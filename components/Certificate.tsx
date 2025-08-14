@@ -10,6 +10,7 @@ import { Download, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { signatureBase64 } from '@/assets/signature.ts';
+import { logoBase64 } from '@/assets/logo.ts';
 
 const Watermark: React.FC<{ text: string }> = ({ text }) => (
     <div className="absolute inset-0 grid grid-cols-3 grid-rows-4 gap-8 pointer-events-none overflow-hidden p-4">
@@ -124,7 +125,7 @@ const Certificate: React.FC = () => {
                 <div className="w-full h-full border-2 border-teal-700 flex flex-col p-6">
                     
                     <div className="flex items-center space-x-3">
-                        <img src={organization.logo} alt={`${organization.name} Logo`} className="h-14 w-14 object-contain" />
+                        <img src={logoBase64} alt={`${organization.name} Logo`} className="h-14 w-14 object-contain" />
                         <div className="flex flex-col text-left">
                             <span className="text-2xl font-bold text-slate-800 font-serif">{organization.name}</span>
                             <span className="text-sm text-slate-500 font-serif">{organization.website}</span>
