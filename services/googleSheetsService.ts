@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { sampleQuestions } from '@/assets/questionData.ts';
 
 // --- API Client for WordPress Backend ---
-const WP_API_BASE = 'https://www.coding-online.net/wp-json/exam-app/v1';
+const WP_API_BASE = 'https://www.coding-online.net/wp-json/mco-app/v1';
 
 const apiFetch = async (endpoint: string, token: string, options: RequestInit = {}) => {
     const headers = {
@@ -79,7 +79,7 @@ const ORGANIZATIONS: Organization[] = [
 ];
 
 const parseCsv = (csvText: string): Question[] => {
-    const lines = csvText.split('\\n').map(l => l.trim()).filter(Boolean);
+    const lines = csvText.split('\n').map(l => l.trim()).filter(Boolean);
     if (lines.length < 2) return [];
 
     const header = lines[0].split(',').map(h => h.trim().toLowerCase());
@@ -167,7 +167,7 @@ export const googleSheetsService = {
     getQuestions: async (exam: Exam): Promise<Question[]> => {
         try {
             const sheetUrl = exam.questionSourceUrl;
-            const match = /\\/d\\/([a-zA-Z0-9-_]+)/.exec(sheetUrl);
+            const match = /\/d\/([a-zA-Z0-9-_]+)/.exec(sheetUrl);
             if (!match) throw new Error("Invalid Google Sheet URL format.");
 
             const sheetId = match[1];
