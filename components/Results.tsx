@@ -6,6 +6,7 @@ import type { TestResult, Exam, RecommendedBook, AnswerReview } from '../types.t
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import Spinner from './Spinner.tsx';
+import LogoSpinner from './LogoSpinner.tsx';
 import { Check, X, FileDown, BookUp, ShieldCheck, Sparkles } from 'lucide-react';
 import BookCover from './BookCover.tsx';
 
@@ -110,7 +111,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
 
 
     if (isLoading) {
-        return <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow-md"><Spinner /><p className="mt-4 text-slate-600">Calculating your results...</p></div>;
+        return <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow-md"><LogoSpinner /><p className="mt-4 text-slate-600">Calculating your results...</p></div>;
     }
     
     if (!result || !exam) {
@@ -162,7 +163,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
 
             {isGeneratingFeedback && (
                 <div className="p-4 bg-slate-50 rounded-lg text-center">
-                    <Spinner />
+                    <LogoSpinner />
                     <p className="mt-2 text-slate-600">Our AI is analyzing your results... this may take a moment.</p>
                 </div>
             )}

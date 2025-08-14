@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
-import Spinner from './Spinner.tsx';
+import LogoSpinner from './LogoSpinner.tsx';
 import type { RecommendedBook } from '../types.ts';
 import { ShoppingCart, BookOpenCheck } from 'lucide-react';
 import BookCover from './BookCover.tsx';
@@ -80,7 +80,7 @@ const BookStore: React.FC = () => {
     if (isInitializing) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh]">
-                <Spinner />
+                <LogoSpinner />
                 <p className="mt-4 text-slate-500">Loading Books...</p>
             </div>
         );

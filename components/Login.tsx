@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
-import Spinner from './Spinner.tsx';
+import LogoSpinner from './LogoSpinner.tsx';
 import toast from 'react-hot-toast';
 
 const Login: React.FC = () => {
@@ -41,7 +41,7 @@ const Login: React.FC = () => {
             <div className="flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg text-center">
                     <h2 className="text-2xl font-bold text-slate-900">Finalizing Login</h2>
-                    <Spinner />
+                    <LogoSpinner />
                     <p className="text-slate-500">Please wait while we securely log you in...</p>
                 </div>
             </div>

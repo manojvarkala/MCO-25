@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LogIn, UserPlus } from 'lucide-react';
-import Spinner from './Spinner.tsx';
+import LogoSpinner from './LogoSpinner.tsx';
 
 const LandingPage: React.FC = () => {
     const navigate = useNavigate();
@@ -21,7 +21,7 @@ const LandingPage: React.FC = () => {
     if (isLoading || !activeOrg || user) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh]">
-                <Spinner />
+                <LogoSpinner />
                 <p className="mt-4 text-slate-500">Loading Application...</p>
             </div>
         );

@@ -6,6 +6,7 @@ import type { Question, UserAnswer, Exam } from '../types.ts';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import Spinner from './Spinner.tsx';
+import LogoSpinner from './LogoSpinner.tsx';
 import { ChevronLeft, ChevronRight, Send, Clock } from 'lucide-react';
 
 const formatTime = (seconds: number) => {
@@ -187,7 +188,7 @@ const Test: React.FC = () => {
   };
 
   if (isInitializing || isLoading || !examConfig) {
-    return <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow-md"><Spinner /><p className="mt-4 text-slate-600">Loading your test...</p></div>;
+    return <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow-md"><LogoSpinner /><p className="mt-4 text-slate-600">Loading your test...</p></div>;
   }
 
   if (questions.length === 0) {

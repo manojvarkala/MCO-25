@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext.tsx';
 import { googleSheetsService } from '@/services/googleSheetsService.ts';
 import type { CertificateData } from '@/types.ts';
 import Spinner from './Spinner.tsx';
+import LogoSpinner from './LogoSpinner.tsx';
 import { Download, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -87,7 +88,7 @@ const Certificate: React.FC = () => {
     };
 
     if (isLoading) {
-        return <div className="flex flex-col items-center justify-center h-64"><Spinner /><p className="mt-4 text-slate-600">Loading your certificate...</p></div>;
+        return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4 text-slate-600">Loading your certificate...</p></div>;
     }
 
     if (!certData) {
