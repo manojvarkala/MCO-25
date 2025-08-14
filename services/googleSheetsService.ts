@@ -49,7 +49,7 @@ const EXAM_PRODUCT_CATEGORIES: ExamProductCategory[] = [
     { id: 'prod-billing', name: 'Medical Billing', description: 'A test series covering the essentials of medical billing and reimbursement.', practiceExamId: 'exam-billing-practice', certificationExamId: 'exam-billing-cert' }
 ];
 
-const DEFAULT_QUESTION_URL = 'https://docs.google.com/spreadsheets/d/1vQZ7Jz2F_2l8t8_1qA8Pz4N7w_9j_9hL2K5e_8sF9cE/edit?usp=sharing';
+const DEFAULT_QUESTION_URL = 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing';
 
 const ALL_EXAMS: Exam[] = [
     // Practice Exams
@@ -77,6 +77,47 @@ const ORGANIZATIONS: Organization[] = [
         certificateTemplates: CERTIFICATE_TEMPLATES,
     }
 ];
+
+const parseCsv = (csvText: string): Question[] => {
+    const lines = csvText.split('\\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length < 2) return [];
+
+    const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const qIdx = header.indexOf('question');
+    const oIdx = header.indexOf('options');
+    const aIdx = header.indexOf('correct_answer');
+
+    if (qIdx === -1 || oIdx === -1 || aIdx === -1) {
+        throw new Error("CSV must contain 'question', 'options', and 'correct_answer' columns.");
+    }
+
+    const questions: Question[] = [];
+    for (let i = 1; i < lines.length; i++) {
+        try {
+            const data = lines[i].split(',');
+            const questionText = data[qIdx]?.trim();
+            const optionsStr = data[oIdx]?.trim();
+            const correctAnswerText = data[aIdx]?.trim();
+
+            if (!questionText || !optionsStr || !correctAnswerText) continue;
+
+            const options = optionsStr.split('|').map(o => o.trim());
+            const correctAnswerIndex = options.findIndex(o => o === correctAnswerText);
+
+            if (correctAnswerIndex !== -1) {
+                questions.push({
+                    id: i,
+                    question: questionText,
+                    options: options,
+                    correctAnswer: correctAnswerIndex + 1, // Convert to 1-based index
+                });
+            }
+        } catch (e) {
+            console.warn(`Skipping malformed CSV line ${i}: ${lines[i]}`);
+        }
+    }
+    return questions;
+};
 
 export const googleSheetsService = {
     // --- CONFIGURATION (STATIC) ---
@@ -124,23 +165,39 @@ export const googleSheetsService = {
     
     // --- QUESTION LOADING (API OR LOCAL) ---
     getQuestions: async (exam: Exam): Promise<Question[]> => {
-        // Fallback to local sample questions
-        const shuffled = [...sampleQuestions].sort(() => 0.5 - Math.random());
-        const selectedQuestions = shuffled.slice(0, exam.numberOfQuestions);
-        const fetchedQuestions = selectedQuestions.map((q, index) => ({
-            ...q,
-            id: index + 1,
-        }));
+        try {
+            const sheetUrl = exam.questionSourceUrl;
+            const match = /\\/d\\/([a-zA-Z0-9-_]+)/.exec(sheetUrl);
+            if (!match) throw new Error("Invalid Google Sheet URL format.");
 
-        if (!fetchedQuestions || fetchedQuestions.length === 0) {
-            throw new Error(`No questions were loaded for this exam.`);
+            const sheetId = match[1];
+            const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+
+            const response = await fetch(csvUrl);
+            if (!response.ok) throw new Error(`Failed to fetch sheet. Status: ${response.status}`);
+            
+            const csvText = await response.text();
+            let fetchedQuestions = parseCsv(csvText);
+
+            if (fetchedQuestions.length === 0) throw new Error("No valid questions parsed from the Google Sheet.");
+
+            // Shuffle and select the required number of questions
+            fetchedQuestions.sort(() => 0.5 - Math.random());
+            const selectedQuestions = fetchedQuestions.slice(0, exam.numberOfQuestions);
+
+            if (selectedQuestions.length < exam.numberOfQuestions) {
+                console.warn(`Warning: Not enough unique questions available for ${exam.name}. Requested ${exam.numberOfQuestions}, but only found ${selectedQuestions.length}.`);
+            }
+             return selectedQuestions;
+
+        } catch (error) {
+            console.error("Failed to fetch questions from Google Sheet, using local fallback:", error);
+            toast.error("Could not load questions from the source. Using practice set.", { duration: 5000 });
+            
+            const shuffled = [...sampleQuestions].sort(() => 0.5 - Math.random());
+            const selectedQuestions = shuffled.slice(0, exam.numberOfQuestions);
+            return selectedQuestions.map((q, index) => ({ ...q, id: index + 1 }));
         }
-
-        if (fetchedQuestions.length < exam.numberOfQuestions) {
-             console.warn(`Warning: Not enough unique questions available for ${exam.name}. Requested ${exam.numberOfQuestions}, but only found ${fetchedQuestions.length}.`);
-        }
-
-        return Promise.resolve(fetchedQuestions);
     },
     
     // --- DUAL-MODE SUBMISSION ---
