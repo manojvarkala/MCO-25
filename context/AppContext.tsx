@@ -3,7 +3,6 @@ import { googleSheetsService } from '@/services/googleSheetsService.ts';
 import type { Organization, RecommendedBook, Exam } from '@/types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/context/AuthContext.tsx';
-import { localSuggestedBooks } from '@/assets/bookData.ts';
 
 interface AppContextType {
   organizations: Organization[];
@@ -28,13 +27,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const initializeApp = async () => {
         try {
             const initialOrgsFromApi = await googleSheetsService.getAppConfig();
+            
+            const bookMap = new Map<string, RecommendedBook>();
+            initialOrgsFromApi.forEach(org => {
+                if (org.suggestedBooks) {
+                    org.suggestedBooks.forEach(book => {
+                        if (!bookMap.has(book.id)) {
+                            bookMap.set(book.id, book);
+                        }
+                    });
+                }
+            });
 
             const processOrgs = (orgs: Organization[]): Organization[] => {
-                const bookMap = new Map(localSuggestedBooks.map(book => [book.id, book]));
-
                 return orgs.map(org => {
-                    const finalSuggestedBooks = localSuggestedBooks;
-
                     const processedExams = org.exams.map((exam: any): Exam => {
                         let finalExam: Exam = { ...exam };
 
@@ -52,7 +58,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                         return finalExam;
                     });
                     
-                    return { ...org, exams: processedExams, suggestedBooks: finalSuggestedBooks };
+                    return { ...org, exams: processedExams };
                 });
             };
             

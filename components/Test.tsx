@@ -83,7 +83,7 @@ const Test: React.FC = () => {
 
       try {
         setIsLoading(true);
-        const fetchedQuestions = await googleSheetsService.getQuestions(config);
+        const fetchedQuestions = await googleSheetsService.getQuestions(config, token);
         
         setQuestions(fetchedQuestions);
 
@@ -143,7 +143,7 @@ const Test: React.FC = () => {
 
   const handlePrev = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev + 1);
+      setCurrentQuestionIndex(prev => prev - 1);
     }
   };
 
