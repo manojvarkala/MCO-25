@@ -6,239 +6,204 @@ const Integration: React.FC = () => {
 
     const phpCode = `<?php
 /**
- * Plugin Name:       Annapoorna Exam Test Question Display
- * Description:       Fetches a single question from a Google Sheet and displays it on a page via a shortcode for testing purposes.
- * Version:           1.2.0
- * Author:            Your World-Class Senior Frontend Engineer
+ * Plugin Name:       MCO Exam App Integration
+ * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
+ * Version:           5.0.0
+ * Author:            Annapoorna Infotech (Refactored)
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+// --- CONFIGURATION ---
+define('MCO_LOGIN_SLUG', 'exam-login');
+define('MCO_EXAM_APP_URL', 'https://exams.coding-online.net/');
+define('MCO_EXAM_APP_TEST_URL', 'https://mco-25.vercel.app/');
+
+// IMPORTANT: Define a secure, random key in wp-config.php. It must be at least 32 characters.
+// define('MCO_JWT_SECRET', 'your-very-strong-secret-key-that-is-long-and-random');
+// define('MCO_DEBUG', true); // Add for debug logging
+// --- END CONFIGURATION ---
+
+add_action('init', 'mco_exam_app_init');
+function mco_exam_app_init() {
+    add_action('admin_notices', 'mco_check_dependencies');
+    add_action('admin_menu', 'mco_exam_add_admin_menu');
+    add_action('admin_init', 'mco_exam_register_settings');
+    add_action('woocommerce_thankyou', 'mco_redirect_after_purchase', 10, 1);
+    add_action('rest_api_init', 'mco_exam_register_rest_api');
+    add_action('register_form', 'mco_exam_add_custom_registration_fields');
+    add_action('user_register', 'mco_exam_save_reg_fields');
+    
+    add_filter('registration_errors', 'mco_exam_validate_reg_fields', 10, 3);
+    add_filter('login_url', 'mco_exam_login_url', 10, 2);
+    
+    add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
+    add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
 }
 
-// 1. Add Admin Menu for Settings
-if ( ! function_exists( 'aet_add_admin_menu' ) ) {
-    add_action('admin_menu', 'aet_add_admin_menu');
-    function aet_add_admin_menu() {
-        add_options_page(
-            'Question Bank Settings',
-            'Question Bank Test',
-            'manage_options',
-            'aet_question_bank_test',
-            'aet_options_page_html'
-        );
-    }
-}
+function mco_debug_log($message) { if (defined('MCO_DEBUG') && MCO_DEBUG) error_log('MCO Exam App Debug: ' . print_r($message, true)); }
+function mco_check_dependencies() { if (!class_exists('WooCommerce')) echo '<div class="notice notice-error"><p><strong>MCO Exam App:</strong> WooCommerce is not active. Exam features will be limited.</p></div>'; if (!defined('MCO_JWT_SECRET') || strlen(MCO_JWT_SECRET) < 32) echo '<div class="notice notice-error"><p><strong>MCO Exam App:</strong> A secure <strong>MCO_JWT_SECRET</strong> is not defined in wp-config.php. SSO will not work.</p></div>';}
+function mco_exam_add_admin_menu() { add_options_page('MCO Exam App Settings', 'MCO Exam App', 'manage_options', 'mco-exam-settings', 'mco_exam_settings_page_html'); }
+function mco_exam_register_settings() { register_setting('mco_exam_app_settings_group', 'mco_exam_app_mode'); }
+function mco_exam_settings_page_html() { if (!current_user_can('manage_options')) return; ?>
+    <div class="wrap"><h1><?php echo esc_html(get_admin_page_title()); ?></h1><p>Control the exam app version for redirects.</p><form action="options.php" method="post"><?php settings_fields('mco_exam_app_settings_group'); ?><table class="form-table"><tr><th scope="row">App Mode for Admins</th><td><fieldset><label><input type="radio" name="mco_exam_app_mode" value="production" <?php checked(get_option('mco_exam_app_mode'), 'production'); ?> /> Production</label><br/><label><input type="radio" name="mco_exam_app_mode" value="test" <?php checked(get_option('mco_exam_app_mode', 'test'), 'test'); ?> /> Test</label></fieldset></td></tr></table><?php submit_button('Save Settings'); ?></form></div><?php }
+function mco_get_exam_app_url($is_admin = false) { if ($is_admin) return get_option('mco_exam_app_mode', 'test') === 'production' ? MCO_EXAM_APP_URL : MCO_EXAM_APP_TEST_URL; return MCO_EXAM_APP_URL; }
 
-if ( ! function_exists( 'aet_settings_init' ) ) {
-    add_action('admin_init', 'aet_settings_init');
-    function aet_settings_init() {
-        register_setting('aetQuestionTestPage', 'aet_settings');
-        add_settings_section(
-            'aet_page_section',
-            __('Google Sheet Configuration', 'wordpress'),
-            null,
-            'aetQuestionTestPage'
-        );
-        add_settings_field(
-            'aet_question_sheet_url',
-            __('Question Source URL', 'wordpress'),
-            'aet_sheet_url_render',
-            'aetQuestionTestPage',
-            'aet_page_section'
-        );
-    }
-}
-
-if ( ! function_exists( 'aet_sheet_url_render' ) ) {
-    function aet_sheet_url_render() {
-        $options = get_option('aet_settings');
-        $url = isset($options['aet_question_sheet_url']) ? $options['aet_question_sheet_url'] : 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing';
-        ?>
-        <input type='text' name='aet_settings[aet_question_sheet_url]' value="<?php echo esc_attr($url); ?>" style="width: 100%; max-width: 600px;">
-        <p class="description">Enter the full URL of the public Google Sheet. The sheet must have columns: <strong>question</strong>, <strong>options</strong> (pipe-separated, e.g., "Opt A|Opt B"), and <strong>correct_answer</strong> (the exact text of the correct option).</p>
-        <?php
-    }
-}
-
-if ( ! function_exists( 'aet_options_page_html' ) ) {
-    function aet_options_page_html() {
-        ?>
-        <div class="wrap">
-            <h1>Question Bank API Test</h1>
-            <form action='options.php' method='post'>
-                <?php
-                settings_fields('aetQuestionTestPage');
-                do_settings_sections('aetQuestionTestPage');
-                submit_button();
-                ?>
-            </form>
-            <hr />
-            <?php aet_run_question_source_test(); ?>
-        </div>
-        <?php
-    }
-}
-
-// 2. Function to fetch and parse questions
-if ( ! function_exists( 'aet_fetch_and_parse_questions' ) ) {
-    function aet_fetch_and_parse_questions() {
-        $options = get_option('aet_settings');
-        $sheet_url = isset($options['aet_question_sheet_url']) ? $options['aet_question_sheet_url'] : '';
-
-        if (empty($sheet_url)) {
-            return new WP_Error('no_url', 'Google Sheet URL is not configured in Settings > Question Bank Test.');
-        }
-
-        if (preg_match('/\\/d\\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
-            $sheet_id = $matches[1];
-            $csv_url = "https://docs.google.com/spreadsheets/d/{$sheet_id}/export?format=csv";
-        } else {
-            return new WP_Error('invalid_url', 'The provided URL does not appear to be a valid Google Sheet URL.');
-        }
-
-        $response = wp_remote_get($csv_url, ['timeout' => 20]);
-
-        if (is_wp_error($response)) {
-            return new WP_Error('fetch_failed', 'Failed to fetch data from Google Sheets. Error: ' . $response->get_error_message());
-        }
+// --- DATA SOURCE & JWT ---
+function mco_exam_get_payload($user_id) {
+    if (!$user = get_userdata($user_id)) return null;
+    $user_full_name = trim($user->first_name . ' ' . $user->last_name) ?: $user->display_name;
+    $paid_exam_ids = []; $exam_prices = new stdClass();
+    
+    if (class_exists('WooCommerce')) {
+        $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert'];
         
-        $http_code = wp_remote_retrieve_response_code($response);
-        if ($http_code != 200) {
-            return new WP_Error('fetch_failed_http', "Failed to fetch data from Google Sheets. Server responded with status code: {$http_code}. Please ensure the sheet is public ('Anyone with the link can view').");
-        }
-
-        $csv_data = wp_remote_retrieve_body($response);
-        if (empty($csv_data)) {
-            return new WP_Error('empty_response', 'The Google Sheet returned no data. It might be empty.');
-        }
-
-        $lines = explode("\\n", trim($csv_data));
-        $header_line = array_shift($lines);
-        $header = array_map('strtolower', array_map('trim', str_getcsv($header_line)));
-        
-        $questions = [];
-        foreach ($lines as $line) {
-            $trimmed_line = trim($line);
-            if (empty($trimmed_line)) continue;
-
-            $row_data = str_getcsv($trimmed_line);
-            if (count($row_data) < count($header)) {
-                $row_data = array_pad($row_data, count($header), '');
-            }
-            if(count($header) != count($row_data)){
-                continue;
-            }
-            
-            $row = array_combine($header, $row_data);
-
-            if (empty($row['question']) || empty($row['options']) || !isset($row['correct_answer'])) {
-                continue;
-            }
-
-            $options = array_map('trim', explode('|', $row['options']));
-            if (count($options) < 2) continue;
-
-            $correct_answer_text = trim($row['correct_answer']);
-            $correct_index = array_search($correct_answer_text, $options);
-
-            if ($correct_index === false) {
-                continue;
-            }
-
-            $questions[] = [
-                'question' => trim($row['question']),
-                'options'  => $options,
-                'correct'  => $correct_index,
-            ];
-        }
-        
-        if (empty($questions)) {
-            return new WP_Error('parsing_failed', 'No valid questions could be parsed from the source. Check formatting. Ensure headers are correct (question, options, correct_answer), options are pipe-separated, and correct_answer matches one of the options exactly.');
-        }
-        return $questions;
-    }
-}
-
-// 3. Test function for admin page
-if ( ! function_exists( 'aet_run_question_source_test' ) ) {
-    function aet_run_question_source_test() {
-        echo '<h3>Data Source Test</h3>';
-        $questions = aet_fetch_and_parse_questions();
-        if (is_wp_error($questions)) {
-            echo '<p style="color:red; border: 1px solid red; padding: 10px;"><strong>Failed to load questions.</strong><br>' . esc_html($questions->get_error_message()) . '</p>';
-        } else {
-            echo '<p style="color:green; border: 1px solid green; padding: 10px;"><strong>Success!</strong> ' . count($questions) . ' questions loaded successfully.</p>';
-            echo '<h4>Sample Question:</h4>';
-            $sample_question = $questions[array_rand($questions)];
-            echo '<div style="border: 1px solid #ccc; padding: 15px;">';
-            echo '<p><strong>Q:</strong> ' . esc_html($sample_question['question']) . '</p>';
-            echo '<ul>';
-            foreach ($sample_question['options'] as $index => $option) {
-                $style = ($index === $sample_question['correct']) ? ' style="font-weight:bold; color:green;"' : '';
-                echo '<li' . $style . '>' . esc_html($option) . ($style ? ' (Correct)' : '') . '</li>';
-            }
-            echo '</ul></div>';
-        }
-    }
-}
-
-// 4. Shortcode to display a question
-if ( ! function_exists( 'aet_shortcode_handler' ) ) {
-    function aet_shortcode_handler($atts) {
-        $questions = aet_fetch_and_parse_questions();
-
-        if (is_wp_error($questions)) {
-            return '<p style="color:red;">Error loading question: ' . esc_html($questions->get_error_message()) . '</p>';
-        }
-
-        $question = $questions[array_rand($questions)];
-        $question_id = 'aet_q_' . uniqid();
-
-        ob_start();
-        ?>
-        <style>
-            .aet-question-container { border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-bottom: 20px; background-color: #f9f9f9; font-family: sans-serif; }
-            .aet-options-list { list-style: none; padding: 0; margin: 0; }
-            .aet-options-list label { display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ccc; border-radius: 5px; transition: background-color 0.2s; }
-            .aet-options-list input[type="radio"] { margin-right: 10px; }
-            .aet-check-btn { background-color: #0891b2; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
-            .aet-feedback { padding: 10px; margin-top: 15px; border-radius: 5px; display: none; }
-            .aet-feedback.correct { background-color: #d1fae5; color: #065f46; }
-            .aet-feedback.incorrect { background-color: #fee2e2; color: #991b1b; }
-        </style>
-        <div class="aet-question-container" id="<?php echo esc_attr($question_id); ?>">
-            <p><?php echo esc_html($question['question']); ?></p>
-            <ul class="aet-options-list">
-                <?php foreach ($question['options'] as $index => $option): ?>
-                    <li><label><input type="radio" name="<?php echo esc_attr($question_id); ?>" value="<?php echo esc_attr($index); ?>"><span><?php echo esc_html($option); ?></span></label></li>
-                <?php endforeach; ?>
-            </ul>
-            <button class="aet-check-btn" onclick="aet_check_answer_<?php echo esc_js($question_id); ?>()">Check Answer</button>
-            <div class="aet-feedback"></div>
-        </div>
-        <script type="text/javascript">
-            function aet_check_answer_<?php echo esc_js($question_id); ?>() {
-                var container = document.getElementById('<?php echo esc_js($question_id); ?>');
-                var selected = container.querySelector('input:checked');
-                var feedback = container.querySelector('.aet-feedback');
-                if (!selected) { alert('Please select an answer.'); return; }
-                var correctAnswerIndex = <?php echo esc_js($question['correct']); ?>;
-                feedback.style.display = 'block';
-                if (parseInt(selected.value, 10) === correctAnswerIndex) {
-                    feedback.textContent = 'Correct!';
-                    feedback.className = 'aet-feedback correct';
-                } else {
-                    feedback.textContent = 'Incorrect.';
-                    feedback.className = 'aet-feedback incorrect';
+        $exam_prices = get_transient('mco_exam_prices');
+        if (false === $exam_prices) {
+            $exam_prices = new stdClass();
+            foreach ($all_exam_skus as $sku) {
+                if (($product_id = wc_get_product_id_by_sku($sku)) && ($product = wc_get_product($product_id))) {
+                    $price = (float) $product->get_price();
+                    $regular_price = (float) $product->get_regular_price();
+                    $exam_prices->{$sku} = ['price' => $price, 'regularPrice' => ($regular_price > $price) ? $regular_price : $price];
                 }
             }
-        </script>
-        <?php
-        return ob_get_clean();
+            set_transient('mco_exam_prices', $exam_prices, 12 * HOUR_IN_SECONDS);
+        }
+
+        $customer_orders = wc_get_orders(['customer' => $user_id, 'status' => ['wc-completed', 'wc-processing'], 'limit' => -1]);
+        $purchased_skus = [];
+        if ($customer_orders) {
+            foreach ($customer_orders as $order) {
+                foreach ($order->get_items() as $item) { if (($p = $item->get_product()) && $p->get_sku()) $purchased_skus[] = $p->get_sku(); }
+            }
+        }
+        $paid_exam_ids = array_values(array_intersect($all_exam_skus, array_unique($purchased_skus)));
     }
-    add_shortcode('aet_question_test', 'aet_shortcode_handler');
+    
+    return ['iss' => get_site_url(), 'iat' => time(), 'exp' => time() + (60 * 60 * 2), 'user' => ['id' => (string)$user->ID, 'name' => $user_full_name, 'email' => $user->user_email, 'isAdmin' => user_can($user, 'administrator')], 'paidExamIds' => $paid_exam_ids, 'examPrices' => $exam_prices];
 }
+
+function mco_base64url_encode($data) { return rtrim(strtr(base64_encode($data), '+/', '-_'), '='); }
+function mco_base64url_decode($data) { return base64_decode(strtr($data, '-_', '+/')); }
+function mco_generate_exam_jwt($user_id) { $secret_key = defined('MCO_JWT_SECRET') ? MCO_JWT_SECRET : ''; if (empty($secret_key) || strlen($secret_key) < 32) return null; if (!$payload = mco_exam_get_payload($user_id)) return null; $h = mco_base64url_encode(json_encode(['typ'=>'JWT','alg'=>'HS256'])); $p = mco_base64url_encode(json_encode($payload)); $s = hash_hmac('sha256', "$h.$p", $secret_key, true); return "$h.$p." . mco_base64url_encode($s); }
+function mco_verify_exam_jwt($token) { $secret_key = defined('MCO_JWT_SECRET') ? MCO_JWT_SECRET : ''; if (empty($secret_key)) return null; $parts = explode('.', $token); if (count($parts) !== 3) return null; list($h_b64, $p_b64, $s_b64) = $parts; $s = mco_base64url_decode($s_b64); if (!hash_equals(hash_hmac('sha256', "$h_b64.$p_b64", $secret_key, true), $s)) return null; $payload = json_decode(mco_base64url_decode($p_b64), true); return (isset($payload['exp']) && $payload['exp'] < time()) ? null : $payload; }
+
+function mco_redirect_after_purchase($order_id) { if (!$order_id || !($order = wc_get_order($order_id)) || !($user_id = $order->get_customer_id())) return; if ($user_id > 0 && $order->has_status(['completed', 'processing', 'on-hold'])) { if (function_exists('WC') && WC()->cart) WC()->cart->empty_cart(); if ($token = mco_generate_exam_jwt($user_id)) { wp_redirect(mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=/dashboard'); exit; } } }
+
+// --- REST API ENDPOINTS ---
+function mco_exam_register_rest_api() {
+    register_rest_route('mco-app/v1', '/user-results', ['methods' => 'GET', 'callback' => 'mco_get_user_results_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+    register_rest_route('mco-app/v1', '/certificate-data/(?P<test_id>[\\w-]+)', ['methods' => 'GET', 'callback' => 'mco_get_certificate_data_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+    register_rest_route('mco-app/v1', '/update-name', ['methods' => 'POST', 'callback' => 'mco_exam_update_user_name_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+    register_rest_route('mco-app/v1', '/submit-result', ['methods' => 'POST', 'callback' => 'mco_exam_submit_result_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+}
+
+function mco_exam_api_permission_check($request) {
+    $token = $request->get_header('Authorization');
+    if (!$token || !preg_match('/Bearer\\s(\\S+)/', $token, $matches)) return new WP_Error('jwt_missing', 'Auth token not found.', ['status' => 401]);
+    $payload = mco_verify_exam_jwt($matches[1]);
+    if (!$payload || !isset($payload['user']['id'])) return new WP_Error('jwt_invalid', 'Invalid token.', ['status' => 403]);
+    $request->set_param('jwt_user_id', $payload['user']['id']);
+    return true;
+}
+
+function mco_get_user_results_callback($request) {
+    $user_id = (int)$request->get_param('jwt_user_id');
+    $results = get_user_meta($user_id, 'mco_exam_results', true);
+    return new WP_REST_Response(is_array($results) ? array_values($results) : [], 200);
+}
+
+function mco_get_certificate_data_callback($request) {
+    $user_id = (int)$request->get_param('jwt_user_id');
+    $test_id = $request['test_id'];
+    $user = get_userdata($user_id);
+    if (!$user) return new WP_Error('user_not_found', 'User not found.', ['status' => 404]);
+
+    // Data is static in the React app, but we fetch it here for certificate validation logic
+    $all_data = json_decode(file_get_contents(plugin_dir_path(__FILE__) . 'data.json'), true);
+    $org = $all_data[0];
+
+    if ($test_id === 'sample') {
+        $template = $org['certificateTemplates'][0];
+        $candidate_name = trim($user->first_name . ' ' . $user->last_name) ?: $user->display_name;
+        $data = [ 'certificateNumber' => "SAMPLE-" . time(), 'candidateName' => $candidate_name, 'finalScore' => 95.5, 'date' => date('F j, Y'), 'totalQuestions' => 100, 'organization' => $org, 'template' => $template ];
+        return new WP_REST_Response($data, 200);
+    }
+    
+    $all_results = get_user_meta($user_id, 'mco_exam_results', true);
+    if (!is_array($all_results) || !isset($all_results[sanitize_key($test_id)])) return new WP_Error('not_found', 'Result not found.', ['status' => 404]);
+    $result = $all_results[sanitize_key($test_id)];
+    
+    $exam = current(array_filter($org['exams'], function($e) use ($result) { return $e['id'] === $result['examId']; }));
+    if (!$exam || ($result['score'] < $exam['passScore'] && !user_can($user, 'administrator'))) return new WP_Error('not_earned', 'Certificate not earned.', ['status' => 403]);
+
+    $template = current(array_filter($org['certificateTemplates'], function($t) use ($exam) { return $t['id'] === $exam['certificateTemplateId']; }));
+    if (!$template) return new WP_Error('not_found', 'Template not found.', ['status' => 404]);
+
+    $candidate_name = trim($user->first_name . ' ' . $user->last_name) ?: $user->display_name;
+    $data = [ 'certificateNumber' => substr($user_id, 0, 4) . '-' . substr(md5($test_id), 0, 6), 'candidateName' => $candidate_name, 'finalScore' => $result['score'], 'date' => date('F j, Y', $result['timestamp'] / 1000), 'totalQuestions' => $result['totalQuestions'], 'organization' => $org, 'template' => $template ];
+    return new WP_REST_Response($data, 200);
+}
+
+function mco_exam_update_user_name_callback($request) {
+    $user_id = (int)$request->get_param('jwt_user_id');
+    $full_name = sanitize_text_field($request->get_json_params()['fullName'] ?? '');
+    if (empty($full_name)) return new WP_Error('name_empty', 'Full name cannot be empty.', ['status' => 400]);
+    $parts = explode(' ', $full_name, 2);
+    update_user_meta($user_id, 'first_name', $parts[0]);
+    update_user_meta($user_id, 'last_name', $parts[1] ?? '');
+    return new WP_REST_Response(['success' => true], 200);
+}
+
+function mco_exam_submit_result_callback($request) {
+    $user_id = (int)$request->get_param('jwt_user_id');
+    $result = $request->get_json_params();
+    if (!isset($result['testId'])) return new WP_Error('invalid_data', "Missing testId.", ['status' => 400]);
+    $result['userId'] = (string)$user_id;
+    $all_results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
+    $all_results[$result['testId']] = $result;
+    update_user_meta($user_id, 'mco_exam_results', $all_results);
+    return new WP_REST_Response($result, 200);
+}
+
+// --- SHORTCODES & LOGIN FORM ---
+function mco_exam_login_shortcode() {
+    if (!defined('MCO_JWT_SECRET')) return "<p>Configuration error: MCO_JWT_SECRET is missing.</p>";
+    $error = ''; $user_id = 0;
+
+    if ('POST' === $_SERVER['REQUEST_METHOD'] && !empty($_POST['mco_login_nonce']) && wp_verify_nonce($_POST['mco_login_nonce'], 'mco_login_action')) {
+        $user = wp_signon(['user_login' => sanitize_user($_POST['log']), 'user_password' => $_POST['pwd'], 'remember' => true], false);
+        if (is_wp_error($user)) $error = 'Invalid username or password.'; else $user_id = $user->ID;
+    }
+    if (is_user_logged_in() && !$user_id) $user_id = get_current_user_id();
+
+    if ($user_id > 0) {
+        $token = mco_generate_exam_jwt($user_id);
+        if ($token) {
+            $redirect_to = isset($_REQUEST['redirect_to']) ? esc_url_raw(urldecode($_REQUEST['redirect_to'])) : '/dashboard';
+            $final_url = mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=' . urlencode($redirect_to);
+            return "<div style='text-align:center;'><p>Login successful. Redirecting...</p><script>window.location.href='" . esc_url_raw($final_url) . "';</script></div>";
+        } else {
+            $error = 'Could not create a secure session.';
+        }
+    }
+    ob_start(); ?>
+    <style>.mco-login-container{max-width:400px;margin:5% auto;padding:40px;background:#fff;border-radius:12px;box-shadow:0 10px 25px -5px rgba(0,0,0,.1)}.mco-login-container input{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box}.mco-login-container button{width:100%;padding:14px;background-color:#0891b2;color:#fff;border:none;border-radius:8px;cursor:pointer}</style>
+    <div class="mco-login-container"><h2>Exam Portal Login</h2><?php if ($error) echo "<p style='color:red;'>" . esc_html($error) . "</p>"; ?>
+    <form action="<?php echo esc_url(get_permalink()); ?>" method="post"><p><label>Username/Email<br/><input type="text" name="log" required></label></p><p><label>Password<br/><input type="password" name="pwd" required></label></p><p><button type="submit">Log In</button></p><?php wp_nonce_field('mco_login_action', 'mco_login_nonce'); if (isset($_REQUEST['redirect_to'])) echo '<input type="hidden" name="redirect_to" value="' . esc_attr(urlencode($_REQUEST['redirect_to'])) . '" />'; ?></form>
+    <div style="text-align:center;margin-top:1rem;"><a href="<?php echo esc_url(wp_registration_url()); ?>">Register</a> | <a href="<?php echo esc_url(wp_lostpassword_url()); ?>">Lost Password?</a></div></div>
+    <?php return ob_get_clean();
+}
+
+function mco_exam_showcase_shortcode() {
+    ob_start(); echo "<div>[MCO Exam Showcase Shortcode Placeholder]</div>"; return ob_get_clean();
+}
+
+function mco_exam_add_custom_registration_fields() { ?><p><label for="first_name">First Name<br/><input type="text" name="first_name" required/></label></p><p><label for="last_name">Last Name<br/><input type="text" name="last_name" required/></label></p><?php }
+function mco_exam_validate_reg_fields($errors, $login, $email) { if (empty($_POST['first_name']) || empty($_POST['last_name'])) $errors->add('field_error', 'First and Last Name are required.'); return $errors; }
+function mco_exam_save_reg_fields($user_id) { if (!empty($_POST['first_name'])) update_user_meta($user_id, 'first_name', sanitize_text_field($_POST['first_name'])); if (!empty($_POST['last_name'])) update_user_meta($user_id, 'last_name', sanitize_text_field($_POST['last_name'])); }
+function mco_exam_login_url($login_url, $redirect) { if (strpos($_SERVER['REQUEST_URI'], 'wp-admin') !== false) return $login_url; $url = home_url('/' . MCO_LOGIN_SLUG . '/'); return !empty($redirect) ? add_query_arg('redirect_to', urlencode($redirect), $url) : $url; }
 ?>`;
 
     const copyToClipboard = () => {
@@ -246,7 +211,6 @@ if ( ! function_exists( 'aet_shortcode_handler' ) ) {
             toast.success('PHP code copied to clipboard!');
         }, (err) => {
             toast.error('Failed to copy code.');
-            console.error('Could not copy text: ', err);
         });
     };
 
@@ -254,15 +218,16 @@ if ( ! function_exists( 'aet_shortcode_handler' ) ) {
         <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
             <h1 className="text-3xl font-bold text-slate-800 mb-4">WordPress Integration Guide</h1>
             <div className="prose max-w-none text-slate-600">
-                <p>To integrate the examination portal with your WordPress site for Single Sign-On (SSO) and results synchronization, you can use a custom plugin. Below is the full PHP code for a sample plugin that also handles fetching questions from a Google Sheet.</p>
+                <p>This is the new, unified plugin to integrate the examination portal with WordPress. It handles Single Sign-On (SSO), results synchronization, and is properly namespaced to prevent conflicts.</p>
                 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Setup Steps</h2>
                 <ol>
-                    <li>Create a new PHP file in your <code>/wp-content/plugins/</code> directory (e.g., <code>annapoorna-exam-integration.php</code>).</li>
+                    <li><strong>IMPORTANT:</strong> Deactivate and delete any previous versions of the "Annapoorna" or "MCO" exam plugins from your WordPress site.</li>
+                    <li>Create a new PHP file in <code>/wp-content/plugins/</code> (e.g., <code>mco-exam-integration.php</code>).</li>
                     <li>Copy the code below and paste it into the new file.</li>
-                    <li>Go to the 'Plugins' page in your WordPress admin dashboard and activate the "Annapoorna Exam Test Question Display" plugin.</li>
-                    <li>Navigate to <strong>Settings &rarr; Question Bank Test</strong> in your WordPress admin menu to configure the Google Sheet URL for your questions. This is crucial for the exam app to fetch questions.</li>
-                    <li>To test the connection, use the shortcode <code>[aet_question_test]</code> on any page or post to display a sample question from your configured Google Sheet.</li>
+                    <li>Activate the "MCO Exam App Integration" plugin in your WordPress admin dashboard.</li>
+                    <li>Navigate to <strong>Settings &rarr; MCO Exam App</strong> to configure the plugin.</li>
+                    <li>Use the shortcode <code>[mco_exam_showcase]</code> to display the exam categories, and <code>[mco_exam_login]</code> on your login page.</li>
                 </ol>
 
                 <div className="relative mt-6">
