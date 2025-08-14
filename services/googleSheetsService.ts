@@ -1,6 +1,9 @@
 import type { Question, TestResult, CertificateData, Organization, UserAnswer, User, Exam } from '@/types.ts';
 import toast from 'react-hot-toast';
-import { sampleQuestions } from '@/assets/questionData.ts';
+import { GoogleGenAI } from "@google/genai";
+
+// This is safe to be exposed in the browser. The Vite config handles it.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // --- API Client for WordPress Backend ---
 const WP_API_BASE = 'https://www.coding-online.net/wp-json/mco-app/v1';
@@ -47,6 +50,20 @@ export const googleSheetsService = {
         return response.json();
     },
 
+    // --- AI FEEDBACK ---
+    getAIFeedback: async (prompt: string): Promise<string> => {
+        try {
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+            });
+            return response.text;
+        } catch (error) {
+            console.error("Error getting AI feedback:", error);
+            throw new Error("Failed to generate AI feedback. Please try again later.");
+        }
+    },
+
     // --- DATA SYNC & LOCAL STORAGE ---
     syncResults: async (token: string, user: User): Promise<void> => {
         try {
@@ -87,30 +104,22 @@ export const googleSheetsService = {
     
     // --- QUESTION LOADING (VIA WP PROXY) ---
     getQuestions: async (exam: Exam, token: string): Promise<Question[]> => {
-        try {
-            const fetchedQuestions: Question[] = await apiFetch('/questions-from-sheet', token, {
-                method: 'POST',
-                body: JSON.stringify({
-                    sheetUrl: exam.questionSourceUrl,
-                    count: exam.numberOfQuestions
-                })
-            });
+        const fetchedQuestions: Question[] = await apiFetch('/questions-from-sheet', token, {
+            method: 'POST',
+            body: JSON.stringify({
+                sheetUrl: exam.questionSourceUrl,
+                count: exam.numberOfQuestions
+            })
+        });
 
-            if (fetchedQuestions.length === 0) throw new Error("No valid questions parsed from the source.");
-
-            if (fetchedQuestions.length < exam.numberOfQuestions) {
-                console.warn(`Warning: Not enough unique questions available for ${exam.name}. Requested ${exam.numberOfQuestions}, but only found ${fetchedQuestions.length}.`);
-            }
-             return fetchedQuestions;
-
-        } catch (error) {
-            console.error("Failed to fetch questions from WordPress proxy, using local fallback:", error);
-            toast.error("Could not load questions from the source. Using practice set.", { duration: 5000 });
-            
-            const shuffled = [...sampleQuestions].sort(() => 0.5 - Math.random());
-            const selectedQuestions = shuffled.slice(0, exam.numberOfQuestions);
-            return selectedQuestions.map((q, index) => ({ ...q, id: index + 1 }));
+        if (fetchedQuestions.length === 0) {
+            throw new Error("No valid questions were returned from the source.");
         }
+
+        if (fetchedQuestions.length < exam.numberOfQuestions) {
+            console.warn(`Warning: Not enough unique questions available for ${exam.name}. Requested ${exam.numberOfQuestions}, but only found ${fetchedQuestions.length}.`);
+        }
+            return fetchedQuestions;
     },
     
     // --- DUAL-MODE SUBMISSION ---

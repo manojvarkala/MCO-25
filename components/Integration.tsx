@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import toast from 'react-hot-toast';
 import { logoBase64 } from '@/assets/logo.ts';
@@ -59,7 +60,7 @@ function mco_get_all_app_data() {
     $logo_base64 = '${logoBase64}';
 
     $CERTIFICATE_TEMPLATES = [
-        ['id' => 'cert-practice-1', 'title' => 'Medical Coding Proficiency', 'body' => 'For successfully demonstrating proficiency in medical coding principles and practices with a final score of <strong>{finalScore}%</strong>. This certifies the holder\'s competence in the standards required for this certification.', 'signature1Name' => 'Dr. Amelia Reed', 'signature1Title' => 'Program Director', 'signature2Name' => 'B. Manoj', 'signature2Title' => 'Chief Instructor'],
+        ['id' => 'cert-practice-1', 'title' => 'Medical Coding Proficiency', 'body' => 'For successfully demonstrating proficiency in medical coding principles and practices with a final score of <strong>{finalScore}%</strong>. This certifies the holder\\'s competence in the standards required for this certification.', 'signature1Name' => 'Dr. Amelia Reed', 'signature1Title' => 'Program Director', 'signature2Name' => 'B. Manoj', 'signature2Title' => 'Chief Instructor'],
         ['id' => 'cert-cpc', 'title' => 'Certified Professional Coder (CPC)', 'body' => 'For successfully demonstrating proficiency in medical coding principles and practices with a final score of <strong>{finalScore}%</strong>. This certifies competence in the standards required for the CPC credential.', 'signature1Name' => 'Dr. Amelia Reed', 'signature1Title' => 'Program Director', 'signature2Name' => 'B. Manoj', 'signature2Title' => 'Chief Instructor'],
         ['id' => 'cert-cca', 'title' => 'Certified Coding Associate (CCA)', 'body' => 'Awarded for exceptional performance and mastery in coding topics, achieving a score of <strong>{finalScore}%</strong>. This signifies a high level of expertise for the CCA credential.', 'signature1Name' => 'Dr. Amelia Reed', 'signature1Title' => 'Program Director', 'signature2Name' => 'B. Manoj', 'signature2Title' => 'Chief Instructor'],
         ['id' => 'cert-billing', 'title' => 'Medical Billing Specialist', 'body' => 'For successfully demonstrating proficiency in medical billing and reimbursement with a final score of <strong>{finalScore}%</strong>. This achievement certifies competence in specialized billing standards.', 'signature1Name' => 'Dr. Amelia Reed', 'signature1Title' => 'Program Director', 'signature2Name' => 'B. Manoj', 'signature2Title' => 'Chief Instructor'],
@@ -229,7 +230,43 @@ function mco_exam_update_user_name_callback($request) { $user_id = (int)$request
 function mco_exam_submit_result_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); $result_data = $request->get_json_params(); foreach (['testId', 'examId', 'score', 'correctCount', 'totalQuestions', 'timestamp'] as $key) { if (!isset($result_data[$key])) return new WP_Error('invalid_data', "Missing key: {$key}", ['status' => 400]); } $result_data['userId'] = (string)$user_id; $all_results = get_user_meta($user_id, 'mco_exam_results', true); if (!is_array($all_results)) $all_results = []; $all_results[$result_data['testId']] = $result_data; update_user_meta($user_id, 'mco_exam_results', $all_results); return new WP_REST_Response($result_data, 200); }
 
 // --- SHORTCODES & FORMS ---
-function mco_exam_login_shortcode() { /* ... Same as before ... */ return "Login form will be rendered here."; }
+function mco_exam_login_shortcode() {
+    if (!defined('MCO_JWT_SECRET')) {
+        return "<p class='mco-portal-error'>Configuration error: A strong MCO_JWT_SECRET must be defined in wp-config.php.</p>";
+    }
+    $login_error_message = '';
+    $user_id = 0;
+    if ('POST' === $_SERVER['REQUEST_METHOD'] && !empty($_POST['mco_login_nonce']) && wp_verify_nonce($_POST['mco_login_nonce'], 'mco_login_action')) {
+        $user = wp_signon(['user_login' => sanitize_user($_POST['log']), 'user_password' => $_POST['pwd'], 'remember' => true], false);
+        if (is_wp_error($user)) { $login_error_message = 'Invalid username or password.'; } else { $user_id = $user->ID; }
+    }
+    if (is_user_logged_in() && $user_id === 0) { $user_id = get_current_user_id(); }
+    if ($user_id > 0) {
+        $token = mco_generate_exam_jwt($user_id);
+        if ($token) {
+            $redirect_to = isset($_REQUEST['redirect_to']) ? esc_url_raw(urldecode($_REQUEST['redirect_to'])) : '/dashboard';
+            $final_url = mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=' . urlencode($redirect_to);
+            echo "<div class='mco-portal-container' style='text-align:center;'><p>Login successful. Redirecting...</p><script>window.location.href='" . esc_url_raw($final_url) . "';</script></div>";
+            return;
+        } else { $login_error_message = 'Could not create a secure session. Please contact support.'; }
+    }
+    ob_start(); ?>
+    <style>.mco-portal-container{font-family:sans-serif;max-width:400px;margin:5% auto;padding:40px;background:#fff;border-radius:12px;box-shadow:0 10px 25px -5px rgba(0,0,0,.1)}.mco-portal-container h2{text-align:center;font-size:24px;margin-bottom:30px}.mco-portal-container .form-row{margin-bottom:20px}.mco-portal-container label{display:block;margin-bottom:8px;font-weight:600}.mco-portal-container input{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box}.mco-portal-container button{width:100%;padding:14px;background-color:#0891b2;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer}.mco-portal-container button:hover{background-color:#067a8e}.mco-portal-links{margin-top:20px;text-align:center}.mco-portal-error{color:red;text-align:center;margin-bottom:20px}</style>
+    <div class="mco-portal-container">
+        <h2>Exam Portal Login</h2>
+        <?php if ($login_error_message) echo "<p class='mco-portal-error'>" . esc_html($login_error_message) . "</p>"; ?>
+        <form name="loginform" action="<?php echo esc_url(get_permalink()); ?>" method="post">
+            <div class="form-row"><label for="log">Username or Email</label><input type="text" name="log" id="log" required></div>
+            <div class="form-row"><label for="pwd">Password</label><input type="password" name="pwd" id="pwd" required></div>
+            <div class="form-row"><button type="submit">Log In</button></div>
+            <?php wp_nonce_field('mco_login_action', 'mco_login_nonce'); ?>
+            <?php if (isset($_REQUEST['redirect_to'])): ?><input type="hidden" name="redirect_to" value="<?php echo esc_attr(urlencode($_REQUEST['redirect_to'])); ?>" /><?php endif; ?>
+        </form>
+        <div class="mco-portal-links"><a href="<?php echo esc_url(wp_registration_url()); ?>">Register</a> | <a href="<?php echo esc_url(wp_lostpassword_url()); ?>">Lost Password?</a></div>
+    </div>
+    <?php return ob_get_clean();
+}
+
 function mco_exam_showcase_shortcode() {
     $all_data = mco_get_all_app_data();
     $categories = $all_data[0]['examProductCategories'];

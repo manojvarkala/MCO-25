@@ -52,36 +52,36 @@ const Test: React.FC = () => {
           return;
       }
 
-      const userResults = await googleSheetsService.getTestResultsForUser(user);
-
-      if (config.isPractice) {
-        if (!isSubscribed) {
-          const practiceExamIds = new Set(activeOrg.exams.filter(e => e.isPractice).map(e => e.id));
-          const practiceAttempts = userResults.filter(r => practiceExamIds.has(r.examId)).length;
-          if (practiceAttempts >= 10) {
-            toast.error("You have used all 10 of your free practice attempts.", { duration: 4000 });
-            navigate('/dashboard');
-            return;
-          }
-        }
-        useFreeAttempt();
-      } else {
-        const certExamResults = userResults.filter(r => r.examId === config.id);
-        const hasPassed = certExamResults.some(r => r.score >= config.passScore);
-        
-        if (hasPassed) {
-            toast.error("You have already passed this exam.", { duration: 4000 });
-            navigate('/dashboard');
-            return;
-        }
-        if (certExamResults.length >= 3) {
-            toast.error("You have used all 3 attempts for this exam.", { duration: 4000 });
-            navigate('/dashboard');
-            return;
-        }
-      }
-
       try {
+        const userResults = await googleSheetsService.getTestResultsForUser(user);
+        
+        if (config.isPractice) {
+            if (!isSubscribed) {
+              const practiceExamIds = new Set(activeOrg.exams.filter(e => e.isPractice).map(e => e.id));
+              const practiceAttempts = userResults.filter(r => practiceExamIds.has(r.examId)).length;
+              if (practiceAttempts >= 10) {
+                toast.error("You have used all 10 of your free practice attempts.", { duration: 4000 });
+                navigate('/dashboard');
+                return;
+              }
+            }
+            useFreeAttempt();
+        } else {
+            const certExamResults = userResults.filter(r => r.examId === config.id);
+            const hasPassed = certExamResults.some(r => r.score >= config.passScore);
+            
+            if (hasPassed) {
+                toast.error("You have already passed this exam.", { duration: 4000 });
+                navigate('/dashboard');
+                return;
+            }
+            if (certExamResults.length >= 3) {
+                toast.error("You have used all 3 attempts for this exam.", { duration: 4000 });
+                navigate('/dashboard');
+                return;
+            }
+        }
+
         setIsLoading(true);
         const fetchedQuestions = await googleSheetsService.getQuestions(config, token);
         
@@ -128,14 +128,6 @@ const Test: React.FC = () => {
   };
 
   const handleNext = () => {
-    const currentQuestion = questions[currentQuestionIndex];
-    if (!answers.has(currentQuestion.id)) {
-        const confirmed = window.confirm("You have not answered the current question. Would you like to skip it for now?");
-        if (!confirmed) {
-            return;
-        }
-    }
-
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     }
@@ -143,7 +135,7 @@ const Test: React.FC = () => {
 
   const handlePrev = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev + 1);
+      setCurrentQuestionIndex(prev => prev - 1);
     }
   };
 
@@ -159,10 +151,9 @@ const Test: React.FC = () => {
         const unansweredQuestionsCount = questions.length - answers.size;
         if (unansweredQuestionsCount > 0) {
             const confirmed = window.confirm(
-                `You have ${unansweredQuestionsCount} unanswered question(s). Submitting now will mark them as incorrect. Do you want to proceed?`
+                `You have ${unansweredQuestionsCount} unanswered question(s). Are you sure you want to submit?`
             );
             if (!confirmed) {
-                toast('Submission cancelled. Please review all questions.');
                 return;
             }
         }
