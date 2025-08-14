@@ -143,7 +143,7 @@ const Test: React.FC = () => {
 
   const handlePrev = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
+      setCurrentQuestionIndex(prev => prev + 1);
     }
   };
 
@@ -223,6 +223,33 @@ const Test: React.FC = () => {
 
       <div className="w-full bg-slate-200 rounded-full h-2.5 mb-6">
         <div className="bg-cyan-600 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+      </div>
+
+      {/* Question Navigator */}
+      <div className="mb-8 border-t border-b border-slate-200 py-4">
+        <h3 className="text-sm font-semibold text-slate-600 mb-3">Question Navigator</h3>
+        <div className="flex flex-wrap gap-2">
+          {questions.map((q, index) => {
+            const isAnswered = answers.has(q.id);
+            const isCurrent = index === currentQuestionIndex;
+            let buttonClass = 'border-slate-300 bg-white hover:bg-slate-100 text-slate-600';
+            if (isCurrent) {
+              buttonClass = 'bg-cyan-600 border-cyan-600 text-white';
+            } else if (isAnswered) {
+              buttonClass = 'bg-slate-200 border-slate-300 hover:bg-slate-300 text-slate-700';
+            }
+            return (
+              <button
+                key={q.id}
+                onClick={() => setCurrentQuestionIndex(index)}
+                className={`w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold border transition-colors duration-200 ${buttonClass}`}
+                aria-label={`Go to question ${index + 1}`}
+              >
+                {index + 1}
+              </button>
+            );
+          })}
+        </div>
       </div>
       
       <div className="mb-8 min-h-[80px]">
