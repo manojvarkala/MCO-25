@@ -2,7 +2,6 @@
 
 import React from 'react';
 import toast from 'react-hot-toast';
-import { logoBase64 } from '@/assets/logo.ts';
 
 const Integration: React.FC = () => {
 
@@ -70,8 +69,6 @@ function mco_get_all_app_data() {
     static $app_data = null;
     if ($app_data !== null) return $app_data;
     
-    $logo_base64 = '${logoBase64}';
-
     $CERTIFICATE_TEMPLATES = [
         ['id' => 'cert-practice-1', 'title' => 'Medical Coding Proficiency', 'body' => 'For successfully demonstrating proficiency in medical coding principles and practices with a final score of <strong>{finalScore}%</strong>. This certifies the holder\\'s competence in the standards required for this certification.', 'signature1Name' => 'Dr. Amelia Reed', 'signature1Title' => 'Program Director', 'signature2Name' => 'B. Manoj', 'signature2Title' => 'Chief Instructor'],
         ['id' => 'cert-cpc', 'title' => 'Certified Professional Coder (CPC)', 'body' => 'For successfully demonstrating proficiency in medical coding principles and practices with a final score of <strong>{finalScore}%</strong>. This certifies competence in the standards required for the CPC credential.', 'signature1Name' => 'Dr. Amelia Reed', 'signature1Title' => 'Program Director', 'signature2Name' => 'B. Manoj', 'signature2Title' => 'Chief Instructor'],
@@ -120,7 +117,6 @@ function mco_get_all_app_data() {
     $app_data = [
         [
             'id' => 'org-mco', 'name' => 'Medical Coding Online', 'website' => 'www.coding-online.net',
-            'logo' => $logo_base64,
             'exams' => $ALL_EXAMS,
             'examProductCategories' => $EXAM_PRODUCT_CATEGORIES,
             'certificateTemplates' => $CERTIFICATE_TEMPLATES,

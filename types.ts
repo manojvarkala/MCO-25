@@ -17,6 +17,14 @@ export interface UserAnswer {
   answer: number; // The index of the selected option
 }
 
+export interface AnswerReview {
+    questionId: number;
+    question: string;
+    options: string[];
+    userAnswer: number; // index of user's answer
+    correctAnswer: number; // index of correct answer
+}
+
 export interface TestResult {
   testId: string;
   userId: string;
@@ -29,24 +37,6 @@ export interface TestResult {
   review: AnswerReview[];
 }
 
-export interface AnswerReview {
-    questionId: number;
-    question: string;
-    options: string[];
-    userAnswer: number; // index of user's answer
-    correctAnswer: number; // index of correct answer
-}
-
-export interface CertificateData {
-    certificateNumber: string;
-    candidateName: string;
-    finalScore: number;
-    date: string;
-    totalQuestions: number;
-    // Dynamic fields from template
-    organization: Organization;
-    template: CertificateTemplate;
-}
 
 // The structure of the JWT payload coming from the main site
 export interface TokenPayload {
@@ -96,9 +86,9 @@ export interface Exam {
     recommendedBook?: RecommendedBook;
     recommendedBookId?: string;
     isPractice: boolean;
-    productSku?: string;
+    durationMinutes: number;
+    productSku: string;
     productSlug?: string;
-    durationMinutes?: number;
 }
 
 export interface ExamProductCategory {
@@ -113,9 +103,20 @@ export interface Organization {
     id: string;
     name: string;
     website: string;
-    logo: string; // base64 string
+    logo: string;
     exams: Exam[];
     examProductCategories: ExamProductCategory[];
     certificateTemplates: CertificateTemplate[];
-    suggestedBooks?: RecommendedBook[];
+    suggestedBooks: RecommendedBook[];
+}
+
+export interface CertificateData {
+    certificateNumber: string;
+    candidateName: string;
+    finalScore: number;
+    date: string;
+    totalQuestions: number;
+    // Dynamic fields from template
+    organization: Organization;
+    template: CertificateTemplate;
 }
