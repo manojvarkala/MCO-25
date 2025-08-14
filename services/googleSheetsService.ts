@@ -2,9 +2,6 @@ import type { Question, TestResult, CertificateData, Organization, UserAnswer, U
 import toast from 'react-hot-toast';
 import { GoogleGenAI } from "@google/genai";
 
-// This is safe to be exposed in the browser. The Vite config handles it.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 // --- API Client for WordPress Backend ---
 const WP_API_BASE = 'https://www.coding-online.net/wp-json/mco-app/v1';
 
@@ -52,7 +49,13 @@ export const googleSheetsService = {
 
     // --- AI FEEDBACK ---
     getAIFeedback: async (prompt: string): Promise<string> => {
+        if (!process.env.API_KEY) {
+            console.error("Gemini API key is not configured.");
+            throw new Error("The AI feedback feature is not configured. Please contact support.");
+        }
         try {
+            // Initialize the AI client only when the function is called
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: prompt,
