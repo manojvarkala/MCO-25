@@ -10,7 +10,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           6.2.0
+ * Version:           6.3.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -20,11 +20,24 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 define('MCO_LOGIN_SLUG', 'exam-login');
 define('MCO_EXAM_APP_URL', 'https://exams.coding-online.net/');
 define('MCO_EXAM_APP_TEST_URL', 'https://mco-25.vercel.app/');
-
-// IMPORTANT: Define a secure, random key in wp-config.php. It must be at least 32 characters.
 // define('MCO_JWT_SECRET', 'your-very-strong-secret-key-that-is-long-and-random');
-// define('MCO_DEBUG', true); // Add for debug logging
+// define('MCO_DEBUG', true);
 // --- END CONFIGURATION ---
+
+// --- CORS HANDLING ---
+add_action( 'rest_api_init', function() {
+    remove_filter( 'rest_pre_serve_request', 'rest_send_cors_headers' );
+    add_filter( 'rest_pre_serve_request', function( $value ) {
+        header( 'Access-Control-Allow-Origin: *' );
+        header( 'Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS' );
+        header( 'Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type' );
+        if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) {
+            status_header( 200 );
+            exit();
+        }
+        return $value;
+    });
+}, 15 );
 
 add_action('init', 'mco_exam_app_init');
 function mco_exam_app_init() {
@@ -196,7 +209,7 @@ function mco_get_questions_from_sheet_callback($request) {
     $csv_url = str_replace(['/edit?usp=sharing', '/edit#gid='], ['/export?format=csv', '/export?format=csv&gid='], $sheet_url);
     $response = wp_remote_get($csv_url, ['timeout' => 20]);
     if (is_wp_error($response)) { mco_debug_log('Sheet fetch failed: ' . $response->get_error_message()); return new WP_Error('fetch_failed', 'Could not get questions.', ['status' => 500]); }
-    $body = wp_remote_retrieve_body($response); $lines = explode("\\n", trim($body)); array_walk($lines, function(&$line) { $line = trim($line); });
+    $body = wp_remote_retrieve_body($response); $lines = explode("\n", trim($body)); array_walk($lines, function(&$line) { $line = trim($line); });
     $header = str_getcsv(array_shift($lines)); $questions = [];
     foreach ($lines as $line) {
         if (empty(trim($line))) continue; $row = str_getcsv($line);
