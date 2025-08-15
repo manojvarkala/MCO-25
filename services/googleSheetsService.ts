@@ -16,20 +16,25 @@ const apiFetch = async (endpoint: string, token: string, options: RequestInit = 
     const response = await fetch(`${WP_API_BASE}${endpoint}`, { ...options, headers });
     
     if (!response.ok) {
-        let errorMessage = `API Error: Status ${response.status}`;
+        let finalErrorMessage = `Server error: ${response.status} ${response.statusText}`;
         try {
             const errorData = await response.json();
+            // WP_Error objects have 'code' and 'message' properties.
             if (errorData && errorData.message) {
-                errorMessage = errorData.message;
+                finalErrorMessage = errorData.message;
             }
         } catch (e) {
-            errorMessage = `Server returned a non-JSON error (status ${response.status}). Check server logs.`;
+            // The response was not JSON, stick with the original HTTP error.
+            console.error("API response was not valid JSON.", e);
         }
-        
+        // Add specific advice for common, critical errors
         if (response.status === 403) {
-            errorMessage += " This is often caused by an invalid or expired token, or a misconfigured JWT Secret Key in your WordPress settings.";
+            finalErrorMessage += ' (This often means your login session is invalid or has expired. Please try logging out and back in.)';
         }
-        throw new Error(errorMessage);
+        if (response.status === 500) {
+            finalErrorMessage += ' (A server error occurred. Check the WordPress debug logs if you are an admin.)';
+        }
+        throw new Error(finalErrorMessage);
     }
     
     if (response.status === 204) return null; // Handle No Content responses

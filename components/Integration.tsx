@@ -7,7 +7,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           6.5.0
+ * Version:           6.6.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -111,7 +111,7 @@ function mco_exam_get_payload($user_id) {
 }
 
 function mco_base64url_encode($data) { return rtrim(strtr(base64_encode($data), '+/', '-_'), '='); }
-function mco_verify_exam_jwt($token) { $secret_key = defined('MCO_JWT_SECRET') ? MCO_JWT_SECRET : ''; if (empty($secret_key) || strlen($secret_key) < 32) return null; $parts = explode('.', $token); if (count($parts) !== 3) return null; list($header_b64, $payload_b64, $signature_b64) = $parts; $signature = base64_decode(strtr($signature_b64, '-_', '+/')); $expected_signature = hash_hmac('sha256', "$header_b64.$payload_b64", $secret_key, true); if (!hash_equals($expected_signature, $signature)) return null; $payload = json_decode(base64_decode(strtr($payload_b64, '-_', '+/')), true); return (isset($payload['exp']) && $payload['exp'] < time()) ? null : $payload; }
+function mco_verify_exam_jwt($token) { $secret_key = defined('MCO_JWT_SECRET') ? MCO_JWT_SECRET : ''; if (empty($secret_key) || strlen($secret_key) < 32) { mco_debug_log('JWT verification failed: Secret key not configured or insecure.'); return null; } $parts = explode('.', $token); if (count($parts) !== 3) { mco_debug_log('JWT verification failed: Invalid token structure.'); return null; } list($header_b64, $payload_b64, $signature_b64) = $parts; $signature = base64_decode(strtr($signature_b64, '-_', '+/')); $expected_signature = hash_hmac('sha256', "$header_b64.$payload_b64", $secret_key, true); if (!hash_equals($expected_signature, $signature)) { mco_debug_log('JWT verification failed: Signature mismatch.'); return null; } $payload = json_decode(base64_decode(strtr($payload_b64, '-_', '+/')), true); if (isset($payload['exp']) && $payload['exp'] < time()) { mco_debug_log('JWT verification failed: Token expired.'); return null; } return $payload; }
 function mco_generate_exam_jwt($user_id) { $secret_key = defined('MCO_JWT_SECRET') ? MCO_JWT_SECRET : ''; if (empty($secret_key) || strlen($secret_key) < 32 || strpos($secret_key, 'your-very-strong-secret-key') !== false) { mco_debug_log('JWT Secret is not configured or is too weak.'); return null; } if (!$payload = mco_exam_get_payload($user_id)) return null; $header_b64 = mco_base64url_encode(json_encode(['typ' => 'JWT', 'alg' => 'HS256'])); $payload_b64 = mco_base64url_encode(json_encode($payload)); $signature = hash_hmac('sha256', "$header_b64.$payload_b64", $secret_key, true); $signature_b64 = mco_base64url_encode($signature); return "$header_b64.$payload_b64.$signature_b64"; }
 
 function mco_redirect_after_purchase($order_id) { if (!$order_id || !($order = wc_get_order($order_id)) || !($user_id = $order->get_customer_id())) return; if ($user_id > 0 && $order->has_status(['completed', 'processing', 'on-hold'])) { if (function_exists('WC') && WC()->cart) WC()->cart->empty_cart(); if ($token = mco_generate_exam_jwt($user_id)) { wp_redirect(mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=/dashboard'); exit; } } }
@@ -146,10 +146,13 @@ function mco_get_questions_from_sheet_callback($request) {
     $response = wp_remote_get($csv_url, ['timeout' => 20]);
     if (is_wp_error($response)) {
         mco_debug_log('Sheet fetch failed: ' . $response->get_error_message());
-        return new WP_Error('fetch_failed', 'Could not get questions.', ['status' => 500]);
+        return new WP_Error('fetch_failed', 'Could not connect to Google Sheets to get questions.', ['status' => 500]);
     }
     $body = wp_remote_retrieve_body($response);
     $lines = preg_split('/\\r\\n?|\\n/', trim($body));
+    if (count($lines) <= 1) {
+        return new WP_Error('empty_sheet', 'The Google Sheet is empty or could not be read.', ['status' => 500]);
+    }
     array_shift($lines); // Remove header
     $questions = [];
 
@@ -160,16 +163,18 @@ function mco_get_questions_from_sheet_callback($request) {
 
         $question_text = trim($row[0]);
         $options_str = trim($row[1]);
-        $correct_answer_text = trim($row[2]);
+        $correct_answer_text_raw = trim($row[2]);
 
         $options = array_map('trim', explode('|', $options_str));
-        $options = array_filter($options, function($value) { return !empty($value); });
+        $options = array_filter($options, function($value) { return $value !== ''; }); // Remove empty options resulting from "||" or trailing "|"
         $options = array_values($options); // Re-index keys
 
-        $correct_answer_index = array_search($correct_answer_text, $options);
+        // Case-insensitive and space-insensitive search for correct answer
+        $lowercase_options = array_map('strtolower', $options);
+        $correct_answer_index = array_search(strtolower($correct_answer_text_raw), $lowercase_options);
         
         if (count($options) < 2 || $correct_answer_index === false) {
-            mco_debug_log('Skipping invalid row (check option count or correct answer text match): ' . $line);
+            mco_debug_log('Skipping invalid row. Question: "' . $question_text . '". Correct answer text "' . $correct_answer_text_raw . '" not found in options: ' . $options_str);
             continue;
         }
 
@@ -182,7 +187,7 @@ function mco_get_questions_from_sheet_callback($request) {
     }
 
     if (empty($questions)) {
-        return new WP_Error('parse_failed', 'No valid questions could be parsed from the source. Check formatting.', ['status' => 500]);
+        return new WP_Error('parse_failed', 'No valid questions could be parsed from the source. Please check the sheet formatting, especially the pipe separators and correct answer text.', ['status' => 500]);
     }
 
     shuffle($questions);
@@ -234,11 +239,12 @@ function mco_exam_user_details_shortcode() {
     $user = get_userdata($user_id);
     $user_full_name = trim($user->first_name . ' ' . $user->last_name) ?: $user->display_name;
     ob_start(); ?>
-    <div class="mco-user-details" style="font-family: sans-serif; border: 1px solid #ddd; padding: 20px; margin-bottom: 20px;">
+    <div class="mco-user-details" style="font-family: sans-serif; border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; background: #f9f9f9;">
         <h3 style="border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0;">User Details (for Debugging)</h3>
         <p><strong>User ID:</strong> <?php echo esc_html($user_id); ?></p>
         <p><strong>Full Name:</strong> <?php echo esc_html($user_full_name); ?></p>
         <p><strong>Email:</strong> <?php echo esc_html($user->user_email); ?></p>
+        
         <h3 style="border-bottom: 1px solid #eee; padding-bottom: 10px;">WooCommerce Purchases</h3>
         <?php if (class_exists('WooCommerce')) {
             $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert'];
@@ -255,6 +261,7 @@ function mco_exam_user_details_shortcode() {
             if (!empty($paid_exam_ids)) { echo '<ul>'; foreach ($paid_exam_ids as $sku) { echo '<li>' . esc_html($sku) . '</li>'; } echo '</ul>'; } 
             else { echo '<p>No completed exam purchases found.</p>'; }
         } else { echo '<p>WooCommerce is not active.</p>'; } ?>
+        
         <h3 style="border-bottom: 1px solid #eee; padding-bottom: 10px;">Synced Exam Results</h3>
         <?php
         $results = get_user_meta($user_id, 'mco_exam_results', true);
@@ -266,6 +273,34 @@ function mco_exam_user_details_shortcode() {
             }
             echo '</table>';
         } else { echo '<p>No exam results have been synced from the app yet.</p>'; }
+        ?>
+        
+        <h3 style="border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 20px;">Google Sheet Fetch Test</h3>
+        <?php
+        $test_sheet_url = 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing';
+        $csv_url = str_replace(['/edit?usp=sharing', '/edit#gid='], ['/export?format=csv', '/export?format=csv&gid='], $test_sheet_url);
+        $response = wp_remote_get($csv_url, ['timeout' => 20]);
+        if (is_wp_error($response)) {
+            echo '<p style="color: red;"><strong>Error:</strong> Failed to connect to Google Sheets. ' . esc_html($response->get_error_message()) . '</p>';
+        } else {
+            $body = wp_remote_retrieve_body($response);
+            $lines = preg_split('/\\r\\n?|\\n/', trim($body));
+            if(count($lines) > 1) {
+                array_shift($lines);
+                $random_line = $lines[array_rand($lines)];
+                $question_data = str_getcsv($random_line);
+                if(count($question_data) >= 3 && !empty(trim($question_data[0]))) {
+                    echo '<p><strong>Success!</strong> Fetched a random question from the source sheet:</p>';
+                    echo '<blockquote style="border-left: 3px solid #0891b2; padding-left: 15px; margin-left: 0; font-style: italic;">';
+                    echo '<strong>Q:</strong> ' . esc_html(trim($question_data[0]));
+                    echo '</blockquote>';
+                } else {
+                    echo '<p style="color: red;"><strong>Error:</strong> Could fetch sheet, but failed to parse a valid question row.</p>';
+                }
+            } else {
+                echo '<p style="color: red;"><strong>Error:</strong> Fetched sheet, but it appears to be empty or invalid.</p>';
+            }
+        }
         ?>
     </div>
     <?php return ob_get_clean();
@@ -338,7 +373,7 @@ function mco_exam_login_url($login_url, $redirect) { if (strpos($_SERVER['REQUES
                  <p>Once activated, the plugin provides two useful shortcodes:</p>
                 <ul>
                     <li><code>[mco_exam_login]</code>: Creates the secure login form that enables Single Sign-On into the exam application. Create a page called "Exam Login" (with slug <code>exam-login</code>) and place this shortcode on it.</li>
-                    <li><code>[exam_user_details]</code>: This is a new diagnostic shortcode. Place it on any page to display the currently logged-in user's details, including their purchased exams and synced test results. It's useful for verifying that the integration is working correctly.</li>
+                    <li><code>[exam_user_details]</code>: This is a new diagnostic shortcode. Place it on any page to display the currently logged-in user's details, including their purchased exams, synced test results, and a live test of the Google Sheet fetching capability. It's useful for verifying that the integration is working correctly.</li>
                 </ul>
 
                 <div className="mt-8">
