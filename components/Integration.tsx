@@ -10,7 +10,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           7.5.0
+ * Version:           7.5.1
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -121,7 +121,12 @@ function mco_exam_api_permission_check($request) {
 }
 
 function mco_ensure_utf8_recursive($data) {
-    if (is_string($data)) return mb_convert_encoding($data, 'UTF-8', 'UTF-8');
+    if (is_string($data)) {
+        if (!mb_check_encoding($data, 'UTF-8')) {
+            return mb_convert_encoding($data, 'UTF-8', 'auto');
+        }
+        return $data;
+    }
     if (!is_array($data)) return $data;
     $ret = [];
     foreach ($data as $i => $d) $ret[$i] = mco_ensure_utf8_recursive($d);
@@ -140,7 +145,7 @@ function mco_get_questions_from_sheet_callback($request) {
     $response = wp_remote_get($csv_url, ['timeout' => 20]);
     if (is_wp_error($response)) { mco_debug_log('Sheet fetch failed: ' . $response->get_error_message()); return new WP_Error('fetch_failed', 'Could not connect to Google Sheets to get questions.', ['status' => 500]); }
     $body = wp_remote_retrieve_body($response);
-    if (substr($body, 0, 3) == "\\xEF\\xBB\\xBF") $body = substr($body, 3);
+    if (substr($body, 0, 3) === "\\xEF\\xBB\\xBF") $body = substr($body, 3);
     $lines = preg_split('/\\r\\n?|\\n/', trim($body));
     if (count($lines) <= 1) return new WP_Error('empty_sheet', 'The Google Sheet is empty or could not be read.', ['status' => 500]);
     array_shift($lines); $questions = []; $skipped_rows = 0; $total_rows = count($lines);
@@ -177,7 +182,7 @@ function mco_get_questions_from_sheet_callback($request) {
     if (empty($questions)) { $error_message = 'No valid questions could be parsed from the source. Processed ' . $total_rows . ' rows and skipped all of them. Please check your sheet formatting (each option in its own column) and enable MCO_DEBUG in wp-config.php to see detailed logs.'; return new WP_Error('parse_failed', $error_message, ['status' => 500]); }
     shuffle($questions); $selected_questions = array_slice($questions, 0, $count);
     $final_questions = []; foreach($selected_questions as $index => $q) { $q['id'] = $index + 1; $final_questions[] = $q; }
-    return new WP_REST_Response($final_questions, 200);
+    return new WP_REST_Response(mco_ensure_utf8_recursive($final_questions), 200);
 }
 
 // --- NEW DEBUG ENDPOINT ---
