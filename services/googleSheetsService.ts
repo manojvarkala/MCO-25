@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { GoogleGenAI } from "@google/genai";
 
 // --- API Client for WordPress Backend ---
-const WP_API_BASE = 'https://www.coding-online.net/wp-json/mco-app/v1';
+const WP_API_BASE = '/api';
 
 const apiFetch = async (endpoint: string, token: string, options: RequestInit = {}) => {
     const headers: HeadersInit = {

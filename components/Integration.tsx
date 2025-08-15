@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import toast from 'react-hot-toast';
 import { Copy } from 'lucide-react';
@@ -74,8 +75,8 @@ function mco_exam_get_payload($user_id) {
     if (class_exists('WooCommerce')) {
         $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert'];
         $exam_prices = get_transient('mco_exam_prices');
-        if (false === $exam_prices) {
-            mco_debug_log('Exam prices cache miss. Fetching from DB.');
+        if (false === $exam_prices || !is_object($exam_prices) || empty(get_object_vars($exam_prices))) {
+            mco_debug_log('Exam prices cache miss or is invalid. Re-fetching from DB.');
             $exam_prices = new stdClass();
             foreach ($all_exam_skus as $sku) {
                 if (($product_id = wc_get_product_id_by_sku($sku)) && ($product = wc_get_product($product_id))) {
