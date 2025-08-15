@@ -1,4 +1,4 @@
-import type { Question, TestResult, CertificateData, UserAnswer, User, Exam } from '@/types.ts';
+import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData } from '@/types.ts';
 import toast from 'react-hot-toast';
 import { GoogleGenAI } from "@google/genai";
 
@@ -91,7 +91,7 @@ export const googleSheetsService = {
     },
 
     // --- DIRECT API CALLS (NOT CACHED LOCALLY) ---
-    getCertificateData: async (token: string, testId: string): Promise<CertificateData | null> => {
+    getCertificateData: async (token: string, testId: string): Promise<ApiCertificateData | null> => {
         return apiFetch(`/certificate-data/${testId}`, token);
     },
     

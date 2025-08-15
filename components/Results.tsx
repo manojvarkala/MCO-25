@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook, AnswerReview } from '../types.ts';
@@ -11,8 +11,8 @@ import { Check, X, FileDown, BookUp, ShieldCheck, Sparkles } from 'lucide-react'
 import BookCover from './BookCover.tsx';
 
 const Results: React.FC = () => {
-    const { testId } = useParams<{ testId: string }>();
-    const navigate = useNavigate();
+    const { testId } = ReactRouterDOM.useParams<{ testId: string }>();
+    const navigate = ReactRouterDOM.useNavigate();
     const { user } = useAuth();
     const { activeOrg } = useAppContext();
     

@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LogIn, UserPlus } from 'lucide-react';
 import LogoSpinner from './LogoSpinner.tsx';
 
 const LandingPage: React.FC = () => {
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
     const { user } = useAuth();
     const { activeOrg, isLoading } = useAppContext();
     

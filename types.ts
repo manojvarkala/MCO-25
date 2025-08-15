@@ -110,6 +110,15 @@ export interface Organization {
     suggestedBooks: RecommendedBook[];
 }
 
+// The structure returned from the /certificate-data/{testId} endpoint
+export interface ApiCertificateData {
+    certificateNumber: string;
+    candidateName: string;
+    finalScore: number;
+    date: string;
+    examId: string;
+}
+
 export interface CertificateData {
     certificateNumber: string;
     candidateName: string;

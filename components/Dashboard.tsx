@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult } from '../types.ts';
@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
 
 const Dashboard: React.FC = () => {
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
     const { user, paidExamIds, isSubscribed, updateUserName, token } = useAuth();
     const { activeOrg } = useAppContext();
     const [results, setResults] = useState<TestResult[] | null>(null);

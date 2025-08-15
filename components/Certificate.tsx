@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/context/AuthContext.tsx';
 import { googleSheetsService } from '@/services/googleSheetsService.ts';
@@ -11,6 +11,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { signatureBase64 } from '@/assets/signature.ts';
 import { logoBase64 } from '@/assets/logo.ts';
+import { useAppContext } from '@/context/AppContext.tsx';
 
 const Watermark: React.FC<{ text: string }> = ({ text }) => (
     <div className="absolute inset-0 grid grid-cols-3 grid-rows-4 gap-8 pointer-events-none overflow-hidden p-4">
@@ -25,29 +26,72 @@ const Watermark: React.FC<{ text: string }> = ({ text }) => (
 );
 
 const Certificate: React.FC = () => {
-    const { testId = 'sample' } = useParams<{ testId?: string }>();
-    const navigate = useNavigate();
+    const { testId = 'sample' } = ReactRouterDOM.useParams<{ testId?: string }>();
+    const navigate = ReactRouterDOM.useNavigate();
     const { user, token } = useAuth();
+    const { activeOrg } = useAppContext();
     const [certData, setCertData] = useState<CertificateData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isDownloading, setIsDownloading] = useState(false);
     const certificateRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const fetchCertificateData = async () => {
-            if (!user || !token) {
-                toast.error("Invalid data. Cannot generate certificate.");
+        // Handling the sample certificate locally without an API call.
+        if (testId === 'sample') {
+            if (!user || !activeOrg) {
+                if (!activeOrg) setIsLoading(true); // Still waiting for context
+                return;
+            }
+
+            const sampleTemplate = activeOrg.certificateTemplates.find(t => t.id === 'cert-practice-1');
+            if (!sampleTemplate) {
+                toast.error("Sample certificate template not found.");
                 navigate('/dashboard');
+                return;
+            }
+
+            const sampleCertData: CertificateData = {
+                certificateNumber: 'SAMPLE-123456',
+                candidateName: user.name || 'Sample Candidate',
+                finalScore: 95,
+                date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                totalQuestions: 100,
+                organization: activeOrg,
+                template: sampleTemplate,
+            };
+            setCertData(sampleCertData);
+            setIsLoading(false);
+            return; // End execution for sample
+        }
+
+        // Fetch data for a real certificate
+        const fetchCertificateData = async () => {
+            if (!user || !token || !activeOrg) {
+                if (!activeOrg) setIsLoading(true); // Still loading
                 return;
             }
             
             setIsLoading(true);
             try {
-                const data = await googleSheetsService.getCertificateData(token, testId);
-                if (data) {
-                    setCertData(data);
+                const partialData = await googleSheetsService.getCertificateData(token, testId);
+                if (partialData && partialData.examId) {
+                    const exam = activeOrg.exams.find(e => e.id === partialData.examId);
+                    const template = activeOrg.certificateTemplates.find(t => t.id === exam?.certificateTemplateId);
+
+                    if (exam && template) {
+                        const fullCertData: CertificateData = {
+                            ...partialData,
+                            organization: activeOrg,
+                            template: template,
+                            totalQuestions: exam.numberOfQuestions
+                        };
+                        setCertData(fullCertData);
+                    } else {
+                        toast.error("Certificate configuration missing in the app.");
+                        navigate('/dashboard');
+                    }
                 } else {
-                    toast.error("Certificate not earned for this test.");
+                    toast.error("Certificate not earned or result not found.");
                     navigate('/dashboard');
                 }
             } catch (error: any) {
@@ -59,7 +103,7 @@ const Certificate: React.FC = () => {
         };
 
         fetchCertificateData();
-    }, [testId, user, token, navigate]);
+    }, [testId, user, token, navigate, activeOrg]);
 
     const handleDownload = async () => {
         if (!certificateRef.current) return;
@@ -120,7 +164,7 @@ const Certificate: React.FC = () => {
             </div>
             
             <div ref={certificateRef} className="w-full aspect-[1.414/1] bg-white p-4 font-serif-display shadow-lg border-8 border-teal-900 relative overflow-hidden">
-                 {testId === 'sample' && <Watermark text="This message is for a preview certificate" />}
+                 {testId === 'sample' && <Watermark text="SAMPLE CERTIFICATE" />}
                  {testId !== 'sample' && <Watermark text={organization.name} />}
                 <div className="w-full h-full border-2 border-teal-700 flex flex-col p-6">
                     
