@@ -24,55 +24,48 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const { examPrices } = useAuth();
 
   useEffect(() => {
-    const initializeApp = async () => {
+    const initializeApp = () => {
         try {
-            // Data is now imported locally instead of fetched for reliability.
-            const initialOrgsFromDataFile = JSON.parse(JSON.stringify(appData)); // Deep copy to avoid mutation issues
+            const baseOrgs = JSON.parse(JSON.stringify(appData));
             
             const bookMap = new Map<string, RecommendedBook>();
-            initialOrgsFromDataFile.forEach((org: Organization) => {
+            baseOrgs.forEach((org: Organization) => {
                 if (org.suggestedBooks) {
                     org.suggestedBooks.forEach(book => {
-                        if (!bookMap.has(book.id)) {
-                            bookMap.set(book.id, book);
-                        }
+                        if (!bookMap.has(book.id)) bookMap.set(book.id, book);
                     });
                 }
             });
 
-            const processOrgs = (orgs: Organization[]): Organization[] => {
-                return orgs.map(org => {
-                    const processedExams = org.exams.map((exam: any): Exam => {
-                        let finalExam: Exam = { ...exam };
-
-                        if (examPrices && exam.productSku) {
-                            const syncedPriceData = examPrices[exam.productSku];
-                            if (syncedPriceData) {
-                                finalExam.price = syncedPriceData.price;
-                                finalExam.regularPrice = syncedPriceData.regularPrice;
-                            }
-                        }
-
-                        if (exam.recommendedBookId && bookMap.has(exam.recommendedBookId)) {
-                            finalExam.recommendedBook = bookMap.get(exam.recommendedBookId);
-                        }
-                        return finalExam;
-                    });
+            const processedOrgs = baseOrgs.map((org: Organization) => {
+                const processedExams = org.exams.map((exam: Exam): Exam => {
+                    const priceData = examPrices && exam.productSku ? examPrices[exam.productSku] : null;
+                    const recommendedBook = exam.recommendedBookId ? bookMap.get(exam.recommendedBookId) : undefined;
                     
-                    return { ...org, exams: processedExams };
+                    return {
+                        ...exam,
+                        ...(priceData && { price: priceData.price, regularPrice: priceData.regularPrice }),
+                        ...(recommendedBook && { recommendedBook }),
+                    };
                 });
-            };
+                return { ...org, exams: processedExams };
+            });
             
-            const finalOrgs = processOrgs(initialOrgsFromDataFile);
-            setOrganizations(finalOrgs);
+            setOrganizations(processedOrgs);
 
-            if (finalOrgs.length > 0) {
-                const currentOrg = finalOrgs[0];
-                setActiveOrg(currentOrg);
-                if (currentOrg.suggestedBooks) {
-                    setSuggestedBooks(currentOrg.suggestedBooks);
-                }
+            const currentActiveOrgId = activeOrg?.id;
+            const newActiveOrg = currentActiveOrgId
+              ? processedOrgs.find(o => o.id === currentActiveOrgId)
+              : (processedOrgs[0] || null);
+            
+            if (newActiveOrg) {
+              setActiveOrg(newActiveOrg);
+              setSuggestedBooks(newActiveOrg.suggestedBooks || []);
+            } else {
+              setActiveOrg(null);
+              setSuggestedBooks([]);
             }
+
         } catch (error) {
             console.error("Failed to initialize app config from local data:", error);
             toast.error("Could not load application configuration.");

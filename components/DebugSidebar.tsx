@@ -14,6 +14,7 @@ const DebugSidebar: React.FC = () => {
 
     useEffect(() => {
         if (!isOpen || !token) {
+            setDebugData(null);
             return;
         }
 
@@ -22,7 +23,7 @@ const DebugSidebar: React.FC = () => {
         const fetchDebugData = async () => {
             setIsLoading(true);
             setError(null);
-            setDebugData(null); // Clear previous data
+            setDebugData(null);
             try {
                 const data = await googleSheetsService.getDebugDetails(token);
                 if (!isCancelled) {
@@ -43,6 +44,8 @@ const DebugSidebar: React.FC = () => {
 
         return () => {
             isCancelled = true;
+            setIsLoading(false);
+            setError(null);
         };
     }, [isOpen, token]);
 
