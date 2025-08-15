@@ -115,37 +115,43 @@ const Dashboard: React.FC = () => {
     };
 
 
-    const processedPurchasedExams = useMemo(() => {
+    const examCategories = useMemo(() => {
         if (!activeOrg || !results) return [];
-        
-        return activeOrg.exams
-            .filter(e => e.productSku && paidExamIds.includes(e.productSku) && !e.isPractice)
-            .map(exam => {
-                const examResults = results.filter(r => r.examId === exam.id);
+
+        return activeOrg.examProductCategories.map(category => {
+            const practiceExam = activeOrg.exams.find(e => e.id === category.practiceExamId);
+            const certExam = activeOrg.exams.find(e => e.id === category.certificationExamId);
+
+            if (!practiceExam || !certExam) return null;
+
+            const isPurchased = paidExamIds.includes(certExam.productSku);
+            let certStatusData = null;
+
+            if (isPurchased) {
+                const examResults = results.filter(r => r.examId === certExam.id);
                 const attemptsMade = examResults.length;
-                const hasPassed = examResults.some(r => r.score >= exam.passScore);
+                const hasPassed = examResults.some(r => r.score >= certExam.passScore);
                 const bestScore = examResults.length > 0 ? Math.max(...examResults.map(r => r.score)) : null;
-    
+
                 let status: 'passed' | 'attempts_exceeded' | 'available' = 'available';
                 if (hasPassed) {
                     status = 'passed';
                 } else if (attemptsMade >= 3) {
                     status = 'attempts_exceeded';
                 }
-    
-                return {
-                    ...exam,
-                    attemptsMade,
-                    status,
-                    bestScore
-                };
-            });
-    }, [activeOrg, paidExamIds, results]);
+                
+                certStatusData = { attemptsMade, hasPassed, bestScore, status };
+            }
 
-    const availableToPurchaseExams = useMemo(() => {
-        if (!activeOrg) return [];
-        return activeOrg.exams.filter(e => !e.isPractice && e.productSku && !paidExamIds.includes(e.productSku));
-    }, [activeOrg, paidExamIds]);
+            return {
+                ...category,
+                practiceExam,
+                certExam,
+                isPurchased,
+                certStatusData
+            };
+        }).filter(Boolean); // Filter out nulls if exams weren't found
+    }, [activeOrg, paidExamIds, results]);
 
 
     if (isLoading || !activeOrg) {
@@ -153,9 +159,7 @@ const Dashboard: React.FC = () => {
     }
 
     const getExamName = (examId: string) => activeOrg.exams.find(e => e.id === examId)?.name || 'Unknown Exam';
-    const practiceExams = activeOrg.exams.filter(e => e.isPractice);
     
-
     return (
         <div>
             <div className="flex justify-between items-start mb-6 flex-wrap gap-4">
@@ -212,126 +216,100 @@ const Dashboard: React.FC = () => {
                         </a>
                     </div>
 
-                    {/* My Certification Exams */}
-                    <div className="bg-white p-6 rounded-xl shadow-md">
-                        <h2 className="text-xl font-bold text-slate-800 flex items-center mb-4"><BookCopy className="mr-3 text-cyan-500" /> My Certification Exams</h2>
-                        <div className="space-y-3">
-                            {processedPurchasedExams.length > 0 ? processedPurchasedExams.map(exam => {
-                                const canTakeTest = exam.status === 'available';
-                                
-                                let buttonContent: React.ReactNode;
-                                if (exam.status === 'passed') {
-                                    buttonContent = <><CheckCircle size={16} className="mr-2"/> Passed</>;
-                                } else if (exam.status === 'attempts_exceeded') {
-                                    buttonContent = 'Attempts Exceeded';
-                                } else if (exam.attemptsMade > 0) {
-                                    buttonContent = 'Retake Exam';
-                                } else {
-                                    buttonContent = 'Start Exam';
-                                }
+                    {/* My Exam Programs */}
+                    <div className="space-y-6">
+                        <h2 className="text-2xl font-bold text-slate-800 flex items-center"><BookCopy className="mr-3 text-cyan-500" /> My Exam Programs</h2>
+                        {examCategories.map(category => {
+                             if (!category) return null;
+                             const { practiceExam, certExam, isPurchased, certStatusData } = category;
+                             
+                             let certButtonContent: React.ReactNode;
+                             let canTakeCertTest = false;
 
-                                return (
-                                     <div key={exam.id} className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                        <div className="flex-grow">
-                                            <h3 className="font-bold text-slate-800">{exam.name}</h3>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <p className="text-sm text-slate-500">{exam.numberOfQuestions} questions</p>
-                                                {exam.status === 'passed' && (
-                                                    <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full flex items-center gap-1"><CheckCircle size={12}/>Passed</span>
-                                                )}
-                                                {exam.status === 'attempts_exceeded' && (
-                                                    <span className="text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">3/3 Attempts Used</span>
-                                                )}
-                                                {exam.status === 'available' && exam.attemptsMade > 0 && (
-                                                    <span className="text-xs font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded-full">{exam.attemptsMade}/3 Attempts</span>
-                                                )}
+                             if (isPurchased && certStatusData) {
+                                canTakeCertTest = certStatusData.status === 'available';
+                                if (certStatusData.status === 'passed') {
+                                    certButtonContent = <><CheckCircle size={16} className="mr-2"/> Passed</>;
+                                } else if (certStatusData.status === 'attempts_exceeded') {
+                                    certButtonContent = 'Attempts Exceeded';
+                                } else if (certStatusData.attemptsMade > 0) {
+                                    certButtonContent = 'Retake Exam';
+                                } else {
+                                    certButtonContent = 'Start Exam';
+                                }
+                             }
+
+                            return (
+                                <div key={category.id} className="bg-white p-6 rounded-xl shadow-md border border-slate-200">
+                                    <h3 className="text-xl font-bold text-slate-800">{certExam.name}</h3>
+                                    <p className="text-sm text-slate-500 mt-1 mb-4">{certExam.description}</p>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 border-t border-slate-200 pt-4">
+                                        {/* Practice Column */}
+                                        <div className="flex flex-col justify-between p-4 bg-slate-50 rounded-lg">
+                                            <div>
+                                                <h4 className="font-semibold text-slate-700 flex items-center gap-2"><FlaskConical size={16} /> Practice Test</h4>
+                                                <p className="text-xs text-slate-500 mt-1">{practiceExam.numberOfQuestions} questions, {practiceExam.durationMinutes} mins</p>
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                                            {exam.bestScore !== null && (
-                                                <div className="text-center">
-                                                    <p className="text-xs text-slate-500">Best</p>
-                                                    <p className="font-bold text-lg text-cyan-600">{exam.bestScore}%</p>
-                                                </div>
-                                            )}
                                             <button
-                                                onClick={() => navigate(`/test/${exam.id}`)}
-                                                disabled={!canTakeTest}
-                                                className="flex-grow flex items-center justify-center bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700 transition disabled:bg-slate-300 disabled:cursor-not-allowed"
+                                                onClick={() => navigate(`/test/${practiceExam.id}`)}
+                                                className="mt-3 w-full bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700 transition flex items-center justify-center"
                                             >
-                                                {buttonContent}
+                                                <Zap size={16} className="mr-2" />
+                                                Start Practice
                                             </button>
                                         </div>
-                                    </div>
-                                )
-                            }) : (
-                                <div className="text-center py-6 text-slate-500">
-                                    <p>You haven't purchased any certification exams yet. See available exams below.</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                                        
+                                        {/* Certification Column */}
+                                        <div className="flex flex-col justify-between p-4 bg-slate-50 rounded-lg">
+                                            <div>
+                                                <h4 className="font-semibold text-slate-700 flex items-center gap-2"><Trophy size={16} /> Certification Exam</h4>
+                                                <p className="text-xs text-slate-500 mt-1">{certExam.numberOfQuestions} questions, {certExam.durationMinutes} mins</p>
+                                            </div>
 
-                    {/* Available Certification Exams */}
-                    <div className="bg-white p-6 rounded-xl shadow-md">
-                        <h2 className="text-xl font-bold text-slate-800 flex items-center mb-4"><ShoppingCart className="mr-3 text-cyan-500" /> Available Exams</h2>
-                        <div className="space-y-3">
-                            {availableToPurchaseExams.length > 0 ? availableToPurchaseExams.map(exam => (
-                                <div key={exam.id} className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                    <div className="flex-grow">
-                                        <h3 className="font-bold text-slate-700">{exam.name}</h3>
-                                        <p className="text-sm text-slate-500">{exam.description}</p>
-                                    </div>
-                                    <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
-                                        <div className="text-right">
-                                            {exam.regularPrice && exam.regularPrice > exam.price ? (
-                                                <>
-                                                    <span className="text-2xl font-bold text-green-600">${exam.price.toFixed(2)}</span>
-                                                    <span className="text-md text-slate-500 line-through ml-2">${exam.regularPrice.toFixed(2)}</span>
-                                                </>
+                                            {isPurchased && certStatusData ? (
+                                                <div className="mt-3">
+                                                    <div className="flex justify-between items-center text-xs text-slate-600 mb-2">
+                                                        <span>Best: <span className="font-bold">{certStatusData.bestScore ?? 'N/A'}%</span></span>
+                                                        <span>Attempts: <span className="font-bold">{certStatusData.attemptsMade}/3</span></span>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => navigate(`/test/${certExam.id}`)}
+                                                        disabled={!canTakeCertTest}
+                                                        className="w-full flex items-center justify-center bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700 transition disabled:bg-slate-300 disabled:cursor-not-allowed"
+                                                    >
+                                                        {certButtonContent}
+                                                    </button>
+                                                </div>
                                             ) : (
-                                                <span className="text-2xl font-bold text-cyan-600">${exam.price.toFixed(2)}</span>
+                                                <div className="mt-3">
+                                                    <div className="text-center mb-2">
+                                                        {certExam.regularPrice && certExam.regularPrice > certExam.price ? (
+                                                            <>
+                                                                <span className="text-2xl font-bold text-green-600">${certExam.price.toFixed(2)}</span>
+                                                                <span className="text-md text-slate-500 line-through ml-2">${certExam.regularPrice.toFixed(2)}</span>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-2xl font-bold text-cyan-600">${certExam.price.toFixed(2)}</span>
+                                                        )}
+                                                    </div>
+                                                    <a
+                                                        href={certExam.productSlug ? `#/checkout/${certExam.productSlug}` : browseExamsUrl}
+                                                        target={certExam.productSlug ? '_self' : '_blank'}
+                                                        rel="noopener noreferrer"
+                                                        className="w-full flex items-center justify-center bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 transition"
+                                                    >
+                                                        Buy Now
+                                                    </a>
+                                                </div>
                                             )}
                                         </div>
-                                        <a
-                                            href={exam.productSlug ? `#/checkout/${exam.productSlug}` : browseExamsUrl}
-                                            target={exam.productSlug ? '_self' : '_blank'}
-                                            rel="noopener noreferrer"
-                                            className="w-full sm:w-auto flex-grow flex items-center justify-center bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700 transition"
-                                        >
-                                            Buy Now
-                                        </a>
                                     </div>
                                 </div>
-                            )) : (
-                                <div className="text-center py-6 text-slate-500">
-                                    <p>No exams available for purchase at this time.</p>
-                                </div>
-                            )}
-                        </div>
+                            );
+                        })}
                     </div>
-
-                    {/* Practice Exams Section */}
-                    <div className="bg-white p-6 rounded-xl shadow-md">
-                        <h2 className="text-xl font-bold text-slate-800 flex items-center mb-4"><FlaskConical className="mr-3 text-cyan-500" /> Free Practice Exams</h2>
-                        <div className="space-y-3">
-                            {practiceExams.map(exam => (
-                                <div key={exam.id} className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex justify-between items-center">
-                                    <div>
-                                        <h3 className="font-bold text-slate-700">{exam.name}</h3>
-                                        <p className="text-sm text-slate-500">{exam.numberOfQuestions} questions</p>
-                                    </div>
-                                    <button
-                                        onClick={() => navigate(`/test/${exam.id}`)}
-                                        className="bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700 transition flex items-center"
-                                    >
-                                        <Zap size={16} className="mr-2" />
-                                        Start Practice
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                   
 
                     {/* History Section */}
                     <div className="bg-white p-6 rounded-xl shadow-md">
