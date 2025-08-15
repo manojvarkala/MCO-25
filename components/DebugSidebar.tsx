@@ -13,22 +13,37 @@ const DebugSidebar: React.FC = () => {
     const [debugData, setDebugData] = useState<DebugData | null>(null);
 
     useEffect(() => {
-        if (isOpen && token) {
-            const fetchDebugData = async () => {
-                setIsLoading(true);
-                setError(null);
-                setDebugData(null); // Clear previous data
-                try {
-                    const data = await googleSheetsService.getDebugDetails(token);
+        if (!isOpen || !token) {
+            return;
+        }
+
+        let isCancelled = false;
+
+        const fetchDebugData = async () => {
+            setIsLoading(true);
+            setError(null);
+            setDebugData(null); // Clear previous data
+            try {
+                const data = await googleSheetsService.getDebugDetails(token);
+                if (!isCancelled) {
                     setDebugData(data);
-                } catch (err: any) {
+                }
+            } catch (err: any) {
+                if (!isCancelled) {
                     setError(err.message || 'Failed to fetch debug data.');
-                } finally {
+                }
+            } finally {
+                if (!isCancelled) {
                     setIsLoading(false);
                 }
-            };
-            fetchDebugData();
-        }
+            }
+        };
+
+        fetchDebugData();
+
+        return () => {
+            isCancelled = true;
+        };
     }, [isOpen, token]);
 
     const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
