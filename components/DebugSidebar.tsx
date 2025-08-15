@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { DebugData } from '../types.ts';
-import { Bug, X, Server } from 'lucide-react';
+import { Bug, X, Server, User, ShoppingCart, FileText, CheckCircle, AlertTriangle } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 const DebugSidebar: React.FC = () => {
@@ -13,7 +13,7 @@ const DebugSidebar: React.FC = () => {
     const [debugData, setDebugData] = useState<DebugData | null>(null);
 
     useEffect(() => {
-        if (isOpen && !debugData && token) {
+        if (isOpen && token) {
             const fetchDebugData = async () => {
                 setIsLoading(true);
                 setError(null);
@@ -28,7 +28,16 @@ const DebugSidebar: React.FC = () => {
             };
             fetchDebugData();
         }
-    }, [isOpen, debugData, token]);
+    }, [isOpen, token]);
+
+    const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
+        <div className="mb-4">
+            <h3 className="text-lg font-semibold text-cyan-300 mb-2 flex items-center gap-2 border-b border-slate-700 pb-1">
+                {icon} {title}
+            </h3>
+            <div className="text-slate-300 text-sm">{children}</div>
+        </div>
+    );
 
     return (
         <>
@@ -61,9 +70,48 @@ const DebugSidebar: React.FC = () => {
                         )}
                         {error && <p className="text-red-400">Error: {error}</p>}
                         {debugData && (
-                            <pre className="whitespace-pre-wrap break-words">
-                                {JSON.stringify(debugData, null, 2)}
-                            </pre>
+                            <div>
+                                <Section title="User Details" icon={<User size={16} />}>
+                                    <p><strong>ID:</strong> {debugData.user.id}</p>
+                                    <p><strong>Name:</strong> {debugData.user.name}</p>
+                                    <p><strong>Email:</strong> {debugData.user.email}</p>
+                                </Section>
+
+                                <Section title="Purchased Exam SKUs" icon={<ShoppingCart size={16} />}>
+                                    {debugData.purchases.length > 0 ? (
+                                        <ul className="list-disc pl-5">
+                                            {debugData.purchases.map(sku => <li key={sku}>{sku}</li>)}
+                                        </ul>
+                                    ) : <p>No purchases found.</p>}
+                                </Section>
+                                
+                                <Section title="Synced Exam Results" icon={<FileText size={16} />}>
+                                    {debugData.results.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {debugData.results.map(result => (
+                                                <div key={result.testId} className="bg-slate-800 p-2 rounded">
+                                                    <p><strong>Test ID:</strong> {result.testId}</p>
+                                                    <p><strong>Exam ID:</strong> {result.examId}</p>
+                                                    <p><strong>Score:</strong> {result.score}%</p>
+                                                    <p><strong>Date:</strong> {new Date(result.timestamp).toLocaleString()}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : <p>No results synced.</p>}
+                                </Section>
+
+                                <Section title="Google Sheet Connectivity" icon={debugData.sheetTest.success ? <CheckCircle size={16} className="text-green-400" /> : <AlertTriangle size={16} className="text-red-400" />}>
+                                    <p className={debugData.sheetTest.success ? 'text-green-400' : 'text-red-400'}>
+                                        <strong>Status:</strong> {debugData.sheetTest.success ? 'Success' : 'Failure'}
+                                    </p>
+                                    <p><strong>Message:</strong> {debugData.sheetTest.message}</p>
+                                    {debugData.sheetTest.data && (
+                                        <pre className="text-xs bg-slate-800 p-2 rounded mt-1 whitespace-pre-wrap break-all">
+                                            {JSON.stringify(debugData.sheetTest.data, null, 2)}
+                                        </pre>
+                                    )}
+                                </Section>
+                            </div>
                         )}
                     </div>
                 </div>
