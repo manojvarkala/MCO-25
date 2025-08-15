@@ -31,7 +31,7 @@ const Dashboard: React.FC = () => {
 
 
     useEffect(() => {
-        if (!user || !activeOrg) {
+        if (!user || !activeOrg || !token) {
             if (activeOrg) setIsLoading(false);
             return;
         };
@@ -39,6 +39,8 @@ const Dashboard: React.FC = () => {
             setIsLoading(true);
             setHistoryError(null);
             try {
+                // Always sync results from server on dashboard load for consistency
+                await googleSheetsService.syncResults(token, user);
                 const userResults = await googleSheetsService.getTestResultsForUser(user);
                 setResults(userResults);
                 
@@ -70,7 +72,7 @@ const Dashboard: React.FC = () => {
             }
         };
         fetchResults();
-    }, [user, activeOrg]);
+    }, [user, activeOrg, token]);
 
     const handleNameSave = async () => {
         if (!name.trim()) {
