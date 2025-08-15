@@ -7,7 +7,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           6.6.0
+ * Version:           7.0.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -18,7 +18,7 @@ define('MCO_LOGIN_SLUG', 'exam-login');
 define('MCO_EXAM_APP_URL', 'https://exams.coding-online.net/');
 define('MCO_EXAM_APP_TEST_URL', 'https://mco-25.vercel.app/');
 // define('MCO_JWT_SECRET', 'your-very-strong-secret-key-that-is-long-and-random');
-// define('MCO_DEBUG', true);
+// define('MCO_DEBUG', true); // <--- UNCOMMENT THIS TO SEE DETAILED LOGS FOR PARSING ERRORS
 // --- END CONFIGURATION ---
 
 // --- CORS HANDLING ---
@@ -149,32 +149,74 @@ function mco_get_questions_from_sheet_callback($request) {
         return new WP_Error('fetch_failed', 'Could not connect to Google Sheets to get questions.', ['status' => 500]);
     }
     $body = wp_remote_retrieve_body($response);
+    if (substr($body, 0, 3) == "\\xEF\\xBB\\xBF") $body = substr($body, 3);
+
     $lines = preg_split('/\\r\\n?|\\n/', trim($body));
     if (count($lines) <= 1) {
         return new WP_Error('empty_sheet', 'The Google Sheet is empty or could not be read.', ['status' => 500]);
     }
-    array_shift($lines); // Remove header
+    array_shift($lines);
     $questions = [];
+    $skipped_rows = 0;
+    $total_rows = count($lines);
 
-    foreach ($lines as $line) {
-        if (empty(trim($line))) continue;
-        $row = str_getcsv($line);
-        if (count($row) < 3 || empty(trim($row[0]))) continue;
+    foreach ($lines as $line_num => $line) {
+        if (empty(trim($line))) {
+            $skipped_rows++;
+            continue;
+        }
+        $row_raw = str_getcsv($line);
 
-        $question_text = trim($row[0]);
-        $options_str = trim($row[1]);
-        $correct_answer_text_raw = trim($row[2]);
+        if (count($row_raw) < 3 || empty(trim($row_raw[0])) || empty(trim($row_raw[1])) || empty(trim($row_raw[2]))) {
+            $skipped_rows++;
+            mco_debug_log("Skipping row #" . ($line_num + 2) . ": Row must have at least 3 columns (Question, Options, Answer). Content: [" . implode(' | ', $row_raw) . "]");
+            continue;
+        }
 
-        $options = array_map('trim', explode('|', $options_str));
-        $options = array_filter($options, function($value) { return $value !== ''; }); // Remove empty options resulting from "||" or trailing "|"
-        $options = array_values($options); // Re-index keys
+        $question_text = trim($row_raw[0]);
+        $options_str = trim($row_raw[1]);
+        $answer_column_value = trim($row_raw[2]);
+        $options = [];
 
-        // Case-insensitive and space-insensitive search for correct answer
-        $lowercase_options = array_map('strtolower', $options);
-        $correct_answer_index = array_search(strtolower($correct_answer_text_raw), $lowercase_options);
+        if (strpos($options_str, '|') !== false) {
+            $options = array_map('trim', explode('|', $options_str));
+        } else {
+            // This is not a pipe-separated format, so assume subsequent columns are options.
+            // This is a fallback and the primary expected format is pipe-separated.
+            $options = array_map('trim', array_slice($row_raw, 1, -1));
+        }
         
-        if (count($options) < 2 || $correct_answer_index === false) {
-            mco_debug_log('Skipping invalid row. Question: "' . $question_text . '". Correct answer text "' . $correct_answer_text_raw . '" not found in options: ' . $options_str);
+        if (count($options) < 2) {
+            $skipped_rows++;
+            mco_debug_log('Skipping row #' . ($line_num + 2) . '. Reason: Could not parse at least 2 options. Options string: "' . $options_str . '"');
+            continue;
+        }
+
+        $correct_answer_index = false;
+
+        if (is_numeric($answer_column_value)) {
+            $numeric_index = intval($answer_column_value) - 1;
+            if ($numeric_index >= 0 && $numeric_index < count($options)) {
+                $correct_answer_index = $numeric_index;
+            }
+        }
+        if ($correct_answer_index === false && strlen($answer_column_value) === 1 && ctype_alpha($answer_column_value)) {
+            $letter_index = ord(strtoupper($answer_column_value)) - ord('A');
+            if ($letter_index >= 0 && $letter_index < count($options)) {
+                $correct_answer_index = $letter_index;
+            }
+        }
+        if ($correct_answer_index === false) {
+            $lowercase_options = array_map('strtolower', $options);
+            $found_index = array_search(strtolower($answer_column_value), $lowercase_options);
+            if ($found_index !== false) {
+                $correct_answer_index = $found_index;
+            }
+        }
+
+        if ($correct_answer_index === false) {
+            $skipped_rows++;
+            mco_debug_log('Skipping row #' . ($line_num + 2) . '. Reason: Could not determine correct answer. Question: "' . $question_text . '". Answer column value: "' . $answer_column_value . '". Parsed options: [' . implode(', ', $options) . ']');
             continue;
         }
 
@@ -187,7 +229,8 @@ function mco_get_questions_from_sheet_callback($request) {
     }
 
     if (empty($questions)) {
-        return new WP_Error('parse_failed', 'No valid questions could be parsed from the source. Please check the sheet formatting, especially the pipe separators and correct answer text.', ['status' => 500]);
+        $error_message = 'No valid questions could be parsed from the source. Processed ' . $total_rows . ' rows and skipped all of them. Please check your sheet formatting (Question | Option A|Option B|... | Correct Answer) and enable MCO_DEBUG in wp-config.php to see detailed logs.';
+        return new WP_Error('parse_failed', $error_message, ['status' => 500]);
     }
 
     shuffle($questions);
@@ -230,7 +273,26 @@ function mco_get_certificate_data_callback($request) {
     ], 200);
 }
 function mco_exam_update_user_name_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); if (!get_userdata($user_id)) return new WP_Error('user_not_found', 'User not found.', ['status' => 404]); $full_name = isset($request->get_json_params()['fullName']) ? sanitize_text_field($request->get_json_params()['fullName']) : ''; if (empty($full_name)) return new WP_Error('name_empty', 'Full name cannot be empty.', ['status' => 400]); $name_parts = explode(' ', $full_name, 2); update_user_meta($user_id, 'first_name', $name_parts[0]); update_user_meta($user_id, 'last_name', isset($name_parts[1]) ? $name_parts[1] : ''); return new WP_REST_Response(['success' => true, 'message' => 'Name updated successfully.'], 200); }
-function mco_exam_submit_result_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); $result_data = $request->get_json_params(); foreach (['testId', 'examId', 'score', 'correctCount', 'totalQuestions', 'timestamp'] as $key) { if (!isset($result_data[$key])) return new WP_Error('invalid_data', "Missing key: {$key}", ['status' => 400]); } $result_data['userId'] = (string)$user_id; $all_results = get_user_meta($user_id, 'mco_exam_results', true); if (!is_array($all_results)) $all_results = []; $all_results[$result_data['testId']] = $result_data; update_user_meta($user_id, 'mco_exam_results', $all_results); return new WP_REST_Response($result_data, 200); }
+function mco_exam_submit_result_callback($request) { 
+    $user_id = (int)$request->get_param('jwt_user_id'); 
+    $result_data = $request->get_json_params(); 
+    foreach (['testId', 'examId', 'score', 'correctCount', 'totalQuestions', 'timestamp'] as $key) { 
+        if (!isset($result_data[$key])) {
+            mco_debug_log('Result submission failed for user ' . $user_id . '. Missing key: ' . $key);
+            return new WP_Error('invalid_data', "Missing key: {$key}", ['status' => 400]); 
+        }
+    } 
+    $result_data['userId'] = (string)$user_id; 
+    
+    mco_debug_log('Attempting to save result for user ID ' . $user_id . '. Test ID: ' . $result_data['testId']);
+    $all_results = get_user_meta($user_id, 'mco_exam_results', true); 
+    if (!is_array($all_results)) $all_results = []; 
+    $all_results[$result_data['testId']] = $result_data; 
+    $success = update_user_meta($user_id, 'mco_exam_results', $all_results); 
+    mco_debug_log('Result of update_user_meta: ' . ($success ? 'Success' : 'Failure'));
+
+    return new WP_REST_Response($result_data, 200); 
+}
 
 // --- SHORTCODES & FORMS ---
 function mco_exam_user_details_shortcode() {
@@ -365,6 +427,9 @@ function mco_exam_login_url($login_url, $redirect) { if (strpos($_SERVER['REQUES
                     <li><strong>Copy & Paste Code:</strong> Copy the entire PHP code block below and paste it into the <code>mco-exam-integration.php</code> file you just created.</li>
                     <li><strong>Define JWT Secret:</strong> Open your <code>wp-config.php</code> file (in the root of your WordPress installation) and add the following line. <strong>Important:</strong> Replace the placeholder key with a long, random string from a <a href="https://api.wordpress.org/secret-key/1.1/salt/" target="_blank" rel="noopener noreferrer">secure key generator</a>.
                         <pre className="bg-slate-100 p-2 rounded text-sm"><code>define('MCO_JWT_SECRET', 'your-very-strong-secret-key-that-is-long-and-random');</code></pre>
+                    </li>
+                     <li><strong>(Optional) Enable Debugging:</strong> To diagnose sheet parsing issues, add the following line to <code>wp-config.php</code>. This will write detailed logs to your server's error log file.
+                        <pre className="bg-slate-100 p-2 rounded text-sm"><code>define('MCO_DEBUG', true);</code></pre>
                     </li>
                     <li><strong>Activate Plugin:</strong> Go to the "Plugins" page in your WordPress admin dashboard. You should see "MCO Exam App Integration". Click "Activate".</li>
                 </ol>
