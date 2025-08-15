@@ -65,13 +65,22 @@ export const googleSheetsService = {
     // --- DATA SYNC & LOCAL STORAGE ---
     syncResults: async (token: string, user: User): Promise<void> => {
         try {
+            // Get remote results and make a map
             const remoteResults: TestResult[] = await apiFetch('/user-results', token);
-            const resultsMap = remoteResults.reduce((acc, result) => {
+            const remoteMap = remoteResults.reduce((acc, result) => {
                 acc[result.testId] = result;
                 return acc;
             }, {} as { [key: string]: TestResult });
 
-            localStorage.setItem(`exam_results_${user.id}`, JSON.stringify(resultsMap));
+            // Get local results map
+            const localResultsRaw = localStorage.getItem(`exam_results_${user.id}`);
+            const localMap = localResultsRaw ? JSON.parse(localResultsRaw) : {};
+
+            // Merge: local results are overwritten by remote ones if keys match.
+            // New local results (not yet on server) are kept.
+            const mergedMap = { ...localMap, ...remoteMap };
+
+            localStorage.setItem(`exam_results_${user.id}`, JSON.stringify(mergedMap));
         } catch (error: any) {
             console.error("Failed to sync remote results:", error);
             const errorMessage = error.message || "Could not connect to the server. Please check your network connection.";
