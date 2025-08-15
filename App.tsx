@@ -43,7 +43,7 @@ const AppContent: React.FC = () => {
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800">
             <Header />
-            <div className="flex-grow w-full">
+            <div className="flex-grow w-full relative">
                 <main className="container mx-auto px-4 py-8">
                     <ReactRouterDOM.Routes>
                         <ReactRouterDOM.Route path="/" element={<LandingPage />} />
@@ -64,9 +64,9 @@ const AppContent: React.FC = () => {
                         <ReactRouterDOM.Route path="*" element={<ReactRouterDOM.Navigate to="/" replace />} />
                     </ReactRouterDOM.Routes>
                 </main>
+                {user && user.isAdmin && <DebugSidebar />}
             </div>
             <Footer />
-            {user && user.isAdmin && <DebugSidebar />}
         </div>
     );
 };

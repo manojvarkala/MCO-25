@@ -17,6 +17,7 @@ const DebugSidebar: React.FC = () => {
             const fetchDebugData = async () => {
                 setIsLoading(true);
                 setError(null);
+                setDebugData(null); // Clear previous data
                 try {
                     const data = await googleSheetsService.getDebugDetails(token);
                     setDebugData(data);
@@ -50,7 +51,7 @@ const DebugSidebar: React.FC = () => {
             </button>
 
             <div 
-                className={`fixed top-0 right-0 h-full bg-slate-800 text-white shadow-2xl transition-transform duration-300 ease-in-out z-40 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`absolute top-0 right-0 h-full bg-slate-800 text-white shadow-2xl transition-transform duration-300 ease-in-out z-40 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
                 style={{ width: 'min(90vw, 500px)' }}
             >
                 <div className="p-6 h-full flex flex-col">
@@ -72,13 +73,13 @@ const DebugSidebar: React.FC = () => {
                         {debugData && (
                             <div>
                                 <Section title="User Details" icon={<User size={16} />}>
-                                    <p><strong>ID:</strong> {debugData.user.id}</p>
-                                    <p><strong>Name:</strong> {debugData.user.name}</p>
-                                    <p><strong>Email:</strong> {debugData.user.email}</p>
+                                    <p><strong>ID:</strong> {debugData?.user?.id ?? 'N/A'}</p>
+                                    <p><strong>Name:</strong> {debugData?.user?.name ?? 'N/A'}</p>
+                                    <p><strong>Email:</strong> {debugData?.user?.email ?? 'N/A'}</p>
                                 </Section>
 
                                 <Section title="Purchased Exam SKUs" icon={<ShoppingCart size={16} />}>
-                                    {debugData.purchases.length > 0 ? (
+                                    {debugData?.purchases?.length > 0 ? (
                                         <ul className="list-disc pl-5">
                                             {debugData.purchases.map(sku => <li key={sku}>{sku}</li>)}
                                         </ul>
@@ -86,7 +87,7 @@ const DebugSidebar: React.FC = () => {
                                 </Section>
                                 
                                 <Section title="Synced Exam Results" icon={<FileText size={16} />}>
-                                    {debugData.results.length > 0 ? (
+                                    {debugData?.results?.length > 0 ? (
                                         <div className="space-y-2">
                                             {debugData.results.map(result => (
                                                 <div key={result.testId} className="bg-slate-800 p-2 rounded">
@@ -100,12 +101,12 @@ const DebugSidebar: React.FC = () => {
                                     ) : <p>No results synced.</p>}
                                 </Section>
 
-                                <Section title="Google Sheet Connectivity" icon={debugData.sheetTest.success ? <CheckCircle size={16} className="text-green-400" /> : <AlertTriangle size={16} className="text-red-400" />}>
-                                    <p className={debugData.sheetTest.success ? 'text-green-400' : 'text-red-400'}>
-                                        <strong>Status:</strong> {debugData.sheetTest.success ? 'Success' : 'Failure'}
+                                <Section title="Google Sheet Connectivity" icon={debugData?.sheetTest?.success ? <CheckCircle size={16} className="text-green-400" /> : <AlertTriangle size={16} className="text-red-400" />}>
+                                    <p className={debugData?.sheetTest?.success ? 'text-green-400' : 'text-red-400'}>
+                                        <strong>Status:</strong> {debugData?.sheetTest?.success ? 'Success' : 'Failure'}
                                     </p>
-                                    <p><strong>Message:</strong> {debugData.sheetTest.message}</p>
-                                    {debugData.sheetTest.data && (
+                                    <p><strong>Message:</strong> {debugData?.sheetTest?.message ?? 'N/A'}</p>
+                                    {debugData?.sheetTest?.data && (
                                         <pre className="text-xs bg-slate-800 p-2 rounded mt-1 whitespace-pre-wrap break-all">
                                             {JSON.stringify(debugData.sheetTest.data, null, 2)}
                                         </pre>
@@ -116,7 +117,7 @@ const DebugSidebar: React.FC = () => {
                     </div>
                 </div>
             </div>
-            {isOpen && <div onClick={() => setIsOpen(false)} className="fixed inset-0 bg-black/50 z-30 transition-opacity"></div>}
+            {isOpen && <div onClick={() => setIsOpen(false)} className="absolute inset-0 bg-black/50 z-30 transition-opacity"></div>}
         </>
     );
 };
