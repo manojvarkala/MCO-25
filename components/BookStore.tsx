@@ -35,13 +35,13 @@ const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
         { key: 'in' as const, name: '.in', url: book.affiliateLinks.in },
         { key: 'ae' as const, name: '.ae', url: book.affiliateLinks.ae }
     ];
-    const secondaryStores = allStores.filter(store => store.key !== primaryLink.key);
+    const secondaryStores = allStores.filter(store => store.key !== primaryLink.key && store.url);
 
     return (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-1 transition-transform duration-300 border border-slate-100">
-            <BookCover title={book.title} className="w-full h-56" />
+            <BookCover title={book.title} className="w-full h-48" />
             <div className="p-6 flex flex-col flex-grow">
-                <h3 className="text-xl font-bold text-slate-800 mb-2">{book.title}</h3>
+                <h3 className="text-lg font-bold text-slate-800 mb-2 leading-tight">{book.title}</h3>
                 <p className="text-slate-600 text-sm mb-4 flex-grow">{book.description}</p>
                 <div className="mt-auto pt-4 border-t border-slate-200 space-y-2">
                     <a 
@@ -52,22 +52,24 @@ const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
                     >
                         <ShoppingCart size={18} /> Buy on {primaryLink.domainName}
                     </a>
-                    <div className="text-center pt-2">
-                         <span className="text-xs text-slate-400">Other stores: </span>
-                        {secondaryStores.map((store, index) => (
-                             <React.Fragment key={store.key}>
-                                <a 
-                                    href={store.url}
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-xs text-cyan-600 hover:underline font-semibold"
-                                >
-                                   {store.name}
-                                </a>
-                                {index < secondaryStores.length - 1 && <span className="text-xs text-slate-400 mx-1">|</span>}
-                             </React.Fragment>
-                        ))}
-                    </div>
+                    {secondaryStores.length > 0 && (
+                        <div className="text-center pt-2">
+                            <span className="text-xs text-slate-400">Other stores: </span>
+                            {secondaryStores.map((store, index) => (
+                                <React.Fragment key={store.key}>
+                                    <a 
+                                        href={store.url}
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-cyan-600 hover:underline font-semibold"
+                                    >
+                                    {store.name}
+                                    </a>
+                                    {index < secondaryStores.length - 1 && <span className="text-xs text-slate-400 mx-1">|</span>}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -100,7 +102,7 @@ const BookStore: React.FC = () => {
             </div>
 
             {suggestedBooks.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                     {suggestedBooks.map(book => (
                         <BookCard key={book.id} book={book} />
                     ))}

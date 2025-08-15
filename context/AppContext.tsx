@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { googleSheetsService } from '@/services/googleSheetsService.ts';
+import { appData } from '@/assets/appData.ts';
 import type { Organization, RecommendedBook, Exam } from '@/types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/context/AuthContext.tsx';
@@ -26,10 +26,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     const initializeApp = async () => {
         try {
-            const initialOrgsFromApi = await googleSheetsService.getAppConfig();
+            // Data is now imported locally instead of fetched for reliability.
+            const initialOrgsFromDataFile = JSON.parse(JSON.stringify(appData)); // Deep copy to avoid mutation issues
             
             const bookMap = new Map<string, RecommendedBook>();
-            initialOrgsFromApi.forEach(org => {
+            initialOrgsFromDataFile.forEach((org: Organization) => {
                 if (org.suggestedBooks) {
                     org.suggestedBooks.forEach(book => {
                         if (!bookMap.has(book.id)) {
@@ -62,7 +63,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 });
             };
             
-            const finalOrgs = processOrgs(initialOrgsFromApi);
+            const finalOrgs = processOrgs(initialOrgsFromDataFile);
             setOrganizations(finalOrgs);
 
             if (finalOrgs.length > 0) {
@@ -73,7 +74,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 }
             }
         } catch (error) {
-            console.error("Failed to initialize app config:", error);
+            console.error("Failed to initialize app config from local data:", error);
             toast.error("Could not load application configuration.");
         } finally {
             setIsInitializing(false);

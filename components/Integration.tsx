@@ -9,7 +9,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           6.3.0
+ * Version:           6.4.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -52,7 +52,7 @@ function mco_exam_app_init() {
     add_filter('login_url', 'mco_exam_login_url', 10, 2);
     
     add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
-    add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
+    // Note: The [mco_exam_showcase] shortcode is deprecated as data is now in the app.
 }
 
 function mco_debug_log($message) { if (defined('MCO_DEBUG') && MCO_DEBUG) error_log('MCO Exam App Debug: ' . print_r($message, true)); }
@@ -65,77 +65,18 @@ function mco_get_exam_app_url($is_admin = false) { if ($is_admin) return get_opt
 
 
 // --- DATA SOURCE & JWT ---
-function mco_get_all_app_data() {
-    static $app_data = null;
-    if ($app_data !== null) return $app_data;
-    
-    $CERTIFICATE_TEMPLATES = [
-        ['id' => 'cert-practice-1', 'title' => 'Medical Coding Proficiency', "body" => "For successfully demonstrating proficiency in medical coding principles and practices with a final score of <strong>{finalScore}%</strong>. This certifies the holder's competence in the standards required for this certification.", 'signature1Name' => 'Dr. Amelia Reed', 'signature1Title' => 'Program Director', 'signature2Name' => 'B. Manoj', 'signature2Title' => 'Chief Instructor'],
-        ['id' => 'cert-cpc', 'title' => 'Certified Professional Coder (CPC)', 'body' => 'For successfully demonstrating proficiency in medical coding principles and practices with a final score of <strong>{finalScore}%</strong>. This certifies competence in the standards required for the CPC credential.', 'signature1Name' => 'Dr. Amelia Reed', 'signature1Title' => 'Program Director', 'signature2Name' => 'B. Manoj', 'signature2Title' => 'Chief Instructor'],
-        ['id' => 'cert-cca', 'title' => 'Certified Coding Associate (CCA)', 'body' => 'Awarded for exceptional performance and mastery in coding topics, achieving a score of <strong>{finalScore}%</strong>. This signifies a high level of expertise for the CCA credential.', 'signature1Name' => 'Dr. Amelia Reed', 'signature1Title' => 'Program Director', 'signature2Name' => 'B. Manoj', 'signature2Title' => 'Chief Instructor'],
-        ['id' => 'cert-billing', 'title' => 'Medical Billing Specialist', 'body' => 'For successfully demonstrating proficiency in medical billing and reimbursement with a final score of <strong>{finalScore}%</strong>. This achievement certifies competence in specialized billing standards.', 'signature1Name' => 'Dr. Amelia Reed', 'signature1Title' => 'Program Director', 'signature2Name' => 'B. Manoj', 'signature2Title' => 'Chief Instructor'],
-        ['id' => 'cert-ccs', 'title' => 'Certified Coding Specialist (CCS)', 'body' => 'For demonstrating mastery in classifying medical data from patient records with a final score of <strong>{finalScore}%</strong>, as required for the CCS credential.', 'signature1Name' => 'Dr. Amelia Reed', 'signature1Title' => 'Program Director', 'signature2Name' => 'B. Manoj', 'signature2Title' => 'Chief Instructor'],
-        ['id' => 'cert-risk', 'title' => 'Certified Risk Adjustment Coder (CRC)', 'body' => 'Awarded for demonstrating expertise in risk adjustment coding with a score of <strong>{finalScore}%</strong>. This signifies competence in linking diagnosis codes to patient conditions for accurate risk assessment.', 'signature1Name' => 'Dr. Amelia Reed', 'signature1Title' => 'Program Director', 'signature2Name' => 'B. Manoj', 'signature2Title' => 'Chief Instructor'],
-        ['id' => 'cert-icd', 'title' => 'ICD-10-CM Proficiency', 'body' => 'For successfully demonstrating advanced proficiency in the International Classification of Diseases, Tenth Revision, Clinical Modification (ICD-10-CM) with a final score of <strong>{finalScore}%</strong>.', 'signature1Name' => 'Dr. Amelia Reed', 'signature1Title' => 'Program Director', 'signature2Name' => 'B. Manoj', 'signature2Title' => 'Chief Instructor']
-    ];
-    
-    $EXAM_PRODUCT_CATEGORIES = [
-        ['id' => 'prod-cpc', 'name' => 'CPC', 'description' => 'A test series designed to prepare you for the AAPC CPC (Certified Professional Coder) exam.', 'practiceExamId' => 'exam-cpc-practice', 'certificationExamId' => 'exam-cpc-cert'],
-        ['id' => 'prod-cca', 'name' => 'CCA', 'description' => 'A test series for the AHIMA CCA (Certified Coding Associate) credential.', 'practiceExamId' => 'exam-cca-practice', 'certificationExamId' => 'exam-cca-cert'],
-        ['id' => 'prod-billing', 'name' => 'Medical Billing', 'description' => 'A test series covering the essentials of medical billing and reimbursement.', 'practiceExamId' => 'exam-billing-practice', 'certificationExamId' => 'exam-billing-cert'],
-        ['id' => 'prod-ccs', 'name' => 'CCS', 'description' => 'A test series for the AHIMA CCS (Certified Coding Specialist) credential.', 'practiceExamId' => 'exam-ccs-practice', 'certificationExamId' => 'exam-ccs-cert'],
-        ['id' => 'prod-risk', 'name' => 'Risk Adjustment', 'description' => 'A test series for the Risk Adjustment Coder (CRC) credential.', 'practiceExamId' => 'exam-risk-practice', 'certificationExamId' => 'exam-risk-cert'],
-        ['id' => 'prod-icd', 'name' => 'ICD-10-CM', 'description' => 'A test series for ICD-10-CM coding proficiency.', 'practiceExamId' => 'exam-icd-practice', 'certificationExamId' => 'exam-icd-cert'],
-    ];
-
-    $ALL_EXAMS = [
-        // Practice Exams
-        ['id' => 'exam-cpc-practice', 'name' => 'CPC Practice Test', 'description' => 'A short practice test to prepare for the CPC certification.', 'price' => 0, 'productSku' => 'exam-cpc-practice', 'numberOfQuestions' => 10, 'passScore' => 70, 'certificateTemplateId' => 'cert-practice-1', 'isPractice' => true, 'durationMinutes' => 25, 'questionSourceUrl' => 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing'],
-        ['id' => 'exam-cca-practice', 'name' => 'CCA Practice Test', 'description' => 'A short practice test for the Certified Coding Associate exam.', 'price' => 0, 'productSku' => 'exam-cca-practice', 'numberOfQuestions' => 10, 'passScore' => 70, 'certificateTemplateId' => 'cert-practice-1', 'isPractice' => true, 'durationMinutes' => 25, 'questionSourceUrl' => 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing'],
-        ['id' => 'exam-billing-practice', 'name' => 'Medical Billing Practice Test', 'description' => 'A short practice test for medical billing concepts.', 'price' => 0, 'productSku' => 'exam-billing-practice', 'numberOfQuestions' => 10, 'passScore' => 70, 'certificateTemplateId' => 'cert-practice-1', 'isPractice' => true, 'durationMinutes' => 20, 'questionSourceUrl' => 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing'],
-        ['id' => 'exam-ccs-practice', 'name' => 'CCS Practice Test', 'description' => 'Practice for the Certified Coding Specialist exam.', 'price' => 0, 'productSku' => 'exam-ccs-practice', 'numberOfQuestions' => 10, 'passScore' => 70, 'certificateTemplateId' => 'cert-practice-1', 'isPractice' => true, 'durationMinutes' => 25, 'questionSourceUrl' => 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing'],
-        ['id' => 'exam-risk-practice', 'name' => 'Risk Adjustment Practice Test', 'description' => 'Practice for the Risk Adjustment (CRC) exam.', 'price' => 0, 'productSku' => 'exam-risk-practice', 'numberOfQuestions' => 10, 'passScore' => 70, 'certificateTemplateId' => 'cert-practice-1', 'isPractice' => true, 'durationMinutes' => 25, 'questionSourceUrl' => 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing'],
-        ['id' => 'exam-icd-practice', 'name' => 'ICD-10-CM Practice Test', 'description' => 'Practice for the ICD-10-CM proficiency exam.', 'price' => 0, 'productSku' => 'exam-icd-practice', 'numberOfQuestions' => 10, 'passScore' => 75, 'certificateTemplateId' => 'cert-practice-1', 'isPractice' => true, 'durationMinutes' => 20, 'questionSourceUrl' => 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing'],
-        // Certification Exams
-        ['id' => 'exam-cpc-cert', 'name' => 'CPC Certification Exam', 'description' => 'Full certification exam for Certified Professional Coder.', 'price' => 150, 'regularPrice' => 150, 'productSku' => 'exam-cpc-cert', 'productSlug' => 'cpc-certification-exam-preparation', 'numberOfQuestions' => 100, 'passScore' => 70, 'certificateTemplateId' => 'cert-cpc', 'isPractice' => false, 'durationMinutes' => 240, 'questionSourceUrl' => 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing', 'recommendedBookId' => 'book-cpc-guide'],
-        ['id' => 'exam-cca-cert', 'name' => 'CCA Certification Exam', 'description' => 'Full certification exam for Certified Coding Associate.', 'price' => 120, 'regularPrice' => 120, 'productSku' => 'exam-cca-cert', 'productSlug' => 'cca-certification-exam-preparation', 'numberOfQuestions' => 100, 'passScore' => 70, 'certificateTemplateId' => 'cert-cca', 'isPractice' => false, 'durationMinutes' => 180, 'questionSourceUrl' => 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing', 'recommendedBookId' => 'book-step-by-step'],
-        ['id' => 'exam-ccs-cert', 'name' => 'CCS Certification Exam', 'description' => 'Full certification exam for Certified Coding Specialist.', 'price' => 160, 'regularPrice' => 160, 'productSku' => 'exam-ccs-cert', 'productSlug' => 'ccs-certification-exam-preparation', 'numberOfQuestions' => 100, 'passScore' => 70, 'certificateTemplateId' => 'cert-ccs', 'isPractice' => false, 'durationMinutes' => 240, 'questionSourceUrl' => 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing', 'recommendedBookId' => 'book-icd10-cm'],
-        ['id' => 'exam-billing-cert', 'name' => 'Medical Billing Certification Exam', 'description' => 'Comprehensive exam covering medical billing and reimbursement.', 'price' => 100, 'regularPrice' => 100, 'productSku' => 'exam-billing-cert', 'productSlug' => 'medical-billing-certification-exam-preparation', 'numberOfQuestions' => 100, 'passScore' => 75, 'certificateTemplateId' => 'cert-billing', 'isPractice' => false, 'durationMinutes' => 150, 'questionSourceUrl' => 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing', 'recommendedBookId' => 'book-medical-billing'],
-        ['id' => 'exam-risk-cert', 'name' => 'Risk Adjustment (CRC) Certification Exam', 'description' => 'Exam for Certified Risk Adjustment Coder.', 'price' => 150, 'regularPrice' => 150, 'productSku' => 'exam-risk-cert', 'productSlug' => 'risk-adjustment-crc-certification-exam', 'numberOfQuestions' => 100, 'passScore' => 70, 'certificateTemplateId' => 'cert-risk', 'isPractice' => false, 'durationMinutes' => 240, 'questionSourceUrl' => 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing', 'recommendedBookId' => 'book-cpc-guide'],
-        ['id' => 'exam-icd-cert', 'name' => 'ICD-10-CM Certification Exam', 'description' => 'Proficiency exam for ICD-10-CM coding.', 'price' => 90, 'regularPrice' => 90, 'productSku' => 'exam-icd-cert', 'productSlug' => 'icd-10-cm-certification-exam-preparation', 'numberOfQuestions' => 100, 'passScore' => 75, 'certificateTemplateId' => 'cert-icd', 'isPractice' => false, 'durationMinutes' => 120, 'questionSourceUrl' => 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing', 'recommendedBookId' => 'book-icd10-cm']
-    ];
-
-    $SUGGESTED_BOOKS = [
-        ['id' => 'book-cpc-guide', 'title' => 'Official CPC® Certification Study Guide', 'description' => "AAPC's official CPC exam study guide — anatomy, medical terminology, ICD-10-CM, CPT, HCPCS, practice questions and exam tips.", 'affiliateLinks' => [ 'com' => 'https://www.amazon.com/dp/1635278910?tag=mykada-20', 'in' => 'https://www.amazon.in/dp/1635278910?tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/dp/1285427998?tag=medical0f1-21']],
-        ['id' => 'book-icd10-cm', 'title' => "Buck's ICD-10-CM for Physicians 2026", 'description' => "Physician-focused ICD-10-CM code manual with full-color illustrations, Netter's Anatomy, and detailed guidelines.", 'affiliateLinks' => [ 'com' => 'https://www.amazon.com/dp/0443380783?tag=mykada-20', 'in' => 'https://www.amazon.in/dp/0443380783?tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/dp/0443380783?tag=medical0f1-21']],
-        ['id' => 'book-cpt-pro', 'title' => 'AMA CPT® Professional 2026', 'description' => 'The official Current Procedural Terminology (CPT) codebook from the American Medical Association, essential for every coder.', 'affiliateLinks' => [ 'com' => 'https://www.amazon.com/dp/1640163354?tag=mykada-20', 'in' => 'https://www.amazon.in/dp/1640163354?tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/dp/1640163354?tag=medical0f1-21']],
-        ['id' => 'book-hcpcs-level2', 'title' => 'HCPCS Level II Professional 2026', 'description' => 'Comprehensive guide for HCPCS Level II codes used for supplies, equipment, and drugs administered by physicians.', 'affiliateLinks' => [ 'com' => 'https://www.amazon.com/dp/1622029947?tag=mykada-20', 'in' => 'https://www.amazon.in/dp/1622029947?tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/dp/1622029947?tag=medical0f1-21']],
-        ['id' => 'book-medical-billing', 'title' => 'Medical Billing & Coding For Dummies', 'description' => 'An easy-to-understand guide covering the basics of medical billing and coding, perfect for beginners.', 'affiliateLinks' => [ 'com' => 'https://www.amazon.com/dp/1119750393?tag=mykada-20', 'in' => 'https://www.amazon.in/dp/1119750393?tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/dp/1119750393?tag=medical0f1-21']],
-        ['id' => 'book-step-by-step', 'title' => 'Step-by-Step Medical Coding, 2024 Edition', 'description' => 'This guide provides a solid foundation with a practical approach to mastering medical coding concepts and applications.', 'affiliateLinks' => [ 'com' => 'https://www.amazon.com/dp/0323930872?tag=mykada-20', 'in' => 'https://www.amazon.in/dp/0323930872?tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/dp/0323930872?tag=medical0f1-21']],
-    ];
-
-    $app_data = [
-        [
-            'id' => 'org-mco', 'name' => 'Medical Coding Online', 'website' => 'www.coding-online.net',
-            'exams' => $ALL_EXAMS,
-            'examProductCategories' => $EXAM_PRODUCT_CATEGORIES,
-            'certificateTemplates' => $CERTIFICATE_TEMPLATES,
-            'suggestedBooks' => $SUGGESTED_BOOKS,
-        ]
-    ];
-    return $app_data;
-}
-
-// ... (Rest of the functions: mco_exam_get_payload, mco_generate_exam_jwt, etc.)
-
+// Exam data is now stored in the React application itself for better performance and reliability.
+// This function now only fetches dynamic user and pricing data.
 function mco_exam_get_payload($user_id) {
     if (!$user = get_userdata($user_id)) return null;
     $user_full_name = trim($user->first_name . ' ' . $user->last_name) ?: $user->display_name;
     $paid_exam_ids = []; $exam_prices = new stdClass();
     
     if (class_exists('WooCommerce')) {
-        $all_exam_skus_raw = mco_get_all_app_data()[0]['exams'];
-        $all_exam_skus = array_column(array_filter($all_exam_skus_raw, function($e) { return !$e['isPractice'] && isset($e['productSku']); }), 'productSku');
+         // IMPORTANT: The SKUs must match the productSku values in your React app's appData.ts file.
+        $all_exam_skus = [
+            'exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert'
+        ];
         
         $exam_prices = get_transient('mco_exam_prices');
         if (false === $exam_prices) {
@@ -179,7 +120,7 @@ function mco_redirect_after_purchase($order_id) { if (!$order_id || !($order = w
 
 // --- REST API ENDPOINTS ---
 function mco_exam_register_rest_api() {
-    register_rest_route('mco-app/v1', '/app-config', ['methods' => 'GET', 'callback' => 'mco_get_app_config_callback', 'permission_callback' => '__return_true']);
+    // Deprecated: register_rest_route('mco-app/v1', '/app-config', ...); // Data is now local to the app.
     register_rest_route('mco-app/v1', '/user-results', ['methods' => 'GET', 'callback' => 'mco_get_user_results_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/result/(?P<test_id>[\\w-]+)', ['methods' => 'GET', 'callback' => 'mco_get_single_result_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/certificate-data/(?P<test_id>[\\w-]+)', ['methods' => 'GET', 'callback' => 'mco_get_certificate_data_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
@@ -197,43 +138,92 @@ function mco_exam_api_permission_check($request) {
     return true;
 }
 
-function mco_get_app_config_callback() { return new WP_REST_Response(mco_get_all_app_data(), 200); }
-
 function mco_get_questions_from_sheet_callback($request) {
-    $params = $request->get_json_params(); $sheet_url = isset($params['sheetUrl']) ? esc_url_raw($params['sheetUrl']) : ''; $count = isset($params['count']) ? intval($params['count']) : 100;
-    if (empty($sheet_url) || !filter_var($sheet_url, FILTER_VALIDATE_URL)) return new WP_Error('invalid_url', 'Invalid Google Sheet URL.', ['status' => 400]);
+    $params = $request->get_json_params();
+    $sheet_url = isset($params['sheetUrl']) ? esc_url_raw($params['sheetUrl']) : '';
+    $count = isset($params['count']) ? intval($params['count']) : 100;
+    if (empty($sheet_url) || !filter_var($sheet_url, FILTER_VALIDATE_URL)) {
+        return new WP_Error('invalid_url', 'Invalid Google Sheet URL.', ['status' => 400]);
+    }
     $csv_url = str_replace(['/edit?usp=sharing', '/edit#gid='], ['/export?format=csv', '/export?format=csv&gid='], $sheet_url);
     $response = wp_remote_get($csv_url, ['timeout' => 20]);
-    if (is_wp_error($response)) { mco_debug_log('Sheet fetch failed: ' . $response->get_error_message()); return new WP_Error('fetch_failed', 'Could not get questions.', ['status' => 500]); }
-    $body = wp_remote_retrieve_body($response); $lines = explode("\n", trim($body)); array_walk($lines, function(&$line) { $line = trim($line); });
-    $header = str_getcsv(array_shift($lines)); $questions = [];
-    foreach ($lines as $line) {
-        if (empty(trim($line))) continue; $row = str_getcsv($line);
-        if (count($row) < 3) continue;
-        $options = array_slice($row, 1, -1); $options = array_map('trim', array_filter($options, 'trim'));
-        $correct_answer_text = trim(end($row)); $correct_answer_index = array_search($correct_answer_text, $options);
-        if (count($options) < 2 || $correct_answer_index === false) continue;
-        $questions[] = ['id' => count($questions) + 1, 'question' => trim($row[0]), 'options' => $options, 'correctAnswer' => $correct_answer_index + 1];
+    if (is_wp_error($response)) {
+        mco_debug_log('Sheet fetch failed: ' . $response->get_error_message());
+        return new WP_Error('fetch_failed', 'Could not get questions.', ['status' => 500]);
     }
-    if (empty($questions)) return new WP_Error('parse_failed', 'No valid questions could be parsed.', ['status' => 500]);
-    shuffle($questions); $selected_questions = array_slice($questions, 0, $count);
-    $final_questions = []; foreach($selected_questions as $index => $q) { $q['id'] = $index + 1; $final_questions[] = $q; }
+    $body = wp_remote_retrieve_body($response);
+    $lines = preg_split('/\\r\\n?|\\n/', trim($body));
+    array_shift($lines); // Remove header
+    $questions = [];
+
+    foreach ($lines as $line) {
+        if (empty(trim($line))) continue;
+        $row = str_getcsv($line);
+        if (count($row) < 3 || empty(trim($row[0]))) continue;
+
+        $question_text = trim($row[0]);
+        $options_str = trim($row[1]);
+        $correct_answer_text = trim($row[2]);
+
+        $options = array_map('trim', explode('|', $options_str));
+        $options = array_filter($options, function($value) { return !empty($value); });
+        $options = array_values($options); // Re-index keys
+
+        $correct_answer_index = array_search($correct_answer_text, $options);
+        
+        if (count($options) < 2 || $correct_answer_index === false) {
+            mco_debug_log('Skipping invalid row: ' . $line);
+            continue;
+        }
+
+        $questions[] = [
+            'id' => count($questions) + 1,
+            'question' => $question_text,
+            'options' => $options,
+            'correctAnswer' => $correct_answer_index + 1
+        ];
+    }
+
+    if (empty($questions)) {
+        return new WP_Error('parse_failed', 'No valid questions could be parsed from the source. Check formatting.', ['status' => 500]);
+    }
+
+    shuffle($questions);
+    $selected_questions = array_slice($questions, 0, $count);
+    
+    $final_questions = [];
+    foreach($selected_questions as $index => $q) {
+        $q['id'] = $index + 1;
+        $final_questions[] = $q;
+    }
     return new WP_REST_Response($final_questions, 200);
 }
+
 
 function mco_get_user_results_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); if ($user_id <= 0) return new WP_Error('invalid_user', 'Invalid user.', ['status' => 403]); $results = get_user_meta($user_id, 'mco_exam_results', true); return new WP_REST_Response(empty($results) || !is_array($results) ? [] : array_values($results), 200); }
 function mco_get_single_result_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); $test_id = sanitize_key($request['test_id']); $all_results = get_user_meta($user_id, 'mco_exam_results', true); if (is_array($all_results) && isset($all_results[$test_id])) return new WP_REST_Response($all_results[$test_id], 200); return new WP_Error('not_found', 'Result not found.', ['status' => 404]); }
 function mco_get_certificate_data_callback($request) {
+    // This function requires the certificate templates and exam data, which are now in the app.
+    // For simplicity, this is a placeholder. A more robust solution would be for the app
+    // to send the examId and score, and this function would verify against its own (simpler) config.
     $user_id = (int)$request->get_param('jwt_user_id'); $test_id = $request['test_id']; $user = get_userdata($user_id); if (!$user) return new WP_Error('user_not_found', 'User not found.', ['status' => 404]);
-    $org = mco_get_all_app_data()[0];
-    if ($test_id === 'sample') { $template = $org['certificateTemplates'][0]; $candidate_name = trim($user->first_name . ' ' . $user->last_name) ?: $user->display_name; return new WP_REST_Response(['certificateNumber' => "SAMPLE-" . time(), 'candidateName' => $candidate_name, 'finalScore' => 95.5, 'date' => date('F j, Y'), 'totalQuestions' => 100, 'organization' => $org, 'template' => $template], 200); }
-    $all_results = get_user_meta($user_id, 'mco_exam_results', true); if (!is_array($all_results) || !isset($all_results[sanitize_key($test_id)])) return new WP_Error('not_found', 'Result not found.', ['status' => 404]);
-    $result = $all_results[sanitize_key($test_id)]; $exam = null; foreach ($org['exams'] as $e) { if ($e['id'] === $result['examId']) { $exam = $e; break; } }
-    if (!$exam || ($result['score'] < $exam['passScore'] && !user_can($user, 'administrator'))) return new WP_Error('not_earned', 'Certificate not earned.', ['status' => 403]);
-    $template = null; foreach ($org['certificateTemplates'] as $t) { if ($t['id'] === $exam['certificateTemplateId']) { $template = $t; break; } }
-    if (!$template) return new WP_Error('not_found', 'Certificate template not found.', ['status' => 404]);
+    $all_results = get_user_meta($user_id, 'mco_exam_results', true);
+    if ($test_id === 'sample') {
+        return new WP_Error('sample_deprecated', 'Sample certificate data is now generated by the app.', ['status' => 404]);
+    }
+    if (!is_array($all_results) || !isset($all_results[sanitize_key($test_id)])) {
+         return new WP_Error('not_found', 'Result not found.', ['status' => 404]);
+    }
+    // This is a simplified response. The app will have the full template data.
+    $result = $all_results[sanitize_key($test_id)];
     $candidate_name = trim($user->first_name . ' ' . $user->last_name) ?: $user->display_name;
-    return new WP_REST_Response(['certificateNumber' => substr($user_id, 0, 4) . '-' . substr(md5($test_id), 0, 6), 'candidateName' => $candidate_name, 'finalScore' => $result['score'], 'date' => date('F j, Y', $result['timestamp'] / 1000), 'totalQuestions' => $result['totalQuestions'], 'organization' => $org, 'template' => $template], 200);
+    return new WP_REST_Response([
+        'certificateNumber' => substr($user_id, 0, 4) . '-' . substr(md5($test_id), 0, 6), 
+        'candidateName' => $candidate_name, 
+        'finalScore' => $result['score'], 
+        'date' => date('F j, Y', $result['timestamp'] / 1000), 
+        'examId' => $result['examId']
+    ], 200);
 }
 function mco_exam_update_user_name_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); if (!get_userdata($user_id)) return new WP_Error('user_not_found', 'User not found.', ['status' => 404]); $full_name = isset($request->get_json_params()['fullName']) ? sanitize_text_field($request->get_json_params()['fullName']) : ''; if (empty($full_name)) return new WP_Error('name_empty', 'Full name cannot be empty.', ['status' => 400]); $name_parts = explode(' ', $full_name, 2); update_user_meta($user_id, 'first_name', $name_parts[0]); update_user_meta($user_id, 'last_name', isset($name_parts[1]) ? $name_parts[1] : ''); return new WP_REST_Response(['success' => true, 'message' => 'Name updated successfully.'], 200); }
 function mco_exam_submit_result_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); $result_data = $request->get_json_params(); foreach (['testId', 'examId', 'score', 'correctCount', 'totalQuestions', 'timestamp'] as $key) { if (!isset($result_data[$key])) return new WP_Error('invalid_data', "Missing key: {$key}", ['status' => 400]); } $result_data['userId'] = (string)$user_id; $all_results = get_user_meta($user_id, 'mco_exam_results', true); if (!is_array($all_results)) $all_results = []; $all_results[$result_data['testId']] = $result_data; update_user_meta($user_id, 'mco_exam_results', $all_results); return new WP_REST_Response($result_data, 200); }
@@ -276,44 +266,6 @@ function mco_exam_login_shortcode() {
     <?php return ob_get_clean();
 }
 
-function mco_exam_showcase_shortcode() {
-    $all_data = mco_get_all_app_data();
-    $categories = $all_data[0]['examProductCategories'];
-    $exam_map = array_column($all_data[0]['exams'], null, 'id');
-    $app_base_url = mco_get_exam_app_url();
-    ob_start(); ?>
-    <style> .mco-showcase-container{font-family:sans-serif;display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:2rem;margin:2rem 0}.mco-showcase-card{background-color:#fff;border-radius:12px;box-shadow:0 10px 25px -5px rgba(0,0,0,.1);border:1px solid #e2e8f0;overflow:hidden;display:flex;flex-direction:column}.mco-showcase-card-header{background-color:#f8fafc;padding:1.5rem;border-bottom:1px solid #e2e8f0}.mco-showcase-card-header h3{font-size:1.5rem;font-weight:700;color:#1e293b;margin:0}.mco-showcase-card-header p{font-size:.9rem;color:#64748b;margin:.5rem 0 0}.mco-showcase-card-body{padding:1.5rem;display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;flex-grow:1}.mco-showcase-section{display:flex;flex-direction:column;justify-content:space-between}.mco-showcase-section h4{font-size:1.1rem;font-weight:600;color:#334155;margin:0 0 .5rem}.mco-showcase-section .exam-name{font-size:.95rem;color:#475569;flex-grow:1;margin-bottom:1rem}.mco-showcase-price{margin-bottom:1rem}.mco-showcase-btn{display:block;text-align:center;padding:.75rem 1rem;border-radius:8px;text-decoration:none;font-weight:600;transition:background-color .2s}.btn-practice{background-color:#e2e8f0;color:#334155}.btn-practice:hover{background-color:#cbd5e1}.btn-cert{background-color:#0891b2;color:#fff}.btn-cert:hover{background-color:#067a8e}@media (max-width:768px){.mco-showcase-card-body{grid-template-columns:1fr}} </style>
-    <div class="mco-showcase-container">
-        <?php foreach ($categories as $category): ?>
-            <?php $practice_exam = $exam_map[$category['practiceExamId']] ?? null; $cert_exam = $exam_map[$category['certificationExamId']] ?? null; ?>
-            <div class="mco-showcase-card">
-                <div class="mco-showcase-card-header"><h3><?php echo esc_html($category['name']); ?> Program</h3><p><?php echo esc_html($category['description']); ?></p></div>
-                <div class="mco-showcase-card-body">
-                    <?php if ($practice_exam): ?>
-                        <div class="mco-showcase-section"><div><h4>Free Practice Test</h4><p class="exam-name"><?php echo esc_html($practice_exam['name']); ?></p></div><a href="<?php echo esc_url($app_base_url . '#/test/' . $practice_exam['id']); ?>" class="mco-showcase-btn btn-practice">Start Practice</a></div>
-                    <?php endif; ?>
-                    <?php if ($cert_exam && isset($cert_exam['productSlug'])): ?>
-                         <div class="mco-showcase-section">
-                            <div><h4>Certification Exam</h4><p class="exam-name"><?php echo esc_html($cert_exam['name']); ?></p>
-                                <div class="mco-showcase-price">
-                                    <?php if (isset($cert_exam['regularPrice']) && $cert_exam['regularPrice'] > $cert_exam['price']): ?>
-                                        <del style="color:#94a3b8;font-size:1.2rem;margin-right:.5rem;">$<?php echo esc_html(number_format($cert_exam['regularPrice'], 2)); ?></del>
-                                        <ins style="color:#10b981;font-size:1.75rem;text-decoration:none;font-weight:bold;">$<?php echo esc_html(number_format($cert_exam['price'], 2)); ?></ins>
-                                    <?php else: ?>
-                                        <span style="color:#0891b2;font-size:1.75rem;font-weight:bold;">$<?php echo esc_html(number_format($cert_exam['price'], 2)); ?></span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            <a href="<?php echo esc_url(home_url('/product/' . $cert_exam['productSlug'] . '/')); ?>" class="mco-showcase-btn btn-cert">Purchase Exam</a>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        <?php endforeach; ?>
-    </div>
-    <?php return ob_get_clean();
-}
-
 function mco_exam_add_custom_registration_fields() { ?><p><label for="first_name">First Name<br/><input type="text" name="first_name" id="first_name" required/></label></p><p><label for="last_name">Last Name<br/><input type="text" name="last_name" id="last_name" required/></label></p><?php }
 function mco_exam_validate_reg_fields($errors, $login, $email) { if (empty($_POST['first_name']) || empty($_POST['last_name'])) $errors->add('field_error', 'First and Last Name are required.'); return $errors; }
 function mco_exam_save_reg_fields($user_id) { if (!empty($_POST['first_name'])) update_user_meta($user_id, 'first_name', sanitize_text_field($_POST['first_name'])); if (!empty($_POST['last_name'])) update_user_meta($user_id, 'last_name', sanitize_text_field($_POST['last_name'])); }
@@ -344,10 +296,10 @@ function mco_exam_login_url($login_url, $redirect) { if (strpos($_SERVER['REQUES
                 </ol>
 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Usage</h2>
-                 <p>Once activated, the plugin provides two shortcodes:</p>
+                 <p>Once activated, the plugin provides one primary shortcode:</p>
                 <ul>
                     <li><code>[mco_exam_login]</code>: Creates the secure login form that enables Single Sign-On into the exam application. Create a page called "Exam Login" and place this shortcode on it.</li>
-                    <li><code>[mco_exam_showcase]</code>: Displays a dynamic, styled grid of your exam programs, pulling data directly from this plugin file.</li>
+                    <li>The <code>[mco_exam_showcase]</code> shortcode is no longer needed, as the exam list is now managed directly within the React application.</li>
                 </ul>
 
                 <div className="mt-8">

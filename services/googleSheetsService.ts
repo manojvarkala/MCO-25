@@ -1,4 +1,4 @@
-import type { Question, TestResult, CertificateData, Organization, UserAnswer, User, Exam } from '@/types.ts';
+import type { Question, TestResult, CertificateData, UserAnswer, User, Exam } from '@/types.ts';
 import toast from 'react-hot-toast';
 import { GoogleGenAI } from "@google/genai";
 
@@ -37,16 +37,6 @@ const apiFetch = async (endpoint: string, token: string, options: RequestInit = 
 };
 
 export const googleSheetsService = {
-    // --- CONFIGURATION (FETCHED FROM WP) ---
-    getAppConfig: async (): Promise<Organization[]> => {
-        // This is a public endpoint, no token needed.
-        const response = await fetch(`${WP_API_BASE}/app-config`);
-        if (!response.ok) {
-            throw new Error("Failed to fetch application configuration from the server.");
-        }
-        return response.json();
-    },
-
     // --- AI FEEDBACK ---
     getAIFeedback: async (prompt: string): Promise<string> => {
         if (!process.env.API_KEY) {

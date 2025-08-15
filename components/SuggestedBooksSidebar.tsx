@@ -63,14 +63,14 @@ const SuggestedBooksSidebar: React.FC = () => {
             </h3>
             <p className="text-sm text-slate-500 mb-6">Explore these recommended books to deepen your knowledge and prepare for your exams.</p>
             <div className="space-y-6">
-                {suggestedBooks.map(book => {
+                {suggestedBooks.slice(0, 5).map(book => {
                      const { url, domainName } = getGeoAffiliateLink(book);
                      return (
                         <div key={book.id} className="flex items-start gap-4">
-                            <BookCover title={book.title} className="w-16 h-20 rounded shadow-sm flex-shrink-0" />
+                            <BookCover title={book.title} className="w-20 h-24 rounded shadow-sm flex-shrink-0" />
                             <div className="flex-grow min-w-0">
                                 <h4 className="font-bold text-slate-700 leading-tight">{book.title}</h4>
-                                <p className="text-xs text-slate-500 mt-1 mb-2">{book.description.substring(0, 60)}...</p>
+                                <p className="text-xs text-slate-500 mt-1 mb-2">{book.description.substring(0, 75)}...</p>
                                 <a 
                                     href={url}
                                     target="_blank"

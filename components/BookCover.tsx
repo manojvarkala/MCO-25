@@ -16,30 +16,51 @@ const BookCover: React.FC<BookCoverProps> = ({ title, className }) => {
     return hash;
   };
 
-  const colors = [
-    'bg-red-100 text-red-800 border-red-200',
-    'bg-yellow-100 text-yellow-800 border-yellow-200',
-    'bg-green-100 text-green-800 border-green-200',
-    'bg-blue-100 text-blue-800 border-blue-200',
-    'bg-indigo-100 text-indigo-800 border-indigo-200',
-    'bg-purple-100 text-purple-800 border-purple-200',
-    'bg-pink-100 text-pink-800 border-pink-200',
-    'bg-teal-100 text-teal-800 border-teal-200',
-    'bg-orange-100 text-orange-800 border-orange-200',
+  const bgColors = [
+    'from-red-50 to-red-100',
+    'from-yellow-50 to-yellow-100',
+    'from-green-50 to-green-100',
+    'from-blue-50 to-blue-100',
+    'from-indigo-50 to-indigo-100',
+    'from-purple-50 to-purple-100',
+    'from-pink-50 to-pink-100',
+    'from-teal-50 to-teal-100',
+    'from-orange-50 to-orange-100',
   ];
 
-  const colorIndex = Math.abs(getHashOfString(title)) % colors.length;
-  const colorClasses = colors[colorIndex];
+  const textColors = [
+    'text-red-900',
+    'text-yellow-900',
+    'text-green-900',
+    'text-blue-900',
+    'text-indigo-900',
+    'text-purple-900',
+    'text-pink-900',
+    'text-teal-900',
+    'text-orange-900',
+  ]
+  
+  const accentColors = [
+      'bg-red-300', 'bg-yellow-300', 'bg-green-300', 'bg-blue-300', 'bg-indigo-300', 'bg-purple-300', 'bg-pink-300', 'bg-teal-300', 'bg-orange-300'
+  ]
+
+  const colorIndex = Math.abs(getHashOfString(title)) % bgColors.length;
+  const bgColorClass = bgColors[colorIndex];
+  const textColorClass = textColors[colorIndex];
+  const accentColorClass = accentColors[colorIndex];
 
   const titleWords = title.split(' ');
-  const acronym = titleWords.map(word => word[0]).join('').substring(0, 4).toUpperCase();
-
+  
   return (
-    <div className={`flex flex-col items-center justify-center p-2 text-center font-sans border ${colorClasses} ${className}`}>
-      <div className="flex-grow flex items-center justify-center">
-        <span className="text-3xl font-black tracking-tighter">{acronym}</span>
-      </div>
-      <span className="text-xs mt-1 leading-tight font-semibold self-stretch">{title}</span>
+    <div className={`relative flex flex-col items-center justify-between p-4 text-center font-sans bg-gradient-to-br ${bgColorClass} ${className} overflow-hidden`}>
+        <div className={`absolute -bottom-10 -right-10 w-32 h-32 rounded-full opacity-50 ${accentColorClass}`}></div>
+        <div className={`absolute -top-12 -left-8 w-24 h-24 rounded-full opacity-50 ${accentColorClass}`}></div>
+        <div/>
+        <div className="z-10">
+            <h4 className={`font-bold text-lg leading-tight ${textColorClass}`}>{titleWords.slice(0, 4).join(" ")}</h4>
+            {titleWords.length > 4 && <p className={`text-sm ${textColorClass} opacity-80`}>{titleWords.slice(4).join(" ")}</p>}
+        </div>
+        <div className={`w-1/3 h-1 rounded-full ${accentColorClass} z-10`}></div>
     </div>
   );
 };
