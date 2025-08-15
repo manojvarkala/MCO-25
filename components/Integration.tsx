@@ -1,5 +1,6 @@
 import React from 'react';
 import toast from 'react-hot-toast';
+import { Copy } from 'lucide-react';
 
 const Integration: React.FC = () => {
 
@@ -7,7 +8,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           7.3.0
+ * Version:           7.4.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -177,84 +178,64 @@ function mco_get_questions_from_sheet_callback($request) {
 }
 
 // --- NEW SHOWCASE SHORTCODE ---
-function mco_get_all_exam_data() {
+function mco_get_exam_programs_data() {
     return [
-        // Practice Exams (12 total)
-        ['id' => 'exam-cpc-practice', 'name' => 'CPC Practice Test', 'description' => 'A short practice test to prepare for the CPC certification.', 'price' => 0, 'productSku' => 'exam-cpc-practice', 'isPractice' => true],
-        ['id' => 'exam-cca-practice', 'name' => 'CCA Practice Test', 'description' => 'A short practice test for the Certified Coding Associate exam.', 'price' => 0, 'productSku' => 'exam-cca-practice', 'isPractice' => true],
-        ['id' => 'exam-billing-practice', 'name' => 'Medical Billing Practice Test', 'description' => 'A short practice test for medical billing concepts.', 'price' => 0, 'productSku' => 'exam-billing-practice', 'isPractice' => true],
-        ['id' => 'exam-ccs-practice', 'name' => 'CCS Practice Test', 'description' => 'Practice for the Certified Coding Specialist exam.', 'price' => 0, 'productSku' => 'exam-ccs-practice', 'isPractice' => true],
-        ['id' => 'exam-risk-practice', 'name' => 'Risk Adjustment Practice Test', 'description' => 'Practice for the Risk Adjustment (CRC) exam.', 'price' => 0, 'productSku' => 'exam-risk-practice', 'isPractice' => true],
-        ['id' => 'exam-icd-practice', 'name' => 'ICD-10-CM Practice Test', 'description' => 'Practice for the ICD-10-CM proficiency exam.', 'price' => 0, 'productSku' => 'exam-icd-practice', 'isPractice' => true],
-        ['id' => 'exam-cpb-practice', 'name' => 'CPB Practice Test', 'description' => 'Practice for the Certified Professional Biller exam.', 'price' => 0, 'productSku' => 'exam-cpb-practice', 'isPractice' => true],
-        ['id' => 'exam-crc-practice', 'name' => 'CRC Practice Test', 'description' => 'Practice for the Certified Risk Adjustment Coder exam.', 'price' => 0, 'productSku' => 'exam-crc-practice', 'isPractice' => true],
-        ['id' => 'exam-cpma-practice', 'name' => 'CPMA Practice Test', 'description' => 'Practice for the Certified Professional Medical Auditor exam.', 'price' => 0, 'productSku' => 'exam-cpma-practice', 'isPractice' => true],
-        ['id' => 'exam-coc-practice', 'name' => 'COC Practice Test', 'description' => 'Practice for the Certified Outpatient Coder exam.', 'price' => 0, 'productSku' => 'exam-coc-practice', 'isPractice' => true],
-        ['id' => 'exam-cic-practice', 'name' => 'CIC Practice Test', 'description' => 'Practice for the Certified Inpatient Coder exam.', 'price' => 0, 'productSku' => 'exam-cic-practice', 'isPractice' => true],
-        ['id' => 'exam-mta-practice', 'name' => 'Medical Terminology & Anatomy Practice Test', 'description' => 'Practice for the Medical Terminology & Anatomy exam.', 'price' => 0, 'productSku' => 'exam-mta-practice', 'isPractice' => true],
-        // Certification Exams (12 total)
-        ['id' => 'exam-cpc-cert', 'name' => 'CPC Certification Exam', 'description' => 'Full certification exam for Certified Professional Coder.', 'price' => 150, 'regularPrice' => 150, 'productSku' => 'exam-cpc-cert', 'isPractice' => false],
-        ['id' => 'exam-cca-cert', 'name' => 'CCA Certification Exam', 'description' => 'Full certification exam for Certified Coding Associate.', 'price' => 120, 'regularPrice' => 120, 'productSku' => 'exam-cca-cert', 'isPractice' => false],
-        ['id' => 'exam-ccs-cert', 'name' => 'CCS Certification Exam', 'description' => 'Full certification exam for Certified Coding Specialist.', 'price' => 160, 'regularPrice' => 160, 'productSku' => 'exam-ccs-cert', 'isPractice' => false],
-        ['id' => 'exam-billing-cert', 'name' => 'Medical Billing Certification Exam', 'description' => 'Comprehensive exam covering medical billing and reimbursement.', 'price' => 100, 'regularPrice' => 100, 'productSku' => 'exam-billing-cert', 'isPractice' => false],
-        ['id' => 'exam-risk-cert', 'name' => 'Risk Adjustment Certification Exam', 'description' => 'Exam for Risk Adjustment Coding.', 'price' => 150, 'regularPrice' => 150, 'productSku' => 'exam-risk-cert', 'isPractice' => false],
-        ['id' => 'exam-icd-cert', 'name' => 'ICD-10-CM Certification Exam', 'description' => 'Proficiency exam for ICD-10-CM coding.', 'price' => 90, 'regularPrice' => 90, 'productSku' => 'exam-icd-cert', 'isPractice' => false],
-        ['id' => 'exam-cpb-cert', 'name' => 'CPB Certification Exam', 'description' => 'Full certification exam for Certified Professional Biller.', 'price' => 150, 'regularPrice' => 150, 'productSku' => 'exam-cpb-cert', 'isPractice' => false],
-        ['id' => 'exam-crc-cert', 'name' => 'CRC Certification Exam', 'description' => 'Full certification exam for Certified Risk Adjustment Coder.', 'price' => 150, 'regularPrice' => 150, 'productSku' => 'exam-crc-cert', 'isPractice' => false],
-        ['id' => 'exam-cpma-cert', 'name' => 'CPMA Certification Exam', 'description' => 'Full certification exam for Certified Professional Medical Auditor.', 'price' => 150, 'regularPrice' => 150, 'productSku' => 'exam-cpma-cert', 'isPractice' => false],
-        ['id' => 'exam-coc-cert', 'name' => 'COC Certification Exam', 'description' => 'Full certification exam for Certified Outpatient Coder.', 'price' => 150, 'regularPrice' => 150, 'productSku' => 'exam-coc-cert', 'isPractice' => false],
-        ['id' => 'exam-cic-cert', 'name' => 'CIC Certification Exam', 'description' => 'Full certification exam for Certified Inpatient Coder.', 'price' => 160, 'regularPrice' => 160, 'productSku' => 'exam-cic-cert', 'isPractice' => false],
-        ['id' => 'exam-mta-cert', 'name' => 'Medical Terminology & Anatomy Certification Exam', 'description' => 'Proficiency exam for Medical Terminology & Anatomy.', 'price' => 90, 'regularPrice' => 90, 'productSku' => 'exam-mta-cert', 'isPractice' => false]
+        ['name' => 'CPC Exam Program', 'description' => 'Prepare for the AAPC CPC (Certified Professional Coder) exam.', 'practice_id' => 'exam-cpc-practice', 'cert_sku' => 'exam-cpc-cert'],
+        ['name' => 'CCA Exam Program', 'description' => 'Prepare for the AHIMA CCA (Certified Coding Associate) credential.', 'practice_id' => 'exam-cca-practice', 'cert_sku' => 'exam-cca-cert'],
+        ['name' => 'Medical Billing Program', 'description' => 'Cover the essentials of medical billing and reimbursement.', 'practice_id' => 'exam-billing-practice', 'cert_sku' => 'exam-billing-cert'],
+        ['name' => 'CCS Exam Program', 'description' => 'Prepare for the AHIMA CCS (Certified Coding Specialist) credential.', 'practice_id' => 'exam-ccs-practice', 'cert_sku' => 'exam-ccs-cert'],
+        ['name' => 'Risk Adjustment Program', 'description' => 'Prepare for Risk Adjustment coding proficiency.', 'practice_id' => 'exam-risk-practice', 'cert_sku' => 'exam-risk-cert'],
+        ['name' => 'ICD-10-CM Program', 'description' => 'Prepare for ICD-10-CM coding proficiency.', 'practice_id' => 'exam-icd-practice', 'cert_sku' => 'exam-icd-cert'],
+        ['name' => 'CPB Exam Program', 'description' => 'Prepare for the AAPC CPB (Certified Professional Biller) credential.', 'practice_id' => 'exam-cpb-practice', 'cert_sku' => 'exam-cpb-cert'],
+        ['name' => 'CRC Exam Program', 'description' => 'Prepare for the AAPC CRC (Certified Risk Adjustment Coder) credential.', 'practice_id' => 'exam-crc-practice', 'cert_sku' => 'exam-crc-cert'],
+        ['name' => 'CPMA Exam Program', 'description' => 'Prepare for the AAPC CPMA (Certified Professional Medical Auditor) credential.', 'practice_id' => 'exam-cpma-practice', 'cert_sku' => 'exam-cpma-cert'],
+        ['name' => 'COC Exam Program', 'description' => 'Prepare for the AAPC COC (Certified Outpatient Coder) credential.', 'practice_id' => 'exam-coc-practice', 'cert_sku' => 'exam-coc-cert'],
+        ['name' => 'CIC Exam Program', 'description' => 'Prepare for the AAPC CIC (Certified Inpatient Coder) credential.', 'practice_id' => 'exam-cic-practice', 'cert_sku' => 'exam-cic-cert'],
+        ['name' => 'MTA Program', 'description' => 'Prepare for Medical Terminology & Anatomy proficiency.', 'practice_id' => 'exam-mta-practice', 'cert_sku' => 'exam-mta-cert'],
     ];
 }
 
 function mco_exam_showcase_shortcode() {
-    $exams = mco_get_all_exam_data();
+    $exam_programs = mco_get_exam_programs_data();
     $is_wc_active = class_exists('WooCommerce');
     ob_start(); ?>
     <style>
-    .mco-showcase-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2rem; font-family: sans-serif; }
-    .mco-showcase-card { border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1); background: #fff; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #e5e7eb; transition: transform .2s, box-shadow .2s; }
-    .mco-showcase-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); }
-    .mco-showcase-card-header { padding: 1.5rem 1.5rem 1rem; border-bottom: 1px solid #f3f4f6; }
-    .mco-showcase-card-header.cert { background-color: #0891b2; color: white; }
-    .mco-showcase-card-header.practice { background-color: #475569; color: white; }
-    .mco-showcase-card h3 { font-size: 1.25rem; font-weight: 700; margin: 0; }
-    .mco-showcase-card-body { padding: 1.5rem; flex-grow: 1; display: flex; flex-direction: column; }
-    .mco-showcase-card-body p { margin: 0 0 1rem; color: #4b5563; font-size: 0.95rem; line-height: 1.5; }
-    .mco-showcase-card-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid #f3f4f6; }
-    .mco-showcase-price { font-size: 1.1rem; text-align: center; margin-bottom: 1rem; }
+    .mco-showcase-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; font-family: sans-serif; }
+    .mco-showcase-card { border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05); background: #fff; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #e5e7eb; transition: transform .2s, box-shadow .2s; }
+    .mco-showcase-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,.07), 0 4px 6px -4px rgba(0,0,0,.07); }
+    .mco-showcase-card-body { padding: 1.25rem; flex-grow: 1; display: flex; flex-direction: column; }
+    .mco-showcase-card h3 { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.5rem; color: #1f2937; }
+    .mco-showcase-card p { margin: 0 0 1rem; color: #4b5563; font-size: 0.85rem; line-height: 1.5; flex-grow: 1; }
+    .mco-showcase-card-actions { margin-top: auto; display: flex; flex-direction: column; gap: 0.75rem; }
+    .mco-showcase-price { font-size: 1rem; text-align: center; margin-bottom: 0.5rem; }
     .mco-showcase-price .regular { text-decoration: line-through; color: #6b7280; margin-left: 0.5rem; }
-    .mco-showcase-price .sale { font-weight: 700; font-size: 1.75rem; color: #16a34a; }
-    .mco-showcase-btn { display: block; text-align: center; text-decoration: none; padding: 0.8rem 1rem; border-radius: 8px; font-weight: 600; transition: background-color .2s; }
-    .mco-btn-purchase { background-color: #f59e0b; color: #fff; }
+    .mco-showcase-price .sale { font-weight: 700; font-size: 1.5rem; color: #16a34a; }
+    .mco-showcase-btn { display: block; text-align: center; text-decoration: none; padding: 0.6rem 1rem; border-radius: 6px; font-weight: 600; transition: background-color .2s; font-size: 0.9rem; }
+    .mco-btn-purchase { background-color: #f59e0b; color: #fff; border: 1px solid #d97706; }
     .mco-btn-purchase:hover { background-color: #d97706; }
-    .mco-btn-practice { background-color: #64748b; color: #fff; }
-    .mco-btn-practice:hover { background-color: #475569; }
+    .mco-btn-practice { background-color: #f8fafc; color: #475569; border: 1px solid #cbd5e1; }
+    .mco-btn-practice:hover { background-color: #f1f5f9; }
     </style>
     <div class="mco-showcase-container">
-    <?php foreach ($exams as $exam):
-        $header_class = $exam['isPractice'] ? 'practice' : 'cert';
-    ?>
+    <?php foreach ($exam_programs as $program): ?>
         <div class="mco-showcase-card">
-            <div class="mco-showcase-card-header <?php echo $header_class; ?>">
-                <h3><?php echo esc_html($exam['name']); ?></h3>
-            </div>
             <div class="mco-showcase-card-body">
-                <p><?php echo esc_html($exam['description']); ?></p>
-                <div class="mco-showcase-card-footer">
-                    <?php if ($exam['isPractice']): 
-                        $practice_url = MCO_EXAM_APP_URL . '#/test/' . $exam['id'];
+                <h3><?php echo esc_html($program['name']); ?></h3>
+                <p><?php echo esc_html($program['description']); ?></p>
+                <div class="mco-showcase-card-actions">
+                    <?php 
+                        $practice_url = MCO_EXAM_APP_URL . '#/test/' . $program['practice_id'];
                     ?>
-                        <a href="<?php echo esc_url($practice_url); ?>" class="mco-showcase-btn mco-btn-practice">Start Practice</a>
-                    <?php else: 
-                        if ($is_wc_active):
-                            $product_id = wc_get_product_id_by_sku($exam['productSku']);
-                            if ($product_id && $product = wc_get_product($product_id)):
-                                $current_price = (float)$product->get_price();
-                                $regular_price = (float)$product->get_regular_price();
-                                $add_to_cart_url = $product->add_to_cart_url();
+                    <a href="<?php echo esc_url($practice_url); ?>" class="mco-showcase-btn mco-btn-practice">Start Free Practice</a>
+                    
+                    <?php if ($is_wc_active):
+                        $product_id = wc_get_product_id_by_sku($program['cert_sku']);
+                        if ($product_id && $product = wc_get_product($product_id)):
+                            $current_price = (float)$product->get_price();
+                            $regular_price = (float)$product->get_regular_price();
+                            $add_to_cart_url = $product->add_to_cart_url();
                     ?>
+                            <div>
                                 <div class="mco-showcase-price">
                                     <?php if ($regular_price > $current_price): ?>
                                         <span class="sale"><?php echo wc_price($current_price); ?></span>
@@ -264,10 +245,10 @@ function mco_exam_showcase_shortcode() {
                                     <?php endif; ?>
                                 </div>
                                 <a href="<?php echo esc_url($add_to_cart_url); ?>" class="mco-showcase-btn mco-btn-purchase">Purchase Exam</a>
-                            <?php else: ?>
-                                <p style="text-align:center; color: #9ca3af;">Product not available</p>
-                            <?php endif;
-                        endif;
+                            </div>
+                        <?php else: ?>
+                            <p style="text-align:center; font-size: 0.8rem; color: #9ca3af;">Certification not available</p>
+                        <?php endif;
                     endif; ?>
                 </div>
             </div>
@@ -324,49 +305,49 @@ function mco_exam_save_reg_fields($user_id) { if (!empty($_POST['first_name'])) 
 function mco_exam_login_url($login_url, $redirect) { if (strpos($_SERVER['REQUEST_URI'], 'wp-admin') !== false) return $login_url; $login_page_url = home_url('/' . MCO_LOGIN_SLUG . '/'); return !empty($redirect) ? add_query_arg('redirect_to', urlencode($redirect), $login_page_url) : $login_page_url; }
 ?>`;
 
-    const copyToClipboard = () => {
-        navigator.clipboard.writeText(phpCode)
-            .then(() => toast.success('Plugin code copied to clipboard!'))
-            .catch(err => toast.error('Failed to copy code.'));
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text).then(() => {
+            toast.success('PHP code copied to clipboard!');
+        }, (err) => {
+            toast.error('Failed to copy text.');
+            console.error('Could not copy text: ', err);
+        });
     };
 
     return (
         <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
             <h1 className="text-3xl font-bold text-slate-800 mb-4">WordPress Integration Guide</h1>
             <div className="prose max-w-none text-slate-600">
-                <p>This single, unified PHP file contains all the necessary code to integrate the examination application with your WordPress site. It handles user authentication (SSO), exam data configuration, and results synchronization.</p>
-                
-                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Installation Steps</h2>
-                <ol>
-                    <li><strong>Remove Old Plugins:</strong> If you have any previous versions of the "Annapoorna" or "MCO" integration plugins, please deactivate and delete them from your WordPress admin dashboard to avoid conflicts.</li>
-                    <li><strong>Create New Plugin File:</strong> In your WordPress installation, navigate to the <code>/wp-content/plugins/</code> directory. Create a new folder named <code>mco-exam-integration</code>. Inside this folder, create a new file named <code>mco-exam-integration.php</code>.</li>
-                    <li><strong>Copy & Paste Code:</strong> Copy the entire PHP code block below and paste it into the <code>mco-exam-integration.php</code> file you just created.</li>
-                    <li><strong>Define JWT Secret:</strong> Open your <code>wp-config.php</code> file (in the root of your WordPress installation) and add the following line. <strong>Important:</strong> Replace the placeholder key with a long, random string from a <a href="https://api.wordpress.org/secret-key/1.1/salt/" target="_blank" rel="noopener noreferrer">secure key generator</a>.
-                        <pre className="bg-slate-100 p-2 rounded text-sm"><code>define('MCO_JWT_SECRET', 'your-very-strong-secret-key-that-is-long-and-random');</code></pre>
-                    </li>
-                     <li><strong>(Optional) Enable Debugging:</strong> To diagnose sheet parsing issues, add the following line to <code>wp-config.php</code>. This will write detailed logs to your server's error log file.
-                        <pre className="bg-slate-100 p-2 rounded text-sm"><code>define('MCO_DEBUG', true);</code></pre>
-                    </li>
-                    <li><strong>Activate Plugin:</strong> Go to the "Plugins" page in your WordPress admin dashboard. You should see "MCO Exam App Integration". Click "Activate".</li>
-                </ol>
-
-                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Usage</h2>
-                 <p>Once activated, the plugin provides three useful shortcodes:</p>
-                <ul>
-                    <li><code>[mco_exam_showcase]</code>: This is the primary shortcode to display all your available exams in a clean, card-based layout for your visitors.</li>
-                    <li><code>[mco_exam_login]</code>: Creates the secure login form that enables Single Sign-On into the exam application. Create a page called "Exam Login" (with slug <code>exam-login</code>) and place this shortcode on it.</li>
-                    <li><code>[exam_user_details]</code>: This is a diagnostic shortcode for admins. Place it on any page to display the currently logged-in user's details, including their purchased exams, synced test results, and a live test of the Google Sheet fetching capability.</li>
-                </ul>
-
-                <div className="mt-8">
-                    <div className="flex justify-between items-center mb-2">
-                         <h3 className="text-xl font-bold text-slate-800">Plugin Code (mco-exam-integration.php)</h3>
-                         <button onClick={copyToClipboard} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition text-sm">Copy Code</button>
-                    </div>
-                    <pre className="bg-slate-800 text-white p-4 rounded-lg max-h-96 overflow-auto text-xs">
-                        <code>{phpCode}</code>
+                <p>
+                    To enable Single Sign-On (SSO) and sync exam results between this React application and your WordPress site, you need to add a custom plugin to your WordPress installation.
+                </p>
+                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Plugin Code</h2>
+                <p>
+                    Create a new PHP file (e.g., <code>mco-exam-integration.php</code>) in your <code>/wp-content/plugins/</code> directory and paste the following code into it. Then, activate the "MCO Exam App Integration" plugin from your WordPress admin dashboard.
+                </p>
+                <div className="relative mt-4">
+                    <button 
+                        onClick={() => copyToClipboard(phpCode)}
+                        className="absolute top-3 right-3 bg-slate-700 hover:bg-slate-800 text-white font-semibold py-1 px-3 rounded-md text-sm transition flex items-center gap-2"
+                        aria-label="Copy PHP code to clipboard"
+                    >
+                        <Copy size={14} />
+                        Copy Code
+                    </button>
+                    <pre className="bg-slate-900 text-white p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
+                        <code>
+                            {phpCode}
+                        </code>
                     </pre>
                 </div>
+
+                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Configuration</h2>
+                <p>
+                    <strong>Important:</strong> After activating the plugin, you must define a secure <code>MCO_JWT_SECRET</code> in your <code>wp-config.php</code> file. This is crucial for securing the communication between the two applications.
+                </p>
+                <pre className="bg-slate-100 border border-slate-200 text-slate-800 p-4 rounded-md overflow-x-auto text-sm">
+                    <code>{`// Add this line to your wp-config.php file, replacing the example key.\ndefine('MCO_JWT_SECRET', 'your-very-strong-secret-key-that-is-long-and-random');`}</code>
+                </pre>
             </div>
         </div>
     );

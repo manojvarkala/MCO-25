@@ -248,7 +248,7 @@ const Dashboard: React.FC = () => {
                                         {/* Practice Column */}
                                         <div className="flex flex-col justify-between p-4 bg-slate-50 rounded-lg">
                                             <div>
-                                                <h4 className="font-semibold text-slate-700 flex items-center gap-2"><FlaskConical size={16} /> Practice Test</h4>
+                                                <h4 className="font-semibold text-slate-700 flex items-center gap-2"><FlaskConical size={16} /> Free Practice</h4>
                                                 <p className="text-xs text-slate-500 mt-1">{practiceExam.numberOfQuestions} questions, {practiceExam.durationMinutes} mins</p>
                                             </div>
                                             <button
