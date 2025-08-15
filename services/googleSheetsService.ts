@@ -1,4 +1,4 @@
-import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData } from '@/types.ts';
+import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData } from '@/types.ts';
 import toast from 'react-hot-toast';
 import { GoogleGenAI } from "@google/genai";
 
@@ -100,6 +100,10 @@ export const googleSheetsService = {
         return apiFetch(`/certificate-data/${testId}`, token);
     },
     
+    getDebugDetails: async (token: string): Promise<DebugData> => {
+        return apiFetch('/debug-details', token);
+    },
+
     // --- QUESTION LOADING (VIA WP PROXY) ---
     getQuestions: async (exam: Exam, token: string): Promise<Question[]> => {
         const fetchedQuestions: Question[] = await apiFetch('/questions-from-sheet', token, {

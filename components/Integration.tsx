@@ -8,7 +8,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           7.4.0
+ * Version:           7.5.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -106,6 +106,7 @@ function mco_exam_register_rest_api() {
     register_rest_route('mco-app/v1', '/questions-from-sheet', ['methods' => 'POST', 'callback' => 'mco_get_questions_from_sheet_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/update-name', ['methods' => 'POST', 'callback' => 'mco_exam_update_user_name_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/certificate-data/(?P<test_id>[\\w-]+)', ['methods' => 'GET', 'callback' => 'mco_get_certificate_data_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+    register_rest_route('mco-app/v1', '/debug-details', ['methods' => 'GET', 'callback' => 'mco_get_debug_details_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
 }
 
 function mco_exam_api_permission_check($request) {
@@ -176,6 +177,57 @@ function mco_get_questions_from_sheet_callback($request) {
     $final_questions = []; foreach($selected_questions as $index => $q) { $q['id'] = $index + 1; $final_questions[] = $q; }
     return new WP_REST_Response($final_questions, 200);
 }
+
+// --- NEW DEBUG ENDPOINT ---
+function mco_get_debug_details_callback($request) {
+    $user_id = (int)$request->get_param('jwt_user_id');
+    if (!$user = get_userdata($user_id)) return new WP_Error('user_not_found', 'User not found.', ['status' => 404]);
+    if (!user_can($user, 'administrator')) return new WP_Error('forbidden', 'You do not have permission to view debug details.', ['status' => 403]);
+    
+    $user_full_name = trim($user->first_name . ' ' . $user->last_name) ?: $user->display_name;
+    
+    // Get Purchases
+    $paid_exam_ids = [];
+    if (class_exists('WooCommerce')) {
+        $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert'];
+        $customer_orders = wc_get_orders(['customer' => $user_id, 'status' => ['wc-completed', 'wc-processing'], 'limit' => -1]);
+        $purchased_skus = [];
+        if ($customer_orders) { foreach ($customer_orders as $order) { foreach ($order->get_items() as $item) { if ($product = $item->get_product()) $purchased_skus[] = $product->get_sku(); } } }
+        $paid_exam_ids = array_values(array_intersect($all_exam_skus, array_unique($purchased_skus)));
+    }
+
+    // Get Results
+    $results = get_user_meta($user_id, 'mco_exam_results', true);
+    $results = empty($results) || !is_array($results) ? [] : array_values($results);
+
+    // Sheet Test
+    $test_sheet_url = 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing';
+    $csv_url = str_replace(['/edit?usp=sharing', '/edit#gid='], ['/export?format=csv', '/export?format=csv&gid='], $test_sheet_url);
+    $response = wp_remote_get($csv_url, ['timeout' => 20]);
+    $sheet_test_result = [];
+    if (is_wp_error($response)) {
+        $sheet_test_result = ['success' => false, 'message' => 'Failed to connect to Google Sheets.', 'data' => $response->get_error_message()];
+    } else {
+        $body = wp_remote_retrieve_body($response);
+        $lines = preg_split('/\\r\\n?|\\n/', trim($body));
+        if (count($lines) > 1) {
+            array_shift($lines); $random_line = $lines[array_rand($lines)];
+            $sheet_test_result = ['success' => true, 'message' => 'Successfully fetched and parsed a random question.', 'data' => str_getcsv($random_line)];
+        } else {
+            $sheet_test_result = ['success' => false, 'message' => 'Fetched sheet, but it appears to be empty or invalid.'];
+        }
+    }
+
+    $debug_data = [
+        'user' => ['id' => (string)$user->ID, 'name' => $user_full_name, 'email' => $user->user_email],
+        'purchases' => $paid_exam_ids,
+        'results' => mco_ensure_utf8_recursive($results),
+        'sheetTest' => $sheet_test_result
+    ];
+
+    return new WP_REST_Response($debug_data, 200);
+}
+
 
 // --- NEW SHOWCASE SHORTCODE ---
 function mco_get_exam_programs_data() {

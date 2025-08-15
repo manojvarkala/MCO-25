@@ -129,3 +129,19 @@ export interface CertificateData {
     organization: Organization;
     template: CertificateTemplate;
 }
+
+// Data for the Admin Debug Sidebar
+export interface DebugData {
+    user: {
+        id: string;
+        name: string;
+        email: string;
+    };
+    purchases: string[];
+    results: TestResult[];
+    sheetTest: {
+        success: boolean;
+        message: string;
+        data?: any;
+    };
+}
