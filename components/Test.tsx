@@ -55,7 +55,7 @@ const Test: React.FC = () => {
 
       try {
         // Read from local storage first to check attempt counts
-        const userResults = googleSheetsService.getTestResultsForUser(user);
+        const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
         
         if (config.isPractice) {
             if (!isSubscribed) {

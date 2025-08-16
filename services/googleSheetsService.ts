@@ -61,26 +61,10 @@ export const googleSheetsService = {
             throw new Error("Failed to generate AI feedback. Please try again later.");
         }
     },
-
-    // --- DATA SYNC & LOCAL STORAGE ---
-    syncResults: async (user: User, token: string): Promise<void> => {
-        try {
-            const remoteResults: TestResult[] = await apiFetch('/user-results', token);
-            const resultsMap = remoteResults.reduce((acc, result) => {
-                acc[result.testId] = result;
-                return acc;
-            }, {} as { [key: string]: TestResult });
-            localStorage.setItem(`exam_results_${user.id}`, JSON.stringify(resultsMap));
-            console.log("Results successfully synced with server.");
-        } catch (error) {
-            console.error("Server sync failed:", error);
-            toast.error("Server sync failed. Displaying cached results.");
-        }
-    },
     
-    getTestResultsForUser: (user: User): TestResult[] => {
+    getLocalTestResultsForUser: (userId: string): TestResult[] => {
         try {
-            const storedResults = localStorage.getItem(`exam_results_${user.id}`);
+            const storedResults = localStorage.getItem(`exam_results_${userId}`);
             if (storedResults) {
                 return Object.values(JSON.parse(storedResults));
             }
@@ -89,6 +73,17 @@ export const googleSheetsService = {
             console.error("Failed to parse results from localStorage", error);
             return [];
         }
+    },
+
+    getTestResultsForUser: async (user: User, token: string): Promise<TestResult[]> => {
+        const remoteResults: TestResult[] = await apiFetch('/user-results', token);
+        const resultsMap = remoteResults.reduce((acc, result) => {
+            acc[result.testId] = result;
+            return acc;
+        }, {} as { [key: string]: TestResult });
+        localStorage.setItem(`exam_results_${user.id}`, JSON.stringify(resultsMap));
+        console.log("Results successfully synced with server.");
+        return remoteResults;
     },
 
     getTestResult: (user: User, testId: string): TestResult | undefined => {

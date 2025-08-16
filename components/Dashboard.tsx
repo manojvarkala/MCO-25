@@ -30,49 +30,53 @@ const Dashboard: React.FC = () => {
 
 
     useEffect(() => {
-        if (!user || !activeOrg) {
+        if (!user || !activeOrg || !token) {
             if (activeOrg) setIsLoading(false);
             return;
         };
+        
         const fetchResults = async () => {
             setIsLoading(true);
             setHistoryError(null);
             
-            // Attempt to sync with server, but don't block UI.
-            if (token) {
-                await googleSheetsService.syncResults(user, token);
+            // First, load from local cache for instant UI
+            const cachedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
+            if (cachedResults) {
+                setResults(cachedResults);
             }
 
-            // Read from local storage (which may have been updated by sync).
-            const userResults = googleSheetsService.getTestResultsForUser(user);
-            
-            if (userResults) {
-                setResults(userResults);
-                if (userResults.length > 0) {
-                    const totalScore = userResults.reduce((sum, r) => sum + r.score, 0);
-                    const avg = totalScore / userResults.length;
-                    const best = Math.max(...userResults.map(r => r.score));
+            // Then, fetch from server to get the latest data
+            try {
+                const serverResults = await googleSheetsService.getTestResultsForUser(user, token);
+                setResults(serverResults);
+                
+                if (serverResults.length > 0) {
+                    const totalScore = serverResults.reduce((sum, r) => sum + r.score, 0);
+                    const avg = totalScore / serverResults.length;
+                    const best = Math.max(...serverResults.map(r => r.score));
                     setStats({
                         avgScore: parseFloat(avg.toFixed(1)),
                         bestScore: best,
-                        examsTaken: userResults.length
+                        examsTaken: serverResults.length
                     });
                 } else {
                     setStats({ avgScore: 0, bestScore: 0, examsTaken: 0 });
                 }
 
                 const practiceExamIds = new Set(activeOrg.exams.filter(e => e.isPractice).map(e => e.id));
-                const practiceAttemptsTaken = userResults.filter(r => practiceExamIds.has(r.examId)).length;
+                const practiceAttemptsTaken = serverResults.filter(r => practiceExamIds.has(r.examId)).length;
                 setPracticeStats({ attemptsTaken: practiceAttemptsTaken, attemptsAllowed: 10 });
-            } else {
+
+            } catch (error: any) {
                  const errorMessage = "Could not load your exam history.";
                  toast.error(errorMessage);
                  setHistoryError(errorMessage);
-                 setResults([]);
+                 if (!cachedResults) setResults([]); // If cache was empty and fetch failed
+            } finally {
+                setIsLoading(false);
             }
-
-            setIsLoading(false);
         };
+
         fetchResults();
     }, [user, activeOrg, token]);
 
