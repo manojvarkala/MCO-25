@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
 const Dashboard: React.FC = () => {
     const navigate = ReactRouterDOM.useNavigate();
-    const { user, paidExamIds, isSubscribed, updateUserName, token } from useAuth();
+    const { user, paidExamIds, isSubscribed, updateUserName, token } = useAuth();
     const { activeOrg } = useAppContext();
     const [results, setResults] = useState<TestResult[] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
