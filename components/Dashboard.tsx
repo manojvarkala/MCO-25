@@ -371,21 +371,33 @@ const Dashboard: React.FC = () => {
             </div>
 
             {isOfferVisible && (
-                <div className="fixed bottom-5 right-5 w-80 bg-gradient-to-br from-cyan-500 to-purple-600 text-white p-5 rounded-xl shadow-2xl z-50 transform transition-all duration-300 ease-in-out hover:scale-105">
-                    <button 
-                        onClick={() => setIsOfferVisible(false)}
-                        className="absolute top-2 right-2 text-white/70 hover:text-white"
-                        aria-label="Dismiss announcement"
+                <div 
+                    className="fixed inset-0 z-50 flex p-0 md:p-4
+                               md:items-center md:justify-center md:bg-black md:bg-opacity-50
+                               items-end"
+                >
+                    <div 
+                        className="relative bg-gradient-to-br from-cyan-500 to-purple-600 text-white shadow-2xl 
+                                   w-full rounded-t-2xl p-4
+                                   md:max-w-lg md:rounded-2xl md:p-8"
                     >
-                        <X size={20} />
-                    </button>
-                    <div className="flex items-center gap-4">
-                        <div className="bg-white/20 p-3 rounded-full">
-                            <Megaphone size={28} />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-lg">Introductory Offer!</h3>
-                            <p className="text-sm">All certification exams are just <span className="font-extrabold text-2xl">$1</span> for a limited time!</p>
+                        <button 
+                            onClick={() => setIsOfferVisible(false)}
+                            className="absolute top-3 right-3 text-white/70 hover:text-white transition-colors"
+                            aria-label="Dismiss announcement"
+                        >
+                            <X size={24} />
+                        </button>
+                        <div className="flex items-center gap-5">
+                            <div className="bg-white/20 p-3 rounded-full hidden sm:block">
+                                <Megaphone size={32} />
+                            </div>
+                            <div className="flex-grow">
+                                <h3 className="font-extrabold text-lg sm:text-xl text-white">Limited Time Offer!</h3>
+                                <p className="text-sm sm:text-base text-white/90 mt-1">
+                                    All certification exams are just <span className="font-black text-yellow-300 text-xl sm:text-2xl">$1</span> as an introductory offer!
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
