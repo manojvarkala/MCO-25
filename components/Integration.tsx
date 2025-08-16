@@ -10,8 +10,8 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           7.5.1
- * Author:            Annapoorna Infotech (Refactored)
+ * Version:           7.5.2
+ * Author:            Annapoorna Infotech (Refactored & Fixed)
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -54,7 +54,7 @@ function mco_exam_app_init() {
     
     add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
     add_shortcode('exam_user_details', 'mco_exam_user_details_shortcode');
-    add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode'); // <-- Reinstated shortcode
+    add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
 }
 
 function mco_debug_log($message) { if (defined('MCO_DEBUG') && MCO_DEBUG) error_log('MCO Exam App Debug: ' . print_r($message, true)); }
@@ -140,48 +140,82 @@ function mco_get_questions_from_sheet_callback($request) {
     $params = $request->get_json_params();
     $sheet_url = isset($params['sheetUrl']) ? esc_url_raw($params['sheetUrl']) : '';
     $count = isset($params['count']) ? intval($params['count']) : 100;
-    if (empty($sheet_url) || !filter_var($sheet_url, FILTER_VALIDATE_URL)) return new WP_Error('invalid_url', 'Invalid Google Sheet URL.', ['status' => 400]);
-    $csv_url = str_replace(['/edit?usp=sharing', '/edit#gid='], ['/export?format=csv', '/export?format=csv&gid='], $sheet_url);
-    $response = wp_remote_get($csv_url, ['timeout' => 20]);
-    if (is_wp_error($response)) { mco_debug_log('Sheet fetch failed: ' . $response->get_error_message()); return new WP_Error('fetch_failed', 'Could not connect to Google Sheets to get questions.', ['status' => 500]); }
-    $body = wp_remote_retrieve_body($response);
-    if (substr($body, 0, 3) === "\\xEF\\xBB\\xBF") $body = substr($body, 3);
-    $lines = preg_split('/\\r\\n?|\\n/', trim($body));
-    if (count($lines) <= 1) return new WP_Error('empty_sheet', 'The Google Sheet is empty or could not be read.', ['status' => 500]);
-    array_shift($lines); $questions = []; $skipped_rows = 0; $total_rows = count($lines);
-    foreach ($lines as $line_num => $line) {
-        if (empty(trim($line))) { $skipped_rows++; continue; }
-        $row_raw = str_getcsv($line);
-        $options_str = isset($row_raw[1]) ? trim($row_raw[1]) : '';
-        if (count($row_raw) < 3 && strpos($options_str, '|') === false) { $skipped_rows++; mco_debug_log("Skipping row #" . ($line_num + 2) . ": Not enough columns for separate options, and no pipe separator found."); continue; }
-        if (empty(trim($row_raw[0])) || empty($options_str)) { $skipped_rows++; mco_debug_log("Skipping row #" . ($line_num + 2) . ": Question or Options column is empty."); continue; }
-        
-        $question_text = trim($row_raw[0]);
-        $options = [];
-        $answer_column_value = '';
-        
-        if (strpos($options_str, '|') !== false) {
-            $options = array_map('trim', explode('|', $options_str));
-            $answer_column_value = isset($row_raw[2]) ? trim($row_raw[2]) : '';
-        } else {
-            for ($i = 1; $i < count($row_raw) - 1; $i++) { if (!empty(trim($row_raw[$i]))) $options[] = trim($row_raw[$i]); }
-            $answer_column_value = trim(end($row_raw));
-        }
-        
-        if (count($options) < 2) { $skipped_rows++; mco_debug_log('Skipping row #' . ($line_num + 2) . '. Reason: Could not parse at least 2 options.'); continue; }
-        
-        $correct_answer_index = false;
-        if (is_numeric($answer_column_value)) { $numeric_index = intval($answer_column_value) - 1; if ($numeric_index >= 0 && $numeric_index < count($options)) $correct_answer_index = $numeric_index; }
-        if ($correct_answer_index === false && strlen($answer_column_value) === 1 && ctype_alpha($answer_column_value)) { $letter_index = ord(strtoupper($answer_column_value)) - ord('A'); if ($letter_index >= 0 && $letter_index < count($options)) $correct_answer_index = $letter_index; }
-        if ($correct_answer_index === false) { $found_index = array_search(strtolower($answer_column_value), array_map('strtolower', $options)); if ($found_index !== false) $correct_answer_index = $found_index; }
-        
-        if ($correct_answer_index === false) { $skipped_rows++; mco_debug_log('Skipping row #' . ($line_num + 2) . '. Reason: Could not determine correct answer from value: "' . $answer_column_value . '".'); continue; }
-        
-        $questions[] = ['id' => count($questions) + 1, 'question' => $question_text, 'options' => $options, 'correctAnswer' => $correct_answer_index + 1];
+    
+    if (empty($sheet_url) || !filter_var($sheet_url, FILTER_VALIDATE_URL)) {
+        return new WP_Error('invalid_url', 'Invalid Google Sheet URL.', ['status' => 400]);
     }
-    if (empty($questions)) { $error_message = 'No valid questions could be parsed from the source. Processed ' . $total_rows . ' rows and skipped all of them. Please check your sheet formatting (each option in its own column) and enable MCO_DEBUG in wp-config.php to see detailed logs.'; return new WP_Error('parse_failed', $error_message, ['status' => 500]); }
-    shuffle($questions); $selected_questions = array_slice($questions, 0, $count);
-    $final_questions = []; foreach($selected_questions as $index => $q) { $q['id'] = $index + 1; $final_questions[] = $q; }
+
+    $csv_url = str_replace(['/edit?usp=sharing', '/edit#gid='], ['/export?format=csv', '/export?format=csv&gid='], $sheet_url);
+    
+    $response = wp_remote_get($csv_url, ['timeout' => 20]);
+
+    if (is_wp_error($response)) {
+        mco_debug_log('Sheet fetch failed: ' . $response->get_error_message());
+        return new WP_Error('fetch_failed', 'Could not connect to Google Sheets to get questions.', ['status' => 500]);
+    }
+
+    $body = wp_remote_retrieve_body($response);
+    
+    // Remove UTF-8 BOM if present
+    if (substr($body, 0, 3) === "\xEF\xBB\xBF") {
+        $body = substr($body, 3);
+    }
+    
+    $lines = preg_split('/\\r\\n?|\\n/', trim($body));
+    
+    if (count($lines) <= 1) {
+        return new WP_Error('empty_sheet', 'The Google Sheet is empty or could not be read.', ['status' => 500]);
+    }
+
+    array_shift($lines); // Remove header row
+    $questions = [];
+
+    foreach ($lines as $line) {
+        if (empty(trim($line))) continue;
+
+        $row = str_getcsv($line);
+
+        if (count($row) < 3) continue; // Must have at least a question, one option, and an answer.
+
+        $question_text = trim($row[0]);
+        $correct_answer_num = (int)trim(array_pop($row)); // Assumes last column is the correct answer index (1-based)
+        
+        $options = [];
+        // Assumes options are in columns from index 1 up to the new end of the row array
+        for ($i = 1; $i < count($row); $i++) {
+            $option = trim($row[$i]);
+            if (!empty($option)) {
+                $options[] = $option;
+            }
+        }
+
+        // Validate the parsed data for this row
+        if (empty($question_text) || count($options) < 2 || $correct_answer_num <= 0 || $correct_answer_num > count($options)) {
+            continue; // Skip invalid rows
+        }
+
+        $questions[] = [
+            'id' => count($questions) + 1,
+            'question' => $question_text,
+            'options' => $options,
+            'correctAnswer' => $correct_answer_num
+        ];
+    }
+    
+    if (empty($questions)) {
+        return new WP_Error('parse_failed', 'No valid questions could be parsed from the source. Please check your sheet formatting.', ['status' => 500]);
+    }
+
+    shuffle($questions);
+    $selected_questions = array_slice($questions, 0, $count);
+    
+    // Re-ID questions after shuffle and slice to ensure they are sequential from 1
+    $final_questions = [];
+    foreach ($selected_questions as $index => $q) {
+        $q['id'] = $index + 1;
+        $final_questions[] = $q;
+    }
+
     return new WP_REST_Response(mco_ensure_utf8_recursive($final_questions), 200);
 }
 
