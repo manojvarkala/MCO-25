@@ -104,10 +104,9 @@ const Test: React.FC = () => {
         
         if (config.isPractice) {
             if (!isSubscribed) {
-              const practiceExamIds = new Set(activeOrg.exams.filter(e => e.isPractice).map(e => e.id));
-              const practiceAttempts = userResults.filter(r => practiceExamIds.has(r.examId)).length;
+              const practiceAttempts = userResults.filter(r => r.examId === config.id).length;
               if (practiceAttempts >= 10) {
-                toast.error("You have used all 10 of your free practice attempts.", { duration: 4000 });
+                toast.error("You have used all 10 of your free practice attempts for this exam.", { duration: 4000 });
                 navigate('/dashboard');
                 return;
               }
