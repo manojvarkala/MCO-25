@@ -38,9 +38,8 @@ const Dashboard: React.FC = () => {
             setIsLoading(true);
             setHistoryError(null);
             try {
-                // Always sync results from server on dashboard load for consistency
-                await googleSheetsService.syncResults(token, user);
-                const userResults = await googleSheetsService.getTestResultsForUser(user);
+                // Fetch latest results directly from server; this also updates the local cache.
+                const userResults = await googleSheetsService.getTestResultsForUser(user, token);
                 setResults(userResults);
                 
                 if (userResults.length > 0) {

@@ -54,7 +54,7 @@ const Test: React.FC = () => {
       }
 
       try {
-        const userResults = await googleSheetsService.getTestResultsForUser(user);
+        const userResults = await googleSheetsService.getTestResultsForUser(user, token);
         
         if (config.isPractice) {
             if (!isSubscribed) {

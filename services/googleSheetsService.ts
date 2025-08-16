@@ -63,45 +63,41 @@ export const googleSheetsService = {
     },
 
     // --- DATA SYNC & LOCAL STORAGE ---
-    syncResults: async (token: string, user: User): Promise<void> => {
+    getTestResultsForUser: async (user: User, token: string): Promise<TestResult[]> => {
         try {
-            // Get remote results and make a map
             const remoteResults: TestResult[] = await apiFetch('/user-results', token);
-            const remoteMap = remoteResults.reduce((acc, result) => {
+            const resultsMap = remoteResults.reduce((acc, result) => {
                 acc[result.testId] = result;
                 return acc;
             }, {} as { [key: string]: TestResult });
 
-            // Get local results map
-            const localResultsRaw = localStorage.getItem(`exam_results_${user.id}`);
-            const localMap = localResultsRaw ? JSON.parse(localResultsRaw) : {};
+            // Update local storage to cache the latest server data
+            localStorage.setItem(`exam_results_${user.id}`, JSON.stringify(resultsMap));
 
-            // Merge: local results are overwritten by remote ones if keys match.
-            // New local results (not yet on server) are kept.
-            const mergedMap = { ...localMap, ...remoteMap };
-
-            localStorage.setItem(`exam_results_${user.id}`, JSON.stringify(mergedMap));
-        } catch (error: any) {
-            console.error("Failed to sync remote results:", error);
-            const errorMessage = error.message || "Could not connect to the server. Please check your network connection.";
-            toast.error(errorMessage);
-        }
-    },
-
-    getTestResultsForUser: async (user: User): Promise<TestResult[]> => {
-        try {
-            const storedResults = localStorage.getItem(`exam_results_${user.id}`);
-            const results = storedResults ? JSON.parse(storedResults) : {};
-            return Promise.resolve(Object.values(results));
+            return Object.values(resultsMap);
         } catch (error) {
-            console.error("Failed to parse results from localStorage", error);
-            return Promise.resolve([]);
+            console.error("Failed to fetch test results from server:", error);
+            // Fallback to local storage if network fails
+            const storedResults = localStorage.getItem(`exam_results_${user.id}`);
+            if (storedResults) {
+                toast.error("Server sync failed. Displaying cached results.");
+                return Object.values(JSON.parse(storedResults));
+            }
+            // If there's no cache, re-throw the error to be handled by the UI
+            throw error;
         }
     },
 
     getTestResult: async (user: User, testId: string): Promise<TestResult | undefined> => {
-        const results = await googleSheetsService.getTestResultsForUser(user);
-        return results.find(r => r.testId === testId);
+        // This function now reads from the cache which is updated on Dashboard load.
+        try {
+            const storedResults = localStorage.getItem(`exam_results_${user.id}`);
+            const results = storedResults ? JSON.parse(storedResults) : {};
+            return Promise.resolve(results[testId]);
+        } catch (error) {
+            console.error("Failed to parse results from localStorage", error);
+            return Promise.resolve(undefined);
+        }
     },
 
     // --- DIRECT API CALLS (NOT CACHED LOCALLY) ---

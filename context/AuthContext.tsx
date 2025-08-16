@@ -126,9 +126,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setExamPrices(payload.examPrices);
                 localStorage.setItem('examPrices', JSON.stringify(payload.examPrices));
             }
-            
-            // Sync results from backend to local storage
-            await googleSheetsService.syncResults(jwtToken, payload.user);
+            // The dashboard will now handle syncing results upon loading.
 
         } else {
             throw new Error("Invalid token payload structure.");
