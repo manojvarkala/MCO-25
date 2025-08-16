@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { GoogleGenAI } from "@google/genai";
 
 // --- API Client for WordPress Backend ---
-const WP_API_BASE = '/api';
+const WP_API_BASE = 'https://www.coding-online.net/wp-json/mco-app/v1';
 
 const apiFetch = async (endpoint: string, token: string, options: RequestInit = {}) => {
     const headers: HeadersInit = {
@@ -111,6 +111,13 @@ export const googleSheetsService = {
     
     getDebugDetails: async (token: string): Promise<DebugData> => {
         return apiFetch('/debug-details', token);
+    },
+
+    updateUserName: async (token: string, newName: string): Promise<any> => {
+        return apiFetch('/update-name', token, {
+            method: 'POST',
+            body: JSON.stringify({ fullName: newName })
+        });
     },
 
     // --- QUESTION LOADING (VIA WP PROXY) ---

@@ -27,7 +27,6 @@ const Dashboard: React.FC = () => {
     const appDashboardPath = '/dashboard';
     const syncUrl = `${loginUrl}?redirect_to=${encodeURIComponent(appDashboardPath)}`;
     const browseExamsUrl = 'https://www.coding-online.net/exam-programs';
-    const updateNameEndpoint = '/api/update-name';
 
 
     useEffect(() => {
@@ -88,19 +87,7 @@ const Dashboard: React.FC = () => {
         const toastId = toast.loading('Syncing name with your profile...');
 
         try {
-            const response = await fetch(updateNameEndpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ fullName: name.trim() })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to update name.');
-            }
+            await googleSheetsService.updateUserName(token, name.trim());
 
             updateUserName(name.trim());
             setIsEditingName(false);
