@@ -140,48 +140,34 @@ function mco_get_questions_from_sheet_callback($request) {
     $params = $request->get_json_params();
     $sheet_url = isset($params['sheetUrl']) ? esc_url_raw($params['sheetUrl']) : '';
     $count = isset($params['count']) ? intval($params['count']) : 100;
-    
-    if (empty($sheet_url) || !filter_var($sheet_url, FILTER_VALIDATE_URL)) {
-        return new WP_Error('invalid_url', 'Invalid Google Sheet URL.', ['status' => 400]);
+
+    if (empty($sheet_url)) {
+        return new WP_Error('invalid_url', 'Google Sheet URL was not provided.', ['status' => 400]);
     }
 
-    $csv_url = str_replace(['/edit?usp=sharing', '/edit#gid='], ['/export?format=csv', '/export?format=csv&gid='], $sheet_url);
-    
-    $response = wp_remote_get($csv_url, ['timeout' => 20]);
+    $csv_url = str_replace('/edit?usp=sharing', '/export?format=csv', $sheet_url);
+    $response = wp_remote_get($csv_url, ['timeout' => 15]);
 
     if (is_wp_error($response)) {
-        mco_debug_log('Sheet fetch failed: ' . $response->get_error_message());
-        return new WP_Error('fetch_failed', 'Could not connect to Google Sheets to get questions.', ['status' => 500]);
+        return new WP_Error('fetch_failed', 'Could not retrieve questions from the source sheet.', ['status' => 500]);
     }
 
     $body = wp_remote_retrieve_body($response);
-    
-    // Remove UTF-8 BOM if present
-    if (substr($body, 0, 3) === "\xEF\xBB\xBF") {
-        $body = substr($body, 3);
-    }
-    
-    $lines = preg_split('/\\r\\n?|\\n/', trim($body));
-    
-    if (count($lines) <= 1) {
-        return new WP_Error('empty_sheet', 'The Google Sheet is empty or could not be read.', ['status' => 500]);
-    }
-
+    $lines = explode(PHP_EOL, trim($body));
     array_shift($lines); // Remove header row
-    $questions = [];
 
+    $questions = [];
     foreach ($lines as $line) {
         if (empty(trim($line))) continue;
 
         $row = str_getcsv($line);
-
-        if (count($row) < 3) continue; // Must have at least a question, one option, and an answer.
+        if (count($row) < 3) continue; // Skip rows without at least a question, one option, and an answer.
 
         $question_text = trim($row[0]);
-        $correct_answer_num = (int)trim(array_pop($row)); // Assumes last column is the correct answer index (1-based)
+        $correct_answer_num = (int)trim(array_pop($row)); // The last column is the answer index.
         
         $options = [];
-        // Assumes options are in columns from index 1 up to the new end of the row array
+        // All columns between the first and the new last are options.
         for ($i = 1; $i < count($row); $i++) {
             $option = trim($row[$i]);
             if (!empty($option)) {
@@ -189,9 +175,9 @@ function mco_get_questions_from_sheet_callback($request) {
             }
         }
 
-        // Validate the parsed data for this row
+        // Validate the parsed data.
         if (empty($question_text) || count($options) < 2 || $correct_answer_num <= 0 || $correct_answer_num > count($options)) {
-            continue; // Skip invalid rows
+            continue;
         }
 
         $questions[] = [
@@ -201,23 +187,24 @@ function mco_get_questions_from_sheet_callback($request) {
             'correctAnswer' => $correct_answer_num
         ];
     }
-    
+
     if (empty($questions)) {
-        return new WP_Error('parse_failed', 'No valid questions could be parsed from the source. Please check your sheet formatting.', ['status' => 500]);
+        return new WP_Error('parse_failed', 'No valid questions could be parsed. Check sheet formatting.', ['status' => 500]);
     }
 
     shuffle($questions);
     $selected_questions = array_slice($questions, 0, $count);
     
-    // Re-ID questions after shuffle and slice to ensure they are sequential from 1
+    // Re-ID questions after shuffle to ensure they are sequential
     $final_questions = [];
     foreach ($selected_questions as $index => $q) {
         $q['id'] = $index + 1;
         $final_questions[] = $q;
     }
 
-    return new WP_REST_Response(mco_ensure_utf8_recursive($final_questions), 200);
+    return new WP_REST_Response($final_questions, 200);
 }
+
 
 // --- NEW DEBUG ENDPOINT ---
 function mco_get_debug_details_callback($request) {
