@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import toast from 'react-hot-toast';
 import { Copy } from 'lucide-react';
@@ -9,7 +10,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           7.5.0
+ * Version:           7.6.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -130,52 +131,86 @@ function mco_get_user_results_callback($request) { $user_id = (int)$request->get
 function mco_get_certificate_data_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); $test_id = sanitize_key($request['test_id']); $user = get_userdata($user_id); if (!$user) return new WP_Error('user_not_found', 'User not found.', ['status' => 404]); $all_results = get_user_meta($user_id, 'mco_exam_results', true); if (!is_array($all_results) || !isset($all_results[$test_id])) { return new WP_Error('not_found', 'Result not found.', ['status' => 404]); } $result = $all_results[$test_id]; $candidate_name = trim($user->first_name . ' ' . $user->last_name) ?: $user->display_name; return new WP_REST_Response(['certificateNumber' => substr($user_id, 0, 4) . '-' . substr(md5($test_id), 0, 6), 'candidateName' => $candidate_name, 'finalScore' => $result['score'], 'date' => date('F j, Y', (int)((int)$result['timestamp'] / 1000)), 'examId' => $result['examId']], 200); }
 function mco_exam_update_user_name_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); if (!get_userdata($user_id)) return new WP_Error('user_not_found', 'User not found.', ['status' => 404]); $full_name = isset($request->get_json_params()['fullName']) ? sanitize_text_field($request->get_json_params()['fullName']) : ''; if (empty($full_name)) return new WP_Error('name_empty', 'Full name cannot be empty.', ['status' => 400]); $name_parts = explode(' ', $full_name, 2); update_user_meta($user_id, 'first_name', $name_parts[0]); update_user_meta($user_id, 'last_name', isset($name_parts[1]) ? $name_parts[1] : ''); return new WP_REST_Response(['success' => true, 'message' => 'Name updated successfully.'], 200); }
 function mco_exam_submit_result_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); $result_data = $request->get_json_params(); foreach (['testId', 'examId', 'score', 'correctCount', 'totalQuestions', 'timestamp'] as $key) { if (!isset($result_data[$key])) { mco_debug_log('Result submission failed for user ' . $user_id . '. Missing key: ' . $key); return new WP_Error('invalid_data', "Missing key: {$key}", ['status' => 400]); } } $result_data['userId'] = (string)$user_id; mco_debug_log('Attempting to save result for user ID ' . $user_id . '. Test ID: ' . $result_data['testId']); $all_results = get_user_meta($user_id, 'mco_exam_results', true); if (!is_array($all_results)) $all_results = []; $all_results[$result_data['testId']] = $result_data; $success = update_user_meta($user_id, 'mco_exam_results', $all_results); mco_debug_log('Result of update_user_meta: ' . ($success ? 'Success' : 'Failure')); return new WP_REST_Response($result_data, 200); }
+
 function mco_get_questions_from_sheet_callback($request) {
     $params = $request->get_json_params();
     $sheet_url = isset($params['sheetUrl']) ? esc_url_raw($params['sheetUrl']) : '';
     $count = isset($params['count']) ? intval($params['count']) : 100;
-    if (empty($sheet_url) || !filter_var($sheet_url, FILTER_VALIDATE_URL)) return new WP_Error('invalid_url', 'Invalid Google Sheet URL.', ['status' => 400]);
+    if (empty($sheet_url) || !filter_var($sheet_url, FILTER_VALIDATE_URL)) {
+        return new WP_Error('invalid_url', 'Invalid Google Sheet URL.', ['status' => 400]);
+    }
     $csv_url = str_replace(['/edit?usp=sharing', '/edit#gid='], ['/export?format=csv', '/export?format=csv&gid='], $sheet_url);
     $response = wp_remote_get($csv_url, ['timeout' => 20]);
-    if (is_wp_error($response)) { mco_debug_log('Sheet fetch failed: ' . $response->get_error_message()); return new WP_Error('fetch_failed', 'Could not connect to Google Sheets to get questions.', ['status' => 500]); }
-    $body = wp_remote_retrieve_body($response);
-    if (substr($body, 0, 3) == "\\xEF\\xBB\\xBF") $body = substr($body, 3);
-    $lines = preg_split('/\\r\\n?|\\n/', trim($body));
-    if (count($lines) <= 1) return new WP_Error('empty_sheet', 'The Google Sheet is empty or could not be read.', ['status' => 500]);
-    array_shift($lines); $questions = []; $skipped_rows = 0; $total_rows = count($lines);
-    foreach ($lines as $line_num => $line) {
-        if (empty(trim($line))) { $skipped_rows++; continue; }
-        $row_raw = str_getcsv($line);
-        $options_str = isset($row_raw[1]) ? trim($row_raw[1]) : '';
-        if (count($row_raw) < 3 && strpos($options_str, '|') === false) { $skipped_rows++; mco_debug_log("Skipping row #" . ($line_num + 2) . ": Not enough columns for separate options, and no pipe separator found."); continue; }
-        if (empty(trim($row_raw[0])) || empty($options_str)) { $skipped_rows++; mco_debug_log("Skipping row #" . ($line_num + 2) . ": Question or Options column is empty."); continue; }
-        
-        $question_text = trim($row_raw[0]);
-        $options = [];
-        $answer_column_value = '';
-        
-        if (strpos($options_str, '|') !== false) {
-            $options = array_map('trim', explode('|', $options_str));
-            $answer_column_value = isset($row_raw[2]) ? trim($row_raw[2]) : '';
-        } else {
-            for ($i = 1; $i < count($row_raw) - 1; $i++) { if (!empty(trim($row_raw[$i]))) $options[] = trim($row_raw[$i]); }
-            $answer_column_value = trim(end($row_raw));
-        }
-        
-        if (count($options) < 2) { $skipped_rows++; mco_debug_log('Skipping row #' . ($line_num + 2) . '. Reason: Could not parse at least 2 options.'); continue; }
-        
-        $correct_answer_index = false;
-        if (is_numeric($answer_column_value)) { $numeric_index = intval($answer_column_value) - 1; if ($numeric_index >= 0 && $numeric_index < count($options)) $correct_answer_index = $numeric_index; }
-        if ($correct_answer_index === false && strlen($answer_column_value) === 1 && ctype_alpha($answer_column_value)) { $letter_index = ord(strtoupper($answer_column_value)) - ord('A'); if ($letter_index >= 0 && $letter_index < count($options)) $correct_answer_index = $letter_index; }
-        if ($correct_answer_index === false) { $found_index = array_search(strtolower($answer_column_value), array_map('strtolower', $options)); if ($found_index !== false) $correct_answer_index = $found_index; }
-        
-        if ($correct_answer_index === false) { $skipped_rows++; mco_debug_log('Skipping row #' . ($line_num + 2) . '. Reason: Could not determine correct answer from value: "' . $answer_column_value . '".'); continue; }
-        
-        $questions[] = ['id' => count($questions) + 1, 'question' => $question_text, 'options' => $options, 'correctAnswer' => $correct_answer_index + 1];
+    if (is_wp_error($response)) {
+        mco_debug_log('Sheet fetch failed: ' . $response->get_error_message());
+        return new WP_Error('fetch_failed', 'Could not connect to Google Sheets to get questions.', ['status' => 500]);
     }
-    if (empty($questions)) { $error_message = 'No valid questions could be parsed from the source. Processed ' . $total_rows . ' rows and skipped all of them. Please check your sheet formatting (each option in its own column) and enable MCO_DEBUG in wp-config.php to see detailed logs.'; return new WP_Error('parse_failed', $error_message, ['status' => 500]); }
-    shuffle($questions); $selected_questions = array_slice($questions, 0, $count);
-    $final_questions = []; foreach($selected_questions as $index => $q) { $q['id'] = $index + 1; $final_questions[] = $q; }
+    $body = wp_remote_retrieve_body($response);
+    if (substr($body, 0, 3) == "\xEF\xBB\xBF") $body = substr($body, 3);
+    $lines = preg_split('/\\r\\n?|\\n/', trim($body));
+    if (count($lines) <= 1) {
+        return new WP_Error('empty_sheet', 'The Google Sheet is empty or could not be read.', ['status' => 500]);
+    }
+    array_shift($lines);
+    $questions = [];
+    $skipped_rows = 0;
+    $total_rows = count($lines);
+    foreach ($lines as $line_num => $line) {
+        if (empty(trim($line))) {
+            $skipped_rows++;
+            continue;
+        }
+        $handle = fopen('php://memory', 'r+');
+        fwrite($handle, $line);
+        rewind($handle);
+        $row_data = fgetcsv($handle);
+        fclose($handle);
+        if ($row_data === false || count($row_data) < 3) {
+            $skipped_rows++;
+            mco_debug_log("Skipping row #" . ($line_num + 2) . ": Could not parse CSV or not enough columns.");
+            continue;
+        }
+        $row_data = array_map('trim', $row_data);
+        while (count($row_data) > 0 && end($row_data) === '') {
+            array_pop($row_data);
+        }
+        if (count($row_data) < 3) {
+            $skipped_rows++;
+            mco_debug_log("Skipping row #" . ($line_num + 2) . ": Not enough non-empty columns for question, option, and answer.");
+            continue;
+        }
+        $question_text = $row_data[0];
+        $correct_answer_index_val = array_pop($row_data);
+        $options = array_slice($row_data, 1);
+        if (empty($question_text) || empty($options) || !is_numeric($correct_answer_index_val)) {
+            $skipped_rows++;
+            mco_debug_log("Skipping row #" . ($line_num + 2) . ": Question/options empty or answer index is not numeric.");
+            continue;
+        }
+        $correct_answer_index = intval($correct_answer_index_val);
+        if ($correct_answer_index < 1 || $correct_answer_index > count($options)) {
+            $skipped_rows++;
+            mco_debug_log("Skipping row #" . ($line_num + 2) . ": Answer index (" . $correct_answer_index . ") is out of bounds for options count (" . count($options) . ").");
+            continue;
+        }
+        $questions[] = [
+            'id' => count($questions) + 1,
+            'question' => $question_text,
+            'options' => $options,
+            'correctAnswer' => $correct_answer_index
+        ];
+    }
+    if (empty($questions)) {
+        $error_message = 'No valid questions could be parsed. Processed ' . $total_rows . ' rows and skipped all of them. Please check sheet formatting: Question in Column A, Options in B, C, etc., and the correct answer number (e.g., 1, 2, 3) in the final column. Enable MCO_DEBUG for details.';
+        return new WP_Error('parse_failed', $error_message, ['status' => 500]);
+    }
+    shuffle($questions);
+    $selected_questions = array_slice($questions, 0, $count);
+    $final_questions = [];
+    foreach($selected_questions as $index => $q) {
+        $q['id'] = $index + 1;
+        $final_questions[] = $q;
+    }
     return new WP_REST_Response($final_questions, 200);
 }
 
