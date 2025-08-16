@@ -62,6 +62,22 @@ export const googleSheetsService = {
         }
     },
     
+    // --- RESULTS HANDLING (CACHE-FIRST APPROACH) ---
+    syncResults: async (user: User, token: string): Promise<void> => {
+        try {
+            const remoteResults: TestResult[] = await apiFetch('/user-results', token);
+            const resultsMap = remoteResults.reduce((acc, result) => {
+                acc[result.testId] = result;
+                return acc;
+            }, {} as { [key: string]: TestResult });
+            localStorage.setItem(`exam_results_${user.id}`, JSON.stringify(resultsMap));
+            console.log("Results successfully synced with server.");
+        } catch (error) {
+            console.error("Background sync failed:", error);
+            toast.error("Server sync failed. Displaying cached results.");
+        }
+    },
+
     getLocalTestResultsForUser: (userId: string): TestResult[] => {
         try {
             const storedResults = localStorage.getItem(`exam_results_${userId}`);
@@ -73,17 +89,6 @@ export const googleSheetsService = {
             console.error("Failed to parse results from localStorage", error);
             return [];
         }
-    },
-
-    getTestResultsForUser: async (user: User, token: string): Promise<TestResult[]> => {
-        const remoteResults: TestResult[] = await apiFetch('/user-results', token);
-        const resultsMap = remoteResults.reduce((acc, result) => {
-            acc[result.testId] = result;
-            return acc;
-        }, {} as { [key: string]: TestResult });
-        localStorage.setItem(`exam_results_${user.id}`, JSON.stringify(resultsMap));
-        console.log("Results successfully synced with server.");
-        return remoteResults;
     },
 
     getTestResult: (user: User, testId: string): TestResult | undefined => {

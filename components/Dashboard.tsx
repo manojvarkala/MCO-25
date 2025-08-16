@@ -12,11 +12,10 @@ import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
 
 const Dashboard: React.FC = () => {
     const navigate = ReactRouterDOM.useNavigate();
-    const { user, paidExamIds, isSubscribed, updateUserName, token } = useAuth();
+    const { user, paidExamIds, isSubscribed, updateUserName, token } from useAuth();
     const { activeOrg } = useAppContext();
     const [results, setResults] = useState<TestResult[] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [historyError, setHistoryError] = useState<string | null>(null);
     const [stats, setStats] = useState({ avgScore: 0, bestScore: 0, examsTaken: 0 });
     const [practiceStats, setPracticeStats] = useState({ attemptsTaken: 0, attemptsAllowed: 0 });
     const [isEditingName, setIsEditingName] = useState(false);
@@ -29,56 +28,48 @@ const Dashboard: React.FC = () => {
     const browseExamsUrl = 'https://www.coding-online.net/exam-programs';
 
 
+    const processResults = (resultsData: TestResult[]) => {
+        setResults(resultsData);
+        if (resultsData.length > 0 && activeOrg) {
+            const totalScore = resultsData.reduce((sum, r) => sum + r.score, 0);
+            const avg = totalScore / resultsData.length;
+            const best = Math.max(...resultsData.map(r => r.score));
+            setStats({
+                avgScore: parseFloat(avg.toFixed(1)),
+                bestScore: best,
+                examsTaken: resultsData.length
+            });
+
+            const practiceExamIds = new Set(activeOrg.exams.filter(e => e.isPractice).map(e => e.id));
+            const practiceAttemptsTaken = resultsData.filter(r => practiceExamIds.has(r.examId)).length;
+            setPracticeStats({ attemptsTaken: practiceAttemptsTaken, attemptsAllowed: 10 });
+
+        } else {
+            setStats({ avgScore: 0, bestScore: 0, examsTaken: 0 });
+        }
+    };
+
     useEffect(() => {
-        if (!user || !activeOrg || !token) {
+        if (!user || !activeOrg) {
             if (activeOrg) setIsLoading(false);
             return;
-        };
-        
-        const fetchResults = async () => {
-            setIsLoading(true);
-            setHistoryError(null);
-            
-            // First, load from local cache for instant UI
-            const cachedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
-            if (cachedResults) {
-                setResults(cachedResults);
-            }
+        }
 
-            // Then, fetch from server to get the latest data
-            try {
-                const serverResults = await googleSheetsService.getTestResultsForUser(user, token);
-                setResults(serverResults);
-                
-                if (serverResults.length > 0) {
-                    const totalScore = serverResults.reduce((sum, r) => sum + r.score, 0);
-                    const avg = totalScore / serverResults.length;
-                    const best = Math.max(...serverResults.map(r => r.score));
-                    setStats({
-                        avgScore: parseFloat(avg.toFixed(1)),
-                        bestScore: best,
-                        examsTaken: serverResults.length
-                    });
-                } else {
-                    setStats({ avgScore: 0, bestScore: 0, examsTaken: 0 });
-                }
+        setIsLoading(true);
+        // Load from local storage first for instant UI response
+        const cachedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
+        processResults(cachedResults);
+        setIsLoading(false);
 
-                const practiceExamIds = new Set(activeOrg.exams.filter(e => e.isPractice).map(e => e.id));
-                const practiceAttemptsTaken = serverResults.filter(r => practiceExamIds.has(r.examId)).length;
-                setPracticeStats({ attemptsTaken: practiceAttemptsTaken, attemptsAllowed: 10 });
-
-            } catch (error: any) {
-                 const errorMessage = "Could not load your exam history.";
-                 toast.error(errorMessage);
-                 setHistoryError(errorMessage);
-                 if (!cachedResults) setResults([]); // If cache was empty and fetch failed
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchResults();
-    }, [user, activeOrg, token]);
+        // Then sync with server in the background
+        if (token) {
+            googleSheetsService.syncResults(user, token).then(() => {
+                // After sync, re-read from local storage to update UI
+                const updatedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
+                processResults(updatedResults);
+            });
+        }
+    }, [user?.id, activeOrg, token]); // Depend on user.id to re-run if user changes
 
     const handleNameSave = async () => {
         if (!name.trim()) {
@@ -308,7 +299,6 @@ const Dashboard: React.FC = () => {
                     {/* History Section */}
                     <div className="bg-white p-6 rounded-xl shadow-md">
                         <h2 className="text-xl font-bold text-slate-800 flex items-center mb-4"><History className="mr-3 text-cyan-500" /> My Exam History</h2>
-                        {historyError && <p className="text-red-500">{historyError}</p>}
                         {results && results.length > 0 ? (
                             <div className="space-y-3">
                                 {results.slice(0, 5).map(result => (

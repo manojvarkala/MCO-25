@@ -55,7 +55,7 @@ const Results: React.FC = () => {
             }
         };
         fetchResultAndExam();
-    }, [testId, user, activeOrg, navigate]);
+    }, [testId, user?.id, activeOrg, navigate]);
 
     const handleGenerateFeedback = async () => {
         if (!result || !exam) return;
@@ -65,6 +65,7 @@ const Results: React.FC = () => {
             const incorrectAnswers = result.review.filter(r => r.userAnswer !== r.correctAnswer);
             if (incorrectAnswers.length === 0) {
                 toast.success("You got all questions correct! No feedback needed.", { id: toastId });
+                setAiFeedback("Congratulations on a perfect score! You've demonstrated excellent knowledge in all areas of this exam.");
                 return;
             }
 
@@ -175,7 +176,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 </div>
             )}
             
-            {(isPaid && !exam.recommendedBook) && (
+            {(isPaid && !isPass) && (
                 <div className="text-center p-6 bg-slate-50 border border-slate-200 rounded-lg mt-8">
                         <h2 className="text-xl font-semibold text-slate-700">Answer Review Not Available</h2>
                         <p className="text-slate-600 max-w-2xl mx-auto mt-2">To protect the integrity of the certification exam and ensure fairness for all candidates, a detailed answer review is not provided for paid tests.</p>
