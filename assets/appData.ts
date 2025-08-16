@@ -1,5 +1,5 @@
-import type { Organization, CertificateTemplate, Exam, ExamProductCategory } from '@/types.ts';
-import { suggestedBooksData } from '@/assets/bookData.ts';
+import type { Organization, CertificateTemplate, Exam, ExamProductCategory } from '../types.ts';
+import { suggestedBooksData } from './bookData.ts';
 
 const CERTIFICATE_TEMPLATES: CertificateTemplate[] = [
     { id: 'cert-practice-1', title: 'Medical Coding Proficiency', body: "For successfully demonstrating proficiency in medical coding principles and practices with a final score of <strong>{finalScore}%</strong>. This certifies the holder's competence in the standards required for this certification.", signature1Name: 'Dr. Amelia Reed', signature1Title: 'Program Director', signature2Name: 'B. Manoj', signature2Title: 'Chief Instructor'},

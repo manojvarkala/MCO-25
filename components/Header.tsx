@@ -3,7 +3,7 @@ import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked } from 'lucide-react';
-import { logoBase64 } from '@/assets/logo.ts';
+import { logoBase64 } from '../assets/logo.ts';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();

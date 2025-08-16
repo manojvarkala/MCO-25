@@ -1,8 +1,8 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { appData } from '@/assets/appData.ts';
-import type { Organization, RecommendedBook, Exam } from '@/types.ts';
+import { appData } from '../assets/appData.ts';
+import type { Organization, RecommendedBook, Exam } from '../types.ts';
 import toast from 'react-hot-toast';
-import { useAuth } from '@/context/AuthContext.tsx';
+import { useAuth } from './AuthContext.tsx';
 
 interface AppContextType {
   organizations: Organization[];

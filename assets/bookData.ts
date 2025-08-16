@@ -1,4 +1,4 @@
-import type { RecommendedBook } from '@/types.ts';
+import type { RecommendedBook } from '../types.ts';
 
 export const suggestedBooksData: RecommendedBook[] = [
     // Existing 6 books

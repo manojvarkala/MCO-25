@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { useAuth } from '@/context/AuthContext.tsx';
-import { googleSheetsService } from '@/services/googleSheetsService.ts';
-import type { CertificateData } from '@/types.ts';
+import { useAuth } from '../context/AuthContext.tsx';
+import { googleSheetsService } from '../services/googleSheetsService.ts';
+import type { CertificateData } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import { Download, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { signatureBase64 } from '@/assets/signature.ts';
-import { logoBase64 } from '@/assets/logo.ts';
-import { useAppContext } from '@/context/AppContext.tsx';
+import { signatureBase64 } from '../assets/signature.ts';
+import { logoBase64 } from '../assets/logo.ts';
+import { useAppContext } from '../context/AppContext.tsx';
 
 const Watermark: React.FC<{ text: string }> = ({ text }) => (
     <div className="absolute inset-0 grid grid-cols-3 grid-rows-4 gap-8 pointer-events-none overflow-hidden p-4">

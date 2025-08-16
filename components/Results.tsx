@@ -8,7 +8,7 @@ import { useAppContext } from '../context/AppContext.tsx';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import { Check, X, FileDown, BookUp, ShieldCheck, Sparkles } from 'lucide-react';
-import BookCover from '@/assets/BookCover.tsx';
+import BookCover from '../assets/BookCover.tsx';
 
 const Results: React.FC = () => {
     const { testId } = ReactRouterDOM.useParams<{ testId: string }>();

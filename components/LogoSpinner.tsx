@@ -1,5 +1,5 @@
 import React from 'react';
-import { logoBase64 } from '@/assets/logo.ts';
+import { logoBase64 } from '../assets/logo.ts';
 
 const LogoSpinner: React.FC = () => {
   return (
