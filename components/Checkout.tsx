@@ -8,7 +8,7 @@ const Checkout: React.FC = () => {
     useEffect(() => {
         if (productSlug) {
             const redirectTimer = setTimeout(() => {
-                const checkoutUrl = `https://coding-online.net/product/${productSlug}/`;
+                const checkoutUrl = `https://www.coding-online.net/product/${productSlug}/`;
                 window.location.href = checkoutUrl;
             }, 2000); // 2-second delay before redirecting
 

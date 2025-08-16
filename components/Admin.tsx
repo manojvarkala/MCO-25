@@ -5,7 +5,7 @@ import type { Exam } from '../types.ts';
 import toast from 'react-hot-toast';
 
 const Admin: React.FC = () => {
-    const wpAdminUrl = 'https://www.coding-online.net/wp-admin/options-general.php?page=exam-app-settings';
+    const wpAdminUrl = 'https://www.coding-online.net/wp-admin/options-general.php?page=mco-exam-settings';
     const { activeOrg, updateActiveOrg } = useAppContext();
 
     const [editingExamId, setEditingExamId] = useState<string | null>(null);

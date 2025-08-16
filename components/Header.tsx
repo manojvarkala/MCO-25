@@ -13,15 +13,15 @@ const Header: React.FC = () => {
     logout();
     // Redirect to the external WordPress site's logout page, then back to the app's home
     const appHomeUrl = 'https://exams.coding-online.net';
-    const wpLogoutUrl = `https://coding-online.net/wp-login.php?action=logout&redirect_to=${encodeURIComponent(appHomeUrl)}`;
+    const wpLogoutUrl = `https://www.coding-online.net/wp-login.php?action=logout&redirect_to=${encodeURIComponent(appHomeUrl)}`;
     window.location.href = wpLogoutUrl;
   };
 
   const headerLink = user ? "/dashboard" : "/";
   
   // The custom login page is a WordPress page with the slug 'exam-login'
-  const loginUrl = `https://coding-online.net/exam-login/`;
-  const myAccountUrl = `https://coding-online.net/my-account/`;
+  const loginUrl = `https://www.coding-online.net/exam-login/`;
+  const myAccountUrl = `https://www.coding-online.net/my-account/`;
 
 
   return (
@@ -106,7 +106,7 @@ const Header: React.FC = () => {
                     <span>Login</span>
                 </a>
                 <a
-                    href="https://coding-online.net/wp-login.php?action=register"
+                    href="https://www.coding-online.net/wp-login.php?action=register"
                     className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
                     >
                     <UserPlus size={16} />
