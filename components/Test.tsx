@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -29,12 +29,51 @@ const Test: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
+  const handleSubmitRef = useRef<((isAutoSubmit?: boolean) => Promise<void>) | null>(null);
 
-  const handleSubmitRef = useRef(handleSubmit);
+  const handleSubmit = useCallback(async (isAutoSubmit = false) => {
+    if (!isAutoSubmit) {
+        const unansweredQuestionsCount = questions.length - answers.size;
+        if (unansweredQuestionsCount > 0) {
+            const confirmed = window.confirm(
+                `You have ${unansweredQuestionsCount} unanswered question(s). Are you sure you want to submit?`
+            );
+            if (!confirmed) {
+                return;
+            }
+        }
+    }
+    
+    if(!user || !examId || !token) {
+        toast.error("Cannot submit: user or exam context is missing.");
+        navigate('/');
+        return;
+    }
 
+    setIsSubmitting(true);
+    if(timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    localStorage.removeItem(`exam_timer_${examId}_${user.id}`);
+
+    try {
+        const userAnswers: UserAnswer[] = Array.from(answers.entries()).map(([questionId, answer]) => ({
+            questionId,
+            answer,
+        }));
+        
+        const result = await googleSheetsService.submitTest(user, examId, userAnswers, questions, token);
+        toast.success("Test submitted successfully!");
+        navigate(`/results/${result.testId}`);
+
+    } catch(error) {
+        toast.error("Failed to submit the test. Please try again.");
+    } finally {
+        setIsSubmitting(false);
+    }
+  }, [answers, examId, navigate, questions, token, user]);
+  
   useEffect(() => {
     handleSubmitRef.current = handleSubmit;
-  });
+  }, [handleSubmit]);
 
   useEffect(() => {
     if (isInitializing || !examId || !activeOrg) return;
@@ -54,7 +93,6 @@ const Test: React.FC = () => {
       }
 
       try {
-        // Read from local storage first to check attempt counts
         const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
         
         if (config.isPractice) {
@@ -89,7 +127,6 @@ const Test: React.FC = () => {
         
         setQuestions(fetchedQuestions);
 
-        // Timer setup
         const timerKey = `exam_timer_${examId}_${user.id}`;
         let endTime = localStorage.getItem(timerKey);
         if (!endTime) {
@@ -107,7 +144,9 @@ const Test: React.FC = () => {
                 if(timerIntervalRef.current) clearInterval(timerIntervalRef.current);
                 localStorage.removeItem(timerKey);
                 toast.error("Time's up! Your test has been submitted automatically.");
-                handleSubmitRef.current(true);
+                if (handleSubmitRef.current) {
+                    handleSubmitRef.current(true);
+                }
             }
         }, 1000);
 
@@ -145,46 +184,6 @@ const Test: React.FC = () => {
     handleAnswerSelect(questionId, optionIndex);
     if (currentQuestionIndex < questions.length - 1) {
         setTimeout(() => handleNext(), 200);
-    }
-  };
-
-  async function handleSubmit(isAutoSubmit = false) {
-    if (!isAutoSubmit) {
-        const unansweredQuestionsCount = questions.length - answers.size;
-        if (unansweredQuestionsCount > 0) {
-            const confirmed = window.confirm(
-                `You have ${unansweredQuestionsCount} unanswered question(s). Are you sure you want to submit?`
-            );
-            if (!confirmed) {
-                return;
-            }
-        }
-    }
-    
-    if(!user || !examId || !token) {
-        toast.error("Cannot submit: user or exam context is missing.");
-        navigate('/');
-        return;
-    }
-
-    setIsSubmitting(true);
-    if(timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    localStorage.removeItem(`exam_timer_${examId}_${user.id}`);
-
-    try {
-        const userAnswers: UserAnswer[] = Array.from(answers.entries()).map(([questionId, answer]) => ({
-            questionId,
-            answer,
-        }));
-        
-        const result = await googleSheetsService.submitTest(user, examId, userAnswers, questions, token);
-        toast.success("Test submitted successfully!");
-        navigate(`/results/${result.testId}`);
-
-    } catch(error) {
-        toast.error("Failed to submit the test. Please try again.");
-    } finally {
-        setIsSubmitting(false);
     }
   };
 
