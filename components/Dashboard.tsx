@@ -5,7 +5,7 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { BookCopy, History, FlaskConical, Eye, FileText, BarChart, BadgePercent, Trophy, ArrowRight, Home, RefreshCw, Star, Zap, CheckCircle, Lock, Edit, Save, X, ShoppingCart, AlertTriangle, Award } from 'lucide-react';
+import { BookCopy, History as HistoryIcon, FlaskConical, Eye, FileText, BarChart, BadgePercent, Trophy, ArrowRight, Home, RefreshCw, Star, Zap, CheckCircle, Lock, Edit, Save, X, ShoppingCart, AlertTriangle, Award } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
@@ -298,7 +298,7 @@ const Dashboard: React.FC = () => {
 
                     {/* History Section */}
                     <div className="bg-white p-6 rounded-xl shadow-md">
-                        <h2 className="text-xl font-bold text-slate-800 flex items-center mb-4"><History className="mr-3 text-cyan-500" /> My Exam History</h2>
+                        <h2 className="text-xl font-bold text-slate-800 flex items-center mb-4"><HistoryIcon className="mr-3 text-cyan-500" /> My Exam History</h2>
                         {results && results.length > 0 ? (
                             <div className="space-y-3">
                                 {results.slice(0, 5).map(result => (
