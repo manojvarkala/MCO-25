@@ -27,7 +27,7 @@ const Dashboard: React.FC = () => {
     const appDashboardPath = '/dashboard';
     const syncUrl = `${loginUrl}?redirect_to=${encodeURIComponent(appDashboardPath)}`;
     const browseExamsUrl = 'https://www.coding-online.net/exam-programs';
-    const updateNameEndpoint = 'https://www.coding-online.net/wp-json/exam-app/v1/update-name';
+    const updateNameEndpoint = '/api/update-name';
 
 
     useEffect(() => {
