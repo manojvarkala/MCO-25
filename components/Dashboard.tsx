@@ -5,7 +5,7 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { BookCopy, History as HistoryIcon, FlaskConical, Eye, FileText, BarChart, BadgePercent, Trophy, ArrowRight, Home, RefreshCw, Star, Zap, CheckCircle, Lock, Edit, Save, X, ShoppingCart, AlertTriangle, Award } from 'lucide-react';
+import { BookCopy, History as HistoryIcon, FlaskConical, Eye, FileText, BarChart, BadgePercent, Trophy, ArrowRight, Home, RefreshCw, Star, Zap, CheckCircle, Lock, Edit, Save, X, ShoppingCart, AlertTriangle, Award, Megaphone } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
@@ -20,6 +20,7 @@ const Dashboard: React.FC = () => {
     const [isEditingName, setIsEditingName] = useState(false);
     const [isSavingName, setIsSavingName] = useState(false);
     const [name, setName] = useState(user?.name || '');
+    const [isOfferVisible, setIsOfferVisible] = useState(true);
 
     const loginUrl = 'https://www.coding-online.net/exam-login/';
     const appDashboardPath = '/dashboard';
@@ -368,6 +369,27 @@ const Dashboard: React.FC = () => {
                     <SuggestedBooksSidebar />
                 </div>
             </div>
+
+            {isOfferVisible && (
+                <div className="fixed bottom-5 right-5 w-80 bg-gradient-to-br from-cyan-500 to-purple-600 text-white p-5 rounded-xl shadow-2xl z-50 transform transition-all duration-300 ease-in-out hover:scale-105">
+                    <button 
+                        onClick={() => setIsOfferVisible(false)}
+                        className="absolute top-2 right-2 text-white/70 hover:text-white"
+                        aria-label="Dismiss announcement"
+                    >
+                        <X size={20} />
+                    </button>
+                    <div className="flex items-center gap-4">
+                        <div className="bg-white/20 p-3 rounded-full">
+                            <Megaphone size={28} />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-lg">Introductory Offer!</h3>
+                            <p className="text-sm">All certification exams are just <span className="font-extrabold text-2xl">$1</span> for a limited time!</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
