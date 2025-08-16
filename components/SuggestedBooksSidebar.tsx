@@ -2,7 +2,7 @@ import React from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { BookOpen, ShoppingCart } from 'lucide-react';
 import type { RecommendedBook } from '../types.ts';
-import BookCover from './BookCover.tsx';
+import BookCover from '@/assets/BookCover.tsx';
 
 const SuggestedBooksSidebar: React.FC = () => {
     const { suggestedBooks, isInitializing } = useAppContext();
