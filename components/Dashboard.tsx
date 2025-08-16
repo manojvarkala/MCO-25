@@ -9,6 +9,7 @@ import { BookCopy, History as HistoryIcon, FlaskConical, Eye, FileText, BarChart
 import { useAppContext } from '../context/AppContext.tsx';
 import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
+
 const Dashboard: React.FC = () => {
     const navigate = ReactRouterDOM.useNavigate();
     const { user, paidExamIds, isSubscribed, updateUserName, token } from useAuth();
