@@ -30,10 +30,10 @@ const Results: React.FC = () => {
             return;
         }
 
-        const fetchResultAndExam = async () => {
+        const fetchResultAndExam = () => {
             setIsLoading(true);
             try {
-                const foundResult = await googleSheetsService.getTestResult(user, testId);
+                const foundResult = googleSheetsService.getTestResult(user, testId);
                 if (foundResult) {
                     setResult(foundResult);
                     const examConfig = activeOrg.exams.find(e => e.id === foundResult.examId);

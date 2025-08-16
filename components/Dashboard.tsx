@@ -30,18 +30,24 @@ const Dashboard: React.FC = () => {
 
 
     useEffect(() => {
-        if (!user || !activeOrg || !token) {
+        if (!user || !activeOrg) {
             if (activeOrg) setIsLoading(false);
             return;
         };
         const fetchResults = async () => {
             setIsLoading(true);
             setHistoryError(null);
-            try {
-                // Fetch latest results directly from server; this also updates the local cache.
-                const userResults = await googleSheetsService.getTestResultsForUser(user, token);
+            
+            // Attempt to sync with server, but don't block UI.
+            if (token) {
+                await googleSheetsService.syncResults(user, token);
+            }
+
+            // Read from local storage (which may have been updated by sync).
+            const userResults = googleSheetsService.getTestResultsForUser(user);
+            
+            if (userResults) {
                 setResults(userResults);
-                
                 if (userResults.length > 0) {
                     const totalScore = userResults.reduce((sum, r) => sum + r.score, 0);
                     const avg = totalScore / userResults.length;
@@ -58,16 +64,14 @@ const Dashboard: React.FC = () => {
                 const practiceExamIds = new Set(activeOrg.exams.filter(e => e.isPractice).map(e => e.id));
                 const practiceAttemptsTaken = userResults.filter(r => practiceExamIds.has(r.examId)).length;
                 setPracticeStats({ attemptsTaken: practiceAttemptsTaken, attemptsAllowed: 10 });
-
-            } catch (error: any) {
-                console.error("Failed to fetch dashboard results:", error);
-                const errorMessage = "Could not load your exam history.";
-                toast.error(errorMessage);
-                setHistoryError(errorMessage);
-                setResults([]);
-            } finally {
-                setIsLoading(false);
+            } else {
+                 const errorMessage = "Could not load your exam history.";
+                 toast.error(errorMessage);
+                 setHistoryError(errorMessage);
+                 setResults([]);
             }
+
+            setIsLoading(false);
         };
         fetchResults();
     }, [user, activeOrg, token]);

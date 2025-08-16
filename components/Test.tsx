@@ -54,7 +54,8 @@ const Test: React.FC = () => {
       }
 
       try {
-        const userResults = await googleSheetsService.getTestResultsForUser(user, token);
+        // Read from local storage first to check attempt counts
+        const userResults = googleSheetsService.getTestResultsForUser(user);
         
         if (config.isPractice) {
             if (!isSubscribed) {

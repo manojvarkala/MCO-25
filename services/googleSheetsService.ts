@@ -63,40 +63,42 @@ export const googleSheetsService = {
     },
 
     // --- DATA SYNC & LOCAL STORAGE ---
-    getTestResultsForUser: async (user: User, token: string): Promise<TestResult[]> => {
+    syncResults: async (user: User, token: string): Promise<void> => {
         try {
             const remoteResults: TestResult[] = await apiFetch('/user-results', token);
             const resultsMap = remoteResults.reduce((acc, result) => {
                 acc[result.testId] = result;
                 return acc;
             }, {} as { [key: string]: TestResult });
-
-            // Update local storage to cache the latest server data
             localStorage.setItem(`exam_results_${user.id}`, JSON.stringify(resultsMap));
-
-            return Object.values(resultsMap);
+            console.log("Results successfully synced with server.");
         } catch (error) {
-            console.error("Failed to fetch test results from server:", error);
-            // Fallback to local storage if network fails
+            console.error("Server sync failed:", error);
+            toast.error("Server sync failed. Displaying cached results.");
+        }
+    },
+    
+    getTestResultsForUser: (user: User): TestResult[] => {
+        try {
             const storedResults = localStorage.getItem(`exam_results_${user.id}`);
             if (storedResults) {
-                toast.error("Server sync failed. Displaying cached results.");
                 return Object.values(JSON.parse(storedResults));
             }
-            // If there's no cache, re-throw the error to be handled by the UI
-            throw error;
+            return [];
+        } catch (error) {
+            console.error("Failed to parse results from localStorage", error);
+            return [];
         }
     },
 
-    getTestResult: async (user: User, testId: string): Promise<TestResult | undefined> => {
-        // This function now reads from the cache which is updated on Dashboard load.
+    getTestResult: (user: User, testId: string): TestResult | undefined => {
         try {
             const storedResults = localStorage.getItem(`exam_results_${user.id}`);
             const results = storedResults ? JSON.parse(storedResults) : {};
-            return Promise.resolve(results[testId]);
+            return results[testId];
         } catch (error) {
             console.error("Failed to parse results from localStorage", error);
-            return Promise.resolve(undefined);
+            return undefined;
         }
     },
 
