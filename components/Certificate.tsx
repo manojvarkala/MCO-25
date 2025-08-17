@@ -33,7 +33,7 @@ const Certificate: React.FC = () => {
     const [certData, setCertData] = useState<CertificateData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isDownloading, setIsDownloading] = useState(false);
-    const certificateRef = useRef<HTMLDivElement>(null);
+    const certificatePrintRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         // Handling the sample certificate locally without an API call.
@@ -106,21 +106,21 @@ const Certificate: React.FC = () => {
     }, [testId, user, token, navigate, activeOrg]);
 
     const handleDownload = async () => {
-        if (!certificateRef.current) return;
+        if (!certificatePrintRef.current || !certData) return;
         setIsDownloading(true);
         const toastId = toast.loading('Generating PDF...');
 
         try {
-            const canvas = await html2canvas(certificateRef.current, {
-                scale: 3, useCORS: true, backgroundColor: null,
+            const canvas = await html2canvas(certificatePrintRef.current, {
+                scale: 2, useCORS: true, backgroundColor: null,
             });
-            const imgData = canvas.toDataURL('image/png');
+            const imgData = canvas.toDataURL('image/png', 0.95);
             const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
             
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Certificate-of-Completion.pdf`);
+            pdf.save(`Certificate-of-Completion-${certData.candidateName.replace(/\\s+/g, '_')}.pdf`);
             toast.dismiss(toastId);
             toast.success("Certificate downloaded!");
         } catch(error) {
@@ -144,6 +144,7 @@ const Certificate: React.FC = () => {
     const bodyText = template.body.replace('{finalScore}', certData.finalScore.toString());
 
     return (
+        <>
         <div className="max-w-5xl mx-auto bg-slate-100 p-4 sm:p-6 rounded-lg">
             <div className="flex justify-between items-center mb-6">
                  <button
@@ -163,7 +164,8 @@ const Certificate: React.FC = () => {
                 </button>
             </div>
             
-            <div ref={certificateRef} className="w-full aspect-[1.414/1] bg-white p-4 font-serif-display shadow-lg border-8 border-teal-900 relative overflow-hidden">
+            {/* Visible Certificate for Display */}
+            <div className="w-full aspect-[1.414/1] bg-white p-4 font-serif-display shadow-lg border-8 border-teal-900 relative overflow-hidden">
                  {testId === 'sample' && <Watermark text="SAMPLE CERTIFICATE" />}
                  {testId !== 'sample' && <Watermark text={organization.name} />}
                 <div className="w-full h-full border-2 border-teal-700 flex flex-col p-6">
@@ -218,6 +220,47 @@ const Certificate: React.FC = () => {
                 </div>
             </div>
         </div>
+        
+        {/* Hidden, print-quality certificate for PDF generation */}
+        <div style={{ position: 'absolute', left: '-9999px', top: 0, width: '1123px', height: '794px', color: 'black' }}>
+             <div ref={certificatePrintRef} className="w-full h-full bg-white font-serif-display relative overflow-hidden flex flex-col" style={{ padding: '16px', border: '32px solid #0f766e' }}>
+                {testId === 'sample' && <Watermark text="SAMPLE CERTIFICATE" />}
+                {testId !== 'sample' && <Watermark text={organization.name} />}
+                <div className="w-full h-full flex flex-col" style={{ padding: '24px', border: '8px solid #115e59' }}>
+                    <div className="flex items-center" style={{ gap: '12px' }}>
+                        <img src={logoBase64} alt={`${organization.name} Logo`} style={{ height: '56px', width: '56px', objectFit: 'contain' }} />
+                        <div className="flex flex-col text-left">
+                            <span className="font-bold font-serif" style={{ fontSize: '24px', color: '#1e293b' }}>{organization.name}</span>
+                            <span className="font-serif" style={{ fontSize: '14px', color: '#64748b' }}>{organization.website}</span>
+                        </div>
+                    </div>
+                    <div className="flex-grow flex flex-col items-center justify-center text-center">
+                        <p style={{ fontSize: '20px', color: '#475569', letterSpacing: '0.05em' }}>Certificate of Achievement in</p>
+                        <p className="font-bold" style={{ fontSize: '38px', color: '#134e4a', letterSpacing: '0.025em', marginTop: '4px' }}>{template.title}</p>
+                        <div style={{ width: '33.33%', margin: '16px auto', borderBottom: '1px solid #94a3b8' }}></div>
+                        <p style={{ fontSize: '18px', color: '#475569' }}>This certificate is proudly presented to</p>
+                        <p className="font-script" style={{ fontSize: '64px', color: '#134e4a', margin: '16px 0' }}>{certData.candidateName}</p>
+                        <p style={{ fontSize: '16px', color: '#334155', lineHeight: '1.625', maxWidth: '896px' }} dangerouslySetInnerHTML={{ __html: bodyText }} />
+                    </div>
+                    <div style={{ paddingTop: '16px', marginTop: 'auto' }}>
+                        <div className="flex justify-center items-center w-full">
+                            <div className="text-center" style={{ width: '288px' }}>
+                                <img src={signatureBase64} alt={`${template.signature1Name} Signature`} style={{ height: '64px', margin: '0 auto 8px', objectFit: 'contain' }} />
+                                <div style={{ borderTop: '1px solid #94a3b8', paddingTop: '8px' }}>
+                                    <p style={{ fontSize: '14px', color: '#334155', letterSpacing: '0.05em' }}><strong>{template.signature1Name}</strong></p>
+                                    <p style={{ fontSize: '12px', color: '#475569', letterSpacing: '0.05em' }}>{template.signature1Title}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="w-full flex justify-between" style={{ color: '#64748b', fontSize: '12px', paddingTop: '8px', borderTop: '1px solid #cbd5e1', marginTop: '24px' }}>
+                            <span>Certificate No: <strong>{certData.certificateNumber}</strong></span>
+                            <span>Date of Issue: <strong>{certData.date}</strong></span>
+                        </div>
+                    </div>
+                </div>
+             </div>
+        </div>
+        </>
     );
 };
 
