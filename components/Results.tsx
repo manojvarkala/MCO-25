@@ -1,257 +1,131 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { TestResult, Exam, RecommendedBook, AnswerReview } from '../types.ts';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
-import Spinner from './Spinner.tsx';
-import LogoSpinner from './LogoSpinner.tsx';
-import { Check, X, FileDown, BookUp, ShieldCheck, Sparkles } from 'lucide-react';
-import BookCover from '../assets/BookCover.tsx';
+import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag } from 'lucide-react';
+import { logoBase64 } from '../assets/logo.ts';
 
-const Results: React.FC = () => {
-    const { testId } = ReactRouterDOM.useParams<{ testId: string }>();
-    const navigate = ReactRouterDOM.useNavigate();
-    const { user } = useAuth();
-    const { activeOrg } = useAppContext();
-    
-    const [result, setResult] = useState<TestResult | null>(null);
-    const [exam, setExam] = useState<Exam | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [aiFeedback, setAiFeedback] = useState<string>('');
-    const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+const Header: React.FC = () => {
+  const { user, logout } = useAuth();
+  const { activeOrg } = useAppContext();
 
-    useEffect(() => {
-        if (!testId || !user || !activeOrg) {
-            if(!user) toast.error("Authentication session has expired.");
-            else toast.error("Required data is missing.");
-            navigate('/dashboard');
-            return;
-        }
+  const handleLogout = () => {
+    logout();
+    // Redirect to the external WordPress site's logout page, then back to the app's home
+    const appHomeUrl = 'https://exams.coding-online.net';
+    const wpLogoutUrl = `https://www.coding-online.net/wp-login.php?action=logout&redirect_to=${encodeURIComponent(appHomeUrl)}`;
+    window.location.href = wpLogoutUrl;
+  };
 
-        const fetchResultAndExam = () => {
-            setIsLoading(true);
-            try {
-                const foundResult = googleSheetsService.getTestResult(user, testId);
-                if (foundResult) {
-                    setResult(foundResult);
-                    const examConfig = activeOrg.exams.find(e => e.id === foundResult.examId);
-                    if (examConfig) {
-                        setExam(examConfig);
-                    } else {
-                        toast.error("Could not find the configuration for this exam.");
-                        navigate('/dashboard');
-                    }
-                } else {
-                    toast.error("Could not find your test results.");
-                    navigate('/dashboard');
-                }
-            } catch (error) {
-                toast.error("Failed to load results.");
-                navigate('/dashboard');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchResultAndExam();
-    }, [testId, user?.id, activeOrg, navigate]);
-
-    const handleGenerateFeedback = async () => {
-        if (!result || !exam) return;
-        setIsGeneratingFeedback(true);
-        const toastId = toast.loading('Generating AI feedback...');
-        try {
-            const incorrectAnswers = result.review.filter(r => r.userAnswer !== r.correctAnswer);
-            if (incorrectAnswers.length === 0) {
-                toast.success("You got all questions correct! No feedback needed.", { id: toastId });
-                setAiFeedback("Congratulations on a perfect score! You've demonstrated excellent knowledge in all areas of this exam.");
-                return;
-            }
-
-            const prompt = `I am a student preparing for the ${exam.name}. I answered the following questions incorrectly. Please provide personalized feedback for me. For each question, explain why the correct answer is right and what specific topic I should study to improve. Keep the tone encouraging and educational. Structure your response clearly with headings for each question.
-
-Here are the questions I got wrong:
-${incorrectAnswers.map(item => `
----
-Question: ${item.question}
-Options:
-${item.options.map((opt, i) => `- ${opt}`).join('\n')}
-My Answer: ${item.userAnswer > -1 ? item.options[item.userAnswer] : 'Not Answered'}
-Correct Answer: ${item.options[item.correctAnswer]}
----
-`).join('\n')}
-
-Please provide a summary of the key areas I need to focus on based on these errors.
-`;
-            const feedback = await googleSheetsService.getAIFeedback(prompt);
-            setAiFeedback(feedback);
-            toast.success("AI feedback generated!", { id: toastId });
-        } catch (error: any) {
-            toast.error(error.message || "Failed to generate feedback.", { id: toastId });
-        } finally {
-            setIsGeneratingFeedback(false);
-        }
-    };
-    
-    const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } => {
-        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        let domainKey: keyof RecommendedBook['affiliateLinks'] = 'com';
-        let domainName = 'Amazon.com';
-
-        const gccTimezones = ['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat'];
-        if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
-            domainKey = 'in'; domainName = 'Amazon.in';
-        } else if (gccTimezones.some(tz => timeZone === tz)) {
-            domainKey = 'ae'; domainName = 'Amazon.ae';
-        }
-        
-        const url = book.affiliateLinks[domainKey];
-        return !url ? { url: book.affiliateLinks.com, domainName: 'Amazon.com' } : { url, domainName };
-    };
+  const headerLink = user ? "/dashboard" : "/";
+  
+  // The custom login page is a WordPress page with the slug 'exam-login'
+  const loginUrl = `https://www.coding-online.net/exam-login/`;
+  const myAccountUrl = `https://www.coding-online.net/my-account/`;
 
 
-    if (isLoading) {
-        return <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow-md"><LogoSpinner /><p className="mt-4 text-slate-600">Calculating your results...</p></div>;
-    }
-    
-    if (!result || !exam) {
-        return <div className="text-center p-8 bg-white rounded-lg shadow-md"><p>Could not load results.</p></div>
-    }
-    
-    const isPass = result.score >= exam.passScore;
-    const isPaid = exam.price > 0;
-    const scoreColor = isPass ? 'text-green-600' : 'text-red-600';
-    const isAdmin = !!user?.isAdmin;
-
-    return (
-        <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
-            <h1 className="text-3xl font-bold text-slate-800 mb-4">Results for {exam.name}</h1>
-            
-            <div className={`text-center border-2 ${isPass ? 'border-green-200' : 'border-red-200'} bg-slate-50 rounded-lg p-6 mb-8`}>
-                <p className="text-lg text-slate-600">Your Score</p>
-                <p className={`text-7xl font-bold ${scoreColor}`}>{result.score}%</p>
-                <p className="text-slate-500 mt-2">({result.correctCount} out of {result.totalQuestions} correct)</p>
-                <p className={`mt-4 text-xl font-semibold ${scoreColor}`}>{isPass ? 'Congratulations, you passed!' : 'Unfortunately, you did not pass.'}</p>
-            </div>
-
-            {((isPaid && isPass) || isAdmin) && (
-                <div className="text-center mb-8">
-                    <button
-                        onClick={() => navigate(`/certificate/${result.testId}`)}
-                        className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105"
-                    >
-                        <FileDown size={20} />
-                        <span>{isAdmin && !isPass ? "View Certificate (Admin Override)" : "Download Your Certificate"}</span>
-                    </button>
+  return (
+    <header className="bg-white shadow-md sticky top-0 z-50">
+      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+        {activeOrg ? (
+            <ReactRouterDOM.Link to={headerLink} className="flex items-center space-x-3">
+                 <img
+                    src={logoBase64}
+                    alt={`${activeOrg.name} Logo`}
+                    className="h-14 w-14 object-contain"
+                />
+                <div className="flex flex-col">
+                    <span className="text-3xl font-bold text-slate-900 font-serif">
+                        {activeOrg.name}
+                    </span>
+                    <span className="text-md text-slate-500 font-serif">
+                        {activeOrg.website}
+                    </span>
                 </div>
-            )}
-            
-            {!isPass && (
-                <div className="text-center mb-8 p-6 bg-amber-50 border border-amber-200 rounded-lg">
-                    <h2 className="text-xl font-semibold text-amber-800 mb-4">Need some help?</h2>
-                    <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Don't worry, practice makes perfect. Use our AI-powered tool to get a personalized study plan based on the questions you missed.</p>
-                     <button
-                        onClick={handleGenerateFeedback}
-                        disabled={isGeneratingFeedback}
-                        className="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-amber-300"
-                    >
-                        {isGeneratingFeedback ? <Spinner /> : <Sparkles size={20} />}
-                        <span>{isGeneratingFeedback ? 'Generating...' : 'Get AI-Powered Feedback'}</span>
-                    </button>
-                </div>
-            )}
-
-            {isGeneratingFeedback && (
-                <div className="p-4 bg-slate-50 rounded-lg text-center">
-                    <LogoSpinner />
-                    <p className="mt-2 text-slate-600">Our AI is analyzing your results... this may take a moment.</p>
-                </div>
-            )}
-
-            {aiFeedback && (
-                 <div className="mt-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
-                    <h2 className="text-2xl font-semibold text-slate-700 mb-4 flex items-center gap-2"><Sparkles className="text-cyan-500" /> AI Study Guide</h2>
-                    <div className="prose prose-slate max-w-none whitespace-pre-wrap">{aiFeedback}</div>
-                </div>
-            )}
-            
-            {(isPaid && !isPass) && (
-                <div className="text-center p-6 bg-slate-50 border border-slate-200 rounded-lg mt-8">
-                        <h2 className="text-xl font-semibold text-slate-700">Answer Review Not Available</h2>
-                        <p className="text-slate-600 max-w-2xl mx-auto mt-2">To protect the integrity of the certification exam and ensure fairness for all candidates, a detailed answer review is not provided for paid tests.</p>
-                </div>
-            )}
-
-            {exam.recommendedBook && (() => {
-                const { url, domainName } = getGeoAffiliateLink(exam.recommendedBook!);
-                return (
-                    <div className="text-center p-6 bg-blue-50 border border-blue-200 rounded-lg mt-8">
-                        <h2 className="text-xl font-semibold text-blue-800 mb-4">Recommended Study Material</h2>
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-left">
-                            <BookCover title={exam.recommendedBook!.title} className="w-32 h-40 rounded-lg shadow-md flex-shrink-0" />
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-800">{exam.recommendedBook!.title}</h3>
-                                <p className="text-slate-600 mt-1 mb-4 max-w-md">{exam.recommendedBook!.description}</p>
-                                <a 
-                                    href={url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    aria-label={`Buy ${exam.recommendedBook!.title} on ${domainName}`}
-                                    className="inline-flex items-center space-x-2 bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105"
-                                >
-                                    <BookUp size={20} />
-                                    <span>Buy on {domainName}</span>
-                                </a>
-                                <p className="text-xs text-slate-500 mt-2 max-w-md">
-                                    As an Amazon Associate, we earn from qualifying purchases. This is a geo-targeted affiliate link.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                );
-            })()} 
-            
-            {!isPaid && (
-                <div className="mt-8">
-                    <h2 className="text-2xl font-semibold text-slate-700 mb-4">Answer Review</h2>
-                    <div className="space-y-6">
-                        {result.review.map((item, index) => (
-                            <div key={item.questionId} className="border border-slate-200 rounded-lg p-4">
-                                <p className="font-semibold text-slate-800 mb-3">{index + 1}. {item.question}</p>
-                                <div className="space-y-2">
-                                    {item.options.map((option, optionIndex) => {
-                                        const isUserAnswer = item.userAnswer === optionIndex;
-                                        const isCorrectAnswer = item.correctAnswer === optionIndex;
-                                        let bgClass = 'bg-slate-50';
-                                        if (isCorrectAnswer) bgClass = 'bg-green-100 border-green-400';
-                                        else if (isUserAnswer && !isCorrectAnswer) bgClass = 'bg-red-100 border-red-400';
-
-                                        return (
-                                            <div key={optionIndex} className={`flex items-center p-3 rounded border ${bgClass}`}>
-                                                {isUserAnswer && !isCorrectAnswer && <X size={18} className="text-red-600 mr-2 shrink-0" />}
-                                                {isCorrectAnswer && <Check size={18} className="text-green-600 mr-2 shrink-0" />}
-                                                <span className="text-slate-700">{option}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            <div className="text-center mt-8">
-                <button 
-                    onClick={() => navigate('/dashboard')}
-                    className="bg-slate-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-700 transition"
+            </ReactRouterDOM.Link>
+        ) : (
+             <div className="flex items-center space-x-3">
+                 <div className="h-14 w-14 bg-slate-200 rounded-full animate-pulse"></div>
+                 <div className="flex flex-col">
+                    <div className="h-8 w-48 bg-slate-200 rounded animate-pulse mb-2"></div>
+                    <div className="h-4 w-32 bg-slate-200 rounded animate-pulse"></div>
+                 </div>
+             </div>
+        )}
+       
+        <div className="flex items-center space-x-4">
+           <ReactRouterDOM.Link 
+                to="/bookstore"
+                className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200"
+                title="Recommended Books"
+            >
+                <BookMarked size={20} />
+                <span className="hidden sm:inline font-semibold">Book Store</span>
+            </ReactRouterDOM.Link>
+            <ReactRouterDOM.Link 
+                to="/pricing"
+                className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200"
+                title="View Plans and Pricing"
+            >
+                <Tag size={20} />
+                <span className="hidden sm:inline font-semibold">Pricing</span>
+            </ReactRouterDOM.Link>
+          {user ? (
+            <>
+              <ReactRouterDOM.Link to="/profile" className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200" title="View your profile">
+                <UserCircle size={20} />
+                <span className="hidden sm:inline">Welcome, {user.name}{user.isAdmin && ' (Admin)'}</span>
+              </ReactRouterDOM.Link>
+               {user.isAdmin && (
+                  <ReactRouterDOM.Link
+                    to="/admin"
+                    className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                    title="Go to the Admin Panel"
+                  >
+                    <Shield size={16} />
+                    <span className="hidden sm:inline">Admin</span>
+                  </ReactRouterDOM.Link>
+               )}
+               <a
+                href={myAccountUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Manage your orders, downloads, and addresses on our main site."
+                className="flex items-center space-x-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition duration-200"
+              >
+                <User size={16} />
+                <span className="hidden sm:inline">My Account</span>
+              </a>
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition duration-200"
+              >
+                <LogOut size={16} />
+                <span>Logout</span>
+              </button>
+            </>
+          ) : (
+             <div className="flex items-center space-x-2">
+                <a
+                    href={loginUrl}
+                    className="flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition duration-200"
                 >
-                    Back to Dashboard
-                </button>
-            </div>
+                    <LogIn size={16} />
+                    <span>Login</span>
+                </a>
+                <a
+                    href="https://www.coding-online.net/wp-login.php?action=register"
+                    className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                    >
+                    <UserPlus size={16} />
+                    <span>Register</span>
+                </a>
+             </div>
+          )}
         </div>
-    );
+      </div>
+    </header>
+  );
 };
 
-export default Results;
+export default Header;
