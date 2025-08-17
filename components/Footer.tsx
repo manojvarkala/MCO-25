@@ -35,9 +35,7 @@ const Footer: React.FC = () => {
               </>
             )}
             
-            [wp_news_ticker_benaceur_short_code]
-
-            <span className="text-slate-300">|</span>
+                   <span className="text-slate-300">|</span>
             <a href="https://annapoornainfo.com/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-cyan-600 hover:underline">Privacy Policy</a>
         </div>
         <p>&copy; {new Date().getFullYear()} Medical Coding Online | Powered by Annapoorna Examination App. All Rights Reserved.</p>
