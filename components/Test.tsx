@@ -68,11 +68,6 @@ const Test: React.FC = () => {
     }
   }, [examId, navigate, token, user, answers, questions]);
 
-  const handleSubmitRef = useRef(handleSubmit);
-  useEffect(() => {
-    handleSubmitRef.current = handleSubmit;
-  }, [handleSubmit]);
-
   useEffect(() => {
     if (isInitializing || !examId || !activeOrg) return;
 
@@ -140,7 +135,7 @@ const Test: React.FC = () => {
                 if(timerIntervalRef.current) clearInterval(timerIntervalRef.current);
                 localStorage.removeItem(timerKey);
                 toast.error("Time's up! Your test has been submitted automatically.");
-                handleSubmitRef.current(true);
+                handleSubmit(true);
             }
         }, 1000);
 
@@ -156,7 +151,7 @@ const Test: React.FC = () => {
     return () => {
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
-  }, [examId, activeOrg, navigate, useFreeAttempt, isInitializing, user, isSubscribed, token]);
+  }, [examId, activeOrg, navigate, useFreeAttempt, isInitializing, user, isSubscribed, token, handleSubmit]);
 
   const handleAnswerSelect = (questionId: number, optionIndex: number) => {
     setAnswers(prev => new Map(prev).set(questionId, optionIndex));
