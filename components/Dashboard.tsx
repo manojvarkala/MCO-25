@@ -5,7 +5,7 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { BookCopy, History as HistoryIcon, FlaskConical, Eye, FileText, BarChart, BadgePercent, Trophy, ArrowRight, Home, RefreshCw, Star, Zap, CheckCircle, Lock, Edit, Save, X, ShoppingCart, AlertTriangle, Award, Megaphone } from 'lucide-react';
+import { BookCopy, History as HistoryIcon, FlaskConical, Eye, FileText, BarChart, BadgePercent, Trophy, ArrowRight, Home, RefreshCw, Star, Zap, CheckCircle, Lock, Edit, Save, X, ShoppingCart, AlertTriangle, Award } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
@@ -20,7 +20,6 @@ const Dashboard: React.FC = () => {
     const [isEditingName, setIsEditingName] = useState(false);
     const [isSavingName, setIsSavingName] = useState(false);
     const [name, setName] = useState(user?.name || '');
-    const [isOfferVisible, setIsOfferVisible] = useState(true);
 
     const loginUrl = 'https://www.coding-online.net/exam-login/';
     const appDashboardPath = '/dashboard';
@@ -369,39 +368,6 @@ const Dashboard: React.FC = () => {
                     <SuggestedBooksSidebar />
                 </div>
             </div>
-
-            {isOfferVisible && (
-                <div 
-                    className="fixed inset-0 z-50 flex p-0 md:p-4
-                               md:items-center md:justify-center md:bg-black md:bg-opacity-50
-                               items-end"
-                >
-                    <div 
-                        className="relative bg-gradient-to-br from-cyan-500 to-purple-600 text-white shadow-2xl 
-                                   w-full rounded-t-2xl p-4
-                                   md:max-w-lg md:rounded-2xl md:p-8"
-                    >
-                        <button 
-                            onClick={() => setIsOfferVisible(false)}
-                            className="absolute top-3 right-3 text-white/70 hover:text-white transition-colors"
-                            aria-label="Dismiss announcement"
-                        >
-                            <X size={24} />
-                        </button>
-                        <div className="flex items-center gap-5">
-                            <div className="bg-white/20 p-3 rounded-full hidden sm:block">
-                                <Megaphone size={32} />
-                            </div>
-                            <div className="flex-grow">
-                                <h3 className="font-extrabold text-lg sm:text-xl text-white">Limited Time Offer!</h3>
-                                <p className="text-sm sm:text-base text-white/90 mt-1">
-                                    All certification exams are just <span className="font-black text-yellow-300 text-xl sm:text-2xl">$1</span> as an introductory offer!
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

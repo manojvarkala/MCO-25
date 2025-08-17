@@ -74,7 +74,7 @@ const Header: React.FC = () => {
             <>
               <ReactRouterDOM.Link to="/profile" className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200" title="View your profile">
                 <UserCircle size={20} />
-                <span className="hidden sm:inline">Welcome, {user.name}{user.isAdmin && ' (Admin)'}</span>
+                <span className="hidden sm:inline">Profile{user.isAdmin && ' (Admin)'}</span>
               </ReactRouterDOM.Link>
                {user.isAdmin && (
                   <ReactRouterDOM.Link
