@@ -20,6 +20,7 @@ import BookStore from './components/BookStore.tsx';
 import Profile from './components/Profile.tsx';
 import Checkout from './components/Checkout.tsx';
 import DebugSidebar from './components/DebugSidebar.tsx';
+import Pricing from './components/Pricing.tsx';
 
 
 interface ProtectedRouteProps {
@@ -40,6 +41,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = f
 
 const AppContent: React.FC = () => {
     const { user } = useAuth();
+
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800">
             <Header />
@@ -51,6 +53,7 @@ const AppContent: React.FC = () => {
                         <ReactRouterDOM.Route path="/instructions" element={<Instructions />} />
                         <ReactRouterDOM.Route path="/integration" element={<Integration />} />
                         <ReactRouterDOM.Route path="/bookstore" element={<BookStore />} />
+                        <ReactRouterDOM.Route path="/pricing" element={<Pricing />} />
                         <ReactRouterDOM.Route path="/checkout/:productSlug" element={<Checkout />} />
                         
                         <ReactRouterDOM.Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
