@@ -10,7 +10,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           7.9.0
+ * Version:           8.2.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -72,19 +72,18 @@ function mco_exam_get_payload($user_id) {
     $user_full_name = trim($user->first_name . ' ' . $user->last_name) ?: $user->display_name;
     $paid_exam_ids = []; 
     $exam_prices = new stdClass();
-    $is_subscribed = false; // Initialize subscription status
+    $is_subscribed = false;
     
     if (class_exists('WooCommerce')) {
-        $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert'];
+        $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert', 'exam-mcf-cert'];
         $subscription_skus = [
             'sub-monthly', 'sub-yearly', 'sub-1mo-addon',
-            // Non-renewable one-month add-on SKUs
             'exam-cpc-cert-1mo-addon', 'exam-cca-cert-1mo-addon', 'exam-ccs-cert-1mo-addon', 
             'exam-billing-cert-1mo-addon', 'exam-risk-cert-1mo-addon', 'exam-icd-cert-1mo-addon', 
             'exam-cpb-cert-1mo-addon', 'exam-crc-cert-1mo-addon', 'exam-cpma-cert-1mo-addon', 
             'exam-coc-cert-1mo-addon', 'exam-cic-cert-1mo-addon', 'exam-mta-cert-1mo-addon', 
             'exam-ap-cert-1mo-addon', 'exam-em-cert-1mo-addon', 'exam-rcm-cert-1mo-addon', 
-            'exam-hi-cert-1mo-addon'
+            'exam-hi-cert-1mo-addon', 'exam-mcf-cert-1mo-addon'
         ];
         
         $exam_prices = get_transient('mco_exam_prices');
@@ -113,12 +112,27 @@ function mco_exam_get_payload($user_id) {
         } 
         $purchased_skus = array_unique($purchased_skus);
 
-        $paid_exam_ids = array_values(array_intersect($all_exam_skus, $purchased_skus));
+        // --- NEW LOGIC FOR BUNDLED PRODUCTS ---
         $is_subscribed = !empty(array_intersect($subscription_skus, $purchased_skus));
+
+        $direct_exam_purchases = array_intersect($all_exam_skus, $purchased_skus);
+        
+        $exams_from_addons = [];
+        foreach ($purchased_skus as $sku) {
+            if (strpos($sku, '-1mo-addon') !== false) {
+                $base_sku = str_replace('-1mo-addon', '', $sku);
+                if (in_array($base_sku, $all_exam_skus)) {
+                    $exams_from_addons[] = $base_sku;
+                }
+            }
+        }
+        
+        $paid_exam_ids = array_values(array_unique(array_merge($direct_exam_purchases, $exams_from_addons)));
     }
     
     return ['iss' => get_site_url(), 'iat' => time(), 'exp' => time() + (60 * 60 * 2), 'user' => ['id' => (string)$user->ID, 'name' => $user_full_name, 'email' => $user->user_email, 'isAdmin' => user_can($user, 'administrator')], 'paidExamIds' => $paid_exam_ids, 'examPrices' => $exam_prices, 'isSubscribed' => $is_subscribed];
 }
+
 
 function mco_base64url_encode($data) { return rtrim(strtr(base64_encode($data), '+/', '-_'), '='); }
 function mco_verify_exam_jwt($token) { $secret_key = defined('MCO_JWT_SECRET') ? MCO_JWT_SECRET : ''; if (empty($secret_key) || strlen($secret_key) < 32) { mco_debug_log('JWT verification failed: Secret key not configured or insecure.'); return null; } $parts = explode('.', $token); if (count($parts) !== 3) { mco_debug_log('JWT verification failed: Invalid token structure.'); return null; } list($header_b64, $payload_b64, $signature_b64) = $parts; $signature = base64_decode(strtr($signature_b64, '-_', '+/')); $expected_signature = hash_hmac('sha256', "$header_b64.$payload_b64", $secret_key, true); if (!hash_equals($expected_signature, $signature)) { mco_debug_log('JWT verification failed: Signature mismatch.'); return null; } $payload = json_decode(base64_decode(strtr($payload_b64, '-_', '+/')), true); if (isset($payload['exp']) && $payload['exp'] < time()) { mco_debug_log('JWT verification failed: Token expired.'); return null; } return $payload; }
@@ -216,7 +230,7 @@ function mco_get_debug_details_callback($request) {
     // Get Purchases
     $paid_exam_ids = [];
     if (class_exists('WooCommerce')) {
-        $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert'];
+        $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert', 'exam-mcf-cert'];
         $customer_orders = wc_get_orders(['customer' => $user_id, 'status' => ['wc-completed', 'wc-processing'], 'limit' => -1]);
         $purchased_skus = [];
         if ($customer_orders) { foreach ($customer_orders as $order) { foreach ($order->get_items() as $item) { if ($product = $item->get_product()) $purchased_skus[] = $product->get_sku(); } } }
@@ -275,6 +289,7 @@ function mco_get_exam_programs_data() {
         ['name' => 'E/M Coding Program', 'description' => 'Prepare for Evaluation & Management coding proficiency.', 'practice_id' => 'exam-em-practice', 'cert_sku' => 'exam-em-cert'],
         ['name' => 'Revenue Cycle Management Program', 'description' => 'Prepare for Revenue Cycle Management proficiency.', 'practice_id' => 'exam-rcm-practice', 'cert_sku' => 'exam-rcm-cert'],
         ['name' => 'Health Informatics Program', 'description' => 'Prepare for Health Informatics proficiency.', 'practice_id' => 'exam-hi-practice', 'cert_sku' => 'exam-hi-cert'],
+        ['name' => 'Medical Coding Fundamentals Program', 'description' => 'A foundational test series covering core medical coding principles.', 'practice_id' => 'exam-mcf-practice', 'cert_sku' => 'exam-mcf-cert'],
     ];
 }
 
@@ -298,6 +313,8 @@ function mco_exam_showcase_shortcode() {
     .mco-btn-purchase:hover { background-color: #d97706; }
     .mco-btn-practice { background-color: #f8fafc; color: #475569; border: 1px solid #cbd5e1; }
     .mco-btn-practice:hover { background-color: #f1f5f9; }
+    .mco-btn-addon { display: inline-block !important; background-color: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 0.4rem 0.8rem; font-size: 0.8rem !important; }
+    .mco-btn-addon:hover { background-color: #e0e7ff; }
     </style>
     <div class="mco-showcase-container">
     <?php foreach ($exam_programs as $program): ?>
@@ -329,6 +346,20 @@ function mco_exam_showcase_shortcode() {
                                 </div>
                                 <a href="<?php echo esc_url($add_to_cart_url); ?>" class="mco-showcase-btn mco-btn-purchase">Purchase Exam</a>
                             </div>
+
+                            <?php
+                                $addon_sku = $program['cert_sku'] . '-1mo-addon';
+                                $addon_product_id = wc_get_product_id_by_sku($addon_sku);
+                                if ($addon_product_id && $addon_product = wc_get_product($addon_product_id)):
+                                    $addon_price = (float)$addon_product->get_price();
+                            ?>
+                                <div style="text-align: center; margin-top: 0.25rem;">
+                                    <a href="<?php echo esc_url($addon_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-addon">
+                                        + Add Premium Access (1-Month)
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+
                         <?php else: ?>
                             <p style="text-align:center; font-size: 0.8rem; color: #9ca3af;">Certification not available</p>
                         <?php endif;
@@ -350,7 +381,7 @@ function mco_exam_user_details_shortcode() {
         <h3 style="border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0;">User Details (for Debugging)</h3>
         <p><strong>User ID:</strong> <?php echo esc_html($user_id); ?></p> <p><strong>Full Name:</strong> <?php echo esc_html($user_full_name); ?></p> <p><strong>Email:</strong> <?php echo esc_html($user->user_email); ?></p>
         <h3 style="border-bottom: 1px solid #eee; padding-bottom: 10px;">WooCommerce Purchases</h3>
-        <?php if (class_exists('WooCommerce')) { $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert']; $customer_orders = wc_get_orders(['customer' => $user_id, 'status' => ['wc-completed', 'wc-processing'], 'limit' => -1]); $purchased_skus = []; if ($customer_orders) { foreach ($customer_orders as $order) { foreach ($order->get_items() as $item) { if ($product = $item->get_product()) $purchased_skus[] = $product->get_sku(); } } } $paid_exam_ids = array_values(array_intersect($all_exam_skus, array_unique($purchased_skus))); if (!empty($paid_exam_ids)) { echo '<ul>'; foreach ($paid_exam_ids as $sku) { echo '<li>' . esc_html($sku) . '</li>'; } echo '</ul>'; } else { echo '<p>No completed exam purchases found.</p>'; } } else { echo '<p>WooCommerce is not active.</p>'; } ?>
+        <?php if (class_exists('WooCommerce')) { $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert', 'exam-mcf-cert']; $customer_orders = wc_get_orders(['customer' => $user_id, 'status' => ['wc-completed', 'wc-processing'], 'limit' => -1]); $purchased_skus = []; if ($customer_orders) { foreach ($customer_orders as $order) { foreach ($order->get_items() as $item) { if ($product = $item->get_product()) $purchased_skus[] = $product->get_sku(); } } } $paid_exam_ids = array_values(array_intersect($all_exam_skus, array_unique($purchased_skus))); if (!empty($paid_exam_ids)) { echo '<ul>'; foreach ($paid_exam_ids as $sku) { echo '<li>' . esc_html($sku) . '</li>'; } echo '</ul>'; } else { echo '<p>No completed exam purchases found.</p>'; } } else { echo '<p>WooCommerce is not active.</p>'; } ?>
         <h3 style="border-bottom: 1px solid #eee; padding-bottom: 10px;">Synced Exam Results</h3>
         <?php $results = get_user_meta($user_id, 'mco_exam_results', true); if (!empty($results) && is_array($results)) { echo '<table style="width: 100%; border-collapse: collapse;"><tr><th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Exam ID</th><th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Score</th><th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Date</th></tr>'; foreach ($results as $result) { $date = date('Y-m-d H:i', (int)((int)$result['timestamp'] / 1000)); echo '<tr><td style="border: 1px solid #ddd; padding: 8px;">' . esc_html($result['examId']) . '</td><td style="border: 1px solid #ddd; padding: 8px;">' . esc_html($result['score']) . '%</td><td style="border: 1px solid #ddd; padding: 8px;">' . esc_html($date) . '</td></tr>'; } echo '</table>'; } else { echo '<p>No exam results have been synced from the app yet.</p>'; } ?>
         <h3 style="border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 20px;">Google Sheet Fetch Test</h3>

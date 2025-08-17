@@ -3,8 +3,8 @@ import { Check, Star } from 'lucide-react';
 
 const Pricing: React.FC = () => {
     // These URLs will eventually point to the WooCommerce subscription/product pages
-    const monthlySubUrl = 'https://www.coding-online.net/my-account/subscriptions/';
-    const yearlySubUrl = 'https://www.coding-online.net/my-account/subscriptions/';
+    const monthlySubUrl = 'https://www.coding-online.net/product/monthly-subscription/';
+    const yearlySubUrl = 'https://www.coding-online.net/product/yearly-subscription/';
     const browseExamsUrl = 'https://www.coding-online.net/exam-programs/';
 
     return (
@@ -53,21 +53,21 @@ const Pricing: React.FC = () => {
                     <a href={yearlySubUrl} target="_blank" rel="noopener noreferrer" className="mt-8 block w-full bg-cyan-500 border border-transparent rounded-md py-3 text-base font-semibold text-white text-center hover:bg-cyan-600">Subscribe & Save</a>
                 </div>
 
-                {/* Per Exam Card */}
+                {/* Exam Bundle Card */}
                 <div className="border border-slate-200 rounded-2xl shadow-lg p-8 flex flex-col">
-                    <h3 className="text-xl font-semibold text-slate-900">Certification Exam</h3>
-                    <p className="mt-4 text-slate-500">Ideal for taking a single, official certification exam.</p>
+                    <h3 className="text-xl font-semibold text-slate-900">Exam Bundle</h3>
+                    <p className="mt-4 text-slate-500">The complete package: one certification exam plus one month of premium access to all study tools.</p>
                     <div className="mt-6">
-                        <span className="text-4xl font-extrabold text-slate-900">$49.99</span>
-                        <span className="text-base font-medium text-slate-500">/exam</span>
+                        <span className="text-4xl font-extrabold text-slate-900">$59.99</span>
+                        <span className="text-base font-medium text-slate-500">/bundle</span>
                     </div>
                     <ul className="mt-6 space-y-4">
-                        <li className="flex items-start"><Check className="flex-shrink-0 h-6 w-6 text-green-500" /><span className="ml-3 text-slate-500">Purchase a Single Certification Exam</span></li>
-                        <li className="flex items-start"><Check className="flex-shrink-0 h-6 w-6 text-green-500" /><span className="ml-3 text-slate-500">Includes 3 Attempts</span></li>
-                        <li className="flex items-start"><Check className="flex-shrink-0 h-6 w-6 text-green-500" /><span className="ml-3 text-slate-500">Pass to Earn Your Official Certificate</span></li>
-                        <li className="flex items-start"><Check className="flex-shrink-0 h-6 w-6 text-green-500" /><span className="ml-3 text-slate-500">Downloadable Certificate</span></li>
+                        <li className="flex items-start"><Check className="flex-shrink-0 h-6 w-6 text-green-500" /><span className="ml-3 text-slate-500">Purchase a Single Certification Exam (3 attempts)</span></li>
+                        <li className="flex items-start"><Check className="flex-shrink-0 h-6 w-6 text-green-500" /><span className="ml-3 text-slate-500">Downloadable Certificate upon Passing</span></li>
+                        <li className="flex items-start"><Check className="flex-shrink-0 h-6 w-6 text-green-500" /><span className="ml-3 text-slate-500">1-Month Unlimited Access to ALL Practice Exams</span></li>
+                        <li className="flex items-start"><Check className="flex-shrink-0 h-6 w-6 text-green-500" /><span className="ml-3 text-slate-500">1-Month Unlimited AI-Powered Feedback</span></li>
                     </ul>
-                    <a href={browseExamsUrl} target="_blank" rel="noopener noreferrer" className="mt-8 block w-full bg-slate-100 border border-slate-300 rounded-md py-3 text-base font-semibold text-slate-700 text-center hover:bg-slate-200">Browse Exams</a>
+                    <a href={browseExamsUrl} target="_blank" rel="noopener noreferrer" className="mt-8 block w-full bg-slate-100 border border-slate-300 rounded-md py-3 text-base font-semibold text-slate-700 text-center hover:bg-slate-200">Browse Exam Bundles</a>
                 </div>
             </div>
         </div>
