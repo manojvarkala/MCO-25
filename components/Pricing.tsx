@@ -63,7 +63,7 @@ const Pricing: React.FC = () => {
                         <div>
                             <h4 className="font-semibold text-slate-700">Single Exam</h4>
                              <div className="mt-2">
-                                <span className="text-2xl font-extrabold text-slate-900">Prices Vary</span>
+                                <span className="text-2xl font-extrabold text-slate-900">$49.99</span>
                             </div>
                             <ul className="mt-4 space-y-2 text-sm">
                                 <li className="flex items-start"><Check className="flex-shrink-0 h-5 w-5 text-green-500" /><span className="ml-2 text-slate-500">One Certification Exam (3 attempts)</span></li>
