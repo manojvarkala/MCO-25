@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook, AnswerReview } from '../types.ts';
@@ -14,8 +15,8 @@ import html2canvas from 'html2canvas';
 import { logoBase64 } from '../assets/logo.ts';
 
 const Results: React.FC = () => {
-    const { testId } = ReactRouterDOM.useParams<{ testId: string }>();
-    const navigate = ReactRouterDOM.useNavigate();
+    const { testId } = useParams<{ testId: string }>();
+    const navigate = useNavigate();
     const { user } = useAuth();
     const { activeOrg } = useAppContext();
     

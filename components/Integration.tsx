@@ -10,7 +10,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           7.6.1
+ * Version:           7.7.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -70,10 +70,14 @@ function mco_get_exam_app_url($is_admin = false) { if ($is_admin) return get_opt
 function mco_exam_get_payload($user_id) {
     if (!$user = get_userdata($user_id)) return null;
     $user_full_name = trim($user->first_name . ' ' . $user->last_name) ?: $user->display_name;
-    $paid_exam_ids = []; $exam_prices = new stdClass();
+    $paid_exam_ids = []; 
+    $exam_prices = new stdClass();
+    $is_subscribed = false; // Initialize subscription status
     
     if (class_exists('WooCommerce')) {
         $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert'];
+        $subscription_skus = ['sub-monthly', 'sub-yearly', 'sub-1mo-addon']; // SKUs for subscriptions
+        
         $exam_prices = get_transient('mco_exam_prices');
         if (false === $exam_prices) {
             mco_debug_log('Exam prices cache miss. Fetching from DB.');
@@ -90,10 +94,21 @@ function mco_exam_get_payload($user_id) {
         }
         $customer_orders = wc_get_orders(['customer' => $user_id, 'status' => ['wc-completed', 'wc-processing'], 'limit' => -1]);
         $purchased_skus = [];
-        if ($customer_orders) { foreach ($customer_orders as $order) { foreach ($order->get_items() as $item) { $product = $item->get_product(); if ($product && $product->get_sku()) $purchased_skus[] = $product->get_sku(); } } }
-        $paid_exam_ids = array_values(array_intersect($all_exam_skus, array_unique($purchased_skus)));
+        if ($customer_orders) { 
+            foreach ($customer_orders as $order) { 
+                foreach ($order->get_items() as $item) { 
+                    $product = $item->get_product(); 
+                    if ($product && $product->get_sku()) $purchased_skus[] = $product->get_sku(); 
+                } 
+            } 
+        }
+        $purchased_skus = array_unique($purchased_skus);
+
+        $paid_exam_ids = array_values(array_intersect($all_exam_skus, $purchased_skus));
+        $is_subscribed = !empty(array_intersect($subscription_skus, $purchased_skus));
     }
-    return ['iss' => get_site_url(), 'iat' => time(), 'exp' => time() + (60 * 60 * 2), 'user' => ['id' => (string)$user->ID, 'name' => $user_full_name, 'email' => $user->user_email, 'isAdmin' => user_can($user, 'administrator')], 'paidExamIds' => array_unique($paid_exam_ids), 'examPrices' => $exam_prices];
+    
+    return ['iss' => get_site_url(), 'iat' => time(), 'exp' => time() + (60 * 60 * 2), 'user' => ['id' => (string)$user->ID, 'name' => $user_full_name, 'email' => $user->user_email, 'isAdmin' => user_can($user, 'administrator')], 'paidExamIds' => $paid_exam_ids, 'examPrices' => $exam_prices, 'isSubscribed' => $is_subscribed];
 }
 
 function mco_base64url_encode($data) { return rtrim(strtr(base64_encode($data), '+/', '-_'), '='); }

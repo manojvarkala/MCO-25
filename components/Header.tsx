@@ -1,5 +1,6 @@
+
 import React from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag } from 'lucide-react';
@@ -28,7 +29,7 @@ const Header: React.FC = () => {
     <header className="bg-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         {activeOrg ? (
-            <ReactRouterDOM.Link to={headerLink} className="flex items-center space-x-3">
+            <Link to={headerLink} className="flex items-center space-x-3">
                  <img
                     src={logoBase64}
                     alt={`${activeOrg.name} Logo`}
@@ -42,7 +43,7 @@ const Header: React.FC = () => {
                         {activeOrg.website}
                     </span>
                 </div>
-            </ReactRouterDOM.Link>
+            </Link>
         ) : (
              <div className="flex items-center space-x-3">
                  <div className="h-14 w-14 bg-slate-200 rounded-full animate-pulse"></div>
@@ -54,37 +55,37 @@ const Header: React.FC = () => {
         )}
        
         <div className="flex items-center space-x-4">
-           <ReactRouterDOM.Link 
+           <Link 
                 to="/bookstore"
                 className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200"
                 title="Recommended Books"
             >
                 <BookMarked size={20} />
                 <span className="hidden sm:inline font-semibold">Book Store</span>
-            </ReactRouterDOM.Link>
-            <ReactRouterDOM.Link 
+            </Link>
+            <Link 
                 to="/pricing"
                 className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200"
                 title="View Plans and Pricing"
             >
                 <Tag size={20} />
                 <span className="hidden sm:inline font-semibold">Pricing</span>
-            </ReactRouterDOM.Link>
+            </Link>
           {user ? (
             <>
-              <ReactRouterDOM.Link to="/profile" className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200" title="View your profile">
+              <Link to="/profile" className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200" title="View your profile">
                 <UserCircle size={20} />
                 <span className="hidden sm:inline">Profile{user.isAdmin && ' (Admin)'}</span>
-              </ReactRouterDOM.Link>
+              </Link>
                {user.isAdmin && (
-                  <ReactRouterDOM.Link
+                  <Link
                     to="/admin"
                     className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
                     title="Go to the Admin Panel"
                   >
                     <Shield size={16} />
                     <span className="hidden sm:inline">Admin</span>
-                  </ReactRouterDOM.Link>
+                  </Link>
                )}
                <a
                 href={myAccountUrl}

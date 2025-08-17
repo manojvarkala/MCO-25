@@ -1,9 +1,10 @@
+
 import React, { useEffect } from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import Spinner from './Spinner.tsx';
 
 const Checkout: React.FC = () => {
-    const { productSlug } = ReactRouterDOM.useParams<{ productSlug: string }>();
+    const { productSlug } = useParams<{ productSlug: string }>();
 
     useEffect(() => {
         if (productSlug) {

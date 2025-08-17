@@ -48,7 +48,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return null;
     }
   });
-  const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(() => {
+    try {
+        const storedSubscribed = localStorage.getItem('isSubscribed');
+        return storedSubscribed ? JSON.parse(storedSubscribed) : false;
+    } catch (error) {
+        console.error("Failed to parse isSubscribed from localStorage", error);
+        return false;
+    }
+  });
 
   const logout = useCallback(() => {
     setUser(null);
@@ -60,6 +68,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
     localStorage.removeItem('examPrices');
+    localStorage.removeItem('isSubscribed');
     localStorage.removeItem('activeOrg');
     Object.keys(localStorage).forEach(key => {
         if (key.startsWith('exam_timer_') || key.startsWith('exam_results_')) {
@@ -125,6 +134,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (payload.examPrices) {
                 setExamPrices(payload.examPrices);
                 localStorage.setItem('examPrices', JSON.stringify(payload.examPrices));
+            }
+
+            if (payload.isSubscribed) {
+                setIsSubscribed(payload.isSubscribed);
+                localStorage.setItem('isSubscribed', JSON.stringify(payload.isSubscribed));
+            } else {
+                setIsSubscribed(false);
+                localStorage.removeItem('isSubscribed');
             }
 
             // Sync results in the background after successful login

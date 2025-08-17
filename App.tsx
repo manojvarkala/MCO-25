@@ -1,5 +1,6 @@
+
 import React from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
@@ -31,10 +32,10 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = false }) => {
   const { user } = useAuth();
   if (!user) {
-    return <ReactRouterDOM.Navigate to="/" replace />;
+    return <Navigate to="/" replace />;
   }
   if (adminOnly && !user.isAdmin) {
-    return <ReactRouterDOM.Navigate to="/dashboard" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
 };
@@ -47,25 +48,25 @@ const AppContent: React.FC = () => {
             <Header />
             <div className="flex-grow w-full relative">
                 <main className="container mx-auto px-4 py-8">
-                    <ReactRouterDOM.Routes>
-                        <ReactRouterDOM.Route path="/" element={<LandingPage />} />
-                        <ReactRouterDOM.Route path="/auth" element={<Login />} />
-                        <ReactRouterDOM.Route path="/instructions" element={<Instructions />} />
-                        <ReactRouterDOM.Route path="/integration" element={<Integration />} />
-                        <ReactRouterDOM.Route path="/bookstore" element={<BookStore />} />
-                        <ReactRouterDOM.Route path="/pricing" element={<Pricing />} />
-                        <ReactRouterDOM.Route path="/checkout/:productSlug" element={<Checkout />} />
+                    <Routes>
+                        <Route path="/" element={<LandingPage />} />
+                        <Route path="/auth" element={<Login />} />
+                        <Route path="/instructions" element={<Instructions />} />
+                        <Route path="/integration" element={<Integration />} />
+                        <Route path="/bookstore" element={<BookStore />} />
+                        <Route path="/pricing" element={<Pricing />} />
+                        <Route path="/checkout/:productSlug" element={<Checkout />} />
                         
-                        <ReactRouterDOM.Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/results/:testId" element={<ProtectedRoute><Results /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
+                        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                        <Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
+                        <Route path="/results/:testId" element={<ProtectedRoute><Results /></ProtectedRoute>} />
+                        <Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
+                        <Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
+                        <Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
                     
-                        <ReactRouterDOM.Route path="*" element={<ReactRouterDOM.Navigate to="/" replace />} />
-                    </ReactRouterDOM.Routes>
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
                 </main>
                 {user && user.isAdmin && <DebugSidebar />}
             </div>
@@ -79,10 +80,10 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <AppProvider>
-        <ReactRouterDOM.HashRouter>
+        <HashRouter>
             <AppContent />
             <Toaster position="top-right" reverseOrder={false} />
-        </ReactRouterDOM.HashRouter>
+        </HashRouter>
       </AppProvider>
     </AuthProvider>
   );

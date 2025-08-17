@@ -43,6 +43,7 @@ export interface TokenPayload {
     user: User;
     paidExamIds: string[];
     examPrices?: { [examId: string]: { price: number; regularPrice?: number } };
+    isSubscribed?: boolean;
     iat?: number;
     exp?: number;
 }

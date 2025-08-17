@@ -1,5 +1,6 @@
+
 import React from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 
 const Footer: React.FC = () => {
@@ -9,11 +10,11 @@ const Footer: React.FC = () => {
     <footer className="bg-white mt-auto">
       <div className="container mx-auto px-4 py-4 text-center text-slate-500 text-sm">
         <div className="flex justify-center items-center space-x-4 mb-2">
-            <ReactRouterDOM.Link to="/instructions" className="text-cyan-600 hover:underline">Instructions</ReactRouterDOM.Link>
+            <Link to="/instructions" className="text-cyan-600 hover:underline">Instructions</Link>
             {user && user.isAdmin && (
               <>
                 <span className="text-slate-300">|</span>
-                <ReactRouterDOM.Link to="/integration" className="text-cyan-600 hover:underline">WordPress Integration</ReactRouterDOM.Link>
+                <Link to="/integration" className="text-cyan-600 hover:underline">WordPress Integration</Link>
               </>
             )}
 
