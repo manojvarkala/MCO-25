@@ -70,8 +70,7 @@ const Pricing: React.FC = () => {
                                 <li className="flex items-start"><Check className="flex-shrink-0 h-5 w-5 text-green-500" /><span className="ml-2 text-slate-500">Downloadable Certificate upon Passing</span></li>
                             </ul>
                         </div>
-
-                        {/* Exam Bundle Option */}
+                                                 {/* Exam Bundle Option */}
                         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                              <h4 className="font-semibold text-slate-700 flex items-center gap-2"><ShoppingBag size={16} className="text-cyan-600"/> Exam Bundle</h4>
                              <div className="mt-2">

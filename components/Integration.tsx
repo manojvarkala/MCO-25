@@ -10,7 +10,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           8.2.0
+ * Version:           8.3.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -352,10 +352,14 @@ function mco_exam_showcase_shortcode() {
                                 $addon_product_id = wc_get_product_id_by_sku($addon_sku);
                                 if ($addon_product_id && $addon_product = wc_get_product($addon_product_id)):
                                     $addon_price = (float)$addon_product->get_price();
+                                    $price_difference = $addon_price - $current_price;
+                                    $button_text = ($price_difference > 0) 
+                                        ? 'Upgrade to Bundle for ' . wc_price($price_difference) . ' more'
+                                        : 'Purchase Exam Bundle';
                             ?>
                                 <div style="text-align: center; margin-top: 0.25rem;">
-                                    <a href="<?php echo esc_url($addon_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-addon">
-                                        + Add Premium Access (1-Month)
+                                    <a href="<?php echo esc_url($addon_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-addon" title="Includes the exam plus 1-month of premium access to all practice tests and AI feedback.">
+                                        <?php echo esc_html($button_text); ?>
                                     </a>
                                 </div>
                             <?php endif; ?>
