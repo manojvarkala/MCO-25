@@ -2,7 +2,7 @@ import React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
-import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked } from 'lucide-react';
+import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag } from 'lucide-react';
 import { logoBase64 } from '../assets/logo.ts';
 
 const Header: React.FC = () => {
@@ -61,6 +61,14 @@ const Header: React.FC = () => {
             >
                 <BookMarked size={20} />
                 <span className="hidden sm:inline font-semibold">Book Store</span>
+            </ReactRouterDOM.Link>
+            <ReactRouterDOM.Link 
+                to="/pricing"
+                className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200"
+                title="View Plans and Pricing"
+            >
+                <Tag size={20} />
+                <span className="hidden sm:inline font-semibold">Pricing</span>
             </ReactRouterDOM.Link>
           {user ? (
             <>
