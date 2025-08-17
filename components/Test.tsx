@@ -30,18 +30,9 @@ const Test: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
 
-  // Use refs to hold the latest state for the timer callback
-  const answersRef = useRef(answers);
-  useEffect(() => { answersRef.current = answers; }, [answers]);
-  const questionsRef = useRef(questions);
-  useEffect(() => { questionsRef.current = questions; }, [questions]);
-
   const handleSubmit = useCallback(async (isAutoSubmit = false) => {
-    const currentAnswers = answersRef.current;
-    const currentQuestions = questionsRef.current;
-
     if (!isAutoSubmit) {
-        const unansweredQuestionsCount = currentQuestions.length - currentAnswers.size;
+        const unansweredQuestionsCount = questions.length - answers.size;
         if (unansweredQuestionsCount > 0) {
             const confirmed = window.confirm(
                 `You have ${unansweredQuestionsCount} unanswered question(s). Are you sure you want to submit?`
@@ -61,12 +52,12 @@ const Test: React.FC = () => {
     localStorage.removeItem(`exam_timer_${examId}_${user.id}`);
 
     try {
-        const userAnswers: UserAnswer[] = Array.from(currentAnswers.entries()).map(([questionId, answer]) => ({
+        const userAnswers: UserAnswer[] = Array.from(answers.entries()).map(([questionId, answer]) => ({
             questionId,
             answer,
         }));
         
-        const result = await googleSheetsService.submitTest(user, examId, userAnswers, currentQuestions, token);
+        const result = await googleSheetsService.submitTest(user, examId, userAnswers, questions, token);
         toast.success("Test submitted successfully!");
         navigate(`/results/${result.testId}`);
 
@@ -75,7 +66,7 @@ const Test: React.FC = () => {
     } finally {
         setIsSubmitting(false);
     }
-  }, [examId, navigate, token, user]);
+  }, [examId, navigate, token, user, answers, questions]);
 
   const handleSubmitRef = useRef(handleSubmit);
   useEffect(() => {
