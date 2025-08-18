@@ -10,14 +10,14 @@ interface WheelOfFortuneProps {
 }
 
 const allPossibleSegments = [
-    { label: "Annual Subscription", prizeId: "SUB_YEARLY", color: "bg-yellow-500", textColor: "text-gray-900" },
-    { label: "Better Luck Next Time", prizeId: "NEXT_TIME", color: "bg-gray-800", textColor: "text-yellow-400" },
-    { label: "Free CPC Exam", prizeId: "EXAM_CPC", color: "bg-yellow-500", textColor: "text-gray-900" },
-    { label: "Monthly Subscription", prizeId: "SUB_MONTHLY", color: "bg-yellow-500", textColor: "text-gray-900" },
-    { label: "Better Luck Next Time", prizeId: "NEXT_TIME", color: "bg-gray-800", textColor: "text-yellow-400" },
-    { label: "Free CCA Exam", prizeId: "EXAM_CCA", color: "bg-yellow-500", textColor: "text-gray-900" },
-    { label: "Weekly Subscription", prizeId: "SUB_WEEKLY", color: "bg-yellow-500", textColor: "text-gray-900" },
-    { label: "Better Luck Next Time", prizeId: "NEXT_TIME", color: "bg-gray-800", textColor: "text-yellow-400" },
+    { label: "Annual Subscription", prizeId: "SUB_YEARLY" },
+    { label: "Better Luck Next Time", prizeId: "NEXT_TIME" },
+    { label: "Free CPC Exam", prizeId: "EXAM_CPC" },
+    { label: "Monthly Subscription", prizeId: "SUB_MONTHLY" },
+    { label: "Better Luck Next Time", prizeId: "NEXT_TIME" },
+    { label: "Free CCA Exam", prizeId: "EXAM_CCA" },
+    { label: "Weekly Subscription", prizeId: "SUB_WEEKLY" },
+    { label: "Better Luck Next Time", prizeId: "NEXT_TIME" },
 ];
 
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -36,11 +36,21 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
     const [rotation, setRotation] = useState(0);
     const [displaySegments, setDisplaySegments] = useState(allPossibleSegments);
     const [spinsLeft, setSpinsLeft] = useState(1);
+    const [conicGradient, setConicGradient] = useState('');
 
     useEffect(() => {
-        // Ensure high-value prize is always visible by shuffling a list that contains it
         const segmentsToShuffle = [...allPossibleSegments];
-        setDisplaySegments(shuffleArray(segmentsToShuffle));
+        const shuffled = shuffleArray(segmentsToShuffle);
+        setDisplaySegments(shuffled);
+
+        const gradientString = shuffled.map((_, index) => {
+            const isGold = index % 2 === 0;
+            const color = isGold ? '#ca8a04' : '#171717';
+            const startAngle = (360 / shuffled.length) * index;
+            const endAngle = (360 / shuffled.length) * (index + 1);
+            return `${color} ${startAngle}deg ${endAngle}deg`;
+        }).join(', ');
+        setConicGradient(gradientString);
     }, []);
 
     const handleSpin = async () => {
@@ -52,12 +62,14 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
             const result = await googleSheetsService.spinWheel(token);
             const { prizeId, prizeLabel, newToken } = result;
 
-            const targetIndex = displaySegments.findIndex(s => s.prizeId === prizeId && s.label === prizeLabel);
-            const fallbackIndex = targetIndex !== -1 ? targetIndex : displaySegments.findIndex(s => s.prizeId === 'NEXT_TIME');
+            let targetIndex = displaySegments.findIndex(s => s.prizeId === prizeId && s.label === prizeLabel);
+            if (targetIndex === -1) {
+                targetIndex = displaySegments.findIndex(s => s.prizeId === 'NEXT_TIME');
+            }
             
             const degreesPerSegment = 360 / displaySegments.length;
             const randomOffset = (Math.random() * 0.8 - 0.4) * degreesPerSegment;
-            const targetRotation = 360 - (fallbackIndex * degreesPerSegment + degreesPerSegment / 2) + randomOffset;
+            const targetRotation = 360 - (targetIndex * degreesPerSegment + degreesPerSegment / 2) + randomOffset;
             
             const fullSpins = 6 * 360;
             setRotation(rotation + fullSpins + targetRotation);
@@ -109,29 +121,37 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                         </svg>
                     </div>
                     <div 
-                        className="w-full h-full rounded-full border-[12px] border-zinc-900 bg-black transition-transform duration-[7000ms] ease-out-cubic"
-                        style={{ transform: `rotate(${rotation}deg)` }}
+                        className="w-full h-full rounded-full border-[12px] border-zinc-900 transition-transform duration-[7000ms] ease-out-cubic relative"
+                        style={{ 
+                            transform: `rotate(${rotation}deg)`,
+                            background: `conic-gradient(${conicGradient})`
+                        }}
                     >
-                        <div className="absolute inset-0 rounded-full overflow-hidden">
-                            {displaySegments.map((segment, index) => {
-                                const angle = 360 / displaySegments.length;
-                                const isGold = segment.prizeId !== 'NEXT_TIME';
-                                return (
-                                    <div key={index} className="absolute w-1/2 h-1/2 origin-bottom-right" style={{ transform: `rotate(${index * angle}deg)` }}>
-                                        <div 
-                                            className={`w-full h-full ${isGold ? 'bg-gradient-to-br from-yellow-400 to-amber-600' : 'bg-black'}`}
-                                            style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }}
-                                        >
-                                            <div className="absolute w-full h-full flex items-center justify-center" style={{transform: `rotate(${angle / 2 - 90}deg) translateY(-50%)`}}>
-                                                 <span className={`text-xs font-bold ${isGold ? 'text-black' : 'text-yellow-400'}`}>
-                                                    {segment.label}
-                                                </span>
-                                            </div>
+                        {displaySegments.map((segment, index) => {
+                            const angle = 360 / displaySegments.length;
+                            const rotationAngle = index * angle;
+                            const textRotationAngle = rotationAngle + angle / 2;
+                            const isGold = index % 2 === 0;
+
+                            return (
+                                <React.Fragment key={index}>
+                                    <div
+                                        className="absolute w-full h-full"
+                                        style={{ transform: `rotate(${rotationAngle}deg)` }}
+                                    >
+                                        <div className="absolute top-0 left-1/2 -translate-x-px w-px h-1/2 bg-amber-800/75"></div>
+                                    </div>
+                                    <div
+                                        className="absolute w-full h-full"
+                                        style={{ transform: `rotate(${textRotationAngle}deg)` }}
+                                    >
+                                        <div className={`absolute top-0 left-1/2 -translate-x-1/2 pt-6 w-24 text-center text-xs font-bold ${isGold ? 'text-black' : 'text-amber-300'}`}>
+                                            {segment.label}
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
+                                </React.Fragment>
+                            );
+                        })}
                     </div>
                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-zinc-900 border-4 border-zinc-800 flex items-center justify-center">
                         <div className="w-12 h-12 rounded-full bg-black border-2 border-zinc-700"></div>
