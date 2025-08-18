@@ -49,6 +49,13 @@ export interface TokenPayload {
     exp?: number;
 }
 
+// Result from the spin wheel endpoint
+export interface SpinWheelResult {
+    prizeId: string;
+    prizeLabel: string;
+    newToken?: string;
+}
+
 
 // =================================================================
 // DYNAMIC CONFIGURATION TYPES

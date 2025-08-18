@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           8.7.0
+ * Version:           8.8.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -133,7 +133,12 @@ function mco_exam_get_payload($user_id) {
         $granted_skus = get_user_meta($user_id, 'mco_granted_skus', true);
         if (!is_array($granted_skus)) $granted_skus = [];
 
-        $is_subscribed = !empty(array_intersect($subscription_skus, $purchased_skus));
+        $is_subscribed_by_purchase = !empty(array_intersect($subscription_skus, $purchased_skus));
+        
+        $won_subscription_expiry = get_user_meta($user_id, 'mco_subscription_expiry', true);
+        $is_subscribed_by_win = $won_subscription_expiry && $won_subscription_expiry > time();
+        $is_subscribed = $is_subscribed_by_purchase || $is_subscribed_by_win;
+
         $direct_exam_purchases = array_intersect($all_exam_skus, $purchased_skus);
         $exams_from_addons = [];
         foreach ($purchased_skus as $sku) {
@@ -335,58 +340,79 @@ function mco_spin_wheel_callback($request) {
     }
     
     $option_key = 'mco_wheel_prizes_' . date('Y-m');
-    $prize_counts = get_option($option_key, ['exam_wins' => 0]);
-    
-    $exam_prizes = [
-        ['id' => 'exam-cpc-cert', 'label' => 'Free CPC Exam'],
-        ['id' => 'exam-cca-cert', 'label' => 'Free CCA Exam'],
-        ['id' => 'exam-billing-cert', 'label' => 'Free Billing Exam'],
-        ['id' => 'exam-ccs-cert', 'label' => 'Free CCS Exam'],
+    $prize_counts = get_option($option_key, [
+        'SUB_YEARLY' => 0,
+        'SUB_MONTHLY' => 0,
+        'SUB_WEEKLY' => 0,
+        'EXAM' => 0,
+    ]);
+
+    $prizes = [
+        ['id' => 'SUB_YEARLY', 'label' => 'Annual Subscription', 'limit' => 2, 'weight' => 1],
+        ['id' => 'SUB_MONTHLY', 'label' => 'Monthly Subscription', 'limit' => 2, 'weight' => 3],
+        ['id' => 'SUB_WEEKLY', 'label' => 'Weekly Subscription', 'limit' => 50, 'weight' => 10],
+        ['id' => 'EXAM_CPC', 'label' => 'Free CPC Exam', 'limit' => 100, 'weight' => 15, 'type' => 'EXAM', 'sku' => 'exam-cpc-cert'],
+        ['id' => 'EXAM_CCA', 'label' => 'Free CCA Exam', 'limit' => 100, 'weight' => 15, 'type' => 'EXAM', 'sku' => 'exam-cca-cert'],
+        ['id' => 'NEXT_TIME', 'label' => 'Better Luck Next Time', 'limit' => -1, 'weight' => 56],
     ];
 
-    $weighted_prizes = [];
-    if ($prize_counts['exam_wins'] < 100) {
-        // 4 exam prize slots, 4 'next time' slots. So 50% chance if exams are available.
-        $weighted_prizes['EXAM'] = 50;
-        $weighted_prizes['NEXT_TIME'] = 50;
-    } else {
-        $weighted_prizes['NEXT_TIME'] = 100;
-    }
-    
-    // Weighted random selection
-    $rand = mt_rand(1, 100);
-    $cumulative_weight = 0;
-    $result_id = 'NEXT_TIME';
-    foreach ($weighted_prizes as $prize_id => $weight) {
-        $cumulative_weight += $weight;
-        if ($rand <= $cumulative_weight) {
-            $result_id = $prize_id;
-            break;
+    $available_prizes = [];
+    $total_weight = 0;
+    foreach ($prizes as $prize) {
+        $count_key = isset($prize['type']) ? $prize['type'] : $prize['id'];
+        if ($prize['limit'] === -1 || (isset($prize_counts[$count_key]) && $prize_counts[$count_key] < $prize['limit'])) {
+            $available_prizes[] = $prize;
+            $total_weight += $prize['weight'];
         }
     }
-    
-    $final_prize = ['prizeId' => 'NEXT_TIME', 'prizeLabel' => 'Next Time'];
 
-    if ($result_id === 'EXAM') {
-        $won_exam = $exam_prizes[array_rand($exam_prizes)];
-        
-        $granted_skus = get_user_meta($user_id, 'mco_granted_skus', true);
-        if (!is_array($granted_skus)) $granted_skus = [];
-        if (!in_array($won_exam['id'], $granted_skus)) {
-            $granted_skus[] = $won_exam['id'];
-            update_user_meta($user_id, 'mco_granted_skus', $granted_skus);
+    if (empty($available_prizes)) {
+        $won_prize = ['prizeId' => 'NEXT_TIME', 'prizeLabel' => 'Better Luck Next Time'];
+    } else {
+        $rand = mt_rand(1, $total_weight);
+        $cumulative_weight = 0;
+        $chosen_prize = $available_prizes[0]; // Default
+        foreach ($available_prizes as $prize) {
+            $cumulative_weight += $prize['weight'];
+            if ($rand <= $cumulative_weight) {
+                $chosen_prize = $prize;
+                break;
+            }
         }
         
-        $prize_counts['exam_wins']++;
-        update_option($option_key, $prize_counts);
-        
-        $final_prize['prizeId'] = $won_exam['id'];
-        $final_prize['prizeLabel'] = $won_exam['label'];
+        $won_prize = ['prizeId' => $chosen_prize['id'], 'prizeLabel' => $chosen_prize['label']];
+        $count_key = isset($chosen_prize['type']) ? $chosen_prize['type'] : $chosen_prize['id'];
+
+        if ($count_key !== 'NEXT_TIME') {
+            if (!isset($prize_counts[$count_key])) $prize_counts[$count_key] = 0;
+            $prize_counts[$count_key]++;
+            update_option($option_key, $prize_counts);
+        }
+
+        // --- Grant Prize ---
+        $current_expiry = get_user_meta($user_id, 'mco_subscription_expiry', true) ?: time();
+
+        switch($chosen_prize['id']) {
+            case 'SUB_YEARLY': update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + YEAR_IN_SECONDS); break;
+            case 'SUB_MONTHLY': update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + MONTH_IN_SECONDS); break;
+            case 'SUB_WEEKLY': update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + WEEK_IN_SECONDS); break;
+        }
+
+        if (isset($chosen_prize['type']) && $chosen_prize['type'] === 'EXAM') {
+            $granted_skus = get_user_meta($user_id, 'mco_granted_skus', true);
+            if (!is_array($granted_skus)) $granted_skus = [];
+            if (!in_array($chosen_prize['sku'], $granted_skus)) {
+                $granted_skus[] = $chosen_prize['sku'];
+                update_user_meta($user_id, 'mco_granted_skus', $granted_skus);
+            }
+        }
     }
     
     update_user_meta($user_id, 'mco_has_spun_wheel', true);
+    $new_token = mco_generate_exam_jwt($user_id);
+    $won_prize['newToken'] = $new_token;
     
-    return new WP_REST_Response($final_prize, 200);
+    return new WP_REST_Response($won_prize, 200);
 }
 
 

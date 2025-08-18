@@ -1,4 +1,4 @@
-import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData } from '../types.ts';
+import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, SpinWheelResult } from '../types.ts';
 import toast from 'react-hot-toast';
 import { GoogleGenAI } from "@google/genai";
 
@@ -222,7 +222,7 @@ export const googleSheetsService = {
     },
 
     // --- NEW WHEEL OF FORTUNE ---
-    spinWheel: async (token: string): Promise<{ prizeId: string, prizeLabel: string }> => {
+    spinWheel: async (token: string): Promise<SpinWheelResult> => {
         return apiFetch('/spin-wheel', token, { method: 'POST' });
     }
 };
