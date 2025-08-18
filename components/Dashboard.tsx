@@ -10,9 +10,10 @@ import { BookCopy, History as HistoryIcon, FlaskConical, Eye, FileText, BarChart
 import { useAppContext } from '../context/AppContext.tsx';
 import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
+
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
-    const { user, paidExamIds, isSubscribed, updateUserName, token } = useAuth();
+    const { user, paidExamIds, isSubscribed, updateUserName, token, examPrices } = useAuth();
     const { activeOrg } = useAppContext();
     const [results, setResults] = useState<TestResult[] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -136,7 +137,7 @@ const Dashboard: React.FC = () => {
                 certStatusData
             };
         }).filter(Boolean); // Filter out nulls if exams weren't found
-    }, [activeOrg, paidExamIds, results]);
+    }, [activeOrg, paidExamIds, results, examPrices]);
 
 
     if (isLoading || !activeOrg) {
@@ -183,6 +184,22 @@ const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-8">
+                     {!isSubscribed && (
+                        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-xl shadow-lg">
+                            <h2 className="text-2xl font-bold mb-2">Unlock Your Full Potential!</h2>
+                            <p className="mb-4">Subscribe to get unlimited access to all practice exams and AI-powered feedback to supercharge your learning.</p>
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <a href="https://www.coding-online.net/product/monthly-subscription/" target="_blank" rel="noopener noreferrer" className="flex-1 text-center bg-white text-indigo-600 font-bold py-2 px-4 rounded-lg hover:bg-indigo-100 transition">
+                                    Monthly Plan - $19.99
+                                </a>
+                                <a href="https://www.coding-online.net/product/yearly-subscription/" target="_blank" rel="noopener noreferrer" className="flex-1 text-center bg-yellow-400 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-yellow-300 transition relative">
+                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">SAVE 35%</span>
+                                    Yearly Plan - $149.99
+                                </a>
+                            </div>
+                        </div>
+                    )}
+
                      {/* New Purchase Notification */}
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                         <div className="flex items-center justify-center space-x-3">
@@ -267,25 +284,51 @@ const Dashboard: React.FC = () => {
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="mt-3">
-                                                    <div className="text-center mb-2">
-                                                        {certExam.regularPrice && certExam.regularPrice > certExam.price ? (
-                                                            <>
-                                                                <span className="text-2xl font-bold text-green-600">${certExam.price.toFixed(2)}</span>
-                                                                <span className="text-md text-slate-500 line-through ml-2">${certExam.regularPrice.toFixed(2)}</span>
-                                                            </>
-                                                        ) : (
-                                                            <span className="text-2xl font-bold text-cyan-600">${certExam.price.toFixed(2)}</span>
-                                                        )}
+                                                <div className="mt-3 space-y-3">
+                                                    <div className="p-3 bg-white rounded-md border">
+                                                        <div className="text-center">
+                                                            <h5 className="font-semibold text-slate-600">Single Exam</h5>
+                                                            {certExam.regularPrice && certExam.regularPrice > certExam.price ? (
+                                                                <div>
+                                                                    <span className="text-xl font-bold text-green-600">${certExam.price.toFixed(2)}</span>
+                                                                    <span className="text-sm text-slate-500 line-through ml-2">${certExam.regularPrice.toFixed(2)}</span>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-xl font-bold text-cyan-600">${certExam.price.toFixed(2)}</span>
+                                                            )}
+                                                        </div>
+                                                        <a
+                                                            href={certExam.productSlug ? `#/checkout/${certExam.productSlug}` : browseExamsUrl}
+                                                            target={certExam.productSlug ? '_self' : '_blank'}
+                                                            rel="noopener noreferrer"
+                                                            className="mt-2 w-full flex items-center justify-center bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 transition"
+                                                        >
+                                                            Buy Exam
+                                                        </a>
                                                     </div>
-                                                    <a
-                                                        href={certExam.productSlug ? `#/checkout/${certExam.productSlug}` : browseExamsUrl}
-                                                        target={certExam.productSlug ? '_self' : '_blank'}
-                                                        rel="noopener noreferrer"
-                                                        className="w-full flex items-center justify-center bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 transition"
-                                                    >
-                                                        Buy Now
-                                                    </a>
+                                                     {(() => {
+                                                        const bundleSku = `${certExam.productSku}-1mo-addon`;
+                                                        const bundlePriceData = examPrices?.[bundleSku];
+                                                        if (bundlePriceData) {
+                                                            const bundleSlug = bundleSku;
+                                                            return (
+                                                                <div className="p-3 bg-white rounded-md border border-cyan-400 ring-2 ring-cyan-200">
+                                                                    <div className="text-center">
+                                                                        <h5 className="font-semibold text-cyan-700">Exam + Study Bundle</h5>
+                                                                        <span className="text-xl font-bold text-cyan-600">${bundlePriceData.price.toFixed(2)}</span>
+                                                                        <p className="text-xs text-slate-500">+ 1-Month Premium Access</p>
+                                                                    </div>
+                                                                    <a
+                                                                        href={`#/checkout/${bundleSlug}`}
+                                                                        className="mt-2 w-full flex items-center justify-center bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700 transition"
+                                                                    >
+                                                                        Buy Bundle for ${bundlePriceData.price.toFixed(2)}
+                                                                    </a>
+                                                                </div>
+                                                            )
+                                                        }
+                                                        return null;
+                                                    })()}
                                                 </div>
                                             )}
                                         </div>

@@ -1,11 +1,26 @@
+
 import React from 'react';
 import { Check, Star, ShoppingBag } from 'lucide-react';
+import { useAppContext } from '../context/AppContext.tsx';
+import { useAuth } from '../context/AuthContext.tsx';
 
 const Pricing: React.FC = () => {
+    const { activeOrg } = useAppContext();
+    const { examPrices } = useAuth();
+    
     // These URLs will eventually point to the WooCommerce subscription/product pages
     const monthlySubUrl = 'https://www.coding-online.net/product/monthly-subscription/';
     const yearlySubUrl = 'https://www.coding-online.net/product/yearly-subscription/';
     const browseExamsUrl = 'https://www.coding-online.net/exam-programs/';
+
+    // Find CPC exam to use as an example for pricing display
+    const cpcExam = activeOrg?.exams.find(e => e.productSku === 'exam-cpc-cert');
+    const singleExamPrice = cpcExam?.price;
+
+    // Find bundle price from examPrices context
+    const bundleSku = 'exam-cpc-cert-1mo-addon';
+    const bundlePriceData = examPrices?.[bundleSku];
+    const bundlePrice = bundlePriceData?.price;
 
     return (
         <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
@@ -63,7 +78,9 @@ const Pricing: React.FC = () => {
                         <div>
                             <h4 className="font-semibold text-slate-700">Single Exam</h4>
                              <div className="mt-2">
-                                <span className="text-2xl font-extrabold text-slate-900">$49.99</span>
+                                <span className="text-2xl font-extrabold text-slate-900">
+                                    {singleExamPrice ? `$${singleExamPrice.toFixed(2)}` : '$49.99'}
+                                </span>
                             </div>
                             <ul className="mt-4 space-y-2 text-sm">
                                 <li className="flex items-start"><Check className="flex-shrink-0 h-5 w-5 text-green-500" /><span className="ml-2 text-slate-500">One Certification Exam (3 attempts)</span></li>
@@ -74,7 +91,9 @@ const Pricing: React.FC = () => {
                         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                              <h4 className="font-semibold text-slate-700 flex items-center gap-2"><ShoppingBag size={16} className="text-cyan-600"/> Exam Bundle</h4>
                              <div className="mt-2">
-                                <span className="text-2xl font-extrabold text-slate-900">$59.99</span>
+                                <span className="text-2xl font-extrabold text-slate-900">
+                                    {bundlePrice ? `$${bundlePrice.toFixed(2)}` : '$59.99'}
+                                </span>
                                 <span className="text-base font-medium text-slate-500"> /bundle</span>
                             </div>
                             <ul className="mt-4 space-y-2 text-sm">

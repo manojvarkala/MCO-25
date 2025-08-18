@@ -10,7 +10,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           8.3.0
+ * Version:           8.4.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -306,8 +306,8 @@ function mco_exam_showcase_shortcode() {
     .mco-showcase-card p { margin: 0 0 1rem; color: #4b5563; font-size: 0.85rem; line-height: 1.5; flex-grow: 1; }
     .mco-showcase-card-actions { margin-top: auto; display: flex; flex-direction: column; gap: 0.75rem; }
     .mco-showcase-price { font-size: 1rem; text-align: center; margin-bottom: 0.5rem; }
-    .mco-showcase-price .regular { text-decoration: line-through; color: #6b7280; margin-left: 0.5rem; }
-    .mco-showcase-price .sale { font-weight: 700; font-size: 1.5rem; color: #16a34a; }
+    .mco-showcase-price .price { font-weight: 700; font-size: 1.5rem; color: #16a34a; }
+    .mco-showcase-price .price del { color: #6b7280; margin-right: 0.5rem; font-weight: 400; }
     .mco-showcase-btn { display: block; text-align: center; text-decoration: none; padding: 0.6rem 1rem; border-radius: 6px; font-weight: 600; transition: background-color .2s; font-size: 0.9rem; }
     .mco-btn-purchase { background-color: #f59e0b; color: #fff; border: 1px solid #d97706; }
     .mco-btn-purchase:hover { background-color: #d97706; }
@@ -317,6 +317,59 @@ function mco_exam_showcase_shortcode() {
     .mco-btn-addon:hover { background-color: #e0e7ff; }
     </style>
     <div class="mco-showcase-container">
+    <?php
+    if ($is_wc_active) {
+        $monthly_product_id = wc_get_product_id_by_sku('sub-monthly');
+        $yearly_product_id = wc_get_product_id_by_sku('sub-yearly');
+        $monthly_product = $monthly_product_id ? wc_get_product($monthly_product_id) : false;
+        $yearly_product = $yearly_product_id ? wc_get_product($yearly_product_id) : false;
+
+        if ($monthly_product || $yearly_product) {
+    ?>
+    <div style="grid-column: 1 / -1; margin-bottom: 2rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 2rem;">
+        <h2 style="text-align: center; font-size: 1.875rem; font-weight: 800; color: #1f2937; margin-bottom: 1rem;">Subscription Plans</h2>
+        <p style="text-align: center; max-width: 600px; margin: 0 auto 1.5rem; color: #4b5563;">Get unlimited access to all practice exams and AI feedback with a subscription.</p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; max-width: 800px; margin: auto;">
+            
+            <?php if ($monthly_product): ?>
+            <div class="mco-showcase-card">
+                <div class="mco-showcase-card-body">
+                    <h3>Monthly Subscription</h3>
+                    <p>Perfect for focused, short-term preparation. Includes unlimited access to all practice exams and AI feedback.</p>
+                    <div class="mco-showcase-price" style="margin-top: auto;">
+                        <span class="price" style="font-size: 2rem;"><?php echo $monthly_product->get_price_html(); ?></span>
+                        <span class="regular">/month</span>
+                    </div>
+                    <div class="mco-showcase-card-actions" style="margin-top: 1rem;">
+                        <a href="<?php echo esc_url($monthly_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-practice">Subscribe Now</a>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($yearly_product): ?>
+            <div class="mco-showcase-card" style="border: 2px solid #0891b2; position: relative;">
+                <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%) translateY(-50%); background-color: #0891b2; color: white; padding: 0.25rem 1rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">BEST VALUE</div>
+                 <div class="mco-showcase-card-body">
+                    <h3>Yearly Subscription</h3>
+                    <p>Save over 35% with our annual plan for continuous learning.</p>
+                     <div class="mco-showcase-price" style="margin-top: auto;">
+                        <span class="price" style="font-size: 2rem;"><?php echo $yearly_product->get_price_html(); ?></span>
+                        <span class="regular">/year</span>
+                    </div>
+                    <div class="mco-showcase-card-actions" style="margin-top: 1rem;">
+                        <a href="<?php echo esc_url($yearly_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-purchase">Subscribe & Save</a>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+        </div>
+    </div>
+    <?php
+        }
+    }
+    ?>
     <?php foreach ($exam_programs as $program): ?>
         <div class="mco-showcase-card">
             <div class="mco-showcase-card-body">
@@ -331,18 +384,11 @@ function mco_exam_showcase_shortcode() {
                     <?php if ($is_wc_active):
                         $product_id = wc_get_product_id_by_sku($program['cert_sku']);
                         if ($product_id && $product = wc_get_product($product_id)):
-                            $current_price = (float)$product->get_price();
-                            $regular_price = (float)$product->get_regular_price();
                             $add_to_cart_url = $product->add_to_cart_url();
                     ?>
                             <div>
                                 <div class="mco-showcase-price">
-                                    <?php if ($regular_price > $current_price): ?>
-                                        <span class="sale"><?php echo wc_price($current_price); ?></span>
-                                        <span class="regular"><?php echo wc_price($regular_price); ?></span>
-                                    <?php else: ?>
-                                        <span class="sale"><?php echo wc_price($current_price); ?></span>
-                                    <?php endif; ?>
+                                    <span class="price"><?php echo $product->get_price_html(); ?></span>
                                 </div>
                                 <a href="<?php echo esc_url($add_to_cart_url); ?>" class="mco-showcase-btn mco-btn-purchase">Purchase Exam</a>
                             </div>
@@ -352,14 +398,11 @@ function mco_exam_showcase_shortcode() {
                                 $addon_product_id = wc_get_product_id_by_sku($addon_sku);
                                 if ($addon_product_id && $addon_product = wc_get_product($addon_product_id)):
                                     $addon_price = (float)$addon_product->get_price();
-                                    $price_difference = $addon_price - $current_price;
-                                    $button_text = ($price_difference > 0) 
-                                        ? 'Upgrade to Bundle for ' . wc_price($price_difference) . ' more'
-                                        : 'Purchase Exam Bundle';
+                                    $button_text = 'Buy Bundle for ' . wc_price($addon_price);
                             ?>
                                 <div style="text-align: center; margin-top: 0.25rem;">
                                     <a href="<?php echo esc_url($addon_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-addon" title="Includes the exam plus 1-month of premium access to all practice tests and AI feedback.">
-                                        <?php echo esc_html($button_text); ?>
+                                        <?php echo $button_text; ?>
                                     </a>
                                 </div>
                             <?php endif; ?>
