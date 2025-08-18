@@ -404,12 +404,12 @@ function mco_exam_showcase_shortcode() {
     .mco-showcase-price .price { font-weight: 700; font-size: 1.5rem; color: #16a34a; }
     .mco-showcase-price .price del { color: #6b7280; margin-right: 0.5rem; font-weight: 400; }
     .mco-showcase-btn { display: block; text-align: center; text-decoration: none; padding: 0.6rem 1rem; border-radius: 6px; font-weight: 600; transition: background-color .2s; font-size: 0.9rem; }
-    .mco-btn-purchase { background-color: #f59e0b; color: #fff; border: 1px solid #d97706; }
-    .mco-btn-purchase:hover { background-color: #d97706; }
-    .mco-btn-practice { background-color: #f8fafc; color: #475569; border: 1px solid #cbd5e1; }
-    .mco-btn-practice:hover { background-color: #f1f5f9; }
-    .mco-btn-addon { display: inline-block !important; background-color: #16a34a; color: white; border: 1px solid #15803d; padding: 0.6rem 1rem !important; font-size: 0.9rem !important; }
-    .mco-btn-addon:hover { background-color: #15803d; }
+    .mco-btn-purchase { background-color: #0e7490; color: #fff; border: 1px solid #0e7490; }
+    .mco-btn-purchase:hover { background-color: #155e75; }
+    .mco-btn-practice { background-color: #475569; color: #fff; border: 1px solid #475569; }
+    .mco-btn-practice:hover { background-color: #334155; }
+    .mco-btn-addon { display: inline-block !important; background-color: #4f46e5; color: white; border: 1px solid #4f46e5; padding: 0.6rem 1rem !important; font-size: 0.9rem !important; }
+    .mco-btn-addon:hover { background-color: #4338ca; }
     </style>
     <div class="mco-showcase-container">
     <?php
