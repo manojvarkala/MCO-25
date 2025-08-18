@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -185,17 +186,37 @@ const Dashboard: React.FC = () => {
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-8">
                      {!isSubscribed && (
-                        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-xl shadow-lg">
-                            <h2 className="text-2xl font-bold mb-2">Unlock Your Full Potential!</h2>
-                            <p className="mb-4">Subscribe to get unlimited access to all practice exams and AI-powered feedback to supercharge your learning.</p>
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <a href="https://www.coding-online.net/product/monthly-subscription/" target="_blank" rel="noopener noreferrer" className="flex-1 text-center bg-white text-indigo-600 font-bold py-2 px-4 rounded-lg hover:bg-indigo-100 transition">
-                                    Monthly Plan - $19.99
-                                </a>
-                                <a href="https://www.coding-online.net/product/yearly-subscription/" target="_blank" rel="noopener noreferrer" className="flex-1 text-center bg-yellow-400 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-yellow-300 transition relative">
-                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">SAVE 35%</span>
-                                    Yearly Plan - $149.99
-                                </a>
+                        <div className="space-y-4">
+                            <h2 className="text-2xl font-bold text-slate-800">Unlock Your Full Potential!</h2>
+                             <p className="text-slate-600">Subscribe to get unlimited access to all practice exams and AI-powered feedback to supercharge your learning.</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Monthly Card */}
+                                <div className="border border-slate-200 rounded-xl p-6 flex flex-col bg-white shadow-sm">
+                                    <h3 className="text-lg font-semibold text-slate-800">Monthly Subscription</h3>
+                                    <p className="mt-2 text-slate-500 text-sm flex-grow">Perfect for focused, short-term preparation.</p>
+                                    <div className="mt-4">
+                                        <span className="text-3xl font-bold text-slate-800">$19.99</span>
+                                        <span className="text-base font-medium text-slate-500">/month</span>
+                                    </div>
+                                    <a href="https://www.coding-online.net/product/monthly-subscription/" target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-slate-100 border border-slate-300 rounded-md py-2 text-sm font-semibold text-slate-700 text-center hover:bg-slate-200">
+                                        Subscribe Now
+                                    </a>
+                                </div>
+                                {/* Yearly Card */}
+                                <div className="relative border-2 border-cyan-500 rounded-xl p-6 flex flex-col bg-white shadow-lg">
+                                    <div className="absolute top-0 py-1 px-3 bg-cyan-500 rounded-full text-xs font-semibold uppercase text-white transform -translate-y-1/2">
+                                        Best Value
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-slate-800">Yearly Subscription</h3>
+                                    <p className="mt-2 text-slate-500 text-sm flex-grow">Save over 35% with our annual plan.</p>
+                                    <div className="mt-4">
+                                        <span className="text-3xl font-bold text-slate-800">$149.99</span>
+                                        <span className="text-base font-medium text-slate-500">/year</span>
+                                    </div>
+                                    <a href="https://www.coding-online.net/product/yearly-subscription/" target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-cyan-600 border border-transparent rounded-md py-2 text-sm font-semibold text-white text-center hover:bg-cyan-700">
+                                        Subscribe & Save
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -311,6 +332,7 @@ const Dashboard: React.FC = () => {
                                                         const bundlePriceData = examPrices?.[bundleSku];
                                                         if (bundlePriceData) {
                                                             const bundleSlug = bundleSku;
+                                                            const priceDifference = bundlePriceData.price - certExam.price;
                                                             return (
                                                                 <div className="p-3 bg-white rounded-md border border-cyan-400 ring-2 ring-cyan-200">
                                                                     <div className="text-center">
@@ -322,7 +344,7 @@ const Dashboard: React.FC = () => {
                                                                         href={`#/checkout/${bundleSlug}`}
                                                                         className="mt-2 w-full flex items-center justify-center bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700 transition"
                                                                     >
-                                                                        Buy Bundle for ${bundlePriceData.price.toFixed(2)}
+                                                                        Add 1-Month Subscription for ${priceDifference.toFixed(2)} extra
                                                                     </a>
                                                                 </div>
                                                             )

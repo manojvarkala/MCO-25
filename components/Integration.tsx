@@ -10,7 +10,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           8.4.0
+ * Version:           8.5.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -297,6 +297,28 @@ function mco_exam_showcase_shortcode() {
     $exam_programs = mco_get_exam_programs_data();
     $is_wc_active = class_exists('WooCommerce');
     ob_start(); ?>
+    <div id="mco-announcement-container" style="position: sticky; top: 0; z-index: 1000; padding: 1rem; display: none;">
+        <div style="position: relative; background: linear-gradient(to bottom right, #06b6d4, #8b5cf6); color: white; box-shadow: 0 20px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1); width: 100%; border-radius: 1rem; padding: 1.5rem; max-width: 64rem; margin: auto;">
+            <button id="mco-close-announcement" style="position: absolute; top: 1rem; right: 1rem; color: rgba(255,255,255,0.7); transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'" aria-label="Dismiss announcement">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+            <div style="display: flex; align-items: center; gap: 1.25rem;">
+                <div style="background-color: rgba(255,255,255,0.2); padding: 0.75rem; border-radius: 9999px;">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+                </div>
+                <div style="flex-grow: 1;">
+                    <h3 style="font-weight: 800; font-size: 1.5rem; color: white;">Limited Time Offer!</h3>
+                    <p style="font-size: 1.125rem; color: rgba(255,255,255,0.9); margin-top: 0.25rem;">
+                        All certification exams are just <span style="font-weight: 900; color: #facc15; font-size: 1.875rem;">$1</span> as an introductory offer!
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mco-intro-content" style="text-align: center; max-width: 800px; margin: 2rem auto 3rem; font-family: sans-serif; color: #374151;">
+        <h2 style="font-size: 2.25rem; font-weight: 800; color: #111827; margin-bottom: 1rem;">Welcome to the Medical Coding Online Exam Portal</h2>
+        <p style="font-size: 1.125rem; line-height: 1.75; color: #4b5563;">Your journey to certification starts here. Below you'll find a comprehensive list of our exam programs, each designed to test your knowledge and prepare you for professional certification. Start with a free practice exam, or purchase a certification exam to earn your credentials. For the best value, consider our subscription plans for unlimited access to all practice materials.</p>
+    </div>
     <style>
     .mco-showcase-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; font-family: sans-serif; }
     .mco-showcase-card { border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05); background: #fff; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #e5e7eb; transition: transform .2s, box-shadow .2s; }
@@ -397,8 +419,8 @@ function mco_exam_showcase_shortcode() {
                                 $addon_sku = $program['cert_sku'] . '-1mo-addon';
                                 $addon_product_id = wc_get_product_id_by_sku($addon_sku);
                                 if ($addon_product_id && $addon_product = wc_get_product($addon_product_id)):
-                                    $addon_price = (float)$addon_product->get_price();
-                                    $button_text = 'Buy Bundle for ' . wc_price($addon_price);
+                                    $price_difference = (float)$addon_product->get_price() - (float)$product->get_price();
+                                    $button_text = 'Add 1-Month Subscription for ' . wc_price($price_difference) . ' extra';
                             ?>
                                 <div style="text-align: center; margin-top: 0.25rem;">
                                     <a href="<?php echo esc_url($addon_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-addon" title="Includes the exam plus 1-month of premium access to all practice tests and AI feedback.">
@@ -416,6 +438,26 @@ function mco_exam_showcase_shortcode() {
         </div>
     <?php endforeach; ?>
     </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const announcementContainer = document.getElementById('mco-announcement-container');
+        const closeButton = document.getElementById('mco-close-announcement');
+        const announcementKey = 'announcementDismissed_1_dollar_offer';
+
+        if (!sessionStorage.getItem(announcementKey)) {
+            if (announcementContainer) {
+                announcementContainer.style.display = 'block';
+            }
+        }
+
+        if (closeButton && announcementContainer) {
+            closeButton.addEventListener('click', function() {
+                announcementContainer.style.display = 'none';
+                sessionStorage.setItem(announcementKey, 'true');
+            });
+        }
+    });
+    </script>
     <?php return ob_get_clean();
 }
 
