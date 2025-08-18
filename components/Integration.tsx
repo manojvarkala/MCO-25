@@ -86,19 +86,23 @@ function mco_exam_get_payload($user_id) {
             'exam-hi-cert-1mo-addon', 'exam-mcf-cert-1mo-addon'
         ];
         
-        $exam_prices = get_transient('mco_exam_prices');
+        $all_skus_for_pricing = array_unique(array_merge($all_exam_skus, $subscription_skus));
+        $exam_prices = get_transient('mco_exam_prices_v2');
         if (false === $exam_prices) {
             mco_debug_log('Exam prices cache miss. Fetching from DB.');
             $exam_prices = new stdClass();
-            foreach ($all_exam_skus as $sku) {
+            foreach ($all_skus_for_pricing as $sku) {
                 if (($product_id = wc_get_product_id_by_sku($sku)) && ($product = wc_get_product($product_id))) {
                     $price = (float) $product->get_price();
                     $regular_price = (float) $product->get_regular_price();
-                    if ($regular_price > $price) { $exam_prices->{$sku} = ['price' => $price, 'regularPrice' => $regular_price]; } 
-                    else { $exam_prices->{$sku} = ['price' => $price, 'regularPrice' => $price]; }
+                    $price_data = ['price' => $price, 'regularPrice' => $price, 'productId' => $product_id];
+                    if ($regular_price > $price) {
+                        $price_data['regularPrice'] = $regular_price;
+                    }
+                    $exam_prices->{$sku} = $price_data;
                 }
             }
-            set_transient('mco_exam_prices', $exam_prices, 12 * HOUR_IN_SECONDS);
+            set_transient('mco_exam_prices_v2', $exam_prices, 12 * HOUR_IN_SECONDS);
         }
         $customer_orders = wc_get_orders(['customer' => $user_id, 'status' => ['wc-completed', 'wc-processing'], 'limit' => -1]);
         $purchased_skus = [];
@@ -496,54 +500,4 @@ function mco_exam_add_custom_registration_fields() { ?><p><label for="first_name
 function mco_exam_validate_reg_fields($errors, $login, $email) { if (empty($_POST['first_name']) || empty($_POST['last_name'])) $errors->add('field_error', 'First and Last Name are required.'); return $errors; }
 function mco_exam_save_reg_fields($user_id) { if (!empty($_POST['first_name'])) update_user_meta($user_id, 'first_name', sanitize_text_field($_POST['first_name'])); if (!empty($_POST['last_name'])) update_user_meta($user_id, 'last_name', sanitize_text_field($_POST['last_name'])); }
 function mco_exam_login_url($login_url, $redirect) { if (strpos($_SERVER['REQUEST_URI'], 'wp-admin') !== false) return $login_url; $login_page_url = home_url('/' . MCO_LOGIN_SLUG . '/'); return !empty($redirect) ? add_query_arg('redirect_to', urlencode($redirect), $login_page_url) : $login_page_url; }
-?>`;
-
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text).then(() => {
-            toast.success('PHP code copied to clipboard!');
-        }, (err) => {
-            toast.error('Failed to copy text.');
-            console.error('Could not copy text: ', err);
-        });
-    };
-
-    return (
-        <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
-            <h1 className="text-3xl font-bold text-slate-800 mb-4">WordPress Integration Guide</h1>
-            <div className="prose max-w-none text-slate-600">
-                <p>
-                    To enable Single Sign-On (SSO) and sync exam results between this React application and your WordPress site, you need to add a custom plugin to your WordPress installation.
-                </p>
-                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Plugin Code</h2>
-                <p>
-                    Create a new PHP file (e.g., <code>mco-exam-integration.php</code>) in your <code>/wp-content/plugins/</code> directory and paste the following code into it. Then, activate the "MCO Exam App Integration" plugin from your WordPress admin dashboard.
-                </p>
-                <div className="relative mt-4">
-                    <button 
-                        onClick={() => copyToClipboard(phpCode)}
-                        className="absolute top-3 right-3 bg-slate-700 hover:bg-slate-800 text-white font-semibold py-1 px-3 rounded-md text-sm transition flex items-center gap-2"
-                        aria-label="Copy PHP code to clipboard"
-                    >
-                        <Copy size={14} />
-                        Copy Code
-                    </button>
-                    <pre className="bg-slate-900 text-white p-4 rounded-lg overflow-x-auto text-sm leading-relaxed">
-                        <code>
-                            {phpCode}
-                        </code>
-                    </pre>
-                </div>
-
-                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Configuration</h2>
-                <p>
-                    <strong>Important:</strong> After activating the plugin, you must define a secure <code>MCO_JWT_SECRET</code> in your <code>wp-config.php</code> file. This is crucial for securing the communication between the two applications.
-                </p>
-                <pre className="bg-slate-100 border border-slate-200 text-slate-800 p-4 rounded-md overflow-x-auto text-sm">
-                    <code>{`// Add this line to your wp-config.php file, replacing the example key.\ndefine('MCO_JWT_SECRET', 'your-very-strong-secret-key-that-is-long-and-random');`}</code>
-                </pre>
-            </div>
-        </div>
-    );
-};
-
-export default Integration;
+?>

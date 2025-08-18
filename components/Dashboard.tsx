@@ -27,7 +27,7 @@ const Dashboard: React.FC = () => {
     const loginUrl = 'https://www.coding-online.net/exam-login/';
     const appDashboardPath = '/dashboard';
     const syncUrl = `${loginUrl}?redirect_to=${encodeURIComponent(appDashboardPath)}`;
-    const browseExamsUrl = 'https://www.coding-online.net/exam-programs';
+    const browseExamsUrl = 'https://www.coding-online.net/exam-programs/';
 
     const monthlySubUrl = 'https://www.coding-online.net/product/monthly-subscription/';
     const yearlySubUrl = 'https://www.coding-online.net/product/yearly-subscription/';
@@ -343,20 +343,30 @@ const Dashboard: React.FC = () => {
                                                                 <span className="text-xl font-bold text-cyan-600">${certExam.price.toFixed(2)}</span>
                                                             )}
                                                         </div>
-                                                        <a
-                                                            href={certExam.productSlug ? `#/checkout/${certExam.productSlug}` : browseExamsUrl}
-                                                            target={certExam.productSlug ? '_self' : '_blank'}
-                                                            rel="noopener noreferrer"
-                                                            className="mt-2 w-full flex items-center justify-center bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 transition"
-                                                        >
-                                                            Buy Exam
-                                                        </a>
+                                                         {(() => {
+                                                            const priceData = examPrices?.[certExam.productSku];
+                                                            const url = priceData?.productId 
+                                                                ? `https://www.coding-online.net/cart/?add-to-cart=${priceData.productId}`
+                                                                : browseExamsUrl;
+                                                            return (
+                                                                <a
+                                                                    href={url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="mt-2 w-full flex items-center justify-center bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 transition"
+                                                                >
+                                                                    Buy Exam
+                                                                </a>
+                                                            );
+                                                        })()}
                                                     </div>
                                                      {(() => {
                                                         const bundleSku = `${certExam.productSku}-1mo-addon`;
                                                         const bundlePriceData = examPrices?.[bundleSku];
                                                         if (bundlePriceData) {
-                                                            const bundleSlug = bundleSku;
+                                                            const bundleUrl = bundlePriceData.productId
+                                                                ? `https://www.coding-online.net/cart/?add-to-cart=${bundlePriceData.productId}`
+                                                                : browseExamsUrl;
                                                             return (
                                                                 <div className="p-3 bg-white rounded-md border border-cyan-400 ring-2 ring-cyan-200">
                                                                     <div className="text-center">
@@ -365,7 +375,9 @@ const Dashboard: React.FC = () => {
                                                                         <p className="text-xs text-slate-500">+ 1-Month Premium Access</p>
                                                                     </div>
                                                                     <a
-                                                                        href={`#/checkout/${bundleSlug}`}
+                                                                        href={bundleUrl}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
                                                                         className="mt-2 w-full flex items-center justify-center bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700 transition"
                                                                     >
                                                                         Buy Bundle for ${bundlePriceData.price.toFixed(2)}
