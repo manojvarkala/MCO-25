@@ -40,6 +40,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
     
     // State for the slide-to-spin interaction
     const [dragY, setDragY] = useState(0);
+    const dragYRef = useRef(0);
     const sliderHandleRef = useRef<HTMLDivElement>(null);
     const isDraggingRef = useRef(false);
     const startYRef = useRef(0);
@@ -138,13 +139,14 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
         const deltaY = clientY - startYRef.current;
         const newDragY = Math.max(-60, Math.min(0, deltaY));
         setDragY(newDragY);
+        dragYRef.current = newDragY;
     };
 
     const handleDragEnd = () => {
         if (!isDraggingRef.current) return;
         isDraggingRef.current = false;
         
-        if (dragY <= -55) { // Threshold met
+        if (dragYRef.current <= -55) { // Threshold met
             handleSpin();
         }
         
@@ -152,6 +154,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
             sliderHandleRef.current.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
         }
         setDragY(0);
+        dragYRef.current = 0;
 
         window.removeEventListener('mousemove', handleDragMove);
         window.removeEventListener('mouseup', handleDragEnd);
@@ -163,7 +166,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4" role="dialog" aria-modal="true">
             <div className="bg-black rounded-2xl shadow-xl p-6 w-full max-w-sm text-white text-center relative animate-fade-in-up border border-yellow-800/50">
                 <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-white transition">
                     <X size={24} />
