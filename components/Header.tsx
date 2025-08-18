@@ -3,7 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
-import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag } from 'lucide-react';
+import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, HelpCircle } from 'lucide-react';
 import { logoBase64 } from '../assets/logo.ts';
 
 const Header: React.FC = () => {
@@ -55,6 +55,14 @@ const Header: React.FC = () => {
         )}
        
         <div className="flex items-center space-x-4">
+           <Link 
+                to="/user-guide"
+                className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200"
+                title="User Guide"
+            >
+                <HelpCircle size={20} />
+                <span className="hidden sm:inline font-semibold">User Guide</span>
+            </Link>
            <Link 
                 to="/bookstore"
                 className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200"
