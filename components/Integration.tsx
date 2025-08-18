@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           9.0.0
+ * Version:           9.1.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -353,90 +353,38 @@ function mco_spin_wheel_callback($request) {
         return new WP_Error('already_spun', 'You have already used your spin.', ['status' => 403]);
     }
     
-    $option_key = 'mco_wheel_prizes_' . date('Y-m');
-    $prize_counts = get_option($option_key, [
-        'SUB_YEARLY' => 0,
-        'SUB_MONTHLY' => 0,
-        'SUB_WEEKLY' => 0,
-        'EXAM' => 0,
-    ]);
-
     $prizes = [
-        ['id' => 'SUB_YEARLY', 'label' => 'Annual Subscription', 'limit' => 2, 'weight' => 1],
-        ['id' => 'SUB_MONTHLY', 'label' => 'Monthly Subscription', 'limit' => 2, 'weight' => 3],
-        ['id' => 'SUB_WEEKLY', 'label' => 'Weekly Subscription', 'limit' => 50, 'weight' => 20],
-        ['id' => 'EXAM_CPC', 'label' => 'Free CPC Exam', 'limit' => 100, 'weight' => 13, 'type' => 'EXAM', 'sku' => 'exam-cpc-cert'],
-        ['id' => 'EXAM_CCA', 'label' => 'Free CCA Exam', 'limit' => 100, 'weight' => 13, 'type' => 'EXAM', 'sku' => 'exam-cca-cert'],
-        ['id' => 'NEXT_TIME', 'label' => 'Better Luck Next Time', 'limit' => -1, 'weight' => 50],
+        ['id' => 'SUB_YEARLY', 'label' => 'Annual Subscription', 'weight' => 0.5, 'type' => 'SUBSCRIPTION'],
+        ['id' => 'SUB_MONTHLY', 'label' => 'Monthly Subscription', 'weight' => 1.5, 'type' => 'SUBSCRIPTION'],
+        ['id' => 'SUB_WEEKLY', 'label' => 'Weekly Subscription', 'weight' => 15, 'type' => 'SUBSCRIPTION'],
+        ['id' => 'EXAM_CPC', 'label' => 'Free CPC Exam', 'weight' => 4, 'type' => 'EXAM', 'sku' => 'exam-cpc-cert'],
+        ['id' => 'EXAM_CCA', 'label' => 'Free CCA Exam', 'weight' => 4, 'type' => 'EXAM', 'sku' => 'exam-cca-cert'],
+        ['id' => 'NEXT_TIME', 'label' => 'Better Luck Next Time', 'weight' => 75],
     ];
 
-    $available_prizes = [];
     $total_weight = 0;
     foreach ($prizes as $prize) {
-        $count_key = isset($prize['type']) ? $prize['type'] : $prize['id'];
-        if ($prize['limit'] === -1 || (isset($prize_counts[$count_key]) && $prize_counts[$count_key] < $prize['limit'])) {
-            $available_prizes[] = $prize;
-            $total_weight += $prize['weight'];
-        }
+        $total_weight += $prize['weight'];
     }
 
-    if (empty($available_prizes)) {
-        $chosen_prize = ['id' => 'NEXT_TIME', 'label' => 'Better Luck Next Time', 'limit' => -1, 'weight' => 100];
-    } else {
-        $rand = mt_rand(1, $total_weight);
-        $cumulative_weight = 0;
-        $chosen_prize = $available_prizes[0];
-        foreach ($available_prizes as $prize) {
-            $cumulative_weight += $prize['weight'];
-            if ($rand <= $cumulative_weight) {
-                $chosen_prize = $prize;
-                break;
-            }
-        }
-    }
+    $rand = mt_rand(1, (int)($total_weight * 100)) / 100.0;
+    $cumulative_weight = 0;
+    $chosen_prize = $prizes[count($prizes) - 1]; // Default to last prize (Next Time)
 
-    // --- Alternative Prize Logic ---
-    if (isset($chosen_prize['type']) && $chosen_prize['type'] === 'EXAM') {
-        $user_results = get_user_meta($user_id, 'mco_exam_results', true);
-        $has_passed = false;
-        if (is_array($user_results)) {
-            foreach ($user_results as $result) {
-                $exam_config = null;
-                $all_exams = mco_get_exam_programs_data();
-                foreach($all_exams as $e) {
-                    if ($e['cert_sku'] === $result['examId']) {
-                        // This is not quite right, need the full exam object.
-                        // This logic is flawed, but for the purpose of the feature we assume pass score is 70 for this check
-                        break;
-                    }
-                }
-                if (isset($result['examId']) && $result['examId'] === $chosen_prize['sku'] && isset($result['score']) && $result['score'] >= 70) {
-                    $has_passed = true;
-                    break;
-                }
-            }
-        }
-        if ($has_passed) {
-            // User already passed. Give them a one month sub as an alternative.
-            $chosen_prize = [ 'id' => 'SUB_MONTHLY_ALT', 'label' => 'One Month Subscription (Alternative)', 'limit' => -1, 'weight' => 0, 'type' => 'SUBSCRIPTION_ALT' ];
+    foreach ($prizes as $prize) {
+        $cumulative_weight += $prize['weight'];
+        if ($rand <= $cumulative_weight) {
+            $chosen_prize = $prize;
+            break;
         }
     }
     
-    $won_prize = ['prizeId' => $chosen_prize['id'], 'prizeLabel' => $chosen_prize['label']];
-    $count_key = isset($chosen_prize['type']) ? $chosen_prize['type'] : $chosen_prize['id'];
-
-    if ($count_key !== 'NEXT_TIME' && $count_key !== 'SUBSCRIPTION_ALT') {
-        if (!isset($prize_counts[$count_key])) $prize_counts[$count_key] = 0;
-        $prize_counts[$count_key]++;
-        update_option($option_key, $prize_counts);
-    }
-
     // --- Grant Prize ---
     $current_expiry = get_user_meta($user_id, 'mco_subscription_expiry', true) ?: time();
     $prize_type_id = $chosen_prize['id'];
 
     if ($prize_type_id === 'SUB_YEARLY') update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + YEAR_IN_SECONDS);
-    if ($prize_type_id === 'SUB_MONTHLY' || $prize_type_id === 'SUB_MONTHLY_ALT') update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + MONTH_IN_SECONDS);
+    if ($prize_type_id === 'SUB_MONTHLY') update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + MONTH_IN_SECONDS);
     if ($prize_type_id === 'SUB_WEEKLY') update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + WEEK_IN_SECONDS);
 
 
@@ -448,6 +396,8 @@ function mco_spin_wheel_callback($request) {
             update_user_meta($user_id, 'mco_granted_skus', $granted_skus);
         }
     }
+    
+    $won_prize = ['prizeId' => $chosen_prize['id'], 'prizeLabel' => $chosen_prize['label']];
     
     // --- Finalize Spin ---
     if (!$is_admin) {

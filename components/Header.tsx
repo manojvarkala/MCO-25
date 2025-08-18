@@ -1,18 +1,12 @@
-
-
-
-
-
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
-import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, Users, Gift } from 'lucide-react';
+import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, Users, Gift, Star } from 'lucide-react';
 import { logoBase64 } from '../assets/logo.ts';
 
 const Header: React.FC = () => {
-  const { user, logout, canSpinWheel, wheelModalDismissed } = useAuth();
+  const { user, logout, canSpinWheel, wheelModalDismissed, isSubscribed } = useAuth();
   const { activeOrg, setWheelModalOpen } = useAppContext();
 
   const handleLogout = () => {
@@ -29,9 +23,16 @@ const Header: React.FC = () => {
   const loginUrl = `https://www.coding-online.net/exam-login/`;
   const myAccountUrl = `https://www.coding-online.net/my-account/`;
 
+  const headerClasses = isSubscribed
+    ? "bg-slate-800 text-white shadow-lg sticky top-0 z-50"
+    : "bg-white shadow-md sticky top-0 z-50";
+
+  const linkClasses = isSubscribed
+    ? "text-slate-300 hover:text-white"
+    : "text-slate-600 hover:text-cyan-600";
 
   return (
-    <header className="bg-white shadow-md sticky top-0 z-50">
+    <header className={headerClasses}>
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         {activeOrg ? (
             <Link to={headerLink} className="flex items-center space-x-3">
@@ -41,10 +42,10 @@ const Header: React.FC = () => {
                     className="h-14 w-14 object-contain"
                 />
                 <div className="flex flex-col">
-                    <span className="text-3xl font-bold text-slate-900 font-serif">
+                    <span className={`text-3xl font-bold font-serif ${isSubscribed ? 'text-white' : 'text-slate-900'}`}>
                         {activeOrg.name}
                     </span>
-                    <span className="text-md text-slate-500 font-serif">
+                    <span className={`text-md font-serif ${isSubscribed ? 'text-slate-400' : 'text-slate-500'}`}>
                         {activeOrg.website}
                     </span>
                 </div>
@@ -72,7 +73,7 @@ const Header: React.FC = () => {
             )}
             <Link 
                 to="/pricing"
-                className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200"
+                className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}
                 title="View Plans and Pricing"
             >
                 <Tag size={20} />
@@ -80,7 +81,7 @@ const Header: React.FC = () => {
             </Link>
            <Link 
                 to="/bookstore"
-                className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200"
+                className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}
                 title="Recommended Books"
             >
                 <BookMarked size={20} />
@@ -88,7 +89,7 @@ const Header: React.FC = () => {
             </Link>
             <Link 
                 to="/about-us"
-                className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200"
+                className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}
                 title="About Us"
             >
                 <Users size={20} />
@@ -96,14 +97,15 @@ const Header: React.FC = () => {
             </Link>
           {user ? (
             <>
-              <Link to="/profile" className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200" title="View your profile">
+              <Link to="/profile" className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`} title="View your profile">
+                {isSubscribed && <Star size={16} className="text-yellow-400 fill-current" />}
                 <UserCircle size={20} />
                 <span className="hidden sm:inline">Profile{user.isAdmin && ' (Admin)'}</span>
               </Link>
                {user.isAdmin && (
                   <Link
                     to="/admin"
-                    className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                    className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
                     title="Go to the Admin Panel"
                   >
                     <Shield size={16} />

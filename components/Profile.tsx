@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -6,11 +5,11 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam } from '../types.ts';
-import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight, Gift } from 'lucide-react';
+import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight, Gift, Star } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 const Profile: React.FC = () => {
-    const { user, token, updateUserName, wonPrize } = useAuth();
+    const { user, token, updateUserName, wonPrize, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     const navigate = useNavigate();
 
@@ -70,14 +69,19 @@ const Profile: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto space-y-8">
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                <div className="flex items-center space-x-4 mb-6">
+                <div className="flex items-start space-x-4 mb-6">
                     <div className="bg-cyan-100 p-3 rounded-full">
                         <User className="h-8 w-8 text-cyan-600" />
                     </div>
-                    <div>
+                    <div className="flex-grow">
                         <h1 className="text-2xl font-bold text-slate-800">My Profile</h1>
                         <p className="text-slate-500">Manage your account details and view your progress.</p>
                     </div>
+                    {isSubscribed && (
+                        <div className="ml-auto bg-yellow-300 text-yellow-800 text-sm font-bold px-4 py-1 rounded-full flex items-center gap-2 flex-shrink-0">
+                            <Star size={16} className="fill-current"/> Premium Member
+                        </div>
+                    )}
                 </div>
 
                 {user ? (
