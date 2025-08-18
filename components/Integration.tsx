@@ -500,4 +500,67 @@ function mco_exam_add_custom_registration_fields() { ?><p><label for="first_name
 function mco_exam_validate_reg_fields($errors, $login, $email) { if (empty($_POST['first_name']) || empty($_POST['last_name'])) $errors->add('field_error', 'First and Last Name are required.'); return $errors; }
 function mco_exam_save_reg_fields($user_id) { if (!empty($_POST['first_name'])) update_user_meta($user_id, 'first_name', sanitize_text_field($_POST['first_name'])); if (!empty($_POST['last_name'])) update_user_meta($user_id, 'last_name', sanitize_text_field($_POST['last_name'])); }
 function mco_exam_login_url($login_url, $redirect) { if (strpos($_SERVER['REQUEST_URI'], 'wp-admin') !== false) return $login_url; $login_page_url = home_url('/' . MCO_LOGIN_SLUG . '/'); return !empty($redirect) ? add_query_arg('redirect_to', urlencode($redirect), $login_page_url) : $login_page_url; }
-?>
+?>`;
+
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(phpCode).then(() => {
+            toast.success('PHP code copied to clipboard!');
+        }, () => {
+            toast.error('Failed to copy code.');
+        });
+    };
+
+    return (
+        <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+            <h1 className="text-3xl font-bold text-slate-800 mb-4">WordPress Integration Guide</h1>
+            <div className="prose max-w-none text-slate-600">
+                <p>
+                    This plugin handles Single Sign-On (SSO), syncs WooCommerce purchases, and saves test results back to your WordPress site. 
+                    Follow these steps to integrate the examination app.
+                </p>
+
+                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Step 1: Install the Plugin</h2>
+                <p>
+                    Create a new plugin in your WordPress installation. You can do this by creating a new folder in <code>/wp-content/plugins/</code> (e.g., <code>mco-exam-integration</code>) and adding a PHP file (e.g., <code>mco-exam-integration.php</code>) inside it with the code below.
+                </p>
+                <div className="relative bg-slate-800 text-white rounded-lg p-4 font-mono text-sm my-4">
+                    <button onClick={copyToClipboard} className="absolute top-2 right-2 p-2 bg-slate-700 hover:bg-slate-600 rounded-lg" title="Copy code">
+                        <Copy size={16} />
+                    </button>
+                    <pre><code className="language-php" style={{ whiteSpace: 'pre-wrap' }}>{phpCode}</code></pre>
+                </div>
+
+                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Step 2: Configure the JWT Secret Key</h2>
+                <p>
+                    For the SSO to be secure, you <strong>must</strong> define a unique and strong secret key. Open your <code>wp-config.php</code> file and add the following line. Use a <a href="https://api.wordpress.org/secret-key/1.1/salt/" target="_blank" rel="noopener noreferrer" className="text-cyan-600">WordPress Salt Generator</a> to create a strong key.
+                </p>
+                <pre className="bg-slate-100 p-2 rounded"><code>define('MCO_JWT_SECRET', 'your-very-strong-secret-key-that-is-long-and-random');</code></pre>
+
+                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Step 3: Enable Debug Logging (Optional)</h2>
+                <p>
+                    To see detailed logs for issues like Google Sheet parsing errors, uncomment the <code>MCO_DEBUG</code> line at the top of the plugin file and ensure <code>WP_DEBUG</code> and <code>WP_DEBUG_LOG</code> are enabled in your <code>wp-config.php</code> file.
+                </p>
+                 <pre className="bg-slate-100 p-2 rounded"><code>define('MCO_DEBUG', true);</code></pre>
+
+                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Step 4: Create the Login Page</h2>
+                <p>
+                    Create a new page in WordPress with the slug <code>exam-login</code> (or the slug you defined in <code>MCO_LOGIN_SLUG</code>). In the content editor for that page, add the following shortcode:
+                </p>
+                <pre className="bg-slate-100 p-2 rounded"><code>[mco_exam_login]</code></pre>
+
+                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Step 5: Set Up WooCommerce Products</h2>
+                <p>
+                    Ensure your WooCommerce products (for exams, bundles, and subscriptions) have the correct SKUs that match the configurations in the app. The plugin uses these SKUs to check for purchases. Example SKUs: <code>exam-cpc-cert</code>, <code>sub-monthly</code>, <code>exam-cpc-cert-1mo-addon</code>.
+                </p>
+
+                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Step 6: Display Exam Programs on Your Site</h2>
+                <p>
+                    To display the list of exam programs with purchase and practice links on any page, use the following shortcode:
+                </p>
+                <pre className="bg-slate-100 p-2 rounded"><code>[mco_exam_showcase]</code></pre>
+            </div>
+        </div>
+    );
+};
+
+export default Integration;
