@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { Check, X, FileDown, BookUp, ShieldCheck, Sparkles, Download, Star, MessageSquare } from 'lucide-react';
+import { Check, X, FileDown, BookUp, ShieldCheck, Sparkles, Download, Star, MessageSquare, Lock } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -18,7 +18,7 @@ import { logoBase64 } from '../assets/logo.ts';
 const Results: React.FC = () => {
     const { testId } = useParams<{ testId: string }>();
     const navigate = useNavigate();
-    const { user, token } = useAuth();
+    const { user, token, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     
     const [result, setResult] = useState<TestResult | null>(null);
@@ -196,7 +196,8 @@ Please provide a summary of the key areas I need to focus on based on these erro
     }
     
     const isPass = result.score >= exam.passScore;
-    const isPaid = !exam.isPractice;
+    const isPaidCertExam = !exam.isPractice;
+    const canUseAiFeedback = isSubscribed || isPaidCertExam;
     const scoreColor = isPass ? 'text-green-600' : 'text-red-600';
     const isAdmin = !!user?.isAdmin;
 
@@ -212,7 +213,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 <p className={`mt-4 text-xl font-semibold ${scoreColor}`}>{isPass ? 'Congratulations, you passed!' : 'Unfortunately, you did not pass.'}</p>
             </div>
 
-            {((isPaid && isPass) || isAdmin) && (
+            {((isPaidCertExam && isPass) || isAdmin) && (
                 <div className="text-center mb-8">
                     <button
                         onClick={() => navigate(`/certificate/${result.testId}`)}
@@ -277,15 +278,33 @@ Please provide a summary of the key areas I need to focus on based on these erro
             {!isPass && (
                 <div className="text-center mb-8 p-6 bg-amber-50 border border-amber-200 rounded-lg">
                     <h2 className="text-xl font-semibold text-amber-800 mb-4">Need some help?</h2>
-                    <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Don't worry, practice makes perfect. Use our AI-powered tool to get a personalized study plan based on the questions you missed.</p>
-                     <button
-                        onClick={handleGenerateFeedback}
-                        disabled={isGeneratingFeedback}
-                        className="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-amber-300"
-                    >
-                        {isGeneratingFeedback ? <Spinner /> : <Sparkles size={20} />}
-                        <span>{isGeneratingFeedback ? 'Generating...' : 'Get AI-Powered Feedback'}</span>
-                    </button>
+                    {canUseAiFeedback ? (
+                        <>
+                            <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Don't worry, practice makes perfect. Use our AI-powered tool to get a personalized study plan based on the questions you missed.</p>
+                            <button
+                                onClick={handleGenerateFeedback}
+                                disabled={isGeneratingFeedback}
+                                className="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-amber-300"
+                            >
+                                {isGeneratingFeedback ? <Spinner /> : <Sparkles size={20} />}
+                                <span>{isGeneratingFeedback ? 'Generating...' : 'Get AI-Powered Feedback'}</span>
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Unlock our AI-powered study guide to get personalized feedback on your incorrect answers. This feature is available for all subscribers and certification exam purchasers.</p>
+                            <button
+                                disabled
+                                className="inline-flex items-center space-x-2 bg-slate-400 text-white font-bold py-3 px-6 rounded-lg cursor-not-allowed"
+                            >
+                                <Lock size={20} />
+                                <span>AI Feedback Locked</span>
+                            </button>
+                            <a href="#/pricing" className="mt-3 inline-block text-sm text-cyan-600 hover:underline">
+                                View Purchase Options
+                            </a>
+                        </>
+                    )}
                 </div>
             )}
 
@@ -313,7 +332,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 </div>
             )}
             
-            {(isPaid && !isPass) && (
+            {isPaidCertExam && !isPass && (
                 <div className="text-center p-6 bg-slate-50 border border-slate-200 rounded-lg mt-8">
                         <h2 className="text-xl font-semibold text-slate-700">Answer Review Not Available</h2>
                         <p className="text-slate-600 max-w-2xl mx-auto mt-2">To protect the integrity of the certification exam and ensure fairness for all candidates, a detailed answer review is not provided for paid tests.</p>
@@ -349,7 +368,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 );
             })()} 
             
-            {!isPaid && (
+            {!isPaidCertExam && (
                 <div className="mt-8">
                     <h2 className="text-2xl font-semibold text-slate-700 mb-4">Answer Review</h2>
                     <div className="space-y-6">
