@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -12,7 +12,6 @@ import LogoSpinner from './LogoSpinner.tsx';
 import { Check, X, FileDown, BookUp, ShieldCheck, Sparkles, Download, Star, MessageSquare, Lock } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { logoBase64 } from '../assets/logo.ts';
 
 const Results: React.FC = () => {
@@ -27,7 +26,6 @@ const Results: React.FC = () => {
     const [aiFeedback, setAiFeedback] = useState<string>('');
     const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
-    const aiFeedbackPrintRef = useRef<HTMLDivElement>(null);
 
     const [rating, setRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
@@ -137,24 +135,151 @@ Please provide a summary of the key areas I need to focus on based on these erro
     };
 
     const handleDownloadFeedback = async () => {
-        if (!aiFeedbackPrintRef.current || !result || !exam || !user) return;
+        if (!aiFeedback || !result || !exam || !user || !activeOrg) return;
         setIsDownloading(true);
         const toastId = toast.loading('Generating your Study Guide PDF...');
     
         try {
-            const canvas = await html2canvas(aiFeedbackPrintRef.current, {
-                scale: 2, useCORS: true, backgroundColor: '#ffffff',
-            });
-            const imgData = canvas.toDataURL('image/png', 0.95);
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-            const ratio = canvasHeight / canvasWidth;
-            const pdfHeight = pdfWidth * ratio;
-            
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margin = 15;
+            let pageNum = 1;
     
+            const addWatermarkAndFooter = (pageNumber: number) => {
+                // Watermark
+                pdf.setFontSize(52);
+                pdf.setTextColor(230, 230, 230);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text(activeOrg.name, pageWidth / 2, pageHeight / 2, { angle: -45, align: 'center' });
+                
+                // Footer
+                pdf.setFontSize(8);
+                pdf.setTextColor(150, 150, 150);
+                pdf.setFont('helvetica', 'normal');
+                const footerText = `Page ${pageNumber} | © ${new Date().getFullYear()} ${activeOrg.name}`;
+                pdf.text(footerText, pageWidth / 2, pageHeight - 10, { align: 'center' });
+            };
+    
+            // --- Page 1: Cover Page ---
+            pdf.setFillColor(240, 248, 255);
+            pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+            if (logoBase64) pdf.addImage(logoBase64, 'PNG', margin, margin, 20, 20);
+            
+            pdf.setFontSize(26);
+            pdf.setTextColor(15, 23, 42);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('AI-Powered Study Guide', pageWidth / 2, 60, { align: 'center' });
+    
+            pdf.setFontSize(18);
+            pdf.setTextColor(51, 65, 85);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(exam.name, pageWidth / 2, 80, { align: 'center' });
+            
+            pdf.setDrawColor(200, 200, 200);
+            pdf.line(margin, 100, pageWidth - margin, 100);
+    
+            pdf.setFontSize(14);
+            pdf.text('Candidate:', margin, 120);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(user.name, margin + 30, 120);
+            
+            pdf.setFont('helvetica', 'normal');
+            pdf.text('Date:', margin, 130);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(new Date().toLocaleDateString(), margin + 30, 130);
+    
+            // --- Content Pages ---
+            pdf.addPage();
+            pageNum++;
+            addWatermarkAndFooter(pageNum);
+            let yPos = margin;
+            
+            const contentWidth = pageWidth - margin * 2;
+            const lines = aiFeedback.split('\n');
+    
+            lines.forEach(line => {
+                let fontSize = 11;
+                let style = 'normal';
+                let leftMargin = margin;
+                let isList = false;
+    
+                if (line.startsWith('## ')) {
+                    line = line.substring(3);
+                    fontSize = 16;
+                    style = 'bold';
+                    if (yPos > margin + 5) yPos += 5; 
+                } else if (line.startsWith('* ') || line.startsWith('- ')) {
+                    line = '• ' + line.substring(2);
+                    leftMargin = margin + 5;
+                    isList = true;
+                } else if (line.trim() === '---') {
+                    if(yPos > margin + 5) yPos += 2;
+                    pdf.setDrawColor(220,220,220);
+                    pdf.line(margin, yPos, pageWidth - margin, yPos);
+                    yPos += 4;
+                    return;
+                } else if (line.trim() === '') {
+                    yPos += 5;
+                    return;
+                }
+    
+                pdf.setFontSize(fontSize);
+                pdf.setFont('helvetica', style);
+                pdf.setTextColor(30, 41, 59);
+                
+                const effectiveWidth = contentWidth - (isList ? 5 : 0);
+                const splitLines = pdf.splitTextToSize(line, effectiveWidth);
+                
+                if (yPos + (splitLines.length * fontSize * 0.35) > pageHeight - margin - 10) {
+                    pdf.addPage();
+                    pageNum++;
+                    addWatermarkAndFooter(pageNum);
+                    yPos = margin;
+                    if (style === 'bold') yPos += 5;
+                }
+    
+                pdf.text(splitLines, leftMargin, yPos);
+                yPos += (splitLines.length * fontSize * 0.35) + (isList ? 1.5 : 3);
+            });
+    
+            // --- Back Cover Page ---
+            pdf.addPage();
+            pageNum++;
+            addWatermarkAndFooter(pageNum);
+            yPos = margin;
+            
+            if (exam.recommendedBook) {
+                const { url, domainName } = getGeoAffiliateLink(exam.recommendedBook);
+                pdf.setFontSize(16);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setTextColor(15, 23, 42);
+                pdf.text('Recommended Study Material', margin, yPos);
+                yPos += 15;
+                
+                pdf.setFontSize(12);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text(exam.recommendedBook.title, margin, yPos);
+                yPos += 8;
+    
+                pdf.setFontSize(11);
+                pdf.setFont('helvetica', 'normal');
+                const descLines = pdf.splitTextToSize(exam.recommendedBook.description, contentWidth);
+                pdf.text(descLines, margin, yPos);
+                yPos += (descLines.length * 11 * 0.35) + 10;
+                
+                pdf.setTextColor(0, 102, 204);
+                pdf.textWithLink(`Click here to buy on ${domainName}`, margin, yPos, { url });
+            }
+            
+            pdf.setFontSize(8);
+            pdf.setTextColor(100, 116, 139);
+            pdf.setFont('helvetica', 'normal');
+            const copyrightText = `Copyright © ${new Date().getFullYear()} ${activeOrg.name}. All Rights Reserved.\nThis document is intended for the personal use of ${user.name} and may not be reproduced or distributed.`;
+            const copyrightLines = pdf.splitTextToSize(copyrightText, contentWidth);
+            pdf.text(copyrightLines, pageWidth / 2, pageHeight - 30, { align: 'center' });
+    
+            // --- Save ---
             pdf.save(`AI-Study-Guide-${exam.name.replace(/\s+/g, '_')}.pdf`);
             toast.dismiss(toastId);
             toast.success("Study Guide downloaded!");
@@ -427,28 +552,6 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 >
                     Back to Dashboard
                 </button>
-            </div>
-        </div>
-        {/* Hidden div for PDF generation */}
-        <div style={{ position: 'absolute', left: '-9999px', top: 0, width: '794px', color: 'black', background: 'white' }}>
-            <div ref={aiFeedbackPrintRef} className="p-10 font-sans">
-                <div className="flex items-center space-x-3 border-b pb-4 mb-6">
-                    <img src={logoBase64} alt="Logo" className="h-14 w-14 object-contain" />
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-800">AI-Powered Study Guide</h1>
-                        <p className="text-slate-600">For {exam.name}</p>
-                    </div>
-                </div>
-                <div className="flex justify-between text-sm text-slate-500 mb-6">
-                    <span><strong>Candidate:</strong> {user.name}</span>
-                    <span><strong>Date:</strong> {new Date().toLocaleDateString()}</span>
-                </div>
-                <div className="prose prose-slate max-w-none whitespace-pre-wrap text-base">
-                    {aiFeedback}
-                </div>
-                <div className="mt-8 pt-4 border-t text-center text-xs text-slate-400">
-                    <p>&copy; {new Date().getFullYear()} Medical Coding Online | Generated by Annapoorna Examination App</p>
-                </div>
             </div>
         </div>
         </div>
