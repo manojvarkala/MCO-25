@@ -29,6 +29,18 @@ const Dashboard: React.FC = () => {
     const syncUrl = `${loginUrl}?redirect_to=${encodeURIComponent(appDashboardPath)}`;
     const browseExamsUrl = 'https://www.coding-online.net/exam-programs';
 
+    const monthlySubUrl = 'https://www.coding-online.net/product/monthly-subscription/';
+    const yearlySubUrl = 'https://www.coding-online.net/product/yearly-subscription/';
+
+    const monthlyPriceData = examPrices?.['sub-monthly'];
+    const yearlyPriceData = examPrices?.['sub-yearly'];
+
+    const monthlyPrice = monthlyPriceData?.price ?? 19.99;
+    const monthlyRegularPrice = monthlyPriceData?.regularPrice;
+
+    const yearlyPrice = yearlyPriceData?.price ?? 149.99;
+    const yearlyRegularPrice = yearlyPriceData?.regularPrice;
+
 
     const processResults = (resultsData: TestResult[]) => {
         setResults(resultsData);
@@ -186,24 +198,51 @@ const Dashboard: React.FC = () => {
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-8">
                      {!isSubscribed && (
-                        <div className="p-6 rounded-lg bg-gradient-to-r from-cyan-50 to-purple-50 border border-slate-200 flex items-center justify-between flex-wrap gap-4">
-                           <div className="flex items-center gap-4">
-                                <div className="bg-white p-3 rounded-full shadow-sm">
-                                    <Zap className="h-6 w-6 text-cyan-500" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Monthly Card */}
+                            <div className="bg-gradient-to-br from-cyan-400 to-sky-600 rounded-xl shadow-lg p-6 flex flex-col text-white">
+                                <h3 className="text-lg font-bold">Monthly Subscription</h3>
+                                <p className="mt-2 text-sm text-sky-100 flex-grow">Unlimited practice & AI feedback.</p>
+                                <div className="mt-4 flex items-baseline gap-2">
+                                    {monthlyRegularPrice && monthlyRegularPrice > monthlyPrice ? (
+                                        <>
+                                            <span className="text-xl line-through opacity-70">${monthlyRegularPrice.toFixed(2)}</span>
+                                            <span className="text-4xl font-extrabold text-white">${monthlyPrice.toFixed(2)}</span>
+                                        </>
+                                    ) : (
+                                        <span className="text-4xl font-extrabold text-white">${monthlyPrice.toFixed(2)}</span>
+                                    )}
+                                    <span className="font-medium text-sky-100">/month</span>
                                 </div>
-                                <div>
-                                    <h2 className="text-lg font-bold text-slate-800">Unlock Your Full Potential</h2>
-                                    <p className="text-slate-600 text-sm">Subscribe for unlimited practice exams & AI feedback.</p>
+                                <a href={monthlySubUrl} target="_blank" rel="noopener noreferrer" className="mt-4 block w-full bg-white text-cyan-600 border border-transparent rounded-md py-2 text-sm font-semibold text-center hover:bg-cyan-50">
+                                    Subscribe Now
+                                </a>
+                            </div>
+
+                            {/* Yearly Card */}
+                            <div className="relative bg-gradient-to-br from-purple-600 to-indigo-600 text-white rounded-xl shadow-lg p-6 flex flex-col">
+                                <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2">
+                                    <div className="bg-yellow-400 text-yellow-900 text-xs font-bold uppercase px-3 py-1 rounded-full flex items-center gap-1">
+                                        <Star size={12}/> Best Value
+                                    </div>
                                 </div>
-                           </div>
-                           <div className="flex items-center gap-3">
-                                <a href="https://www.coding-online.net/product/monthly-subscription/" target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-300 rounded-md py-2 px-4 text-sm font-semibold text-slate-700 text-center hover:bg-slate-100">
-                                    Monthly Plan
+                                <h3 className="text-lg font-bold">Yearly Subscription</h3>
+                                <p className="mt-2 text-sm text-indigo-100 flex-grow">Save over 35% with annual billing.</p>
+                                <div className="mt-4 flex items-baseline gap-2">
+                                    {yearlyRegularPrice && yearlyRegularPrice > yearlyPrice ? (
+                                        <>
+                                            <span className="text-xl line-through opacity-70">${yearlyRegularPrice.toFixed(2)}</span>
+                                            <span className="text-4xl font-extrabold text-white">${yearlyPrice.toFixed(2)}</span>
+                                        </>
+                                    ) : (
+                                        <span className="text-4xl font-extrabold text-white">${yearlyPrice.toFixed(2)}</span>
+                                    )}
+                                    <span className="font-medium text-indigo-100">/year</span>
+                                </div>
+                                <a href={yearlySubUrl} target="_blank" rel="noopener noreferrer" className="mt-4 block w-full bg-white text-purple-700 border border-transparent rounded-md py-2 text-sm font-semibold text-center hover:bg-purple-100">
+                                    Subscribe & Save
                                 </a>
-                                <a href="https://www.coding-online.net/product/yearly-subscription/" target="_blank" rel="noopener noreferrer" className="bg-cyan-600 border border-transparent rounded-md py-2 px-4 text-sm font-semibold text-white text-center hover:bg-cyan-700">
-                                    Yearly Plan & Save
-                                </a>
-                           </div>
+                            </div>
                         </div>
                     )}
 
