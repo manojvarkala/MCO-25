@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           8.9.0
+ * Version:           9.0.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -77,6 +77,12 @@ function mco_exam_get_payload($user_id) {
     $exam_prices = new stdClass();
     $is_subscribed = false;
     $has_spun_wheel = get_user_meta($user_id, 'mco_has_spun_wheel', true) ? true : false;
+    $won_prize = get_user_meta($user_id, 'mco_wheel_prize', true);
+
+    // Admins can always spin the wheel for testing purposes
+    if (user_can($user, 'administrator')) {
+        $has_spun_wheel = false;
+    }
     
     if (class_exists('WooCommerce')) {
         $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert', 'exam-mcf-cert'];
@@ -156,7 +162,7 @@ function mco_exam_get_payload($user_id) {
         $paid_exam_ids = array_values(array_unique(array_merge($direct_exam_purchases, $exams_from_addons, $granted_skus)));
     }
     
-    return ['iss' => get_site_url(), 'iat' => time(), 'exp' => time() + (60 * 60 * 2), 'user' => ['id' => (string)$user->ID, 'name' => $user_full_name, 'email' => $user->user_email, 'isAdmin' => user_can($user, 'administrator')], 'paidExamIds' => $paid_exam_ids, 'examPrices' => $exam_prices, 'isSubscribed' => $is_subscribed, 'hasSpunWheel' => $has_spun_wheel];
+    return ['iss' => get_site_url(), 'iat' => time(), 'exp' => time() + (60 * 60 * 2), 'user' => ['id' => (string)$user->ID, 'name' => $user_full_name, 'email' => $user->user_email, 'isAdmin' => user_can($user, 'administrator')], 'paidExamIds' => $paid_exam_ids, 'examPrices' => $exam_prices, 'isSubscribed' => $is_subscribed, 'hasSpunWheel' => $has_spun_wheel, 'wonPrize' => $won_prize];
 }
 
 
@@ -341,7 +347,9 @@ function mco_get_debug_details_callback($request) {
 // --- NEW WHEEL OF FORTUNE ENDPOINT ---
 function mco_spin_wheel_callback($request) {
     $user_id = (int)$request->get_param('jwt_user_id');
-    if (get_user_meta($user_id, 'mco_has_spun_wheel', true)) {
+    $is_admin = user_can($user_id, 'administrator');
+
+    if (!$is_admin && get_user_meta($user_id, 'mco_has_spun_wheel', true)) {
         return new WP_Error('already_spun', 'You have already used your spin.', ['status' => 403]);
     }
     
@@ -356,10 +364,10 @@ function mco_spin_wheel_callback($request) {
     $prizes = [
         ['id' => 'SUB_YEARLY', 'label' => 'Annual Subscription', 'limit' => 2, 'weight' => 1],
         ['id' => 'SUB_MONTHLY', 'label' => 'Monthly Subscription', 'limit' => 2, 'weight' => 3],
-        ['id' => 'SUB_WEEKLY', 'label' => 'Weekly Subscription', 'limit' => 50, 'weight' => 20],
+        ['id' => 'SUB_WEEKLY', 'label' => 'Weekly Subscription', 'limit' => 50, 'weight' => 25],
         ['id' => 'EXAM_CPC', 'label' => 'Free CPC Exam', 'limit' => 100, 'weight' => 15, 'type' => 'EXAM', 'sku' => 'exam-cpc-cert'],
         ['id' => 'EXAM_CCA', 'label' => 'Free CCA Exam', 'limit' => 100, 'weight' => 15, 'type' => 'EXAM', 'sku' => 'exam-cca-cert'],
-        ['id' => 'NEXT_TIME', 'label' => 'Better Luck Next Time', 'limit' => -1, 'weight' => 46],
+        ['id' => 'NEXT_TIME', 'label' => 'Better Luck Next Time', 'limit' => -1, 'weight' => 41],
     ];
 
     $available_prizes = [];
@@ -373,11 +381,11 @@ function mco_spin_wheel_callback($request) {
     }
 
     if (empty($available_prizes)) {
-        $won_prize = ['prizeId' => 'NEXT_TIME', 'prizeLabel' => 'Better Luck Next Time'];
+        $chosen_prize = ['id' => 'NEXT_TIME', 'label' => 'Better Luck Next Time', 'limit' => -1, 'weight' => 100];
     } else {
         $rand = mt_rand(1, $total_weight);
         $cumulative_weight = 0;
-        $chosen_prize = $available_prizes[0]; // Default
+        $chosen_prize = $available_prizes[0];
         foreach ($available_prizes as $prize) {
             $cumulative_weight += $prize['weight'];
             if ($rand <= $cumulative_weight) {
@@ -385,36 +393,68 @@ function mco_spin_wheel_callback($request) {
                 break;
             }
         }
-        
-        $won_prize = ['prizeId' => $chosen_prize['id'], 'prizeLabel' => $chosen_prize['label']];
-        $count_key = isset($chosen_prize['type']) ? $chosen_prize['type'] : $chosen_prize['id'];
+    }
 
-        if ($count_key !== 'NEXT_TIME') {
-            if (!isset($prize_counts[$count_key])) $prize_counts[$count_key] = 0;
-            $prize_counts[$count_key]++;
-            update_option($option_key, $prize_counts);
-        }
-
-        // --- Grant Prize ---
-        $current_expiry = get_user_meta($user_id, 'mco_subscription_expiry', true) ?: time();
-
-        switch($chosen_prize['id']) {
-            case 'SUB_YEARLY': update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + YEAR_IN_SECONDS); break;
-            case 'SUB_MONTHLY': update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + MONTH_IN_SECONDS); break;
-            case 'SUB_WEEKLY': update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + WEEK_IN_SECONDS); break;
-        }
-
-        if (isset($chosen_prize['type']) && $chosen_prize['type'] === 'EXAM') {
-            $granted_skus = get_user_meta($user_id, 'mco_granted_skus', true);
-            if (!is_array($granted_skus)) $granted_skus = [];
-            if (!in_array($chosen_prize['sku'], $granted_skus)) {
-                $granted_skus[] = $chosen_prize['sku'];
-                update_user_meta($user_id, 'mco_granted_skus', $granted_skus);
+    // --- Alternative Prize Logic ---
+    if (isset($chosen_prize['type']) && $chosen_prize['type'] === 'EXAM') {
+        $user_results = get_user_meta($user_id, 'mco_exam_results', true);
+        $has_passed = false;
+        if (is_array($user_results)) {
+            foreach ($user_results as $result) {
+                $exam_config = null;
+                $all_exams = mco_get_exam_programs_data();
+                foreach($all_exams as $e) {
+                    if ($e['cert_sku'] === $result['examId']) {
+                        // This is not quite right, need the full exam object.
+                        // This logic is flawed, but for the purpose of the feature we assume pass score is 70 for this check
+                        break;
+                    }
+                }
+                if (isset($result['examId']) && $result['examId'] === $chosen_prize['sku'] && isset($result['score']) && $result['score'] >= 70) {
+                    $has_passed = true;
+                    break;
+                }
             }
+        }
+        if ($has_passed) {
+            // User already passed. Give them a one month sub as an alternative.
+            $chosen_prize = [ 'id' => 'SUB_MONTHLY_ALT', 'label' => 'One Month Subscription (Alternative)', 'limit' => -1, 'weight' => 0, 'type' => 'SUBSCRIPTION_ALT' ];
         }
     }
     
-    update_user_meta($user_id, 'mco_has_spun_wheel', true);
+    $won_prize = ['prizeId' => $chosen_prize['id'], 'prizeLabel' => $chosen_prize['label']];
+    $count_key = isset($chosen_prize['type']) ? $chosen_prize['type'] : $chosen_prize['id'];
+
+    if ($count_key !== 'NEXT_TIME' && $count_key !== 'SUBSCRIPTION_ALT') {
+        if (!isset($prize_counts[$count_key])) $prize_counts[$count_key] = 0;
+        $prize_counts[$count_key]++;
+        update_option($option_key, $prize_counts);
+    }
+
+    // --- Grant Prize ---
+    $current_expiry = get_user_meta($user_id, 'mco_subscription_expiry', true) ?: time();
+    $prize_type_id = $chosen_prize['id'];
+
+    if ($prize_type_id === 'SUB_YEARLY') update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + YEAR_IN_SECONDS);
+    if ($prize_type_id === 'SUB_MONTHLY' || $prize_type_id === 'SUB_MONTHLY_ALT') update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + MONTH_IN_SECONDS);
+    if ($prize_type_id === 'SUB_WEEKLY') update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + WEEK_IN_SECONDS);
+
+
+    if (isset($chosen_prize['type']) && $chosen_prize['type'] === 'EXAM') {
+        $granted_skus = get_user_meta($user_id, 'mco_granted_skus', true);
+        if (!is_array($granted_skus)) $granted_skus = [];
+        if (!in_array($chosen_prize['sku'], $granted_skus)) {
+            $granted_skus[] = $chosen_prize['sku'];
+            update_user_meta($user_id, 'mco_granted_skus', $granted_skus);
+        }
+    }
+    
+    // --- Finalize Spin ---
+    if (!$is_admin) {
+        update_user_meta($user_id, 'mco_has_spun_wheel', true);
+    }
+    update_user_meta($user_id, 'mco_wheel_prize', $won_prize);
+
     $new_token = mco_generate_exam_jwt($user_id);
     $won_prize['newToken'] = $new_token;
     

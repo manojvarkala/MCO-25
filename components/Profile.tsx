@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -6,11 +7,11 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam } from '../types.ts';
-import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight } from 'lucide-react';
+import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight, Gift } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 const Profile: React.FC = () => {
-    const { user, token, updateUserName } = useAuth();
+    const { user, token, updateUserName, wonPrize } = useAuth();
     const { activeOrg } = useAppContext();
     const navigate = useNavigate();
 
@@ -82,6 +83,12 @@ const Profile: React.FC = () => {
 
                 {user ? (
                     <div className="space-y-4">
+                         {wonPrize && wonPrize.prizeId !== 'NEXT_TIME' && (
+                            <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                                <h3 className="text-sm font-medium text-amber-700 flex items-center gap-2"><Gift size={16}/> Spin & Win Prize</h3>
+                                <p className="text-lg font-semibold text-amber-900 mt-1">You won: <strong>{wonPrize.prizeLabel}</strong></p>
+                            </div>
+                        )}
                         <div className="bg-slate-50 p-4 rounded-lg">
                             <label className="text-sm font-medium text-slate-500">Full Name (for Certificates)</label>
                             {isEditingName ? (

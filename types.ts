@@ -45,6 +45,7 @@ export interface TokenPayload {
     examPrices?: { [examId: string]: { price: number; regularPrice?: number; productId?: number; avgRating?: number; reviewCount?: number; } };
     isSubscribed?: boolean;
     hasSpunWheel?: boolean;
+    wonPrize?: { prizeId: string; prizeLabel: string; };
     iat?: number;
     exp?: number;
 }

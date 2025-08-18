@@ -44,7 +44,7 @@ const Dashboard: React.FC = () => {
 
     useEffect(() => {
         // Show the wheel modal only for eligible users who haven't already dismissed it this session.
-        if (user && !hasSpunWheel && !wheelModalDismissed) {
+        if (user && (!hasSpunWheel || user.isAdmin) && !wheelModalDismissed) {
             const timer = setTimeout(() => setWheelModalOpen(true), 1500);
             return () => clearTimeout(timer);
         }

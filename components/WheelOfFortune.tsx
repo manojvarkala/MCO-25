@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -31,12 +31,19 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 };
 
 const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
-    const { token, loginWithToken, setHasSpunWheel } = useAuth();
+    const { user, token, loginWithToken, setHasSpunWheel } = useAuth();
     const [isSpinning, setIsSpinning] = useState(false);
     const [rotation, setRotation] = useState(0);
     const [displaySegments, setDisplaySegments] = useState(allPossibleSegments);
     const [spinsLeft, setSpinsLeft] = useState(1);
     const [conicGradient, setConicGradient] = useState('');
+    
+    // State for the slide-to-spin interaction
+    const [dragY, setDragY] = useState(0);
+    const sliderHandleRef = useRef<HTMLDivElement>(null);
+    const isDraggingRef = useRef(false);
+    const startYRef = useRef(0);
+
 
     useEffect(() => {
         const segmentsToShuffle = [...allPossibleSegments];
@@ -56,7 +63,9 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
     const handleSpin = async () => {
         if (!token || isSpinning) return;
         setIsSpinning(true);
-        setSpinsLeft(0);
+        if (user && !user.isAdmin) {
+            setSpinsLeft(0);
+        }
 
         try {
             const result = await googleSheetsService.spinWheel(token);
@@ -64,6 +73,9 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
 
             let targetIndex = displaySegments.findIndex(s => s.prizeId === prizeId && s.label === prizeLabel);
             if (targetIndex === -1) {
+                targetIndex = displaySegments.findIndex(s => s.prizeId === prizeId);
+            }
+             if (targetIndex === -1) {
                 targetIndex = displaySegments.findIndex(s => s.prizeId === 'NEXT_TIME');
             }
             
@@ -83,16 +95,70 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                 } else {
                     toast.error("Better luck next time!");
                 }
-                setHasSpunWheel(true);
-                setTimeout(onClose, 1500);
+                
+                if (user && !user.isAdmin) {
+                    setHasSpunWheel(true);
+                    setTimeout(onClose, 1500);
+                } else {
+                    setIsSpinning(false); // Re-enable for admins
+                }
             }, 7000);
 
         } catch (error: any) {
             toast.error(error.message || "An error occurred.");
             setIsSpinning(false);
-            onClose();
+            if(user && !user.isAdmin) {
+               onClose();
+            }
         }
     };
+
+    const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+        if (isSpinning || (spinsLeft === 0 && !user?.isAdmin)) return;
+        
+        isDraggingRef.current = true;
+        startYRef.current = clientY;
+        
+        if (sliderHandleRef.current) {
+            sliderHandleRef.current.style.transition = 'none';
+        }
+
+        window.addEventListener('mousemove', handleDragMove);
+        window.addEventListener('mouseup', handleDragEnd);
+        window.addEventListener('touchmove', handleDragMove, { passive: false });
+        window.addEventListener('touchend', handleDragEnd);
+        
+        if (e.cancelable) e.preventDefault();
+    };
+
+    const handleDragMove = (e: MouseEvent | TouchEvent) => {
+        if (!isDraggingRef.current) return;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+        const deltaY = clientY - startYRef.current;
+        const newDragY = Math.max(-60, Math.min(0, deltaY));
+        setDragY(newDragY);
+    };
+
+    const handleDragEnd = () => {
+        if (!isDraggingRef.current) return;
+        isDraggingRef.current = false;
+        
+        if (dragY <= -55) { // Threshold met
+            handleSpin();
+        }
+        
+        if (sliderHandleRef.current) {
+            sliderHandleRef.current.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
+        }
+        setDragY(0);
+
+        window.removeEventListener('mousemove', handleDragMove);
+        window.removeEventListener('mouseup', handleDragEnd);
+        window.removeEventListener('touchmove', handleDragMove);
+        window.removeEventListener('touchend', handleDragEnd);
+    };
+
 
     if (!isOpen) return null;
 
@@ -130,7 +196,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                         {displaySegments.map((segment, index) => {
                             const angle = 360 / displaySegments.length;
                             const rotationAngle = index * angle;
-                            const textRotationAngle = rotationAngle + angle / 2;
+                            const textRotationAngle = rotationAngle + angle / 2 - 90; // Adjust for radial text
                             const isGold = index % 2 === 0;
 
                             return (
@@ -145,8 +211,10 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                                         className="absolute w-full h-full"
                                         style={{ transform: `rotate(${textRotationAngle}deg)` }}
                                     >
-                                        <div className={`absolute top-0 left-1/2 -translate-x-1/2 pt-6 w-24 text-center text-xs font-bold ${isGold ? 'text-black' : 'text-amber-300'}`}>
-                                            {segment.label}
+                                        <div className={`absolute top-0 left-1/2 -translate-x-1/2 pt-6 w-32 h-32 text-center text-xs font-bold ${isGold ? 'text-black' : 'text-amber-300'}`}>
+                                            <span style={{ transformOrigin: 'center', writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
+                                                {segment.label}
+                                            </span>
                                         </div>
                                     </div>
                                 </React.Fragment>
@@ -159,16 +227,23 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                 </div>
 
                 <div className="flex flex-col items-center">
-                    <div className="bg-zinc-800 h-20 w-12 rounded-t-lg -mb-1 flex items-end justify-center p-1">
-                        <button 
-                            onClick={handleSpin}
-                            disabled={isSpinning || spinsLeft === 0}
-                            className="w-8 h-8 rounded-full bg-amber-500 disabled:bg-zinc-600 ring-2 ring-amber-300 disabled:ring-zinc-500"
-                        ></button>
+                    <div className="bg-zinc-800 h-24 w-16 rounded-full -mb-2 flex items-end justify-center p-2 relative select-none touch-none">
+                        <div
+                            ref={sliderHandleRef}
+                            onMouseDown={handleDragStart}
+                            onTouchStart={handleDragStart}
+                            className={`w-12 h-12 rounded-full ring-4 ring-amber-300/50 flex items-center justify-center cursor-grab active:cursor-grabbing ${isSpinning || (spinsLeft === 0 && !user?.isAdmin) ? 'bg-zinc-600' : 'bg-amber-500'}`}
+                            style={{ transform: `translateY(${dragY}px)` }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>
+                        </div>
+                        <div className="absolute top-4 text-xs text-zinc-400 pointer-events-none transform -rotate-90 origin-center tracking-widest">
+                            SPIN
+                        </div>
                     </div>
                      <div className="bg-zinc-900 p-2 rounded-lg border border-zinc-800">
                         <div className="bg-black text-white font-semibold py-2 px-6 rounded-md border border-amber-600">
-                            Spins left : {spinsLeft}
+                            Spins left : {user?.isAdmin ? '∞' : spinsLeft}
                         </div>
                      </div>
                 </div>

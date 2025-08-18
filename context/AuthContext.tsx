@@ -10,6 +10,7 @@ interface AuthContextType {
   examPrices: { [id: string]: { price: number; regularPrice?: number; productId?: number; avgRating?: number; reviewCount?: number; } } | null;
   isSubscribed: boolean;
   hasSpunWheel: boolean;
+  wonPrize: { prizeId: string; prizeLabel: string; } | null;
   wheelModalDismissed: boolean;
   loginWithToken: (token: string) => void;
   logout: () => void;
@@ -69,6 +70,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return false;
       }
   });
+  const [wonPrize, setWonPrize] = useState<{ prizeId: string; prizeLabel: string; } | null>(() => {
+    try {
+        const stored = localStorage.getItem('wonPrize');
+        return stored ? JSON.parse(stored) : null;
+    } catch {
+        return null;
+    }
+  });
   const [wheelModalDismissed, setWheelModalDismissed] = useState<boolean>(() => {
       try {
         return sessionStorage.getItem('wheelModalDismissed') === 'true';
@@ -85,12 +94,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setExamPrices(null);
     setIsSubscribed(false);
     setHasSpunWheel(true); // Assume spun on logout to prevent flash
+    setWonPrize(null);
     localStorage.removeItem('examUser');
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
     localStorage.removeItem('examPrices');
     localStorage.removeItem('isSubscribed');
     localStorage.removeItem('hasSpunWheel');
+    localStorage.removeItem('wonPrize');
     localStorage.removeItem('activeOrg');
     sessionStorage.removeItem('wheelModalDismissed');
     Object.keys(localStorage).forEach(key => {
@@ -175,6 +186,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 localStorage.removeItem('hasSpunWheel');
             }
 
+            if (payload.wonPrize) {
+                setWonPrize(payload.wonPrize);
+                localStorage.setItem('wonPrize', JSON.stringify(payload.wonPrize));
+            } else {
+                setWonPrize(null);
+                localStorage.removeItem('wonPrize');
+            }
+
+
             // Reset session-based dismissal state on new login
             setWheelModalDismissed(false);
             sessionStorage.removeItem('wheelModalDismissed');
@@ -220,7 +240,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 
   return (
-    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, hasSpunWheel, wheelModalDismissed, loginWithToken, logout, useFreeAttempt, updateUserName, setHasSpunWheel: updateHasSpunWheel, setWheelModalDismissed: updateWheelModalDismissed }}>
+    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, hasSpunWheel, wonPrize, wheelModalDismissed, loginWithToken, logout, useFreeAttempt, updateUserName, setHasSpunWheel: updateHasSpunWheel, setWheelModalDismissed: updateWheelModalDismissed }}>
       {children}
     </AuthContext.Provider>
   );

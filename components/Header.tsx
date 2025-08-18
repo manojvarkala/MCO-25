@@ -1,6 +1,7 @@
 
 
 
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -57,7 +58,7 @@ const Header: React.FC = () => {
         )}
        
         <div className="flex items-center space-x-4">
-            {user && !hasSpunWheel && wheelModalDismissed && (
+            {user && (!hasSpunWheel || user.isAdmin) && wheelModalDismissed && (
                 <button
                     onClick={() => setWheelModalOpen(true)}
                     className="flex items-center gap-2 bg-black text-yellow-400 font-bold py-2 px-4 rounded-full border-2 border-yellow-500 shadow-lg hover:bg-gray-800 transition-all transform hover:scale-105"
