@@ -296,6 +296,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
                             <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Unlock our AI-powered study guide to get personalized feedback on your incorrect answers. This feature is available for all subscribers and certification exam purchasers.</p>
                             <button
                                 disabled
+                                title="This is a premium feature. Purchase this exam or subscribe to unlock the AI-powered study guide and get personalized feedback on your incorrect answers."
                                 className="inline-flex items-center space-x-2 bg-slate-400 text-white font-bold py-3 px-6 rounded-lg cursor-not-allowed"
                             >
                                 <Lock size={20} />
