@@ -24,6 +24,9 @@ import DebugSidebar from './components/DebugSidebar.tsx';
 import Pricing from './components/Pricing.tsx';
 import Feedback from './components/Feedback.tsx';
 import UserGuide from './components/UserGuide.tsx';
+import AboutUs from './components/AboutUs.tsx';
+import PrivacyPolicy from './components/PrivacyPolicy.tsx';
+import RefundPolicy from './components/RefundPolicy.tsx';
 
 
 interface ProtectedRouteProps {
@@ -60,6 +63,9 @@ const AppContent: React.FC = () => {
                         <Route path="/checkout/:productSlug" element={<Checkout />} />
                         <Route path="/feedback" element={<Feedback />} />
                         <Route path="/user-guide" element={<UserGuide />} />
+                        <Route path="/about-us" element={<AboutUs />} />
+                        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                        <Route path="/refund-policy" element={<RefundPolicy />} />
                         
                         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
