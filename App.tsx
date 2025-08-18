@@ -22,6 +22,7 @@ import Profile from './components/Profile.tsx';
 import Checkout from './components/Checkout.tsx';
 import DebugSidebar from './components/DebugSidebar.tsx';
 import Pricing from './components/Pricing.tsx';
+import Feedback from './components/Feedback.tsx';
 
 
 interface ProtectedRouteProps {
@@ -56,6 +57,7 @@ const AppContent: React.FC = () => {
                         <Route path="/bookstore" element={<BookStore />} />
                         <Route path="/pricing" element={<Pricing />} />
                         <Route path="/checkout/:productSlug" element={<Checkout />} />
+                        <Route path="/feedback" element={<Feedback />} />
                         
                         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

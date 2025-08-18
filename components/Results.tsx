@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { Check, X, FileDown, BookUp, ShieldCheck, Sparkles, Download } from 'lucide-react';
+import { Check, X, FileDown, BookUp, ShieldCheck, Sparkles, Download, Star, MessageSquare } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -17,7 +17,7 @@ import { logoBase64 } from '../assets/logo.ts';
 const Results: React.FC = () => {
     const { testId } = useParams<{ testId: string }>();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, token } = useAuth();
     const { activeOrg } = useAppContext();
     
     const [result, setResult] = useState<TestResult | null>(null);
@@ -28,12 +28,26 @@ const Results: React.FC = () => {
     const [isDownloading, setIsDownloading] = useState(false);
     const aiFeedbackPrintRef = useRef<HTMLDivElement>(null);
 
+    // New state for reviews
+    const [rating, setRating] = useState(0);
+    const [hoverRating, setHoverRating] = useState(0);
+    const [reviewText, setReviewText] = useState('');
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+    const [submittedReview, setSubmittedReview] = useState<{rating: number; reviewText: string} | null>(null);
+
+
     useEffect(() => {
         if (!testId || !user || !activeOrg) {
             if(!user) toast.error("Authentication session has expired.");
             else toast.error("Required data is missing.");
             navigate('/dashboard');
             return;
+        }
+
+        // Check for existing review in localStorage
+        const existingReview = localStorage.getItem(`review_${testId}`);
+        if (existingReview) {
+            setSubmittedReview(JSON.parse(existingReview));
         }
 
         const fetchResultAndExam = () => {
@@ -130,6 +144,30 @@ Please provide a summary of the key areas I need to focus on based on these erro
             setIsDownloading(false);
         }
     };
+
+    const handleSubmitReview = async () => {
+        if (rating === 0) {
+            toast.error("Please select a star rating.");
+            return;
+        }
+        if (!token || !testId) {
+            toast.error("Cannot submit review: missing required info.");
+            return;
+        }
+
+        setIsSubmittingReview(true);
+        try {
+            await googleSheetsService.submitReview(token, testId, rating, reviewText);
+            const reviewData = { rating, reviewText };
+            localStorage.setItem(`review_${testId}`, JSON.stringify(reviewData));
+            setSubmittedReview(reviewData);
+            toast.success("Thank you for your review!");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to submit review.");
+        } finally {
+            setIsSubmittingReview(false);
+        }
+    };
     
     const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } => {
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -185,6 +223,56 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 </div>
             )}
             
+            {/* --- NEW REVIEW SECTION --- */}
+            <div className="text-center mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
+                <h2 className="text-xl font-semibold text-slate-800 mb-4">Rate Your Experience</h2>
+                {submittedReview ? (
+                    <div>
+                        <p className="text-slate-600 mb-2">Thank you for your feedback!</p>
+                        <div className="flex justify-center items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                                <Star key={i} size={24} className={i < submittedReview.rating ? 'text-yellow-400 fill-current' : 'text-slate-300'} />
+                            ))}
+                        </div>
+                        {submittedReview.reviewText && (
+                            <blockquote className="mt-4 text-slate-500 italic border-l-4 border-slate-300 pl-4 text-left max-w-md mx-auto">
+                                "{submittedReview.reviewText}"
+                            </blockquote>
+                        )}
+                    </div>
+                ) : (
+                    <div className="max-w-md mx-auto">
+                        <div className="flex justify-center items-center gap-2 mb-4">
+                            {[...Array(5)].map((_, i) => (
+                                <Star
+                                    key={i}
+                                    size={32}
+                                    className={`cursor-pointer transition-colors ${(hoverRating || rating) > i ? 'text-yellow-400 fill-current' : 'text-slate-300'}`}
+                                    onMouseEnter={() => setHoverRating(i + 1)}
+                                    onMouseLeave={() => setHoverRating(0)}
+                                    onClick={() => setRating(i + 1)}
+                                />
+                            ))}
+                        </div>
+                        <textarea
+                            value={reviewText}
+                            onChange={(e) => setReviewText(e.target.value)}
+                            placeholder="Share your thoughts (optional)"
+                            className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
+                            rows={3}
+                        />
+                        <button
+                            onClick={handleSubmitReview}
+                            disabled={isSubmittingReview}
+                            className="mt-4 inline-flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-cyan-300"
+                        >
+                            {isSubmittingReview ? <Spinner /> : <MessageSquare size={16} />}
+                            <span>{isSubmittingReview ? 'Submitting...' : 'Submit Review'}</span>
+                        </button>
+                    </div>
+                )}
+            </div>
+
             {!isPass && (
                 <div className="text-center mb-8 p-6 bg-amber-50 border border-amber-200 rounded-lg">
                     <h2 className="text-xl font-semibold text-amber-800 mb-4">Need some help?</h2>

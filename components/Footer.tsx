@@ -11,6 +11,8 @@ const Footer: React.FC = () => {
       <div className="container mx-auto px-4 py-4 text-center text-slate-500 text-sm">
         <div className="flex justify-center items-center space-x-4 mb-2">
             <Link to="/instructions" className="text-cyan-600 hover:underline">Instructions</Link>
+            <span className="text-slate-300">|</span>
+            <Link to="/feedback" className="text-cyan-600 hover:underline">Feedback</Link>
             {user && user.isAdmin && (
               <>
                 <span className="text-slate-300">|</span>

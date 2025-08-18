@@ -202,5 +202,22 @@ export const googleSheetsService = {
 
         // Return the result immediately.
         return Promise.resolve(newResult);
+    },
+
+    // --- NEW FEEDBACK & REVIEW SUBMISSIONS (SIMULATED) ---
+    submitFeedback: async (token: string, category: string, message: string): Promise<void> => {
+        console.log("Submitting feedback:", { category, message, token: '...token...' });
+        // In a real app, this would be an API call like:
+        // await apiFetch('/submit-feedback', token, { method: 'POST', body: JSON.stringify({ category, message }) });
+        await new Promise(resolve => setTimeout(resolve, 750)); // Simulate network delay
+        return Promise.resolve();
+    },
+
+    submitReview: async (token: string, testId: string, rating: number, reviewText: string): Promise<void> => {
+        console.log("Submitting review:", { testId, rating, reviewText, token: '...token...' });
+        // In a real app, this would be an API call like:
+        // await apiFetch('/submit-review', token, { method: 'POST', body: JSON.stringify({ testId, rating, reviewText }) });
+        await new Promise(resolve => setTimeout(resolve, 750)); // Simulate network delay
+        return Promise.resolve();
     }
 };
