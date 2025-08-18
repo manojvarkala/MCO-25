@@ -284,6 +284,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
                             <button
                                 onClick={handleGenerateFeedback}
                                 disabled={isGeneratingFeedback}
+                                title="Didn't pass? Let our AI create a custom study guide for you. It analyzes the questions you missed and explains the key topics to focus on for your next attempt."
                                 className="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-amber-300"
                             >
                                 {isGeneratingFeedback ? <Spinner /> : <Sparkles size={20} />}
