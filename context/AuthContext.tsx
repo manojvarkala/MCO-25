@@ -9,7 +9,7 @@ interface AuthContextType {
   paidExamIds: string[];
   examPrices: { [id: string]: { price: number; regularPrice?: number; productId?: number; avgRating?: number; reviewCount?: number; } } | null;
   isSubscribed: boolean;
-  hasSpunWheel: boolean;
+  spinsAvailable: number;
   wonPrize: { prizeId: string; prizeLabel: string; } | null;
   wheelModalDismissed: boolean;
   canSpinWheel: boolean;
@@ -17,7 +17,6 @@ interface AuthContextType {
   logout: () => void;
   useFreeAttempt: () => void;
   updateUserName: (name: string) => void;
-  setHasSpunWheel: (hasSpun: boolean) => void;
   setWheelModalDismissed: (dismissed: boolean) => void;
 }
 
@@ -63,12 +62,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
     }
   });
-  const [hasSpunWheel, setHasSpunWheel] = useState<boolean>(() => {
+  const [spinsAvailable, setSpinsAvailable] = useState<number>(() => {
       try {
-          const stored = localStorage.getItem('hasSpunWheel');
-          return stored ? JSON.parse(stored) : false;
+          const stored = localStorage.getItem('spinsAvailable');
+          return stored ? JSON.parse(stored) : 0;
       } catch {
-          return false;
+          return 0;
       }
   });
   const [wonPrize, setWonPrize] = useState<{ prizeId: string; prizeLabel: string; } | null>(() => {
@@ -90,8 +89,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const canSpinWheel = useMemo(() => {
     if (!user) return false;
     if (user.isAdmin) return true; // Admins can always spin for testing
-    return !hasSpunWheel;
-  }, [user, hasSpunWheel]);
+    return spinsAvailable > 0;
+  }, [user, spinsAvailable]);
 
 
   const logout = useCallback(() => {
@@ -100,14 +99,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setToken(null);
     setExamPrices(null);
     setIsSubscribed(false);
-    setHasSpunWheel(true); // Assume spun on logout to prevent flash
+    setSpinsAvailable(0);
     setWonPrize(null);
     localStorage.removeItem('examUser');
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
     localStorage.removeItem('examPrices');
     localStorage.removeItem('isSubscribed');
-    localStorage.removeItem('hasSpunWheel');
+    localStorage.removeItem('spinsAvailable');
     localStorage.removeItem('wonPrize');
     localStorage.removeItem('activeOrg');
     sessionStorage.removeItem('wheelModalDismissed');
@@ -185,13 +184,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 localStorage.removeItem('isSubscribed');
             }
             
-            if (payload.hasSpunWheel) {
-                setHasSpunWheel(payload.hasSpunWheel);
-                localStorage.setItem('hasSpunWheel', JSON.stringify(payload.hasSpunWheel));
-            } else {
-                setHasSpunWheel(false);
-                localStorage.removeItem('hasSpunWheel');
-            }
+            const spins = payload.spinsAvailable ?? 0;
+            setSpinsAvailable(spins);
+            localStorage.setItem('spinsAvailable', JSON.stringify(spins));
+
 
             if (payload.wonPrize) {
                 setWonPrize(payload.wonPrize);
@@ -230,11 +226,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem('examUser', JSON.stringify(updatedUser));
     }
   }, [user]);
-
-  const updateHasSpunWheel = (hasSpun: boolean) => {
-    setHasSpunWheel(hasSpun);
-    localStorage.setItem('hasSpunWheel', JSON.stringify(hasSpun));
-  };
   
   const updateWheelModalDismissed = (dismissed: boolean) => {
     setWheelModalDismissed(dismissed);
@@ -247,7 +238,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 
   return (
-    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, hasSpunWheel, wonPrize, wheelModalDismissed, canSpinWheel, loginWithToken, logout, useFreeAttempt, updateUserName, setHasSpunWheel: updateHasSpunWheel, setWheelModalDismissed: updateWheelModalDismissed }}>
+    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel, loginWithToken, logout, useFreeAttempt, updateUserName, setWheelModalDismissed: updateWheelModalDismissed }}>
       {children}
     </AuthContext.Provider>
   );

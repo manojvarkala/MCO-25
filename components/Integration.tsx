@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           9.1.0
+ * Version:           9.2.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -76,12 +76,16 @@ function mco_exam_get_payload($user_id) {
     $paid_exam_ids = []; 
     $exam_prices = new stdClass();
     $is_subscribed = false;
-    $has_spun_wheel = get_user_meta($user_id, 'mco_has_spun_wheel', true) ? true : false;
+    $spins_available = get_user_meta($user_id, 'mco_spins_available', true);
+    if ($spins_available === '') {
+        $spins_available = 1; // Grant a free spin if the meta has never been set
+    }
+    $spins_available = intval($spins_available);
     $won_prize = get_user_meta($user_id, 'mco_wheel_prize', true);
 
     // Admins can always spin the wheel for testing purposes
     if (user_can($user, 'administrator')) {
-        $has_spun_wheel = false;
+        $spins_available = 1; // Ensure admin always has at least one spin for the UI to show the wheel
     }
     
     if (class_exists('WooCommerce')) {
@@ -162,7 +166,7 @@ function mco_exam_get_payload($user_id) {
         $paid_exam_ids = array_values(array_unique(array_merge($direct_exam_purchases, $exams_from_addons, $granted_skus)));
     }
     
-    return ['iss' => get_site_url(), 'iat' => time(), 'exp' => time() + (60 * 60 * 2), 'user' => ['id' => (string)$user->ID, 'name' => $user_full_name, 'email' => $user->user_email, 'isAdmin' => user_can($user, 'administrator')], 'paidExamIds' => $paid_exam_ids, 'examPrices' => $exam_prices, 'isSubscribed' => $is_subscribed, 'hasSpunWheel' => $has_spun_wheel, 'wonPrize' => $won_prize];
+    return ['iss' => get_site_url(), 'iat' => time(), 'exp' => time() + (60 * 60 * 2), 'user' => ['id' => (string)$user->ID, 'name' => $user_full_name, 'email' => $user->user_email, 'isAdmin' => user_can($user, 'administrator')], 'paidExamIds' => $paid_exam_ids, 'examPrices' => $exam_prices, 'isSubscribed' => $is_subscribed, 'spinsAvailable' => $spins_available, 'wonPrize' => $won_prize];
 }
 
 
@@ -181,6 +185,8 @@ function mco_exam_register_rest_api() {
     register_rest_route('mco-app/v1', '/debug-details', ['methods' => 'GET', 'callback' => 'mco_get_debug_details_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/submit-review', ['methods' => 'POST', 'callback' => 'mco_exam_submit_review_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/spin-wheel', ['methods' => 'POST', 'callback' => 'mco_spin_wheel_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+    register_rest_route('mco-app/v1', '/add-spins', ['methods' => 'POST', 'callback' => 'mco_add_spins_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+    register_rest_route('mco-app/v1', '/grant-prize', ['methods' => 'POST', 'callback' => 'mco_grant_prize_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
 }
 
 function mco_exam_api_permission_check($request) {
@@ -349,8 +355,12 @@ function mco_spin_wheel_callback($request) {
     $user_id = (int)$request->get_param('jwt_user_id');
     $is_admin = user_can($user_id, 'administrator');
 
-    if (!$is_admin && get_user_meta($user_id, 'mco_has_spun_wheel', true)) {
-        return new WP_Error('already_spun', 'You have already used your spin.', ['status' => 403]);
+    $spins = get_user_meta($user_id, 'mco_spins_available', true);
+    if ($spins === '') $spins = 1; // Default to 1 if not set
+    $spins = intval($spins);
+    
+    if (!$is_admin && $spins <= 0) {
+        return new WP_Error('no_spins', 'You have no spins available.', ['status' => 403]);
     }
     
     $prizes = [
@@ -362,11 +372,7 @@ function mco_spin_wheel_callback($request) {
         ['id' => 'NEXT_TIME', 'label' => 'Better Luck Next Time', 'weight' => 75],
     ];
 
-    $total_weight = 0;
-    foreach ($prizes as $prize) {
-        $total_weight += $prize['weight'];
-    }
-
+    $total_weight = 0; foreach ($prizes as $prize) { $total_weight += $prize['weight']; }
     $rand = mt_rand(1, (int)($total_weight * 100)) / 100.0;
     $cumulative_weight = 0;
     $chosen_prize = $prizes[count($prizes) - 1]; // Default to last prize (Next Time)
@@ -379,16 +385,48 @@ function mco_spin_wheel_callback($request) {
         }
     }
     
-    // --- Grant Prize ---
-    $current_expiry = get_user_meta($user_id, 'mco_subscription_expiry', true) ?: time();
-    $prize_type_id = $chosen_prize['id'];
+    // --- Grant Prize Logic ---
+    if ($chosen_prize['id'] !== 'NEXT_TIME') {
+        mco_grant_prize_logic($user_id, $chosen_prize['id']);
+        $won_prize = ['prizeId' => $chosen_prize['id'], 'prizeLabel' => $chosen_prize['label']];
+        update_user_meta($user_id, 'mco_wheel_prize', $won_prize);
+    } else {
+         $won_prize = ['prizeId' => 'NEXT_TIME', 'prizeLabel' => 'Better Luck Next Time'];
+    }
+    
+    // --- Finalize Spin ---
+    if (!$is_admin) {
+        update_user_meta($user_id, 'mco_spins_available', $spins - 1);
+    }
+    
+    $new_token = mco_generate_exam_jwt($user_id);
+    $won_prize['newToken'] = $new_token;
+    
+    return new WP_REST_Response($won_prize, 200);
+}
 
-    if ($prize_type_id === 'SUB_YEARLY') update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + YEAR_IN_SECONDS);
-    if ($prize_type_id === 'SUB_MONTHLY') update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + MONTH_IN_SECONDS);
-    if ($prize_type_id === 'SUB_WEEKLY') update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + WEEK_IN_SECONDS);
+function mco_grant_prize_logic($user_id, $prize_id) {
+    $prizes = [
+        ['id' => 'SUB_YEARLY', 'label' => 'Annual Subscription', 'weight' => 0.5, 'type' => 'SUBSCRIPTION'],
+        ['id' => 'SUB_MONTHLY', 'label' => 'Monthly Subscription', 'weight' => 1.5, 'type' => 'SUBSCRIPTION'],
+        ['id' => 'SUB_WEEKLY', 'label' => 'Weekly Subscription', 'weight' => 15, 'type' => 'SUBSCRIPTION'],
+        ['id' => 'EXAM_CPC', 'label' => 'Free CPC Exam', 'weight' => 4, 'type' => 'EXAM', 'sku' => 'exam-cpc-cert'],
+        ['id' => 'EXAM_CCA', 'label' => 'Free CCA Exam', 'weight' => 4, 'type' => 'EXAM', 'sku' => 'exam-cca-cert'],
+    ];
+    $chosen_prize = null;
+    foreach ($prizes as $prize) { if ($prize['id'] === $prize_id) { $chosen_prize = $prize; break; } }
+    if (!$chosen_prize) return false;
 
+    if ($chosen_prize['type'] === 'SUBSCRIPTION') {
+        $current_expiry = get_user_meta($user_id, 'mco_subscription_expiry', true) ?: time();
+        $duration = 0;
+        if ($prize_id === 'SUB_YEARLY') $duration = YEAR_IN_SECONDS;
+        if ($prize_id === 'SUB_MONTHLY') $duration = MONTH_IN_SECONDS;
+        if ($prize_id === 'SUB_WEEKLY') $duration = WEEK_IN_SECONDS;
+        update_user_meta($user_id, 'mco_subscription_expiry', $current_expiry + $duration);
+    }
 
-    if (isset($chosen_prize['type']) && $chosen_prize['type'] === 'EXAM') {
+    if ($chosen_prize['type'] === 'EXAM') {
         $granted_skus = get_user_meta($user_id, 'mco_granted_skus', true);
         if (!is_array($granted_skus)) $granted_skus = [];
         if (!in_array($chosen_prize['sku'], $granted_skus)) {
@@ -396,19 +434,52 @@ function mco_spin_wheel_callback($request) {
             update_user_meta($user_id, 'mco_granted_skus', $granted_skus);
         }
     }
-    
-    $won_prize = ['prizeId' => $chosen_prize['id'], 'prizeLabel' => $chosen_prize['label']];
-    
-    // --- Finalize Spin ---
-    if (!$is_admin) {
-        update_user_meta($user_id, 'mco_has_spun_wheel', true);
-    }
-    update_user_meta($user_id, 'mco_wheel_prize', $won_prize);
+    return true;
+}
 
-    $new_token = mco_generate_exam_jwt($user_id);
-    $won_prize['newToken'] = $new_token;
+// --- NEW ADMIN ENDPOINTS ---
+function mco_add_spins_callback($request) {
+    $admin_user_id = (int)$request->get_param('jwt_user_id');
+    if (!user_can($admin_user_id, 'administrator')) {
+        return new WP_Error('forbidden', 'Admin permission required.', ['status' => 403]);
+    }
+    $params = $request->get_json_params();
+    $target_user_id = isset($params['userId']) ? intval($params['userId']) : 0;
+    $spins_to_add = isset($params['spins']) ? intval($params['spins']) : 0;
     
-    return new WP_REST_Response($won_prize, 200);
+    if ($target_user_id <= 0 || !get_userdata($target_user_id)) {
+        return new WP_Error('user_not_found', 'Target user not found.', ['status' => 404]);
+    }
+    if ($spins_to_add <= 0) {
+        return new WP_Error('invalid_spins', 'Number of spins to add must be positive.', ['status' => 400]);
+    }
+
+    $current_spins = get_user_meta($target_user_id, 'mco_spins_available', true);
+    if ($current_spins === '') $current_spins = 0;
+    $new_total_spins = intval($current_spins) + $spins_to_add;
+
+    update_user_meta($target_user_id, 'mco_spins_available', $new_total_spins);
+    return new WP_REST_Response(['success' => true, 'newTotal' => $new_total_spins], 200);
+}
+
+function mco_grant_prize_callback($request) {
+    $admin_user_id = (int)$request->get_param('jwt_user_id');
+    if (!user_can($admin_user_id, 'administrator')) {
+        return new WP_Error('forbidden', 'Admin permission required.', ['status' => 403]);
+    }
+    $params = $request->get_json_params();
+    $target_user_id = isset($params['userId']) ? intval($params['userId']) : 0;
+    $prize_id_to_grant = isset($params['prizeId']) ? sanitize_text_field($params['prizeId']) : '';
+
+    if ($target_user_id <= 0 || !get_userdata($target_user_id)) {
+        return new WP_Error('user_not_found', 'Target user not found.', ['status' => 404]);
+    }
+
+    if (!mco_grant_prize_logic($target_user_id, $prize_id_to_grant)) {
+         return new WP_Error('invalid_prize', 'Invalid prize ID provided.', ['status' => 400]);
+    }
+    
+    return new WP_REST_Response(['success' => true, 'message' => 'Prize granted successfully.'], 200);
 }
 
 

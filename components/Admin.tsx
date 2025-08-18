@@ -1,15 +1,35 @@
 import React, { useState } from 'react';
-import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb } from 'lucide-react';
+import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam } from '../types.ts';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext.tsx';
+import { googleSheetsService } from '../services/googleSheetsService.ts';
+import Spinner from './Spinner.tsx';
+
+const prizeOptions = [
+    { id: 'SUB_YEARLY', label: 'Annual Subscription' },
+    { id: 'SUB_MONTHLY', label: 'Monthly Subscription' },
+    { id: 'SUB_WEEKLY', label: 'Weekly Subscription' },
+    { id: 'EXAM_CPC', label: 'Free CPC Exam' },
+    { id: 'EXAM_CCA', label: 'Free CCA Exam' },
+];
 
 const Admin: React.FC = () => {
     const wpAdminUrl = 'https://www.coding-online.net/wp-admin/options-general.php?page=mco-exam-settings';
     const { activeOrg, updateActiveOrg } = useAppContext();
+    const { token } = useAuth();
 
+    // State for exam customization
     const [editingExamId, setEditingExamId] = useState<string | null>(null);
     const [editedExamData, setEditedExamData] = useState<Partial<Exam>>({});
+    
+    // State for user prize management
+    const [targetUserId, setTargetUserId] = useState('');
+    const [spinsToAdd, setSpinsToAdd] = useState('1');
+    const [prizeToGrant, setPrizeToGrant] = useState(prizeOptions[0].id);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
 
     const handleEditClick = (exam: Exam) => {
         setEditingExamId(exam.id);
@@ -76,6 +96,46 @@ const Admin: React.FC = () => {
         setEditedExamData(prev => ({ ...prev, [name]: checked }));
     };
 
+    const handleAddSpins = async () => {
+        if (!token || !targetUserId.trim() || !spinsToAdd.trim()) {
+            toast.error("User ID and spin count are required.");
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            const spins = parseInt(spinsToAdd);
+            if (isNaN(spins) || spins <= 0) {
+                toast.error("Please enter a valid number of spins.");
+                return;
+            }
+            await googleSheetsService.addSpins(token, targetUserId.trim(), spins);
+            toast.success(`Successfully added ${spins} spin(s) to user ${targetUserId}.`);
+            setTargetUserId('');
+            setSpinsToAdd('1');
+        } catch (error: any) {
+            toast.error(error.message || "Failed to add spins.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleGrantPrize = async () => {
+        if (!token || !targetUserId.trim()) {
+            toast.error("User ID is required.");
+            return;
+        }
+         setIsSubmitting(true);
+        try {
+            await googleSheetsService.grantPrize(token, targetUserId.trim(), prizeToGrant);
+            toast.success(`Successfully granted prize to user ${targetUserId}.`);
+            setTargetUserId('');
+        } catch (error: any) {
+            toast.error(error.message || "Failed to grant prize.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const inputClass = "w-full p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition";
     const labelClass = "block text-sm font-medium text-slate-600 mb-1 flex items-center gap-1";
 
@@ -100,6 +160,54 @@ const Admin: React.FC = () => {
                     <ExternalLink size={20} className="mr-2" />
                     Go to WordPress Mode Settings
                 </a>
+            </div>
+
+             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
+                    <Users className="mr-3 text-cyan-500" />
+                    User Prize Management
+                </h2>
+                <p className="text-slate-600 mb-6">
+                    Grant additional spins or award prizes directly to a user.
+                </p>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Add Spins */}
+                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <h3 className="font-bold text-lg text-slate-800 mb-2 flex items-center gap-2"><PlusCircle size={16}/> Add Spins</h3>
+                        <div className="space-y-3">
+                            <div>
+                                <label htmlFor="targetUserId" className={labelClass}>User ID</label>
+                                <input type="text" id="targetUserId" value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)} placeholder="Enter user's WordPress ID" className={inputClass} />
+                            </div>
+                             <div>
+                                <label htmlFor="spinsToAdd" className={labelClass}>Spins to Add</label>
+                                <input type="number" id="spinsToAdd" value={spinsToAdd} onChange={(e) => setSpinsToAdd(e.target.value)} min="1" className={inputClass} />
+                            </div>
+                            <button onClick={handleAddSpins} disabled={isSubmitting} className="w-full flex items-center justify-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
+                                {isSubmitting ? <Spinner/> : <span>Add Spins</span>}
+                            </button>
+                        </div>
+                    </div>
+                    {/* Grant Prize */}
+                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <h3 className="font-bold text-lg text-slate-800 mb-2 flex items-center gap-2"><Gift size={16}/> Grant Prize</h3>
+                         <div className="space-y-3">
+                             <div>
+                                <label htmlFor="targetUserIdPrize" className={labelClass}>User ID</label>
+                                <input type="text" id="targetUserIdPrize" value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)} placeholder="Same ID as above is fine" className={inputClass} />
+                            </div>
+                            <div>
+                                <label htmlFor="prizeToGrant" className={labelClass}>Prize</label>
+                                <select id="prizeToGrant" value={prizeToGrant} onChange={(e) => setPrizeToGrant(e.target.value)} className={inputClass}>
+                                    {prizeOptions.map(opt => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
+                                </select>
+                            </div>
+                            <button onClick={handleGrantPrize} disabled={isSubmitting} className="w-full flex items-center justify-center space-x-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
+                               {isSubmitting ? <Spinner/> : <span>Grant Prize</span>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">

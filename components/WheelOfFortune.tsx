@@ -31,11 +31,10 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 };
 
 const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
-    const { user, token, loginWithToken, setHasSpunWheel } = useAuth();
+    const { user, token, loginWithToken, spinsAvailable } = useAuth();
     const [isSpinning, setIsSpinning] = useState(false);
     const [rotation, setRotation] = useState(0);
     const [displaySegments, setDisplaySegments] = useState(allPossibleSegments);
-    const [spinsLeft, setSpinsLeft] = useState(1);
     const [conicGradient, setConicGradient] = useState('');
     
     // State for the slide-to-spin interaction
@@ -64,9 +63,6 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
     const handleSpin = async () => {
         if (!token || isSpinning) return;
         setIsSpinning(true);
-        if (user && !user.isAdmin) {
-            setSpinsLeft(0);
-        }
         
         const toastId = toast.loading('Spinning the wheel...');
 
@@ -74,12 +70,9 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
             const result = await googleSheetsService.spinWheel(token);
             const { prizeId, prizeLabel, newToken } = result;
 
-            // Update auth state immediately after getting the result to prevent race conditions
-            if (prizeId !== 'NEXT_TIME' && newToken) {
+            // Update auth state immediately with the new token from the server
+            if (newToken) {
                 await loginWithToken(newToken);
-            }
-            if (user && !user.isAdmin) {
-                setHasSpunWheel(true);
             }
             
             const matchingIndices: number[] = [];
@@ -106,7 +99,6 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
             const fullSpins = 6 * 360;
             setRotation(rotation + fullSpins + targetRotation);
             
-            // This timeout now only handles the UI feedback after the animation
             setTimeout(() => {
                 toast.dismiss(toastId);
                 if (prizeId !== 'NEXT_TIME') {
@@ -134,7 +126,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
 
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
         const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-        if (isSpinning || (spinsLeft === 0 && !user?.isAdmin)) return;
+        if (isSpinning || (spinsAvailable === 0 && !user?.isAdmin)) return;
         
         isDraggingRef.current = true;
         startYRef.current = clientY;
@@ -253,7 +245,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                             ref={sliderHandleRef}
                             onMouseDown={handleDragStart}
                             onTouchStart={handleDragStart}
-                            className={`w-12 h-12 rounded-full ring-4 ring-amber-300/50 flex items-center justify-center cursor-grab active:cursor-grabbing ${isSpinning || (spinsLeft === 0 && !user?.isAdmin) ? 'bg-zinc-600' : 'bg-amber-500'}`}
+                            className={`w-12 h-12 rounded-full ring-4 ring-amber-300/50 flex items-center justify-center cursor-grab active:cursor-grabbing ${isSpinning || (spinsAvailable === 0 && !user?.isAdmin) ? 'bg-zinc-600' : 'bg-amber-500'}`}
                             style={{ transform: `translateY(${dragY}px)` }}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>
@@ -264,7 +256,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                     </div>
                      <div className="bg-zinc-900 p-2 rounded-lg border border-zinc-800">
                         <div className="bg-black text-white font-semibold py-2 px-6 rounded-md border border-amber-600">
-                            Spins left : {user?.isAdmin ? '∞' : spinsLeft}
+                            Spins left : {user?.isAdmin ? '∞' : spinsAvailable}
                         </div>
                      </div>
                 </div>

@@ -224,5 +224,20 @@ export const googleSheetsService = {
     // --- NEW WHEEL OF FORTUNE ---
     spinWheel: async (token: string): Promise<SpinWheelResult> => {
         return apiFetch('/spin-wheel', token, { method: 'POST' });
-    }
+    },
+
+    // --- NEW ADMIN ACTIONS ---
+    addSpins: async (token: string, userId: string, spins: number): Promise<{ success: boolean; newTotal: number; }> => {
+        return apiFetch('/add-spins', token, {
+            method: 'POST',
+            body: JSON.stringify({ userId, spins })
+        });
+    },
+
+    grantPrize: async (token: string, userId: string, prizeId: string): Promise<{ success: boolean; message: string; }> => {
+        return apiFetch('/grant-prize', token, {
+            method: 'POST',
+            body: JSON.stringify({ userId, prizeId })
+        });
+    },
 };

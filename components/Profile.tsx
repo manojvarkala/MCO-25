@@ -20,15 +20,21 @@ const Profile: React.FC = () => {
     const [isLoadingResults, setIsLoadingResults] = useState(true);
 
     useEffect(() => {
-        if (user) {
+        if (user && token) {
             setIsLoadingResults(true);
-            const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
-            // Sort by most recent first
-            userResults.sort((a, b) => b.timestamp - a.timestamp);
-            setResults(userResults);
+            const cachedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
+            cachedResults.sort((a, b) => b.timestamp - a.timestamp);
+            setResults(cachedResults);
             setIsLoadingResults(false);
+
+            // Sync with server in the background to get latest results
+            googleSheetsService.syncResults(user, token).then(() => {
+                const updatedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
+                updatedResults.sort((a, b) => b.timestamp - a.timestamp);
+                setResults(updatedResults);
+            });
         }
-    }, [user]);
+    }, [user, token]);
 
     useEffect(() => {
         if (user) {
