@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           8.6.0
+ * Version:           8.7.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -70,6 +70,7 @@ function mco_exam_get_payload($user_id) {
     $paid_exam_ids = []; 
     $exam_prices = new stdClass();
     $is_subscribed = false;
+    $has_spun_wheel = get_user_meta($user_id, 'mco_has_spun_wheel', true) ? true : false;
     
     if (class_exists('WooCommerce')) {
         $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert', 'exam-mcf-cert'];
@@ -128,6 +129,9 @@ function mco_exam_get_payload($user_id) {
             } 
         } 
         $purchased_skus = array_unique($purchased_skus);
+        
+        $granted_skus = get_user_meta($user_id, 'mco_granted_skus', true);
+        if (!is_array($granted_skus)) $granted_skus = [];
 
         $is_subscribed = !empty(array_intersect($subscription_skus, $purchased_skus));
         $direct_exam_purchases = array_intersect($all_exam_skus, $purchased_skus);
@@ -138,10 +142,10 @@ function mco_exam_get_payload($user_id) {
                 if (in_array($base_sku, $all_exam_skus)) $exams_from_addons[] = $base_sku;
             }
         }
-        $paid_exam_ids = array_values(array_unique(array_merge($direct_exam_purchases, $exams_from_addons)));
+        $paid_exam_ids = array_values(array_unique(array_merge($direct_exam_purchases, $exams_from_addons, $granted_skus)));
     }
     
-    return ['iss' => get_site_url(), 'iat' => time(), 'exp' => time() + (60 * 60 * 2), 'user' => ['id' => (string)$user->ID, 'name' => $user_full_name, 'email' => $user->user_email, 'isAdmin' => user_can($user, 'administrator')], 'paidExamIds' => $paid_exam_ids, 'examPrices' => $exam_prices, 'isSubscribed' => $is_subscribed];
+    return ['iss' => get_site_url(), 'iat' => time(), 'exp' => time() + (60 * 60 * 2), 'user' => ['id' => (string)$user->ID, 'name' => $user_full_name, 'email' => $user->user_email, 'isAdmin' => user_can($user, 'administrator')], 'paidExamIds' => $paid_exam_ids, 'examPrices' => $exam_prices, 'isSubscribed' => $is_subscribed, 'hasSpunWheel' => $has_spun_wheel];
 }
 
 
@@ -159,6 +163,7 @@ function mco_exam_register_rest_api() {
     register_rest_route('mco-app/v1', '/certificate-data/(?P<test_id>[\\w-]+)', ['methods' => 'GET', 'callback' => 'mco_get_certificate_data_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/debug-details', ['methods' => 'GET', 'callback' => 'mco_get_debug_details_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/submit-review', ['methods' => 'POST', 'callback' => 'mco_exam_submit_review_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+    register_rest_route('mco-app/v1', '/spin-wheel', ['methods' => 'POST', 'callback' => 'mco_spin_wheel_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
 }
 
 function mco_exam_api_permission_check($request) {
@@ -320,6 +325,68 @@ function mco_get_debug_details_callback($request) {
     ];
 
     return new WP_REST_Response($debug_data, 200);
+}
+
+// --- NEW WHEEL OF FORTUNE ENDPOINT ---
+function mco_spin_wheel_callback($request) {
+    $user_id = (int)$request->get_param('jwt_user_id');
+    if (get_user_meta($user_id, 'mco_has_spun_wheel', true)) {
+        return new WP_Error('already_spun', 'You have already used your spin.', ['status' => 403]);
+    }
+    
+    $option_key = 'mco_wheel_prizes_' . date('Y-m');
+    $prize_counts = get_option($option_key, ['exam_wins' => 0]);
+    
+    $exam_prizes = [
+        ['id' => 'exam-cpc-cert', 'label' => 'Free CPC Exam'],
+        ['id' => 'exam-cca-cert', 'label' => 'Free CCA Exam'],
+        ['id' => 'exam-billing-cert', 'label' => 'Free Billing Exam'],
+        ['id' => 'exam-ccs-cert', 'label' => 'Free CCS Exam'],
+    ];
+
+    $weighted_prizes = [];
+    if ($prize_counts['exam_wins'] < 100) {
+        // 4 exam prize slots, 4 'next time' slots. So 50% chance if exams are available.
+        $weighted_prizes['EXAM'] = 50;
+        $weighted_prizes['NEXT_TIME'] = 50;
+    } else {
+        $weighted_prizes['NEXT_TIME'] = 100;
+    }
+    
+    // Weighted random selection
+    $rand = mt_rand(1, 100);
+    $cumulative_weight = 0;
+    $result_id = 'NEXT_TIME';
+    foreach ($weighted_prizes as $prize_id => $weight) {
+        $cumulative_weight += $weight;
+        if ($rand <= $cumulative_weight) {
+            $result_id = $prize_id;
+            break;
+        }
+    }
+    
+    $final_prize = ['prizeId' => 'NEXT_TIME', 'prizeLabel' => 'Next Time'];
+
+    if ($result_id === 'EXAM') {
+        $won_exam = $exam_prizes[array_rand($exam_prizes)];
+        
+        $granted_skus = get_user_meta($user_id, 'mco_granted_skus', true);
+        if (!is_array($granted_skus)) $granted_skus = [];
+        if (!in_array($won_exam['id'], $granted_skus)) {
+            $granted_skus[] = $won_exam['id'];
+            update_user_meta($user_id, 'mco_granted_skus', $granted_skus);
+        }
+        
+        $prize_counts['exam_wins']++;
+        update_option($option_key, $prize_counts);
+        
+        $final_prize['prizeId'] = $won_exam['id'];
+        $final_prize['prizeLabel'] = $won_exam['label'];
+    }
+    
+    update_user_meta($user_id, 'mco_has_spun_wheel', true);
+    
+    return new WP_REST_Response($final_prize, 200);
 }
 
 

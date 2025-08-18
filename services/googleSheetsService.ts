@@ -219,5 +219,10 @@ export const googleSheetsService = {
         await apiFetch('/submit-review', token, { method: 'POST', body: JSON.stringify({ examId, rating, reviewText }) });
         await new Promise(resolve => setTimeout(resolve, 750)); // Simulate network delay
         return Promise.resolve();
+    },
+
+    // --- NEW WHEEL OF FORTUNE ---
+    spinWheel: async (token: string): Promise<{ prizeId: string, prizeLabel: string }> => {
+        return apiFetch('/spin-wheel', token, { method: 'POST' });
     }
 };

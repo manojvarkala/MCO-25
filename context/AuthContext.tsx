@@ -9,10 +9,12 @@ interface AuthContextType {
   paidExamIds: string[];
   examPrices: { [id: string]: { price: number; regularPrice?: number; productId?: number; avgRating?: number; reviewCount?: number; } } | null;
   isSubscribed: boolean;
+  hasSpunWheel: boolean;
   loginWithToken: (token: string) => void;
   logout: () => void;
   useFreeAttempt: () => void;
   updateUserName: (name: string) => void;
+  setHasSpunWheel: (hasSpun: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,6 +59,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
     }
   });
+  const [hasSpunWheel, setHasSpunWheel] = useState<boolean>(() => {
+      try {
+          const stored = localStorage.getItem('hasSpunWheel');
+          return stored ? JSON.parse(stored) : false;
+      } catch {
+          return false;
+      }
+  });
+
 
   const logout = useCallback(() => {
     setUser(null);
@@ -64,11 +75,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setToken(null);
     setExamPrices(null);
     setIsSubscribed(false);
+    setHasSpunWheel(true); // Assume spun on logout to prevent flash
     localStorage.removeItem('examUser');
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
     localStorage.removeItem('examPrices');
     localStorage.removeItem('isSubscribed');
+    localStorage.removeItem('hasSpunWheel');
     localStorage.removeItem('activeOrg');
     Object.keys(localStorage).forEach(key => {
         if (key.startsWith('exam_timer_') || key.startsWith('exam_results_')) {
@@ -143,6 +156,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setIsSubscribed(false);
                 localStorage.removeItem('isSubscribed');
             }
+            
+            if (payload.hasSpunWheel) {
+                setHasSpunWheel(payload.hasSpunWheel);
+                localStorage.setItem('hasSpunWheel', JSON.stringify(payload.hasSpunWheel));
+            } else {
+                setHasSpunWheel(false);
+                localStorage.removeItem('hasSpunWheel');
+            }
+
 
             // Sync results in the background after successful login
             await googleSheetsService.syncResults(payload.user, jwtToken);
@@ -169,9 +191,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [user]);
 
+  const updateHasSpunWheel = (hasSpun: boolean) => {
+    setHasSpunWheel(hasSpun);
+    localStorage.setItem('hasSpunWheel', JSON.stringify(hasSpun));
+  };
+
 
   return (
-    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, loginWithToken, logout, useFreeAttempt, updateUserName }}>
+    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, hasSpunWheel, loginWithToken, logout, useFreeAttempt, updateUserName, setHasSpunWheel: updateHasSpunWheel }}>
       {children}
     </AuthContext.Provider>
   );
