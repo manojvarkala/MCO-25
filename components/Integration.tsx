@@ -7,11 +7,17 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           8.8.0
+ * Version:           8.9.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
+
+// --- IMPORTANT ---
+// After activating or updating this plugin, you MUST flush WordPress permalinks.
+// Go to your WordPress Admin -> Settings -> Permalinks and just click "Save Changes".
+// This rebuilds the URL routes and prevents "No route was found" errors for the API.
+// --- IMPORTANT ---
 
 // --- CONFIGURATION ---
 define('MCO_LOGIN_SLUG', 'exam-login');
@@ -350,10 +356,10 @@ function mco_spin_wheel_callback($request) {
     $prizes = [
         ['id' => 'SUB_YEARLY', 'label' => 'Annual Subscription', 'limit' => 2, 'weight' => 1],
         ['id' => 'SUB_MONTHLY', 'label' => 'Monthly Subscription', 'limit' => 2, 'weight' => 3],
-        ['id' => 'SUB_WEEKLY', 'label' => 'Weekly Subscription', 'limit' => 50, 'weight' => 10],
+        ['id' => 'SUB_WEEKLY', 'label' => 'Weekly Subscription', 'limit' => 50, 'weight' => 20],
         ['id' => 'EXAM_CPC', 'label' => 'Free CPC Exam', 'limit' => 100, 'weight' => 15, 'type' => 'EXAM', 'sku' => 'exam-cpc-cert'],
         ['id' => 'EXAM_CCA', 'label' => 'Free CCA Exam', 'limit' => 100, 'weight' => 15, 'type' => 'EXAM', 'sku' => 'exam-cca-cert'],
-        ['id' => 'NEXT_TIME', 'label' => 'Better Luck Next Time', 'limit' => -1, 'weight' => 56],
+        ['id' => 'NEXT_TIME', 'label' => 'Better Luck Next Time', 'limit' => -1, 'weight' => 46],
     ];
 
     $available_prizes = [];

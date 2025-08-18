@@ -12,6 +12,8 @@ interface AppContextType {
   setActiveOrgById: (orgId: string) => void;
   updateActiveOrg: (updatedOrg: Organization) => void;
   suggestedBooks: RecommendedBook[];
+  isWheelModalOpen: boolean;
+  setWheelModalOpen: (isOpen: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -22,6 +24,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isInitializing, setIsInitializing] = useState(true);
   const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>([]);
   const { examPrices } = useAuth();
+  const [isWheelModalOpen, setWheelModalOpen] = useState(false);
 
   useEffect(() => {
     const initializeApp = () => {
@@ -99,7 +102,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   return (
-    <AppContext.Provider value={{ organizations, activeOrg, isLoading: isInitializing, isInitializing, setActiveOrgById, updateActiveOrg, suggestedBooks }}>
+    <AppContext.Provider value={{ organizations, activeOrg, isLoading: isInitializing, isInitializing, setActiveOrgById, updateActiveOrg, suggestedBooks, isWheelModalOpen, setWheelModalOpen }}>
       {children}
     </AppContext.Provider>
   );

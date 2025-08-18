@@ -9,7 +9,6 @@ import { BookCopy, History as HistoryIcon, FlaskConical, Eye, FileText, BarChart
 import { useAppContext } from '../context/AppContext.tsx';
 import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
-import WheelOfFortune from './WheelOfFortune.tsx';
 
 const StarRating: React.FC<{ rating: number; count: number; }> = ({ rating, count }) => {
     if (count === 0) return null;
@@ -33,8 +32,8 @@ const StarRating: React.FC<{ rating: number; count: number; }> = ({ rating, coun
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
-    const { user, paidExamIds, isSubscribed, updateUserName, token, examPrices, hasSpunWheel, setHasSpunWheel } = useAuth();
-    const { activeOrg } = useAppContext();
+    const { user, paidExamIds, isSubscribed, updateUserName, token, examPrices, hasSpunWheel, wheelModalDismissed } = useAuth();
+    const { activeOrg, setWheelModalOpen } = useAppContext();
     const [results, setResults] = useState<TestResult[] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [stats, setStats] = useState({ avgScore: 0, bestScore: 0, examsTaken: 0 });
@@ -42,16 +41,14 @@ const Dashboard: React.FC = () => {
     const [isEditingName, setIsEditingName] = useState(false);
     const [isSavingName, setIsSavingName] = useState(false);
     const [name, setName] = useState(user?.name || '');
-    const [showWheel, setShowWheel] = useState(false);
 
     useEffect(() => {
-        // Show the wheel only for logged-in users who haven't spun it before.
-        if (user && !hasSpunWheel) {
-            // A small delay to let the dashboard load and make the modal's appearance smoother.
-            const timer = setTimeout(() => setShowWheel(true), 1500);
+        // Show the wheel modal only for eligible users who haven't already dismissed it this session.
+        if (user && !hasSpunWheel && !wheelModalDismissed) {
+            const timer = setTimeout(() => setWheelModalOpen(true), 1500);
             return () => clearTimeout(timer);
         }
-    }, [user, hasSpunWheel]);
+    }, [user, hasSpunWheel, wheelModalDismissed, setWheelModalOpen]);
 
     const loginUrl = 'https://www.coding-online.net/exam-login/';
     const appDashboardPath = '/dashboard';
@@ -194,10 +191,6 @@ const Dashboard: React.FC = () => {
     
     return (
         <div>
-            {user && <WheelOfFortune isOpen={showWheel} onClose={() => {
-                setShowWheel(false);
-                setHasSpunWheel(true);
-            }} />}
             <div className="flex justify-between items-start mb-6 flex-wrap gap-4">
                  <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
                 <div className="flex items-center gap-4 bg-slate-100 p-2 rounded-lg">

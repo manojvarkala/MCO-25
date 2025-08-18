@@ -10,11 +10,13 @@ interface AuthContextType {
   examPrices: { [id: string]: { price: number; regularPrice?: number; productId?: number; avgRating?: number; reviewCount?: number; } } | null;
   isSubscribed: boolean;
   hasSpunWheel: boolean;
+  wheelModalDismissed: boolean;
   loginWithToken: (token: string) => void;
   logout: () => void;
   useFreeAttempt: () => void;
   updateUserName: (name: string) => void;
   setHasSpunWheel: (hasSpun: boolean) => void;
+  setWheelModalDismissed: (dismissed: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,6 +69,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return false;
       }
   });
+  const [wheelModalDismissed, setWheelModalDismissed] = useState<boolean>(() => {
+      try {
+        return sessionStorage.getItem('wheelModalDismissed') === 'true';
+      } catch {
+        return false;
+      }
+  });
 
 
   const logout = useCallback(() => {
@@ -83,6 +92,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem('isSubscribed');
     localStorage.removeItem('hasSpunWheel');
     localStorage.removeItem('activeOrg');
+    sessionStorage.removeItem('wheelModalDismissed');
     Object.keys(localStorage).forEach(key => {
         if (key.startsWith('exam_timer_') || key.startsWith('exam_results_')) {
             localStorage.removeItem(key);
@@ -165,6 +175,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 localStorage.removeItem('hasSpunWheel');
             }
 
+            // Reset session-based dismissal state on new login
+            setWheelModalDismissed(false);
+            sessionStorage.removeItem('wheelModalDismissed');
 
             // Sync results in the background after successful login
             await googleSheetsService.syncResults(payload.user, jwtToken);
@@ -195,10 +208,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setHasSpunWheel(hasSpun);
     localStorage.setItem('hasSpunWheel', JSON.stringify(hasSpun));
   };
+  
+  const updateWheelModalDismissed = (dismissed: boolean) => {
+    setWheelModalDismissed(dismissed);
+    try {
+        sessionStorage.setItem('wheelModalDismissed', String(dismissed));
+    } catch (e) {
+        console.error("Could not set sessionStorage item.", e);
+    }
+  };
 
 
   return (
-    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, hasSpunWheel, loginWithToken, logout, useFreeAttempt, updateUserName, setHasSpunWheel: updateHasSpunWheel }}>
+    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, hasSpunWheel, wheelModalDismissed, loginWithToken, logout, useFreeAttempt, updateUserName, setHasSpunWheel: updateHasSpunWheel, setWheelModalDismissed: updateWheelModalDismissed }}>
       {children}
     </AuthContext.Provider>
   );

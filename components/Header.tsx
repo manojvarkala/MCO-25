@@ -1,15 +1,16 @@
 
 
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
-import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, Users } from 'lucide-react';
+import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, Users, Gift } from 'lucide-react';
 import { logoBase64 } from '../assets/logo.ts';
 
 const Header: React.FC = () => {
-  const { user, logout } = useAuth();
-  const { activeOrg } = useAppContext();
+  const { user, logout, hasSpunWheel, wheelModalDismissed } = useAuth();
+  const { activeOrg, setWheelModalOpen } = useAppContext();
 
   const handleLogout = () => {
     logout();
@@ -56,6 +57,16 @@ const Header: React.FC = () => {
         )}
        
         <div className="flex items-center space-x-4">
+            {user && !hasSpunWheel && wheelModalDismissed && (
+                <button
+                    onClick={() => setWheelModalOpen(true)}
+                    className="flex items-center gap-2 bg-black text-yellow-400 font-bold py-2 px-4 rounded-full border-2 border-yellow-500 shadow-lg hover:bg-gray-800 transition-all transform hover:scale-105"
+                    title="You have a free spin!"
+                >
+                    <Gift size={16} />
+                    <span className="hidden sm:inline">Spin & Win</span>
+                </button>
+            )}
             <Link 
                 to="/pricing"
                 className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition duration-200"

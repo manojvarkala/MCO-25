@@ -1,10 +1,11 @@
 
+
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
-import { AppProvider } from './context/AppContext.tsx';
+import { AppProvider, useAppContext } from './context/AppContext.tsx';
 
 import Login from './components/Login.tsx';
 import Dashboard from './components/Dashboard.tsx';
@@ -27,6 +28,7 @@ import UserGuide from './components/UserGuide.tsx';
 import AboutUs from './components/AboutUs.tsx';
 import PrivacyPolicy from './components/PrivacyPolicy.tsx';
 import RefundPolicy from './components/RefundPolicy.tsx';
+import WheelOfFortune from './components/WheelOfFortune.tsx';
 
 
 interface ProtectedRouteProps {
@@ -46,10 +48,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = f
 };
 
 const AppContent: React.FC = () => {
-    const { user } = useAuth();
+    const { user, hasSpunWheel, setWheelModalDismissed } = useAuth();
+    const { isWheelModalOpen, setWheelModalOpen } = useAppContext();
 
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800">
+            {user && !hasSpunWheel && (
+              <WheelOfFortune 
+                isOpen={isWheelModalOpen} 
+                onClose={() => {
+                  setWheelModalOpen(false);
+                  setWheelModalDismissed(true); // User has now interacted with it this session
+                }} 
+              />
+            )}
             <Header />
             <div className="flex-grow w-full relative">
                 <main className="container mx-auto px-4 py-8">
