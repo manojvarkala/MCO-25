@@ -42,7 +42,7 @@ export interface TestResult {
 export interface TokenPayload {
     user: User;
     paidExamIds: string[];
-    examPrices?: { [examId: string]: { price: number; regularPrice?: number; productId?: number; } };
+    examPrices?: { [examId: string]: { price: number; regularPrice?: number; productId?: number; avgRating?: number; reviewCount?: number; } };
     isSubscribed?: boolean;
     iat?: number;
     exp?: number;

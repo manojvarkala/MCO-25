@@ -12,6 +12,26 @@ import { useAppContext } from '../context/AppContext.tsx';
 import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
 
+const StarRating: React.FC<{ rating: number; count: number; }> = ({ rating, count }) => {
+    if (count === 0) return null;
+
+    const fullStars = Math.floor(rating);
+    const halfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+
+    return (
+        <div className="flex items-center gap-2">
+            <div className="flex items-center">
+                {[...Array(fullStars)].map((_, i) => <Star key={`full-${i}`} size={16} className="text-yellow-400 fill-current" />)}
+                {halfStar && <Star size={16} className="text-yellow-400 fill-current" style={{ clipPath: 'polygon(0 0, 50% 0, 50% 100%, 0% 100%)' }} />}
+                {[...Array(emptyStars)].map((_, i) => <Star key={`empty-${i}`} size={16} className="text-slate-300" />)}
+            </div>
+            <span className="text-xs text-slate-500">({count} reviews)</span>
+        </div>
+    );
+};
+
+
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
     const { user, paidExamIds, isSubscribed, updateUserName, token, examPrices } = useAuth();
@@ -309,10 +329,16 @@ const Dashboard: React.FC = () => {
                                     certButtonContent = 'Start Exam';
                                 }
                              }
+                             const ratingData = examPrices?.[certExam.productSku];
 
                             return (
                                 <div key={category.id} className="bg-white p-6 rounded-xl shadow-md border border-slate-200">
                                     <h3 className="text-xl font-bold text-slate-800">{certExam.name}</h3>
+                                    {ratingData && ratingData.reviewCount && ratingData.reviewCount > 0 && (
+                                        <div className="mt-2 mb-2">
+                                            <StarRating rating={ratingData.avgRating || 0} count={ratingData.reviewCount} />
+                                        </div>
+                                    )}
                                     <p className="text-sm text-slate-500 mt-1 mb-4">{certExam.description}</p>
                                     
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 border-t border-slate-200 pt-4">

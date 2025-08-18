@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -150,14 +151,14 @@ Please provide a summary of the key areas I need to focus on based on these erro
             toast.error("Please select a star rating.");
             return;
         }
-        if (!token || !testId) {
+        if (!token || !testId || !exam) {
             toast.error("Cannot submit review: missing required info.");
             return;
         }
 
         setIsSubmittingReview(true);
         try {
-            await googleSheetsService.submitReview(token, testId, rating, reviewText);
+            await googleSheetsService.submitReview(token, exam.id, rating, reviewText);
             const reviewData = { rating, reviewText };
             localStorage.setItem(`review_${testId}`, JSON.stringify(reviewData));
             setSubmittedReview(reviewData);

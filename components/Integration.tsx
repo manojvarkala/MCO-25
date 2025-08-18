@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           8.5.0
+ * Version:           8.6.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -51,7 +51,7 @@ function mco_exam_app_init() {
     
     add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
     add_shortcode('exam_user_details', 'mco_exam_user_details_shortcode');
-    add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode'); // <-- Reinstated shortcode
+    add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
 }
 
 function mco_debug_log($message) { if (defined('MCO_DEBUG') && MCO_DEBUG) error_log('MCO Exam App Debug: ' . print_r($message, true)); }
@@ -84,7 +84,7 @@ function mco_exam_get_payload($user_id) {
         ];
         
         $all_skus_for_pricing = array_unique(array_merge($all_exam_skus, $subscription_skus));
-        $exam_prices = get_transient('mco_exam_prices_v2');
+        $exam_prices = get_transient('mco_exam_prices_v3');
         if (false === $exam_prices) {
             mco_debug_log('Exam prices cache miss. Fetching from DB.');
             $exam_prices = new stdClass();
@@ -93,13 +93,17 @@ function mco_exam_get_payload($user_id) {
                     $price = (float) $product->get_price();
                     $regular_price = (float) $product->get_regular_price();
                     $price_data = ['price' => $price, 'regularPrice' => $price, 'productId' => $product_id];
-                    if ($regular_price > $price) {
-                        $price_data['regularPrice'] = $regular_price;
-                    }
+                    if ($regular_price > $price) $price_data['regularPrice'] = $regular_price;
+
+                    $avg_rating = get_post_meta($product_id, '_mco_exam_avg_rating', true);
+                    $review_count = get_post_meta($product_id, '_mco_exam_review_count', true);
+                    if ($avg_rating) $price_data['avgRating'] = (float)$avg_rating;
+                    if ($review_count) $price_data['reviewCount'] = (int)$review_count;
+
                     $exam_prices->{$sku} = $price_data;
                 }
             }
-            set_transient('mco_exam_prices_v2', $exam_prices, 12 * HOUR_IN_SECONDS);
+            set_transient('mco_exam_prices_v3', $exam_prices, 12 * HOUR_IN_SECONDS);
         }
         $customer_orders = wc_get_orders(['customer' => $user_id, 'status' => ['wc-completed', 'wc-processing'], 'limit' => -1]);
         $purchased_skus = [];
@@ -113,21 +117,15 @@ function mco_exam_get_payload($user_id) {
         } 
         $purchased_skus = array_unique($purchased_skus);
 
-        // --- NEW LOGIC FOR BUNDLED PRODUCTS ---
         $is_subscribed = !empty(array_intersect($subscription_skus, $purchased_skus));
-
         $direct_exam_purchases = array_intersect($all_exam_skus, $purchased_skus);
-        
         $exams_from_addons = [];
         foreach ($purchased_skus as $sku) {
             if (strpos($sku, '-1mo-addon') !== false) {
                 $base_sku = str_replace('-1mo-addon', '', $sku);
-                if (in_array($base_sku, $all_exam_skus)) {
-                    $exams_from_addons[] = $base_sku;
-                }
+                if (in_array($base_sku, $all_exam_skus)) $exams_from_addons[] = $base_sku;
             }
         }
-        
         $paid_exam_ids = array_values(array_unique(array_merge($direct_exam_purchases, $exams_from_addons)));
     }
     
@@ -148,6 +146,7 @@ function mco_exam_register_rest_api() {
     register_rest_route('mco-app/v1', '/update-name', ['methods' => 'POST', 'callback' => 'mco_exam_update_user_name_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/certificate-data/(?P<test_id>[\\w-]+)', ['methods' => 'GET', 'callback' => 'mco_get_certificate_data_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/debug-details', ['methods' => 'GET', 'callback' => 'mco_get_debug_details_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+    register_rest_route('mco-app/v1', '/submit-review', ['methods' => 'POST', 'callback' => 'mco_exam_submit_review_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
 }
 
 function mco_exam_api_permission_check($request) {
@@ -220,6 +219,58 @@ function mco_get_questions_from_sheet_callback($request) {
     return new WP_REST_Response(mco_ensure_utf8_recursive($final_questions), 200);
 }
 
+// --- NEW REVIEW ENDPOINT ---
+function mco_exam_submit_review_callback($request) {
+    $user_id = (int)$request->get_param('jwt_user_id');
+    $params = $request->get_json_params();
+    $exam_id = isset($params['examId']) ? sanitize_text_field($params['examId']) : '';
+    $rating = isset($params['rating']) ? intval($params['rating']) : 0;
+
+    if (empty($exam_id) || $rating < 1 || $rating > 5) {
+        return new WP_Error('invalid_data', 'Missing or invalid data provided for review.', ['status' => 400]);
+    }
+
+    $exam_programs = mco_get_exam_programs_data();
+    $target_program = null;
+    foreach ($exam_programs as $program) {
+        if ($program['practice_id'] === $exam_id || $program['cert_sku'] === $exam_id) {
+            $target_program = $program;
+            break;
+        }
+    }
+
+    if (!$target_program) {
+        // Try to find it in the main SKU list if it's a cert exam
+        $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert', 'exam-mcf-cert'];
+        if (in_array($exam_id, $all_exam_skus)) {
+            $target_program = ['cert_sku' => $exam_id];
+        }
+    }
+    
+    if (!$target_program) {
+        return new WP_Error('exam_not_found', 'Could not find a product associated with this exam ID.', ['status' => 404]);
+    }
+    
+    $product_id = wc_get_product_id_by_sku($target_program['cert_sku']);
+    if (!$product_id) {
+        return new WP_Error('product_not_found', 'WooCommerce product not found for SKU: ' . $target_program['cert_sku'], ['status' => 404]);
+    }
+    
+    $ratings = get_post_meta($product_id, '_mco_exam_ratings', true);
+    if (!is_array($ratings)) { $ratings = []; }
+    $ratings[] = $rating;
+
+    $count = count($ratings);
+    $avg = $count > 0 ? round(array_sum($ratings) / $count, 2) : 0;
+    
+    update_post_meta($product_id, '_mco_exam_ratings', $ratings);
+    update_post_meta($product_id, '_mco_exam_avg_rating', $avg);
+    update_post_meta($product_id, '_mco_exam_review_count', $count);
+    delete_transient('mco_exam_prices_v3');
+
+    return new WP_REST_Response(['success' => true, 'message' => 'Review submitted successfully.'], 200);
+}
+
 // --- NEW DEBUG ENDPOINT ---
 function mco_get_debug_details_callback($request) {
     $user_id = (int)$request->get_param('jwt_user_id');
@@ -228,21 +279,10 @@ function mco_get_debug_details_callback($request) {
     
     $user_full_name = trim($user->first_name . ' ' . $user->last_name) ?: $user->display_name;
     
-    // Get Purchases
-    $paid_exam_ids = [];
-    if (class_exists('WooCommerce')) {
-        $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert', 'exam-mcf-cert'];
-        $customer_orders = wc_get_orders(['customer' => $user_id, 'status' => ['wc-completed', 'wc-processing'], 'limit' => -1]);
-        $purchased_skus = [];
-        if ($customer_orders) { foreach ($customer_orders as $order) { foreach ($order->get_items() as $item) { if ($product = $item->get_product()) $purchased_skus[] = $product->get_sku(); } } }
-        $paid_exam_ids = array_values(array_intersect($all_exam_skus, array_unique($purchased_skus)));
-    }
-
-    // Get Results
+    $paid_exam_ids = mco_exam_get_payload($user_id)['paidExamIds'];
     $results = get_user_meta($user_id, 'mco_exam_results', true);
     $results = empty($results) || !is_array($results) ? [] : array_values($results);
 
-    // Sheet Test
     $test_sheet_url = 'https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing';
     $csv_url = str_replace(['/edit?usp=sharing', '/edit#gid='], ['/export?format=csv', '/export?format=csv&gid='], $test_sheet_url);
     $response = wp_remote_get($csv_url, ['timeout' => 20]);
@@ -293,6 +333,26 @@ function mco_get_exam_programs_data() {
         ['name' => 'Medical Coding Fundamentals Program', 'description' => 'A foundational test series covering core medical coding principles.', 'practice_id' => 'exam-mcf-practice', 'cert_sku' => 'exam-mcf-cert'],
     ];
 }
+
+function mco_render_stars_html($rating, $count) {
+    if ($count == 0) return '';
+    $rating = floatval($rating);
+    $full_stars = floor($rating);
+    $half_star = ($rating - $full_stars) >= 0.5 ? 1 : 0;
+    $empty_stars = 5 - $full_stars - $half_star;
+    $html = '<div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem;">';
+    $html .= '<div style="display: flex; align-items: center;">';
+    $star_svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #f59e0b;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>';
+    $empty_star_svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #d1d5db;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>';
+    for ($i = 0; $i < $full_stars; $i++) $html .= $star_svg;
+    if ($half_star) $html .= '<div style="position:relative; width: 16px; height: 16px;">' . $star_svg . '<div style="position:absolute; top:0; left:0; width:50%; height:100%; overflow:hidden;">' . $empty_star_svg . '</div></div>';
+    for ($i = 0; $i < $empty_stars; $i++) $html .= $empty_star_svg;
+    $html .= '</div>';
+    $html .= '<span style="font-size: 0.75rem; color: #6b7280;">(' . esc_html($count) . ' reviews)</span>';
+    $html .= '</div>';
+    return $html;
+}
+
 
 function mco_exam_showcase_shortcode() {
     $exam_programs = mco_get_exam_programs_data();
@@ -403,6 +463,16 @@ function mco_exam_showcase_shortcode() {
         <div class="mco-showcase-card">
             <div class="mco-showcase-card-body">
                 <h3><?php echo esc_html($program['name']); ?></h3>
+                <?php
+                    if ($is_wc_active) {
+                        $product_id_for_rating = wc_get_product_id_by_sku($program['cert_sku']);
+                        if ($product_id_for_rating) {
+                            $avg_rating = get_post_meta($product_id_for_rating, '_mco_exam_avg_rating', true);
+                            $review_count = get_post_meta($product_id_for_rating, '_mco_exam_review_count', true);
+                            echo mco_render_stars_html($avg_rating, $review_count);
+                        }
+                    }
+                ?>
                 <p><?php echo esc_html($program['description']); ?></p>
                 <div class="mco-showcase-card-actions">
                     <?php 
