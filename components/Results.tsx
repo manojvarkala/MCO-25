@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { TestResult, Exam, RecommendedBook, AnswerReview } from '../types.ts';
+import type { TestResult, Exam, RecommendedBook } from '../types.ts';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import Spinner from './Spinner.tsx';
@@ -18,7 +18,7 @@ import { logoBase64 } from '../assets/logo.ts';
 const Results: React.FC = () => {
     const { testId } = useParams<{ testId: string }>();
     const navigate = useNavigate();
-    const { user, token, isSubscribed } = useAuth();
+    const { user, token, paidExamIds, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     
     const [result, setResult] = useState<TestResult | null>(null);
@@ -29,12 +29,15 @@ const Results: React.FC = () => {
     const [isDownloading, setIsDownloading] = useState(false);
     const aiFeedbackPrintRef = useRef<HTMLDivElement>(null);
 
-    // New state for reviews
     const [rating, setRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
     const [reviewText, setReviewText] = useState('');
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
     const [submittedReview, setSubmittedReview] = useState<{rating: number; reviewText: string} | null>(null);
+    
+    const [isPurchased, setIsPurchased] = useState(false);
+    const [attemptsExceeded, setAttemptsExceeded] = useState(false);
+    const [hasPassedCert, setHasPassedCert] = useState(false);
 
 
     useEffect(() => {
@@ -45,7 +48,6 @@ const Results: React.FC = () => {
             return;
         }
 
-        // Check for existing review in localStorage
         const existingReview = localStorage.getItem(`review_${testId}`);
         if (existingReview) {
             setSubmittedReview(JSON.parse(existingReview));
@@ -60,6 +62,25 @@ const Results: React.FC = () => {
                     const examConfig = activeOrg.exams.find(e => e.id === foundResult.examId);
                     if (examConfig) {
                         setExam(examConfig);
+
+                        let certExamConfig: Exam | undefined;
+                        if (examConfig.isPractice) {
+                            const category = activeOrg.examProductCategories.find(c => c.practiceExamId === examConfig.id);
+                            certExamConfig = category ? activeOrg.exams.find(e => e.id === category.certificationExamId) : undefined;
+                        } else {
+                            certExamConfig = examConfig;
+                        }
+
+                        if (certExamConfig) {
+                            const purchased = paidExamIds.includes(certExamConfig.productSku);
+                            setIsPurchased(purchased);
+                            
+                            const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
+                            const certAttempts = userResults.filter(r => r.examId === certExamConfig!.id);
+                            setAttemptsExceeded(certAttempts.length >= 3);
+                            setHasPassedCert(certAttempts.some(r => r.score >= certExamConfig!.passScore));
+                        }
+
                     } else {
                         toast.error("Could not find the configuration for this exam.");
                         navigate('/dashboard');
@@ -76,7 +97,7 @@ const Results: React.FC = () => {
             }
         };
         fetchResultAndExam();
-    }, [testId, user, activeOrg, navigate]);
+    }, [testId, user, activeOrg, navigate, paidExamIds]);
 
     const handleGenerateFeedback = async () => {
         if (!result || !exam) return;
@@ -197,7 +218,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
     
     const isPass = result.score >= exam.passScore;
     const isPaidCertExam = !exam.isPractice;
-    const canUseAiFeedback = isSubscribed || isPaidCertExam;
+    const canUseAiFeedback = isSubscribed || (isPurchased && !hasPassedCert && !attemptsExceeded);
     const scoreColor = isPass ? 'text-green-600' : 'text-red-600';
     const isAdmin = !!user?.isAdmin;
 
@@ -225,7 +246,6 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 </div>
             )}
             
-            {/* --- NEW REVIEW SECTION --- */}
             <div className="text-center mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
                 <h2 className="text-xl font-semibold text-slate-800 mb-4">Rate Your Experience</h2>
                 {submittedReview ? (
@@ -293,17 +313,17 @@ Please provide a summary of the key areas I need to focus on based on these erro
                         </>
                     ) : (
                         <>
-                            <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Unlock our AI-powered study guide to get personalized feedback on your incorrect answers. This feature is available for all subscribers and certification exam purchasers.</p>
-                            <button
-                                disabled
-                                title="This is a premium feature. Purchase this exam or subscribe to unlock the AI-powered study guide and get personalized feedback on your incorrect answers."
-                                className="inline-flex items-center space-x-2 bg-slate-400 text-white font-bold py-3 px-6 rounded-lg cursor-not-allowed"
-                            >
+                             <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Unlock our AI-powered study guide to get personalized feedback. This premium feature is available to subscribers or with an exam purchase.</p>
+                             <button
+                                 disabled
+                                 title="This is a premium feature. Subscribe or purchase the certification exam to unlock the AI study guide. Access is removed for a specific exam after you pass it or use all 3 attempts."
+                                 className="inline-flex items-center space-x-2 bg-slate-400 text-white font-bold py-3 px-6 rounded-lg cursor-not-allowed"
+                             >
                                 <Lock size={20} />
                                 <span>AI Feedback Locked</span>
                             </button>
                             <a href="#/pricing" className="mt-3 inline-block text-sm text-cyan-600 hover:underline">
-                                View Purchase Options
+                                View Purchase & Subscription Options
                             </a>
                         </>
                     )}

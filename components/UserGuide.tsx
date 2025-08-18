@@ -42,7 +42,12 @@ const UserGuide: React.FC = () => {
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2 flex items-center gap-2"><CheckCircle /> Results, Feedback & Certificates</h2>
                 <p>After submitting, you'll be taken to the Results page:</p>
                 <ul>
-                    <li><strong><Sparkles className="inline-block h-5 w-5 text-amber-500" /> AI-Powered Feedback:</strong> If you don't pass a certification exam, you'll see an option to "Get AI-Powered Feedback". This generates a personalized study guide based on your incorrect answers, which you can then download as a PDF.</li>
+                    <li><strong><Sparkles className="inline-block h-5 w-5 text-amber-500" /> AI-Powered Feedback:</strong> This premium feature generates a personalized PDF study guide based on your incorrect answers. Access is unlocked in two ways:
+                        <ul>
+                            <li><strong>For Subscribers:</strong> You get AI feedback for <strong>any exam</strong> you don't pass, including all practice tests.</li>
+                            <li><strong>For Exam Purchasers:</strong> Purchasing a certification exam unlocks AI feedback for that specific exam program (both its certification and practice versions), as long as you have attempts remaining.</li>
+                        </ul>
+                    </li>
                     <li><strong><Star className="inline-block h-5 w-5 text-yellow-400" /> Rate Your Experience:</strong> After each exam, you can leave a star rating and a review. This helps us and other users! Your ratings will appear on the exam cards on the main website.</li>
                     <li><strong><Award className="inline-block h-5 w-5 text-blue-500" /> Certificate:</strong> If you pass a paid certification exam, a button will appear to "Download Your Certificate". Make sure your name is correct on your profile, as this is the name that will be printed on it.</li>
                     <li><strong>Answer Review:</strong> For <strong>practice tests</strong>, you can review every question to see your answer and the correct one. To protect the integrity of the certification exams, this feature is not available for paid tests.</li>
