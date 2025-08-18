@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type } from 'lucide-react';
+import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -197,6 +197,35 @@ const Admin: React.FC = () => {
                             )}
                         </div>
                     ))}
+                </div>
+            </div>
+
+            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
+                    <Lightbulb className="mr-3 text-cyan-500" />
+                    Architectural Vision: A Multi-Subject Platform
+                </h2>
+                <div className="space-y-4 text-slate-600">
+                    <p>
+                        This application has a robust architectural foundation that makes it highly adaptable to subjects beyond medical coding (e.g., law, finance, IT certifications). The core concept is to separate the application's <strong>engine</strong> from its <strong>content</strong>.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <h4 className="font-semibold text-slate-700">The Platform (Engine)</h4>
+                            <p className="text-sm">Subject-agnostic, reusable parts like the user system, exam player, results engine, and AI feedback system.</p>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <h4 className="font-semibold text-slate-700">The Content (Fuel)</h4>
+                            <p className="text-sm">Subject-specific data like exam names, descriptions, question sources, and certificate text.</p>
+                        </div>
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-700">Future Development Path</h3>
+                    <p>
+                        To achieve this, a future refactoring effort could move all subject-specific content from the code into a centralized JSON configuration file. 
+                    </p>
+                    <p>
+                        This would make the application "multi-tenant". Launching a version for a new subject would only require creating a new configuration file and a new Google Sheet with questions, requiring <strong>no further code changes</strong>. This one-time architectural investment would significantly increase the platform's versatility and scalability.
+                    </p>
                 </div>
             </div>
         </div>

@@ -11,13 +11,13 @@ interface WheelOfFortuneProps {
 
 const allPossibleSegments = [
     { label: "Annual Subscription", prizeId: "SUB_YEARLY" },
-    { label: "Better Luck Next Time", prizeId: "NEXT_TIME" },
+    { label: "Weekly Subscription", prizeId: "SUB_WEEKLY" },
     { label: "Free CPC Exam", prizeId: "EXAM_CPC" },
     { label: "Monthly Subscription", prizeId: "SUB_MONTHLY" },
     { label: "Better Luck Next Time", prizeId: "NEXT_TIME" },
     { label: "Free CCA Exam", prizeId: "EXAM_CCA" },
     { label: "Weekly Subscription", prizeId: "SUB_WEEKLY" },
-    { label: "Better Luck Next Time", prizeId: "NEXT_TIME" },
+    { label: "Monthly Subscription", prizeId: "SUB_MONTHLY" },
 ];
 
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -67,19 +67,38 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
         if (user && !user.isAdmin) {
             setSpinsLeft(0);
         }
+        
+        const toastId = toast.loading('Spinning the wheel...');
 
         try {
             const result = await googleSheetsService.spinWheel(token);
             const { prizeId, prizeLabel, newToken } = result;
 
-            let targetIndex = displaySegments.findIndex(s => s.prizeId === prizeId && s.label === prizeLabel);
-            if (targetIndex === -1) {
-                targetIndex = displaySegments.findIndex(s => s.prizeId === prizeId);
+            // Update auth state immediately after getting the result to prevent race conditions
+            if (prizeId !== 'NEXT_TIME' && newToken) {
+                await loginWithToken(newToken);
             }
-             if (targetIndex === -1) {
-                targetIndex = displaySegments.findIndex(s => s.prizeId === 'NEXT_TIME');
+            if (user && !user.isAdmin) {
+                setHasSpunWheel(true);
             }
             
+            const matchingIndices: number[] = [];
+            displaySegments.forEach((segment, index) => {
+                if (segment.prizeId === prizeId) {
+                    matchingIndices.push(index);
+                }
+            });
+    
+            let targetIndex: number;
+            if (matchingIndices.length > 0) {
+                targetIndex = matchingIndices[Math.floor(Math.random() * matchingIndices.length)];
+            } else {
+                console.warn(`Prize ID ${prizeId} not found on wheel. Landing on a fallback.`);
+                const fallbackIndices: number[] = [];
+                displaySegments.forEach((s, i) => { if (s.prizeId === 'NEXT_TIME') fallbackIndices.push(i); });
+                targetIndex = fallbackIndices.length > 0 ? fallbackIndices[Math.floor(Math.random() * fallbackIndices.length)] : 0;
+            }
+
             const degreesPerSegment = 360 / displaySegments.length;
             const randomOffset = (Math.random() * 0.8 - 0.4) * degreesPerSegment;
             const targetRotation = 360 - (targetIndex * degreesPerSegment + degreesPerSegment / 2) + randomOffset;
@@ -87,18 +106,16 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
             const fullSpins = 6 * 360;
             setRotation(rotation + fullSpins + targetRotation);
             
+            // This timeout now only handles the UI feedback after the animation
             setTimeout(() => {
+                toast.dismiss(toastId);
                 if (prizeId !== 'NEXT_TIME') {
                     toast.success(`Congratulations! You won: ${prizeLabel}. Your prize has been activated.`, { duration: 4000 });
-                    if (newToken) {
-                       loginWithToken(newToken);
-                    }
                 } else {
                     toast.error("Better luck next time!");
                 }
                 
                 if (user && !user.isAdmin) {
-                    setHasSpunWheel(true);
                     setTimeout(onClose, 1500);
                 } else {
                     setIsSpinning(false); // Re-enable for admins
@@ -106,6 +123,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
             }, 7000);
 
         } catch (error: any) {
+            toast.dismiss(toastId);
             toast.error(error.message || "An error occurred.");
             setIsSpinning(false);
             if(user && !user.isAdmin) {
