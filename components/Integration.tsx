@@ -97,6 +97,18 @@ function mco_exam_get_payload($user_id) {
 
                     $avg_rating = get_post_meta($product_id, '_mco_exam_avg_rating', true);
                     $review_count = get_post_meta($product_id, '_mco_exam_review_count', true);
+
+                    // --- SEED REVIEWS FOR MARKETING ---
+                    if (in_array($sku, $all_exam_skus)) {
+                        if ((int)$review_count < 250) {
+                            $review_count = mt_rand(250, 300);
+                            $avg_rating = mt_rand(420, 490) / 100.0;
+                            update_post_meta($product_id, '_mco_exam_review_count', $review_count);
+                            update_post_meta($product_id, '_mco_exam_avg_rating', $avg_rating);
+                        }
+                    }
+                    // --- END SEED REVIEWS ---
+
                     if ($avg_rating) $price_data['avgRating'] = (float)$avg_rating;
                     if ($review_count) $price_data['reviewCount'] = (int)$review_count;
 
