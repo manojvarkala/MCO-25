@@ -186,38 +186,24 @@ const Dashboard: React.FC = () => {
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-8">
                      {!isSubscribed && (
-                        <div className="space-y-4">
-                            <h2 className="text-2xl font-bold text-slate-800">Unlock Your Full Potential!</h2>
-                             <p className="text-slate-600">Subscribe to get unlimited access to all practice exams and AI-powered feedback to supercharge your learning.</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Monthly Card */}
-                                <div className="border border-slate-200 rounded-xl p-6 flex flex-col bg-white shadow-sm">
-                                    <h3 className="text-lg font-semibold text-slate-800">Monthly Subscription</h3>
-                                    <p className="mt-2 text-slate-500 text-sm flex-grow">Perfect for focused, short-term preparation.</p>
-                                    <div className="mt-4">
-                                        <span className="text-3xl font-bold text-slate-800">$19.99</span>
-                                        <span className="text-base font-medium text-slate-500">/month</span>
-                                    </div>
-                                    <a href="https://www.coding-online.net/product/monthly-subscription/" target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-slate-100 border border-slate-300 rounded-md py-2 text-sm font-semibold text-slate-700 text-center hover:bg-slate-200">
-                                        Subscribe Now
-                                    </a>
+                        <div className="p-6 rounded-lg bg-gradient-to-r from-cyan-50 to-purple-50 border border-slate-200 flex items-center justify-between flex-wrap gap-4">
+                           <div className="flex items-center gap-4">
+                                <div className="bg-white p-3 rounded-full shadow-sm">
+                                    <Zap className="h-6 w-6 text-cyan-500" />
                                 </div>
-                                {/* Yearly Card */}
-                                <div className="relative border-2 border-cyan-500 rounded-xl p-6 flex flex-col bg-white shadow-lg">
-                                    <div className="absolute top-0 py-1 px-3 bg-cyan-500 rounded-full text-xs font-semibold uppercase text-white transform -translate-y-1/2">
-                                        Best Value
-                                    </div>
-                                    <h3 className="text-lg font-semibold text-slate-800">Yearly Subscription</h3>
-                                    <p className="mt-2 text-slate-500 text-sm flex-grow">Save over 35% with our annual plan.</p>
-                                    <div className="mt-4">
-                                        <span className="text-3xl font-bold text-slate-800">$149.99</span>
-                                        <span className="text-base font-medium text-slate-500">/year</span>
-                                    </div>
-                                    <a href="https://www.coding-online.net/product/yearly-subscription/" target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-cyan-600 border border-transparent rounded-md py-2 text-sm font-semibold text-white text-center hover:bg-cyan-700">
-                                        Subscribe & Save
-                                    </a>
+                                <div>
+                                    <h2 className="text-lg font-bold text-slate-800">Unlock Your Full Potential</h2>
+                                    <p className="text-slate-600 text-sm">Subscribe for unlimited practice exams & AI feedback.</p>
                                 </div>
-                            </div>
+                           </div>
+                           <div className="flex items-center gap-3">
+                                <a href="https://www.coding-online.net/product/monthly-subscription/" target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-300 rounded-md py-2 px-4 text-sm font-semibold text-slate-700 text-center hover:bg-slate-100">
+                                    Monthly Plan
+                                </a>
+                                <a href="https://www.coding-online.net/product/yearly-subscription/" target="_blank" rel="noopener noreferrer" className="bg-cyan-600 border border-transparent rounded-md py-2 px-4 text-sm font-semibold text-white text-center hover:bg-cyan-700">
+                                    Yearly Plan & Save
+                                </a>
+                           </div>
                         </div>
                     )}
 

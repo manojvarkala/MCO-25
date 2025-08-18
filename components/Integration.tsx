@@ -348,44 +348,23 @@ function mco_exam_showcase_shortcode() {
 
         if ($monthly_product || $yearly_product) {
     ?>
-    <div style="grid-column: 1 / -1; margin-bottom: 2rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 2rem;">
-        <h2 style="text-align: center; font-size: 1.875rem; font-weight: 800; color: #1f2937; margin-bottom: 1rem;">Subscription Plans</h2>
-        <p style="text-align: center; max-width: 600px; margin: 0 auto 1.5rem; color: #4b5563;">Get unlimited access to all practice exams and AI feedback with a subscription.</p>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; max-width: 800px; margin: auto;">
-            
+    <div style="grid-column: 1 / -1; margin-bottom: 2rem; border: 1px solid #e2e8f0; padding: 1.5rem 2rem; border-radius: 0.75rem; background: linear-gradient(to right, #f0f9ff, #f9fafb); display: flex; align-items: center; justify-content: space-between; gap: 2rem; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="background-color: #fff; padding: 0.75rem; border-radius: 9999px; box-shadow: 0 1px 3px 0 rgba(0,0,0,.05);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <div>
+                <h3 style="font-size: 1.25rem; font-weight: 700; color: #1f2937;">Unlock Your Full Potential</h3>
+                <p style="color: #4b5563; margin-top: 0.25rem;">Subscribe for unlimited practice exams & AI feedback.</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
             <?php if ($monthly_product): ?>
-            <div class="mco-showcase-card">
-                <div class="mco-showcase-card-body">
-                    <h3>Monthly Subscription</h3>
-                    <p>Perfect for focused, short-term preparation. Includes unlimited access to all practice exams and AI feedback.</p>
-                    <div class="mco-showcase-price" style="margin-top: auto;">
-                        <span class="price" style="font-size: 2rem;"><?php echo $monthly_product->get_price_html(); ?></span>
-                        <span class="regular">/month</span>
-                    </div>
-                    <div class="mco-showcase-card-actions" style="margin-top: 1rem;">
-                        <a href="<?php echo esc_url($monthly_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-practice">Subscribe Now</a>
-                    </div>
-                </div>
-            </div>
+                <a href="<?php echo esc_url($monthly_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-practice">Monthly Plan</a>
             <?php endif; ?>
-
-            <?php if ($yearly_product): ?>
-            <div class="mco-showcase-card" style="border: 2px solid #0891b2; position: relative;">
-                <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%) translateY(-50%); background-color: #0891b2; color: white; padding: 0.25rem 1rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">BEST VALUE</div>
-                 <div class="mco-showcase-card-body">
-                    <h3>Yearly Subscription</h3>
-                    <p>Save over 35% with our annual plan for continuous learning.</p>
-                     <div class="mco-showcase-price" style="margin-top: auto;">
-                        <span class="price" style="font-size: 2rem;"><?php echo $yearly_product->get_price_html(); ?></span>
-                        <span class="regular">/year</span>
-                    </div>
-                    <div class="mco-showcase-card-actions" style="margin-top: 1rem;">
-                        <a href="<?php echo esc_url($yearly_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-purchase">Subscribe & Save</a>
-                    </div>
-                </div>
-            </div>
+             <?php if ($yearly_product): ?>
+                <a href="<?php echo esc_url($yearly_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-purchase">Yearly Plan & Save</a>
             <?php endif; ?>
-
         </div>
     </div>
     <?php
