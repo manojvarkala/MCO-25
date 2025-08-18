@@ -24,7 +24,7 @@ const Header: React.FC = () => {
   const myAccountUrl = `https://www.coding-online.net/my-account/`;
 
   const headerClasses = isSubscribed
-    ? "bg-slate-800 text-white shadow-lg sticky top-0 z-50"
+    ? "shadow-lg sticky top-0 z-50 premium-header-gradient"
     : "bg-white shadow-md sticky top-0 z-50";
 
   const linkClasses = isSubscribed
@@ -42,10 +42,10 @@ const Header: React.FC = () => {
                     className="h-14 w-14 object-contain"
                 />
                 <div className="flex flex-col">
-                    <span className={`text-3xl font-bold font-serif ${isSubscribed ? 'text-white' : 'text-slate-900'}`}>
+                    <span className="text-3xl font-bold font-serif text-slate-900">
                         {activeOrg.name}
                     </span>
-                    <span className={`text-md font-serif ${isSubscribed ? 'text-slate-400' : 'text-slate-500'}`}>
+                    <span className="text-md font-serif text-slate-500">
                         {activeOrg.website}
                     </span>
                 </div>
