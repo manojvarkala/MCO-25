@@ -335,8 +335,8 @@ function mco_exam_showcase_shortcode() {
     .mco-btn-purchase:hover { background-color: #d97706; }
     .mco-btn-practice { background-color: #f8fafc; color: #475569; border: 1px solid #cbd5e1; }
     .mco-btn-practice:hover { background-color: #f1f5f9; }
-    .mco-btn-addon { display: inline-block !important; background-color: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 0.4rem 0.8rem; font-size: 0.8rem !important; }
-    .mco-btn-addon:hover { background-color: #e0e7ff; }
+    .mco-btn-addon { display: inline-block !important; background-color: #16a34a; color: white; border: 1px solid #15803d; padding: 0.6rem 1rem !important; font-size: 0.9rem !important; }
+    .mco-btn-addon:hover { background-color: #15803d; }
     </style>
     <div class="mco-showcase-container">
     <?php
@@ -348,24 +348,36 @@ function mco_exam_showcase_shortcode() {
 
         if ($monthly_product || $yearly_product) {
     ?>
-    <div style="grid-column: 1 / -1; margin-bottom: 2rem; border: 1px solid #e2e8f0; padding: 1.5rem 2rem; border-radius: 0.75rem; background: linear-gradient(to right, #f0f9ff, #f9fafb); display: flex; align-items: center; justify-content: space-between; gap: 2rem; flex-wrap: wrap;">
-        <div style="display: flex; align-items: center; gap: 1rem;">
-            <div style="background-color: #fff; padding: 0.75rem; border-radius: 9999px; box-shadow: 0 1px 3px 0 rgba(0,0,0,.05);">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+    <div style="grid-column: 1 / -1; margin-bottom: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+        <!-- Monthly Card -->
+        <?php if ($monthly_product): ?>
+        <div style="background: linear-gradient(to bottom right, #22d3ee, #0ea5e9); color: white; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); padding: 2rem; display: flex; flex-direction: column;">
+            <h3 style="font-size: 1.25rem; font-weight: 700;">Monthly Subscription</h3>
+            <p style="margin-top: 1rem; color: rgba(255,255,255,0.8); flex-grow: 1;">Unlimited practice & AI feedback.</p>
+            <div style="margin-top: 1.5rem; display: flex; align-items: baseline; gap: 0.5rem;">
+                <span style="font-size: 2.25rem; font-weight: 800;"><?php echo $monthly_product->get_price_html(); ?></span>
+                <span style="font-weight: 500; color: rgba(255,255,255,0.8);">/month</span>
             </div>
-            <div>
-                <h3 style="font-size: 1.25rem; font-weight: 700; color: #1f2937;">Unlock Your Full Potential</h3>
-                <p style="color: #4b5563; margin-top: 0.25rem;">Subscribe for unlimited practice exams & AI feedback.</p>
+            <a href="<?php echo esc_url($monthly_product->add_to_cart_url()); ?>" class="mco-showcase-btn" style="margin-top: 2rem; background: white; color: #0891b2;">Subscribe Now</a>
+        </div>
+        <?php endif; ?>
+
+        <!-- Yearly Card -->
+        <?php if ($yearly_product): ?>
+        <div style="background: linear-gradient(to bottom right, #a855f7, #4f46e5); color: white; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); padding: 2rem; display: flex; flex-direction: column; position: relative;">
+            <div style="position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); background: #facc15; color: #78350f; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.75rem; border-radius: 9999px; display: flex; align-items: center; gap: 0.25rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"></path></svg>
+                Best Value
             </div>
+            <h3 style="font-size: 1.25rem; font-weight: 700;">Yearly Subscription</h3>
+            <p style="margin-top: 1rem; color: rgba(255,255,255,0.8); flex-grow: 1;">Save over 35% with annual billing.</p>
+            <div style="margin-top: 1.5rem; display: flex; align-items: baseline; gap: 0.5rem;">
+                <span style="font-size: 2.25rem; font-weight: 800;"><?php echo $yearly_product->get_price_html(); ?></span>
+                <span style="font-weight: 500; color: rgba(255,255,255,0.8);">/year</span>
+            </div>
+            <a href="<?php echo esc_url($yearly_product->add_to_cart_url()); ?>" class="mco-showcase-btn" style="margin-top: 2rem; background: white; color: #6d28d9;">Subscribe & Save</a>
         </div>
-        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            <?php if ($monthly_product): ?>
-                <a href="<?php echo esc_url($monthly_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-practice">Monthly Plan</a>
-            <?php endif; ?>
-             <?php if ($yearly_product): ?>
-                <a href="<?php echo esc_url($yearly_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-purchase">Yearly Plan & Save</a>
-            <?php endif; ?>
-        </div>
+        <?php endif; ?>
     </div>
     <?php
         }
@@ -398,8 +410,7 @@ function mco_exam_showcase_shortcode() {
                                 $addon_sku = $program['cert_sku'] . '-1mo-addon';
                                 $addon_product_id = wc_get_product_id_by_sku($addon_sku);
                                 if ($addon_product_id && $addon_product = wc_get_product($addon_product_id)):
-                                    $price_difference = (float)$addon_product->get_price() - (float)$product->get_price();
-                                    $button_text = 'Add 1-Month Subscription for ' . wc_price($price_difference) . ' extra';
+                                    $button_text = 'Buy Bundle for ' . $addon_product->get_price_html();
                             ?>
                                 <div style="text-align: center; margin-top: 0.25rem;">
                                     <a href="<?php echo esc_url($addon_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-addon" title="Includes the exam plus 1-month of premium access to all practice tests and AI feedback.">

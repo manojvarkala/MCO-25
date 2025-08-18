@@ -357,7 +357,6 @@ const Dashboard: React.FC = () => {
                                                         const bundlePriceData = examPrices?.[bundleSku];
                                                         if (bundlePriceData) {
                                                             const bundleSlug = bundleSku;
-                                                            const priceDifference = bundlePriceData.price - certExam.price;
                                                             return (
                                                                 <div className="p-3 bg-white rounded-md border border-cyan-400 ring-2 ring-cyan-200">
                                                                     <div className="text-center">
@@ -369,7 +368,7 @@ const Dashboard: React.FC = () => {
                                                                         href={`#/checkout/${bundleSlug}`}
                                                                         className="mt-2 w-full flex items-center justify-center bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700 transition"
                                                                     >
-                                                                        Add 1-Month Subscription for ${priceDifference.toFixed(2)} extra
+                                                                        Buy Bundle for ${bundlePriceData.price.toFixed(2)}
                                                                     </a>
                                                                 </div>
                                                             )
