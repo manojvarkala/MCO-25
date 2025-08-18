@@ -34,12 +34,16 @@ const Dashboard: React.FC = () => {
 
     const monthlyPriceData = examPrices?.['sub-monthly'];
     const yearlyPriceData = examPrices?.['sub-yearly'];
+    const bundlePriceData = examPrices?.['exam-cpc-cert-1mo-addon']; // Representative bundle
 
     const monthlyPrice = monthlyPriceData?.price ?? 19.99;
     const monthlyRegularPrice = monthlyPriceData?.regularPrice;
 
     const yearlyPrice = yearlyPriceData?.price ?? 149.99;
     const yearlyRegularPrice = yearlyPriceData?.regularPrice;
+    
+    const bundlePrice = bundlePriceData?.price ?? 59.99;
+    const bundleRegularPrice = bundlePriceData?.regularPrice;
 
 
     const processResults = (resultsData: TestResult[]) => {
@@ -198,7 +202,7 @@ const Dashboard: React.FC = () => {
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-8">
                      {!isSubscribed && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {/* Monthly Card */}
                             <div className="bg-gradient-to-br from-cyan-400 to-sky-600 rounded-xl shadow-lg p-6 flex flex-col text-white">
                                 <h3 className="text-lg font-bold">Monthly Subscription</h3>
@@ -241,6 +245,25 @@ const Dashboard: React.FC = () => {
                                 </div>
                                 <a href={yearlySubUrl} target="_blank" rel="noopener noreferrer" className="mt-4 block w-full bg-white text-purple-700 border border-transparent rounded-md py-2 text-sm font-semibold text-center hover:bg-purple-100">
                                     Subscribe & Save
+                                </a>
+                            </div>
+
+                             {/* New Bundle Card */}
+                            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg p-6 flex flex-col text-white">
+                                <h3 className="text-lg font-bold">Exam + Study Bundle</h3>
+                                <p className="mt-2 text-sm text-emerald-100 flex-grow">Get an exam plus 1-month of premium study access.</p>
+                                <div className="mt-4 flex items-baseline gap-2">
+                                    {bundleRegularPrice && bundleRegularPrice > bundlePrice ? (
+                                        <>
+                                            <span className="text-xl line-through opacity-70">${bundleRegularPrice.toFixed(2)}</span>
+                                            <span className="text-4xl font-extrabold text-white">${bundlePrice.toFixed(2)}</span>
+                                        </>
+                                    ) : (
+                                        <span className="text-4xl font-extrabold text-white">${bundlePrice.toFixed(2)}</span>
+                                    )}
+                                </div>
+                                <a href={browseExamsUrl} target="_blank" rel="noopener noreferrer" className="mt-4 block w-full bg-white text-green-700 border border-transparent rounded-md py-2 text-sm font-semibold text-center hover:bg-green-50">
+                                    Browse Bundles
                                 </a>
                             </div>
                         </div>

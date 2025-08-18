@@ -31,9 +31,22 @@ const Test: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
 
+  const answersRef = useRef(answers);
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
+  const questionsRef = useRef(questions);
+  useEffect(() => {
+    questionsRef.current = questions;
+  }, [questions]);
+
   const handleSubmit = useCallback(async (isAutoSubmit = false) => {
+    const latestAnswers = answersRef.current;
+    const latestQuestions = questionsRef.current;
+
     if (!isAutoSubmit) {
-        const unansweredQuestionsCount = questions.length - answers.size;
+        const unansweredQuestionsCount = latestQuestions.length - latestAnswers.size;
         if (unansweredQuestionsCount > 0) {
             const confirmed = window.confirm(
                 `You have ${unansweredQuestionsCount} unanswered question(s). Are you sure you want to submit?`
@@ -53,12 +66,12 @@ const Test: React.FC = () => {
     localStorage.removeItem(`exam_timer_${examId}_${user.id}`);
 
     try {
-        const userAnswers: UserAnswer[] = Array.from(answers.entries()).map(([questionId, answer]) => ({
+        const userAnswers: UserAnswer[] = Array.from(latestAnswers.entries()).map(([questionId, answer]) => ({
             questionId,
             answer,
         }));
         
-        const result = await googleSheetsService.submitTest(user, examId, userAnswers, questions, token);
+        const result = await googleSheetsService.submitTest(user, examId, userAnswers, latestQuestions, token);
         toast.success("Test submitted successfully!");
         navigate(`/results/${result.testId}`);
 
@@ -67,7 +80,7 @@ const Test: React.FC = () => {
     } finally {
         setIsSubmitting(false);
     }
-  }, [examId, navigate, token, user, answers, questions]);
+  }, [examId, navigate, token, user]);
 
   useEffect(() => {
     if (isInitializing || !examId || !activeOrg) return;
@@ -166,7 +179,7 @@ const Test: React.FC = () => {
 
   const handlePrev = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
+      setCurrentQuestionIndex(prev => prev + 1);
     }
   };
 
