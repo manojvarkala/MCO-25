@@ -155,3 +155,10 @@ export interface DebugData {
         data?: any;
     };
 }
+
+// User data from admin search
+export interface SearchedUser {
+    id: string;
+    name: string;
+    email: string;
+}

@@ -37,6 +37,20 @@
       .premium-header-gradient {
         background: linear-gradient(to right, #ffffff 25%, #1e293b 45%);
       }
+      @keyframes pointer-wiggle {
+        0%, 100% { transform: scale(1) rotate(0deg); }
+        50% { transform: scale(1.15) rotate(-2deg); }
+      }
+      .pointer-wiggling {
+        animation: pointer-wiggle 0.2s ease-in-out infinite;
+      }
+      @keyframes pulse-gift {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.2); opacity: 0.75; }
+      }
+      .animate-pulse-gift {
+        animation: pulse-gift 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
     </style>
   <script type="importmap">
 {

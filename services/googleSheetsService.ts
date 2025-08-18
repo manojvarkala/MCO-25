@@ -1,4 +1,4 @@
-import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, SpinWheelResult } from '../types.ts';
+import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, SpinWheelResult, SearchedUser } from '../types.ts';
 import toast from 'react-hot-toast';
 import { GoogleGenAI } from "@google/genai";
 
@@ -238,6 +238,27 @@ export const googleSheetsService = {
         return apiFetch('/grant-prize', token, {
             method: 'POST',
             body: JSON.stringify({ userId, prizeId })
+        });
+    },
+
+    searchUser: async (token: string, searchTerm: string): Promise<SearchedUser[]> => {
+        return apiFetch('/search-user', token, {
+            method: 'POST',
+            body: JSON.stringify({ searchTerm })
+        });
+    },
+
+    resetSpins: async (token: string, userId: string): Promise<{ success: boolean; message: string; }> => {
+        return apiFetch('/reset-spins', token, {
+            method: 'POST',
+            body: JSON.stringify({ userId })
+        });
+    },
+
+    removePrize: async (token: string, userId: string): Promise<{ success: boolean; message: string; }> => {
+        return apiFetch('/remove-prize', token, {
+            method: 'POST',
+            body: JSON.stringify({ userId })
         });
     },
 };

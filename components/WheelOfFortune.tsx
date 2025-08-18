@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import { Gift, X, Info } from 'lucide-react';
+import type { TokenPayload } from '../types.ts';
 
 interface WheelOfFortuneProps {
     isOpen: boolean;
@@ -33,6 +34,7 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
     const { user, token, loginWithToken, spinsAvailable } = useAuth();
     const [isSpinning, setIsSpinning] = useState(false);
+    const [isWiggling, setIsWiggling] = useState(false);
     const [rotation, setRotation] = useState(0);
     const [displaySegments, setDisplaySegments] = useState(allPossibleSegments);
     const [conicGradient, setConicGradient] = useState('');
@@ -63,6 +65,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
     const handleSpin = async () => {
         if (!token || isSpinning) return;
         setIsSpinning(true);
+        setIsWiggling(true);
         
         const toastId = toast.loading('Spinning the wheel...');
 
@@ -101,23 +104,38 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
             
             setTimeout(() => {
                 toast.dismiss(toastId);
+                setIsWiggling(false);
                 if (prizeId !== 'NEXT_TIME') {
                     toast.success(`Congratulations! You won: ${prizeLabel}. Your prize has been activated.`, { duration: 4000 });
                 } else {
                     toast.error("Better luck next time!");
                 }
+
+                let newSpins = 0;
+                if(newToken) {
+                    try {
+                        const payloadBase64Url = newToken.split('.')[1];
+                        const payloadBase64 = payloadBase64Url.replace(/-/g, '+').replace(/_/g, '/');
+                        const decodedPayload = decodeURIComponent(atob(payloadBase64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                        const payload: TokenPayload = JSON.parse(decodedPayload);
+                        newSpins = payload.spinsAvailable ?? 0;
+                    } catch (e) {
+                        console.error("Failed to decode new token in wheel", e);
+                    }
+                }
                 
-                if (user && !user.isAdmin) {
+                if (newSpins === 0 && !user?.isAdmin) {
                     setTimeout(onClose, 1500);
                 } else {
-                    setIsSpinning(false); // Re-enable for admins
+                    setIsSpinning(false); // Re-enable for next spin
                 }
             }, 7000);
 
         } catch (error: any) {
             toast.dismiss(toastId);
-            toast.error(error.message || "An error occurred.");
             setIsSpinning(false);
+            setIsWiggling(false);
+            toast.error(error.message || "An error occurred.");
             if(user && !user.isAdmin) {
                onClose();
             }
@@ -193,7 +211,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                 </h2>
                 
                 <div className="relative w-72 h-72 mx-auto my-8">
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20" style={{ filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.5))' }}>
+                    <div className={`absolute -top-4 left-1/2 -translate-x-1/2 z-20 transition-transform duration-100 ${isWiggling ? 'pointer-wiggling' : ''}`} style={{ filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.5))' }}>
                         <svg width="30" height="40" viewBox="0 0 38 51" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M19 50.5C19 50.5 37.5 32.8856 37.5 19C37.5 5.11442 29.3856 0.5 19 0.5C8.61442 0.5 0.5 5.11442 0.5 19C0.5 32.8856 19 50.5 19 50.5Z" fill="url(#paint0_linear_1_2)" stroke="#E5E7EB" />
                             <defs><linearGradient id="paint0_linear_1_2" x1="19" y1="0.5" x2="19" y2="50.5" gradientUnits="userSpaceOnUse"><stop stopColor="white"/><stop offset="1" stopColor="#D1D5DB"/></linearGradient></defs>

@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           9.2.0
+ * Version:           9.3.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -187,6 +187,9 @@ function mco_exam_register_rest_api() {
     register_rest_route('mco-app/v1', '/spin-wheel', ['methods' => 'POST', 'callback' => 'mco_spin_wheel_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/add-spins', ['methods' => 'POST', 'callback' => 'mco_add_spins_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/grant-prize', ['methods' => 'POST', 'callback' => 'mco_grant_prize_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+    register_rest_route('mco-app/v1', '/search-user', ['methods' => 'POST', 'callback' => 'mco_search_user_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+    register_rest_route('mco-app/v1', '/reset-spins', ['methods' => 'POST', 'callback' => 'mco_reset_spins_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+    register_rest_route('mco-app/v1', '/remove-prize', ['methods' => 'POST', 'callback' => 'mco_remove_prize_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
 }
 
 function mco_exam_api_permission_check($request) {
@@ -480,6 +483,67 @@ function mco_grant_prize_callback($request) {
     }
     
     return new WP_REST_Response(['success' => true, 'message' => 'Prize granted successfully.'], 200);
+}
+
+function mco_search_user_callback($request) {
+    $admin_user_id = (int)$request->get_param('jwt_user_id');
+    if (!user_can($admin_user_id, 'administrator')) return new WP_Error('forbidden', 'Admin permission required.', ['status' => 403]);
+    
+    $params = $request->get_json_params();
+    $search_term = isset($params['searchTerm']) ? sanitize_text_field($params['searchTerm']) : '';
+    if (empty($search_term)) return new WP_REST_Response([], 200);
+
+    $user_query = new WP_User_Query([
+        'search' => '*' . esc_attr($search_term) . '*',
+        'search_columns' => ['user_login', 'user_email', 'display_name'],
+        'number' => 10
+    ]);
+    
+    $users = [];
+    foreach ($user_query->get_results() as $user) {
+        $users[] = ['id' => (string)$user->ID, 'name' => $user->display_name, 'email' => $user->user_email];
+    }
+    return new WP_REST_Response($users, 200);
+}
+
+function mco_reset_spins_callback($request) {
+    $admin_user_id = (int)$request->get_param('jwt_user_id');
+    if (!user_can($admin_user_id, 'administrator')) return new WP_Error('forbidden', 'Admin permission required.', ['status' => 403]);
+    
+    $params = $request->get_json_params();
+    $target_user_id = isset($params['userId']) ? intval($params['userId']) : 0;
+    if ($target_user_id <= 0 || !get_userdata($target_user_id)) return new WP_Error('user_not_found', 'Target user not found.', ['status' => 404]);
+
+    update_user_meta($target_user_id, 'mco_spins_available', 0);
+    return new WP_REST_Response(['success' => true, 'message' => 'Spins reset to 0.'], 200);
+}
+
+function mco_remove_prize_callback($request) {
+    $admin_user_id = (int)$request->get_param('jwt_user_id');
+    if (!user_can($admin_user_id, 'administrator')) return new WP_Error('forbidden', 'Admin permission required.', ['status' => 403]);
+    
+    $params = $request->get_json_params();
+    $target_user_id = isset($params['userId']) ? intval($params['userId']) : 0;
+    if ($target_user_id <= 0 || !get_userdata($target_user_id)) return new WP_Error('user_not_found', 'Target user not found.', ['status' => 404]);
+
+    $won_prize = get_user_meta($target_user_id, 'mco_wheel_prize', true);
+    if ($won_prize && isset($won_prize['prizeId'])) {
+        $prize_id = $won_prize['prizeId'];
+        $prize_map = [ 'EXAM_CPC' => 'exam-cpc-cert', 'EXAM_CCA' => 'exam-cca-cert' ];
+        if (array_key_exists($prize_id, $prize_map)) {
+            $sku_to_remove = $prize_map[$prize_id];
+            $granted_skus = get_user_meta($target_user_id, 'mco_granted_skus', true);
+            if (is_array($granted_skus)) {
+                $granted_skus = array_diff($granted_skus, [$sku_to_remove]);
+                update_user_meta($target_user_id, 'mco_granted_skus', array_values($granted_skus));
+            }
+        }
+    }
+    
+    delete_user_meta($target_user_id, 'mco_wheel_prize');
+    delete_user_meta($target_user_id, 'mco_subscription_expiry');
+    
+    return new WP_REST_Response(['success' => true, 'message' => 'Prize removed and entitlements revoked.'], 200);
 }
 
 

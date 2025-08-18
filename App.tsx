@@ -1,7 +1,8 @@
 
 
 
-import React from 'react';
+
+import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
@@ -49,8 +50,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = f
 };
 
 const AppContent: React.FC = () => {
-    const { user, canSpinWheel, setWheelModalDismissed } = useAuth();
+    const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed } = useAuth();
     const { isWheelModalOpen, setWheelModalOpen } = useAppContext();
+
+    useEffect(() => {
+        // Show the wheel modal only for eligible users who haven't already dismissed it this session.
+        if (canSpinWheel && !wheelModalDismissed) {
+            const timer = setTimeout(() => setWheelModalOpen(true), 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [canSpinWheel, wheelModalDismissed, setWheelModalOpen]);
 
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800">

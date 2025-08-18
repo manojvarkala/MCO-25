@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -6,8 +6,9 @@ import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, Use
 import { logoBase64 } from '../assets/logo.ts';
 
 const Header: React.FC = () => {
-  const { user, logout, canSpinWheel, wheelModalDismissed, isSubscribed } = useAuth();
+  const { user, logout, canSpinWheel, isSubscribed } = useAuth();
   const { activeOrg, setWheelModalOpen } = useAppContext();
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -60,14 +61,14 @@ const Header: React.FC = () => {
              </div>
         )}
        
-        <div className="flex items-center space-x-4">
-            {canSpinWheel && wheelModalDismissed && (
+        <nav className="flex items-center space-x-4">
+            {canSpinWheel && (
                 <button
                     onClick={() => setWheelModalOpen(true)}
                     className="flex items-center gap-2 bg-black text-yellow-400 font-bold py-2 px-4 rounded-full border-2 border-yellow-500 shadow-lg hover:bg-gray-800 transition-all transform hover:scale-105"
                     title="You have a free spin!"
                 >
-                    <Gift size={16} />
+                    <Gift size={16} className="animate-pulse-gift" />
                     <span className="hidden sm:inline">Spin & Win</span>
                 </button>
             )}
@@ -97,31 +98,29 @@ const Header: React.FC = () => {
             </Link>
           {user ? (
             <>
-              <Link to="/profile" className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`} title="View your profile">
-                {isSubscribed && <Star size={16} className="text-yellow-400 fill-current" />}
-                <UserCircle size={20} />
-                <span className="hidden sm:inline">Profile{user.isAdmin && ' (Admin)'}</span>
-              </Link>
-               {user.isAdmin && (
-                  <Link
-                    to="/admin"
-                    className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
-                    title="Go to the Admin Panel"
-                  >
-                    <Shield size={16} />
-                    <span className="hidden sm:inline">Admin</span>
-                  </Link>
-               )}
-               <a
-                href={myAccountUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Manage your orders, downloads, and addresses on our main site."
-                className="flex items-center space-x-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition duration-200"
-              >
-                <User size={16} />
-                <span className="hidden sm:inline">My Account</span>
-              </a>
+              <div className="relative" onMouseEnter={() => setIsProfileMenuOpen(true)} onMouseLeave={() => setIsProfileMenuOpen(false)}>
+                <Link to="/profile" className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`} title="View your profile">
+                    {isSubscribed && <Star size={16} className="text-yellow-400 fill-current" />}
+                    <UserCircle size={20} />
+                    <span className="hidden sm:inline">Profile</span>
+                </Link>
+                 {isProfileMenuOpen && (
+                    <div className={`absolute right-0 mt-2 w-56 rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 z-50 ${isSubscribed ? 'bg-slate-800' : 'bg-white'}`}>
+                        <div className="px-4 py-2 text-xs text-slate-400">Welcome, {user.name}</div>
+                         <Link to="/profile" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
+                            <User size={14}/> Profile Details
+                        </Link>
+                        <a href={myAccountUrl} target="_blank" rel="noopener noreferrer" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
+                           <UserCircle size={14}/> My Account (Main Site)
+                        </a>
+                        {user.isAdmin && (
+                            <Link to="/admin" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
+                               <Shield size={14}/> Admin Panel
+                            </Link>
+                        )}
+                    </div>
+                )}
+              </div>
               <button
                 onClick={handleLogout}
                 className="flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition duration-200"
@@ -148,7 +147,7 @@ const Header: React.FC = () => {
                 </a>
              </div>
           )}
-        </div>
+        </nav>
       </div>
     </header>
   );
