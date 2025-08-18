@@ -32,7 +32,7 @@ const StarRating: React.FC<{ rating: number; count: number; }> = ({ rating, coun
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
-    const { user, paidExamIds, isSubscribed, updateUserName, token, examPrices, hasSpunWheel, wheelModalDismissed } = useAuth();
+    const { user, paidExamIds, isSubscribed, updateUserName, token, examPrices, canSpinWheel, wheelModalDismissed } = useAuth();
     const { activeOrg, setWheelModalOpen } = useAppContext();
     const [results, setResults] = useState<TestResult[] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -44,11 +44,11 @@ const Dashboard: React.FC = () => {
 
     useEffect(() => {
         // Show the wheel modal only for eligible users who haven't already dismissed it this session.
-        if (user && (!hasSpunWheel || user.isAdmin) && !wheelModalDismissed) {
+        if (canSpinWheel && !wheelModalDismissed) {
             const timer = setTimeout(() => setWheelModalOpen(true), 1500);
             return () => clearTimeout(timer);
         }
-    }, [user, hasSpunWheel, wheelModalDismissed, setWheelModalOpen]);
+    }, [canSpinWheel, wheelModalDismissed, setWheelModalOpen]);
 
     const loginUrl = 'https://www.coding-online.net/exam-login/';
     const appDashboardPath = '/dashboard';

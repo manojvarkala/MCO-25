@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import type { User, TokenPayload } from '../types.ts';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -12,6 +12,7 @@ interface AuthContextType {
   hasSpunWheel: boolean;
   wonPrize: { prizeId: string; prizeLabel: string; } | null;
   wheelModalDismissed: boolean;
+  canSpinWheel: boolean;
   loginWithToken: (token: string) => void;
   logout: () => void;
   useFreeAttempt: () => void;
@@ -85,6 +86,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
       }
   });
+  
+  const canSpinWheel = useMemo(() => {
+    if (!user) return false;
+    if (user.isAdmin) return true; // Admins can always spin for testing
+    return !hasSpunWheel;
+  }, [user, hasSpunWheel]);
 
 
   const logout = useCallback(() => {
@@ -240,7 +247,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 
   return (
-    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, hasSpunWheel, wonPrize, wheelModalDismissed, loginWithToken, logout, useFreeAttempt, updateUserName, setHasSpunWheel: updateHasSpunWheel, setWheelModalDismissed: updateWheelModalDismissed }}>
+    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, hasSpunWheel, wonPrize, wheelModalDismissed, canSpinWheel, loginWithToken, logout, useFreeAttempt, updateUserName, setHasSpunWheel: updateHasSpunWheel, setWheelModalDismissed: updateWheelModalDismissed }}>
       {children}
     </AuthContext.Provider>
   );

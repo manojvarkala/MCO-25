@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
@@ -48,12 +49,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = f
 };
 
 const AppContent: React.FC = () => {
-    const { user, hasSpunWheel, setWheelModalDismissed } = useAuth();
+    const { user, canSpinWheel, setWheelModalDismissed } = useAuth();
     const { isWheelModalOpen, setWheelModalOpen } = useAppContext();
 
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800">
-            {user && (!hasSpunWheel || user.isAdmin) && (
+            {canSpinWheel && (
               <WheelOfFortune 
                 isOpen={isWheelModalOpen} 
                 onClose={() => {

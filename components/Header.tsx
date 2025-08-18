@@ -2,6 +2,8 @@
 
 
 
+
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -10,7 +12,7 @@ import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, Use
 import { logoBase64 } from '../assets/logo.ts';
 
 const Header: React.FC = () => {
-  const { user, logout, hasSpunWheel, wheelModalDismissed } = useAuth();
+  const { user, logout, canSpinWheel, wheelModalDismissed } = useAuth();
   const { activeOrg, setWheelModalOpen } = useAppContext();
 
   const handleLogout = () => {
@@ -58,7 +60,7 @@ const Header: React.FC = () => {
         )}
        
         <div className="flex items-center space-x-4">
-            {user && (!hasSpunWheel || user.isAdmin) && wheelModalDismissed && (
+            {canSpinWheel && wheelModalDismissed && (
                 <button
                     onClick={() => setWheelModalOpen(true)}
                     className="flex items-center gap-2 bg-black text-yellow-400 font-bold py-2 px-4 rounded-full border-2 border-yellow-500 shadow-lg hover:bg-gray-800 transition-all transform hover:scale-105"
