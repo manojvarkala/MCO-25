@@ -58,34 +58,31 @@ const SuggestedBooksSidebar: React.FC = () => {
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-md">
-            <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
+            <h3 className="text-xl font-bold text-slate-800 mb-2 flex items-center">
                 <BookOpen className="mr-3 text-cyan-500" /> Study Hall
             </h3>
             <p className="text-sm text-slate-500 mb-6">Explore these recommended books to deepen your knowledge and prepare for your exams.</p>
-            <div className="space-y-6">
-                {suggestedBooks.slice(0, 5).map(book => {
+            <div className="space-y-4">
+                {suggestedBooks.map(book => {
                      const { url, domainName } = getGeoAffiliateLink(book);
                      return (
-                        <div key={book.id} className="flex items-start gap-4">
-                            <BookCover title={book.title} className="w-20 h-24 rounded shadow-sm flex-shrink-0" />
-                            <div className="flex-grow min-w-0">
-                                <h4 className="font-bold text-slate-700 leading-tight">{book.title}</h4>
-                                <p className="text-xs text-slate-500 mt-1 mb-2">{book.description.substring(0, 75)}...</p>
-                                <a 
-                                    href={url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-xs font-semibold text-cyan-600 hover:text-cyan-800 inline-flex items-center gap-1"
-                                >
-                                   <ShoppingCart size={12}/> Buy on {domainName}
-                                </a>
-                            </div>
+                        <div key={book.id} className="bg-slate-50 rounded-lg p-4 border border-slate-200 text-center">
+                            <BookCover title={book.title} className="w-full h-32 rounded shadow-md mb-3" />
+                            <h4 className="font-bold text-slate-800 leading-tight text-sm">{book.title}</h4>
+                            <a 
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-3 text-xs font-semibold text-cyan-600 hover:text-cyan-800 inline-flex items-center gap-1"
+                            >
+                               <ShoppingCart size={12}/> Buy on {domainName}
+                            </a>
                         </div>
                      )
                 })}
             </div>
-             <p className="text-xs text-slate-400 mt-4 text-center">
-                As an Amazon Associate, we earn from qualifying purchases.
+             <p className="text-xs text-slate-400 mt-6 text-center">
+                As an Amazon Associate, we earn from qualifying purchases. Using our links costs you nothing extra!
             </p>
         </div>
     );

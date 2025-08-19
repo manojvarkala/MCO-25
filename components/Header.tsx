@@ -43,9 +43,16 @@ const Header: React.FC = () => {
                     className="h-14 w-14 object-contain"
                 />
                 <div className="flex flex-col">
-                    <span className="text-3xl font-bold font-serif text-slate-900">
-                        {activeOrg.name}
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-3xl font-bold font-serif text-slate-900">
+                            {activeOrg.name}
+                        </span>
+                        {isSubscribed && (
+                            <span className="bg-yellow-400 text-yellow-900 text-xs font-bold uppercase px-2 py-0.5 rounded-full self-center">
+                                PRO
+                            </span>
+                        )}
+                    </div>
                     <span className="text-md font-serif text-slate-500">
                         {activeOrg.website}
                     </span>

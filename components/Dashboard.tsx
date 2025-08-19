@@ -356,9 +356,12 @@ const Dashboard: React.FC = () => {
                                                 <h4 className="font-semibold text-slate-700 flex items-center gap-2"><FlaskConical size={16} /> Free Practice Exam</h4>
                                                 <div className="mt-2 text-xs">
                                                     {isSubscribed ? (
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-800">
-                                                            <Star size={12} className="mr-1"/> Unlimited Attempts
-                                                        </span>
+                                                        <div>
+                                                            <span className="text-xs line-through text-slate-500">10 Free Attempts</span>
+                                                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                                <Star size={12} className="mr-1"/> Unlimited Attempts
+                                                            </span>
+                                                        </div>
                                                     ) : (
                                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-800">
                                                             10 Free Attempts
@@ -388,6 +391,7 @@ const Dashboard: React.FC = () => {
                                                     <li className="flex items-center gap-2"><List size={14}/> {certExam.numberOfQuestions} questions</li>
                                                     <li className="flex items-center gap-2"><Clock size={14}/> {certExam.durationMinutes} minutes</li>
                                                     <li className="flex items-center gap-2"><Target size={14}/> {certExam.passScore}% passing score</li>
+                                                    <li className="flex items-center gap-2"><Repeat size={14}/> 3 attempts included</li>
                                                 </ul>
                                             </div>
 

@@ -97,7 +97,7 @@ const BookStore: React.FC = () => {
                     Enhance your learning with our curated list of essential books for medical coding professionals. Each book has been selected to help you succeed in your exams and career.
                 </p>
                 <p className="text-xs text-slate-400 mt-4">
-                    As an Amazon Associate, we earn from qualifying purchases. This does not add any extra cost for you.
+                    As an Amazon Associate, we earn from qualifying purchases. Using our links doesn't cost you anything extra and helps support our platform to keep creating great content for you.
                 </p>
             </div>
 
