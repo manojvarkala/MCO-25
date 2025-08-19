@@ -33,21 +33,21 @@ const SuggestedBooksSidebar: React.FC = () => {
             <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
                 <BookOpen className="mr-3 text-cyan-500" /> Study Hall
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-6">
                 {suggestedBooks.map(book => {
                     const { url, domainName } = getGeoAffiliateLink(book);
                     return (
-                        <div key={book.id} className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center gap-4">
-                            <BookCover title={book.title} className="w-16 h-20 rounded-md shadow-sm flex-shrink-0" />
-                            <div className="flex-grow">
-                                <p className="font-semibold text-sm text-slate-700 leading-tight">{book.title}</p>
+                        <div key={book.id} className="bg-white rounded-lg shadow-md overflow-hidden border border-slate-200 transform hover:-translate-y-1 transition-transform duration-200">
+                            <BookCover title={book.title} className="w-full h-32" />
+                            <div className="p-4">
+                                <h4 className="font-bold text-slate-800 text-sm mb-3 leading-tight">{book.title}</h4>
                                 <a 
                                     href={url} 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="mt-2 inline-flex items-center justify-center gap-1 text-xs text-white bg-cyan-600 hover:bg-cyan-700 font-semibold rounded-full px-3 py-1.5 transition-colors"
+                                    className="w-full flex items-center justify-center gap-2 text-sm text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-3 py-2 transition-colors"
                                 >
-                                    <BookUp size={14} />
+                                    <BookUp size={16} />
                                     <span>Buy on {domainName}</span>
                                 </a>
                             </div>
@@ -55,7 +55,7 @@ const SuggestedBooksSidebar: React.FC = () => {
                     );
                 })}
             </div>
-             <p className="text-xs text-slate-400 mt-4 text-center">
+             <p className="text-xs text-slate-400 mt-6 text-center">
                 Using our affiliate links doesn't cost you extra and helps support our platform. Thank you!
             </p>
         </div>
