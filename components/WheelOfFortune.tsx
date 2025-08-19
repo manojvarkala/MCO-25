@@ -54,7 +54,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
 
         const gradientString = shuffled.map((_, index) => {
             const isGold = index % 2 === 0;
-            const color = isGold ? '#f59e0b' : '#404040'; // amber-500, neutral-700
+            const color = isGold ? '#f59e0b' : '#27272a'; // amber-500, zinc-800
             const startAngle = (360 / shuffled.length) * index;
             const endAngle = (360 / shuffled.length) * (index + 1);
             return `${color} ${startAngle}deg ${endAngle}deg`;
@@ -97,7 +97,8 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
 
             const degreesPerSegment = 360 / displaySegments.length;
             const randomOffset = (Math.random() * 0.8 - 0.4) * degreesPerSegment;
-            const targetRotation = 360 - (targetIndex * degreesPerSegment + degreesPerSegment / 2) + randomOffset;
+            // The pointer is at the top (270 degrees in conic-gradient). This formula aligns the middle of the winning segment with the pointer.
+            const targetRotation = 270 - (targetIndex * degreesPerSegment + degreesPerSegment / 2) + randomOffset;
             
             const fullSpins = 6 * 360;
             setRotation(rotation + fullSpins + targetRotation);
@@ -211,7 +212,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                 </h2>
                 
                 <div className="relative w-72 h-72 mx-auto my-8">
-                    <div className={`absolute -top-4 left-1/2 -translate-x-1/2 z-20 transition-transform duration-100 ${isWiggling ? 'pointer-wiggling' : ''}`} style={{ filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.5))' }}>
+                    <div className={`absolute -top-4 left-1/2 -translate-x-1/2 z-20 transition-transform duration-100 ${isWiggling ? 'pointer-ticking' : ''}`} style={{ filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.5))' }}>
                         <svg width="30" height="40" viewBox="0 0 38 51" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M19 50.5C19 50.5 37.5 32.8856 37.5 19C37.5 5.11442 29.3856 0.5 19 0.5C8.61442 0.5 0.5 5.11442 0.5 19C0.5 32.8856 19 50.5 19 50.5Z" fill="url(#paint0_linear_1_2)" stroke="#E5E7EB" />
                             <defs><linearGradient id="paint0_linear_1_2" x1="19" y1="0.5" x2="19" y2="50.5" gradientUnits="userSpaceOnUse"><stop stopColor="white"/><stop offset="1" stopColor="#D1D5DB"/></linearGradient></defs>
@@ -219,7 +220,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                     </div>
                     <div className="w-full h-full rounded-full p-2 border-4 border-amber-500/30 bg-zinc-800 shadow-inner">
                         <div 
-                            className="w-full h-full rounded-full border-[10px] border-zinc-950 transition-transform duration-[7000ms] ease-out-cubic relative"
+                            className="w-full h-full rounded-full border-[10px] border-zinc-950 transition-transform duration-[7000ms] ease-out-cubic relative shadow-[inset_0_8px_15px_rgba(0,0,0,0.6)]"
                             style={{ 
                                 transform: `rotate(${rotation}deg)`,
                                 background: `conic-gradient(${conicGradient})`
@@ -228,7 +229,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                             {displaySegments.map((segment, index) => {
                                 const angle = 360 / displaySegments.length;
                                 const rotationAngle = index * angle;
-                                const textRotationAngle = rotationAngle + angle / 2 - 90; // Adjust for radial text
+                                const textRotationAngle = rotationAngle + angle / 2;
                                 const isGold = index % 2 === 0;
 
                                 return (
@@ -243,8 +244,8 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                                             className="absolute w-full h-full"
                                             style={{ transform: `rotate(${textRotationAngle}deg)` }}
                                         >
-                                            <div className={`absolute top-0 left-1/2 -translate-x-1/2 pt-6 w-32 h-32 text-center text-xs font-bold ${isGold ? 'text-black' : 'text-amber-400'}`}>
-                                                <span style={{ transformOrigin: 'center', writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
+                                            <div className={`absolute top-0 left-1/2 -translate-x-1/2 h-1/2 pt-3 w-auto text-center text-xs font-bold ${isGold ? 'text-zinc-900' : 'text-amber-400'}`}>
+                                                <span className="inline-block transform rotate-90 origin-center whitespace-nowrap">
                                                     {segment.label}
                                                 </span>
                                             </div>
@@ -252,10 +253,11 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                                     </React.Fragment>
                                 );
                             })}
+                            <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle at 50% 40%, rgba(255,255,255,0.3), rgba(255,255,255,0) 70%)' }}></div>
                         </div>
                     </div>
-                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-zinc-900 border-4 border-zinc-800 flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-black border-2 border-zinc-700"></div>
+                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-zinc-900 border-4 border-zinc-800 flex items-center justify-center shadow-lg">
+                        <div className="w-12 h-12 rounded-full bg-black border-2 border-zinc-700 shadow-inner"></div>
                      </div>
                 </div>
 

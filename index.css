@@ -23,12 +23,12 @@ body { font-family: 'Inter', sans-serif; }
 .premium-header-gradient {
   background: linear-gradient(to right, #ffffff 25%, #1e293b 45%);
 }
-@keyframes pointer-wiggle {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  50% { transform: scale(1.15) rotate(-2deg); }
+@keyframes pointer-tick {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-5deg); }
 }
-.pointer-wiggling {
-  animation: pointer-wiggle 0.2s ease-in-out infinite;
+.pointer-ticking {
+  animation: pointer-tick 0.1s ease-in-out infinite;
 }
 @keyframes pulse-gift {
   0%, 100% { transform: scale(1); opacity: 1; }
