@@ -13,7 +13,11 @@ const apiFetch = async (endpoint: string, token: string, options: RequestInit = 
        headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${WP_API_BASE}${endpoint}`, { ...options, headers });
+    // Use a cache-busting parameter to help bypass aggressive proxy/firewall rules
+    const urlWithCacheBuster = new URL(`${WP_API_BASE}${endpoint}`, window.location.origin);
+    urlWithCacheBuster.searchParams.append('mco_cb', Date.now().toString());
+
+    const response = await fetch(urlWithCacheBuster.toString(), { ...options, headers });
     
     if (!response.ok) {
         let finalErrorMessage = `Server error: ${response.status} ${response.statusText}`;
