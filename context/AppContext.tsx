@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { appData } from '../assets/appData.ts';
-import type { Organization, RecommendedBook, Exam } from '../types.ts';
+import type { Organization, RecommendedBook, Exam, ExamProductCategory } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
 
@@ -45,8 +45,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     const priceData = examPrices && exam.productSku ? examPrices[exam.productSku] : null;
                     const recommendedBook = exam.recommendedBookId ? bookMap.get(exam.recommendedBookId) : undefined;
                     
+                    const category = org.examProductCategories.find(
+                        (cat: ExamProductCategory) => cat.practiceExamId === exam.id || cat.certificationExamId === exam.id
+                    );
+
+                    if (!category || !category.questionSourceUrl) {
+                        console.error(`Configuration error: No question source URL found for exam "${exam.name}" (ID: ${exam.id}). Please check appData.ts.`);
+                        return {
+                            ...exam,
+                            questionSourceUrl: '', // Set to empty to prevent runtime errors on property access
+                            ...(priceData && { price: priceData.price, regularPrice: priceData.regularPrice }),
+                            ...(recommendedBook && { recommendedBook }),
+                        };
+                    }
+                    
+                    const questionSourceUrl = category.questionSourceUrl;
+
                     return {
                         ...exam,
+                        questionSourceUrl,
                         ...(priceData && { price: priceData.price, regularPrice: priceData.regularPrice }),
                         ...(recommendedBook && { recommendedBook }),
                     };

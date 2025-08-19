@@ -124,6 +124,10 @@ export const googleSheetsService = {
 
     // --- QUESTION LOADING (VIA WP PROXY) ---
     getQuestions: async (exam: Exam, token: string): Promise<Question[]> => {
+        if (!exam.questionSourceUrl) {
+            throw new Error(`The exam "${exam.name}" is not configured with a valid question source. Please contact an administrator.`);
+        }
+        
         const fetchedQuestions: Question[] = await apiFetch('/questions-from-sheet', token, {
             method: 'POST',
             body: JSON.stringify({

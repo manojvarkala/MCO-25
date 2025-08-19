@@ -89,7 +89,7 @@ export interface Exam {
     description: string;
     price: number;
     regularPrice?: number;
-    questionSourceUrl: string;
+    questionSourceUrl: string; // This will be populated from the category
     numberOfQuestions: number;
     passScore: number;
     certificateTemplateId: string;
@@ -107,6 +107,7 @@ export interface ExamProductCategory {
     description: string;
     practiceExamId: string;
     certificationExamId: string;
+    questionSourceUrl: string;
 }
 
 export interface Organization {
