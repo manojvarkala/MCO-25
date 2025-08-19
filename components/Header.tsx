@@ -105,7 +105,7 @@ const Header: React.FC = () => {
                     <span className="hidden sm:inline">Profile</span>
                 </ReactRouterDOM.Link>
                  {isProfileMenuOpen && (
-                    <div className={`absolute right-0 mt-2 w-56 rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 z-50 ${isSubscribed ? 'bg-slate-800' : 'bg-white'}`}>
+                    <div className={`absolute right-0 top-full pt-2 w-56 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50 ${isSubscribed ? 'bg-slate-800' : 'bg-white'}`}>
                         <div className="px-4 py-2 text-xs text-slate-400">Welcome, {user.name}</div>
                          <ReactRouterDOM.Link to="/profile" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
                             <User size={14}/> Profile Details

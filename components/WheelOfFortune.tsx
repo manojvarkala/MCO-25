@@ -54,7 +54,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
 
         const gradientString = shuffled.map((_, index) => {
             const isGold = index % 2 === 0;
-            const color = isGold ? '#ca8a04' : '#171717';
+            const color = isGold ? '#f59e0b' : '#404040'; // amber-500, neutral-700
             const startAngle = (360 / shuffled.length) * index;
             const endAngle = (360 / shuffled.length) * (index + 1);
             return `${color} ${startAngle}deg ${endAngle}deg`;
@@ -217,40 +217,42 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                             <defs><linearGradient id="paint0_linear_1_2" x1="19" y1="0.5" x2="19" y2="50.5" gradientUnits="userSpaceOnUse"><stop stopColor="white"/><stop offset="1" stopColor="#D1D5DB"/></linearGradient></defs>
                         </svg>
                     </div>
-                    <div 
-                        className="w-full h-full rounded-full border-[12px] border-zinc-900 transition-transform duration-[7000ms] ease-out-cubic relative"
-                        style={{ 
-                            transform: `rotate(${rotation}deg)`,
-                            background: `conic-gradient(${conicGradient})`
-                        }}
-                    >
-                        {displaySegments.map((segment, index) => {
-                            const angle = 360 / displaySegments.length;
-                            const rotationAngle = index * angle;
-                            const textRotationAngle = rotationAngle + angle / 2 - 90; // Adjust for radial text
-                            const isGold = index % 2 === 0;
+                    <div className="w-full h-full rounded-full p-2 border-4 border-amber-500/30 bg-zinc-800 shadow-inner">
+                        <div 
+                            className="w-full h-full rounded-full border-[10px] border-zinc-950 transition-transform duration-[7000ms] ease-out-cubic relative"
+                            style={{ 
+                                transform: `rotate(${rotation}deg)`,
+                                background: `conic-gradient(${conicGradient})`
+                            }}
+                        >
+                            {displaySegments.map((segment, index) => {
+                                const angle = 360 / displaySegments.length;
+                                const rotationAngle = index * angle;
+                                const textRotationAngle = rotationAngle + angle / 2 - 90; // Adjust for radial text
+                                const isGold = index % 2 === 0;
 
-                            return (
-                                <React.Fragment key={index}>
-                                    <div
-                                        className="absolute w-full h-full"
-                                        style={{ transform: `rotate(${rotationAngle}deg)` }}
-                                    >
-                                        <div className="absolute top-0 left-1/2 -translate-x-px w-px h-1/2 bg-amber-800/75"></div>
-                                    </div>
-                                    <div
-                                        className="absolute w-full h-full"
-                                        style={{ transform: `rotate(${textRotationAngle}deg)` }}
-                                    >
-                                        <div className={`absolute top-0 left-1/2 -translate-x-1/2 pt-6 w-32 h-32 text-center text-xs font-bold ${isGold ? 'text-black' : 'text-amber-300'}`}>
-                                            <span style={{ transformOrigin: 'center', writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
-                                                {segment.label}
-                                            </span>
+                                return (
+                                    <React.Fragment key={index}>
+                                        <div
+                                            className="absolute w-full h-full"
+                                            style={{ transform: `rotate(${rotationAngle}deg)` }}
+                                        >
+                                            <div className="absolute top-0 left-1/2 -translate-x-px w-px h-1/2 bg-amber-200/20"></div>
                                         </div>
-                                    </div>
-                                </React.Fragment>
-                            );
-                        })}
+                                        <div
+                                            className="absolute w-full h-full"
+                                            style={{ transform: `rotate(${textRotationAngle}deg)` }}
+                                        >
+                                            <div className={`absolute top-0 left-1/2 -translate-x-1/2 pt-6 w-32 h-32 text-center text-xs font-bold ${isGold ? 'text-black' : 'text-amber-400'}`}>
+                                                <span style={{ transformOrigin: 'center', writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
+                                                    {segment.label}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </React.Fragment>
+                                );
+                            })}
+                        </div>
                     </div>
                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-zinc-900 border-4 border-zinc-800 flex items-center justify-center">
                         <div className="w-12 h-12 rounded-full bg-black border-2 border-zinc-700"></div>
