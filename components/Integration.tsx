@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           9.4.0
+ * Version:           9.5.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -169,7 +169,6 @@ function mco_exam_get_payload($user_id) {
     return ['iss' => get_site_url(), 'iat' => time(), 'exp' => time() + (60 * 60 * 2), 'user' => ['id' => (string)$user->ID, 'name' => $user_full_name, 'email' => $user->user_email, 'isAdmin' => user_can($user, 'administrator')], 'paidExamIds' => $paid_exam_ids, 'examPrices' => $exam_prices, 'isSubscribed' => $is_subscribed, 'spinsAvailable' => $spins_available, 'wonPrize' => $won_prize];
 }
 
-function mco_ensure_utf8_recursive($data) { if (is_string($data)) return mb_convert_encoding($data, 'UTF-8', 'UTF-8'); if (!is_array($data)) return $data; $ret = []; foreach ($data as $i => $d) $ret[$i] = mco_ensure_utf8_recursive($d); return $ret; }
 function mco_base64url_encode($data) { return rtrim(strtr(base64_encode($data), '+/', '-_'), '='); }
 
 function mco_verify_exam_jwt($token) {
@@ -196,9 +195,12 @@ function mco_generate_exam_jwt($user_id) {
     if (empty($secret_key) || strlen($secret_key) < 32 || strpos($secret_key, 'your-very-strong-secret-key') !== false) { mco_debug_log('JWT Secret is not configured or is too weak.'); return null; }
     if (!$payload = mco_exam_get_payload($user_id)) return null;
     
-    $payload = mco_ensure_utf8_recursive($payload);
-    $payload_json = json_encode($payload);
-    if ($payload_json === false) { mco_debug_log('JWT generation failed: json_encode error: ' . json_last_error_msg()); return null; }
+    // Use JSON_INVALID_UTF8_SUBSTITUTE to handle potential encoding issues in user names, etc.
+    $payload_json = json_encode($payload, JSON_INVALID_UTF8_SUBSTITUTE);
+    if ($payload_json === false) { 
+        mco_debug_log('JWT generation failed: json_encode error: ' . json_last_error_msg()); 
+        return null; 
+    }
     
     $header_b64 = mco_base64url_encode(json_encode(['typ' => 'JWT', 'alg' => 'HS256']));
     $payload_b64 = mco_base64url_encode($payload_json);
@@ -242,7 +244,7 @@ function mco_exam_api_permission_check($request) {
     return true;
 }
 
-function mco_get_user_results_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); if ($user_id <= 0) return new WP_Error('invalid_user', 'Invalid user.', ['status' => 403]); $results = get_user_meta($user_id, 'mco_exam_results', true); $results = empty($results) || !is_array($results) ? [] : array_values($results); return new WP_REST_Response(mco_ensure_utf8_recursive($results), 200); }
+function mco_get_user_results_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); if ($user_id <= 0) return new WP_Error('invalid_user', 'Invalid user.', ['status' => 403]); $results = get_user_meta($user_id, 'mco_exam_results', true); $results = empty($results) || !is_array($results) ? [] : array_values($results); return new WP_REST_Response($results, 200); }
 function mco_get_certificate_data_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); $test_id = sanitize_key($request['test_id']); $user = get_userdata($user_id); if (!$user) return new WP_Error('user_not_found', 'User not found.', ['status' => 404]); $all_results = get_user_meta($user_id, 'mco_exam_results', true); if (!is_array($all_results) || !isset($all_results[$test_id])) { return new WP_Error('not_found', 'Result not found.', ['status' => 404]); } $result = $all_results[$test_id]; $candidate_name = trim($user->first_name . ' ' . $user->last_name) ?: $user->display_name; return new WP_REST_Response(['certificateNumber' => substr($user_id, 0, 4) . '-' . substr(md5($test_id), 0, 6), 'candidateName' => $candidate_name, 'finalScore' => $result['score'], 'date' => date('F j, Y', (int)((int)$result['timestamp'] / 1000)), 'examId' => $result['examId']], 200); }
 function mco_exam_update_user_name_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); if (!get_userdata($user_id)) return new WP_Error('user_not_found', 'User not found.', ['status' => 404]); $full_name = isset($request->get_json_params()['fullName']) ? sanitize_text_field($request->get_json_params()['fullName']) : ''; if (empty($full_name)) return new WP_Error('name_empty', 'Full name cannot be empty.', ['status' => 400]); $name_parts = explode(' ', $full_name, 2); update_user_meta($user_id, 'first_name', $name_parts[0]); update_user_meta($user_id, 'last_name', isset($name_parts[1]) ? $name_parts[1] : ''); return new WP_REST_Response(['success' => true, 'message' => 'Name updated successfully.'], 200); }
 function mco_exam_submit_result_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); $result_data = $request->get_json_params(); foreach (['testId', 'examId', 'score', 'correctCount', 'totalQuestions', 'timestamp'] as $key) { if (!isset($result_data[$key])) { mco_debug_log('Result submission failed for user ' . $user_id . '. Missing key: ' . $key); return new WP_Error('invalid_data', "Missing key: {$key}", ['status' => 400]); } } $result_data['userId'] = (string)$user_id; mco_debug_log('Attempting to save result for user ID ' . $user_id . '. Test ID: ' . $result_data['testId']); $all_results = get_user_meta($user_id, 'mco_exam_results', true); if (!is_array($all_results)) $all_results = []; $all_results[$result_data['testId']] = $result_data; $success = update_user_meta($user_id, 'mco_exam_results', $all_results); mco_debug_log('Result of update_user_meta: ' . ($success ? 'Success' : 'Failure')); return new WP_REST_Response($result_data, 200); }
@@ -293,7 +295,7 @@ function mco_get_questions_from_sheet_callback($request) {
     if (empty($questions)) { $error_message = 'No valid questions could be parsed from the source. Processed ' . $total_rows . ' rows and skipped all of them. Please check your sheet formatting (each option in its own column) and enable MCO_DEBUG in wp-config.php to see detailed logs.'; return new WP_Error('parse_failed', $error_message, ['status' => 500]); }
     shuffle($questions); $selected_questions = array_slice($questions, 0, $count);
     $final_questions = []; foreach($selected_questions as $index => $q) { $q['id'] = $index + 1; $final_questions[] = $q; }
-    return new WP_REST_Response(mco_ensure_utf8_recursive($final_questions), 200);
+    return new WP_REST_Response($final_questions, 200);
 }
 
 // --- NEW REVIEW ENDPOINT ---
@@ -380,7 +382,7 @@ function mco_get_debug_details_callback($request) {
     $debug_data = [
         'user' => ['id' => (string)$user->ID, 'name' => $user_full_name, 'email' => $user->user_email],
         'purchases' => $paid_exam_ids,
-        'results' => mco_ensure_utf8_recursive($results),
+        'results' => $results,
         'sheetTest' => $sheet_test_result
     ];
 

@@ -5,7 +5,7 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { BookCopy, History as HistoryIcon, FlaskConical, Eye, FileText, BarChart, BadgePercent, Trophy, ArrowRight, Home, RefreshCw, Star, Zap, CheckCircle, Lock, Edit, Save, X, ShoppingCart, AlertTriangle, Award } from 'lucide-react';
+import { BookCopy, History as HistoryIcon, FlaskConical, Eye, FileText, BarChart, BadgePercent, Trophy, ArrowRight, Home, RefreshCw, Star, Zap, CheckCircle, Lock, Edit, Save, X, ShoppingCart, AlertTriangle, Award, Wifi } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
@@ -41,6 +41,8 @@ const Dashboard: React.FC = () => {
     const [isEditingName, setIsEditingName] = useState(false);
     const [isSavingName, setIsSavingName] = useState(false);
     const [name, setName] = useState(user?.name || '');
+    const [isTestingConnection, setIsTestingConnection] = useState(false);
+    const [connectionTestResult, setConnectionTestResult] = useState<string | null>(null);
 
     const loginUrl = 'https://www.coding-online.net/exam-login/';
     const appDashboardPath = '/dashboard';
@@ -132,6 +134,28 @@ const Dashboard: React.FC = () => {
             toast.error(error.message || "An error occurred.", { id: toastId });
         } finally {
             setIsSavingName(false);
+        }
+    };
+
+    const handleTestConnection = async () => {
+        setIsTestingConnection(true);
+        setConnectionTestResult(null);
+
+        if (!token) {
+            setConnectionTestResult('Error: No authentication token found. Please log in again.');
+            setIsTestingConnection(false);
+            return;
+        }
+
+        try {
+            const data = await googleSheetsService.getDebugDetails(token);
+            const resultText = `✅ Connection Successful!\n\n${JSON.stringify(data, null, 2)}`;
+            setConnectionTestResult(resultText);
+        } catch (error: any) {
+            const errorText = `❌ Connection Failed.\n\nError: ${error.message}`;
+            setConnectionTestResult(errorText);
+        } finally {
+            setIsTestingConnection(false);
         }
     };
 
@@ -288,22 +312,36 @@ const Dashboard: React.FC = () => {
                     )}
 
                      {/* New Purchase Notification */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                        <div className="flex items-center justify-center space-x-3">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-3 text-center">
                             <RefreshCw className="text-blue-600" size={24} />
                             <div>
                                 <p className="font-semibold text-blue-800">Just made a purchase or switching sites?</p>
                                 <p className="text-sm text-blue-700">Click below to sync your latest data. This loads purchased exams and test history.</p>
                             </div>
+                              <a
+                                href={syncUrl}
+                                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 flex-shrink-0"
+                                title="This takes you to our main site to securely sync your purchased exams with your account."
+                            >
+                                Sync My Exams
+                            </a>
                         </div>
-                        <a
-                            href={syncUrl}
-                            className="mt-3 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-                            title="This takes you to our main site to securely sync your purchased exams with your account."
-                        >
-                            Sync My Exams
-                        </a>
+                        {user && user.isAdmin && (
+                            <div className="mt-4 pt-4 border-t border-blue-200">
+                                <button onClick={handleTestConnection} disabled={isTestingConnection} className="w-full flex items-center justify-center gap-2 text-sm font-medium rounded-md px-3 py-2 text-slate-700 bg-slate-200 hover:bg-slate-300 disabled:bg-slate-200 disabled:opacity-70">
+                                    {isTestingConnection ? <Spinner /> : <Wifi size={16} />}
+                                    Test API Connection
+                                </button>
+                                {connectionTestResult && (
+                                    <pre className={`mt-3 p-3 rounded-md text-xs whitespace-pre-wrap font-mono ${connectionTestResult.startsWith('❌') ? 'bg-red-50 text-red-800' : 'bg-green-50 text-green-800'}`}>
+                                        {connectionTestResult}
+                                    </pre>
+                                )}
+                            </div>
+                        )}
                     </div>
+
 
                     {/* My Exam Programs */}
                     <div className="space-y-6">
