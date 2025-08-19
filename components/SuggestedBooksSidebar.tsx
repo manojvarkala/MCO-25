@@ -24,37 +24,28 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
 const SuggestedBooksSidebar: React.FC = () => {
     const { suggestedBooks } = useAppContext();
 
-    // Use a memo to shuffle only once on initial render or when books change.
-    const randomBooks = React.useMemo(() => {
-        if (!suggestedBooks || suggestedBooks.length === 0) {
-            return [];
-        }
-        const shuffled = [...suggestedBooks].sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, 3);
-    }, [suggestedBooks]);
-
-    if (randomBooks.length === 0) {
+    if (!suggestedBooks || suggestedBooks.length === 0) {
         return null;
     }
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-md">
             <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
-                <BookOpen className="mr-3 text-cyan-500" /> Suggested Study Guides
+                <BookOpen className="mr-3 text-cyan-500" /> Study Hall
             </h3>
             <div className="space-y-4">
-                {randomBooks.map(book => {
+                {suggestedBooks.map(book => {
                     const { url, domainName } = getGeoAffiliateLink(book);
                     return (
-                        <div key={book.id} className="flex items-center gap-4">
-                             <BookCover title={book.title} className="w-16 h-20 rounded-md shadow-sm flex-shrink-0" />
+                        <div key={book.id} className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center gap-4">
+                             <BookCover title={book.title} className="w-20 h-24 rounded-md shadow-sm flex-shrink-0" />
                             <div className="flex-grow">
                                 <p className="font-semibold text-sm text-slate-700 leading-tight">{book.title}</p>
                                 <a 
                                     href={url} 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="mt-1 inline-flex items-center gap-1 text-xs text-cyan-600 hover:text-cyan-800 font-semibold"
+                                    className="mt-2 inline-flex items-center gap-1 text-xs text-cyan-600 hover:text-cyan-800 font-semibold"
                                 >
                                     <BookUp size={14} />
                                     Buy on {domainName}
@@ -64,6 +55,9 @@ const SuggestedBooksSidebar: React.FC = () => {
                     );
                 })}
             </div>
+             <p className="text-xs text-slate-400 mt-4 text-center">
+                Using our affiliate links doesn't cost you extra and helps support our platform. Thank you!
+            </p>
         </div>
     );
 };

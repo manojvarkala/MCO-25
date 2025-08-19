@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           10.1.1
+ * Version:           10.2.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -94,24 +94,29 @@ function mco_exam_get_payload($user_id) {
     if (class_exists('WooCommerce')) {
         $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert', 'exam-mcf-cert'];
         $base_subscription_skus = ['sub-monthly', 'sub-yearly', 'sub-1mo-addon'];
-
-        // Add new, specific bundle SKUs
         $specific_bundle_skus = ['exam-cpc-cert-1', 'exam-cca-cert-bundle'];
-
-        // Dynamically create addon SKUs from the list of all certification exams
         $addon_skus = array_map(function($sku) { return $sku . '-1mo-addon'; }, $all_exam_skus);
-        
-        // Combine base subscriptions with all possible addon SKUs
         $subscription_skus = array_unique(array_merge($base_subscription_skus, $addon_skus));
-        
-        // Combine all SKUs for which prices are needed
         $all_skus_for_pricing = array_unique(array_merge($all_exam_skus, $subscription_skus, $specific_bundle_skus));
         
-        foreach ($all_skus_for_pricing as $sku) {
-            if (($product_id = wc_get_product_id_by_sku($sku)) && ($product = wc_get_product($product_id))) {
-                $price_data = ['price' => (float)$product->get_price(), 'regularPrice' => (float)$product->get_regular_price(), 'productId' => $product_id];
-                $exam_prices->{$sku} = $price_data;
+        // Use a transient to cache price and rating data for performance
+        $exam_prices = get_transient('mco_exam_prices_v4');
+        if (false === $exam_prices) {
+            $exam_prices = new stdClass();
+            foreach ($all_skus_for_pricing as $sku) {
+                if (($product_id = wc_get_product_id_by_sku($sku)) && ($product = wc_get_product($product_id))) {
+                    $price_data = ['price' => (float)$product->get_price(), 'regularPrice' => (float)$product->get_regular_price(), 'productId' => $product_id];
+                    
+                    // Fetch rating meta
+                    $avg_rating = get_post_meta($product_id, '_mco_exam_avg_rating', true);
+                    $review_count = get_post_meta($product_id, '_mco_exam_review_count', true);
+                    if ($avg_rating) $price_data['avgRating'] = (float)$avg_rating;
+                    if ($review_count) $price_data['reviewCount'] = (int)$review_count;
+
+                    $exam_prices->{$sku} = $price_data;
+                }
             }
+            set_transient('mco_exam_prices_v4', $exam_prices, 6 * HOUR_IN_SECONDS);
         }
         
         $customer_orders = wc_get_orders(['customer' => $user_id, 'status' => ['wc-completed', 'wc-processing'], 'limit' => -1]);
@@ -305,6 +310,7 @@ function mco_exam_submit_review_callback($request) {
     update_post_meta($product_id, '_mco_exam_ratings', $ratings);
     update_post_meta($product_id, '_mco_exam_avg_rating', $avg);
     update_post_meta($product_id, '_mco_exam_review_count', $count);
+    delete_transient('mco_exam_prices_v4'); // Clear cache on new review
 
     return new WP_REST_Response(['success' => true], 200);
 }
