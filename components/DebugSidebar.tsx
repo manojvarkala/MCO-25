@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { DebugData } from '../types.ts';
@@ -7,12 +7,12 @@ import Spinner from './Spinner.tsx';
 
 const DebugSidebar: React.FC = () => {
     const { token } = useAuth();
-    const [isOpen, setIsOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [debugData, setDebugData] = useState<DebugData | null>(null);
+    const [isOpen, setIsOpen] = React.useState(false);
+    const [isLoading, setIsLoading] = React.useState(false);
+    const [error, setError] = React.useState<string | null>(null);
+    const [debugData, setDebugData] = React.useState<DebugData | null>(null);
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (!isOpen || !token) {
             setDebugData(null);
             return;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -13,13 +13,13 @@ const Profile: React.FC = () => {
     const { activeOrg } = useAppContext();
     const navigate = ReactRouterDOM.useNavigate();
 
-    const [results, setResults] = useState<TestResult[]>([]);
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [isSavingName, setIsSavingName] = useState(false);
-    const [name, setName] = useState(user?.name || '');
-    const [isLoadingResults, setIsLoadingResults] = useState(true);
+    const [results, setResults] = React.useState<TestResult[]>([]);
+    const [isEditingName, setIsEditingName] = React.useState(false);
+    const [isSavingName, setIsSavingName] = React.useState(false);
+    const [name, setName] = React.useState(user?.name || '');
+    const [isLoadingResults, setIsLoadingResults] = React.useState(true);
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (user && token) {
             setIsLoadingResults(true);
             const cachedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
@@ -36,7 +36,7 @@ const Profile: React.FC = () => {
         }
     }, [user, token]);
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (user) {
             setName(user.name);
         }

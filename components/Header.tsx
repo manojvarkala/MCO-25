@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import * as React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -8,7 +8,7 @@ import { logoBase64 } from '../assets/logo.ts';
 const Header: React.FC = () => {
   const { user, logout, canSpinWheel, isSubscribed } = useAuth();
   const { activeOrg, setWheelModalOpen } = useAppContext();
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false);
 
   const handleLogout = () => {
     logout();

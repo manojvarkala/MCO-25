@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import * as React from 'react';
 import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, SearchedUser } from '../types.ts';
@@ -21,18 +21,18 @@ const Admin: React.FC = () => {
     const { token } = useAuth();
 
     // State for exam customization
-    const [editingExamId, setEditingExamId] = useState<string | null>(null);
-    const [editedExamData, setEditedExamData] = useState<Partial<Exam>>({});
+    const [editingExamId, setEditingExamId] = React.useState<string | null>(null);
+    const [editedExamData, setEditedExamData] = React.useState<Partial<Exam>>({});
     
     // State for user prize management
-    const [searchTerm, setSearchTerm] = useState('');
-    const [isSearching, setIsSearching] = useState(false);
-    const [searchResults, setSearchResults] = useState<SearchedUser[]>([]);
-    const [selectedUser, setSelectedUser] = useState<SearchedUser | null>(null);
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const [isSearching, setIsSearching] = React.useState(false);
+    const [searchResults, setSearchResults] = React.useState<SearchedUser[]>([]);
+    const [selectedUser, setSelectedUser] = React.useState<SearchedUser | null>(null);
 
-    const [spinsToAdd, setSpinsToAdd] = useState('1');
-    const [prizeToGrant, setPrizeToGrant] = useState(prizeOptions[0].id);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [spinsToAdd, setSpinsToAdd] = React.useState('1');
+    const [prizeToGrant, setPrizeToGrant] = React.useState(prizeOptions[0].id);
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
 
 
     const handleEditClick = (exam: Exam) => {

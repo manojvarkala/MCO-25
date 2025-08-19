@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import * as React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -34,13 +34,13 @@ const Dashboard: React.FC = () => {
     const navigate = ReactRouterDOM.useNavigate();
     const { user, paidExamIds, isSubscribed, updateUserName, token, examPrices } = useAuth();
     const { activeOrg } = useAppContext();
-    const [results, setResults] = useState<TestResult[] | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [stats, setStats] = useState({ avgScore: 0, bestScore: 0, examsTaken: 0 });
-    const [practiceStats, setPracticeStats] = useState({ attemptsTaken: 0, attemptsAllowed: 0 });
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [isSavingName, setIsSavingName] = useState(false);
-    const [name, setName] = useState(user?.name || '');
+    const [results, setResults] = React.useState<TestResult[] | null>(null);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [stats, setStats] = React.useState({ avgScore: 0, bestScore: 0, examsTaken: 0 });
+    const [practiceStats, setPracticeStats] = React.useState({ attemptsTaken: 0, attemptsAllowed: 0 });
+    const [isEditingName, setIsEditingName] = React.useState(false);
+    const [isSavingName, setIsSavingName] = React.useState(false);
+    const [name, setName] = React.useState(user?.name || '');
 
     const loginUrl = 'https://www.coding-online.net/exam-login/';
     const appDashboardPath = '/dashboard';
@@ -85,7 +85,7 @@ const Dashboard: React.FC = () => {
         }
     };
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (!user || !activeOrg) {
             if (activeOrg) setIsLoading(false);
             return;
@@ -135,7 +135,7 @@ const Dashboard: React.FC = () => {
         }
     };
 
-    const examCategories = useMemo(() => {
+    const examCategories = React.useMemo(() => {
         if (!activeOrg || !results) return [];
 
         return activeOrg.examProductCategories.map(category => {

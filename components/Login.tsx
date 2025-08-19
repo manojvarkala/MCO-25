@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import * as React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
@@ -8,11 +8,11 @@ const Login: React.FC = () => {
     const location = ReactRouterDOM.useLocation();
     const navigate = ReactRouterDOM.useNavigate();
     const { user, loginWithToken } = useAuth();
-    const [isLoading, setIsLoading] = useState(true);
-    const wasAlreadyLoggedIn = useRef(!!user);
-    const tokenProcessed = useRef(false);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const wasAlreadyLoggedIn = React.useRef(!!user);
+    const tokenProcessed = React.useRef(false);
 
-    useEffect(() => {
+    React.useEffect(() => {
         const searchParams = new URLSearchParams(location.search);
         const token = searchParams.get('token');
 

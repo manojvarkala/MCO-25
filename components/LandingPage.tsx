@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import * as React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -10,7 +10,7 @@ const LandingPage: React.FC = () => {
     const { user } = useAuth();
     const { activeOrg, isLoading } = useAppContext();
     
-    useEffect(() => {
+    React.useEffect(() => {
         if (user) {
             navigate('/dashboard');
         }

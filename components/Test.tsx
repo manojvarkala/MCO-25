@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import * as React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -21,26 +21,26 @@ const Test: React.FC = () => {
   const { user, useFreeAttempt, isSubscribed, token } = useAuth();
   const { activeOrg, isInitializing } = useAppContext();
 
-  const [examConfig, setExamConfig] = useState<Exam | null>(null);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Map<number, number>>(new Map());
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const timerIntervalRef = useRef<number | null>(null);
+  const [examConfig, setExamConfig] = React.useState<Exam | null>(null);
+  const [questions, setQuestions] = React.useState<Question[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
+  const [answers, setAnswers] = React.useState<Map<number, number>>(new Map());
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [timeLeft, setTimeLeft] = React.useState<number | null>(null);
+  const timerIntervalRef = React.useRef<number | null>(null);
 
-  const answersRef = useRef(answers);
-  useEffect(() => {
+  const answersRef = React.useRef(answers);
+  React.useEffect(() => {
     answersRef.current = answers;
   }, [answers]);
 
-  const questionsRef = useRef(questions);
-  useEffect(() => {
+  const questionsRef = React.useRef(questions);
+  React.useEffect(() => {
     questionsRef.current = questions;
   }, [questions]);
 
-  const handleSubmit = useCallback(async (isAutoSubmit = false) => {
+  const handleSubmit = React.useCallback(async (isAutoSubmit = false) => {
     const latestAnswers = answersRef.current;
     const latestQuestions = questionsRef.current;
 
@@ -81,7 +81,7 @@ const Test: React.FC = () => {
     }
   }, [examId, navigate, token, user]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (isInitializing || !examId || !activeOrg) return;
 
     const config = activeOrg.exams.find(e => e.id === examId);

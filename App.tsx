@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import * as React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
@@ -52,7 +52,7 @@ const AppContent: React.FC = () => {
     const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed } = useAuth();
     const { isWheelModalOpen, setWheelModalOpen } = useAppContext();
 
-    useEffect(() => {
+    React.useEffect(() => {
         // Show the wheel modal only for eligible users who haven't already dismissed it this session.
         if (canSpinWheel && !wheelModalDismissed) {
             const timer = setTimeout(() => setWheelModalOpen(true), 1500);

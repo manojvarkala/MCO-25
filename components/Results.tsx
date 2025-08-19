@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -18,25 +18,25 @@ const Results: React.FC = () => {
     const { user, token, paidExamIds, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     
-    const [result, setResult] = useState<TestResult | null>(null);
-    const [exam, setExam] = useState<Exam | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [aiFeedback, setAiFeedback] = useState<string>('');
-    const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
-    const [isDownloading, setIsDownloading] = useState(false);
+    const [result, setResult] = React.useState<TestResult | null>(null);
+    const [exam, setExam] = React.useState<Exam | null>(null);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [aiFeedback, setAiFeedback] = React.useState<string>('');
+    const [isGeneratingFeedback, setIsGeneratingFeedback] = React.useState(false);
+    const [isDownloading, setIsDownloading] = React.useState(false);
 
-    const [rating, setRating] = useState(0);
-    const [hoverRating, setHoverRating] = useState(0);
-    const [reviewText, setReviewText] = useState('');
-    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-    const [submittedReview, setSubmittedReview] = useState<{rating: number; reviewText: string} | null>(null);
+    const [rating, setRating] = React.useState(0);
+    const [hoverRating, setHoverRating] = React.useState(0);
+    const [reviewText, setReviewText] = React.useState('');
+    const [isSubmittingReview, setIsSubmittingReview] = React.useState(false);
+    const [submittedReview, setSubmittedReview] = React.useState<{rating: number; reviewText: string} | null>(null);
     
-    const [isPurchased, setIsPurchased] = useState(false);
-    const [attemptsExceeded, setAttemptsExceeded] = useState(false);
-    const [hasPassedCert, setHasPassedCert] = useState(false);
+    const [isPurchased, setIsPurchased] = React.useState(false);
+    const [attemptsExceeded, setAttemptsExceeded] = React.useState(false);
+    const [hasPassedCert, setHasPassedCert] = React.useState(false);
 
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (!testId || !user || !activeOrg) {
             if(!user) toast.error("Authentication session has expired.");
             else toast.error("Required data is missing.");

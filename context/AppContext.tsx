@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import * as React from 'react';
 import { appData } from '../assets/appData.ts';
 import type { Organization, RecommendedBook, Exam, ExamProductCategory } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -16,17 +16,17 @@ interface AppContextType {
   setWheelModalOpen: (isOpen: boolean) => void;
 }
 
-const AppContext = createContext<AppContextType | undefined>(undefined);
+const AppContext = React.createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>([]);
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [organizations, setOrganizations] = React.useState<Organization[]>([]);
+  const [activeOrg, setActiveOrg] = React.useState<Organization | null>(null);
+  const [isInitializing, setIsInitializing] = React.useState(true);
+  const [suggestedBooks, setSuggestedBooks] = React.useState<RecommendedBook[]>([]);
   const { examPrices } = useAuth();
-  const [isWheelModalOpen, setWheelModalOpen] = useState(false);
+  const [isWheelModalOpen, setWheelModalOpen] = React.useState(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const initializeApp = () => {
         try {
             const baseOrgs = JSON.parse(JSON.stringify(appData));
@@ -126,7 +126,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 };
 
 export const useAppContext = (): AppContextType => {
-  const context = useContext(AppContext);
+  const context = React.useContext(AppContext);
   if (context === undefined) {
     throw new Error('useAppContext must be used within an AppProvider');
   }
