@@ -1,7 +1,5 @@
-
-
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook } from '../types.ts';
@@ -15,8 +13,8 @@ import jsPDF from 'jspdf';
 import { logoBase64 } from '../assets/logo.ts';
 
 const Results: React.FC = () => {
-    const { testId } = useParams<{ testId: string }>();
-    const navigate = useNavigate();
+    const { testId } = ReactRouterDOM.useParams<{ testId: string }>();
+    const navigate = ReactRouterDOM.useNavigate();
     const { user, token, paidExamIds, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     

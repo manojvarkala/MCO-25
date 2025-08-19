@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult } from '../types.ts';
@@ -31,7 +31,7 @@ const StarRating: React.FC<{ rating: number; count: number; }> = ({ rating, coun
 
 
 const Dashboard: React.FC = () => {
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
     const { user, paidExamIds, isSubscribed, updateUserName, token, examPrices } = useAuth();
     const { activeOrg } = useAppContext();
     const [results, setResults] = useState<TestResult[] | null>(null);

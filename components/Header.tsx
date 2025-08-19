@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, Users, Gift, Star } from 'lucide-react';
@@ -36,7 +36,7 @@ const Header: React.FC = () => {
     <header className={headerClasses}>
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         {activeOrg ? (
-            <Link to={headerLink} className="flex items-center space-x-3">
+            <ReactRouterDOM.Link to={headerLink} className="flex items-center space-x-3">
                  <img
                     src={logoBase64}
                     alt={`${activeOrg.name} Logo`}
@@ -50,7 +50,7 @@ const Header: React.FC = () => {
                         {activeOrg.website}
                     </span>
                 </div>
-            </Link>
+            </ReactRouterDOM.Link>
         ) : (
              <div className="flex items-center space-x-3">
                  <div className="h-14 w-14 bg-slate-200 rounded-full animate-pulse"></div>
@@ -72,51 +72,51 @@ const Header: React.FC = () => {
                     <span className="hidden sm:inline">Spin & Win</span>
                 </button>
             )}
-            <Link 
+            <ReactRouterDOM.Link 
                 to="/pricing"
                 className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}
                 title="View Plans and Pricing"
             >
                 <Tag size={20} />
                 <span className="hidden sm:inline font-semibold">Pricing</span>
-            </Link>
-           <Link 
+            </ReactRouterDOM.Link>
+           <ReactRouterDOM.Link 
                 to="/bookstore"
                 className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}
                 title="Recommended Books"
             >
                 <BookMarked size={20} />
                 <span className="hidden sm:inline font-semibold">Book Store</span>
-            </Link>
-            <Link 
+            </ReactRouterDOM.Link>
+            <ReactRouterDOM.Link 
                 to="/about-us"
                 className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}
                 title="About Us"
             >
                 <Users size={20} />
                 <span className="hidden sm:inline font-semibold">About Us</span>
-            </Link>
+            </ReactRouterDOM.Link>
           {user ? (
             <>
               <div className="relative" onMouseEnter={() => setIsProfileMenuOpen(true)} onMouseLeave={() => setIsProfileMenuOpen(false)}>
-                <Link to="/profile" className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`} title="View your profile">
+                <ReactRouterDOM.Link to="/profile" className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`} title="View your profile">
                     {isSubscribed && <Star size={16} className="text-yellow-400 fill-current" />}
                     <UserCircle size={20} />
                     <span className="hidden sm:inline">Profile</span>
-                </Link>
+                </ReactRouterDOM.Link>
                  {isProfileMenuOpen && (
                     <div className={`absolute right-0 mt-2 w-56 rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 z-50 ${isSubscribed ? 'bg-slate-800' : 'bg-white'}`}>
                         <div className="px-4 py-2 text-xs text-slate-400">Welcome, {user.name}</div>
-                         <Link to="/profile" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
+                         <ReactRouterDOM.Link to="/profile" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
                             <User size={14}/> Profile Details
-                        </Link>
+                        </ReactRouterDOM.Link>
                         <a href={myAccountUrl} target="_blank" rel="noopener noreferrer" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
                            <UserCircle size={14}/> My Account (Main Site)
                         </a>
                         {user.isAdmin && (
-                            <Link to="/admin" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
+                            <ReactRouterDOM.Link to="/admin" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
                                <Shield size={14}/> Admin Panel
-                            </Link>
+                            </ReactRouterDOM.Link>
                         )}
                     </div>
                 )}

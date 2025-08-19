@@ -1,13 +1,12 @@
-
 import React, { useEffect, useState, useRef } from 'react';
-import { useLocation, useNavigate, Navigate } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import toast from 'react-hot-toast';
 
 const Login: React.FC = () => {
-    const location = useLocation();
-    const navigate = useNavigate();
+    const location = ReactRouterDOM.useLocation();
+    const navigate = ReactRouterDOM.useNavigate();
     const { user, loginWithToken } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
     const wasAlreadyLoggedIn = useRef(!!user);
@@ -61,11 +60,11 @@ const Login: React.FC = () => {
              }
         }
         
-        return <Navigate to={redirectTo} replace />;
+        return <ReactRouterDOM.Navigate to={redirectTo} replace />;
     }
 
     if (!isLoading && !user) {
-        return <Navigate to="/" replace />;
+        return <ReactRouterDOM.Navigate to="/" replace />;
     }
 
     return null;

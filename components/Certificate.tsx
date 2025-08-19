@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -27,8 +26,8 @@ const Watermark: React.FC<{ text: string }> = ({ text }) => (
 );
 
 const Certificate: React.FC = () => {
-    const { testId = 'sample' } = useParams<{ testId?: string }>();
-    const navigate = useNavigate();
+    const { testId = 'sample' } = ReactRouterDOM.useParams<{ testId?: string }>();
+    const navigate = ReactRouterDOM.useNavigate();
     const { user, token } = useAuth();
     const { activeOrg } = useAppContext();
     const [certData, setCertData] = useState<CertificateData | null>(null);

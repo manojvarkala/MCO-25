@@ -194,9 +194,16 @@ function mco_exam_register_rest_api() {
 
 function mco_exam_api_permission_check($request) {
     $token = $request->get_header('Authorization');
-    if (!$token || !preg_match('/Bearer\\s(\\S+)/', $token, $matches)) return new WP_Error('jwt_missing', 'Authorization token not found.', ['status' => 401]);
+    if (!$token || !preg_match('/Bearer\\s(\\S+)/', $token, $matches)) {
+        return new WP_Error('jwt_missing', 'Authorization token not found.', ['status' => 401]);
+    }
     $payload = mco_verify_exam_jwt($matches[1]);
-    if (!$payload || !isset($payload['user']['id'])) return new WP_Error('jwt_invalid', 'Invalid or expired token.', ['status' => 403]);
+    if (!$payload) {
+        return new WP_Error('jwt_invalid', 'Invalid or expired token.', ['status' => 403]);
+    }
+    if (!isset($payload['user']['id']) || empty($payload['user']['id'])) {
+        return new WP_Error('jwt_no_user_id', 'User ID not found in the token', ['status' => 403]);
+    }
     $request->set_param('jwt_user_id', $payload['user']['id']);
     return true;
 }

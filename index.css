@@ -1,0 +1,39 @@
+body { font-family: 'Inter', sans-serif; }
+.font-serif-display { font-family: 'Source Serif 4', serif; }
+.font-script { font-family: 'Pinyon Script', cursive; }
+.logo-spinner {
+  -webkit-mask-image: linear-gradient(to top, black 50%, transparent 100%);
+  mask-image: linear-gradient(to top, black 50%, transparent 100%);
+  animation: wipe-up 1.5s ease-in-out infinite;
+}
+@keyframes wipe-up {
+  0% {
+    -webkit-mask-position: 0 100%;
+    mask-position: 0 100%;
+  }
+  50% {
+    -webkit-mask-position: 0 0;
+    mask-position: 0 0;
+  }
+  100% {
+    -webkit-mask-position: 0 0;
+    mask-position: 0 0;
+  }
+}
+.premium-header-gradient {
+  background: linear-gradient(to right, #ffffff 25%, #1e293b 45%);
+}
+@keyframes pointer-wiggle {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.15) rotate(-2deg); }
+}
+.pointer-wiggling {
+  animation: pointer-wiggle 0.2s ease-in-out infinite;
+}
+@keyframes pulse-gift {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.75; }
+}
+.animate-pulse-gift {
+  animation: pulse-gift 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
