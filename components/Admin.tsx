@@ -384,7 +384,7 @@ const Admin: React.FC = () => {
                 </h2>
                 <div className="space-y-4 text-slate-600">
                     <p>
-                        This application has a robust architectural foundation that makes it highly adaptable to subjects beyond medical coding (e.g., law, finance, IT certifications). The core concept is to separate the application's <strong>engine</strong> from its <strong>content</strong>.
+                        This application has a robust architectural foundation that makes it highly adaptable to subjects beyond medical coding (e.g., law, finance, IT certifications). The core concept is the separation of the application's <strong>engine</strong> from its <strong>content</strong>.
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
                         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
@@ -396,12 +396,12 @@ const Admin: React.FC = () => {
                             <p className="text-sm">Subject-specific data like exam names, descriptions, question sources, and certificate text.</p>
                         </div>
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-700">Future Development Path</h3>
+                    <h3 className="text-lg font-semibold text-slate-700">Current Architecture</h3>
                     <p>
-                        To achieve this, a future refactoring effort could move all subject-specific content from the code into a centralized JSON configuration file. 
+                        All subject-specific data—exam names, descriptions, question sources, certificate templates—is loaded from a central configuration. This makes the application "multi-tenant" by design.
                     </p>
                     <p>
-                        This would make the application "multi-tenant". Launching a version for a new subject would only require creating a new configuration file and a new Google Sheet with questions, requiring <strong>no further code changes</strong>. This one-time architectural investment would significantly increase the platform's versatility and scalability.
+                        Launching a version for a new subject only requires creating a new configuration file (or updating the existing one) and a new Google Sheet with questions, requiring <strong>no further code changes</strong>. This architecture ensures the platform is versatile and scalable.
                     </p>
                 </div>
             </div>
