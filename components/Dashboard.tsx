@@ -353,7 +353,18 @@ const Dashboard: React.FC = () => {
                                         {/* Box 1: Practice */}
                                         <div className="flex flex-col justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 h-full">
                                             <div className="flex-grow">
-                                                <h4 className="font-semibold text-slate-700 flex items-center gap-2"><FlaskConical size={16} /> Practice Exam</h4>
+                                                <h4 className="font-semibold text-slate-700 flex items-center gap-2"><FlaskConical size={16} /> Free Practice Exam</h4>
+                                                <div className="mt-2 text-xs">
+                                                    {isSubscribed ? (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-800">
+                                                            <Star size={12} className="mr-1"/> Unlimited Attempts
+                                                        </span>
+                                                    ) : (
+                                                         <span className="inline-flex items-center px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-800">
+                                                            10 Free Attempts
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <ul className="text-xs text-slate-600 mt-2 space-y-1">
                                                     <li className="flex items-center gap-2"><List size={14}/> {practiceExam.numberOfQuestions} questions</li>
                                                     <li className="flex items-center gap-2"><Clock size={14}/> {practiceExam.durationMinutes} minutes</li>

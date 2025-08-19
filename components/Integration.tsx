@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           10.0.0
+ * Version:           10.1.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -432,44 +432,98 @@ function mco_exam_user_details_shortcode() { if (!is_user_logged_in()) return '<
         <?php $results = get_user_meta($user_id, 'mco_exam_results', true); if (!empty($results)) { echo '<ul>'; foreach ($results as $res) echo '<li>' . esc_html($res['examId']) . ': ' . esc_html($res['score']) . '%</li>'; echo '</ul>'; } else { echo '<p>No results.</p>'; } ?>
     </div> <?php return ob_get_clean();
 }
-function mco_exam_showcase_shortcode() { /* Showcase logic omitted for brevity */ return '<!-- Exam Showcase Placeholder -->'; }
+
+// --- SHOWCASE SHORTCODE HELPER FUNCTIONS ---
+function mco_exam_showcase_shortcode() {
+    $exam_programs = mco_get_exam_programs_data();
+    $is_wc_active = class_exists('WooCommerce');
+    ob_start(); ?>
+    <div class="mco-intro-content" style="text-align: center; max-width: 800px; margin: 2rem auto 3rem; font-family: sans-serif; color: #374151;">
+        <h2 style="font-size: 2.25rem; font-weight: 800; color: #111827; margin-bottom: 1rem;">Welcome to the Exam Portal</h2>
+        <p style="font-size: 1.125rem; line-height: 1.75; color: #4b5563;">Your journey to certification starts here. Below you'll find our exam programs. Start with a free practice exam, purchase a certification exam, or subscribe for the best value.</p>
+    </div>
+    <style>
+    .mco-showcase-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; font-family: sans-serif; }
+    .mco-showcase-card { border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05); background: #fff; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #e5e7eb; transition: transform .2s, box-shadow .2s; }
+    .mco-showcase-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,.07), 0 4px 6px -4px rgba(0,0,0,.07); }
+    .mco-showcase-card-body { padding: 1.25rem; flex-grow: 1; display: flex; flex-direction: column; }
+    .mco-showcase-card h3 { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.5rem; color: #1f2937; }
+    .mco-showcase-card p { margin: 0 0 1rem; color: #4b5563; font-size: 0.85rem; line-height: 1.5; flex-grow: 1; }
+    .mco-showcase-card-actions { margin-top: auto; display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+    .mco-showcase-btn { display: block; text-align: center; text-decoration: none; padding: 0.6rem 1rem; border-radius: 6px; font-weight: 600; transition: background-color .2s; font-size: 0.9rem; }
+    .mco-btn-purchase { background-color: #0e7490; color: #fff; border: 1px solid #0e7490; }
+    .mco-btn-purchase:hover { background-color: #155e75; }
+    .mco-btn-practice { background-color: #475569; color: #fff; border: 1px solid #475569; }
+    .mco-btn-practice:hover { background-color: #334155; }
+    .mco-btn-addon { display: inline-block !important; background-color: #4f46e5; color: white; border: 1px solid #4f46e5; padding: 0.6rem 1rem !important; font-size: 0.9rem !important; }
+    .mco-btn-addon:hover { background-color: #4338ca; }
+    </style>
+    <div class="mco-showcase-container">
+    <?php
+    if ($is_wc_active) {
+        $monthly_product = wc_get_product(wc_get_product_id_by_sku('sub-monthly'));
+        $yearly_product = wc_get_product(wc_get_product_id_by_sku('sub-yearly'));
+    ?>
+    <div style="grid-column: 1 / -1; margin-bottom: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+        <?php if ($monthly_product): ?>
+        <div style="background: linear-gradient(to bottom right, #22d3ee, #0ea5e9); color: white; border-radius: 1rem; padding: 2rem; display: flex; flex-direction: column;">
+            <h3 style="font-size: 1.25rem; font-weight: 700;">Monthly Subscription</h3>
+            <p style="margin-top: 1rem; color: rgba(255,255,255,0.8); flex-grow: 1;">Unlimited practice & AI feedback.</p>
+            <div style="margin-top: 1.5rem; display: flex; align-items: baseline; gap: 0.5rem;"><span style="font-size: 2.25rem; font-weight: 800;"><?php echo $monthly_product->get_price_html(); ?></span><span style="font-weight: 500; color: rgba(255,255,255,0.8);">/month</span></div>
+            <a href="<?php echo esc_url($monthly_product->add_to_cart_url()); ?>" class="mco-showcase-btn" style="margin-top: 2rem; background: white; color: #0891b2;">Subscribe Now</a>
+        </div>
+        <?php endif; ?>
+        <?php if ($yearly_product): ?>
+        <div style="background: linear-gradient(to bottom right, #a855f7, #4f46e5); color: white; border-radius: 1rem; padding: 2rem; display: flex; flex-direction: column; position: relative;">
+            <div style="position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); background: #facc15; color: #78350f; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.75rem; border-radius: 9999px;">Best Value</div>
+            <h3 style="font-size: 1.25rem; font-weight: 700;">Yearly Subscription</h3>
+            <p style="margin-top: 1rem; color: rgba(255,255,255,0.8); flex-grow: 1;">Save over 35% with annual billing.</p>
+            <div style="margin-top: 1.5rem; display: flex; align-items: baseline; gap: 0.5rem;"><span style="font-size: 2.25rem; font-weight: 800;"><?php echo $yearly_product->get_price_html(); ?></span><span style="font-weight: 500; color: rgba(255,255,255,0.8);">/year</span></div>
+            <a href="<?php echo esc_url($yearly_product->add_to_cart_url()); ?>" class="mco-showcase-btn" style="margin-top: 2rem; background: white; color: #6d28d9;">Subscribe & Save</a>
+        </div>
+        <?php endif; ?>
+    </div>
+    <?php } ?>
+    <?php foreach ($exam_programs as $program): ?>
+        <div class="mco-showcase-card">
+            <div class="mco-showcase-card-body">
+                <h3><?php echo esc_html($program['name']); ?></h3>
+                <?php if ($is_wc_active) { $product_id = wc_get_product_id_by_sku($program['cert_sku']); if ($product_id) { echo mco_render_stars_html(get_post_meta($product_id, '_mco_exam_avg_rating', true), get_post_meta($product_id, '_mco_exam_review_count', true)); } } ?>
+                <p><?php echo esc_html($program['description']); ?></p>
+                <div class="mco-showcase-card-actions">
+                    <a href="<?php echo esc_url(MCO_EXAM_APP_URL . '#/test/' . $program['practice_id']); ?>" class="mco-showcase-btn mco-btn-practice">Start Free Practice</a>
+                    <?php if ($is_wc_active && ($product = wc_get_product(wc_get_product_id_by_sku($program['cert_sku'])))): ?>
+                        <a href="<?php echo esc_url($product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-purchase">Purchase Exam (<?php echo $product->get_price_html(); ?>)</a>
+                        <?php if ($addon_product = wc_get_product(wc_get_product_id_by_sku($program['cert_sku'] . '-1mo-addon'))): ?>
+                            <a href="<?php echo esc_url($addon_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-addon">Buy Bundle (<?php echo $addon_product->get_price_html(); ?>)</a>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    <?php endforeach; ?>
+    </div>
+    <?php return ob_get_clean();
+}
+
+
 function mco_exam_login_shortcode() {
     if (!defined('MCO_JWT_SECRET')) return "<p class='mco-portal-error'>Configuration error: A strong MCO_JWT_SECRET must be defined in wp-config.php.</p>";
     $login_error_message = ''; $user_id = 0;
-    
     if ('POST' === $_SERVER['REQUEST_METHOD'] && !empty($_POST['mco_login_nonce']) && wp_verify_nonce($_POST['mco_login_nonce'], 'mco_login_action')) {
         $user = wp_signon(['user_login' => sanitize_user($_POST['log']), 'user_password' => $_POST['pwd'], 'remember' => true], false);
-        if (is_wp_error($user)) {
-            $login_error_message = 'Invalid username or password.';
+        if (is_wp_error($user)) { 
+            $login_error_message = 'Invalid username or password.'; 
         } else {
-            $user_id = $user->ID;
-            // Email verification check: assumes an external plugin sets 'is_email_verified' meta.
-            // If meta doesn't exist, we allow login to avoid locking out existing users.
-            $is_verified = get_user_meta($user_id, 'is_email_verified', true);
-            if ($is_verified === 'false' || $is_verified === false || $is_verified === 0) {
-                $login_error_message = 'Your email address has not been verified. Please check your inbox for a verification link.';
-                wp_logout();
-                $user_id = 0; // Prevent further processing
+            if ( get_user_meta( $user->ID, 'has_to_be_activated', true ) !== false ) {
+                $login_error_message = 'Your account must be activated. Please check your email for the activation link.';
+            } else {
+                $user_id = $user->ID;
             }
         }
     }
-    
-    if (is_user_logged_in() && $user_id === 0) {
-        $user_id = get_current_user_id();
-    }
-    
-    if ($user_id > 0) {
-        $token = mco_generate_exam_jwt($user_id);
-        if ($token) {
-            $redirect_to = isset($_REQUEST['redirect_to']) ? esc_url_raw(urldecode($_REQUEST['redirect_to'])) : '/dashboard';
-            $final_url = mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=' . urlencode($redirect_to);
-            echo "<div class='mco-portal-container' style='text-align:center;'><p>Login successful. Redirecting...</p><script>window.location.href='" . esc_url_raw($final_url) . "';</script></div>";
-            return;
-        } else {
-            if (empty($login_error_message)) $login_error_message = 'Could not create a secure session. Please contact support.';
-        }
-    }
-
+    if (is_user_logged_in() && $user_id === 0) { $user_id = get_current_user_id(); }
+    if ($user_id > 0) { $token = mco_generate_exam_jwt($user_id); if ($token) { $redirect_to = isset($_REQUEST['redirect_to']) ? esc_url_raw(urldecode($_REQUEST['redirect_to'])) : '/dashboard'; $final_url = mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=' . urlencode($redirect_to); echo "<div class='mco-portal-container' style='text-align:center;'><p>Login successful. Redirecting...</p><script>window.location.href='" . esc_url_raw($final_url) . "';</script></div>"; return; } else { $login_error_message = 'Could not create a secure session. Please contact support.'; } }
     ob_start(); ?>
     <style>.mco-portal-container{font-family:sans-serif;max-width:400px;margin:5% auto;padding:40px;background:#fff;border-radius:12px;box-shadow:0 10px 25px -5px rgba(0,0,0,.1)}.mco-portal-container h2{text-align:center;font-size:24px;margin-bottom:30px}.mco-portal-container .form-row{margin-bottom:20px}.mco-portal-container label{display:block;margin-bottom:8px;font-weight:600}.mco-portal-container input{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box}.mco-portal-container button{width:100%;padding:14px;background-color:#0891b2;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer}.mco-portal-container button:hover{background-color:#067a8e}.mco-portal-links{margin-top:20px;text-align:center}.mco-portal-error{color:red;text-align:center;margin-bottom:20px}</style>
     <div class="mco-portal-container">
@@ -485,7 +539,7 @@ function mco_exam_login_shortcode() {
     </div> <?php return ob_get_clean();
 }
 
-function mco_exam_add_custom_registration_fields() { ?><p><label for="first_name">First Name<br/><input type="text" name="first_name" required/></label></p><p><label for="last_name">Last Name<br/><input type="text" name="last_name" required/></label></p><?php }
+function mco_exam_add_custom_registration_fields() { ?><p><label for="first_name">First Name<br/><input type="text" name="first_name" id="first_name" required/></label></p><p><label for="last_name">Last Name<br/><input type="text" name="last_name" id="last_name" required/></label></p><?php }
 function mco_exam_validate_reg_fields($errors, $login, $email) { if (empty($_POST['first_name']) || empty($_POST['last_name'])) $errors->add('field_error', 'First and Last Name are required.'); return $errors; }
 function mco_exam_save_reg_fields($user_id) { if (!empty($_POST['first_name'])) update_user_meta($user_id, 'first_name', sanitize_text_field($_POST['first_name'])); if (!empty($_POST['last_name'])) update_user_meta($user_id, 'last_name', sanitize_text_field($_POST['last_name'])); }
 function mco_exam_login_url($login_url, $redirect) { if (strpos($_SERVER['REQUEST_URI'], 'wp-admin') !== false) return $login_url; $login_page_url = home_url('/' . MCO_LOGIN_SLUG . '/'); return !empty($redirect) ? add_query_arg('redirect_to', urlencode($redirect), $login_page_url) : $login_page_url; }

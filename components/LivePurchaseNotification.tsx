@@ -3,9 +3,28 @@ import { ShoppingCart } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 
 // Data for fake notifications
-const firstNames = ['John', 'Maria', 'David', 'Sarah', 'Michael', 'Jessica', 'Chris', 'Emily', 'Daniel', 'Laura'];
-const locations = ['New York, NY', 'London, UK', 'Sydney, AU', 'Toronto, CA', 'Mumbai, IN', 'Los Angeles, CA', 'Chicago, IL', 'Dubai, AE'];
-
+const firstNames = ['John', 'Maria', 'David', 'Sarah', 'Michael', 'Jessica', 'Chris', 'Emily', 'Daniel', 'Laura',
+  'Ahmed', 'Sophie', 'Liam', 'Olivia', 'James', 'Ava', 'Mohammed', 'Emma', 'Noah', 'Isabella',
+  'William', 'Mia', 'Alexander', 'Charlotte', 'Henry', 'Amelia', 'Joseph', 'Harper', 'Thomas',
+  'Evelyn', 'Ethan', 'Aria', 'Daniel', 'Scarlett', 'Benjamin', 'Grace', 'Lucas', 'Chloe',
+  'Jackson', 'Lily', 'Samuel', 'Madison', 'Gabriel', 'Avery', 'Logan', 'Zoe', 'Matthew',
+  'Abigail', 'Elijah', 'Natalie', 'Andrew', 'Hannah', 'Joshua', 'Julia', 'Ryan', 'Victoria',
+  'Nathan', 'Sofia', 'Jacob', 'Ella', 'Christopher', 'Addison', 'Luke', 'Mila', 'Nicholas',
+  'Brooklyn', 'Jonathan', 'Leah', 'Isaac', 'Audrey', 'Steven', 'Claire', 'Owen', 'Lila',
+  'Caleb', 'Violet', 'Aaron', 'Stella', 'Kevin', 'Layla', 'Zachary', 'Nora', 'Evan', 'Hazel'];
+const locations = [
+  'New York, NY', 'London, UK', 'Sydney, AU', 'Toronto, CA', 'Mumbai, IN', 'Los Angeles, CA', 'Chicago, IL', 'Dubai, AE',
+  'Paris, FR', 'Tokyo, JP', 'Singapore, SG', 'Hong Kong, HK', 'Berlin, DE', 'Melbourne, AU', 'São Paulo, BR', 'Cape Town, ZA',
+  'Bangkok, TH', 'Moscow, RU', 'Beijing, CN', 'Seoul, KR', 'Mexico City, MX', 'Istanbul, TR', 'Rome, IT', 'Amsterdam, NL',
+  'Lagos, NG', 'Buenos Aires, AR', 'Cairo, EG', 'Shanghai, CN', 'Jakarta, ID', 'Kuala Lumpur, MY', 'Miami, FL', 'Vancouver, CA',
+  'Stockholm, SE', 'Vienna, AT', 'Barcelona, ES', 'Delhi, IN', 'Rio de Janeiro, BR', 'Dublin, IE', 'San Francisco, CA', 'Oslo, NO',
+  'Helsinki, FI', 'Santiago, CL', 'Bogotá, CO', 'Nairobi, KE', 'Manila, PH', 'Athens, GR', 'Lisbon, PT', 'Tel Aviv, IL',
+  'Auckland, NZ', 'Prague, CZ', 'Zurich, CH', 'Montreal, CA', 'Houston, TX', 'Karachi, PK', 'Lima, PE', 'Kyiv, UA',
+  'Johannesburg, ZA', 'Bangalore, IN', 'Hanoi, VN', 'Riyadh, SA', 'San Diego, CA', 'Brussels, BE', 'Budapest, HU', 'Warsaw, PL',
+  'Munich, DE', 'Copenhagen, DK', 'Accra, GH', 'Colombo, LK', 'Doha, QA', 'Taipei, TW', 'San Jose, CR', 'Montevideo, UY',
+  'Addis Ababa, ET', 'Algiers, DZ', 'Kolkata, IN', 'Guangzhou, CN', 'Casablanca, MA', 'Ankara, TR', 'Belfast, UK', 'Tunis, TN',
+  'Seattle, WA'
+];
 const LivePurchaseNotification: React.FC = () => {
     const { activeOrg } = useAppContext();
     const [isVisible, setIsVisible] = useState(false);
