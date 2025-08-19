@@ -160,6 +160,38 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
 
 
     if (!isOpen) return null;
+    
+    const PrizeResultDisplay = () => {
+        if (!prizeResult) return null;
+
+        const canSpinAgain = user?.isAdmin || spinsAvailable > 0;
+        const isWin = prizeResult.prizeId !== 'NEXT_TIME';
+        const buttonText = canSpinAgain ? (isWin ? 'Awesome!' : 'Spin Again') : 'Close';
+        const buttonClass = isWin 
+            ? "bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-lg transition"
+            : "bg-slate-600 hover:bg-slate-700 text-white font-bold py-3 px-8 rounded-lg transition";
+
+        return (
+            <div className="absolute inset-0 bg-black/80 rounded-2xl flex flex-col items-center justify-center animate-fade-in z-30 p-4">
+                <Gift size={48} className="text-yellow-400 mb-4" />
+                <h3 className="text-xl font-bold text-gray-200 mb-2">{isWin ? "You won..." : "Sorry..."}</h3>
+                <p className="text-4xl font-extrabold text-white mb-8 text-center">{prizeResult.prizeLabel}</p>
+                <button 
+                    onClick={() => {
+                        if (canSpinAgain) {
+                            setPrizeResult(null);
+                            setIsSpinning(false);
+                        } else {
+                            onClose();
+                        }
+                    }} 
+                    className={buttonClass}
+                >
+                    {buttonText}
+                </button>
+            </div>
+        );
+    };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4" role="dialog" aria-modal="true">
@@ -168,28 +200,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                     <X size={24} />
                 </button>
                 
-                {prizeResult && (
-                    <div className="absolute inset-0 bg-black/80 rounded-2xl flex flex-col items-center justify-center animate-fade-in z-30 p-4">
-                        <Gift size={48} className="text-yellow-400 mb-4" />
-                        <h3 className="text-xl font-bold text-gray-200 mb-2">You won...</h3>
-                        <p className="text-4xl font-extrabold text-white mb-8 text-center">{prizeResult.prizeLabel}</p>
-                        <button 
-                            onClick={() => {
-                                const canSpinAgain = user?.isAdmin || spinsAvailable > 0;
-                                if (canSpinAgain) {
-                                    setPrizeResult(null);
-                                    setIsSpinning(false);
-                                } else {
-                                    onClose();
-                                }
-                            }} 
-                            className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-lg transition"
-                        >
-                            {(user?.isAdmin || spinsAvailable > 0) ? 'Awesome!' : 'Close'}
-                        </button>
-                    </div>
-                )}
-
+                <PrizeResultDisplay />
 
                 <h2 className="text-3xl font-bold text-white flex items-center justify-center gap-2">
                     Spin & Win

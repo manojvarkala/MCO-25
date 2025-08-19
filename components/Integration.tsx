@@ -95,13 +95,17 @@ function mco_exam_get_payload($user_id) {
         $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert', 'exam-mcf-cert'];
         $base_subscription_skus = ['sub-monthly', 'sub-yearly', 'sub-1mo-addon'];
 
+        // Add new, specific bundle SKUs
+        $specific_bundle_skus = ['exam-cpc-cert-1', 'exam-cca-cert-bundle'];
+
         // Dynamically create addon SKUs from the list of all certification exams
         $addon_skus = array_map(function($sku) { return $sku . '-1mo-addon'; }, $all_exam_skus);
         
         // Combine base subscriptions with all possible addon SKUs
         $subscription_skus = array_unique(array_merge($base_subscription_skus, $addon_skus));
         
-        $all_skus_for_pricing = array_unique(array_merge($all_exam_skus, $subscription_skus));
+        // Combine all SKUs for which prices are needed
+        $all_skus_for_pricing = array_unique(array_merge($all_exam_skus, $subscription_skus, $specific_bundle_skus));
         
         foreach ($all_skus_for_pricing as $sku) {
             if (($product_id = wc_get_product_id_by_sku($sku)) && ($product = wc_get_product($product_id))) {
@@ -307,10 +311,8 @@ function mco_exam_submit_review_callback($request) {
 
 // --- NEW DEBUG ENDPOINT ---
 function mco_get_debug_details_callback($request) {
+    if (!user_can((int)$request->get_param('jwt_user_id'), 'administrator')) return new WP_Error('forbidden', 'Admin permission required.', ['status' => 403]);
     $user_id = (int)$request->get_param('jwt_user_id');
-    if (!$user = get_userdata($user_id)) return new WP_Error('user_not_found', 'User not found.', ['status' => 404]);
-    if (!user_can($user, 'administrator')) return new WP_Error('forbidden', 'You do not have permission to view debug details.', ['status' => 403]);
-    
     $payload = mco_exam_get_payload($user_id);
     $results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
 

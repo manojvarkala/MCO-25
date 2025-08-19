@@ -339,12 +339,15 @@ const Dashboard: React.FC = () => {
                                     )}
                                     <p className="text-sm text-slate-500 mt-1 mb-4">{certExam.description}</p>
                                     
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 border-t border-slate-200 pt-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-200 pt-4">
                                         {/* Practice Column */}
-                                        <div className="md:col-span-1 flex flex-col justify-between p-4 bg-slate-50 rounded-lg">
-                                            <div>
-                                                <h4 className="font-semibold text-slate-700 flex items-center gap-2"><FlaskConical size={16} /> Free Practice</h4>
-                                                <p className="text-xs text-slate-500 mt-1">{practiceExam.numberOfQuestions} questions, {practiceExam.durationMinutes} mins</p>
+                                        <div className="flex flex-col justify-between p-4 bg-slate-100 rounded-lg border border-slate-200">
+                                            <div className="flex-grow">
+                                                <h4 className="font-semibold text-slate-700 flex items-center gap-2"><FlaskConical size={16} /> Practice Exam</h4>
+                                                <ul className="text-xs text-slate-600 mt-2 space-y-1">
+                                                    <li className="flex items-center gap-2"><List size={14}/> {practiceExam.numberOfQuestions} questions</li>
+                                                    <li className="flex items-center gap-2"><Clock size={14}/> {practiceExam.durationMinutes} minutes duration</li>
+                                                </ul>
                                             </div>
                                             <button
                                                 onClick={() => navigate(`/test/${practiceExam.id}`)}
@@ -356,15 +359,14 @@ const Dashboard: React.FC = () => {
                                         </div>
                                         
                                         {/* Certification Column */}
-                                        <div className="md:col-span-2 flex flex-col justify-between p-4 bg-slate-100 rounded-lg border border-slate-200">
-                                            <div>
+                                        <div className="flex flex-col justify-between p-4 bg-slate-100 rounded-lg border border-slate-200">
+                                            <div className="flex-grow">
                                                 <h4 className="font-semibold text-slate-700 flex items-center gap-2"><Trophy size={16} /> Certification Exam</h4>
                                                 <ul className="text-xs text-slate-600 mt-2 space-y-1">
                                                     <li className="flex items-center gap-2"><List size={14}/> {certExam.numberOfQuestions} questions</li>
                                                     <li className="flex items-center gap-2"><Clock size={14}/> {certExam.durationMinutes} minutes duration</li>
                                                     <li className="flex items-center gap-2"><Target size={14}/> {certExam.passScore}% passing score</li>
-                                                    <li className="flex items-center gap-2"><Repeat size={14}/> 3 attempts included</li>
-                                                    <li className="flex items-center gap-2"><Award size={14}/> Official Certificate on passing</li>
+                                                    <li className="flex items-center gap-2"><Award size={14}/> Official Certificate</li>
                                                 </ul>
                                             </div>
 
@@ -415,7 +417,15 @@ const Dashboard: React.FC = () => {
                                                         })()}
                                                     </div>
                                                      {(() => {
-                                                        const bundleSku = `${certExam.productSku}-1mo-addon`;
+                                                        let bundleSku = '';
+                                                        if (certExam.productSku === 'exam-cpc-cert') {
+                                                            bundleSku = 'exam-cpc-cert-1';
+                                                        } else if (certExam.productSku === 'exam-cca-cert') {
+                                                            bundleSku = 'exam-cca-cert-bundle';
+                                                        } else {
+                                                            bundleSku = `${certExam.productSku}-1mo-addon`;
+                                                        }
+
                                                         const bundlePriceData = examPrices?.[bundleSku];
                                                         if (bundlePriceData) {
                                                             const bundleUrl = bundlePriceData.productId
