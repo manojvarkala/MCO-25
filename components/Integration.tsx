@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           9.5.0
+ * Version:           9.6.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -238,7 +238,10 @@ function mco_exam_api_permission_check($request) {
         return new WP_Error('jwt_invalid', 'Invalid or expired token.', ['status' => 403]);
     }
     if (!isset($payload['user']['id']) || empty($payload['user']['id'])) {
-        return new WP_Error('jwt_no_user_id', 'User ID not found in the token', ['status' => 403]);
+        // Enhanced error message to debug payload issues.
+        $debug_message = 'User ID not found in the token. This often means the token is corrupted. Decoded Payload: ' . print_r($payload, true);
+        mco_debug_log($debug_message);
+        return new WP_Error('jwt_no_user_id', $debug_message, ['status' => 403]);
     }
     $request->set_param('jwt_user_id', $payload['user']['id']);
     return true;
