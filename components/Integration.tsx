@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           9.3.0
+ * Version:           9.4.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -24,7 +24,7 @@ define('MCO_LOGIN_SLUG', 'exam-login');
 define('MCO_EXAM_APP_URL', 'https://exams.coding-online.net/');
 define('MCO_EXAM_APP_TEST_URL', 'https://mco-25.vercel.app/');
 // define('MCO_JWT_SECRET', 'your-very-strong-secret-key-that-is-long-and-random');
-// define('MCO_DEBUG', true); // <--- UNCOMMENT THIS TO SEE DETAILED LOGS FOR PARSING ERRORS
+define('MCO_DEBUG', true); // Enabled for troubleshooting. Check wp-content/debug.log
 // --- END CONFIGURATION ---
 
 // --- CORS HANDLING ---
@@ -169,10 +169,44 @@ function mco_exam_get_payload($user_id) {
     return ['iss' => get_site_url(), 'iat' => time(), 'exp' => time() + (60 * 60 * 2), 'user' => ['id' => (string)$user->ID, 'name' => $user_full_name, 'email' => $user->user_email, 'isAdmin' => user_can($user, 'administrator')], 'paidExamIds' => $paid_exam_ids, 'examPrices' => $exam_prices, 'isSubscribed' => $is_subscribed, 'spinsAvailable' => $spins_available, 'wonPrize' => $won_prize];
 }
 
-
+function mco_ensure_utf8_recursive($data) { if (is_string($data)) return mb_convert_encoding($data, 'UTF-8', 'UTF-8'); if (!is_array($data)) return $data; $ret = []; foreach ($data as $i => $d) $ret[$i] = mco_ensure_utf8_recursive($d); return $ret; }
 function mco_base64url_encode($data) { return rtrim(strtr(base64_encode($data), '+/', '-_'), '='); }
-function mco_verify_exam_jwt($token) { $secret_key = defined('MCO_JWT_SECRET') ? MCO_JWT_SECRET : ''; if (empty($secret_key) || strlen($secret_key) < 32) { mco_debug_log('JWT verification failed: Secret key not configured or insecure.'); return null; } $parts = explode('.', $token); if (count($parts) !== 3) { mco_debug_log('JWT verification failed: Invalid token structure.'); return null; } list($header_b64, $payload_b64, $signature_b64) = $parts; $signature = base64_decode(strtr($signature_b64, '-_', '+/')); $expected_signature = hash_hmac('sha256', "$header_b64.$payload_b64", $secret_key, true); if (!hash_equals($expected_signature, $signature)) { mco_debug_log('JWT verification failed: Signature mismatch.'); return null; } $payload = json_decode(base64_decode(strtr($payload_b64, '-_', '+/')), true); if (isset($payload['exp']) && $payload['exp'] < time()) { mco_debug_log('JWT verification failed: Token expired.'); return null; } return $payload; }
-function mco_generate_exam_jwt($user_id) { $secret_key = defined('MCO_JWT_SECRET') ? MCO_JWT_SECRET : ''; if (empty($secret_key) || strlen($secret_key) < 32 || strpos($secret_key, 'your-very-strong-secret-key') !== false) { mco_debug_log('JWT Secret is not configured or is too weak.'); return null; } if (!$payload = mco_exam_get_payload($user_id)) return null; $header_b64 = mco_base64url_encode(json_encode(['typ' => 'JWT', 'alg' => 'HS256'])); $payload_b64 = mco_base64url_encode(json_encode($payload)); $signature = hash_hmac('sha256', "$header_b64.$payload_b64", $secret_key, true); $signature_b64 = mco_base64url_encode($signature); return "$header_b64.$payload_b64.$signature_b64"; }
+
+function mco_verify_exam_jwt($token) {
+    $secret_key = defined('MCO_JWT_SECRET') ? MCO_JWT_SECRET : '';
+    if (empty($secret_key) || strlen($secret_key) < 32) { mco_debug_log('JWT verification failed: Secret key not configured or insecure.'); return null; }
+    $parts = explode('.', $token);
+    if (count($parts) !== 3) { mco_debug_log('JWT verification failed: Invalid token structure.'); return null; }
+    list($header_b64, $payload_b64, $signature_b64) = $parts;
+    $signature = base64_decode(strtr($signature_b64, '-_', '+/'));
+    $expected_signature = hash_hmac('sha256', "$header_b64.$payload_b64", $secret_key, true);
+    if (!hash_equals($expected_signature, $signature)) { mco_debug_log('JWT verification failed: Signature mismatch.'); return null; }
+    
+    $payload_json = base64_decode(strtr($payload_b64, '-_', '+/'));
+    if ($payload_json === false) { mco_debug_log('JWT verification failed: base64_decode on payload failed.'); return null; }
+    $payload = json_decode($payload_json, true);
+    if (json_last_error() !== JSON_ERROR_NONE) { mco_debug_log('JWT verification failed: json_decode error: ' . json_last_error_msg() . '. Raw payload JSON: ' . $payload_json); return null; }
+    
+    if (isset($payload['exp']) && $payload['exp'] < time()) { mco_debug_log('JWT verification failed: Token expired.'); return null; }
+    return $payload;
+}
+
+function mco_generate_exam_jwt($user_id) {
+    $secret_key = defined('MCO_JWT_SECRET') ? MCO_JWT_SECRET : '';
+    if (empty($secret_key) || strlen($secret_key) < 32 || strpos($secret_key, 'your-very-strong-secret-key') !== false) { mco_debug_log('JWT Secret is not configured or is too weak.'); return null; }
+    if (!$payload = mco_exam_get_payload($user_id)) return null;
+    
+    $payload = mco_ensure_utf8_recursive($payload);
+    $payload_json = json_encode($payload);
+    if ($payload_json === false) { mco_debug_log('JWT generation failed: json_encode error: ' . json_last_error_msg()); return null; }
+    
+    $header_b64 = mco_base64url_encode(json_encode(['typ' => 'JWT', 'alg' => 'HS256']));
+    $payload_b64 = mco_base64url_encode($payload_json);
+    $signature = hash_hmac('sha256', "$header_b64.$payload_b64", $secret_key, true);
+    $signature_b64 = mco_base64url_encode($signature);
+    return "$header_b64.$payload_b64.$signature_b64";
+}
+
 function mco_redirect_after_purchase($order_id) { if (!$order_id || !($order = wc_get_order($order_id)) || !($user_id = $order->get_customer_id())) return; if ($user_id > 0 && $order->has_status(['completed', 'processing', 'on-hold'])) { if (function_exists('WC') && WC()->cart) WC()->cart->empty_cart(); if ($token = mco_generate_exam_jwt($user_id)) { wp_redirect(mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=/dashboard'); exit; } } }
 
 // --- REST API ENDPOINTS ---
@@ -208,13 +242,6 @@ function mco_exam_api_permission_check($request) {
     return true;
 }
 
-function mco_ensure_utf8_recursive($data) {
-    if (is_string($data)) return mb_convert_encoding($data, 'UTF-8', 'UTF-8');
-    if (!is_array($data)) return $data;
-    $ret = [];
-    foreach ($data as $i => $d) $ret[$i] = mco_ensure_utf8_recursive($d);
-    return $ret;
-}
 function mco_get_user_results_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); if ($user_id <= 0) return new WP_Error('invalid_user', 'Invalid user.', ['status' => 403]); $results = get_user_meta($user_id, 'mco_exam_results', true); $results = empty($results) || !is_array($results) ? [] : array_values($results); return new WP_REST_Response(mco_ensure_utf8_recursive($results), 200); }
 function mco_get_certificate_data_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); $test_id = sanitize_key($request['test_id']); $user = get_userdata($user_id); if (!$user) return new WP_Error('user_not_found', 'User not found.', ['status' => 404]); $all_results = get_user_meta($user_id, 'mco_exam_results', true); if (!is_array($all_results) || !isset($all_results[$test_id])) { return new WP_Error('not_found', 'Result not found.', ['status' => 404]); } $result = $all_results[$test_id]; $candidate_name = trim($user->first_name . ' ' . $user->last_name) ?: $user->display_name; return new WP_REST_Response(['certificateNumber' => substr($user_id, 0, 4) . '-' . substr(md5($test_id), 0, 6), 'candidateName' => $candidate_name, 'finalScore' => $result['score'], 'date' => date('F j, Y', (int)((int)$result['timestamp'] / 1000)), 'examId' => $result['examId']], 200); }
 function mco_exam_update_user_name_callback($request) { $user_id = (int)$request->get_param('jwt_user_id'); if (!get_userdata($user_id)) return new WP_Error('user_not_found', 'User not found.', ['status' => 404]); $full_name = isset($request->get_json_params()['fullName']) ? sanitize_text_field($request->get_json_params()['fullName']) : ''; if (empty($full_name)) return new WP_Error('name_empty', 'Full name cannot be empty.', ['status' => 400]); $name_parts = explode(' ', $full_name, 2); update_user_meta($user_id, 'first_name', $name_parts[0]); update_user_meta($user_id, 'last_name', isset($name_parts[1]) ? $name_parts[1] : ''); return new WP_REST_Response(['success' => true, 'message' => 'Name updated successfully.'], 200); }
