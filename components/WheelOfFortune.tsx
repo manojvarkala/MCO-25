@@ -34,12 +34,11 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
     const { user, token, loginWithToken, spinsAvailable } = useAuth();
     const [isSpinning, setIsSpinning] = useState(false);
-    const [isWiggling, setIsWiggling] = useState(false);
     const [rotation, setRotation] = useState(0);
+    const [prizeResult, setPrizeResult] = useState<{ prizeId: string; prizeLabel: string; } | null>(null);
     const [displaySegments, setDisplaySegments] = useState(allPossibleSegments);
     const [conicGradient, setConicGradient] = useState('');
     
-    // State for the slide-to-spin interaction
     const [dragY, setDragY] = useState(0);
     const dragYRef = useRef(0);
     const sliderHandleRef = useRef<HTMLDivElement>(null);
@@ -62,10 +61,25 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
         setConicGradient(gradientString);
     }, []);
 
+     useEffect(() => {
+        if (prizeResult) {
+            if (prizeResult.prizeId !== 'NEXT_TIME') {
+                toast.success(`Congratulations! You won: ${prizeResult.prizeLabel}. Your prize has been activated.`, { duration: 5000 });
+            } else {
+                toast.error("Better luck next time!");
+            }
+
+            const canSpinAgain = user?.isAdmin || spinsAvailable > 0;
+            if (!canSpinAgain) {
+                setTimeout(onClose, 3000);
+            }
+        }
+    }, [prizeResult, spinsAvailable, user?.isAdmin, onClose]);
+
     const handleSpin = async () => {
         if (!token || isSpinning) return;
         setIsSpinning(true);
-        setIsWiggling(true);
+        setPrizeResult(null);
         
         const toastId = toast.loading('Spinning the wheel...');
 
@@ -73,69 +87,22 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
             const result = await googleSheetsService.spinWheel(token);
             const { prizeId, prizeLabel, newToken } = result;
 
-            // Update auth state immediately with the new token from the server
             if (newToken) {
                 await loginWithToken(newToken);
             }
             
-            const matchingIndices: number[] = [];
-            displaySegments.forEach((segment, index) => {
-                if (segment.prizeId === prizeId) {
-                    matchingIndices.push(index);
-                }
-            });
-    
-            let targetIndex: number;
-            if (matchingIndices.length > 0) {
-                targetIndex = matchingIndices[Math.floor(Math.random() * matchingIndices.length)];
-            } else {
-                console.warn(`Prize ID ${prizeId} not found on wheel. Landing on a fallback.`);
-                const fallbackIndices: number[] = [];
-                displaySegments.forEach((s, i) => { if (s.prizeId === 'NEXT_TIME') fallbackIndices.push(i); });
-                targetIndex = fallbackIndices.length > 0 ? fallbackIndices[Math.floor(Math.random() * fallbackIndices.length)] : 0;
-            }
-
-            const degreesPerSegment = 360 / displaySegments.length;
-            const randomOffset = (Math.random() * 0.8 - 0.4) * degreesPerSegment;
-            // The pointer is at the top (270 degrees in conic-gradient). This formula aligns the middle of the winning segment with the pointer.
-            const targetRotation = 270 - (targetIndex * degreesPerSegment + degreesPerSegment / 2) + randomOffset;
-            
+            const randomExtraSpins = Math.random() * 360;
             const fullSpins = 6 * 360;
-            setRotation(rotation + fullSpins + targetRotation);
+            setRotation(rotation + fullSpins + randomExtraSpins);
             
             setTimeout(() => {
                 toast.dismiss(toastId);
-                setIsWiggling(false);
-                if (prizeId !== 'NEXT_TIME') {
-                    toast.success(`Congratulations! You won: ${prizeLabel}. Your prize has been activated.`, { duration: 4000 });
-                } else {
-                    toast.error("Better luck next time!");
-                }
-
-                let newSpins = 0;
-                if(newToken) {
-                    try {
-                        const payloadBase64Url = newToken.split('.')[1];
-                        const payloadBase64 = payloadBase64Url.replace(/-/g, '+').replace(/_/g, '/');
-                        const decodedPayload = decodeURIComponent(atob(payloadBase64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
-                        const payload: TokenPayload = JSON.parse(decodedPayload);
-                        newSpins = payload.spinsAvailable ?? 0;
-                    } catch (e) {
-                        console.error("Failed to decode new token in wheel", e);
-                    }
-                }
-                
-                if (newSpins === 0 && !user?.isAdmin) {
-                    setTimeout(onClose, 1500);
-                } else {
-                    setIsSpinning(false); // Re-enable for next spin
-                }
+                setPrizeResult({ prizeId, prizeLabel });
             }, 7000);
 
         } catch (error: any) {
             toast.dismiss(toastId);
             setIsSpinning(false);
-            setIsWiggling(false);
             toast.error(error.message || "An error occurred.");
             if(user && !user.isAdmin) {
                onClose();
@@ -145,7 +112,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
 
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
         const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-        if (isSpinning || (spinsAvailable === 0 && !user?.isAdmin)) return;
+        if (isSpinning || prizeResult || (spinsAvailable === 0 && !user?.isAdmin)) return;
         
         isDraggingRef.current = true;
         startYRef.current = clientY;
@@ -196,10 +163,33 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4" role="dialog" aria-modal="true">
-            <div className="bg-black rounded-2xl shadow-xl p-6 w-full max-w-sm text-white text-center relative animate-fade-in-up border border-yellow-800/50">
-                <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-white transition">
+            <div className="bg-black rounded-2xl shadow-xl p-6 w-full max-w-sm text-white text-center relative animate-fade-in-up border border-yellow-800/50 overflow-hidden">
+                <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-white transition z-40">
                     <X size={24} />
                 </button>
+                
+                {prizeResult && (
+                    <div className="absolute inset-0 bg-black/80 rounded-2xl flex flex-col items-center justify-center animate-fade-in z-30 p-4">
+                        <Gift size={48} className="text-yellow-400 mb-4" />
+                        <h3 className="text-xl font-bold text-gray-200 mb-2">You won...</h3>
+                        <p className="text-4xl font-extrabold text-white mb-8 text-center">{prizeResult.prizeLabel}</p>
+                        <button 
+                            onClick={() => {
+                                const canSpinAgain = user?.isAdmin || spinsAvailable > 0;
+                                if (canSpinAgain) {
+                                    setPrizeResult(null);
+                                    setIsSpinning(false);
+                                } else {
+                                    onClose();
+                                }
+                            }} 
+                            className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-lg transition"
+                        >
+                            {(user?.isAdmin || spinsAvailable > 0) ? 'Awesome!' : 'Close'}
+                        </button>
+                    </div>
+                )}
+
 
                 <h2 className="text-3xl font-bold text-white flex items-center justify-center gap-2">
                     Spin & Win
@@ -212,12 +202,6 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                 </h2>
                 
                 <div className="relative w-72 h-72 mx-auto my-8">
-                    <div className={`absolute -top-4 left-1/2 -translate-x-1/2 z-20 transition-transform duration-100 ${isWiggling ? 'pointer-ticking' : ''}`} style={{ filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.5))' }}>
-                        <svg width="30" height="40" viewBox="0 0 38 51" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M19 50.5C19 50.5 37.5 32.8856 37.5 19C37.5 5.11442 29.3856 0.5 19 0.5C8.61442 0.5 0.5 5.11442 0.5 19C0.5 32.8856 19 50.5 19 50.5Z" fill="url(#paint0_linear_1_2)" stroke="#E5E7EB" />
-                            <defs><linearGradient id="paint0_linear_1_2" x1="19" y1="0.5" x2="19" y2="50.5" gradientUnits="userSpaceOnUse"><stop stopColor="white"/><stop offset="1" stopColor="#D1D5DB"/></linearGradient></defs>
-                        </svg>
-                    </div>
                     <div className="w-full h-full rounded-full p-2 border-4 border-amber-500/30 bg-zinc-800 shadow-inner">
                         <div 
                             className="w-full h-full rounded-full border-[10px] border-zinc-950 transition-transform duration-[7000ms] ease-out-cubic relative shadow-[inset_0_8px_15px_rgba(0,0,0,0.6)]"
@@ -244,8 +228,8 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                                             className="absolute w-full h-full"
                                             style={{ transform: `rotate(${textRotationAngle}deg)` }}
                                         >
-                                            <div className={`absolute top-0 left-1/2 -translate-x-1/2 h-1/2 pt-3 w-auto text-center text-xs font-bold ${isGold ? 'text-zinc-900' : 'text-amber-400'}`}>
-                                                <span className="inline-block transform rotate-90 origin-center whitespace-nowrap">
+                                             <div className={`absolute top-0 left-1/2 -translate-x-1/2 h-1/2 pt-4 flex items-start justify-center text-center text-xs font-bold ${isGold ? 'text-zinc-900' : 'text-amber-400'}`}>
+                                                <span className="inline-block transform rotate-90 origin-center" style={{ width: '100px' }}>
                                                     {segment.label}
                                                 </span>
                                             </div>
@@ -267,7 +251,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                             ref={sliderHandleRef}
                             onMouseDown={handleDragStart}
                             onTouchStart={handleDragStart}
-                            className={`w-12 h-12 rounded-full ring-4 ring-amber-300/50 flex items-center justify-center cursor-grab active:cursor-grabbing ${isSpinning || (spinsAvailable === 0 && !user?.isAdmin) ? 'bg-zinc-600' : 'bg-amber-500'}`}
+                            className={`w-12 h-12 rounded-full ring-4 ring-amber-300/50 flex items-center justify-center cursor-grab active:cursor-grabbing ${isSpinning || prizeResult || (spinsAvailable === 0 && !user?.isAdmin) ? 'bg-zinc-600' : 'bg-amber-500'}`}
                             style={{ transform: `translateY(${dragY}px)` }}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>
@@ -294,6 +278,13 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                 }
                 .ease-out-cubic {
                     transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+                }
+                @keyframes fade-in {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                .animate-fade-in {
+                    animation: fade-in 0.3s ease-in-out forwards;
                 }
             `}</style>
         </div>

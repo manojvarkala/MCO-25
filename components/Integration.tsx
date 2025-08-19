@@ -7,8 +7,8 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           9.8.0
- * Author:            Annapoorna Infotech (Simplified)
+ * Version:           10.0.0
+ * Author:            Annapoorna Infotech (Refactored)
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -93,11 +93,16 @@ function mco_exam_get_payload($user_id) {
     
     if (class_exists('WooCommerce')) {
         $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert', 'exam-mcf-cert'];
-        $subscription_skus = ['sub-monthly', 'sub-yearly', 'sub-1mo-addon', 'exam-cpc-cert-1mo-addon', 'exam-cca-cert-1mo-addon', 'exam-ccs-cert-1mo-addon', 'exam-billing-cert-1mo-addon', 'exam-risk-cert-1mo-addon', 'exam-icd-cert-1mo-addon', 'exam-cpb-cert-1mo-addon', 'exam-crc-cert-1mo-addon', 'exam-cpma-cert-1mo-addon', 'exam-coc-cert-1mo-addon', 'exam-cic-cert-1mo-addon', 'exam-mta-cert-1mo-addon', 'exam-ap-cert-1mo-addon', 'exam-em-cert-1mo-addon', 'exam-rcm-cert-1mo-addon', 'exam-hi-cert-1mo-addon', 'exam-mcf-cert-1mo-addon'];
+        $base_subscription_skus = ['sub-monthly', 'sub-yearly', 'sub-1mo-addon'];
+
+        // Dynamically create addon SKUs from the list of all certification exams
+        $addon_skus = array_map(function($sku) { return $sku . '-1mo-addon'; }, $all_exam_skus);
+        
+        // Combine base subscriptions with all possible addon SKUs
+        $subscription_skus = array_unique(array_merge($base_subscription_skus, $addon_skus));
         
         $all_skus_for_pricing = array_unique(array_merge($all_exam_skus, $subscription_skus));
         
-        // Simplified pricing logic without transient caching
         foreach ($all_skus_for_pricing as $sku) {
             if (($product_id = wc_get_product_id_by_sku($sku)) && ($product = wc_get_product($product_id))) {
                 $price_data = ['price' => (float)$product->get_price(), 'regularPrice' => (float)$product->get_regular_price(), 'productId' => $product_id];
@@ -149,7 +154,7 @@ function mco_generate_exam_jwt($user_id) {
     if (empty($secret_key) || strlen($secret_key) < 32 || strpos($secret_key, 'your-very-strong-secret-key') !== false) { mco_debug_log('JWT Secret is not configured or is too weak.'); return null; }
     if (!$payload = mco_exam_get_payload($user_id)) return null;
     
-    $payload_json = json_encode($payload); // Reverted to simple encode, removing JSON_INVALID_UTF8_SUBSTITUTE flag
+    $payload_json = json_encode($payload);
     if ($payload_json === false) { 
         mco_debug_log('JWT generation failed: json_encode error: ' . json_last_error_msg()); 
         return null; 
@@ -191,9 +196,9 @@ function mco_exam_api_permission_check($request) {
         return new WP_Error('jwt_invalid', 'Invalid or expired token.', ['status' => 403]);
     }
     if (!isset($payload['user']['id']) || empty($payload['user']['id'])) {
-        $debug_message = 'User ID not found in the token. This often means the token is corrupted. Decoded Payload: ' . print_r($payload, true);
+        $debug_message = 'User ID not found in the token. (This often means your login session is invalid or has expired. Please try logging out and back in.) Decoded Payload: ' . print_r($payload, true);
         mco_debug_log($debug_message);
-        return new WP_Error('jwt_no_user_id', $debug_message, ['status' => 403]);
+        return new WP_Error('jwt_no_user_id', 'User ID not found in the token (This often means your login session is invalid or has expired. Please try logging out and back in.)', ['status' => 403]);
     }
     $request->set_param('jwt_user_id', $payload['user']['id']);
     return true;
@@ -253,6 +258,22 @@ function mco_get_questions_from_sheet_callback($request) {
     return new WP_REST_Response($final_questions, 200);
 }
 
+// --- HELPER FOR REVIEW LOGIC ---
+function mco_get_cert_sku_for_exam($exam_id) {
+    $practice_to_cert_map = [
+        'exam-cpc-practice' => 'exam-cpc-cert', 'exam-cca-practice' => 'exam-cca-cert',
+        'exam-billing-practice' => 'exam-billing-cert', 'exam-ccs-practice' => 'exam-ccs-cert',
+        'exam-risk-practice' => 'exam-risk-cert', 'exam-icd-practice' => 'exam-icd-cert',
+        'exam-cpb-practice' => 'exam-cpb-cert', 'exam-crc-practice' => 'exam-crc-cert',
+        'exam-cpma-practice' => 'exam-cpma-cert', 'exam-coc-practice' => 'exam-coc-cert',
+        'exam-cic-practice' => 'exam-cic-cert', 'exam-mta-practice' => 'exam-mta-cert',
+        'exam-ap-practice' => 'exam-ap-cert', 'exam-em-practice' => 'exam-em-cert',
+        'exam-rcm-practice' => 'exam-rcm-cert', 'exam-hi-practice' => 'exam-hi-cert',
+        'exam-mcf-practice' => 'exam-mcf-cert',
+    ];
+    return isset($practice_to_cert_map[$exam_id]) ? $practice_to_cert_map[$exam_id] : $exam_id;
+}
+
 // --- NEW REVIEW ENDPOINT ---
 function mco_exam_submit_review_callback($request) {
     $user_id = (int)$request->get_param('jwt_user_id');
@@ -264,9 +285,13 @@ function mco_exam_submit_review_callback($request) {
         return new WP_Error('invalid_data', 'Missing or invalid data provided for review.', ['status' => 400]);
     }
     
-    // This logic to find product by exam ID needs to be robust
-    $product_id = wc_get_product_id_by_sku($exam_id);
-    if (!$product_id) return new WP_Error('product_not_found', 'WooCommerce product not found for SKU: ' . $exam_id, ['status' => 404]);
+    $cert_sku = mco_get_cert_sku_for_exam($exam_id);
+    if (empty($cert_sku)) {
+         return new WP_Error('exam_not_found', 'Could not find a product associated with this exam ID.', ['status' => 404]);
+    }
+
+    $product_id = wc_get_product_id_by_sku($cert_sku);
+    if (!$product_id) return new WP_Error('product_not_found', 'WooCommerce product not found for SKU: ' . $cert_sku, ['status' => 404]);
 
     $ratings = get_post_meta($product_id, '_mco_exam_ratings', true) ?: [];
     $ratings[] = $rating;
@@ -407,26 +432,54 @@ function mco_exam_user_details_shortcode() { if (!is_user_logged_in()) return '<
 }
 function mco_exam_showcase_shortcode() { /* Showcase logic omitted for brevity */ return '<!-- Exam Showcase Placeholder -->'; }
 function mco_exam_login_shortcode() {
-    if (!defined('MCO_JWT_SECRET')) return "<p>Configuration error.</p>";
-    $error = '';
+    if (!defined('MCO_JWT_SECRET')) return "<p class='mco-portal-error'>Configuration error: A strong MCO_JWT_SECRET must be defined in wp-config.php.</p>";
+    $login_error_message = ''; $user_id = 0;
+    
     if ('POST' === $_SERVER['REQUEST_METHOD'] && !empty($_POST['mco_login_nonce']) && wp_verify_nonce($_POST['mco_login_nonce'], 'mco_login_action')) {
-        $user = wp_signon(['user_login' => sanitize_user($_POST['log']), 'user_password' => $_POST['pwd']], false);
-        if (is_wp_error($user)) { $error = 'Invalid credentials.'; } else {
-            if ($token = mco_generate_exam_jwt($user->ID)) {
-                $redirect = isset($_REQUEST['redirect_to']) ? esc_url_raw(urldecode($_REQUEST['redirect_to'])) : '/dashboard';
-                wp_redirect(mco_get_exam_app_url(user_can($user->ID, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=' . urlencode($redirect)); exit;
-            } else { $error = 'Could not create session.'; }
+        $user = wp_signon(['user_login' => sanitize_user($_POST['log']), 'user_password' => $_POST['pwd'], 'remember' => true], false);
+        if (is_wp_error($user)) {
+            $login_error_message = 'Invalid username or password.';
+        } else {
+            $user_id = $user->ID;
+            // Email verification check: assumes an external plugin sets 'is_email_verified' meta.
+            // If meta doesn't exist, we allow login to avoid locking out existing users.
+            $is_verified = get_user_meta($user_id, 'is_email_verified', true);
+            if ($is_verified === 'false' || $is_verified === false || $is_verified === 0) {
+                $login_error_message = 'Your email address has not been verified. Please check your inbox for a verification link.';
+                wp_logout();
+                $user_id = 0; // Prevent further processing
+            }
         }
     }
+    
+    if (is_user_logged_in() && $user_id === 0) {
+        $user_id = get_current_user_id();
+    }
+    
+    if ($user_id > 0) {
+        $token = mco_generate_exam_jwt($user_id);
+        if ($token) {
+            $redirect_to = isset($_REQUEST['redirect_to']) ? esc_url_raw(urldecode($_REQUEST['redirect_to'])) : '/dashboard';
+            $final_url = mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=' . urlencode($redirect_to);
+            echo "<div class='mco-portal-container' style='text-align:center;'><p>Login successful. Redirecting...</p><script>window.location.href='" . esc_url_raw($final_url) . "';</script></div>";
+            return;
+        } else {
+            if (empty($login_error_message)) $login_error_message = 'Could not create a secure session. Please contact support.';
+        }
+    }
+
     ob_start(); ?>
+    <style>.mco-portal-container{font-family:sans-serif;max-width:400px;margin:5% auto;padding:40px;background:#fff;border-radius:12px;box-shadow:0 10px 25px -5px rgba(0,0,0,.1)}.mco-portal-container h2{text-align:center;font-size:24px;margin-bottom:30px}.mco-portal-container .form-row{margin-bottom:20px}.mco-portal-container label{display:block;margin-bottom:8px;font-weight:600}.mco-portal-container input{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box}.mco-portal-container button{width:100%;padding:14px;background-color:#0891b2;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer}.mco-portal-container button:hover{background-color:#067a8e}.mco-portal-links{margin-top:20px;text-align:center}.mco-portal-error{color:red;text-align:center;margin-bottom:20px}</style>
     <div class="mco-portal-container">
-        <form action="<?php echo esc_url(get_permalink()); ?>" method="post">
-            <!-- Simplified Login Form HTML -->
-            <p><label>Username/Email<br/><input type="text" name="log" required></label></p>
-            <p><label>Password<br/><input type="password" name="pwd" required></label></p>
-            <p><button type="submit">Log In</button></p>
+        <h2>Exam Portal Login</h2> <?php if ($login_error_message) echo "<p class='mco-portal-error'>" . esc_html($login_error_message) . "</p>"; ?>
+        <form name="loginform" action="<?php echo esc_url(get_permalink()); ?>" method="post">
+            <div class="form-row"><label for="log">Username or Email</label><input type="text" name="log" id="log" required></div>
+            <div class="form-row"><label for="pwd">Password</label><input type="password" name="pwd" id="pwd" required></div>
+            <div class="form-row"><button type="submit">Log In</button></div>
             <?php wp_nonce_field('mco_login_action', 'mco_login_nonce'); ?>
+            <?php if (isset($_REQUEST['redirect_to'])): ?><input type="hidden" name="redirect_to" value="<?php echo esc_attr(urlencode($_REQUEST['redirect_to'])); ?>" /><?php endif; ?>
         </form>
+        <div class="mco-portal-links"><a href="<?php echo esc_url(wp_registration_url()); ?>">Register</a> | <a href="<?php echo esc_url(wp_lostpassword_url()); ?>">Lost Password?</a></div>
     </div> <?php return ob_get_clean();
 }
 

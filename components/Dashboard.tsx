@@ -5,7 +5,7 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { BookCopy, History as HistoryIcon, FlaskConical, Eye, FileText, BarChart, BadgePercent, Trophy, ArrowRight, Home, RefreshCw, Star, Zap, CheckCircle, Lock, Edit, Save, X, ShoppingCart, AlertTriangle, Award, Wifi } from 'lucide-react';
+import { BookCopy, History as HistoryIcon, FlaskConical, Eye, FileText, BarChart, BadgePercent, Trophy, ArrowRight, Home, RefreshCw, Star, Zap, CheckCircle, Lock, Edit, Save, X, ShoppingCart, AlertTriangle, Award, Wifi, List, Clock, Target, Repeat } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
@@ -41,8 +41,6 @@ const Dashboard: React.FC = () => {
     const [isEditingName, setIsEditingName] = useState(false);
     const [isSavingName, setIsSavingName] = useState(false);
     const [name, setName] = useState(user?.name || '');
-    const [isTestingConnection, setIsTestingConnection] = useState(false);
-    const [connectionTestResult, setConnectionTestResult] = useState<string | null>(null);
 
     const loginUrl = 'https://www.coding-online.net/exam-login/';
     const appDashboardPath = '/dashboard';
@@ -136,29 +134,6 @@ const Dashboard: React.FC = () => {
             setIsSavingName(false);
         }
     };
-
-    const handleTestConnection = async () => {
-        setIsTestingConnection(true);
-        setConnectionTestResult(null);
-
-        if (!token) {
-            setConnectionTestResult('Error: No authentication token found. Please log in again.');
-            setIsTestingConnection(false);
-            return;
-        }
-
-        try {
-            const data = await googleSheetsService.getDebugDetails(token);
-            const resultText = `✅ Connection Successful!\n\n${JSON.stringify(data, null, 2)}`;
-            setConnectionTestResult(resultText);
-        } catch (error: any) {
-            const errorText = `❌ Connection Failed.\n\nError: ${error.message}`;
-            setConnectionTestResult(errorText);
-        } finally {
-            setIsTestingConnection(false);
-        }
-    };
-
 
     const examCategories = useMemo(() => {
         if (!activeOrg || !results) return [];
@@ -327,19 +302,6 @@ const Dashboard: React.FC = () => {
                                 Sync My Exams
                             </a>
                         </div>
-                        {user && user.isAdmin && (
-                            <div className="mt-4 pt-4 border-t border-blue-200">
-                                <button onClick={handleTestConnection} disabled={isTestingConnection} className="w-full flex items-center justify-center gap-2 text-sm font-medium rounded-md px-3 py-2 text-slate-700 bg-slate-200 hover:bg-slate-300 disabled:bg-slate-200 disabled:opacity-70">
-                                    {isTestingConnection ? <Spinner /> : <Wifi size={16} />}
-                                    Test API Connection
-                                </button>
-                                {connectionTestResult && (
-                                    <pre className={`mt-3 p-3 rounded-md text-xs whitespace-pre-wrap font-mono ${connectionTestResult.startsWith('❌') ? 'bg-red-50 text-red-800' : 'bg-green-50 text-green-800'}`}>
-                                        {connectionTestResult}
-                                    </pre>
-                                )}
-                            </div>
-                        )}
                     </div>
 
 
@@ -377,9 +339,9 @@ const Dashboard: React.FC = () => {
                                     )}
                                     <p className="text-sm text-slate-500 mt-1 mb-4">{certExam.description}</p>
                                     
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 border-t border-slate-200 pt-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 border-t border-slate-200 pt-4">
                                         {/* Practice Column */}
-                                        <div className="flex flex-col justify-between p-4 bg-slate-50 rounded-lg">
+                                        <div className="md:col-span-1 flex flex-col justify-between p-4 bg-slate-50 rounded-lg">
                                             <div>
                                                 <h4 className="font-semibold text-slate-700 flex items-center gap-2"><FlaskConical size={16} /> Free Practice</h4>
                                                 <p className="text-xs text-slate-500 mt-1">{practiceExam.numberOfQuestions} questions, {practiceExam.durationMinutes} mins</p>
@@ -394,10 +356,16 @@ const Dashboard: React.FC = () => {
                                         </div>
                                         
                                         {/* Certification Column */}
-                                        <div className="flex flex-col justify-between p-4 bg-slate-50 rounded-lg">
+                                        <div className="md:col-span-2 flex flex-col justify-between p-4 bg-slate-100 rounded-lg border border-slate-200">
                                             <div>
                                                 <h4 className="font-semibold text-slate-700 flex items-center gap-2"><Trophy size={16} /> Certification Exam</h4>
-                                                <p className="text-xs text-slate-500 mt-1">{certExam.numberOfQuestions} questions, {certExam.durationMinutes} mins</p>
+                                                <ul className="text-xs text-slate-600 mt-2 space-y-1">
+                                                    <li className="flex items-center gap-2"><List size={14}/> {certExam.numberOfQuestions} questions</li>
+                                                    <li className="flex items-center gap-2"><Clock size={14}/> {certExam.durationMinutes} minutes duration</li>
+                                                    <li className="flex items-center gap-2"><Target size={14}/> {certExam.passScore}% passing score</li>
+                                                    <li className="flex items-center gap-2"><Repeat size={14}/> 3 attempts included</li>
+                                                    <li className="flex items-center gap-2"><Award size={14}/> Official Certificate on passing</li>
+                                                </ul>
                                             </div>
 
                                             {isPurchased && certStatusData ? (
@@ -415,17 +383,18 @@ const Dashboard: React.FC = () => {
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="mt-3 space-y-3">
-                                                    <div className="p-3 bg-white rounded-md border">
-                                                        <div className="text-center">
-                                                            <h5 className="font-semibold text-slate-600">Single Exam</h5>
+                                                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    {/* Single Exam Option */}
+                                                    <div className="p-3 bg-white rounded-md border flex flex-col text-center">
+                                                        <h5 className="font-semibold text-slate-600 flex-grow">Single Exam</h5>
+                                                        <div className="my-2">
                                                             {certExam.regularPrice && certExam.regularPrice > certExam.price ? (
                                                                 <div>
-                                                                    <span className="text-xl font-bold text-green-600">${certExam.price.toFixed(2)}</span>
+                                                                    <span className="text-2xl font-bold text-green-600">${certExam.price.toFixed(2)}</span>
                                                                     <span className="text-sm text-slate-500 line-through ml-2">${certExam.regularPrice.toFixed(2)}</span>
                                                                 </div>
                                                             ) : (
-                                                                <span className="text-xl font-bold text-cyan-600">${certExam.price.toFixed(2)}</span>
+                                                                <span className="text-2xl font-bold text-cyan-600">${certExam.price.toFixed(2)}</span>
                                                             )}
                                                         </div>
                                                          {(() => {
@@ -438,7 +407,7 @@ const Dashboard: React.FC = () => {
                                                                     href={url}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
-                                                                    className="mt-2 w-full flex items-center justify-center bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 transition"
+                                                                    className="mt-auto w-full flex items-center justify-center bg-yellow-500 text-white text-sm font-bold py-2 px-2 rounded-lg hover:bg-yellow-600 transition"
                                                                 >
                                                                     Buy Exam
                                                                 </a>
@@ -453,19 +422,19 @@ const Dashboard: React.FC = () => {
                                                                 ? `https://www.coding-online.net/cart/?add-to-cart=${bundlePriceData.productId}`
                                                                 : browseExamsUrl;
                                                             return (
-                                                                <div className="p-3 bg-white rounded-md border border-cyan-400 ring-2 ring-cyan-200">
-                                                                    <div className="text-center">
-                                                                        <h5 className="font-semibold text-cyan-700">Exam + Study Bundle</h5>
-                                                                        <span className="text-xl font-bold text-cyan-600">${bundlePriceData.price.toFixed(2)}</span>
-                                                                        <p className="text-xs text-slate-500">+ 1-Month Premium Access</p>
+                                                                <div className="p-3 bg-white rounded-md border border-cyan-400 ring-2 ring-cyan-200 flex flex-col text-center">
+                                                                    <h5 className="font-semibold text-cyan-700 flex-grow">Exam + Study Bundle</h5>
+                                                                    <div className="my-2">
+                                                                        <span className="text-2xl font-bold text-cyan-600">${bundlePriceData.price.toFixed(2)}</span>
+                                                                        <p className="text-xs text-slate-500">+ 1-Mo Premium</p>
                                                                     </div>
                                                                     <a
                                                                         href={bundleUrl}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
-                                                                        className="mt-2 w-full flex items-center justify-center bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700 transition"
+                                                                        className="mt-auto w-full flex items-center justify-center bg-cyan-600 text-white text-sm font-bold py-2 px-2 rounded-lg hover:bg-cyan-700 transition"
                                                                     >
-                                                                        Buy Bundle for ${bundlePriceData.price.toFixed(2)}
+                                                                        Buy Bundle
                                                                     </a>
                                                                 </div>
                                                             )
