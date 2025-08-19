@@ -1,0 +1,70 @@
+import React, { useState, useEffect } from 'react';
+import { ShoppingCart } from 'lucide-react';
+import { useAppContext } from '../context/AppContext.tsx';
+
+// Data for fake notifications
+const firstNames = ['John', 'Maria', 'David', 'Sarah', 'Michael', 'Jessica', 'Chris', 'Emily', 'Daniel', 'Laura'];
+const locations = ['New York, NY', 'London, UK', 'Sydney, AU', 'Toronto, CA', 'Mumbai, IN', 'Los Angeles, CA', 'Chicago, IL', 'Dubai, AE'];
+
+const LivePurchaseNotification: React.FC = () => {
+    const { activeOrg } = useAppContext();
+    const [isVisible, setIsVisible] = useState(false);
+    const [notification, setNotification] = useState({ name: '', location: '', exam: '', time: '' });
+
+    const certificationExams = activeOrg?.exams.filter(e => !e.isPractice && e.price > 0).map(e => e.name) || [];
+
+    useEffect(() => {
+        if (!activeOrg || certificationExams.length === 0) {
+            return;
+        }
+
+        let timeoutId: number;
+
+        const showRandomNotification = () => {
+            const randomName = firstNames[Math.floor(Math.random() * firstNames.length)];
+            const randomLocation = locations[Math.floor(Math.random() * locations.length)];
+            const randomExam = certificationExams[Math.floor(Math.random() * certificationExams.length)];
+            const randomTime = `${Math.floor(Math.random() * 10) + 1} minutes ago`;
+
+            setNotification({ name: randomName, location: randomLocation, exam: randomExam, time: randomTime });
+            setIsVisible(true);
+
+            // Hide after 5 seconds
+            const hideTimeoutId = window.setTimeout(() => {
+                setIsVisible(false);
+            }, 5000);
+
+            // Schedule next notification
+            const randomDelay = Math.random() * 15000 + 8000; // 8 to 23 seconds
+            timeoutId = window.setTimeout(showRandomNotification, randomDelay + 5000); // add 5s for hide animation duration
+        };
+
+        // Start the loop after an initial delay
+        timeoutId = window.setTimeout(showRandomNotification, 7000);
+
+        return () => clearTimeout(timeoutId);
+    }, [activeOrg, certificationExams]);
+
+    return (
+        <div
+            className={`fixed bottom-4 left-4 z-50 bg-white p-4 rounded-lg shadow-2xl border border-slate-200 w-full max-w-sm transition-all duration-500 ease-in-out ${isVisible ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'}`}
+        >
+            <div className="flex items-start">
+                <div className="bg-green-100 p-2 rounded-full mr-4">
+                    <ShoppingCart className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="flex-1">
+                    <p className="font-bold text-slate-800">
+                        {notification.name} from {notification.location}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                        Just purchased the "{notification.exam}"
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">{notification.time}</p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default LivePurchaseNotification;

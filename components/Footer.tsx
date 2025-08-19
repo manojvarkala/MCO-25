@@ -8,7 +8,7 @@ const Footer: React.FC = () => {
   return (
     <footer className="bg-white mt-auto">
       <div className="container mx-auto px-4 py-4 text-center text-slate-500 text-sm">
-        <div className="flex justify-center items-center space-x-4 mb-2">
+        <div className="flex justify-center items-center space-x-4 mb-2 flex-wrap">
             <ReactRouterDOM.Link to="/instructions" className="text-cyan-600 hover:underline">Instructions</ReactRouterDOM.Link>
             <span className="text-slate-300">|</span>
             <ReactRouterDOM.Link to="/user-guide" className="text-cyan-600 hover:underline">User Guide</ReactRouterDOM.Link>
@@ -19,7 +19,9 @@ const Footer: React.FC = () => {
             {user && user.isAdmin && (
               <>
                 <span className="text-slate-300">|</span>
-                <ReactRouterDOM.Link to="/integration" className="text-cyan-600 hover:underline">WordPress Integration</ReactRouterDOM.Link>
+                <ReactRouterDOM.Link to="/integration" className="text-cyan-600 hover:underline">Integration</ReactRouterDOM.Link>
+                <span className="text-slate-300">|</span>
+                <ReactRouterDOM.Link to="/purchase-notifier" className="text-cyan-600 hover:underline">Notifier Script</ReactRouterDOM.Link>
               </>
             )}
             <span className="text-slate-300">|</span>

@@ -28,6 +28,8 @@ import PrivacyPolicy from './components/PrivacyPolicy.tsx';
 import RefundPolicy from './components/RefundPolicy.tsx';
 import WheelOfFortune from './components/WheelOfFortune.tsx';
 import TermsOfService from './components/TermsOfService.tsx';
+import LivePurchaseNotification from './components/LivePurchaseNotification.tsx';
+import PurchaseNotifier from './components/PurchaseNotifier.tsx';
 
 
 interface ProtectedRouteProps {
@@ -94,6 +96,7 @@ const AppContent: React.FC = () => {
                         <ReactRouterDOM.Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
+                        <ReactRouterDOM.Route path="/purchase-notifier" element={<ProtectedRoute adminOnly={true}><PurchaseNotifier /></ProtectedRoute>} />
                     
                         <ReactRouterDOM.Route path="*" element={<ReactRouterDOM.Navigate to="/" replace />} />
                     </ReactRouterDOM.Routes>
@@ -101,6 +104,7 @@ const AppContent: React.FC = () => {
                 {user && user.isAdmin && <DebugSidebar />}
             </div>
             <Footer />
+            <LivePurchaseNotification />
         </div>
     );
 };
