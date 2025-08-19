@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           10.1.0
+ * Version:           10.1.1
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -433,7 +433,47 @@ function mco_exam_user_details_shortcode() { if (!is_user_logged_in()) return '<
     </div> <?php return ob_get_clean();
 }
 
-// --- SHOWCASE SHORTCODE HELPER FUNCTIONS ---
+function mco_get_exam_programs_data() {
+    return [
+        ['name' => 'CPC Exam Program', 'description' => 'Prepare for the AAPC CPC (Certified Professional Coder) exam.', 'practice_id' => 'exam-cpc-practice', 'cert_sku' => 'exam-cpc-cert'],
+        ['name' => 'CCA Exam Program', 'description' => 'Prepare for the AHIMA CCA (Certified Coding Associate) credential.', 'practice_id' => 'exam-cca-practice', 'cert_sku' => 'exam-cca-cert'],
+        ['name' => 'Medical Billing Program', 'description' => 'Cover the essentials of medical billing and reimbursement.', 'practice_id' => 'exam-billing-practice', 'cert_sku' => 'exam-billing-cert'],
+        ['name' => 'CCS Exam Program', 'description' => 'Prepare for the AHIMA CCS (Certified Coding Specialist) credential.', 'practice_id' => 'exam-ccs-practice', 'cert_sku' => 'exam-ccs-cert'],
+        ['name' => 'Risk Adjustment Program', 'description' => 'Prepare for Risk Adjustment coding proficiency.', 'practice_id' => 'exam-risk-practice', 'cert_sku' => 'exam-risk-cert'],
+        ['name' => 'ICD-10-CM Program', 'description' => 'Prepare for ICD-10-CM coding proficiency.', 'practice_id' => 'exam-icd-practice', 'cert_sku' => 'exam-icd-cert'],
+        ['name' => 'CPB Exam Program', 'description' => 'Prepare for the AAPC CPB (Certified Professional Biller) credential.', 'practice_id' => 'exam-cpb-practice', 'cert_sku' => 'exam-cpb-cert'],
+        ['name' => 'CRC Exam Program', 'description' => 'Prepare for the AAPC CRC (Certified Risk Adjustment Coder) credential.', 'practice_id' => 'exam-crc-practice', 'cert_sku' => 'exam-crc-cert'],
+        ['name' => 'CPMA Exam Program', 'description' => 'Prepare for the AAPC CPMA (Certified Professional Medical Auditor) credential.', 'practice_id' => 'exam-cpma-practice', 'cert_sku' => 'exam-cpma-cert'],
+        ['name' => 'COC Exam Program', 'description' => 'Prepare for the AAPC COC (Certified Outpatient Coder) credential.', 'practice_id' => 'exam-coc-practice', 'cert_sku' => 'exam-coc-cert'],
+        ['name' => 'CIC Exam Program', 'description' => 'Prepare for the AAPC CIC (Certified Inpatient Coder) credential.', 'practice_id' => 'exam-cic-practice', 'cert_sku' => 'exam-cic-cert'],
+        ['name' => 'MTA Program', 'description' => 'Prepare for Medical Terminology & Anatomy proficiency.', 'practice_id' => 'exam-mta-practice', 'cert_sku' => 'exam-mta-cert'],
+        ['name' => 'Anatomy & Physiology Program', 'description' => 'Prepare for Anatomy & Physiology proficiency.', 'practice_id' => 'exam-ap-practice', 'cert_sku' => 'exam-ap-cert'],
+        ['name' => 'E/M Coding Program', 'description' => 'Prepare for Evaluation & Management coding proficiency.', 'practice_id' => 'exam-em-practice', 'cert_sku' => 'exam-em-cert'],
+        ['name' => 'Revenue Cycle Management Program', 'description' => 'Prepare for Revenue Cycle Management proficiency.', 'practice_id' => 'exam-rcm-practice', 'cert_sku' => 'exam-rcm-cert'],
+        ['name' => 'Health Informatics Program', 'description' => 'Prepare for Health Informatics proficiency.', 'practice_id' => 'exam-hi-practice', 'cert_sku' => 'exam-hi-cert'],
+        ['name' => 'Medical Coding Fundamentals Program', 'description' => 'A foundational test series covering core medical coding principles.', 'practice_id' => 'exam-mcf-practice', 'cert_sku' => 'exam-mcf-cert'],
+    ];
+}
+
+function mco_render_stars_html($rating, $count) {
+    if ($count == 0) return '';
+    $rating = floatval($rating);
+    $full_stars = floor($rating);
+    $half_star = ($rating - $full_stars) >= 0.5 ? 1 : 0;
+    $empty_stars = 5 - $full_stars - $half_star;
+    $html = '<div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem;">';
+    $html .= '<div style="display: flex; align-items: center;">';
+    $star_svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #f59e0b;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>';
+    $empty_star_svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #d1d5db;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>';
+    for ($i = 0; $i < $full_stars; $i++) $html .= $star_svg;
+    if ($half_star) $html .= '<div style="position:relative; width: 16px; height: 16px;">' . $star_svg . '<div style="position:absolute; top:0; left:0; width:50%; height:100%; overflow:hidden;">' . $empty_star_svg . '</div></div>';
+    for ($i = 0; $i < $empty_stars; $i++) $html .= $empty_star_svg;
+    $html .= '</div>';
+    $html .= '<span style="font-size: 0.75rem; color: #6b7280;">(' . esc_html($count) . ' reviews)</span>';
+    $html .= '</div>';
+    return $html;
+}
+
 function mco_exam_showcase_shortcode() {
     $exam_programs = mco_get_exam_programs_data();
     $is_wc_active = class_exists('WooCommerce');
