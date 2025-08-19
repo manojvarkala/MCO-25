@@ -207,12 +207,6 @@ const Test: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">{examConfig.name}</h1>
             <p className="text-slate-500">Question {currentQuestionIndex + 1} of {questions.length}</p>
         </div>
-        {timeLeft !== null && (
-            <div className="flex items-center space-x-2 bg-slate-100 text-slate-700 font-bold py-2 px-4 rounded-lg">
-                <Clock size={20} />
-                <span>{formatTime(timeLeft)}</span>
-            </div>
-        )}
       </div>
 
       <div className="w-full bg-slate-200 rounded-full h-2.5 mb-6">
@@ -277,6 +271,13 @@ const Test: React.FC = () => {
           <ChevronLeft size={16} />
           <span>Previous</span>
         </button>
+
+        {timeLeft !== null && (
+            <div className="flex items-center space-x-2 bg-slate-100 text-slate-700 font-bold py-2 px-4 rounded-lg">
+                <Clock size={20} />
+                <span>{formatTime(timeLeft)}</span>
+            </div>
+        )}
         
         {currentQuestionIndex === questions.length - 1 ? (
           <button
