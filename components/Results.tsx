@@ -109,7 +109,7 @@ const Results: React.FC = () => {
                 return;
             }
 
-            const prompt = `I am a student preparing for the ${exam.name}. I answered the following questions incorrectly. Please provide personalized feedback for me. For each question, explain why the correct answer is right and what specific topic I should study to improve. Keep the tone encouraging and educational. Structure your response clearly with headings for each question.
+            const prompt = `I am a student preparing for the ${exam.name}. I answered the following questions incorrectly. Please provide personalized feedback for me. For each question, explain why the correct answer is right and what specific topic I should study to improve. Keep the tone encouraging and educational. Structure your response clearly with plain text headings for each question. DO NOT use markdown formatting (like ###, **, or *).
 
 Here are the questions I got wrong:
 ${incorrectAnswers.map(item => `
@@ -174,7 +174,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 4. Give 2-3 actionable "Study Recommendations" for improvement. These should be specific tips, like "Review the CPT guidelines for modifier usage" or "Focus on the differences between inpatient and outpatient coding."
                 5. End with an encouraging closing statement.
 
-                Format the output clearly with headings (e.g., **Weak Areas**, **Strong Areas**, **Study Recommendations**). Do not repeat the questions back in the output.
+                Format the output clearly using plain text headings (e.g., "Weak Areas", "Strong Areas", "Study Recommendations"). Do not use any markdown formatting (like ###, **, or *). Do not repeat the questions back in the output.
             `;
 
             const summary = await googleSheetsService.getAIFeedback(prompt);

@@ -201,7 +201,7 @@ const Test: React.FC = () => {
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
   return (
-    <div className="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-lg">
+    <div className="bg-white p-6 sm:p-8 rounded-xl shadow-lg">
       <div className="flex justify-between items-start mb-2">
         <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">{examConfig.name}</h1>
