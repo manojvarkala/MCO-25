@@ -190,39 +190,38 @@ const Test: React.FC = () => {
   };
 
   if (isInitializing || isLoading || !examConfig) {
-    return <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow-md"><LogoSpinner /><p className="mt-4 text-slate-600">Loading your test...</p></div>;
+    return <div className="flex flex-col items-center justify-center h-screen bg-white"><LogoSpinner /><p className="mt-4 text-slate-600">Loading your test...</p></div>;
   }
 
   if (questions.length === 0) {
-    return <div className="text-center p-8 bg-white rounded-lg shadow-md"><p>No questions available for this exam.</p></div>
+    return <div className="text-center p-8 bg-white h-screen flex items-center justify-center"><p>No questions available for this exam.</p></div>
   }
 
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
   return (
-    <div className="bg-white p-6 sm:p-8 rounded-xl shadow-lg">
-      <div className="flex justify-between items-start mb-2">
-        <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">{examConfig.name}</h1>
-            <p className="text-slate-500">Question {currentQuestionIndex + 1} of {questions.length}</p>
+    <div className="flex flex-col h-screen bg-white">
+      <header className="flex-shrink-0 p-4 sm:p-6 border-b border-slate-200">
+        <div className="flex justify-between items-start mb-4">
+            <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-800">{examConfig.name}</h1>
+                <p className="text-sm text-slate-500">Question {currentQuestionIndex + 1} of {questions.length}</p>
+            </div>
         </div>
-      </div>
-
-      <div className="w-full bg-slate-200 rounded-full h-2.5 mb-6">
-        <div className="bg-cyan-600 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
-      </div>
-
-      {/* Question Navigator */}
-      <div className="mb-8 border-t border-b border-slate-200 py-4">
-        <h3 className="text-sm font-semibold text-slate-600 mb-3">Question Navigator</h3>
-        <div className="flex flex-wrap gap-2">
+        <div className="w-full bg-slate-200 rounded-full h-2">
+            <div className="bg-cyan-600 h-2 rounded-full" style={{ width: `${progress}%` }}></div>
+        </div>
+      </header>
+      
+      <div className="flex-shrink-0 p-3 border-b border-slate-200 overflow-x-auto">
+        <div className="flex flex-nowrap gap-2">
           {questions.map((q, index) => {
             const isAnswered = answers.has(q.id);
             const isCurrent = index === currentQuestionIndex;
             let buttonClass = 'border-slate-300 bg-white hover:bg-slate-100 text-slate-600';
             if (isCurrent) {
-              buttonClass = 'bg-cyan-600 border-cyan-600 text-white';
+              buttonClass = 'bg-cyan-600 border-cyan-600 text-white ring-2 ring-offset-1 ring-cyan-500';
             } else if (isAnswered) {
               buttonClass = 'bg-slate-200 border-slate-300 hover:bg-slate-300 text-slate-700';
             }
@@ -230,7 +229,7 @@ const Test: React.FC = () => {
               <button
                 key={q.id}
                 onClick={() => setCurrentQuestionIndex(index)}
-                className={`w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold border transition-colors duration-200 ${buttonClass}`}
+                className={`flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-xs font-bold border transition-colors duration-200 ${buttonClass}`}
                 aria-label={`Go to question ${index + 1}`}
               >
                 {index + 1}
@@ -240,64 +239,67 @@ const Test: React.FC = () => {
         </div>
       </div>
       
-      <div className="mb-8 min-h-[80px]">
-        <p className="text-lg font-semibold text-slate-700">{currentQuestion.question}</p>
-      </div>
-
-      <div className="space-y-4 mb-8">
-        {currentQuestion.options.map((option, index) => (
-          <label 
-            key={index} 
-            onDoubleClick={() => handleDoubleClickOption(currentQuestion.id, index)}
-            className={`flex items-center p-4 border rounded-lg cursor-pointer transition ${answers.get(currentQuestion.id) === index ? 'bg-cyan-50 border-cyan-500 ring-2 ring-cyan-500' : 'border-slate-300 hover:border-cyan-400'}`}>
-            <input
-              type="radio"
-              name={`question-${currentQuestion.id}`}
-              checked={answers.get(currentQuestion.id) === index}
-              onChange={() => handleAnswerSelect(currentQuestion.id, index)}
-              className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-slate-300"
-            />
-            <span className="ml-4 text-slate-700">{option}</span>
-          </label>
-        ))}
-      </div>
+      <main className="flex-grow p-6 sm:p-8 overflow-y-auto">
+        <div className="mb-8">
+            <p className="text-lg font-semibold text-slate-700 leading-relaxed">{currentQuestion.question}</p>
+        </div>
+        <div className="space-y-4">
+            {currentQuestion.options.map((option, index) => (
+            <label 
+                key={index} 
+                onDoubleClick={() => handleDoubleClickOption(currentQuestion.id, index)}
+                className={`flex items-start p-4 border rounded-lg cursor-pointer transition ${answers.get(currentQuestion.id) === index ? 'bg-cyan-50 border-cyan-500 ring-2 ring-cyan-500' : 'border-slate-300 hover:border-cyan-400'}`}>
+                <input
+                type="radio"
+                name={`question-${currentQuestion.id}`}
+                checked={answers.get(currentQuestion.id) === index}
+                onChange={() => handleAnswerSelect(currentQuestion.id, index)}
+                className="h-5 w-5 mt-0.5 text-cyan-600 focus:ring-cyan-500 border-slate-300"
+                />
+                <span className="ml-4 text-slate-700">{option}</span>
+            </label>
+            ))}
+        </div>
+      </main>
       
-      <div className="flex justify-between items-center">
-        <button
-          onClick={handlePrev}
-          disabled={currentQuestionIndex === 0 || isSubmitting}
-          className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
-        >
-          <ChevronLeft size={16} />
-          <span>Previous</span>
-        </button>
+      <footer className="flex-shrink-0 p-4 sm:p-6 border-t border-slate-200 bg-white">
+        <div className="flex justify-between items-center">
+            <button
+            onClick={handlePrev}
+            disabled={currentQuestionIndex === 0 || isSubmitting}
+            className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
+            >
+            <ChevronLeft size={16} />
+            <span>Previous</span>
+            </button>
 
-        {timeLeft !== null && (
-            <div className="flex items-center space-x-2 bg-slate-100 text-slate-700 font-bold py-2 px-4 rounded-lg">
-                <Clock size={20} />
-                <span>{formatTime(timeLeft)}</span>
-            </div>
-        )}
-        
-        {currentQuestionIndex === questions.length - 1 ? (
-          <button
-            onClick={() => handleSubmit(false)}
-            disabled={isSubmitting}
-            className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition disabled:bg-green-300"
-          >
-            {isSubmitting ? <Spinner /> : <><Send size={16}/> <span>Submit</span></>}
-          </button>
-        ) : (
-          <button
-            onClick={handleNext}
-            disabled={isSubmitting}
-            className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition"
-          >
-            <span>Next</span>
-            <ChevronRight size={16} />
-          </button>
-        )}
-      </div>
+            {timeLeft !== null && (
+                <div className="flex items-center space-x-2 bg-slate-100 text-slate-700 font-bold py-2 px-4 rounded-lg">
+                    <Clock size={20} />
+                    <span>{formatTime(timeLeft)}</span>
+                </div>
+            )}
+            
+            {currentQuestionIndex === questions.length - 1 ? (
+            <button
+                onClick={() => handleSubmit(false)}
+                disabled={isSubmitting || !answers.has(currentQuestion.id)}
+                className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition disabled:bg-green-300 disabled:cursor-not-allowed"
+            >
+                {isSubmitting ? <Spinner /> : <><Send size={16}/> <span>Submit</span></>}
+            </button>
+            ) : (
+            <button
+                onClick={handleNext}
+                disabled={isSubmitting}
+                className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+            >
+                <span>Next</span>
+                <ChevronRight size={16} />
+            </button>
+            )}
+        </div>
+      </footer>
     </div>
   );
 };
