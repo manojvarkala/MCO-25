@@ -1,6 +1,4 @@
-
-
-import React from 'react';
+import * as React from 'react';
 import { Check, Star, ShoppingBag } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';

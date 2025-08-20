@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import * as React from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -33,20 +33,20 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 
 const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
     const { user, token, loginWithToken, spinsAvailable } = useAuth();
-    const [isSpinning, setIsSpinning] = useState(false);
-    const [rotation, setRotation] = useState(0);
-    const [prizeResult, setPrizeResult] = useState<{ prizeId: string; prizeLabel: string; } | null>(null);
-    const [displaySegments, setDisplaySegments] = useState(allPossibleSegments);
-    const [conicGradient, setConicGradient] = useState('');
+    const [isSpinning, setIsSpinning] = React.useState(false);
+    const [rotation, setRotation] = React.useState(0);
+    const [prizeResult, setPrizeResult] = React.useState<{ prizeId: string; prizeLabel: string; } | null>(null);
+    const [displaySegments, setDisplaySegments] = React.useState(allPossibleSegments);
+    const [conicGradient, setConicGradient] = React.useState('');
     
-    const [dragY, setDragY] = useState(0);
-    const dragYRef = useRef(0);
-    const sliderHandleRef = useRef<HTMLDivElement>(null);
-    const isDraggingRef = useRef(false);
-    const startYRef = useRef(0);
+    const [dragY, setDragY] = React.useState(0);
+    const dragYRef = React.useRef(0);
+    const sliderHandleRef = React.useRef<HTMLDivElement>(null);
+    const isDraggingRef = React.useRef(false);
+    const startYRef = React.useRef(0);
 
 
-    useEffect(() => {
+    React.useEffect(() => {
         const segmentsToShuffle = [...allPossibleSegments];
         const shuffled = shuffleArray(segmentsToShuffle);
         setDisplaySegments(shuffled);
@@ -61,7 +61,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
         setConicGradient(gradientString);
     }, []);
 
-     useEffect(() => {
+     React.useEffect(() => {
         if (prizeResult) {
             if (prizeResult.prizeId !== 'NEXT_TIME') {
                 toast.success(`Congratulations! You won: ${prizeResult.prizeLabel}. Your prize has been activated.`, { duration: 5000 });

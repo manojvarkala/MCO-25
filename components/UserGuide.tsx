@@ -1,5 +1,4 @@
-
-import React from 'react';
+import * as React from 'react';
 import { LayoutDashboard, FileText, CheckCircle, Sparkles, Award, Star, MessageSquare, BookOpen, ShoppingBag, LogIn } from 'lucide-react';
 
 const UserGuide: React.FC = () => {
