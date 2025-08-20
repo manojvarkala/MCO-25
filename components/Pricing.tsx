@@ -17,7 +17,7 @@ const Pricing: React.FC = () => {
     const singleExamPrice = cpcExam?.price;
     const singleExamRegularPrice = cpcExam?.regularPrice;
 
-    const bundleSku = 'exam-cpc-cert-1mo-addon';
+    const bundleSku = 'exam-cpc-cert-1'; // Use the specific bundle SKU as representative
     const bundlePriceData = examPrices?.[bundleSku];
     const bundlePrice = bundlePriceData?.price;
     const bundleRegularPrice = bundlePriceData?.regularPrice;

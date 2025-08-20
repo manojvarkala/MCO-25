@@ -52,7 +52,7 @@ const Dashboard: React.FC = () => {
 
     const monthlyPriceData = examPrices?.['sub-monthly'];
     const yearlyPriceData = examPrices?.['sub-yearly'];
-    const bundlePriceData = examPrices?.['exam-cpc-cert-1mo-addon']; // Representative bundle
+    const bundlePriceData = examPrices?.['exam-cpc-cert-1']; // Representative bundle
 
     const monthlyPrice = monthlyPriceData?.price ?? 19.99;
     const monthlyRegularPrice = monthlyPriceData?.regularPrice;
