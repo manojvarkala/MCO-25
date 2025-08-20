@@ -307,7 +307,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 const { url, domainName } = getGeoAffiliateLink(exam.recommendedBook);
                 pdf.setFontSize(16);
                 pdf.setFont('helvetica', 'bold');
-                pdf.setTextColor(15, 23, 42);
+                pdf.setTextColor(15, 23, 42); // slate-900
                 pdf.text('Recommended Study Material', margin, yPos);
                 yPos += 15;
                 
@@ -318,12 +318,31 @@ Please provide a summary of the key areas I need to focus on based on these erro
     
                 pdf.setFontSize(11);
                 pdf.setFont('helvetica', 'normal');
+                pdf.setTextColor(51, 65, 85); // slate-700
                 const descLines = pdf.splitTextToSize(exam.recommendedBook.description, contentWidth);
                 pdf.text(descLines, margin, yPos);
                 yPos += (descLines.length * 11 * 0.35) + 10;
                 
-                pdf.setTextColor(0, 102, 204);
-                pdf.textWithLink(`Click here to buy on ${domainName}`, margin, yPos, { url });
+                const linkText = `Click here to buy on ${domainName}`;
+                const fontSize = 11;
+                pdf.setFontSize(fontSize);
+                pdf.setFont('helvetica', 'normal');
+                pdf.setTextColor(0, 102, 204); // A standard blue link color
+
+                // 1. Calculate dimensions in current document units (mm)
+                const fontSizeInUnits = fontSize / pdf.internal.scaleFactor;
+                const textWidth = pdf.getStringUnitWidth(linkText) * fontSizeInUnits;
+                
+                // 2. Render the text
+                pdf.text(linkText, margin, yPos);
+
+                // 3. Draw an underline
+                pdf.setDrawColor(0, 102, 204); // blue underline
+                pdf.setLineWidth(0.2); // Set a thin line width
+                pdf.line(margin, yPos + 0.5, margin + textWidth, yPos + 0.5); // Draw line just below the text baseline
+
+                // 4. Create the clickable link area
+                pdf.link(margin, yPos - fontSizeInUnits, textWidth, fontSizeInUnits, { url: url });
             }
             
             pdf.setFontSize(8);
