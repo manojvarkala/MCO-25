@@ -56,7 +56,7 @@ const SuggestedBooksSidebar: React.FC = () => {
                 })}
             </div>
              <p className="text-xs text-slate-400 mt-6 text-center">
-                Using our affiliate links doesn't cost you extra and helps support our platform. Thank you!
+                Using our affiliate links doesn't cost you extra and helps support our platform. Note: Book availability may vary by region. Thank you!
             </p>
         </div>
     );

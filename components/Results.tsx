@@ -505,7 +505,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
                                     <span>Buy on {domainName}</span>
                                 </a>
                                 <p className="text-xs text-slate-500 mt-2 max-w-md">
-                                    As an Amazon Associate, we earn from qualifying purchases. Using our links doesn't cost you anything extra and helps support our platform!
+                                    As an Amazon Associate, we earn from qualifying purchases. Using our links doesn't cost you anything extra and helps support our platform! Please note that book availability may vary by region.
                                 </p>
                             </div>
                         </div>
