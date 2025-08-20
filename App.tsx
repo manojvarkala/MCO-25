@@ -52,6 +52,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = f
 const AppContent: React.FC = () => {
     const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed } = useAuth();
     const { isWheelModalOpen, setWheelModalOpen } = useAppContext();
+    const location = ReactRouterDOM.useLocation();
+    
+    const isTestPage = location.pathname.startsWith('/test/');
 
     React.useEffect(() => {
         // Show the wheel modal only for eligible users who haven't already dismissed it this session.
@@ -60,6 +63,10 @@ const AppContent: React.FC = () => {
             return () => clearTimeout(timer);
         }
     }, [canSpinWheel, wheelModalDismissed, setWheelModalOpen]);
+
+    const mainClasses = isTestPage 
+        ? "py-8" 
+        : "container mx-auto px-4 py-8";
 
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800">
@@ -72,9 +79,9 @@ const AppContent: React.FC = () => {
                 }} 
               />
             )}
-            <Header />
+            {!isTestPage && <Header />}
             <div className="flex-grow w-full relative">
-                <main className="container mx-auto px-4 py-8">
+                <main className={mainClasses}>
                     <ReactRouterDOM.Routes>
                         {/* Routes with generic sidebar */}
                         <ReactRouterDOM.Route element={<SidebarLayout />}>
@@ -106,10 +113,10 @@ const AppContent: React.FC = () => {
                         <ReactRouterDOM.Route path="*" element={<ReactRouterDOM.Navigate to="/" replace />} />
                     </ReactRouterDOM.Routes>
                 </main>
-                {user && user.isAdmin && <DebugSidebar />}
+                {user && user.isAdmin && !isTestPage && <DebugSidebar />}
             </div>
-            <Footer />
-            <LivePurchaseNotification />
+            {!isTestPage && <Footer />}
+            {!isTestPage && <LivePurchaseNotification />}
         </div>
     );
 };
