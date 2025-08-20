@@ -162,13 +162,16 @@ const Dashboard: React.FC = () => {
                 
                 certStatusData = { attemptsMade, hasPassed, bestScore, status };
             }
+            
+            const isPopular = certExam.productSku === 'exam-cpc-cert';
 
             return {
                 ...category,
                 practiceExam,
                 certExam,
                 isPurchased,
-                certStatusData
+                certStatusData,
+                isPopular
             };
         }).filter(Boolean); // Filter out nulls if exams weren't found
     }, [activeOrg, paidExamIds, results, examPrices]);
@@ -309,7 +312,7 @@ const Dashboard: React.FC = () => {
                         <h2 className="text-2xl font-bold text-slate-800 flex items-center"><BookCopy className="mr-3 text-cyan-500" /> My Exam Programs</h2>
                         {examCategories.map(category => {
                              if (!category) return null;
-                             const { practiceExam, certExam, isPurchased, certStatusData } = category;
+                             const { practiceExam, certExam, isPurchased, certStatusData, isPopular } = category;
                              
                              let certButtonContent: React.ReactNode;
                              let canTakeCertTest = false;
@@ -340,7 +343,14 @@ const Dashboard: React.FC = () => {
                              const bundlePriceData = examPrices?.[bundleSku];
 
                             return (
-                                <div key={category.id} className="bg-white p-6 rounded-xl shadow-md border border-slate-200">
+                                <div key={category.id} className="bg-white p-6 rounded-xl shadow-md border border-slate-200 relative">
+                                    {isPopular && (
+                                        <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 z-10">
+                                            <div className="bg-orange-400 text-white text-xs font-bold uppercase px-3 py-1 rounded-full flex items-center gap-1">
+                                                <Star size={12}/> Most Popular
+                                            </div>
+                                        </div>
+                                    )}
                                     <h3 className="text-xl font-bold text-slate-800">{certExam.name}</h3>
                                     {ratingData && ratingData.reviewCount && ratingData.reviewCount > 0 && (
                                         <div className="mt-2 mb-2">
