@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           10.2.0
+ * Version:           10.3.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -440,25 +440,37 @@ function mco_exam_user_details_shortcode() { if (!is_user_logged_in()) return '<
 }
 
 function mco_get_exam_programs_data() {
-    return [
-        ['name' => 'CPC Exam Program', 'description' => 'Prepare for the AAPC CPC (Certified Professional Coder) exam.', 'practice_id' => 'exam-cpc-practice', 'cert_sku' => 'exam-cpc-cert'],
-        ['name' => 'CCA Exam Program', 'description' => 'Prepare for the AHIMA CCA (Certified Coding Associate) credential.', 'practice_id' => 'exam-cca-practice', 'cert_sku' => 'exam-cca-cert'],
-        ['name' => 'Medical Billing Program', 'description' => 'Cover the essentials of medical billing and reimbursement.', 'practice_id' => 'exam-billing-practice', 'cert_sku' => 'exam-billing-cert'],
-        ['name' => 'CCS Exam Program', 'description' => 'Prepare for the AHIMA CCS (Certified Coding Specialist) credential.', 'practice_id' => 'exam-ccs-practice', 'cert_sku' => 'exam-ccs-cert'],
-        ['name' => 'Risk Adjustment Program', 'description' => 'Prepare for Risk Adjustment coding proficiency.', 'practice_id' => 'exam-risk-practice', 'cert_sku' => 'exam-risk-cert'],
-        ['name' => 'ICD-10-CM Program', 'description' => 'Prepare for ICD-10-CM coding proficiency.', 'practice_id' => 'exam-icd-practice', 'cert_sku' => 'exam-icd-cert'],
-        ['name' => 'CPB Exam Program', 'description' => 'Prepare for the AAPC CPB (Certified Professional Biller) credential.', 'practice_id' => 'exam-cpb-practice', 'cert_sku' => 'exam-cpb-cert'],
-        ['name' => 'CRC Exam Program', 'description' => 'Prepare for the AAPC CRC (Certified Risk Adjustment Coder) credential.', 'practice_id' => 'exam-crc-practice', 'cert_sku' => 'exam-crc-cert'],
-        ['name' => 'CPMA Exam Program', 'description' => 'Prepare for the AAPC CPMA (Certified Professional Medical Auditor) credential.', 'practice_id' => 'exam-cpma-practice', 'cert_sku' => 'exam-cpma-cert'],
-        ['name' => 'COC Exam Program', 'description' => 'Prepare for the AAPC COC (Certified Outpatient Coder) credential.', 'practice_id' => 'exam-coc-practice', 'cert_sku' => 'exam-coc-cert'],
-        ['name' => 'CIC Exam Program', 'description' => 'Prepare for the AAPC CIC (Certified Inpatient Coder) credential.', 'practice_id' => 'exam-cic-practice', 'cert_sku' => 'exam-cic-cert'],
-        ['name' => 'MTA Program', 'description' => 'Prepare for Medical Terminology & Anatomy proficiency.', 'practice_id' => 'exam-mta-practice', 'cert_sku' => 'exam-mta-cert'],
-        ['name' => 'Anatomy & Physiology Program', 'description' => 'Prepare for Anatomy & Physiology proficiency.', 'practice_id' => 'exam-ap-practice', 'cert_sku' => 'exam-ap-cert'],
-        ['name' => 'E/M Coding Program', 'description' => 'Prepare for Evaluation & Management coding proficiency.', 'practice_id' => 'exam-em-practice', 'cert_sku' => 'exam-em-cert'],
-        ['name' => 'Revenue Cycle Management Program', 'description' => 'Prepare for Revenue Cycle Management proficiency.', 'practice_id' => 'exam-rcm-practice', 'cert_sku' => 'exam-rcm-cert'],
-        ['name' => 'Health Informatics Program', 'description' => 'Prepare for Health Informatics proficiency.', 'practice_id' => 'exam-hi-practice', 'cert_sku' => 'exam-hi-cert'],
-        ['name' => 'Medical Coding Fundamentals Program', 'description' => 'A foundational test series covering core medical coding principles.', 'practice_id' => 'exam-mcf-practice', 'cert_sku' => 'exam-mcf-cert'],
+    $programs = [
+        ['name' => 'CPC Exam Program', 'description' => 'Prepare for the AAPC CPC (Certified Professional Coder) exam.', 'practice_id' => 'exam-cpc-practice', 'cert_sku' => 'exam-cpc-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 240]],
+        ['name' => 'CCA Exam Program', 'description' => 'Prepare for the AHIMA CCA (Certified Coding Associate) credential.', 'practice_id' => 'exam-cca-practice', 'cert_sku' => 'exam-cca-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 115, 'passScore' => 70, 'durationMinutes' => 120]],
+        ['name' => 'Medical Billing Program', 'description' => 'Cover the essentials of medical billing and reimbursement.', 'practice_id' => 'exam-billing-practice', 'cert_sku' => 'exam-billing-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 180]],
+        ['name' => 'CCS Exam Program', 'description' => 'Prepare for the AHIMA CCS (Certified Coding Specialist) credential.', 'practice_id' => 'exam-ccs-practice', 'cert_sku' => 'exam-ccs-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 240]],
+        ['name' => 'Risk Adjustment Program', 'description' => 'Prepare for Risk Adjustment coding proficiency.', 'practice_id' => 'exam-risk-practice', 'cert_sku' => 'exam-risk-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 180]],
+        ['name' => 'ICD-10-CM Program', 'description' => 'Prepare for ICD-10-CM coding proficiency.', 'practice_id' => 'exam-icd-practice', 'cert_sku' => 'exam-icd-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 180]],
+        ['name' => 'CPB Exam Program', 'description' => 'Prepare for the AAPC CPB (Certified Professional Biller) credential.', 'practice_id' => 'exam-cpb-practice', 'cert_sku' => 'exam-cpb-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 240]],
+        ['name' => 'CRC Exam Program', 'description' => 'Prepare for the AAPC CRC (Certified Risk Adjustment Coder) credential.', 'practice_id' => 'exam-crc-practice', 'cert_sku' => 'exam-crc-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 240]],
+        ['name' => 'CPMA Exam Program', 'description' => 'Prepare for the AAPC CPMA (Certified Professional Medical Auditor) credential.', 'practice_id' => 'exam-cpma-practice', 'cert_sku' => 'exam-cpma-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 240]],
+        ['name' => 'COC Exam Program', 'description' => 'Prepare for the AAPC COC (Certified Outpatient Coder) credential.', 'practice_id' => 'exam-coc-practice', 'cert_sku' => 'exam-coc-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 240]],
+        ['name' => 'CIC Exam Program', 'description' => 'Prepare for the AAPC CIC (Certified Inpatient Coder) credential.', 'practice_id' => 'exam-cic-practice', 'cert_sku' => 'exam-cic-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 75, 'passScore' => 70, 'durationMinutes' => 150]],
+        ['name' => 'MTA Program', 'description' => 'Prepare for Medical Terminology & Anatomy proficiency.', 'practice_id' => 'exam-mta-practice', 'cert_sku' => 'exam-mta-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 120]],
+        ['name' => 'Anatomy & Physiology Program', 'description' => 'Prepare for Anatomy & Physiology proficiency.', 'practice_id' => 'exam-ap-practice', 'cert_sku' => 'exam-ap-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 120]],
+        ['name' => 'E/M Coding Program', 'description' => 'Prepare for Evaluation & Management coding proficiency.', 'practice_id' => 'exam-em-practice', 'cert_sku' => 'exam-em-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 50, 'passScore' => 70, 'durationMinutes' => 90]],
+        ['name' => 'Revenue Cycle Management Program', 'description' => 'Prepare for Revenue Cycle Management proficiency.', 'practice_id' => 'exam-rcm-practice', 'cert_sku' => 'exam-rcm-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 120]],
+        ['name' => 'Health Informatics Program', 'description' => 'Prepare for Health Informatics proficiency.', 'practice_id' => 'exam-hi-practice', 'cert_sku' => 'exam-hi-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 120]],
+        ['name' => 'Medical Coding Fundamentals Program', 'description' => 'A foundational test series covering core medical coding principles.', 'practice_id' => 'exam-mcf-practice', 'cert_sku' => 'exam-mcf-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 120]],
     ];
+    
+    foreach ($programs as &$program) {
+        if ($program['cert_sku'] === 'exam-cpc-cert') {
+            $program['bundle_sku'] = 'exam-cpc-cert-1';
+        } elseif ($program['cert_sku'] === 'exam-cca-cert') {
+            $program['bundle_sku'] = 'exam-cca-cert-bundle';
+        } else {
+            $program['bundle_sku'] = $program['cert_sku'] . '-1mo-addon';
+        }
+    }
+    unset($program);
+    return $programs;
 }
 
 function mco_render_stars_html($rating, $count) {
@@ -483,71 +495,137 @@ function mco_render_stars_html($rating, $count) {
 function mco_exam_showcase_shortcode() {
     $exam_programs = mco_get_exam_programs_data();
     $is_wc_active = class_exists('WooCommerce');
+    
+    // SVG icons
+    $icon_flask = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.31"/><path d="M14 9.31V2"/><path d="M8.5 2h7"/><path d="M14 9.31C16.58 10.45 18 12.92 18 16a6 6 0 0 1-12 0c0-3.08 1.42-5.55 4-6.69"/><path d="M8.5 14h7"/></svg>';
+    $icon_trophy = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M9.17 9C8.42 9.62 7.5 11.11 7.5 13.5V15h9v-1.5c0-2.39-.92-3.88-1.67-4.5"/><path d="M12 2C6.5 2 3 5.5 3 10.5c0 2.22.84 4.24 2.25 5.5h13.5c1.4-1.26 2.25-3.28 2.25-5.5C21 5.5 17.5 2 12 2z"/></svg>';
+    $icon_cart = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.16"/></svg>';
+    $icon_list = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>';
+    $icon_clock = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+    $icon_target = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
+    $icon_repeat = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>';
+    $icon_zap = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+
     ob_start(); ?>
     <div class="mco-intro-content" style="text-align: center; max-width: 800px; margin: 2rem auto 3rem; font-family: sans-serif; color: #374151;">
         <h2 style="font-size: 2.25rem; font-weight: 800; color: #111827; margin-bottom: 1rem;">Welcome to the Exam Portal</h2>
         <p style="font-size: 1.125rem; line-height: 1.75; color: #4b5563;">Your journey to certification starts here. Below you'll find our exam programs. Start with a free practice exam, purchase a certification exam, or subscribe for the best value.</p>
     </div>
     <style>
-    .mco-showcase-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; font-family: sans-serif; }
-    .mco-showcase-card { border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05); background: #fff; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #e5e7eb; transition: transform .2s, box-shadow .2s; }
-    .mco-showcase-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,.07), 0 4px 6px -4px rgba(0,0,0,.07); }
-    .mco-showcase-card-body { padding: 1.25rem; flex-grow: 1; display: flex; flex-direction: column; }
-    .mco-showcase-card h3 { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.5rem; color: #1f2937; }
-    .mco-showcase-card p { margin: 0 0 1rem; color: #4b5563; font-size: 0.85rem; line-height: 1.5; flex-grow: 1; }
-    .mco-showcase-card-actions { margin-top: auto; display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
-    .mco-showcase-btn { display: block; text-align: center; text-decoration: none; padding: 0.6rem 1rem; border-radius: 6px; font-weight: 600; transition: background-color .2s; font-size: 0.9rem; }
-    .mco-btn-purchase { background-color: #0e7490; color: #fff; border: 1px solid #0e7490; }
-    .mco-btn-purchase:hover { background-color: #155e75; }
-    .mco-btn-practice { background-color: #475569; color: #fff; border: 1px solid #475569; }
-    .mco-btn-practice:hover { background-color: #334155; }
-    .mco-btn-addon { display: inline-block !important; background-color: #4f46e5; color: white; border: 1px solid #4f46e5; padding: 0.6rem 1rem !important; font-size: 0.9rem !important; }
-    .mco-btn-addon:hover { background-color: #4338ca; }
+        .mco-showcase-container { display: flex; flex-direction: column; gap: 2rem; font-family: sans-serif; }
+        .mco-program-card { background: #fff; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05); border: 1px solid #e5e7eb; }
+        .mco-program-card h3 { font-size: 1.25rem; line-height: 1.75rem; font-weight: 700; color: #1f2937; }
+        .mco-program-card .mco-program-description { font-size: 0.875rem; line-height: 1.25rem; color: #6b7280; margin-top: 0.25rem; margin-bottom: 1rem; }
+        .mco-subcards-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; border-top: 1px solid #e5e7eb; padding-top: 1rem; }
+        @media (min-width: 768px) { .mco-subcards-grid { grid-template-columns: repeat(3, 1fr); } }
+        .mco-subcard { display: flex; flex-direction: column; justify-content: space-between; padding: 1rem; background-color: #f8fafc; border-radius: 0.5rem; border: 1px solid #e5e7eb; height: 100%; }
+        .mco-subcard-bundle { background-color: #ecfeff; border-color: #a5f3fc; }
+        .mco-subcard .mco-subcard-content { flex-grow: 1; }
+        .mco-subcard h4 { font-weight: 600; color: #334155; display: flex; align-items: center; gap: 0.5rem; }
+        .mco-subcard ul { list-style: none; padding: 0; margin: 0.5rem 0 0; font-size: 0.75rem; color: #4b5563; }
+        .mco-subcard ul li { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+        .mco-subcard-price { margin-top: 0.5rem; margin-bottom: 0.5rem; text-align: center; }
+        .mco-price-current { font-size: 1.5rem; font-weight: 700; color: #166534; }
+        .mco-price-regular { font-size: 0.875rem; color: #6b7280; text-decoration: line-through; margin-left: 0.5rem; }
+        .mco-subcard-btn { margin-top: 0.75rem; width: 100%; display: flex; align-items: center; justify-content: center; text-decoration: none; font-weight: 700; padding: 0.5rem 1rem; border-radius: 0.5rem; transition: background-color 0.2s; gap: 0.5rem; }
+        .mco-btn-practice { background-color: #475569; color: white; }
+        .mco-btn-practice:hover { background-color: #334155; }
+        .mco-btn-purchase { background-color: #f59e0b; color: white; font-size: 0.875rem; }
+        .mco-btn-purchase:hover { background-color: #d97706; }
+        .mco-btn-bundle { background-color: #0891b2; color: white; font-size: 0.875rem; }
+        .mco-btn-bundle:hover { background-color: #0e7490; }
+        .mco-svg-icon { display: inline-block; width: 16px; height: 16px; vertical-align: middle; }
     </style>
     <div class="mco-showcase-container">
-    <?php
-    if ($is_wc_active) {
-        $monthly_product = wc_get_product(wc_get_product_id_by_sku('sub-monthly'));
-        $yearly_product = wc_get_product(wc_get_product_id_by_sku('sub-yearly'));
-    ?>
-    <div style="grid-column: 1 / -1; margin-bottom: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
-        <?php if ($monthly_product): ?>
-        <div style="background: linear-gradient(to bottom right, #22d3ee, #0ea5e9); color: white; border-radius: 1rem; padding: 2rem; display: flex; flex-direction: column;">
-            <h3 style="font-size: 1.25rem; font-weight: 700;">Monthly Subscription</h3>
-            <p style="margin-top: 1rem; color: rgba(255,255,255,0.8); flex-grow: 1;">Unlimited practice & AI feedback.</p>
-            <div style="margin-top: 1.5rem; display: flex; align-items: baseline; gap: 0.5rem;"><span style="font-size: 2.25rem; font-weight: 800;"><?php echo $monthly_product->get_price_html(); ?></span><span style="font-weight: 500; color: rgba(255,255,255,0.8);">/month</span></div>
-            <a href="<?php echo esc_url($monthly_product->add_to_cart_url()); ?>" class="mco-showcase-btn" style="margin-top: 2rem; background: white; color: #0891b2;">Subscribe Now</a>
-        </div>
-        <?php endif; ?>
-        <?php if ($yearly_product): ?>
-        <div style="background: linear-gradient(to bottom right, #a855f7, #4f46e5); color: white; border-radius: 1rem; padding: 2rem; display: flex; flex-direction: column; position: relative;">
-            <div style="position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); background: #facc15; color: #78350f; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.75rem; border-radius: 9999px;">Best Value</div>
-            <h3 style="font-size: 1.25rem; font-weight: 700;">Yearly Subscription</h3>
-            <p style="margin-top: 1rem; color: rgba(255,255,255,0.8); flex-grow: 1;">Save over 35% with annual billing.</p>
-            <div style="margin-top: 1.5rem; display: flex; align-items: baseline; gap: 0.5rem;"><span style="font-size: 2.25rem; font-weight: 800;"><?php echo $yearly_product->get_price_html(); ?></span><span style="font-weight: 500; color: rgba(255,255,255,0.8);">/year</span></div>
-            <a href="<?php echo esc_url($yearly_product->add_to_cart_url()); ?>" class="mco-showcase-btn" style="margin-top: 2rem; background: white; color: #6d28d9;">Subscribe & Save</a>
-        </div>
-        <?php endif; ?>
-    </div>
-    <?php } ?>
-    <?php foreach ($exam_programs as $program): ?>
-        <div class="mco-showcase-card">
-            <div class="mco-showcase-card-body">
+        <?php if ($is_wc_active) {
+            $monthly_product = wc_get_product(wc_get_product_id_by_sku('sub-monthly'));
+            $yearly_product = wc_get_product(wc_get_product_id_by_sku('sub-yearly')); ?>
+            <div style="margin-bottom: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                <?php if ($monthly_product): ?>
+                <div style="background: linear-gradient(to bottom right, #22d3ee, #0ea5e9); color: white; border-radius: 1rem; padding: 2rem; display: flex; flex-direction: column;">
+                    <h3 style="font-size: 1.25rem; font-weight: 700;">Monthly Subscription</h3>
+                    <p style="margin-top: 1rem; color: rgba(255,255,255,0.8); flex-grow: 1;">Unlimited practice & AI feedback.</p>
+                    <div style="margin-top: 1.5rem; display: flex; align-items: baseline; gap: 0.5rem;"><span style="font-size: 2.25rem; font-weight: 800;"><?php echo $monthly_product->get_price_html(); ?></span><span style="font-weight: 500; color: rgba(255,255,255,0.8);">/month</span></div>
+                    <a href="<?php echo esc_url($monthly_product->add_to_cart_url()); ?>" class="mco-subcard-btn" style="margin-top: 2rem; background: white; color: #0891b2;">Subscribe Now</a>
+                </div>
+                <?php endif; ?>
+                <?php if ($yearly_product): ?>
+                <div style="background: linear-gradient(to bottom right, #a855f7, #4f46e5); color: white; border-radius: 1rem; padding: 2rem; display: flex; flex-direction: column; position: relative;">
+                    <div style="position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); background: #facc15; color: #78350f; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.75rem; border-radius: 9999px;">Best Value</div>
+                    <h3 style="font-size: 1.25rem; font-weight: 700;">Yearly Subscription</h3>
+                    <p style="margin-top: 1rem; color: rgba(255,255,255,0.8); flex-grow: 1;">Save over 35% with annual billing.</p>
+                    <div style="margin-top: 1.5rem; display: flex; align-items: baseline; gap: 0.5rem;"><span style="font-size: 2.25rem; font-weight: 800;"><?php echo $yearly_product->get_price_html(); ?></span><span style="font-weight: 500; color: rgba(255,255,255,0.8);">/year</span></div>
+                    <a href="<?php echo esc_url($yearly_product->add_to_cart_url()); ?>" class="mco-subcard-btn" style="margin-top: 2rem; background: white; color: #6d28d9;">Subscribe & Save</a>
+                </div>
+                <?php endif; ?>
+            </div>
+        <?php } ?>
+        <?php foreach ($exam_programs as $program): ?>
+            <div class="mco-program-card">
                 <h3><?php echo esc_html($program['name']); ?></h3>
                 <?php if ($is_wc_active) { $product_id = wc_get_product_id_by_sku($program['cert_sku']); if ($product_id) { echo mco_render_stars_html(get_post_meta($product_id, '_mco_exam_avg_rating', true), get_post_meta($product_id, '_mco_exam_review_count', true)); } } ?>
-                <p><?php echo esc_html($program['description']); ?></p>
-                <div class="mco-showcase-card-actions">
-                    <a href="<?php echo esc_url(MCO_EXAM_APP_URL . '#/test/' . $program['practice_id']); ?>" class="mco-showcase-btn mco-btn-practice">Start Free Practice</a>
-                    <?php if ($is_wc_active && ($product = wc_get_product(wc_get_product_id_by_sku($program['cert_sku'])))): ?>
-                        <a href="<?php echo esc_url($product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-purchase">Purchase Exam (<?php echo $product->get_price_html(); ?>)</a>
-                        <?php if ($addon_product = wc_get_product(wc_get_product_id_by_sku($program['cert_sku'] . '-1mo-addon'))): ?>
-                            <a href="<?php echo esc_url($addon_product->add_to_cart_url()); ?>" class="mco-showcase-btn mco-btn-addon">Buy Bundle (<?php echo $addon_product->get_price_html(); ?>)</a>
+                <p class="mco-program-description"><?php echo esc_html($program['description']); ?></p>
+                <div class="mco-subcards-grid">
+                    
+                    <!-- Practice Exam Card -->
+                    <div class="mco-subcard">
+                        <div class="mco-subcard-content">
+                            <h4><?php echo $icon_flask; ?> Free Practice Exam</h4>
+                             <ul>
+                                <li><?php echo $icon_list; ?> <?php echo esc_html($program['practice_exam']['numberOfQuestions']); ?> questions</li>
+                                <li><?php echo $icon_clock; ?> <?php echo esc_html($program['practice_exam']['durationMinutes']); ?> minutes</li>
+                                <li><?php echo $icon_target; ?> <?php echo esc_html($program['practice_exam']['passScore']); ?>% pass score</li>
+                            </ul>
+                        </div>
+                        <a href="<?php echo esc_url(MCO_EXAM_APP_URL . '#/test/' . $program['practice_id']); ?>" class="mco-subcard-btn mco-btn-practice"><?php echo $icon_zap; ?> Start Practice</a>
+                    </div>
+                    
+                    <!-- Certification Exam Card -->
+                    <div class="mco-subcard">
+                        <div class="mco-subcard-content">
+                            <h4><?php echo $icon_trophy; ?> Certification Exam</h4>
+                            <ul>
+                                <li><?php echo $icon_list; ?> <?php echo esc_html($program['cert_exam']['numberOfQuestions']); ?> questions</li>
+                                <li><?php echo $icon_clock; ?> <?php echo esc_html($program['cert_exam']['durationMinutes']); ?> minutes</li>
+                                <li><?php echo $icon_target; ?> <?php echo esc_html($program['cert_exam']['passScore']); ?>% passing score</li>
+                                <li><?php echo $icon_repeat; ?> 3 attempts included</li>
+                            </ul>
+                        </div>
+                        <?php if ($is_wc_active && ($product = wc_get_product(wc_get_product_id_by_sku($program['cert_sku'])))): ?>
+                            <div class="mco-subcard-price">
+                                <?php if ($product->is_on_sale()): ?>
+                                    <span class="mco-price-current"><?php echo wc_price($product->get_sale_price()); ?></span>
+                                    <span class="mco-price-regular"><?php echo wc_price($product->get_regular_price()); ?></span>
+                                <?php else: ?>
+                                    <span class="mco-price-current"><?php echo wc_price($product->get_price()); ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <a href="<?php echo esc_url($product->add_to_cart_url()); ?>" class="mco-subcard-btn mco-btn-purchase">Buy Exam</a>
                         <?php endif; ?>
-                    <?php endif; ?>
+                    </div>
+
+                    <!-- Bundle Card -->
+                    <div class="mco-subcard mco-subcard-bundle">
+                         <div class="mco-subcard-content">
+                             <h4><?php echo $icon_cart; ?> Exam + Study Bundle</h4>
+                             <p style="font-size: 0.75rem; color: #4b5563; margin-top: 0.5rem;">Get the exam plus 1-month of premium access to all practice tests & AI feedback.</p>
+                         </div>
+                        <?php if ($is_wc_active && ($bundle_product = wc_get_product(wc_get_product_id_by_sku($program['bundle_sku'])))): ?>
+                            <div class="mco-subcard-price">
+                                 <?php if ($bundle_product->is_on_sale()): ?>
+                                    <span class="mco-price-current" style="color: #0891b2;"><?php echo wc_price($bundle_product->get_sale_price()); ?></span>
+                                    <span class="mco-price-regular"><?php echo wc_price($bundle_product->get_regular_price()); ?></span>
+                                <?php else: ?>
+                                    <span class="mco-price-current" style="color: #0891b2;"><?php echo wc_price($bundle_product->get_price()); ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <a href="<?php echo esc_url($bundle_product->add_to_cart_url()); ?>" class="mco-subcard-btn mco-btn-bundle">Buy Bundle</a>
+                        <?php endif; ?>
+                    </div>
+
                 </div>
             </div>
-        </div>
-    <?php endforeach; ?>
+        <?php endforeach; ?>
     </div>
     <?php return ob_get_clean();
 }

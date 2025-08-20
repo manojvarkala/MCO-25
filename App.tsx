@@ -30,6 +30,7 @@ import WheelOfFortune from './components/WheelOfFortune.tsx';
 import TermsOfService from './components/TermsOfService.tsx';
 import LivePurchaseNotification from './components/LivePurchaseNotification.tsx';
 import PurchaseNotifier from './components/PurchaseNotifier.tsx';
+import SidebarLayout from './components/SidebarLayout.tsx';
 
 
 interface ProtectedRouteProps {
@@ -75,24 +76,28 @@ const AppContent: React.FC = () => {
             <div className="flex-grow w-full relative">
                 <main className="container mx-auto px-4 py-8">
                     <ReactRouterDOM.Routes>
+                        {/* Routes with generic sidebar */}
+                        <ReactRouterDOM.Route element={<SidebarLayout />}>
+                            <ReactRouterDOM.Route path="/instructions" element={<Instructions />} />
+                            <ReactRouterDOM.Route path="/bookstore" element={<BookStore />} />
+                            <ReactRouterDOM.Route path="/pricing" element={<Pricing />} />
+                            <ReactRouterDOM.Route path="/feedback" element={<Feedback />} />
+                            <ReactRouterDOM.Route path="/user-guide" element={<UserGuide />} />
+                            <ReactRouterDOM.Route path="/about-us" element={<AboutUs />} />
+                            <ReactRouterDOM.Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                            <ReactRouterDOM.Route path="/refund-policy" element={<RefundPolicy />} />
+                            <ReactRouterDOM.Route path="/terms-of-service" element={<TermsOfService />} />
+                            <ReactRouterDOM.Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                            <ReactRouterDOM.Route path="/results/:testId" element={<ProtectedRoute><Results /></ProtectedRoute>} />
+                        </ReactRouterDOM.Route>
+
+                        {/* Routes with their own layout or no sidebar */}
                         <ReactRouterDOM.Route path="/" element={<LandingPage />} />
                         <ReactRouterDOM.Route path="/auth" element={<Login />} />
-                        <ReactRouterDOM.Route path="/instructions" element={<Instructions />} />
                         <ReactRouterDOM.Route path="/integration" element={<Integration />} />
-                        <ReactRouterDOM.Route path="/bookstore" element={<BookStore />} />
-                        <ReactRouterDOM.Route path="/pricing" element={<Pricing />} />
                         <ReactRouterDOM.Route path="/checkout/:productSlug" element={<Checkout />} />
-                        <ReactRouterDOM.Route path="/feedback" element={<Feedback />} />
-                        <ReactRouterDOM.Route path="/user-guide" element={<UserGuide />} />
-                        <ReactRouterDOM.Route path="/about-us" element={<AboutUs />} />
-                        <ReactRouterDOM.Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                        <ReactRouterDOM.Route path="/refund-policy" element={<RefundPolicy />} />
-                        <ReactRouterDOM.Route path="/terms-of-service" element={<TermsOfService />} />
-                        
                         <ReactRouterDOM.Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/results/:testId" element={<ProtectedRoute><Results /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
