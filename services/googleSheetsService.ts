@@ -143,7 +143,36 @@ export const googleSheetsService = {
         if (fetchedQuestions.length < exam.numberOfQuestions) {
             console.warn(`Warning: Not enough unique questions available for ${exam.name}. Requested ${exam.numberOfQuestions}, but only found ${fetchedQuestions.length}.`);
         }
-            return fetchedQuestions;
+        
+        // --- Shuffle options for each question ---
+        const shuffledQuestions = fetchedQuestions.map(question => {
+            if (!question.options || question.options.length === 0) {
+                return question; // Return as-is if no options
+            }
+
+            // Store the correct answer's text before shuffling
+            const correctAnswerText = question.options[question.correctAnswer - 1];
+
+            // Create an array of option objects to shuffle
+            let optionsToShuffle = [...question.options];
+            
+            // Fisher-Yates shuffle algorithm
+            for (let i = optionsToShuffle.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [optionsToShuffle[i], optionsToShuffle[j]] = [optionsToShuffle[j], optionsToShuffle[i]];
+            }
+
+            // Find the new index of the correct answer
+            const newCorrectAnswerIndex = optionsToShuffle.findIndex(option => option === correctAnswerText);
+
+            return {
+                ...question,
+                options: optionsToShuffle,
+                correctAnswer: newCorrectAnswerIndex + 1, // Update to new 1-based index
+            };
+        });
+
+        return shuffledQuestions;
     },
     
     // --- DUAL-MODE SUBMISSION ---

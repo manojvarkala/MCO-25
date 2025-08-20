@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { Check, X, FileDown, BookUp, ShieldCheck, Sparkles, Download, Star, MessageSquare, Lock } from 'lucide-react';
+import { Check, X, FileDown, BookUp, ShieldCheck, Sparkles, Download, Star, MessageSquare, Lock, BarChart } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 import jsPDF from 'jspdf';
 import { logoBase64 } from '../assets/logo.ts';
@@ -23,6 +23,8 @@ const Results: React.FC = () => {
     const [isLoading, setIsLoading] = React.useState(true);
     const [aiFeedback, setAiFeedback] = React.useState<string>('');
     const [isGeneratingFeedback, setIsGeneratingFeedback] = React.useState(false);
+    const [aiSummary, setAiSummary] = React.useState<string>('');
+    const [isGeneratingSummary, setIsGeneratingSummary] = React.useState(false);
     const [isDownloading, setIsDownloading] = React.useState(false);
 
     const [rating, setRating] = React.useState(0);
@@ -129,6 +131,60 @@ Please provide a summary of the key areas I need to focus on based on these erro
             toast.error(error.message || "Failed to generate feedback.", { id: toastId });
         } finally {
             setIsGeneratingFeedback(false);
+        }
+    };
+    
+    const handleGenerateSummary = async () => {
+        if (!result || !exam) return;
+        setIsGeneratingSummary(true);
+        const toastId = toast.loading('Generating AI performance summary...');
+        try {
+            const incorrectAnswers = result.review.filter(r => r.userAnswer !== r.correctAnswer);
+            const correctAnswers = result.review.filter(r => r.userAnswer === r.correctAnswer);
+
+            if (incorrectAnswers.length === 0) {
+                toast.success("Perfect score! No summary needed.", { id: toastId });
+                setAiSummary("Excellent work! You answered all questions correctly, demonstrating a strong grasp of the material.");
+                setIsGeneratingSummary(false);
+                return;
+            }
+
+            const prompt = `
+                Act as an expert medical coding tutor. A student has just completed the "${exam.name}" exam and needs a performance summary.
+
+                Their final score was ${result.score}%. They answered ${result.correctCount} out of ${result.totalQuestions} questions correctly.
+
+                Here are the questions they got WRONG:
+                ${incorrectAnswers.map(item => `
+                - Question: ${item.question}
+                    - Their incorrect answer: ${item.userAnswer > -1 ? item.options[item.userAnswer] : 'Not Answered'}
+                    - The correct answer: ${item.options[item.correctAnswer]}
+                `).join('\n')}
+
+                Here are some of the questions they got RIGHT:
+                ${correctAnswers.slice(0, 3).map(item => `
+                - Question: ${item.question}
+                    - Correct Answer: ${item.options[item.correctAnswer]}
+                `).join('\n')}
+
+                Based on this information, provide a concise, encouraging, and helpful performance summary. The summary should:
+                1. Start with a brief, positive opening remark about their score and effort.
+                2. Identify 1-3 key "Weak Areas" based on the topics of the incorrect questions. Be specific (e.g., "E/M Coding for Consultations", "ICD-10-CM Chapter-Specific Guidelines").
+                3. Identify 1-2 "Strong Areas" based on the topics of the correct questions to provide encouragement.
+                4. Give 2-3 actionable "Study Recommendations" for improvement. These should be specific tips, like "Review the CPT guidelines for modifier usage" or "Focus on the differences between inpatient and outpatient coding."
+                5. End with an encouraging closing statement.
+
+                Format the output clearly with headings (e.g., **Weak Areas**, **Strong Areas**, **Study Recommendations**). Do not repeat the questions back in the output.
+            `;
+
+            const summary = await googleSheetsService.getAIFeedback(prompt);
+            setAiSummary(summary);
+            toast.success("AI summary generated!", { id: toastId });
+
+        } catch (error: any) {
+            toast.error(error.message || "Failed to generate summary.", { id: toastId });
+        } finally {
+            setIsGeneratingSummary(false);
         }
     };
 
@@ -423,16 +479,27 @@ Please provide a summary of the key areas I need to focus on based on these erro
                     <h2 className="text-xl font-semibold text-amber-800 mb-4">Need some help?</h2>
                     {canUseAiFeedback ? (
                         <>
-                            <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Don't worry, practice makes perfect. Use our AI-powered tool to get a personalized study plan based on the questions you missed.</p>
-                            <button
-                                onClick={handleGenerateFeedback}
-                                disabled={isGeneratingFeedback}
-                                title="Didn't pass? Let our AI create a custom study guide for you. It analyzes the questions you missed and explains the key topics to focus on for your next attempt."
-                                className="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-amber-300"
-                            >
-                                {isGeneratingFeedback ? <Spinner /> : <Sparkles size={20} />}
-                                <span>{isGeneratingFeedback ? 'Generating...' : 'Get AI-Powered Feedback'}</span>
-                            </button>
+                            <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Don't worry, practice makes perfect. Use our AI-powered tools to get personalized insights on your performance.</p>
+                            <div className="flex flex-col sm:flex-row justify-center gap-4">
+                                <button
+                                    onClick={handleGenerateFeedback}
+                                    disabled={isGeneratingFeedback || isGeneratingSummary}
+                                    title="Didn't pass? Let our AI create a custom study guide for you. It analyzes the questions you missed and explains the key topics to focus on for your next attempt."
+                                    className="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-amber-300"
+                                >
+                                    {isGeneratingFeedback ? <Spinner /> : <Sparkles size={20} />}
+                                    <span>{isGeneratingFeedback ? 'Generating...' : 'Get AI Question Feedback'}</span>
+                                </button>
+                                <button
+                                    onClick={handleGenerateSummary}
+                                    disabled={isGeneratingFeedback || isGeneratingSummary}
+                                    title="Get a high-level summary of your performance, including your weak and strong areas, with actionable study recommendations."
+                                    className="inline-flex items-center space-x-2 bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-sky-300"
+                                >
+                                    {isGeneratingSummary ? <Spinner /> : <BarChart size={20} />}
+                                    <span>{isGeneratingSummary ? 'Analyzing...' : 'Get AI Performance Summary'}</span>
+                                </button>
+                            </div>
                         </>
                     ) : (
                         <>
@@ -457,6 +524,20 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 <div className="p-4 bg-slate-50 rounded-lg text-center">
                     <LogoSpinner />
                     <p className="mt-2 text-slate-600">Our AI is analyzing your results... this may take a moment.</p>
+                </div>
+            )}
+            
+            {isGeneratingSummary && !aiSummary && (
+                 <div className="p-4 bg-slate-50 rounded-lg text-center">
+                    <LogoSpinner />
+                    <p className="mt-2 text-slate-600">Our AI is generating your performance summary...</p>
+                </div>
+            )}
+
+            {aiSummary && (
+                 <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h2 className="text-2xl font-semibold text-slate-700 flex items-center gap-2"><BarChart className="text-blue-500" /> AI Performance Summary</h2>
+                    <div className="prose prose-slate max-w-none whitespace-pre-wrap mt-4">{aiSummary}</div>
                 </div>
             )}
 

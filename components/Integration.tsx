@@ -604,15 +604,15 @@ function mco_exam_showcase_shortcode() {
                     $is_popular = $program['cert_sku'] === 'exam-cpc-cert';
 
                     $card_style = $is_popular 
-                        ? 'position: relative; background: linear-gradient(to bottom right, #fffbeb, #ffedd5, #fef3c7); border-color: #fcd34d;' 
+                        ? 'position: relative; background: linear-gradient(to bottom right, #fffbeb, #ffedd5, #fef3c7); border: 1px solid #fcd34d;' 
                         : 'position: relative;';
 
                     $badge_style = $is_popular
                         ? 'background: linear-gradient(to right, #ef4444, #f97316); color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1);'
                         : '';
 
-                    $subcard_style = $is_popular ? 'background-color: #fffbeb; border-color: #fde68a;' : '';
-                    $bundle_subcard_style = $is_popular ? 'background-color: #fef3c7; border-color: #fcd34d;' : 'background-color: #ecfeff; border-color: #a5f3fc;';
+                    $subcard_style = $is_popular ? 'background-color: #fffbeb; border: 1px solid #fde68a;' : '';
+                    $bundle_subcard_style = $is_popular ? 'background-color: #fef3c7; border: 1px solid #fcd34d;' : 'background-color: #ecfeff; border: 1px solid #a5f3fc;';
                     $divider_style = $is_popular ? 'border-top: 1px solid #fde68a;' : 'border-top: 1px solid #e5e7eb;';
                     ?>
                     <div class="mco-program-card" style="<?php echo $card_style; ?>">
