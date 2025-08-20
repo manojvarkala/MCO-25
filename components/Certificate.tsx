@@ -186,7 +186,7 @@ const Certificate: React.FC = () => {
 
                         <p className="text-lg text-slate-600">This certificate is proudly presented to</p>
                         
-                        <p className="text-5xl font-script text-teal-800 my-4">
+                        <p className="text-5xl font-script font-bold text-teal-800 my-4">
                             {certData.candidateName}
                         </p>
                         
@@ -239,7 +239,7 @@ const Certificate: React.FC = () => {
                         <p className="font-bold" style={{ fontSize: '38px', color: '#134e4a', letterSpacing: '0.025em', marginTop: '4px' }}>{template.title}</p>
                         <div style={{ width: '33.33%', margin: '16px auto', borderBottom: '1px solid #94a3b8' }}></div>
                         <p style={{ fontSize: '18px', color: '#475569' }}>This certificate is proudly presented to</p>
-                        <p className="font-script" style={{ fontSize: '64px', color: '#134e4a', margin: '16px 0' }}>{certData.candidateName}</p>
+                        <p className="font-script font-bold" style={{ fontSize: '64px', color: '#134e4a', margin: '16px 0' }}>{certData.candidateName}</p>
                         <p style={{ fontSize: '16px', color: '#334155', lineHeight: '1.625', maxWidth: '896px' }} dangerouslySetInnerHTML={{ __html: bodyText }} />
                     </div>
                     <div style={{ paddingTop: '16px', marginTop: 'auto' }}>
