@@ -311,13 +311,13 @@ const Dashboard: React.FC = () => {
                     <div className="space-y-6">
                         <h2 className="text-2xl font-bold text-slate-800 flex items-center"><BookCopy className="mr-3 text-cyan-500" /> My Exam Programs</h2>
                         {examCategories.map(category => {
-                             if (!category) return null;
-                             const { practiceExam, certExam, isPurchased, certStatusData, isPopular } = category;
-                             
-                             let certButtonContent: React.ReactNode;
-                             let canTakeCertTest = false;
+                            if (!category) return null;
+                            const { practiceExam, certExam, isPurchased, certStatusData, isPopular } = category;
+                            
+                            let certButtonContent: React.ReactNode;
+                            let canTakeCertTest = false;
 
-                             if (isPurchased && certStatusData) {
+                            if (isPurchased && certStatusData) {
                                 canTakeCertTest = certStatusData.status === 'available';
                                 if (certStatusData.status === 'passed') {
                                     certButtonContent = <><CheckCircle size={16} className="mr-2"/> Passed</>;
@@ -328,25 +328,26 @@ const Dashboard: React.FC = () => {
                                 } else {
                                     certButtonContent = 'Start Exam';
                                 }
-                             }
-                             const ratingData = examPrices?.[certExam.productSku];
+                            }
+                            const ratingData = examPrices?.[certExam.productSku];
 
-                             // Bundle SKU logic
-                             let bundleSku = '';
-                             if (certExam.productSku === 'exam-cpc-cert') {
-                                 bundleSku = 'exam-cpc-cert-1';
-                             } else if (certExam.productSku === 'exam-cca-cert') {
-                                 bundleSku = 'exam-cca-cert-bundle';
-                             } else {
-                                 bundleSku = `${certExam.productSku}-1mo-addon`;
-                             }
-                             const bundlePriceData = examPrices?.[bundleSku];
+                            let bundleSku = '';
+                            if (certExam.productSku === 'exam-cpc-cert') bundleSku = 'exam-cpc-cert-1';
+                            else if (certExam.productSku === 'exam-cca-cert') bundleSku = 'exam-cca-cert-bundle';
+                            else bundleSku = `${certExam.productSku}-1mo-addon`;
+                            const bundlePriceData = examPrices?.[bundleSku];
+
+                            const cardClasses = isPopular ? 'bg-gradient-to-br from-amber-50 via-orange-100 to-amber-200 border-amber-300' : 'bg-white border-slate-200';
+                            const subCardClasses = isPopular ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200';
+                            const bundleSubCardClasses = isPopular ? 'bg-amber-100 border-amber-300 ring-2 ring-amber-200' : 'bg-cyan-50 border-cyan-200 ring-2 ring-cyan-100';
+                            const dividerClasses = isPopular ? 'border-amber-200' : 'border-slate-200';
+                            const bundleUnavailableClasses = isPopular ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-slate-50 border-slate-200 text-slate-400';
 
                             return (
-                                <div key={category.id} className="bg-white p-6 rounded-xl shadow-md border border-slate-200 relative">
+                                <div key={category.id} className={`p-6 rounded-xl shadow-md border relative ${cardClasses}`}>
                                     {isPopular && (
                                         <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 z-10">
-                                            <div className="bg-orange-400 text-white text-xs font-bold uppercase px-3 py-1 rounded-full flex items-center gap-1">
+                                            <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold uppercase px-3 py-1 rounded-full flex items-center gap-1 shadow-md">
                                                 <Star size={12}/> Most Popular
                                             </div>
                                         </div>
@@ -359,9 +360,8 @@ const Dashboard: React.FC = () => {
                                     )}
                                     <p className="text-sm text-slate-500 mt-1 mb-4">{certExam.description}</p>
                                     
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-200 pt-4">
-                                        {/* Box 1: Practice */}
-                                        <div className="flex flex-col justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 h-full">
+                                    <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4 ${dividerClasses}`}>
+                                        <div className={`flex flex-col justify-between p-4 rounded-lg border h-full ${subCardClasses}`}>
                                             <div className="flex-grow">
                                                 <h4 className="font-semibold text-slate-700 flex items-center gap-2"><FlaskConical size={16} /> Free Practice Exam</h4>
                                                 <div className="mt-2 text-xs">
@@ -393,8 +393,7 @@ const Dashboard: React.FC = () => {
                                             </button>
                                         </div>
                                         
-                                        {/* Box 2: Certification (Single) */}
-                                        <div className="flex flex-col justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 h-full">
+                                        <div className={`flex flex-col justify-between p-4 rounded-lg border h-full ${subCardClasses}`}>
                                             <div className="flex-grow">
                                                 <h4 className="font-semibold text-slate-700 flex items-center gap-2"><Trophy size={16} /> Certification Exam</h4>
                                                 <ul className="text-xs text-slate-600 mt-2 space-y-1">
@@ -450,27 +449,26 @@ const Dashboard: React.FC = () => {
                                                 </div>
                                             )}
                                         </div>
-
-                                        {/* Box 3: Bundle */}
+                                        
                                         {bundlePriceData ? (() => {
                                             const bundleUrl = bundlePriceData.productId
                                                 ? `https://www.coding-online.net/cart/?add-to-cart=${bundlePriceData.productId}`
                                                 : browseExamsUrl;
                                             return (
-                                                <div className="flex flex-col justify-between p-4 bg-cyan-50 rounded-lg border border-cyan-200 ring-2 ring-cyan-100 h-full">
+                                                <div className={`flex flex-col justify-between p-4 rounded-lg border h-full ${bundleSubCardClasses}`}>
                                                     <div className="flex-grow">
-                                                        <h4 className="font-semibold text-cyan-700 flex items-center gap-2"><ShoppingCart size={16}/> Exam + Study Bundle</h4>
+                                                        <h4 className={`font-semibold flex items-center gap-2 ${isPopular ? 'text-amber-800' : 'text-cyan-700'}`}><ShoppingCart size={16}/> Exam + Study Bundle</h4>
                                                         <p className="text-xs text-slate-600 mt-2">Get the exam plus 1-month of premium access to all practice tests & AI feedback.</p>
                                                     </div>
                                                     <div className="mt-3 flex flex-col text-center">
                                                         <div className="my-2">
-                                                            <span className="text-2xl font-bold text-cyan-600">${bundlePriceData.price.toFixed(2)}</span>
+                                                            <span className={`text-2xl font-bold ${isPopular ? 'text-amber-700' : 'text-cyan-600'}`}>{`$${bundlePriceData.price.toFixed(2)}`}</span>
                                                         </div>
                                                         <a
                                                             href={bundleUrl}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="mt-auto w-full flex items-center justify-center bg-cyan-600 text-white text-sm font-bold py-2 px-2 rounded-lg hover:bg-cyan-700 transition"
+                                                            className={`mt-auto w-full flex items-center justify-center text-white text-sm font-bold py-2 px-2 rounded-lg transition ${isPopular ? 'bg-orange-500 hover:bg-orange-600' : 'bg-cyan-600 hover:bg-cyan-700'}`}
                                                         >
                                                             Buy Bundle
                                                         </a>
@@ -478,7 +476,7 @@ const Dashboard: React.FC = () => {
                                                 </div>
                                             )
                                         })() : (
-                                            <div className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-lg border border-slate-200 h-full text-slate-400 text-center text-sm">
+                                            <div className={`flex flex-col items-center justify-center p-4 rounded-lg border h-full text-center text-sm ${bundleUnavailableClasses}`}>
                                                 <p>Bundle option not available for this exam.</p>
                                             </div>
                                         )}

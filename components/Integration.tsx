@@ -471,6 +471,20 @@ function mco_get_suggested_books_data() {
         ['id' => 'book-hcpcs-level2', 'title' => 'HCPCS Level II Professional', 'description' => 'Comprehensive guide for HCPCS Level II codes used for supplies, equipment, and drugs administered by physicians.', 'links' => ['com' => 'https://www.amazon.com/s?k=HCPCS+Level+II+Professional&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=HCPCS+Level+II+Professional&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=HCPCS+Level+II+Professional&tag=medical0f1-21']],
         ['id' => 'book-medical-billing', 'title' => 'Medical Billing & Coding For Dummies', 'description' => 'An easy-to-understand guide covering the basics of medical billing and coding, perfect for beginners.', 'links' => ['com' => 'https://www.amazon.com/dp/1119625440?tag=mykada-20', 'in' => 'https://www.amazon.in/dp/1119625440?tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/dp/1119625440?tag=medical0f1-21']],
         ['id' => 'book-step-by-step', 'title' => 'Step-by-Step Medical Coding, 2025 Edition', 'description' => 'This guide provides a solid foundation with a practical approach to mastering medical coding concepts and applications.', 'links' => ['com' => 'https://www.amazon.com/dp/0443248788?tag=mykada-20', 'in' => 'https://www.amazon.in/dp/0443248788?tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/dp/0443248788?tag=medical0f1-21']],
+        ['id' => 'book-anatomy-physiology', 'title' => 'Anatomy & Physiology for Coders', 'description' => 'A focused guide on anatomy and physiology tailored specifically for medical coding professionals to improve accuracy.', 'links' => ['com' => 'https://www.amazon.com/dp/0133015254?tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Anatomy+Physiology+for+Coders&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Anatomy+Physiology+for+Coders&tag=medical0f1-21']],
+        ['id' => 'book-terminology-dummies', 'title' => 'Medical Terminology For Dummies', 'description' => 'Break down complex medical terms into simple, understandable parts. An essential resource for new coders.', 'links' => ['com' => 'https://www.amazon.com/dp/1119625475?tag=mykada-20', 'in' => 'https://www.amazon.in/dp/1119625475?tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/dp/1119625475?tag=medical0f1-21']],
+        ['id' => 'book-icd10-pcs', 'title' => 'ICD-10-PCS: An Applied Approach', 'description' => 'Master inpatient procedural coding with this comprehensive guide to the ICD-10-PCS system, full of exercises.', 'links' => ['com' => 'https://www.amazon.com/dp/1584268247?tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=ICD-10-PCS+An+Applied+Approach&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=ICD-10-PCS+An+Applied+Approach&tag=medical0f1-21']],
+        ['id' => 'book-risk-adjustment', 'title' => 'Risk Adjustment Documentation & Coding', 'description' => 'A deep dive into risk adjustment models (HCC) and the documentation required for accurate coding and reimbursement.', 'links' => ['com' => 'https://www.amazon.com/dp/1640161635?tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Risk+Adjustment+Documentation+Coding&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Risk+Adjustment+Documentation+Coding&tag=medical0f1-21']],
+        ['id' => 'book-auditing', 'title' => 'The Medical Auditing Handbook', 'description' => 'Learn the principles of medical coding auditing to ensure compliance, accuracy, and prevent fraud and abuse.', 'links' => ['com' => 'https://www.amazon.com/s?k=Medical+Auditing+Handbook&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Medical+Auditing+Handbook&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Medical+Auditing+Handbook&tag=medical0f1-21']],
+        ['id' => 'book-compliance', 'title' => "Healthcare Compliance Professional's Manual", 'description' => 'A complete guide to navigating the complex world of healthcare compliance, including HIPAA and OIG work plans.', 'links' => ['com' => 'https://www.amazon.com/dp/1543816657?tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Healthcare+Compliance+Professional+Manual&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Healthcare+Compliance+Professional+Manual&tag=medical0f1-21']],
+        ['id' => 'book-em-coding', 'title' => 'Evaluation and Management (E/M) Coding', 'description' => 'Master the complexities of E/M coding with the latest 2024 guidelines and real-world case studies.', 'links' => ['com' => 'https://www.amazon.com/s?k=Evaluation+and+Management+Coding&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Evaluation+and+Management+Coding&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Evaluation+and+Management+Coding&tag=medical0f1-21']],
+        ['id' => 'book-outpatient', 'title' => 'Outpatient CDI and Coding', 'description' => 'Focuses on the unique challenges of clinical documentation improvement and coding in the outpatient setting.', 'links' => ['com' => 'https://www.amazon.com/s?k=clinical+documentation+improvemen&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=clinical+documentation+improvemen&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=clinical+documentation+improvemen&tag=medical0f1-21']],
+        ['id' => 'book-profee', 'title' => 'Principles of Physician-Based Coding', 'description' => 'A guide to professional fee coding, covering CPT, ICD-10-CM, and HCPCS for physician services.', 'links' => ['com' => 'https://www.amazon.com/dp/1584263458?tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Principles+of+Physician-Based+Coding&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Principles+of+Physician-Based+Coding&tag=medical0f1-21']],
+        ['id' => 'book-revenue-cycle', 'title' => 'The Revenue Cycle Handbook', 'description' => 'Explore the entire revenue cycle management process, from patient registration to final payment.', 'links' => ['com' => 'https://www.amazon.com/s?k=Revenue+Cycle+Handbook&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Revenue+Cycle+Handbook&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Revenue+Cycle+Handbook&tag=medical0f1-21']],
+        ['id' => 'book-pharma', 'title' => 'Pharmaceutical and Medical Device Coding', 'description' => 'A specialty guide for coding related to pharmaceuticals, biologics, and medical devices.', 'links' => ['com' => 'https://www.amazon.com/s?k=Pharmaceutical+and+Medical+Device+Coding&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Pharmaceutical+and+Medical+Device+Coding&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Pharmaceutical+and+Medical+Device+Coding&tag=medical0f1-21']],
+        ['id' => 'book-dental', 'title' => 'Dental Coding with Confidence', 'description' => 'Master CDT codes for accurate dental billing and claim submission with this comprehensive guide.', 'links' => ['com' => 'https://www.amazon.com/dp/1737394715?tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Dental+Coding+with+Confidence&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Dental+Coding+with+Confidence&tag=medical0f1-21']],
+        ['id' => 'book-informatics', 'title' => 'Health Informatics: A Practical Approach', 'description' => 'An introduction to health informatics, covering data standards, EHRs, and the role of data in healthcare.', 'links' => ['com' => 'https://www.amazon.com/s?k=Health+Informatics+A+Practical+Approach&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Health+Informatics+A+Practical+Approach&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Health+Informatics+A+Practical+Approach&tag=medical0f1-21']],
+        ['id' => 'book-career', 'title' => "The Medical Coder's Career Guide", 'description' => 'A guide to building a successful career in medical coding, from certification to specialization and management.', 'links' => ['com' => 'https://www.amazon.com/s?k=Medical+Coders+Career+Guide&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Medical+Coders+Career+Guide&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Medical+Coders+Career+Guide&tag=medical0f1-21']],
     ];
 }
 
@@ -588,11 +602,23 @@ function mco_exam_showcase_shortcode() {
                         if ($program['cert_sku'] === 'exam-cca-cert') $program['bundle_sku'] = 'exam-cca-cert-bundle';
                     }
                     $is_popular = $program['cert_sku'] === 'exam-cpc-cert';
+
+                    $card_style = $is_popular 
+                        ? 'position: relative; background: linear-gradient(to bottom right, #fffbeb, #ffedd5, #fef3c7); border-color: #fcd34d;' 
+                        : 'position: relative;';
+
+                    $badge_style = $is_popular
+                        ? 'background: linear-gradient(to right, #ef4444, #f97316); color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1);'
+                        : '';
+
+                    $subcard_style = $is_popular ? 'background-color: #fffbeb; border-color: #fde68a;' : '';
+                    $bundle_subcard_style = $is_popular ? 'background-color: #fef3c7; border-color: #fcd34d;' : 'background-color: #ecfeff; border-color: #a5f3fc;';
+                    $divider_style = $is_popular ? 'border-top: 1px solid #fde68a;' : 'border-top: 1px solid #e5e7eb;';
                     ?>
-                    <div class="mco-program-card" style="position: relative;">
+                    <div class="mco-program-card" style="<?php echo $card_style; ?>">
                         <?php if ($is_popular): ?>
                             <div style="position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
-                                <div style="background-color: #fb923c; color: white; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; padding: 0.25rem 0.75rem; border-radius: 9999px; display: flex; align-items: center; gap: 0.25rem;">
+                                <div style="<?php echo $badge_style; ?> font-size: 0.75rem; font-weight: 700; text-transform: uppercase; padding: 0.25rem 0.75rem; border-radius: 9999px; display: flex; align-items: center; gap: 0.25rem;">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
                                     <span>Most Popular</span>
                                 </div>
@@ -601,9 +627,9 @@ function mco_exam_showcase_shortcode() {
                         <h3><?php echo esc_html($program['name']); ?></h3>
                         <?php if ($is_wc_active) { $product_id = wc_get_product_id_by_sku($program['cert_sku']); if ($product_id) { echo mco_render_stars_html(get_post_meta($product_id, '_mco_exam_avg_rating', true), get_post_meta($product_id, '_mco_exam_review_count', true)); } } ?>
                         <p class="mco-program-description"><?php echo esc_html($program['description']); ?></p>
-                        <div class="mco-subcards-grid">
+                        <div class="mco-subcards-grid" style="<?php echo $divider_style; ?> padding-top: 1rem;">
                             
-                            <div class="mco-subcard">
+                            <div class="mco-subcard" style="<?php echo $subcard_style; ?>">
                                 <div class="mco-subcard-content">
                                     <h4><?php echo $icon_flask; ?> Free Practice Exam</h4>
                                     <ul>
@@ -615,7 +641,7 @@ function mco_exam_showcase_shortcode() {
                                 <a href="<?php echo esc_url(MCO_EXAM_APP_URL . '#/test/' . $program['practice_id']); ?>" class="mco-subcard-btn mco-btn-practice"><?php echo $icon_zap; ?> Start Practice</a>
                             </div>
                             
-                            <div class="mco-subcard">
+                            <div class="mco-subcard" style="<?php echo $subcard_style; ?>">
                                 <div class="mco-subcard-content">
                                     <h4><?php echo $icon_trophy; ?> Certification Exam</h4>
                                     <ul>
@@ -638,21 +664,21 @@ function mco_exam_showcase_shortcode() {
                                 <?php endif; ?>
                             </div>
 
-                            <div class="mco-subcard mco-subcard-bundle">
+                            <div class="mco-subcard mco-subcard-bundle" style="<?php echo $bundle_subcard_style; ?>">
                                 <div class="mco-subcard-content">
-                                    <h4><?php echo $icon_cart; ?> Exam + Study Bundle</h4>
+                                    <h4 style="<?php if($is_popular) echo 'color: #92400e;'; ?>"><?php echo $icon_cart; ?> Exam + Study Bundle</h4>
                                     <p style="font-size: 0.75rem; color: #4b5563; margin-top: 0.5rem;">Get the exam plus 1-month of premium access to all practice tests & AI feedback.</p>
                                 </div>
                                 <?php if ($is_wc_active && !empty($program['bundle_sku']) && ($bundle_product = wc_get_product(wc_get_product_id_by_sku($program['bundle_sku'])))): ?>
                                     <div class="mco-subcard-price">
                                         <?php if ($bundle_product->is_on_sale()): ?>
-                                            <span class="mco-price-current" style="color: #0891b2;"><?php echo wc_price($bundle_product->get_sale_price()); ?></span>
+                                            <span class="mco-price-current" style="<?php if($is_popular) echo 'color: #b45309;'; else echo 'color: #0891b2;'; ?>"><?php echo wc_price($bundle_product->get_sale_price()); ?></span>
                                             <span class="mco-price-regular"><?php echo wc_price($bundle_product->get_regular_price()); ?></span>
                                         <?php else: ?>
-                                            <span class="mco-price-current" style="color: #0891b2;"><?php echo wc_price($bundle_product->get_price()); ?></span>
+                                            <span class="mco-price-current" style="<?php if($is_popular) echo 'color: #b45309;'; else echo 'color: #0891b2;'; ?>"><?php echo wc_price($bundle_product->get_price()); ?></span>
                                         <?php endif; ?>
                                     </div>
-                                    <a href="<?php echo esc_url($bundle_product->add_to_cart_url()); ?>" class="mco-subcard-btn mco-btn-bundle">Buy Bundle</a>
+                                    <a href="<?php echo esc_url($bundle_product->add_to_cart_url()); ?>" class="mco-subcard-btn <?php echo $is_popular ? 'mco-btn-purchase' : 'mco-btn-bundle'; ?>" style="<?php if($is_popular) echo 'background-color: #f97316;'; ?>">Buy Bundle</a>
                                 <?php endif; ?>
                             </div>
 
