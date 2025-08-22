@@ -776,11 +776,7 @@ function mco_exam_login_shortcode() {
         if (is_wp_error($user)) { 
             $login_error_message = 'Invalid username or password.'; 
         } else {
-            if ( get_user_meta( $user->ID, 'has_to_be_activated', true ) !== false ) {
-                $login_error_message = 'Your account must be activated. Please check your email for the activation link.';
-            } else {
-                $user_id = $user->ID;
-            }
+            $user_id = $user->ID;
         }
     }
     if (is_user_logged_in() && $user_id === 0) { $user_id = get_current_user_id(); }
