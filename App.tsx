@@ -128,10 +128,10 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <AppProvider>
-        <ReactRouterDOM.HashRouter>
+        <ReactRouterDOM.BrowserRouter basename="/MCO-25">
             <AppContent />
             <Toaster position="top-right" reverseOrder={false} />
-        </ReactRouterDOM.HashRouter>
+        </ReactRouterDOM.BrowserRouter>
       </AppProvider>
     </AuthProvider>
   );
