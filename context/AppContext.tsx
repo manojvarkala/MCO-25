@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { appData } from '../assets/appData.ts';
-import type { Organization, RecommendedBook, Exam, ExamProductCategory } from '../types.ts';
+import type { Organization, RecommendedBook, Exam, ExamProductCategory, InProgressExamInfo } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
 
@@ -14,6 +14,7 @@ interface AppContextType {
   suggestedBooks: RecommendedBook[];
   isWheelModalOpen: boolean;
   setWheelModalOpen: (isOpen: boolean) => void;
+  inProgressExam: InProgressExamInfo | null;
 }
 
 const AppContext = React.createContext<AppContextType | undefined>(undefined);
@@ -23,8 +24,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeOrg, setActiveOrg] = React.useState<Organization | null>(null);
   const [isInitializing, setIsInitializing] = React.useState(true);
   const [suggestedBooks, setSuggestedBooks] = React.useState<RecommendedBook[]>([]);
-  const { examPrices } = useAuth();
+  const { user, examPrices } = useAuth();
   const [isWheelModalOpen, setWheelModalOpen] = React.useState(false);
+  const [inProgressExam, setInProgressExam] = React.useState<InProgressExamInfo | null>(null);
 
   React.useEffect(() => {
     const initializeApp = () => {
@@ -97,6 +99,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     initializeApp();
   }, [examPrices]);
 
+  // Effect to detect in-progress exams
+  React.useEffect(() => {
+    if (!user || !activeOrg) {
+        setInProgressExam(null);
+        return;
+    }
+    
+    let foundExam: InProgressExamInfo | null = null;
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(`exam_progress_`) && key.endsWith(`_${user.id}`)) {
+                const examId = key.split('_')[2];
+                const examDetails = activeOrg.exams.find(e => e.id === examId);
+                if (examDetails) {
+                    foundExam = { examId: examDetails.id, examName: examDetails.name };
+                    break; 
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Failed to check for in-progress exams:", error);
+    }
+    setInProgressExam(foundExam);
+
+  }, [user, activeOrg]);
+
 
   const setActiveOrgById = (orgId: string) => {
     const org = organizations.find(o => o.id === orgId);
@@ -119,7 +148,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   return (
-    <AppContext.Provider value={{ organizations, activeOrg, isLoading: isInitializing, isInitializing, setActiveOrgById, updateActiveOrg, suggestedBooks, isWheelModalOpen, setWheelModalOpen }}>
+    <AppContext.Provider value={{ organizations, activeOrg, isLoading: isInitializing, isInitializing, setActiveOrgById, updateActiveOrg, suggestedBooks, isWheelModalOpen, setWheelModalOpen, inProgressExam }}>
       {children}
     </AppContext.Provider>
   );

@@ -5,7 +5,7 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { BookCopy, History as HistoryIcon, FlaskConical, Eye, FileText, BarChart, BadgePercent, Trophy, ArrowRight, Home, RefreshCw, Star, Zap, CheckCircle, Lock, Edit, Save, X, ShoppingCart, AlertTriangle, Award, Wifi, List, Clock, Target, Repeat } from 'lucide-react';
+import { BookCopy, History as HistoryIcon, FlaskConical, Eye, FileText, BarChart, BadgePercent, Trophy, ArrowRight, Home, RefreshCw, Star, Zap, CheckCircle, Lock, Edit, Save, X, ShoppingCart, AlertTriangle, Award, Wifi, List, Clock, Target, Repeat, PlayCircle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
@@ -33,7 +33,7 @@ const StarRating: React.FC<{ rating: number; count: number; }> = ({ rating, coun
 const Dashboard: React.FC = () => {
     const navigate = ReactRouterDOM.useNavigate();
     const { user, paidExamIds, isSubscribed, updateUserName, token, examPrices } = useAuth();
-    const { activeOrg } = useAppContext();
+    const { activeOrg, inProgressExam } = useAppContext();
     const [results, setResults] = React.useState<TestResult[] | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
     const [stats, setStats] = React.useState({ avgScore: 0, bestScore: 0, examsTaken: 0 });
@@ -214,6 +214,26 @@ const Dashboard: React.FC = () => {
             {!user?.name.includes(' ') && (
                 <div className="mb-8 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg text-sm text-center">
                     Please ensure your full name is set correctly for your certificate. Click the edit icon above if needed.
+                </div>
+            )}
+
+            {inProgressExam && (
+                <div className="mb-8 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg">
+                    <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-3 text-center sm:text-left">
+                        <div className="flex items-center gap-3">
+                            <PlayCircle className="h-8 w-8 text-amber-600 flex-shrink-0" />
+                            <div>
+                                <h3 className="font-bold">Exam in Progress</h3>
+                                <p className="text-sm">You have an unfinished session for: <strong>{inProgressExam.examName}</strong></p>
+                            </div>
+                        </div>
+                        <ReactRouterDOM.Link
+                            to={`/test/${inProgressExam.examId}`}
+                            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-amber-600 hover:bg-amber-700 flex-shrink-0"
+                        >
+                            Resume Exam
+                        </ReactRouterDOM.Link>
+                    </div>
                 </div>
             )}
 

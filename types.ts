@@ -169,3 +169,9 @@ export interface ExamProgress {
     answers: UserAnswer[];
     currentQuestionIndex: number;
 }
+
+// Information about an exam the user has started but not finished
+export interface InProgressExamInfo {
+    examId: string;
+    examName: string;
+}
