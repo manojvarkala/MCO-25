@@ -5,7 +5,7 @@ import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, SearchedUser } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
-import { googleSheetsService } from '../services/googleSheetsService.tsx';
+import { googleSheetsService } from '../services/googleSheetsService.ts';
 import Spinner from './Spinner.tsx';
 
 const prizeOptions = [
