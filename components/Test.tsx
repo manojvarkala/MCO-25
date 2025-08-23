@@ -81,16 +81,30 @@ const Test: React.FC = () => {
     setExamConfig(config);
 
     const loadTest = async () => {
+        let sessionRestored = false;
         try {
+            // Attempt to restore session
             const savedSession = localStorage.getItem(sessionKey);
-
             if (savedSession) {
-                const sessionData: ExamSession = JSON.parse(savedSession);
-                setQuestions(sessionData.questions);
-                setAnswers(new Map(sessionData.answers));
-                setCurrentQuestionIndex(sessionData.currentQuestionIndex);
-                toast.success("Welcome back! Your exam session was restored.");
-            } else {
+                try {
+                    const sessionData: ExamSession = JSON.parse(savedSession);
+                    if (sessionData && Array.isArray(sessionData.questions) && Array.isArray(sessionData.answers) && typeof sessionData.currentQuestionIndex === 'number') {
+                        setQuestions(sessionData.questions);
+                        setAnswers(new Map(sessionData.answers));
+                        setCurrentQuestionIndex(sessionData.currentQuestionIndex);
+                        toast.success("Welcome back! Your exam session was restored.");
+                        sessionRestored = true;
+                    } else {
+                        throw new Error("Invalid session data format.");
+                    }
+                } catch (e) {
+                    console.error("Could not restore session due to corrupted data. Starting fresh.", e);
+                    localStorage.removeItem(sessionKey);
+                }
+            }
+
+            // Fetch new questions if no session was restored
+            if (!sessionRestored) {
                 const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
                 if (config.isPractice) {
                     if (!isSubscribed) {
@@ -169,7 +183,7 @@ const Test: React.FC = () => {
 
   const handlePrev = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev + 1);
+      setCurrentQuestionIndex(prev => prev - 1);
     }
   };
   
