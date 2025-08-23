@@ -162,3 +162,10 @@ export interface SearchedUser {
     name: string;
     email: string;
 }
+
+// Data structure for saving exam progress
+export interface ExamProgress {
+    questions: Question[];
+    answers: UserAnswer[];
+    currentQuestionIndex: number;
+}

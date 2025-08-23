@@ -1,5 +1,3 @@
-
-
 import * as React from 'react';
 import toast from 'react-hot-toast';
 import { Copy } from 'lucide-react';
@@ -7,19 +5,13 @@ import { Copy } from 'lucide-react';
 export default function Integration() {
     const phpCode = `<?php
 /**
- * Plugin Name:       MCO Exam App Integration
- * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           10.4.0
+ * Plugin Name:       MCO Exam App Integration (Unified)
+ * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, data sync, and WooCommerce cart/checkout styling.
+ * Version:           11.0.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
-
-// --- IMPORTANT ---
-// After activating or updating this plugin, you MUST flush WordPress permalinks.
-// Go to your WordPress Admin -> Settings -> Permalinks and just click "Save Changes".
-// This rebuilds the URL routes and prevents "No route was found" errors for the API.
-// --- IMPORTANT ---
 
 // --- CONFIGURATION ---
 define('MCO_LOGIN_SLUG', 'exam-login');
@@ -60,6 +52,14 @@ function mco_exam_app_init() {
     add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
     add_shortcode('exam_user_details', 'mco_exam_user_details_shortcode');
     add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
+
+    // Hooks from styling plugin
+    if ( ! function_exists( 'mco_add_custom_wc_styles_to_head' ) ) {
+        add_action('wp_head', 'mco_add_custom_wc_styles_to_head');
+    }
+    if ( ! function_exists( 'mco_custom_order_button_text' ) ) {
+        add_filter( 'woocommerce_order_button_text', 'mco_custom_order_button_text' );
+    }
 }
 
 function mco_debug_log($message) { if (defined('MCO_DEBUG') && MCO_DEBUG) error_log('MCO Exam App Debug: ' . print_r($message, true)); }
@@ -178,7 +178,44 @@ function mco_generate_exam_jwt($user_id) {
     return "$header_b64.$payload_b64.$signature_b64";
 }
 
-function mco_redirect_after_purchase($order_id) { if (!$order_id || !($order = wc_get_order($order_id)) || !($user_id = $order->get_customer_id())) return; if ($user_id > 0 && $order->has_status(['completed', 'processing', 'on-hold'])) { if (function_exists('WC') && WC()->cart) WC()->cart->empty_cart(); if ($token = mco_generate_exam_jwt($user_id)) { wp_redirect(mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=/dashboard'); exit; } } }
+function mco_redirect_after_purchase($order_id) {
+    if (!$order_id || !($order = wc_get_order($order_id)) || !($user_id = $order->get_customer_id())) {
+        return;
+    }
+
+    if ($user_id > 0 && $order->has_status(['completed', 'processing', 'on-hold'])) {
+        // Define SKUs that should trigger a redirect to the exam app
+        $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert', 'exam-mcf-cert'];
+        $base_subscription_skus = ['sub-monthly', 'sub-yearly', 'sub-1mo-addon'];
+        $specific_bundle_skus = ['exam-cpc-cert-1', 'exam-cca-cert-bundle'];
+        $addon_skus = array_map(function($sku) { return $sku . '-1mo-addon'; }, $all_exam_skus);
+        $subscription_skus = array_unique(array_merge($base_subscription_skus, $addon_skus));
+        $skus_that_trigger_redirect = array_unique(array_merge($all_exam_skus, $subscription_skus, $specific_bundle_skus));
+
+        $should_redirect = false;
+        foreach ($order->get_items() as $item) {
+            $product = $item->get_product();
+            if ($product && in_array($product->get_sku(), $skus_that_trigger_redirect)) {
+                $should_redirect = true;
+                break;
+            }
+        }
+
+        if (!$should_redirect) {
+            return; // Don't redirect if no exam product was purchased
+        }
+
+        if (function_exists('WC') && WC()->cart) {
+            WC()->cart->empty_cart();
+        }
+
+        if ($token = mco_generate_exam_jwt($user_id)) {
+            wp_redirect(mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=/dashboard');
+            exit;
+        }
+    }
+}
+
 
 // --- REST API ENDPOINTS ---
 function mco_exam_register_rest_api() {
@@ -277,10 +314,10 @@ function mco_get_cert_sku_for_exam($exam_id) {
         'exam-risk-practice' => 'exam-risk-cert', 'exam-icd-practice' => 'exam-icd-cert',
         'exam-cpb-practice' => 'exam-cpb-cert', 'exam-crc-practice' => 'exam-crc-cert',
         'exam-cpma-practice' => 'exam-cpma-cert', 'exam-coc-practice' => 'exam-coc-cert',
-        'exam-cic-practice' => 'exam-cic-cert', 'exam-mta-practice' => 'exam-mta-cert',
-        'exam-ap-practice' => 'exam-ap-cert', 'exam-em-practice' => 'exam-em-cert',
-        'exam-rcm-practice' => 'exam-rcm-cert', 'exam-hi-practice' => 'exam-hi-cert',
-        'exam-mcf-practice' => 'exam-mcf-cert',
+        'exam-cic-practice' => 'exam-cic-cert',
+        'exam-mta-practice' => 'exam-mta-cert', 'exam-ap-practice' => 'exam-ap-cert',
+        'exam-em-practice' => 'exam-em-cert', 'exam-rcm-practice' => 'exam-rcm-cert',
+        'exam-hi-practice' => 'exam-hi-cert', 'exam-mcf-practice' => 'exam-mcf-cert',
     ];
     return isset($practice_to_cert_map[$exam_id]) ? $practice_to_cert_map[$exam_id] : $exam_id;
 }
@@ -441,333 +478,6 @@ function mco_exam_user_details_shortcode() { if (!is_user_logged_in()) return '<
     </div> <?php return ob_get_clean();
 }
 
-function mco_get_exam_programs_data() {
-    return [
-        ['name' => 'CPC Exam Program', 'description' => 'This comprehensive exam tests your mastery of CPT, HCPCS Level II, and ICD-10-CM coding for physician services. Prove your readiness for the official AAPC CPC credential.', 'practice_id' => 'exam-cpc-practice', 'cert_sku' => 'exam-cpc-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 240]],
-        ['name' => 'CCA Exam Program', 'description' => 'Demonstrate your competency in coding patient data across all settings, including hospitals and physician practices. A crucial step towards achieving your AHIMA CCA certification.', 'practice_id' => 'exam-cca-practice', 'cert_sku' => 'exam-cca-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 115, 'passScore' => 70, 'durationMinutes' => 120]],
-        ['name' => 'Medical Billing Program', 'description' => 'Validate your expertise in the entire medical billing process, from patient registration and claim submission to payment posting and collections. Ideal for aspiring billing specialists.', 'practice_id' => 'exam-billing-practice', 'cert_sku' => 'exam-billing-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 180]],
-        ['name' => 'CCS Exam Program', 'description' => 'Showcase your advanced skills in classifying medical data from patient records, particularly in hospital settings. Prepares you for the rigorous AHIMA CCS credential.', 'practice_id' => 'exam-ccs-practice', 'cert_sku' => 'exam-ccs-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 240]],
-        ['name' => 'Risk Adjustment Program', 'description' => 'Master the principles of risk adjustment coding. This exam evaluates your ability to accurately assign ICD-10-CM codes to reflect patient health status for proper reimbursement.', 'practice_id' => 'exam-risk-practice', 'cert_sku' => 'exam-risk-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 180]],
-        ['name' => 'ICD-10-CM Program', 'description' => 'An in-depth assessment of your ability to accurately use the ICD-10-CM code set for diagnosis coding across various healthcare settings. Perfect for validating your specialized skills.', 'practice_id' => 'exam-icd-practice', 'cert_sku' => 'exam-icd-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 180]],
-        ['name' => 'CPB Exam Program', 'description' => 'Prove your proficiency in all aspects of medical billing, including claim processing, denials management, and compliance. Aligns with the AAPC CPB certification standards.', 'practice_id' => 'exam-cpb-practice', 'cert_sku' => 'exam-cpb-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 240]],
-        ['name' => 'CRC Exam Program', 'description' => 'This exam validates your expertise in risk adjustment (HCC) models. It tests your ability to link diagnoses to chronic conditions for accurate risk score calculation.', 'practice_id' => 'exam-crc-practice', 'cert_sku' => 'exam-crc-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 240]],
-        ['name' => 'CPMA Exam Program', 'description' => 'Demonstrate your skills in medical auditing and compliance. This exam covers documentation guidelines, coding standards, and risk analysis for the AAPC CPMA credential.', 'practice_id' => 'exam-cpma-practice', 'cert_sku' => 'exam-cpma-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 240]],
-        ['name' => 'COC Exam Program', 'description' => 'Test your knowledge of outpatient coding, including CPT, ICD-10-CM, and HCPCS Level II, as it applies to hospital outpatient departments and ambulatory surgery centers.', 'practice_id' => 'exam-coc-practice', 'cert_sku' => 'exam-coc-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 240]],
-        ['name' => 'CIC Exam Program', 'description' => 'This exam assesses your ability to assign accurate codes for diagnoses and procedures in the inpatient hospital setting, covering ICD-10-CM and ICD-10-PCS.', 'practice_id' => 'exam-cic-practice', 'cert_sku' => 'exam-cic-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 75, 'passScore' => 70, 'durationMinutes' => 150]],
-        ['name' => 'MTA Program', 'description' => 'A foundational exam to certify your understanding of the medical language and human body systems that are essential for accurate coding.', 'practice_id' => 'exam-mta-practice', 'cert_sku' => 'exam-mta-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 120]],
-        ['name' => 'Anatomy & Physiology Program', 'description' => 'Validate your comprehensive knowledge of human anatomy and physiology, a core competency for any medical coding or healthcare professional.', 'practice_id' => 'exam-ap-practice', 'cert_sku' => 'exam-ap-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 120]],
-        ['name' => 'E/M Coding Program', 'description' => 'Demonstrate your expertise in the complex world of Evaluation and Management (E/M) coding, including the latest guidelines for office visits and other services.', 'practice_id' => 'exam-em-practice', 'cert_sku' => 'exam-em-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 50, 'passScore' => 70, 'durationMinutes' => 90]],
-        ['name' => 'Revenue Cycle Management Program', 'description' => 'This comprehensive exam covers all stages of the healthcare revenue cycle, from patient access and charge capture to claims management and analytics.', 'practice_id' => 'exam-rcm-practice', 'cert_sku' => 'exam-rcm-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 120]],
-        ['name' => 'Health Informatics Program', 'description' => 'Test your understanding of health informatics principles, including data standards, electronic health records (EHRs), and data analytics in healthcare.', 'practice_id' => 'exam-hi-practice', 'cert_sku' => 'exam-hi-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 120]],
-        ['name' => 'Medical Coding Fundamentals Program', 'description' => 'Establish your grasp of the essential principles of medical coding. This exam covers foundational concepts that are crucial for a successful career in the field.', 'practice_id' => 'exam-mcf-practice', 'cert_sku' => 'exam-mcf-cert', 'practice_exam' => ['numberOfQuestions' => 25, 'passScore' => 70, 'durationMinutes' => 60], 'cert_exam' => ['numberOfQuestions' => 100, 'passScore' => 70, 'durationMinutes' => 120]],
-    ];
-}
-
-function mco_get_suggested_books_data() {
-    return [
-        ['id' => 'book-cpc-guide', 'title' => 'Official CPC® Certification Study Guide', 'description' => "AAPC's official CPC exam study guide — anatomy, medical terminology, ICD-10-CM, CPT, HCPCS, practice questions and exam tips.", 'links' => ['com' => 'https://www.amazon.com/s?k=Official+CPC+Certification+Study+Guide&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Official+CPC+Certification+Study+Guide&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Official+CPC+Certification+Study+Guide&tag=medical0f1-21']],
-        ['id' => 'book-icd10-cm', 'title' => "Buck's ICD-10-CM for Physicians", 'description' => "Physician-focused ICD-10-CM code manual with full-color illustrations, Netter's Anatomy, and detailed guidelines.", 'links' => ['com' => 'https://www.amazon.com/s?k=Buck%27s+ICD-10-CM+for+Physicians&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Buck%27s+ICD-10-CM+for+Physicians&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Buck%27s+ICD-10-CM+for+Physicians&tag=medical0f1-21']],
-        ['id' => 'book-cpt-pro', 'title' => 'AMA CPT® Professional', 'description' => 'The official Current Procedural Terminology (CPT) codebook from the American Medical Association, essential for every coder.', 'links' => ['com' => 'https://www.amazon.com/s?k=AMA+CPT+Professional&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=AMA+CPT+Professional&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=AMA+CPT+Professional&tag=medical0f1-21']],
-        ['id' => 'book-hcpcs-level2', 'title' => 'HCPCS Level II Professional', 'description' => 'Comprehensive guide for HCPCS Level II codes used for supplies, equipment, and drugs administered by physicians.', 'links' => ['com' => 'https://www.amazon.com/s?k=HCPCS+Level+II+Professional&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=HCPCS+Level+II+Professional&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=HCPCS+Level+II+Professional&tag=medical0f1-21']],
-        ['id' => 'book-medical-billing', 'title' => 'Medical Billing & Coding For Dummies', 'description' => 'An easy-to-understand guide covering the basics of medical billing and coding, perfect for beginners.', 'links' => ['com' => 'https://www.amazon.com/dp/1119625440?tag=mykada-20', 'in' => 'https://www.amazon.in/dp/1119625440?tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/dp/1119625440?tag=medical0f1-21']],
-        ['id' => 'book-step-by-step', 'title' => 'Step-by-Step Medical Coding, 2025 Edition', 'description' => 'This guide provides a solid foundation with a practical approach to mastering medical coding concepts and applications.', 'links' => ['com' => 'https://www.amazon.com/dp/0443248788?tag=mykada-20', 'in' => 'https://www.amazon.in/dp/0443248788?tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/dp/0443248788?tag=medical0f1-21']],
-        ['id' => 'book-anatomy-physiology', 'title' => 'Anatomy & Physiology for Coders', 'description' => 'A focused guide on anatomy and physiology tailored specifically for medical coding professionals to improve accuracy.', 'links' => ['com' => 'https://www.amazon.com/dp/0133015254?tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Anatomy+Physiology+for+Coders&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Anatomy+Physiology+for+Coders&tag=medical0f1-21']],
-        ['id' => 'book-terminology-dummies', 'title' => 'Medical Terminology For Dummies', 'description' => 'Break down complex medical terms into simple, understandable parts. An essential resource for new coders.', 'links' => ['com' => 'https://www.amazon.com/dp/1119625475?tag=mykada-20', 'in' => 'https://www.amazon.in/dp/1119625475?tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/dp/1119625475?tag=medical0f1-21']],
-        ['id' => 'book-icd10-pcs', 'title' => 'ICD-10-PCS: An Applied Approach', 'description' => 'Master inpatient procedural coding with this comprehensive guide to the ICD-10-PCS system, full of exercises.', 'links' => ['com' => 'https://www.amazon.com/dp/1584268247?tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=ICD-10-PCS+An+Applied+Approach&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=ICD-10-PCS+An+Applied+Approach&tag=medical0f1-21']],
-        ['id' => 'book-risk-adjustment', 'title' => 'Risk Adjustment Documentation & Coding', 'description' => 'A deep dive into risk adjustment models (HCC) and the documentation required for accurate coding and reimbursement.', 'links' => ['com' => 'https://www.amazon.com/dp/1640161635?tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Risk+Adjustment+Documentation+Coding&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Risk+Adjustment+Documentation+Coding&tag=medical0f1-21']],
-        ['id' => 'book-auditing', 'title' => 'The Medical Auditing Handbook', 'description' => 'Learn the principles of medical coding auditing to ensure compliance, accuracy, and prevent fraud and abuse.', 'links' => ['com' => 'https://www.amazon.com/s?k=Medical+Auditing+Handbook&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Medical+Auditing+Handbook&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Medical+Auditing+Handbook&tag=medical0f1-21']],
-        ['id' => 'book-compliance', 'title' => "Healthcare Compliance Professional's Manual", 'description' => 'A complete guide to navigating the complex world of healthcare compliance, including HIPAA and OIG work plans.', 'links' => ['com' => 'https://www.amazon.com/dp/1543816657?tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Healthcare+Compliance+Professional+Manual&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Healthcare+Compliance+Professional+Manual&tag=medical0f1-21']],
-        ['id' => 'book-em-coding', 'title' => 'Evaluation and Management (E/M) Coding', 'description' => 'Master the complexities of E/M coding with the latest 2024 guidelines and real-world case studies.', 'links' => ['com' => 'https://www.amazon.com/s?k=Evaluation+and+Management+Coding&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Evaluation+and+Management+Coding&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Evaluation+and+Management+Coding&tag=medical0f1-21']],
-        ['id' => 'book-outpatient', 'title' => 'Outpatient CDI and Coding', 'description' => 'Focuses on the unique challenges of clinical documentation improvement and coding in the outpatient setting.', 'links' => ['com' => 'https://www.amazon.com/s?k=clinical+documentation+improvemen&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=clinical+documentation+improvemen&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=clinical+documentation+improvemen&tag=medical0f1-21']],
-        ['id' => 'book-profee', 'title' => 'Principles of Physician-Based Coding', 'description' => 'A guide to professional fee coding, covering CPT, ICD-10-CM, and HCPCS for physician services.', 'links' => ['com' => 'https://www.amazon.com/dp/1584263458?tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Principles+of+Physician-Based+Coding&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Principles+of+Physician-Based+Coding&tag=medical0f1-21']],
-        ['id' => 'book-revenue-cycle', 'title' => 'The Revenue Cycle Handbook', 'description' => 'Explore the entire revenue cycle management process, from patient registration to final payment.', 'links' => ['com' => 'https://www.amazon.com/s?k=Revenue+Cycle+Handbook&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Revenue+Cycle+Handbook&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Revenue+Cycle+Handbook&tag=medical0f1-21']],
-        ['id' => 'book-pharma', 'title' => 'Pharmaceutical and Medical Device Coding', 'description' => 'A specialty guide for coding related to pharmaceuticals, biologics, and medical devices.', 'links' => ['com' => 'https://www.amazon.com/s?k=Pharmaceutical+and+Medical+Device+Coding&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Pharmaceutical+and+Medical+Device+Coding&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Pharmaceutical+and+Medical+Device+Coding&tag=medical0f1-21']],
-        ['id' => 'book-dental', 'title' => 'Dental Coding with Confidence', 'description' => 'Master CDT codes for accurate dental billing and claim submission with this comprehensive guide.', 'links' => ['com' => 'https://www.amazon.com/dp/1737394715?tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Dental+Coding+with+Confidence&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Dental+Coding+with+Confidence&tag=medical0f1-21']],
-        ['id' => 'book-informatics', 'title' => 'Health Informatics: A Practical Approach', 'description' => 'An introduction to health informatics, covering data standards, EHRs, and the role of data in healthcare.', 'links' => ['com' => 'https://www.amazon.com/s?k=Health+Informatics+A+Practical+Approach&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Health+Informatics+A+Practical+Approach&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Health+Informatics+A+Practical+Approach&tag=medical0f1-21']],
-        ['id' => 'book-career', 'title' => "The Medical Coder's Career Guide", 'description' => 'A guide to building a successful career in medical coding, from certification to specialization and management.', 'links' => ['com' => 'https://www.amazon.com/s?k=Medical+Coders+Career+Guide&tag=mykada-20', 'in' => 'https://www.amazon.in/s?k=Medical+Coders+Career+Guide&tag=httpcodingonl-21', 'ae' => 'https://www.amazon.ae/s?k=Medical+Coders+Career+Guide&tag=medical0f1-21']],
-    ];
-}
-
-function mco_render_stars_html($rating, $count) {
-    if ($count == 0) return '';
-    $rating = floatval($rating);
-    $full_stars = floor($rating);
-    $half_star = ($rating - $full_stars) >= 0.5 ? 1 : 0;
-    $empty_stars = 5 - $full_stars - $half_star;
-    $html = '<div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem;">';
-    $html .= '<div style="display: flex; align-items: center;">';
-    $star_svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #f59e0b;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>';
-    $empty_star_svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #d1d5db;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>';
-    for ($i = 0; $i < $full_stars; $i++) $html .= $star_svg;
-    if ($half_star) $html .= '<div style="position:relative; width: 16px; height: 16px;">' . $star_svg . '<div style="position:absolute; top:0; left:0; width:50%; height:100%; overflow:hidden;">' . $empty_star_svg . '</div></div>';
-    for ($i = 0; $i < $empty_stars; $i++) $html .= $empty_star_svg;
-    $html .= '</div>';
-    $html .= '<span style="font-size: 0.75rem; color: #6b7280;">(' . esc_html($count) . ' reviews)</span>';
-    $html .= '</div>';
-    return $html;
-}
-
-function mco_exam_showcase_shortcode() {
-    $exam_programs = mco_get_exam_programs_data();
-    $is_wc_active = class_exists('WooCommerce');
-    
-    // SVG icons
-    $icon_book_open = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
-    $icon_book_up = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M12 7V2"/><path d="m15 4-3-3-3 3"/></svg>';
-    $icon_flask = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.31"/><path d="M14 9.31V2"/><path d="M8.5 2h7"/><path d="M14 9.31C16.58 10.45 18 12.92 18 16a6 6 0 0 1-12 0c0-3.08 1.42-5.55 4-6.69"/><path d="M8.5 14h7"/></svg>';
-    $icon_trophy = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M9.17 9C8.42 9.62 7.5 11.11 7.5 13.5V15h9v-1.5c0-2.39-.92-3.88-1.67-4.5"/><path d="M12 2C6.5 2 3 5.5 3 10.5c0 2.22.84 4.24 2.25 5.5h13.5c1.4-1.26 2.25-3.28 2.25-5.5C21 5.5 17.5 2 12 2z"/></svg>';
-    $icon_cart = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.16"/></svg>';
-    $icon_list = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>';
-    $icon_clock = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
-    $icon_target = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
-    $icon_repeat = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>';
-    $icon_zap = '<svg class="mco-svg-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
-
-    ob_start(); ?>
-    <div class="mco-intro-content" style="text-align: center; max-width: 800px; margin: 2rem auto 3rem; font-family: sans-serif; color: #374151;">
-        <h2 style="font-size: 2.25rem; font-weight: 800; color: #111827; margin-bottom: 1rem;">Welcome to the Exam Portal</h2>
-        <p style="font-size: 1.125rem; line-height: 1.75; color: #4b5563;">Your journey to certification starts here. Below you'll find our exam programs. Start with a free practice exam, purchase a certification exam, or subscribe for the best value.</p>
-    </div>
-    <style>
-        .mco-page-layout { display: grid; grid-template-columns: 1fr; gap: 2rem; font-family: sans-serif; }
-        @media (min-width: 1024px) { .mco-page-layout { grid-template-columns: 2fr 1fr; } }
-        .mco-main-content .mco-showcase-container { display: flex; flex-direction: column; gap: 2rem; }
-        .mco-program-card { background: #fff; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05); border: 1px solid #e5e7eb; }
-        .mco-program-card h3 { font-size: 1.25rem; line-height: 1.75rem; font-weight: 700; color: #1f2937; }
-        .mco-program-card .mco-program-description { font-size: 0.875rem; line-height: 1.25rem; color: #6b7280; margin-top: 0.25rem; margin-bottom: 1rem; }
-        .mco-subcards-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; border-top: 1px solid #e5e7eb; padding-top: 1rem; }
-        @media (min-width: 768px) { .mco-subcards-grid { grid-template-columns: repeat(3, 1fr); } }
-        .mco-subcard { display: flex; flex-direction: column; justify-content: space-between; padding: 1rem; background-color: #f8fafc; border-radius: 0.5rem; border: 1px solid #e5e7eb; height: 100%; }
-        .mco-subcard-bundle { background-color: #ecfeff; border-color: #a5f3fc; }
-        .mco-subcard .mco-subcard-content { flex-grow: 1; }
-        .mco-subcard h4 { font-weight: 600; color: #334155; display: flex; align-items: center; gap: 0.5rem; }
-        .mco-subcard ul { list-style: none; padding: 0; margin: 0.5rem 0 0; font-size: 0.75rem; color: #4b5563; }
-        .mco-subcard ul li { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
-        .mco-subcard-price { margin-top: 0.5rem; margin-bottom: 0.5rem; text-align: center; }
-        .mco-price-current { font-size: 1.5rem; font-weight: 700; color: #166534; }
-        .mco-price-regular { font-size: 0.875rem; color: #6b7280; text-decoration: line-through; margin-left: 0.5rem; }
-        .mco-subcard-btn { margin-top: 0.75rem; width: 100%; display: flex; align-items: center; justify-content: center; text-decoration: none; font-weight: 700; padding: 0.5rem 1rem; border-radius: 0.5rem; transition: background-color 0.2s; gap: 0.5rem; }
-        .mco-btn-practice { background-color: #475569; color: white; } .mco-btn-practice:hover { background-color: #334155; }
-        .mco-btn-purchase { background-color: #f59e0b; color: white; font-size: 0.875rem; } .mco-btn-purchase:hover { background-color: #d97706; }
-        .mco-btn-bundle { background-color: #0891b2; color: white; font-size: 0.875rem; } .mco-btn-bundle:hover { background-color: #0e7490; }
-        .mco-sidebar .mco-bookshelf { background: #fff; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05); border: 1px solid #e5e7eb; }
-        .mco-bookshelf h3 { font-size: 1.25rem; font-weight: 700; color: #1f2937; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
-        .mco-bookshelf .mco-book-card { background: #fff; border-radius: 0.5rem; overflow: hidden; border: 1px solid #e5e7eb; transition: transform 0.2s; margin-bottom: 1.5rem; }
-        .mco-bookshelf .mco-book-card:hover { transform: translateY(-4px); }
-        .mco-book-cover { height: 8rem; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 1rem; text-align: center; overflow: hidden; }
-        .mco-book-cover .mco-book-title { font-weight: 700; font-size: 0.875rem; line-height: 1.2; z-index: 10; }
-        .mco-book-cover .mco-book-accent { width: 33.33%; height: 0.25rem; border-radius: 9999px; z-index: 10; }
-        .mco-book-cover .mco-circle { position: absolute; border-radius: 9999px; opacity: 0.5; }
-        .mco-book-card .mco-book-details { padding: 1rem; }
-        .mco-book-card .mco-book-details h4 { font-weight: 700; color: #1f2937; font-size: 0.875rem; margin-bottom: 0.5rem; }
-        .mco-book-card .mco-book-buy-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 0.875rem; color: #fff; background-color: #f59e0b; font-weight: 600; border-radius: 0.375rem; padding: 0.5rem 0.75rem; text-decoration: none; transition: background-color 0.2s; }
-        .mco-book-card .mco-book-buy-btn:hover { background-color: #d97706; }
-        .mco-svg-icon { display: inline-block; width: 16px; height: 16px; vertical-align: middle; }
-    </style>
-    <div class="mco-page-layout">
-        <main class="mco-main-content">
-            <div class="mco-showcase-container">
-                <?php if ($is_wc_active) {
-                    $monthly_product = wc_get_product(wc_get_product_id_by_sku('sub-monthly'));
-                    $yearly_product = wc_get_product(wc_get_product_id_by_sku('sub-yearly')); ?>
-                    <div style="margin-bottom: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
-                        <?php if ($monthly_product): ?>
-                        <div style="background: linear-gradient(to bottom right, #22d3ee, #0ea5e9); color: white; border-radius: 1rem; padding: 2rem; display: flex; flex-direction: column;">
-                            <h3 style="font-size: 1.25rem; font-weight: 700;">Monthly Subscription</h3>
-                            <p style="margin-top: 1rem; color: rgba(255,255,255,0.8); flex-grow: 1;">Unlimited practice & AI feedback.</p>
-                            <div style="margin-top: 1.5rem; display: flex; align-items: baseline; gap: 0.5rem;"><span style="font-size: 2.25rem; font-weight: 800;"><?php echo $monthly_product->get_price_html(); ?></span><span style="font-weight: 500; color: rgba(255,255,255,0.8);">/month</span></div>
-                            <a href="<?php echo esc_url($monthly_product->add_to_cart_url()); ?>" class="mco-subcard-btn" style="margin-top: 2rem; background: white; color: #0891b2;">Subscribe Now</a>
-                        </div>
-                        <?php endif; ?>
-                        <?php if ($yearly_product): ?>
-                        <div style="background: linear-gradient(to bottom right, #a855f7, #4f46e5); color: white; border-radius: 1rem; padding: 2rem; display: flex; flex-direction: column; position: relative;">
-                            <div style="position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); background: #facc15; color: #78350f; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.75rem; border-radius: 9999px;">Best Value</div>
-                            <h3 style="font-size: 1.25rem; font-weight: 700;">Yearly Subscription</h3>
-                            <p style="margin-top: 1rem; color: rgba(255,255,255,0.8); flex-grow: 1;">Save over 35% with annual billing.</p>
-                            <div style="margin-top: 1.5rem; display: flex; align-items: baseline; gap: 0.5rem;"><span style="font-size: 2.25rem; font-weight: 800;"><?php echo $yearly_product->get_price_html(); ?></span><span style="font-weight: 500; color: rgba(255,255,255,0.8);">/year</span></div>
-                            <a href="<?php echo esc_url($yearly_product->add_to_cart_url()); ?>" class="mco-subcard-btn" style="margin-top: 2rem; background: white; color: #6d28d9;">Subscribe & Save</a>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-                <?php } ?>
-                <?php foreach ($exam_programs as $program):
-                    foreach (['cert_exam', 'practice_exam'] as $exam_type) {
-                        if (isset($program[$exam_type]['bundle_sku']) && !isset($program['bundle_sku'])) {
-                            $program['bundle_sku'] = $program[$exam_type]['bundle_sku'];
-                        }
-                    }
-                    if (!isset($program['bundle_sku'])) {
-                        $program['bundle_sku'] = $program['cert_sku'] . '-1mo-addon';
-                        if ($program['cert_sku'] === 'exam-cpc-cert') $program['bundle_sku'] = 'exam-cpc-cert-1';
-                        if ($program['cert_sku'] === 'exam-cca-cert') $program['bundle_sku'] = 'exam-cca-cert-bundle';
-                    }
-                    $is_popular = $program['cert_sku'] === 'exam-cpc-cert';
-
-                    $card_style = $is_popular 
-                        ? 'position: relative; background: linear-gradient(to bottom right, #fffbeb, #ffedd5, #fef3c7); border: 1px solid #fcd34d;' 
-                        : 'position: relative;';
-
-                    $badge_style = $is_popular
-                        ? 'background: linear-gradient(to right, #ef4444, #f97316); color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1);'
-                        : '';
-
-                    $subcard_style = $is_popular ? 'background-color: #fffbeb; border: 1px solid #fde68a;' : '';
-                    $bundle_subcard_style = $is_popular ? 'background-color: #fef3c7; border: 1px solid #fcd34d;' : 'background-color: #ecfeff; border: 1px solid #a5f3fc;';
-                    $divider_style = $is_popular ? 'border-top: 1px solid #fde68a;' : 'border-top: 1px solid #e5e7eb;';
-                    ?>
-                    <div class="mco-program-card" style="<?php echo $card_style; ?>">
-                        <?php if ($is_popular): ?>
-                            <div style="position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
-                                <div style="<?php echo $badge_style; ?> font-size: 0.75rem; font-weight: 700; text-transform: uppercase; padding: 0.25rem 0.75rem; border-radius: 9999px; display: flex; align-items: center; gap: 0.25rem;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-                                    <span>Most Popular</span>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                        <h3><?php echo esc_html($program['name']); ?></h3>
-                        <?php if ($is_wc_active) { $product_id = wc_get_product_id_by_sku($program['cert_sku']); if ($product_id) { echo mco_render_stars_html(get_post_meta($product_id, '_mco_exam_avg_rating', true), get_post_meta($product_id, '_mco_exam_review_count', true)); } } ?>
-                        <p class="mco-program-description"><?php echo esc_html($program['description']); ?></p>
-                        <div class="mco-subcards-grid" style="<?php echo $divider_style; ?> padding-top: 1rem;">
-                            
-                            <div class="mco-subcard" style="<?php echo $subcard_style; ?>">
-                                <div class="mco-subcard-content">
-                                    <h4><?php echo $icon_flask; ?> Free Practice Exam</h4>
-                                    <ul>
-                                        <li><?php echo $icon_list; ?> <?php echo esc_html($program['practice_exam']['numberOfQuestions']); ?> questions</li>
-                                        <li><?php echo $icon_clock; ?> <?php echo esc_html($program['practice_exam']['durationMinutes']); ?> minutes</li>
-                                        <li><?php echo $icon_target; ?> <?php echo esc_html($program['practice_exam']['passScore']); ?>% pass score</li>
-                                    </ul>
-                                </div>
-                                <a href="<?php echo esc_url(MCO_EXAM_APP_URL . '#/test/' . $program['practice_id']); ?>" class="mco-subcard-btn mco-btn-practice"><?php echo $icon_zap; ?> Start Practice</a>
-                            </div>
-                            
-                            <div class="mco-subcard" style="<?php echo $subcard_style; ?>">
-                                <div class="mco-subcard-content">
-                                    <h4><?php echo $icon_trophy; ?> Certification Exam</h4>
-                                    <ul>
-                                        <li><?php echo $icon_list; ?> <?php echo esc_html($program['cert_exam']['numberOfQuestions']); ?> questions</li>
-                                        <li><?php echo $icon_clock; ?> <?php echo esc_html($program['cert_exam']['durationMinutes']); ?> minutes</li>
-                                        <li><?php echo $icon_target; ?> <?php echo esc_html($program['cert_exam']['passScore']); ?>% passing score</li>
-                                        <li><?php echo $icon_repeat; ?> 3 attempts included</li>
-                                    </ul>
-                                </div>
-                                <?php if ($is_wc_active && ($product = wc_get_product(wc_get_product_id_by_sku($program['cert_sku'])))): ?>
-                                    <div class="mco-subcard-price">
-                                        <?php if ($product->is_on_sale()): ?>
-                                            <span class="mco-price-current"><?php echo wc_price($product->get_sale_price()); ?></span>
-                                            <span class="mco-price-regular"><?php echo wc_price($product->get_regular_price()); ?></span>
-                                        <?php else: ?>
-                                            <span class="mco-price-current"><?php echo wc_price($product->get_price()); ?></span>
-                                        <?php endif; ?>
-                                    </div>
-                                    <a href="<?php echo esc_url($product->add_to_cart_url()); ?>" class="mco-subcard-btn mco-btn-purchase">Buy Exam</a>
-                                <?php endif; ?>
-                            </div>
-
-                            <div class="mco-subcard mco-subcard-bundle" style="<?php echo $bundle_subcard_style; ?>">
-                                <div class="mco-subcard-content">
-                                    <h4 style="<?php if($is_popular) echo 'color: #92400e;'; ?>"><?php echo $icon_cart; ?> Exam + Study Bundle</h4>
-                                    <p style="font-size: 0.75rem; color: #4b5563; margin-top: 0.5rem;">Get the exam plus 1-month of premium access to all practice tests & AI feedback.</p>
-                                </div>
-                                <?php if ($is_wc_active && !empty($program['bundle_sku']) && ($bundle_product = wc_get_product(wc_get_product_id_by_sku($program['bundle_sku'])))): ?>
-                                    <div class="mco-subcard-price">
-                                        <?php if ($bundle_product->is_on_sale()): ?>
-                                            <span class="mco-price-current" style="<?php if($is_popular) echo 'color: #b45309;'; else echo 'color: #0891b2;'; ?>"><?php echo wc_price($bundle_product->get_sale_price()); ?></span>
-                                            <span class="mco-price-regular"><?php echo wc_price($bundle_product->get_regular_price()); ?></span>
-                                        <?php else: ?>
-                                            <span class="mco-price-current" style="<?php if($is_popular) echo 'color: #b45309;'; else echo 'color: #0891b2;'; ?>"><?php echo wc_price($bundle_product->get_price()); ?></span>
-                                        <?php endif; ?>
-                                    </div>
-                                    <a href="<?php echo esc_url($bundle_product->add_to_cart_url()); ?>" class="mco-subcard-btn <?php echo $is_popular ? 'mco-btn-purchase' : 'mco-btn-bundle'; ?>" style="<?php if($is_popular) echo 'background-color: #f97316;'; ?>">Buy Bundle</a>
-                                <?php endif; ?>
-                            </div>
-
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </main>
-        <aside class="mco-sidebar">
-             <div class="mco-bookshelf">
-                <h3><?php echo $icon_book_open; ?> Study Hall</h3>
-                <div class="mco-books-container">
-                    <?php 
-                    $books = mco_get_suggested_books_data();
-                    $bg_colors = ['#fef2f2', '#fefce8', '#f0fdf4', '#eff6ff', '#eef2ff', '#f5f3ff', '#fdf2f8'];
-                    $text_colors = ['#991b1b', '#854d0e', '#166534', '#1e40af', '#3730a3', '#5b21b6', '#9d174d'];
-                    $accent_colors = ['#fca5a5', '#fde047', '#86efac', '#93c5fd', '#a5b4fc', '#c4b5fd', '#f9a8d4'];
-                    foreach($books as $book): 
-                        $hash = crc32($book['title']);
-                        $color_index = abs($hash) % count($bg_colors);
-                        $bg_color = $bg_colors[$color_index];
-                        $text_color = $text_colors[$color_index];
-                        $accent_color = $accent_colors[$color_index];
-                        $title_words = explode(' ', $book['title']);
-                    ?>
-                    <div class="mco-book-card">
-                        <div class="mco-book-cover" style="background-color: <?php echo $bg_color; ?>;">
-                             <div class="mco-circle" style="bottom: -2.5rem; right: -2.5rem; width: 8rem; height: 8rem; background-color: <?php echo $accent_color; ?>;"></div>
-                             <div class="mco-circle" style="top: -3rem; left: -2rem; width: 6rem; height: 6rem; background-color: <?php echo $accent_color; ?>;"></div>
-                             <div></div>
-                             <div class="mco-book-title" style="color: <?php echo $text_color; ?>;">
-                                <?php echo esc_html(implode(' ', array_slice($title_words, 0, 4))); ?>
-                                <?php if (count($title_words) > 4): ?>
-                                <br><span style="font-size: 0.8em; opacity: 0.8;"><?php echo esc_html(implode(' ', array_slice($title_words, 4))); ?></span>
-                                <?php endif; ?>
-                             </div>
-                             <div class="mco-book-accent" style="background-color: <?php echo $accent_color; ?>;"></div>
-                        </div>
-                        <div class="mco-book-details">
-                            <h4><?php echo esc_html($book['title']); ?></h4>
-                            <div class="mco-book-geolink" data-com-url="<?php echo esc_url($book['links']['com']); ?>" data-in-url="<?php echo esc_url($book['links']['in']); ?>" data-ae-url="<?php echo esc_url($book['links']['ae']); ?>">
-                                <a href="<?php echo esc_url($book['links']['com']); ?>" target="_blank" rel="noopener noreferrer" class="mco-book-buy-btn">
-                                    <?php echo $icon_book_up; ?> <span>Buy on Amazon.com</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-                 <p style="font-size: 0.75rem; color: #9ca3af; margin-top: 1.5rem; text-align: center;">Using our affiliate links helps support our platform. Note: Book availability may vary by region.</p>
-            </div>
-        </aside>
-    </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const getGeoAffiliateLink = (links) => {
-                const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-                let domainKey = 'com';
-                let domainName = 'Amazon.com';
-                const gccTimezones = ['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat'];
-                if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
-                    domainKey = 'in';
-                    domainName = 'Amazon.in';
-                } else if (gccTimezones.some(tz => timeZone === tz)) {
-                    domainKey = 'ae';
-                    domainName = 'Amazon.ae';
-                }
-                const url = links[domainKey];
-                return !url || url.trim() === '' ? { url: links.com, domainName: 'Amazon.com' } : { url, domainName };
-            };
-            document.querySelectorAll('.mco-book-geolink').forEach(container => {
-                const links = {
-                    com: container.getAttribute('data-com-url'),
-                    in: container.getAttribute('data-in-url'),
-                    ae: container.getAttribute('data-ae-url'),
-                };
-                const { url, domainName } = getGeoAffiliateLink(links);
-                const anchor = container.querySelector('a');
-                if (anchor) {
-                    anchor.href = url;
-                    anchor.querySelector('span').textContent = 'Buy on ' + domainName;
-                }
-            });
-        });
-    </script>
-    <?php return ob_get_clean();
-}
-
-
 function mco_exam_login_shortcode() {
     if (!defined('MCO_JWT_SECRET')) return "<p class='mco-portal-error'>Configuration error: A strong MCO_JWT_SECRET must be defined in wp-config.php.</p>";
     $login_error_message = ''; $user_id = 0;
@@ -800,6 +510,48 @@ function mco_exam_add_custom_registration_fields() { ?><p><label for="first_name
 function mco_exam_validate_reg_fields($errors, $login, $email) { if (empty($_POST['first_name']) || empty($_POST['last_name'])) $errors->add('field_error', 'First and Last Name are required.'); return $errors; }
 function mco_exam_save_reg_fields($user_id) { if (!empty($_POST['first_name'])) update_user_meta($user_id, 'first_name', sanitize_text_field($_POST['first_name'])); if (!empty($_POST['last_name'])) update_user_meta($user_id, 'last_name', sanitize_text_field($_POST['last_name'])); }
 function mco_exam_login_url($login_url, $redirect) { if (strpos($_SERVER['REQUEST_URI'], 'wp-admin') !== false) return $login_url; $login_page_url = home_url('/' . MCO_LOGIN_SLUG . '/'); return !empty($redirect) ? add_query_arg('redirect_to', urlencode($redirect), $login_page_url) : $login_page_url; }
+
+// --- WooCommerce Styling Functions ---
+function mco_add_custom_wc_styles_to_head() {
+    if ( function_exists('is_woocommerce') && (is_cart() || is_checkout()) ) {
+        $custom_css = "
+            body.woocommerce-cart, body.woocommerce-checkout { background-color: #f8fafc !important; color: #334155; }
+            .woocommerce { font-family: 'Inter', sans-serif; }
+            .woocommerce-cart h1, .woocommerce-checkout h1 { font-size: 2.25rem; font-weight: 800; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 2rem; }
+            .woocommerce form .form-row input.input-text, .woocommerce form .form-row textarea, .woocommerce select { border-radius: 0.5rem !important; border: 1px solid #cbd5e1 !important; padding: 0.75rem 1rem !important; box-shadow: none !important; }
+            .woocommerce form .form-row input.input-text:focus, .woocommerce form .form-row textarea:focus, .woocommerce select:focus { border-color: #0891b2 !important; box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2) !important; outline: none !important; }
+            .woocommerce .button, .woocommerce button.button { border-radius: 0.5rem !important; padding: 0.75rem 1.5rem !important; font-weight: 600 !important; transition: all 0.2s ease-in-out !important; border: none !important; box-shadow: 0 1px 3px 0 rgba(0,0,0,.1), 0 1px 2px -1px rgba(0,0,0,.1) !important; }
+            .woocommerce .button.alt, .woocommerce button.button.alt, .woocommerce #place_order { background-color: #0891b2 !important; color: white !important; }
+            .woocommerce .button.alt:hover, .woocommerce button.button.alt:hover, .woocommerce #place_order:hover { background-color: #0e7490 !important; }
+            .woocommerce .checkout-button { width: 100%; text-align: center; display: block; }
+            .woocommerce-message, .woocommerce-info, .woocommerce-error { border-top-color: #0891b2 !important; background-color: #f0f9ff !important; border-radius: 0.5rem; }
+            .woocommerce-error { border-top-color: #dc2626 !important; }
+            .woocommerce-cart .shop_table { border: none !important; border-radius: 0.75rem !important; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05); }
+            .woocommerce-cart .shop_table thead { background-color: #f1f5f9; }
+            .woocommerce-cart .shop_table th { border-bottom: 2px solid #e2e8f0; text-transform: uppercase; font-size: 0.75rem; color: #475569; }
+            .woocommerce-cart .shop_table tbody td { border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+            .woocommerce-cart .shop_table .product-name a { color: #0f172a; font-weight: 600; }
+            .woocommerce-cart .cart-collaterals .cart_totals { border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.5rem; background: #fff; }
+            .woocommerce-cart .cart-collaterals .cart_totals h2 { font-size: 1.5rem; margin-bottom: 1rem; }
+            .woocommerce-checkout #customer_details, .woocommerce-checkout #order_review_heading, .woocommerce-checkout #order_review { border: 1px solid #e2e8f0; padding: 2rem; background: #fff; border-radius: 0.75rem; }
+            .woocommerce-checkout #order_review_heading { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none; margin-bottom: 0; }
+            .woocommerce-checkout #order_review { border-top-left-radius: 0; border-top-right-radius: 0; margin-top: 0; }
+            .woocommerce-checkout .woocommerce-checkout-payment { background: #f8fafc; border-radius: 0.5rem; }
+            .woocommerce-checkout #place_order { width: 100%; font-size: 1.125rem !important; }
+            @media (min-width: 992px) {
+                .woocommerce-checkout .col2-set, .woocommerce-checkout .col-1, .woocommerce-checkout .col-2 { float: none !important; width: 100% !important; margin: 0 !important; }
+                .woocommerce-checkout form.checkout { display: grid; grid-template-columns: 1fr 400px; gap: 2rem; align-items: flex-start; }
+                .woocommerce-checkout .woocommerce-billing-fields, .woocommerce-checkout .woocommerce-shipping-fields, .woocommerce-checkout .woocommerce-additional-fields { grid-column: 1 / 2; }
+                .woocommerce-checkout .woocommerce-checkout-review-order { grid-column: 2 / 3; position: sticky; top: 2rem; }
+            }
+        ";
+        echo '<style type="text/css">' . $custom_css . '</style>';
+    }
+}
+
+function mco_custom_order_button_text() {
+    return 'Complete Enrollment & Pay Securely';
+}
 ?>`;
 
     const copyToClipboard = () => {
@@ -818,13 +570,13 @@ function mco_exam_login_url($login_url, $redirect) { if (strpos($_SERVER['REQUES
             <h1 className="text-3xl font-extrabold text-slate-800">WordPress Integration Guide</h1>
             
             <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-xl font-bold mb-2">1. Install and Configure the Plugin</h2>
-                <p className="mb-4">Copy the entire PHP code block below and save it as a new plugin file (e.g., <code>mco-integration.php</code>) in your WordPress <code>/wp-content/plugins/</code> directory. Then, activate it from the WordPress admin panel.</p>
+                <h2 className="text-xl font-bold mb-2">1. The Unified Integration Plugin</h2>
+                <p className="mb-4">This is the complete plugin required for the exam application. It handles user login (SSO), data synchronization, and modern styling for your WooCommerce pages. Copy the entire PHP code block below and save it as a new plugin file (e.g., <code>mco-unified-integration.php</code>) in your WordPress <code>/wp-content/plugins/</code> directory. Then, activate it from the WordPress admin panel.</p>
                 
-                <div className="bg-slate-800 text-white p-4 rounded-lg relative font-mono text-sm">
+                <div className="bg-slate-800 text-white p-4 rounded-lg relative font-mono text-sm max-h-[50vh] overflow-auto">
                     <button 
                         onClick={copyToClipboard} 
-                        className="absolute top-2 right-2 p-2 bg-slate-600 rounded-md hover:bg-slate-500 transition"
+                        className="absolute top-2 right-2 p-2 bg-slate-600 rounded-md hover:bg-slate-500 transition sticky z-10"
                         title="Copy to clipboard"
                         >
                         <Copy size={16} />

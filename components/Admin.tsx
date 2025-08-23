@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck } from 'lucide-react';
+import * as ReactRouterDOM from 'react-router-dom';
+import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, SearchedUser } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -179,21 +180,19 @@ const Admin: React.FC = () => {
             
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                 <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
-                    <Settings className="mr-3 text-cyan-500" />
-                    Application Mode
+                    <Code className="mr-3 text-cyan-500" />
+                    WordPress Integration
                 </h2>
                 <p className="text-slate-600 mb-6">
-                    This setting controls the exam app version used for redirects from WordPress. This must be configured directly in your WordPress admin dashboard.
+                    This is the master plugin for integrating the exam app with WordPress. It handles SSO, data sync, and WooCommerce styling.
                 </p>
-                <a
-                    href={wpAdminUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                <ReactRouterDOM.Link
+                    to="/integration"
                     className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
                 >
                     <ExternalLink size={20} className="mr-2" />
-                    Go to WordPress Mode Settings
-                </a>
+                    Get Unified Plugin Code
+                </ReactRouterDOM.Link>
             </div>
 
              <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
@@ -376,7 +375,7 @@ const Admin: React.FC = () => {
                     </div>
                 )}
             </div>
-
+            
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                 <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
                     <Lightbulb className="mr-3 text-cyan-500" />
