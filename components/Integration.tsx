@@ -1,3 +1,5 @@
+
+
 import * as React from 'react';
 import toast from 'react-hot-toast';
 import { Copy } from 'lucide-react';
@@ -6,12 +8,18 @@ export default function Integration() {
     const phpCode = `<?php
 /**
  * Plugin Name:       MCO Exam App Integration
- * Description:       A plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           10.5.1
+ * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
+ * Version:           10.4.0
  * Author:            Annapoorna Infotech (Refactored)
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
+
+// --- IMPORTANT ---
+// After activating or updating this plugin, you MUST flush WordPress permalinks.
+// Go to your WordPress Admin -> Settings -> Permalinks and just click "Save Changes".
+// This rebuilds the URL routes and prevents "No route was found" errors for the API.
+// --- IMPORTANT ---
 
 // --- CONFIGURATION ---
 define('MCO_LOGIN_SLUG', 'exam-login');
@@ -170,44 +178,7 @@ function mco_generate_exam_jwt($user_id) {
     return "$header_b64.$payload_b64.$signature_b64";
 }
 
-function mco_redirect_after_purchase($order_id) {
-    if (!$order_id || !($order = wc_get_order($order_id)) || !($user_id = $order->get_customer_id())) {
-        return;
-    }
-
-    if ($user_id > 0 && $order->has_status(['completed', 'processing', 'on-hold'])) {
-        // Define SKUs that should trigger a redirect to the exam app
-        $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert', 'exam-mcf-cert'];
-        $base_subscription_skus = ['sub-monthly', 'sub-yearly', 'sub-1mo-addon'];
-        $specific_bundle_skus = ['exam-cpc-cert-1', 'exam-cca-cert-bundle'];
-        $addon_skus = array_map(function($sku) { return $sku . '-1mo-addon'; }, $all_exam_skus);
-        $subscription_skus = array_unique(array_merge($base_subscription_skus, $addon_skus));
-        $skus_that_trigger_redirect = array_unique(array_merge($all_exam_skus, $subscription_skus, $specific_bundle_skus));
-
-        $should_redirect = false;
-        foreach ($order->get_items() as $item) {
-            $product = $item->get_product();
-            if ($product && in_array($product->get_sku(), $skus_that_trigger_redirect)) {
-                $should_redirect = true;
-                break;
-            }
-        }
-
-        if (!$should_redirect) {
-            return; // Don't redirect if no exam product was purchased
-        }
-
-        if (function_exists('WC') && WC()->cart) {
-            WC()->cart->empty_cart();
-        }
-
-        if ($token = mco_generate_exam_jwt($user_id)) {
-            wp_redirect(mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=/dashboard');
-            exit;
-        }
-    }
-}
-
+function mco_redirect_after_purchase($order_id) { if (!$order_id || !($order = wc_get_order($order_id)) || !($user_id = $order->get_customer_id())) return; if ($user_id > 0 && $order->has_status(['completed', 'processing', 'on-hold'])) { if (function_exists('WC') && WC()->cart) WC()->cart->empty_cart(); if ($token = mco_generate_exam_jwt($user_id)) { wp_redirect(mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=/dashboard'); exit; } } }
 
 // --- REST API ENDPOINTS ---
 function mco_exam_register_rest_api() {
@@ -847,13 +818,13 @@ function mco_exam_login_url($login_url, $redirect) { if (strpos($_SERVER['REQUES
             <h1 className="text-3xl font-extrabold text-slate-800">WordPress Integration Guide</h1>
             
             <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-xl font-bold mb-2">1. The Main Integration Plugin</h2>
-                <p className="mb-4">This is the primary plugin required for the exam application. It handles user login (SSO) and data synchronization. Copy the entire PHP code block below and save it as a new plugin file (e.g., <code>mco-integration.php</code>) in your WordPress <code>/wp-content/plugins/</code> directory. Then, activate it from the WordPress admin panel.</p>
+                <h2 className="text-xl font-bold mb-2">1. Install and Configure the Plugin</h2>
+                <p className="mb-4">Copy the entire PHP code block below and save it as a new plugin file (e.g., <code>mco-integration.php</code>) in your WordPress <code>/wp-content/plugins/</code> directory. Then, activate it from the WordPress admin panel.</p>
                 
-                <div className="bg-slate-800 text-white p-4 rounded-lg relative font-mono text-sm max-h-[50vh] overflow-auto">
+                <div className="bg-slate-800 text-white p-4 rounded-lg relative font-mono text-sm">
                     <button 
                         onClick={copyToClipboard} 
-                        className="absolute top-2 right-2 p-2 bg-slate-600 rounded-md hover:bg-slate-500 transition sticky z-10"
+                        className="absolute top-2 right-2 p-2 bg-slate-600 rounded-md hover:bg-slate-500 transition"
                         title="Copy to clipboard"
                         >
                         <Copy size={16} />

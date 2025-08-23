@@ -19,6 +19,8 @@ const Footer: React.FC = () => {
             {user && user.isAdmin && (
               <>
                 <span className="text-slate-300">|</span>
+                <ReactRouterDOM.Link to="/integration" className="text-cyan-600 hover:underline">Integration</ReactRouterDOM.Link>
+                <span className="text-slate-300">|</span>
                 <ReactRouterDOM.Link to="/purchase-notifier" className="text-cyan-600 hover:underline">Notifier Script</ReactRouterDOM.Link>
               </>
             )}
