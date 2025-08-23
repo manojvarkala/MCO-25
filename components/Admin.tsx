@@ -184,15 +184,24 @@ const Admin: React.FC = () => {
                     WordPress Integration
                 </h2>
                 <p className="text-slate-600 mb-6">
-                    This is the master plugin for integrating the exam app with WordPress. It handles SSO, data sync, and WooCommerce styling.
+                    Manage the plugins that integrate the exam app with your WordPress site. The main plugin handles SSO and data sync, while the styling plugin customizes your WooCommerce pages.
                 </p>
-                <ReactRouterDOM.Link
-                    to="/integration"
-                    className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
-                >
-                    <ExternalLink size={20} className="mr-2" />
-                    Get Unified Plugin Code
-                </ReactRouterDOM.Link>
+                <div className="flex flex-wrap gap-4">
+                    <ReactRouterDOM.Link
+                        to="/integration"
+                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
+                    >
+                        <ExternalLink size={20} className="mr-2" />
+                        Get Main Plugin Code
+                    </ReactRouterDOM.Link>
+                    <ReactRouterDOM.Link
+                        to="/woocommercestyling"
+                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-yellow-800 bg-yellow-100 hover:bg-yellow-200 transition-transform transform hover:scale-105"
+                    >
+                        <Paintbrush size={20} className="mr-2" />
+                        Get WooCommerce Styling Plugin
+                    </ReactRouterDOM.Link>
+                </div>
             </div>
 
              <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
