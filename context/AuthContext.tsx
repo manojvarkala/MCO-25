@@ -111,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('activeOrg');
     sessionStorage.removeItem('wheelModalDismissed');
     Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('exam_timer_') || key.startsWith('exam_results_') || key.startsWith('exam_session_')) {
+        if (key.startsWith('exam_timer_') || key.startsWith('exam_results_')) {
             localStorage.removeItem(key);
         }
     });

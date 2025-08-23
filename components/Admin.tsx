@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
-import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code } from 'lucide-react';
+import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, SearchedUser } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -180,11 +180,11 @@ const Admin: React.FC = () => {
             
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                 <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
-                    <Code className="mr-3 text-cyan-500" />
+                    <Settings className="mr-3 text-cyan-500" />
                     WordPress Integration
                 </h2>
                 <p className="text-slate-600 mb-6">
-                    Manage the plugins that integrate the exam app with your WordPress site. The main plugin handles SSO and data sync, while the styling plugin customizes your WooCommerce pages.
+                   The following page contains the PHP code for the custom WordPress plugin required for Single Sign-On (SSO) and results synchronization. An administrator can copy this code to create the plugin on your WordPress site.
                 </p>
                 <div className="flex flex-wrap gap-4">
                     <ReactRouterDOM.Link
@@ -192,14 +192,7 @@ const Admin: React.FC = () => {
                         className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
                     >
                         <ExternalLink size={20} className="mr-2" />
-                        Get Main Plugin Code
-                    </ReactRouterDOM.Link>
-                    <ReactRouterDOM.Link
-                        to="/woocommercestyling"
-                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-yellow-800 bg-yellow-100 hover:bg-yellow-200 transition-transform transform hover:scale-105"
-                    >
-                        <Paintbrush size={20} className="mr-2" />
-                        Get WooCommerce Styling Plugin
+                        Get Plugin Code
                     </ReactRouterDOM.Link>
                 </div>
             </div>

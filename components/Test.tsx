@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { Question, UserAnswer, Exam, ExamSession } from '../types.ts';
+import type { Question, UserAnswer, Exam } from '../types.ts';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import Spinner from './Spinner.tsx';
@@ -30,7 +30,6 @@ const Test: React.FC = () => {
   const [timeLeft, setTimeLeft] = React.useState<number | null>(null);
   
   const timerIntervalRef = React.useRef<number | null>(null);
-  const sessionKey = React.useMemo(() => (user && examId ? `exam_session_${user.id}_${examId}` : null), [user, examId]);
 
   const handleSubmit = React.useCallback(async (isAutoSubmit = false) => {
     if (isSubmitting) return;
@@ -45,7 +44,6 @@ const Test: React.FC = () => {
 
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     localStorage.removeItem(`exam_timer_${examId}_${user.id}`);
-    if (sessionKey) localStorage.removeItem(sessionKey);
 
     if (!isAutoSubmit) {
         const unansweredCount = questions.length - answers.size;
@@ -64,11 +62,11 @@ const Test: React.FC = () => {
         toast.error("Failed to submit the test. Please try again.");
         setIsSubmitting(false);
     }
-  }, [examId, navigate, token, user, sessionKey, isSubmitting, questions, answers]);
+  }, [examId, navigate, token, user, isSubmitting, questions, answers]);
 
-  // Effect 1: Load questions from session or fetch new ones.
+  // Effect 1: Load questions.
   React.useEffect(() => {
-    if (isInitializing || !examId || !activeOrg || !user || !sessionKey || !token) {
+    if (isInitializing || !examId || !activeOrg || !user || !token) {
         return;
     }
 
@@ -81,47 +79,23 @@ const Test: React.FC = () => {
     setExamConfig(config);
 
     const loadTest = async () => {
-        let sessionRestored = false;
         try {
-            // Attempt to restore session
-            const savedSession = localStorage.getItem(sessionKey);
-            if (savedSession) {
-                try {
-                    const sessionData: ExamSession = JSON.parse(savedSession);
-                    if (sessionData && Array.isArray(sessionData.questions) && Array.isArray(sessionData.answers) && typeof sessionData.currentQuestionIndex === 'number') {
-                        setQuestions(sessionData.questions);
-                        setAnswers(new Map(sessionData.answers));
-                        setCurrentQuestionIndex(sessionData.currentQuestionIndex);
-                        toast.success("Welcome back! Your exam session was restored.");
-                        sessionRestored = true;
-                    } else {
-                        throw new Error("Invalid session data format.");
-                    }
-                } catch (e) {
-                    console.error("Could not restore session due to corrupted data. Starting fresh.", e);
-                    localStorage.removeItem(sessionKey);
+            const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
+            if (config.isPractice) {
+                if (!isSubscribed) {
+                    const practiceAttempts = userResults.filter(r => r.examId === config.id).length;
+                    if (practiceAttempts >= 10) throw new Error("You have used all 10 free practice attempts.");
                 }
+                useFreeAttempt();
+            } else {
+                const certResults = userResults.filter(r => r.examId === config.id);
+                if (certResults.some(r => r.score >= config.passScore)) throw new Error("You have already passed this exam.");
+                if (certResults.length >= 3) throw new Error("You have used all 3 attempts for this exam.");
             }
-
-            // Fetch new questions if no session was restored
-            if (!sessionRestored) {
-                const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
-                if (config.isPractice) {
-                    if (!isSubscribed) {
-                        const practiceAttempts = userResults.filter(r => r.examId === config.id).length;
-                        if (practiceAttempts >= 10) throw new Error("You have used all 10 free practice attempts.");
-                    }
-                    useFreeAttempt();
-                } else {
-                    const certResults = userResults.filter(r => r.examId === config.id);
-                    if (certResults.some(r => r.score >= config.passScore)) throw new Error("You have already passed this exam.");
-                    if (certResults.length >= 3) throw new Error("You have used all 3 attempts for this exam.");
-                }
-                const fetchedQuestions = await googleSheetsService.getQuestions(config, token);
-                setQuestions(fetchedQuestions);
-                setAnswers(new Map());
-                setCurrentQuestionIndex(0);
-            }
+            const fetchedQuestions = await googleSheetsService.getQuestions(config, token);
+            setQuestions(fetchedQuestions);
+            setAnswers(new Map());
+            setCurrentQuestionIndex(0);
         } catch (error: any) {
             toast.error(error.message || 'Failed to load test.', { duration: 4000 });
             navigate('/dashboard');
@@ -131,7 +105,7 @@ const Test: React.FC = () => {
     };
     
     loadTest();
-  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, useFreeAttempt, sessionKey]);
+  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, useFreeAttempt]);
 
   // Effect 2: Manage the timer.
   React.useEffect(() => {
@@ -158,18 +132,6 @@ const Test: React.FC = () => {
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
   }, [isLoading, examConfig, user, examId, handleSubmit]);
-
-  // Effect 3: Save progress to local storage.
-  React.useEffect(() => {
-    if (isLoading || !sessionKey || questions.length === 0) return;
-
-    const sessionData: ExamSession = {
-        questions,
-        answers: Array.from(answers.entries()),
-        currentQuestionIndex,
-    };
-    localStorage.setItem(sessionKey, JSON.stringify(sessionData));
-  }, [answers, currentQuestionIndex, questions, sessionKey, isLoading]);
 
   const handleAnswerSelect = (questionId: number, optionIndex: number) => {
     setAnswers(prev => new Map(prev).set(questionId, optionIndex));
