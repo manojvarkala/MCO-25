@@ -28,6 +28,7 @@ const Test: React.FC = () => {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [timeLeft, setTimeLeft] = React.useState<number | null>(null);
+  const [examStarted, setExamStarted] = React.useState(false);
   
   const timerIntervalRef = React.useRef<number | null>(null);
   const progressKey = React.useMemo(() => `exam_progress_${examId}_${user?.id}`, [examId, user?.id]);
@@ -101,12 +102,14 @@ const Test: React.FC = () => {
                 setQuestions(savedProgress.questions);
                 setAnswers(new Map(savedProgress.answers.map(a => [a.questionId, a.answer])));
                 setCurrentQuestionIndex(savedProgress.currentQuestionIndex);
+                setExamStarted(true); // Bypass warning on resume
                 toast.success("Resumed your previous session.");
             } else {
                 const fetchedQuestions = await googleSheetsService.getQuestions(config, token);
                 setQuestions(fetchedQuestions);
                 setAnswers(new Map());
                 setCurrentQuestionIndex(0);
+                setExamStarted(false); // Show warning screen for new session
             }
         } catch (error: any) {
             toast.error(error.message || 'Failed to load test.', { duration: 4000 });
@@ -121,7 +124,7 @@ const Test: React.FC = () => {
 
   // Effect 2: Manage the timer.
   React.useEffect(() => {
-    if (isLoading || !examConfig || !user || !examId) return;
+    if (!examStarted || isLoading || !examConfig || !user || !examId) return;
 
     const timerKey = `exam_timer_${examId}_${user.id}`;
     let endTime = localStorage.getItem(timerKey);
@@ -143,7 +146,7 @@ const Test: React.FC = () => {
     return () => {
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [isLoading, examConfig, user, examId, handleSubmit]);
+  }, [examStarted, isLoading, examConfig, user, examId, handleSubmit]);
 
   // Effect 3: Save progress to localStorage
   React.useEffect(() => {
@@ -184,8 +187,36 @@ const Test: React.FC = () => {
     return <div className="flex flex-col items-center justify-center h-screen bg-white"><LogoSpinner /><p className="mt-4 text-slate-600">Loading your test...</p></div>;
   }
 
-  if (questions.length === 0) {
+  if (questions.length === 0 && !isLoading) {
     return <div className="text-center p-8 bg-white h-screen flex items-center justify-center"><p>No questions available for this exam.</p></div>
+  }
+  
+  if (!examStarted) {
+    return (
+        <div className="flex flex-col items-center justify-center h-screen bg-white p-4">
+            <div className="max-w-2xl w-full bg-slate-50 p-8 rounded-xl shadow-lg border border-slate-200 text-center">
+                <h1 className="text-3xl font-bold text-slate-800 mb-2">Ready to start?</h1>
+                <p className="text-slate-600 mb-6">You are about to begin the <strong>{examConfig.name}</strong>.</p>
+                
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-6 text-left">
+                    <p className="font-bold text-yellow-800">Important Rules:</p>
+                    <ul className="list-disc pl-5 text-yellow-700 text-sm mt-2 space-y-1">
+                        <li>Once you begin, the timer will start and cannot be paused.</li>
+                        <li><strong>Do not close or refresh this browser tab.</strong> Doing so may affect your timer and progress.</li>
+                        <li><strong>Do not log in from another browser or device.</strong> This can cause session conflicts and may result in the loss of your current exam attempt.</li>
+                        <li>Ensure you have a stable internet connection.</li>
+                    </ul>
+                </div>
+                
+                <button
+                    onClick={() => setExamStarted(true)}
+                    className="w-full max-w-xs mx-auto bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg transition text-lg"
+                >
+                    Start Exam
+                </button>
+            </div>
+        </div>
+    );
   }
 
   const currentQuestion = questions[currentQuestionIndex];

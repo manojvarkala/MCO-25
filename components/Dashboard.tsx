@@ -405,7 +405,13 @@ const Dashboard: React.FC = () => {
                                                 </ul>
                                             </div>
                                             <button
-                                                onClick={() => navigate(`/test/${practiceExam.id}`)}
+                                                onClick={() => {
+                                                    if (inProgressExam && inProgressExam.examId !== practiceExam.id) {
+                                                        toast.error(`You have "${inProgressExam.examName}" in progress. Please complete it first.`);
+                                                        return;
+                                                    }
+                                                    navigate(`/test/${practiceExam.id}`);
+                                                }}
                                                 className="mt-3 w-full bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700 transition flex items-center justify-center"
                                             >
                                                 <Zap size={16} className="mr-2" />
@@ -431,7 +437,13 @@ const Dashboard: React.FC = () => {
                                                         <span>Attempts: <span className="font-bold">{certStatusData.attemptsMade}/3</span></span>
                                                     </div>
                                                     <button
-                                                        onClick={() => navigate(`/test/${certExam.id}`)}
+                                                        onClick={() => {
+                                                            if (inProgressExam && inProgressExam.examId !== certExam.id) {
+                                                                toast.error(`You have "${inProgressExam.examName}" in progress. Please complete it first.`);
+                                                                return;
+                                                            }
+                                                            navigate(`/test/${certExam.id}`);
+                                                        }}
                                                         disabled={!canTakeCertTest}
                                                         className="w-full flex items-center justify-center bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700 transition disabled:bg-slate-300 disabled:cursor-not-allowed"
                                                     >

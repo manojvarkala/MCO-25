@@ -1,4 +1,5 @@
 
+
 import * as React from 'react';
 
 const Instructions: React.FC = () => {
@@ -18,6 +19,16 @@ const Instructions: React.FC = () => {
                 <p>
                     From your dashboard, you can access both free practice tests and your purchased certification exams. Please ensure your full name is correct on the dashboard, as this will be used on your certificate.
                 </p>
+
+                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Important: During the Exam</h2>
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-4">
+                    <p className="font-bold text-yellow-800">Please read carefully before starting any exam:</p>
+                    <ul className="list-disc pl-5 text-yellow-700">
+                        <li><strong>Do Not Close or Refresh:</strong> Once you begin an exam, do not close your browser tab or refresh the page. While we save your progress, interruptions can affect the timer.</li>
+                        <li><strong>Single Session Rule:</strong> Only have one exam session open at a time. Do not attempt to log in from another browser or device while your exam is in progress, as this can lead to conflicts and potential loss of your attempt.</li>
+                        <li><strong>Stable Connection:</strong> Ensure you have a stable internet connection before starting.</li>
+                    </ul>
+                </div>
                 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Results and Certificates</h2>
                 <p>
