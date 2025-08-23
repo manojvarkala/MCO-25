@@ -1,4 +1,4 @@
-import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, SpinWheelResult, SearchedUser } from '../types.ts';
+import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, SpinWheelResult, SearchedUser, ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
 import { GoogleGenAI } from "@google/genai";
 
@@ -297,5 +297,10 @@ export const googleSheetsService = {
             method: 'POST',
             body: JSON.stringify({ userId })
         });
+    },
+    
+    // --- NEW EXAM STATS ---
+    getExamStats: async (token: string): Promise<ExamStat[]> => {
+        return apiFetch('/exam-stats', token);
     },
 };

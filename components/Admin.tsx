@@ -1,8 +1,8 @@
 import * as React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
-import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code } from 'lucide-react';
+import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
-import type { Exam, SearchedUser } from '../types.ts';
+import type { Exam, SearchedUser, ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -17,7 +17,6 @@ const prizeOptions = [
 ];
 
 const Admin: React.FC = () => {
-    const wpAdminUrl = 'https://www.coding-online.net/wp-admin/options-general.php?page=mco-exam-settings';
     const { activeOrg, updateActiveOrg } = useAppContext();
     const { token } = useAuth();
 
@@ -34,6 +33,30 @@ const Admin: React.FC = () => {
     const [spinsToAdd, setSpinsToAdd] = React.useState('1');
     const [prizeToGrant, setPrizeToGrant] = React.useState(prizeOptions[0].id);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
+    
+    // State for exam stats
+    const [stats, setStats] = React.useState<ExamStat[] | null>(null);
+    const [isLoadingStats, setIsLoadingStats] = React.useState(true);
+    const [statsError, setStatsError] = React.useState<string | null>(null);
+
+
+    const fetchStats = React.useCallback(async () => {
+        if (!token) return;
+        setIsLoadingStats(true);
+        setStatsError(null);
+        try {
+            const data = await googleSheetsService.getExamStats(token);
+            setStats(data);
+        } catch (error: any) {
+            setStatsError(error.message || 'Failed to load statistics.');
+        } finally {
+            setIsLoadingStats(false);
+        }
+    }, [token]);
+
+    React.useEffect(() => {
+        fetchStats();
+    }, [fetchStats]);
 
 
     const handleEditClick = (exam: Exam) => {
@@ -193,6 +216,61 @@ const Admin: React.FC = () => {
                     <ExternalLink size={20} className="mr-2" />
                     Get Unified Plugin Code
                 </ReactRouterDOM.Link>
+            </div>
+            
+            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold text-slate-800 flex items-center">
+                        <BarChart3 className="mr-3 text-cyan-500" />
+                        Exam Statistics
+                    </h2>
+                    <button onClick={fetchStats} disabled={isLoadingStats} className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 px-4 rounded-lg transition disabled:bg-slate-200 disabled:text-slate-400">
+                        <RefreshCw size={16} className={isLoadingStats ? 'animate-spin' : ''} />
+                        Refresh
+                    </button>
+                </div>
+                <p className="text-slate-600 mb-6">
+                    Overview of sales and attempts for each certification exam. Data is fetched directly from your WordPress backend.
+                </p>
+                
+                {isLoadingStats ? (
+                    <div className="flex justify-center items-center h-48"><Spinner /></div>
+                ) : statsError ? (
+                    <div className="text-center py-10 text-red-500 bg-red-50 p-4 rounded-lg">
+                        <p><strong>Error:</strong> {statsError}</p>
+                    </div>
+                ) : stats && stats.length > 0 ? (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50 border-b border-slate-200">
+                                    <th className="p-3 text-sm font-semibold text-slate-600">Exam Name</th>
+                                    <th className="p-3 text-sm font-semibold text-slate-600 text-center">Total Sales</th>
+                                    <th className="p-3 text-sm font-semibold text-slate-600 text-center">Total Attempts</th>
+                                    <th className="p-3 text-sm font-semibold text-slate-600 text-center">Pass Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {stats.map((stat) => (
+                                    <tr key={stat.examId} className="border-b border-slate-200 hover:bg-slate-50">
+                                        <td className="p-3 font-medium text-slate-800">{stat.examName}</td>
+                                        <td className="p-3 text-center text-slate-600 flex items-center justify-center gap-2">
+                                            <ShoppingCart size={14} className="text-blue-500"/> {stat.totalSales}
+                                        </td>
+                                        <td className="p-3 text-center text-slate-600 flex items-center justify-center gap-2">
+                                            <FileText size={14} className="text-green-500"/> {stat.totalAttempts}
+                                        </td>
+                                        <td className={`p-3 text-center font-semibold ${stat.passRate > 70 ? 'text-green-600' : 'text-amber-600'} flex items-center justify-center gap-2`}>
+                                            <Percent size={14} /> {stat.passRate.toFixed(1)}%
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <p className="text-center text-slate-500 py-10">No statistics available.</p>
+                )}
             </div>
 
              <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">

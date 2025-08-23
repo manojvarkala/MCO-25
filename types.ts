@@ -175,3 +175,12 @@ export interface InProgressExamInfo {
     examId: string;
     examName: string;
 }
+
+// Data for the new Exam Statistics panel
+export interface ExamStat {
+    examId: string;
+    examName: string;
+    totalSales: number;
+    totalAttempts: number;
+    passRate: number; // Percentage
+}
