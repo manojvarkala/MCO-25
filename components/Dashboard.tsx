@@ -433,7 +433,7 @@ const Dashboard: React.FC = () => {
                                                     {(() => {
                                                         const priceData = examPrices?.[certExam.productSku];
                                                         const url = priceData?.productId 
-                                                            ? `https://www.coding-online.net/checkout/?add-to-cart=${priceData.productId}`
+                                                            ? `https://www.coding-online.net/cart/?add-to-cart=${priceData.productId}`
                                                             : browseExamsUrl;
                                                         return (
                                                             <a
@@ -452,7 +452,7 @@ const Dashboard: React.FC = () => {
                                         
                                         {bundlePriceData ? (() => {
                                             const bundleUrl = bundlePriceData.productId
-                                                ? `https://www.coding-online.net/checkout/?add-to-cart=${bundlePriceData.productId}`
+                                                ? `https://www.coding-online.net/cart/?add-to-cart=${bundlePriceData.productId}`
                                                 : browseExamsUrl;
                                             return (
                                                 <div className={`flex flex-col justify-between p-4 rounded-lg border h-full ${bundleSubCardClasses}`}>
