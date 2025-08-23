@@ -14,7 +14,6 @@ import Header from './components/Header.tsx';
 import Footer from './components/Footer.tsx';
 import LandingPage from './components/LandingPage.tsx';
 import Instructions from './components/Instructions.tsx';
-import Integration from './components/Integration.tsx';
 import Admin from './components/Admin.tsx';
 import BookStore from './components/BookStore.tsx';
 import Profile from './components/Profile.tsx';
@@ -31,6 +30,7 @@ import TermsOfService from './components/TermsOfService.tsx';
 import LivePurchaseNotification from './components/LivePurchaseNotification.tsx';
 import PurchaseNotifier from './components/PurchaseNotifier.tsx';
 import SidebarLayout from './components/SidebarLayout.tsx';
+import WooCommerceStyling from './components/WooCommerceStyling.tsx';
 
 
 interface ProtectedRouteProps {
@@ -101,13 +101,13 @@ const AppContent: React.FC = () => {
                         {/* Routes with their own layout or no sidebar */}
                         <ReactRouterDOM.Route path="/" element={<LandingPage />} />
                         <ReactRouterDOM.Route path="/auth" element={<Login />} />
-                        <ReactRouterDOM.Route path="/integration" element={<Integration />} />
                         <ReactRouterDOM.Route path="/checkout/:productSlug" element={<Checkout />} />
                         <ReactRouterDOM.Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
+                        <ReactRouterDOM.Route path="/admin/woocommerce-styling" element={<ProtectedRoute adminOnly={true}><WooCommerceStyling /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/purchase-notifier" element={<ProtectedRoute adminOnly={true}><PurchaseNotifier /></ProtectedRoute>} />
                     
                         <ReactRouterDOM.Route path="*" element={<ReactRouterDOM.Navigate to="/" replace />} />

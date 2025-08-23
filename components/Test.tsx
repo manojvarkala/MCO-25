@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { Question, UserAnswer, Exam } from '../types.ts';
+import type { Question, UserAnswer, Exam, ExamSession } from '../types.ts';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import Spinner from './Spinner.tsx';
@@ -29,6 +29,8 @@ const Test: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [timeLeft, setTimeLeft] = React.useState<number | null>(null);
   const timerIntervalRef = React.useRef<number | null>(null);
+  
+  const sessionKey = React.useMemo(() => (user && examId ? `exam_session_${user.id}_${examId}` : null), [user, examId]);
 
   const answersRef = React.useRef(answers);
   React.useEffect(() => {
@@ -63,6 +65,7 @@ const Test: React.FC = () => {
     setIsSubmitting(true);
     if(timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     localStorage.removeItem(`exam_timer_${examId}_${user.id}`);
+    if (sessionKey) localStorage.removeItem(sessionKey);
 
     try {
         const userAnswers: UserAnswer[] = Array.from(latestAnswers.entries()).map(([questionId, answer]) => ({
@@ -79,10 +82,10 @@ const Test: React.FC = () => {
     } finally {
         setIsSubmitting(false);
     }
-  }, [examId, navigate, token, user]);
+  }, [examId, navigate, token, user, sessionKey]);
 
   React.useEffect(() => {
-    if (isInitializing || !examId || !activeOrg) return;
+    if (isInitializing || !examId || !activeOrg || !user || !token || !sessionKey) return;
 
     const config = activeOrg.exams.find(e => e.id === examId);
     if (!config) {
@@ -91,46 +94,9 @@ const Test: React.FC = () => {
         return;
     }
     setExamConfig(config);
-
-    const loadTest = async () => {
-      if (!user || !token) {
-          navigate('/');
-          return;
-      }
-
-      try {
-        const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
-        
-        if (config.isPractice) {
-            if (!isSubscribed) {
-              const practiceAttempts = userResults.filter(r => r.examId === config.id).length;
-              if (practiceAttempts >= 10) {
-                toast.error("You have used all 10 of your free practice attempts for this exam.", { duration: 4000 });
-                navigate('/dashboard');
-                return;
-              }
-            }
-            useFreeAttempt();
-        } else {
-            const certExamResults = userResults.filter(r => r.examId === config.id);
-            const hasPassed = certExamResults.some(r => r.score >= config.passScore);
-            
-            if (hasPassed) {
-                toast.error("You have already passed this exam.", { duration: 4000 });
-                navigate('/dashboard');
-                return;
-            }
-            if (certExamResults.length >= 3) {
-                toast.error("You have used all 3 attempts for this exam.", { duration: 4000 });
-                navigate('/dashboard');
-                return;
-            }
-        }
-
-        setIsLoading(true);
-        const fetchedQuestions = await googleSheetsService.getQuestions(config, token);
-        setQuestions(fetchedQuestions);
-
+    
+    // --- TIMER SETUP ---
+    const setupTimer = () => {
         const timerKey = `exam_timer_${examId}_${user.id}`;
         let endTime = localStorage.getItem(timerKey);
         if (!endTime) {
@@ -138,9 +104,7 @@ const Test: React.FC = () => {
             endTime = (Date.now() + duration * 60 * 1000).toString();
             localStorage.setItem(timerKey, endTime);
         }
-        
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-
         timerIntervalRef.current = window.setInterval(() => {
             const remaining = Math.max(0, Math.round((parseInt(endTime!) - Date.now()) / 1000));
             setTimeLeft(remaining);
@@ -151,20 +115,86 @@ const Test: React.FC = () => {
                 handleSubmit(true);
             }
         }, 1000);
+    };
 
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to load the test.');
-        navigate('/dashboard');
-      } finally {
-        setIsLoading(false);
-      }
+    // --- SESSION RESTORATION / NEW TEST LOGIC ---
+    const loadTest = async () => {
+        // 1. Check for saved session
+        const savedSession = localStorage.getItem(sessionKey);
+        if (savedSession) {
+            try {
+                const sessionData: ExamSession = JSON.parse(savedSession);
+                setQuestions(sessionData.questions);
+                setAnswers(new Map(sessionData.answers));
+                setCurrentQuestionIndex(sessionData.currentQuestionIndex);
+                setIsLoading(false);
+                setupTimer();
+                toast.success("Welcome back! We've restored your previous exam session.");
+                return; // End here if session is restored
+            } catch (e) {
+                console.error("Failed to parse saved session, starting new exam.", e);
+                localStorage.removeItem(sessionKey); // Clear corrupted data
+            }
+        }
+
+        // 2. If no session, start new exam
+        try {
+            const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
+            if (config.isPractice) {
+                if (!isSubscribed) {
+                    const practiceAttempts = userResults.filter(r => r.examId === config.id).length;
+                    if (practiceAttempts >= 10) {
+                        toast.error("You have used all 10 of your free practice attempts for this exam.", { duration: 4000 });
+                        navigate('/dashboard');
+                        return;
+                    }
+                }
+                useFreeAttempt();
+            } else {
+                const certExamResults = userResults.filter(r => r.examId === config.id);
+                const hasPassed = certExamResults.some(r => r.score >= config.passScore);
+                if (hasPassed) {
+                    toast.error("You have already passed this exam.", { duration: 4000 });
+                    navigate('/dashboard');
+                    return;
+                }
+                if (certExamResults.length >= 3) {
+                    toast.error("You have used all 3 attempts for this exam.", { duration: 4000 });
+                    navigate('/dashboard');
+                    return;
+                }
+            }
+
+            const fetchedQuestions = await googleSheetsService.getQuestions(config, token);
+            setQuestions(fetchedQuestions);
+            setupTimer();
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to load the test.');
+            navigate('/dashboard');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     loadTest();
+
     return () => {
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
-  }, [examId, activeOrg, navigate, useFreeAttempt, isInitializing, user, isSubscribed, token, handleSubmit]);
+  }, [examId, activeOrg, navigate, useFreeAttempt, isInitializing, user, isSubscribed, token, handleSubmit, sessionKey]);
+
+  // --- SAVE PROGRESS TO LOCAL STORAGE ---
+  React.useEffect(() => {
+    if (sessionKey && questions.length > 0 && !isLoading) {
+      const sessionData: ExamSession = {
+        questions,
+        answers: Array.from(answers.entries()),
+        currentQuestionIndex,
+      };
+      localStorage.setItem(sessionKey, JSON.stringify(sessionData));
+    }
+  }, [questions, answers, currentQuestionIndex, sessionKey, isLoading]);
+
 
   const handleAnswerSelect = (questionId: number, optionIndex: number) => {
     setAnswers(prev => new Map(prev).set(questionId, optionIndex));
@@ -283,7 +313,7 @@ const Test: React.FC = () => {
             {currentQuestionIndex === questions.length - 1 ? (
             <button
                 onClick={() => handleSubmit(false)}
-                disabled={isSubmitting || !answers.has(currentQuestion.id)}
+                disabled={isSubmitting}
                 className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition disabled:bg-green-300 disabled:cursor-not-allowed"
             >
                 {isSubmitting ? <Spinner /> : <><Send size={16}/> <span>Submit</span></>}

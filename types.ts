@@ -37,6 +37,13 @@ export interface TestResult {
   review: AnswerReview[];
 }
 
+// Interface for saving exam progress
+export interface ExamSession {
+    questions: Question[];
+    answers: [number, number][]; // Map converted to array for JSON compatibility
+    currentQuestionIndex: number;
+}
+
 
 // The structure of the JWT payload coming from the main site
 export interface TokenPayload {

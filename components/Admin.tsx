@@ -1,10 +1,11 @@
 import * as React from 'react';
-import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck } from 'lucide-react';
+import * as ReactRouterDOM from 'react-router-dom';
+import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, SearchedUser } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
-import { googleSheetsService } from '../services/googleSheetsService.ts';
+import { googleSheetsService } from '../services/googleSheetsService.tsx';
 import Spinner from './Spinner.tsx';
 
 const prizeOptions = [
@@ -375,6 +376,23 @@ const Admin: React.FC = () => {
                         </div>
                     </div>
                 )}
+            </div>
+            
+            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
+                    <Paintbrush className="mr-3 text-cyan-500" />
+                    Frontend Customization
+                </h2>
+                <p className="text-slate-600 mb-6">
+                    Here you can find code snippets to visually integrate your WordPress pages with the exam application theme.
+                </p>
+                <ReactRouterDOM.Link
+                    to="/admin/woocommerce-styling"
+                    className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
+                >
+                    <ShoppingCart size={20} className="mr-2" />
+                    Get Cart & Checkout Styles
+                </ReactRouterDOM.Link>
             </div>
 
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
