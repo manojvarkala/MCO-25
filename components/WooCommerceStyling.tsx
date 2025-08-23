@@ -8,7 +8,7 @@ export default function WooCommerceStyling() {
  * Plugin Name:       MCO Custom Cart & Checkout Styling
  * Description:       Applies custom, modern styling to WooCommerce cart and checkout pages to match the exam app theme.
  * Version:           2.1.0
- * Author:            Annapoorna Infotech (Refactored)
+ * Author:            Annapoorna Infotech
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -17,8 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 // After activating or updating this plugin, please clear any caching plugins you have active on your site (e.g., WP Rocket).
 // --- IMPORTANT ---
 
-if (!function_exists('mco_add_custom_wc_styles_to_head')) {
-    add_action('wp_head', 'mco_add_custom_wc_styles_to_head');
+if ( ! function_exists( 'mco_add_custom_wc_styles_to_head' ) ) {
     function mco_add_custom_wc_styles_to_head() {
         if ( function_exists('is_woocommerce') && (is_cart() || is_checkout()) ) {
             $custom_css = "
@@ -110,13 +109,15 @@ if (!function_exists('mco_add_custom_wc_styles_to_head')) {
             echo '<style type="text/css">' . $custom_css . '</style>';
         }
     }
+    add_action('wp_head', 'mco_add_custom_wc_styles_to_head');
 }
 
-if (!function_exists('mco_custom_order_button_text')) {
-    add_filter( 'woocommerce_order_button_text', 'mco_custom_order_button_text' );
+
+if ( ! function_exists( 'mco_custom_order_button_text' ) ) {
     function mco_custom_order_button_text() {
         return 'Complete Enrollment & Pay Securely';
     }
+    add_filter( 'woocommerce_order_button_text', 'mco_custom_order_button_text' );
 }
 
 ?>`;
@@ -153,13 +154,6 @@ if (!function_exists('mco_custom_order_button_text')) {
                     </button>
                     <pre><code className="language-php">{phpCode.trim()}</code></pre>
                 </div>
-            </div>
-
-             <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
-                <h2 className="text-xl font-bold mb-2 text-yellow-800">Important Note</h2>
-                <p className="text-yellow-700">
-                    This version of the styling plugin includes checks to prevent conflicts with other plugins. You should now be able to run both this and the main integration plugin without any "cannot redeclare function" errors.
-                </p>
             </div>
         </div>
     );
