@@ -31,6 +31,13 @@
 </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module">
+      // This dynamically adds the script tag with a cache-busting timestamp.
+      // This ensures that you always get the latest version of the application code.
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.src = `/index.tsx?v=${new Date().getTime()}`;
+      document.body.appendChild(script);
+    </script>
   </body>
 </html>

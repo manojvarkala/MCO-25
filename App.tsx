@@ -30,7 +30,7 @@ import TermsOfService from './components/TermsOfService.tsx';
 import LivePurchaseNotification from './components/LivePurchaseNotification.tsx';
 import PurchaseNotifier from './components/PurchaseNotifier.tsx';
 import SidebarLayout from './components/SidebarLayout.tsx';
-import WooCommerceStyling from './components/WooCommerceStyling.tsx';
+import Integration from './components/Integration.tsx';
 
 
 interface ProtectedRouteProps {
@@ -107,7 +107,7 @@ const AppContent: React.FC = () => {
                         <ReactRouterDOM.Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/admin/woocommerce-styling" element={<ProtectedRoute adminOnly={true}><WooCommerceStyling /></ProtectedRoute>} />
+                        <ReactRouterDOM.Route path="/integration" element={<ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/purchase-notifier" element={<ProtectedRoute adminOnly={true}><PurchaseNotifier /></ProtectedRoute>} />
                     
                         <ReactRouterDOM.Route path="*" element={<ReactRouterDOM.Navigate to="/" replace />} />
