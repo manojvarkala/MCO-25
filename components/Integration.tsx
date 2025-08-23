@@ -7,7 +7,7 @@ export default function Integration() {
 /**
  * Plugin Name:       MCO Exam App Integration
  * Description:       A plugin to integrate the React examination app with WordPress, handling SSO, purchases, and results sync.
- * Version:           10.5.0
+ * Version:           10.5.1
  * Author:            Annapoorna Infotech (Refactored)
  */
 
@@ -170,7 +170,44 @@ function mco_generate_exam_jwt($user_id) {
     return "$header_b64.$payload_b64.$signature_b64";
 }
 
-function mco_redirect_after_purchase($order_id) { if (!$order_id || !($order = wc_get_order($order_id)) || !($user_id = $order->get_customer_id())) return; if ($user_id > 0 && $order->has_status(['completed', 'processing', 'on-hold'])) { if (function_exists('WC') && WC()->cart) WC()->cart->empty_cart(); if ($token = mco_generate_exam_jwt($user_id)) { wp_redirect(mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=/dashboard'); exit; } } }
+function mco_redirect_after_purchase($order_id) {
+    if (!$order_id || !($order = wc_get_order($order_id)) || !($user_id = $order->get_customer_id())) {
+        return;
+    }
+
+    if ($user_id > 0 && $order->has_status(['completed', 'processing', 'on-hold'])) {
+        // Define SKUs that should trigger a redirect to the exam app
+        $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert', 'exam-mcf-cert'];
+        $base_subscription_skus = ['sub-monthly', 'sub-yearly', 'sub-1mo-addon'];
+        $specific_bundle_skus = ['exam-cpc-cert-1', 'exam-cca-cert-bundle'];
+        $addon_skus = array_map(function($sku) { return $sku . '-1mo-addon'; }, $all_exam_skus);
+        $subscription_skus = array_unique(array_merge($base_subscription_skus, $addon_skus));
+        $skus_that_trigger_redirect = array_unique(array_merge($all_exam_skus, $subscription_skus, $specific_bundle_skus));
+
+        $should_redirect = false;
+        foreach ($order->get_items() as $item) {
+            $product = $item->get_product();
+            if ($product && in_array($product->get_sku(), $skus_that_trigger_redirect)) {
+                $should_redirect = true;
+                break;
+            }
+        }
+
+        if (!$should_redirect) {
+            return; // Don't redirect if no exam product was purchased
+        }
+
+        if (function_exists('WC') && WC()->cart) {
+            WC()->cart->empty_cart();
+        }
+
+        if ($token = mco_generate_exam_jwt($user_id)) {
+            wp_redirect(mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=/dashboard');
+            exit;
+        }
+    }
+}
+
 
 // --- REST API ENDPOINTS ---
 function mco_exam_register_rest_api() {
