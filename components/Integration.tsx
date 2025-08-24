@@ -578,6 +578,68 @@ function mco_exam_login_shortcode() {
     </div> <?php return ob_get_clean();
 }
 
+function mco_exam_showcase_shortcode($atts) {
+    if (!class_exists('WooCommerce')) {
+        return '<p>WooCommerce is required for this feature.</p>';
+    }
+
+    $atts = shortcode_atts([
+        'skus' => '',
+    ], $atts, 'mco_exam_showcase');
+
+    $all_exam_skus = ['exam-cpc-cert', 'exam-cca-cert', 'exam-ccs-cert', 'exam-billing-cert', 'exam-risk-cert', 'exam-icd-cert', 'exam-cpb-cert', 'exam-crc-cert', 'exam-cpma-cert', 'exam-coc-cert', 'exam-cic-cert', 'exam-mta-cert', 'exam-ap-cert', 'exam-em-cert', 'exam-rcm-cert', 'exam-hi-cert', 'exam-mcf-cert'];
+    
+    $skus_to_display = [];
+    if (!empty($atts['skus'])) {
+        $skus_to_display = array_map('trim', explode(',', $atts['skus']));
+    } else {
+        $skus_to_display = $all_exam_skus;
+    }
+
+    ob_start();
+    ?>
+    <style>
+        .mco-showcase-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; font-family: sans-serif; }
+        .mco-exam-card { border: 1px solid #e2e8f0; border-radius: 0.75rem; background-color: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05); display: flex; flex-direction: column; transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
+        .mco-exam-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); }
+        .mco-exam-card-content { padding: 1.5rem; flex-grow: 1; display: flex; flex-direction: column; }
+        .mco-exam-card-title { font-size: 1.25rem; font-weight: 700; color: #1e293b; margin: 0 0 0.5rem; }
+        .mco-exam-card-desc { font-size: 0.9rem; color: #64748b; margin: 0 0 1rem; flex-grow: 1; line-height: 1.5; }
+        .mco-exam-card-footer { margin-top: auto; border-top: 1px solid #f1f5f9; padding-top: 1rem; }
+        .mco-exam-card-price { font-size: 1.5rem; font-weight: 800; color: #0891b2; }
+        .mco-exam-card-price del { font-size: 1rem; color: #94a3b8; margin-right: 0.5rem; }
+        .mco-exam-card-price ins { text-decoration: none; }
+        .mco-exam-card-button { display: block; width: 100%; text-align: center; background-color: #f59e0b; color: #fff; font-weight: 600; padding: 0.75rem; border-radius: 0.5rem; text-decoration: none; margin-top: 1rem; transition: background-color 0.2s; }
+        .mco-exam-card-button:hover { background-color: #d97706; }
+    </style>
+    <div class="mco-showcase-grid">
+    <?php
+    foreach ($skus_to_display as $sku) {
+        $product_id = wc_get_product_id_by_sku($sku);
+        if (!$product_id) continue;
+        $product = wc_get_product($product_id);
+        if (!$product) continue;
+        ?>
+        <div class="mco-exam-card">
+            <div class="mco-exam-card-content">
+                <h3 class="mco-exam-card-title"><?php echo esc_html($product->get_name()); ?></h3>
+                <p class="mco-exam-card-desc"><?php echo wp_kses_post($product->get_short_description()); ?></p>
+                <div class="mco-exam-card-footer">
+                    <div class="mco-exam-card-price">
+                        <?php echo $product->get_price_html(); ?>
+                    </div>
+                    <a href="<?php echo esc_url($product->get_permalink()); ?>" class="mco-exam-card-button">View Details</a>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+    ?>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
 function mco_exam_add_custom_registration_fields() { ?><p><label for="first_name">First Name<br/><input type="text" name="first_name" id="first_name" required/></label></p><p><label for="last_name">Last Name<br/><input type="text" name="last_name" id="last_name" required/></label></p><?php }
 function mco_exam_validate_reg_fields($errors, $login, $email) { if (empty($_POST['first_name']) || empty($_POST['last_name'])) $errors->add('field_error', 'First and Last Name are required.'); return $errors; }
 function mco_exam_save_reg_fields($user_id) { if (!empty($_POST['first_name'])) update_user_meta($user_id, 'first_name', sanitize_text_field($_POST['first_name'])); if (!empty($_POST['last_name'])) update_user_meta($user_id, 'last_name', sanitize_text_field($_POST['last_name'])); }
