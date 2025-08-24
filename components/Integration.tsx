@@ -232,6 +232,7 @@ function mco_exam_register_rest_api() {
     register_rest_route('mco-app/v1', '/search-user', ['methods' => 'POST', 'callback' => 'mco_search_user_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/reset-spins', ['methods' => 'POST', 'callback' => 'mco_reset_spins_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/remove-prize', ['methods' => 'POST', 'callback' => 'mco_remove_prize_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+    register_rest_route('mco-app/v1', '/exam-stats', ['methods' => 'GET', 'callback' => 'mco_get_exam_stats_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
 }
 
 function mco_exam_api_permission_check($request) {
@@ -466,6 +467,77 @@ function mco_remove_prize_callback($request) {
     delete_user_meta($target_user_id, 'mco_wheel_prize');
     delete_user_meta($target_user_id, 'mco_subscription_expiry');
     return new WP_REST_Response(['success' => true], 200);
+}
+function mco_get_exam_stats_callback($request) {
+    if (!user_can((int)$request->get_param('jwt_user_id'), 'administrator')) {
+        return new WP_Error('forbidden', 'Admin permission required.', ['status' => 403]);
+    }
+    if (!class_exists('WooCommerce')) {
+        return new WP_Error('woocommerce_inactive', 'WooCommerce must be active to fetch stats.', ['status' => 500]);
+    }
+
+    $exam_configs = [
+        'exam-cpc-cert' => ['name' => 'CPC Certification Exam', 'passScore' => 70],
+        'exam-cca-cert' => ['name' => 'CCA Certification Exam', 'passScore' => 70],
+        'exam-billing-cert' => ['name' => 'Medical Billing Certification', 'passScore' => 70],
+        'exam-ccs-cert' => ['name' => 'CCS Certification Exam', 'passScore' => 70],
+        'exam-risk-cert' => ['name' => 'Risk Adjustment Certification', 'passScore' => 70],
+        'exam-icd-cert' => ['name' => 'ICD-10-CM Proficiency Exam', 'passScore' => 70],
+        'exam-cpb-cert' => ['name' => 'CPB Certification Exam', 'passScore' => 70],
+        'exam-crc-cert' => ['name' => 'CRC Certification Exam', 'passScore' => 70],
+        'exam-cpma-cert' => ['name' => 'CPMA Certification Exam', 'passScore' => 70],
+        'exam-coc-cert' => ['name' => 'COC Certification Exam', 'passScore' => 70],
+        'exam-cic-cert' => ['name' => 'CIC Certification Exam', 'passScore' => 70],
+        'exam-mta-cert' => ['name' => 'Medical Terminology & Anatomy Proficiency', 'passScore' => 70],
+        'exam-ap-cert' => ['name' => 'Anatomy & Physiology Proficiency', 'passScore' => 70],
+        'exam-em-cert' => ['name' => 'Evaluation & Management Proficiency', 'passScore' => 70],
+        'exam-rcm-cert' => ['name' => 'Revenue Cycle Management Proficiency', 'passScore' => 70],
+        'exam-hi-cert' => ['name' => 'Health Informatics Proficiency', 'passScore' => 70],
+        'exam-mcf-cert' => ['name' => 'Medical Coding Fundamentals Proficiency', 'passScore' => 70],
+    ];
+
+    global $wpdb;
+    $meta_key = 'mco_exam_results';
+    $db_results = $wpdb->get_col($wpdb->prepare("SELECT meta_value FROM $wpdb->usermeta WHERE meta_key = %s", $meta_key));
+
+    $all_attempts = [];
+    foreach ($db_results as $meta_value) {
+        $user_results = maybe_unserialize($meta_value);
+        if (is_array($user_results)) {
+            $all_attempts = array_merge($all_attempts, array_values($user_results));
+        }
+    }
+    
+    $stats = [];
+    foreach ($exam_configs as $exam_id => $config) {
+        $product_id = wc_get_product_id_by_sku($exam_id);
+        $total_sales = $product_id ? (int)get_post_meta($product_id, 'total_sales', true) : 0;
+        
+        $exam_attempts = array_filter($all_attempts, function($attempt) use ($exam_id) {
+            return isset($attempt['examId']) && $attempt['examId'] === $exam_id;
+        });
+
+        $total_attempts = count($exam_attempts);
+        $passed_attempts_count = 0;
+        if ($total_attempts > 0) {
+             $passed_attempts_count = count(array_filter($exam_attempts, function($attempt) use ($config) {
+                return isset($attempt['score']) && $attempt['score'] >= $config['passScore'];
+            }));
+        }
+        $pass_rate = $total_attempts > 0 ? ($passed_attempts_count / $total_attempts) * 100 : 0;
+        
+        if ($total_sales > 0 || $total_attempts > 0) {
+            $stats[] = [
+                'examId' => $exam_id,
+                'examName' => $config['name'],
+                'totalSales' => $total_sales,
+                'totalAttempts' => $total_attempts,
+                'passRate' => round($pass_rate, 2),
+            ];
+        }
+    }
+    
+    return new WP_REST_Response($stats, 200);
 }
 
 
