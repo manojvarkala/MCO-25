@@ -1,4 +1,5 @@
 
+
 import * as React from 'react';
 import { Link } from 'react-router-dom';
 import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent } from 'lucide-react';
@@ -252,20 +253,26 @@ const Admin: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {stats.map((stat) => (
-                                    <tr key={stat.examId} className="border-b border-slate-200 hover:bg-slate-50">
-                                        <td className="p-3 font-medium text-slate-800">{stat.examName}</td>
-                                        <td className="p-3 text-center text-slate-600 flex items-center justify-center gap-2">
-                                            <ShoppingCart size={14} className="text-blue-500"/> {stat.totalSales}
-                                        </td>
-                                        <td className="p-3 text-center text-slate-600 flex items-center justify-center gap-2">
-                                            <FileText size={14} className="text-green-500"/> {stat.totalAttempts}
-                                        </td>
-                                        <td className={`p-3 text-center font-semibold ${stat.passRate > 70 ? 'text-green-600' : 'text-amber-600'} flex items-center justify-center gap-2`}>
-                                            <Percent size={14} /> {stat.passRate.toFixed(1)}%
-                                        </td>
-                                    </tr>
-                                ))}
+                                {stats.map((stat) => {
+                                    const examConfig = activeOrg?.exams.find(exam => exam.id === stat.examId);
+                                    const passScore = examConfig ? examConfig.passScore : 70; // Default to 70 if exam config not found
+                                    const passRateColor = stat.passRate >= passScore ? 'text-green-600' : 'text-amber-600';
+
+                                    return (
+                                        <tr key={stat.examId} className="border-b border-slate-200 hover:bg-slate-50">
+                                            <td className="p-3 font-medium text-slate-800">{stat.examName}</td>
+                                            <td className="p-3 text-center text-slate-600 flex items-center justify-center gap-2">
+                                                <ShoppingCart size={14} className="text-blue-500"/> {stat.totalSales}
+                                            </td>
+                                            <td className="p-3 text-center text-slate-600 flex items-center justify-center gap-2">
+                                                <FileText size={14} className="text-green-500"/> {stat.totalAttempts}
+                                            </td>
+                                            <td className={`p-3 text-center font-semibold ${passRateColor} flex items-center justify-center gap-2`}>
+                                                <Percent size={14} /> {stat.passRate.toFixed(1)}%
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

@@ -232,7 +232,7 @@ function mco_exam_register_rest_api() {
     register_rest_route('mco-app/v1', '/search-user', ['methods' => 'POST', 'callback' => 'mco_search_user_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/reset-spins', ['methods' => 'POST', 'callback' => 'mco_reset_spins_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/remove-prize', ['methods' => 'POST', 'callback' => 'mco_remove_prize_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
-    register_rest_route('mco-app/v1', '/exam-stats', ['methods' => 'GET', 'callback' => 'mco_get_exam_stats_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+    register_rest_route('mco-app/v1', '/exam-stats', ['methods' => 'POST', 'callback' => 'mco_get_exam_stats_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
 }
 
 function mco_exam_api_permission_check($request) {
@@ -686,52 +686,4 @@ function mco_add_custom_wc_styles_to_head() {
 function mco_custom_order_button_text() {
     return 'Complete Enrollment & Pay Securely';
 }
-?>`;
-
-    const copyToClipboard = () => {
-        navigator.clipboard.writeText(phpCode)
-            .then(() => {
-                toast.success('PHP code copied to clipboard!');
-            })
-            .catch(err => {
-                console.error('Failed to copy text: ', err);
-                toast.error('Could not copy code.');
-            });
-    };
-
-    return (
-        <div className="max-w-4xl mx-auto space-y-8">
-            <h1 className="text-3xl font-extrabold text-slate-800">WordPress Integration Guide</h1>
-            
-            <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-xl font-bold mb-2">1. The Unified Integration Plugin</h2>
-                <p className="mb-4">This is the complete plugin required for the exam application. It handles user login (SSO), data synchronization, and modern styling for your WooCommerce pages. Copy the entire PHP code block below and save it as a new plugin file (e.g., <code>mco-unified-integration.php</code>) in your WordPress <code>/wp-content/plugins/</code> directory. Then, activate it from the WordPress admin panel.</p>
-                
-                <div className="bg-slate-800 text-white p-4 rounded-lg relative font-mono text-sm max-h-[50vh] overflow-auto">
-                    <button 
-                        onClick={copyToClipboard} 
-                        className="absolute top-2 right-2 p-2 bg-slate-600 rounded-md hover:bg-slate-500 transition sticky z-10"
-                        title="Copy to clipboard"
-                        >
-                        <Copy size={16} />
-                    </button>
-                    <pre><code className="language-php">{phpCode}</code></pre>
-                </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-xl font-bold mb-2">2. Set JWT Secret Key</h2>
-                <p>For security, you <strong>must</strong> define a unique and strong secret key for JWT (JSON Web Token) generation. Open your <code>wp-config.php</code> file and add the following line:</p>
-                <pre className="bg-slate-100 p-2 rounded mt-2"><code>define('MCO_JWT_SECRET', 'your-very-strong-secret-key-that-is-long-and-random');</code></pre>
-                <p className="mt-2 text-sm text-red-600"><strong>Important:</strong> Replace <code>'your-very-strong-secret-key...'</code> with a long, random string. You can use an online generator to create a secure key.</p>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-xl font-bold mb-2">3. Create the Login Page</h2>
-                <p>Create a new page in WordPress with the slug <code>exam-login</code>. Inside the content editor, add the shortcode:</p>
-                <pre className="bg-slate-100 p-2 rounded mt-2"><code>[mco_exam_login]</code></pre>
-                <p className="mt-2">This will render the login form that handles single sign-on (SSO) to the exam application.</p>
-            </div>
-        </div>
-    );
-}
+?>
