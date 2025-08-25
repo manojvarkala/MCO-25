@@ -35,9 +35,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            const appData = await response.json();
+            const configData = await response.json();
             
-            const baseOrgs = JSON.parse(JSON.stringify(appData));
+            // FIX: Access the 'organizations' array from the fetched JSON object
+            const baseOrgs = JSON.parse(JSON.stringify(configData.organizations || []));
             
             const bookMap = new Map<string, RecommendedBook>();
             baseOrgs.forEach((org: Organization) => {
@@ -58,7 +59,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     );
 
                     if (!category || !category.questionSourceUrl) {
-                        console.error(`Configuration error: No question source URL found for exam "${exam.name}" (ID: ${exam.id}). Please check appData.ts.`);
+                        console.error(`Configuration error: No question source URL found for exam "${exam.name}" (ID: ${exam.id}). Please check your config file.`);
                         return {
                             ...exam,
                             questionSourceUrl: '', // Set to empty to prevent runtime errors on property access
