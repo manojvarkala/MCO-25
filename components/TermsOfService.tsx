@@ -35,17 +35,29 @@ const TermsOfService: React.FC = () => {
                     <li>To engage in any other conduct that restricts or inhibits anyone's use or enjoyment of the Service, or which, as determined by us, may harm the Company or users of the Service or expose them to liability.</li>
                 </ul>
 
-                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">5. Termination</h2>
+                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">5. Proctoring and Exam Integrity</h2>
+                <p>
+                    By starting any certification or practice exam on the Service, you consent to be monitored to ensure the integrity of the examination process. This monitoring includes:
+                </p>
+                <ul>
+                    <li><strong>AI Proctoring:</strong> You agree to grant the Service temporary access to your device's camera for the duration of the exam. An AI-powered system will monitor the video feed for potential violations, such as leaving the view, presence of other individuals, or use of unauthorized materials.</li>
+                    <li><strong>Browser Monitoring:</strong> The Service will enforce a secure testing environment. This includes requiring fullscreen mode and detecting if you navigate away from the exam tab.</li>
+                </ul>
+                <p>
+                    Violating these conditions, as determined by either the AI proctoring system or the browser monitoring functions, may result in the immediate termination of your exam. In such cases, the exam attempt will be considered forfeited, and no refund will be issued.
+                </p>
+
+                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">6. Termination</h2>
                 <p>
                     We may terminate or suspend your account immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms. Upon termination, your right to use the Service will immediately cease.
                 </p>
                 
-                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">6. Limitation Of Liability</h2>
+                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">7. Limitation Of Liability</h2>
                 <p>
                     In no event shall Annapoorna Infotech, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.
                 </p>
 
-                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">7. Changes to Terms</h2>
+                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">8. Changes to Terms</h2>
                 <p>
                     We reserve the right, at our sole discretion, to modify or replace these Terms at any time. We will try to provide at least 30 days' notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.
                 </p>

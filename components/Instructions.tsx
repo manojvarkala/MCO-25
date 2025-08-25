@@ -21,11 +21,27 @@ const Instructions: React.FC = () => {
                 </p>
 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Important: During the Exam</h2>
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-4">
-                    <p className="font-bold text-yellow-800">Please read carefully before starting any exam:</p>
-                    <ul className="list-disc pl-5 text-yellow-700">
-                        <li><strong>Do Not Close or Refresh:</strong> Once you begin an exam, do not close your browser tab or refresh the page. While we save your progress, interruptions can affect the timer.</li>
-                        <li><strong>Single Session Rule:</strong> Only have one exam session open at a time. Do not attempt to log in from another browser or device while your exam is in progress, as this can lead to conflicts and potential loss of your attempt.</li>
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 my-4">
+                    <p className="font-bold text-red-800">Please read carefully before starting any exam:</p>
+                    <ul className="list-disc pl-5 text-red-700 space-y-2">
+                        <li>
+                            <strong>AI Proctoring via Camera:</strong> Your exam session will be monitored using your device's camera. The AI proctoring system will be active throughout the exam. You must:
+                            <ul className="list-['-_'] pl-5 mt-1">
+                                <li>Remain visible in the camera frame at all times.</li>
+                                <li>Be in a well-lit, private room without other people present.</li>
+                                <li>Avoid looking away from the screen for extended periods.</li>
+                                <li>Not use any unauthorized materials like phones, notes, or other devices.</li>
+                            </ul>
+                            A critical violation detected by the AI proctor will result in immediate exam termination.
+                        </li>
+                        <li>
+                            <strong>Browser Security (by Exam App):</strong> The exam environment itself is secured. You must:
+                             <ul className="list-['-_'] pl-5 mt-1">
+                                <li>Take the exam in <strong>fullscreen mode</strong>. Exiting fullscreen is a violation.</li>
+                                <li><strong>Stay on the exam tab.</strong> Navigating away, minimizing the window, or switching to another application will be flagged. Multiple violations will terminate your exam.</li>
+                            </ul>
+                        </li>
+                        <li><strong>Single Session Rule:</strong> Only have one exam session open at a time. Do not attempt to log in from another browser or device while your exam is in progress.</li>
                         <li><strong>Stable Connection:</strong> Ensure you have a stable internet connection before starting.</li>
                     </ul>
                 </div>

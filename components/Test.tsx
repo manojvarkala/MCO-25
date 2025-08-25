@@ -1,4 +1,5 @@
 
+
 import * as React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -8,13 +9,16 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { ChevronLeft, ChevronRight, Send, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Send, Clock, AlertTriangle } from 'lucide-react';
 
 const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
+
+const MAX_FOCUS_VIOLATIONS = 3;
+const FOCUS_VIOLATION_TOAST_ID = 'focus-violation-toast';
 
 const Test: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
@@ -30,14 +34,23 @@ const Test: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [timeLeft, setTimeLeft] = React.useState<number | null>(null);
   const [examStarted, setExamStarted] = React.useState(false);
-  
+  const [focusViolationCount, setFocusViolationCount] = React.useState(0);
+
   const timerIntervalRef = React.useRef<number | null>(null);
-  const progressKey = React.useMemo(() => `exam_progress_${examId}_${user?.id}`, [examId, user?.id]);
   const proctoringIframeRef = React.useRef<HTMLIFrameElement>(null);
+  const hasSubmittedRef = React.useRef(false);
+  const progressKey = React.useMemo(() => `exam_progress_${examId}_${user?.id}`, [examId, user?.id]);
+
 
   const handleSubmit = React.useCallback(async (isAutoSubmit = false) => {
+    if (hasSubmittedRef.current) return;
+    hasSubmittedRef.current = true;
+
     if (proctoringIframeRef.current?.contentWindow) {
         proctoringIframeRef.current.contentWindow.postMessage('stop-proctoring', '*');
+    }
+    if (document.fullscreenElement) {
+        document.exitFullscreen().catch(err => console.error("Could not exit fullscreen:", err));
     }
     
     if (isSubmitting) return;
@@ -58,6 +71,7 @@ const Test: React.FC = () => {
         const unansweredCount = questions.length - answers.size;
         if (unansweredCount > 0 && !window.confirm(`You have ${unansweredCount} unanswered questions. Are you sure you want to submit?`)) {
             setIsSubmitting(false);
+            hasSubmittedRef.current = false; // Reset submit lock
             return;
         }
     }
@@ -70,9 +84,10 @@ const Test: React.FC = () => {
     } catch (error) {
         toast.error("Failed to submit the test. Please try again.");
         setIsSubmitting(false);
+        hasSubmittedRef.current = false; // Reset submit lock
     }
   }, [examId, navigate, token, user, isSubmitting, questions, answers, progressKey]);
-
+  
   // Effect 1: Load questions and saved progress.
   React.useEffect(() => {
     if (isInitializing || !examId || !activeOrg || !user || !token) {
@@ -103,19 +118,20 @@ const Test: React.FC = () => {
             }
             
             const savedProgressJSON = localStorage.getItem(progressKey);
-            if (savedProgressJSON) {
+            if (savedProgressJSON && document.fullscreenElement) { // Only resume if already in fullscreen
                 const savedProgress: ExamProgress = JSON.parse(savedProgressJSON);
                 setQuestions(savedProgress.questions);
                 setAnswers(new Map(savedProgress.answers.map(a => [a.questionId, a.answer])));
                 setCurrentQuestionIndex(savedProgress.currentQuestionIndex);
-                setExamStarted(true); // Bypass warning on resume
+                setExamStarted(true);
                 toast.success("Resumed your previous session.");
             } else {
+                localStorage.removeItem(progressKey); // Clear any stale progress
                 const fetchedQuestions = await googleSheetsService.getQuestions(config, token);
                 setQuestions(fetchedQuestions);
                 setAnswers(new Map());
                 setCurrentQuestionIndex(0);
-                setExamStarted(false); // Show warning screen for new session
+                setExamStarted(false); 
             }
         } catch (error: any) {
             toast.error(error.message || 'Failed to load test.', { duration: 4000 });
@@ -156,7 +172,7 @@ const Test: React.FC = () => {
 
   // Effect 3: Save progress to localStorage
   React.useEffect(() => {
-      if (!isLoading && questions.length > 0 && user?.id) {
+      if (!isLoading && examStarted && questions.length > 0 && user?.id) {
           const progress: ExamProgress = {
               questions,
               answers: Array.from(answers.entries()).map(([questionId, answer]) => ({ questionId, answer })),
@@ -164,19 +180,83 @@ const Test: React.FC = () => {
           };
           localStorage.setItem(progressKey, JSON.stringify(progress));
       }
-  }, [answers, currentQuestionIndex, questions, isLoading, user?.id, progressKey]);
+  }, [answers, currentQuestionIndex, questions, isLoading, examStarted, user?.id, progressKey]);
 
-  // Effect 4: Start Proctoring
+  // Effect 4: Listeners for proctoring, focus, and fullscreen violations
+  React.useEffect(() => {
+    if (!examStarted) return;
+
+    const handleProctoringMessage = (event: MessageEvent) => {
+        if (event.data === 'proctoring-violation-critical' && !hasSubmittedRef.current) {
+            toast.error('Critical proctoring violation detected. The exam will be terminated.', { duration: 5000 });
+            handleSubmit(true);
+        }
+    };
+
+    const handleFocusViolation = (reason: string) => {
+        if (hasSubmittedRef.current) return;
+        const newCount = focusViolationCount + 1;
+        setFocusViolationCount(newCount);
+
+        if (newCount >= MAX_FOCUS_VIOLATIONS) {
+            toast.error(`Violation ${newCount}/${MAX_FOCUS_VIOLATIONS}: Exam terminated for ${reason}.`, { id: FOCUS_VIOLATION_TOAST_ID, duration: 6000 });
+            handleSubmit(true);
+        } else {
+            toast.error(`Warning ${newCount}/${MAX_FOCUS_VIOLATIONS}: ${reason} is a violation. Return to the exam immediately.`, { id: FOCUS_VIOLATION_TOAST_ID, duration: 10000 });
+             if (reason.includes("exiting fullscreen")) {
+                document.documentElement.requestFullscreen().catch(err => console.error(err));
+            }
+        }
+    };
+
+    const handleVisibilityChange = () => {
+        if (document.hidden) handleFocusViolation("switching tabs");
+    };
+    const handleFullscreenChange = () => {
+        if (!document.fullscreenElement) handleFocusViolation("exiting fullscreen");
+    };
+
+    window.addEventListener('message', handleProctoringMessage);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+        window.removeEventListener('message', handleProctoringMessage);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, [examStarted, handleSubmit, focusViolationCount]);
+
+   const handleStartExam = () => {
+        const element = document.documentElement;
+        if (element.requestFullscreen) {
+            element.requestFullscreen().catch(err => {
+                toast.error(`Fullscreen is required. Please allow it to start. Error: ${err.message}`, { duration: 6000 });
+            });
+            setExamStarted(true); // Start exam immediately on request
+        } else {
+            setExamStarted(true); // Fallback for browsers that don't support it
+        }
+    };
+
+  // Effect 5: Start Proctoring when exam begins
   React.useEffect(() => {
     if (examStarted && proctoringIframeRef.current?.contentWindow) {
-      // Use a timeout to ensure the iframe has loaded and is ready for the message
       const timer = setTimeout(() => {
-        toast.success('AI proctoring session started.');
         proctoringIframeRef.current?.contentWindow?.postMessage('start-proctoring', '*');
-      }, 1500); // Wait for iframe to load
+        toast.success('AI proctoring session started.');
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [examStarted]);
+  
+  // Effect 6: Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        if (document.fullscreenElement) document.exitFullscreen().catch(err => console.error(err));
+    };
+  }, []);
 
   const handleAnswerSelect = (questionId: number, optionIndex: number) => {
     setAnswers(prev => new Map(prev).set(questionId, optionIndex));
@@ -204,7 +284,7 @@ const Test: React.FC = () => {
   if (isInitializing || isLoading || !examConfig) {
     return <div className="flex flex-col items-center justify-center h-screen bg-white"><LogoSpinner /><p className="mt-4 text-slate-600">Loading your test...</p></div>;
   }
-
+  
   if (questions.length === 0 && !isLoading) {
     return <div className="text-center p-8 bg-white h-screen flex items-center justify-center"><p>No questions available for this exam.</p></div>
   }
@@ -216,22 +296,22 @@ const Test: React.FC = () => {
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">Ready to start?</h1>
                 <p className="text-slate-600 mb-6">You are about to begin the <strong>{examConfig.name}</strong>.</p>
                 
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-6 text-left">
-                    <p className="font-bold text-yellow-800">Important Rules:</p>
-                    <ul className="list-disc pl-5 text-yellow-700 text-sm mt-2 space-y-1">
-                        <li>Once you begin, the timer will start and cannot be paused.</li>
-                        <li><strong>Do not close or refresh this browser tab.</strong> Doing so may affect your timer and progress.</li>
-                        <li><strong>Do not log in from another browser or device.</strong> This can cause session conflicts and may result in the loss of your current exam attempt.</li>
-                        <li>Ensure you have a stable internet connection.</li>
-                        <li><strong>AI Proctoring:</strong> This exam will be proctored using your camera. Please ensure you are in a well-lit room and remain visible at all times.</li>
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 my-6 text-left">
+                    <p className="font-bold text-red-800 flex items-center gap-2"><AlertTriangle size={20}/> Important Rules - Please Read Carefully</p>
+                    <ul className="list-disc pl-5 text-red-700 text-sm mt-2 space-y-1">
+                        <li><strong>Fullscreen Required:</strong> The exam will run in fullscreen mode to ensure focus.</li>
+                        <li><strong>Stay on This Tab:</strong> Leaving this tab, minimizing the window, or exiting fullscreen will result in immediate termination of your exam.</li>
+                        <li><strong>AI Proctoring:</strong> This exam will be proctored using your camera. Ensure your face is visible at all times. Critical violations will terminate the exam.</li>
+                        <li><strong>Single Session:</strong> Do not open another exam window or log in from another device.</li>
+                        <li><strong>Timer:</strong> The timer starts immediately and cannot be paused.</li>
                     </ul>
                 </div>
                 
                 <button
-                    onClick={() => setExamStarted(true)}
+                    onClick={handleStartExam}
                     className="w-full max-w-xs mx-auto bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg transition text-lg"
                 >
-                    Start Exam
+                    I Understand, Start Exam
                 </button>
             </div>
         </div>
@@ -244,7 +324,7 @@ const Test: React.FC = () => {
   return (
     <div className="flex flex-col h-screen bg-white">
       {examStarted && (
-        <div className="fixed bottom-4 right-4 z-50 bg-white shadow-lg rounded-lg border border-slate-300 w-[250px] md:w-[400px]">
+        <div className="fixed top-4 right-4 z-50 bg-white shadow-lg rounded-lg border border-slate-300 w-[200px] md:w-[320px]">
             <div className="bg-slate-100 text-slate-700 px-3 py-1 font-bold text-xs md:text-sm rounded-t-lg flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
                 AI Proctoring Active
@@ -255,7 +335,7 @@ const Test: React.FC = () => {
                 src="https://ai-proctoring-dun.vercel.app/#_" 
                 title="AI Proctoring Session"
                 allow="camera"
-                className="w-full h-[188px] md:h-[300px]"
+                className="w-full h-[150px] md:h-[240px]"
                 style={{ border: 'none', borderRadius: '0 0 8px 8px' }}
             ></iframe>
         </div>
