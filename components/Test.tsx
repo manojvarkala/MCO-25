@@ -1,8 +1,10 @@
 
 
 
+
+
 import * as React from 'react';
-import { useParams, useHistory } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Question, UserAnswer, Exam, ExamProgress } from '../types.ts';
@@ -23,7 +25,7 @@ const FOCUS_VIOLATION_TOAST_ID = 'focus-violation-toast';
 
 const Test: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
-  const history = useHistory();
+  const navigate = useNavigate();
   const { user, useFreeAttempt, isSubscribed, token } = useAuth();
   const { activeOrg, isInitializing } = useAppContext();
 
@@ -59,7 +61,7 @@ const Test: React.FC = () => {
 
     if (!user || !examId || !token || questions.length === 0) {
         toast.error("Cannot submit: user or exam context is missing.");
-        history.push('/');
+        navigate('/');
         setIsSubmitting(false);
         return;
     }
@@ -81,13 +83,13 @@ const Test: React.FC = () => {
         const userAnswers: UserAnswer[] = Array.from(answers.entries()).map(([questionId, answer]) => ({ questionId, answer }));
         const result = await googleSheetsService.submitTest(user, examId, userAnswers, questions, token);
         toast.success("Test submitted successfully!");
-        history.push(`/results/${result.testId}`);
+        navigate(`/results/${result.testId}`);
     } catch (error) {
         toast.error("Failed to submit the test. Please try again.");
         setIsSubmitting(false);
         hasSubmittedRef.current = false; // Reset submit lock
     }
-  }, [examId, history, token, user, isSubmitting, questions, answers, progressKey]);
+  }, [examId, navigate, token, user, isSubmitting, questions, answers, progressKey]);
   
   // Effect 1: Load questions and saved progress.
   React.useEffect(() => {
@@ -98,7 +100,7 @@ const Test: React.FC = () => {
     const config = activeOrg.exams.find(e => e.id === examId);
     if (!config) {
         toast.error("Could not find the specified exam.");
-        history.push('/dashboard');
+        navigate('/dashboard');
         return;
     }
     setExamConfig(config);
@@ -136,14 +138,14 @@ const Test: React.FC = () => {
             }
         } catch (error: any) {
             toast.error(error.message || 'Failed to load test.', { duration: 4000 });
-            history.push('/dashboard');
+            navigate('/dashboard');
         } finally {
             setIsLoading(false);
         }
     };
     
     loadTest();
-  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, history, useFreeAttempt, progressKey]);
+  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, useFreeAttempt, progressKey]);
 
   // Effect 2: Manage the timer.
   React.useEffect(() => {
@@ -260,7 +262,7 @@ const Test: React.FC = () => {
 
   const handlePrev = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev + 1);
+      setCurrentQuestionIndex(prev => prev - 1);
     }
   };
   

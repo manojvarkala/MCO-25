@@ -1,22 +1,22 @@
 
 
 import * as React from 'react';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LogIn, UserPlus } from 'lucide-react';
 import LogoSpinner from './LogoSpinner.tsx';
 
 const LandingPage: React.FC = () => {
-    const history = useHistory();
+    const navigate = useNavigate();
     const { user } = useAuth();
     const { activeOrg, isLoading } = useAppContext();
     
     React.useEffect(() => {
         if (user) {
-            history.push('/dashboard');
+            navigate('/dashboard');
         }
-    }, [user, history]);
+    }, [user, navigate]);
 
     const loginUrl = `https://www.coding-online.net/exam-login/`;
 

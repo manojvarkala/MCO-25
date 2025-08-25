@@ -1,7 +1,7 @@
 
 
 import * as React from 'react';
-import { useParams, useHistory } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook } from '../types.ts';
@@ -16,7 +16,7 @@ import { logoBase64 } from '../assets/logo.ts';
 
 const Results: React.FC = () => {
     const { testId } = useParams<{ testId: string }>();
-    const history = useHistory();
+    const navigate = useNavigate();
     const { user, token, paidExamIds, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     
@@ -44,7 +44,7 @@ const Results: React.FC = () => {
         if (!testId || !user || !activeOrg) {
             if(!user) toast.error("Authentication session has expired.");
             else toast.error("Required data is missing.");
-            history.push('/dashboard');
+            navigate('/dashboard');
             return;
         }
 
@@ -83,21 +83,21 @@ const Results: React.FC = () => {
 
                     } else {
                         toast.error("Could not find the configuration for this exam.");
-                        history.push('/dashboard');
+                        navigate('/dashboard');
                     }
                 } else {
                     toast.error("Could not find your test results.");
-                    history.push('/dashboard');
+                    navigate('/dashboard');
                 }
             } catch (error) {
                 toast.error("Failed to load results.");
-                history.push('/dashboard');
+                navigate('/dashboard');
             } finally {
                 setIsLoading(false);
             }
         };
         fetchResultAndExam();
-    }, [testId, user, activeOrg, history, paidExamIds]);
+    }, [testId, user, activeOrg, navigate, paidExamIds]);
 
     const handleGenerateFeedback = async () => {
         if (!result || !exam) return;
@@ -437,7 +437,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
             {((isPaidCertExam && isPass) || isAdmin) && (
                 <div className="text-center mb-8">
                     <button
-                        onClick={() => history.push(`/certificate/${result.testId}`)}
+                        onClick={() => navigate(`/certificate/${result.testId}`)}
                         className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105"
                     >
                         <FileDown size={20} />
@@ -529,133 +529,3 @@ Please provide a summary of the key areas I need to focus on based on these erro
                                  disabled
                                  title="This is a premium feature. Subscribe or purchase the certification exam to unlock the AI study guide. Access is removed for a specific exam after you pass it or use all 3 attempts."
                                  className="inline-flex items-center space-x-2 bg-slate-400 text-white font-bold py-3 px-6 rounded-lg cursor-not-allowed"
-                             >
-                                <Lock size={20} />
-                                <span>AI Feedback Locked</span>
-                            </button>
-                            <a href="#/pricing" className="mt-3 inline-block text-sm text-cyan-600 hover:underline">
-                                View Purchase & Subscription Options
-                            </a>
-                        </>
-                    )}
-                </div>
-            )}
-
-            {isGeneratingFeedback && (
-                <div className="p-4 bg-slate-50 rounded-lg text-center">
-                    <LogoSpinner />
-                    <p className="mt-2 text-slate-600">Our AI is analyzing your results... this may take a moment.</p>
-                </div>
-            )}
-            
-            {isGeneratingSummary && !aiSummary && (
-                 <div className="p-4 bg-slate-50 rounded-lg text-center">
-                    <LogoSpinner />
-                    <p className="mt-2 text-slate-600">Our AI is generating your performance summary...</p>
-                </div>
-            )}
-
-            {aiSummary && (
-                 <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h2 className="text-2xl font-semibold text-slate-700 flex items-center gap-2"><BarChart className="text-blue-500" /> AI Performance Summary</h2>
-                    <div className="prose prose-slate max-w-none whitespace-pre-wrap mt-4">{aiSummary}</div>
-                </div>
-            )}
-
-            {aiFeedback && (
-                 <div className="mt-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-semibold text-slate-700 flex items-center gap-2"><Sparkles className="text-cyan-500" /> AI Study Guide</h2>
-                        <button
-                            onClick={handleDownloadFeedback}
-                            disabled={isDownloading}
-                            className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 font-semibold py-2 px-4 rounded-lg hover:bg-blue-200 transition disabled:bg-slate-200 disabled:text-slate-500"
-                        >
-                            {isDownloading ? <Spinner /> : <Download size={16} />}
-                            <span>{isDownloading ? 'Generating...' : 'Download PDF'}</span>
-                        </button>
-                    </div>
-                    <div className="prose prose-slate max-w-none whitespace-pre-wrap">{aiFeedback}</div>
-                </div>
-            )}
-            
-            {isPaidCertExam && !isPass && (
-                <div className="text-center p-6 bg-slate-50 border border-slate-200 rounded-lg mt-8">
-                        <h2 className="text-xl font-semibold text-slate-700">Answer Review Not Available</h2>
-                        <p className="text-slate-600 max-w-2xl mx-auto mt-2">To protect the integrity of the certification exam and ensure fairness for all candidates, a detailed answer review is not provided for paid tests.</p>
-                </div>
-            )}
-
-            {exam.recommendedBook && (() => {
-                const { url, domainName } = getGeoAffiliateLink(exam.recommendedBook!);
-                return (
-                    <div className="text-center p-6 bg-blue-50 border border-blue-200 rounded-lg mt-8">
-                        <h2 className="text-xl font-semibold text-blue-800 mb-4">Recommended Study Material</h2>
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-left">
-                            <BookCover title={exam.recommendedBook!.title} className="w-32 h-40 rounded-lg shadow-md flex-shrink-0" />
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-800">{exam.recommendedBook!.title}</h3>
-                                <p className="text-slate-600 mt-1 mb-4 max-w-md">{exam.recommendedBook!.description}</p>
-                                <a 
-                                    href={url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    aria-label={`Buy ${exam.recommendedBook!.title} on ${domainName}`}
-                                    className="inline-flex items-center space-x-2 bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105"
-                                >
-                                    <BookUp size={20} />
-                                    <span>Buy on {domainName}</span>
-                                </a>
-                                <p className="text-xs text-slate-500 mt-2 max-w-md">
-                                    As an Amazon Associate, we earn from qualifying purchases. Using our links doesn't cost you anything extra and helps support our platform! Please note that book availability may vary by region.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                );
-            })()} 
-            
-            {!isPaidCertExam && (
-                <div className="mt-8">
-                    <h2 className="text-2xl font-semibold text-slate-700 mb-4">Answer Review</h2>
-                    <div className="space-y-6">
-                        {result.review.map((item, index) => (
-                            <div key={item.questionId} className="border border-slate-200 rounded-lg p-4">
-                                <p className="font-semibold text-slate-800 mb-3">{index + 1}. {item.question}</p>
-                                <div className="space-y-2">
-                                    {item.options.map((option, optionIndex) => {
-                                        const isUserAnswer = item.userAnswer === optionIndex;
-                                        const isCorrectAnswer = item.correctAnswer === optionIndex;
-                                        let bgClass = 'bg-slate-50';
-                                        if (isCorrectAnswer) bgClass = 'bg-green-100 border-green-400';
-                                        else if (isUserAnswer && !isCorrectAnswer) bgClass = 'bg-red-100 border-red-400';
-
-                                        return (
-                                            <div key={optionIndex} className={`flex items-center p-3 rounded border ${bgClass}`}>
-                                                {isUserAnswer && !isCorrectAnswer && <X size={18} className="text-red-600 mr-2 shrink-0" />}
-                                                {isCorrectAnswer && <Check size={18} className="text-green-600 mr-2 shrink-0" />}
-                                                <span className="text-slate-700">{option}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            <div className="text-center mt-8">
-                <button 
-                    onClick={() => history.push('/dashboard')}
-                    className="bg-slate-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-700 transition"
-                >
-                    Back to Dashboard
-                </button>
-            </div>
-        </div>
-        </div>
-    );
-};
-
-export default Results;

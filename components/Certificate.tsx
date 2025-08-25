@@ -1,7 +1,7 @@
 
 
 import * as React from 'react';
-import { useParams, useHistory } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -29,7 +29,7 @@ const Watermark: React.FC<{ text: string }> = ({ text }) => (
 
 const Certificate: React.FC = () => {
     const { testId = 'sample' } = useParams<{ testId?: string }>();
-    const history = useHistory();
+    const navigate = useNavigate();
     const { user, token } = useAuth();
     const { activeOrg } = useAppContext();
     const [certData, setCertData] = React.useState<CertificateData | null>(null);
@@ -48,7 +48,7 @@ const Certificate: React.FC = () => {
             const sampleTemplate = activeOrg.certificateTemplates.find(t => t.id === 'cert-practice-1');
             if (!sampleTemplate) {
                 toast.error("Sample certificate template not found.");
-                history.push('/dashboard');
+                navigate('/dashboard');
                 return;
             }
 
@@ -90,22 +90,22 @@ const Certificate: React.FC = () => {
                         setCertData(fullCertData);
                     } else {
                         toast.error("Certificate configuration missing in the app.");
-                        history.push('/dashboard');
+                        navigate('/dashboard');
                     }
                 } else {
                     toast.error("Certificate not earned or result not found.");
-                    history.push('/dashboard');
+                    navigate('/dashboard');
                 }
             } catch (error: any) {
                 toast.error(error.message || "Failed to load certificate data.");
-                history.push('/dashboard');
+                navigate('/dashboard');
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchCertificateData();
-    }, [testId, user, token, history, activeOrg]);
+    }, [testId, user, token, navigate, activeOrg]);
 
     const handleDownload = async () => {
         if (!certificatePrintRef.current || !certData) return;
@@ -150,7 +150,7 @@ const Certificate: React.FC = () => {
         <div className="max-w-5xl mx-auto bg-slate-100 p-4 sm:p-6 rounded-lg">
             <div className="flex justify-between items-center mb-6">
                  <button
-                    onClick={() => history.push('/dashboard')}
+                    onClick={() => navigate('/dashboard')}
                     className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition"
                 >
                     <ArrowLeft size={16} />

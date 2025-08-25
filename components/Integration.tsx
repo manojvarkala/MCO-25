@@ -536,18 +536,16 @@ function mco_get_exam_stats_callback($request) {
         $pass_rate = $total_attempts > 0 ? ($passed_attempts_count / $total_attempts) * 100 : 0;
         $average_score = $total_attempts > 0 ? $total_score / $total_attempts : 0;
         
-        if ($total_sales > 0 || $total_attempts > 0) {
-            $stats[] = [
-                'examId' => $exam_id,
-                'examName' => $config['name'],
-                'totalSales' => $total_sales,
-                'totalAttempts' => $total_attempts,
-                'passed' => $passed_attempts_count,
-                'failed' => $failed_attempts_count,
-                'passRate' => round($pass_rate, 2),
-                'averageScore' => round($average_score, 2)
-            ];
-        }
+        $stats[] = [
+            'examId' => $exam_id,
+            'examName' => $config['name'],
+            'totalSales' => $total_sales,
+            'totalAttempts' => $total_attempts,
+            'passed' => $passed_attempts_count,
+            'failed' => $failed_attempts_count,
+            'passRate' => round($pass_rate, 2),
+            'averageScore' => round($average_score, 2)
+        ];
     }
     
     return new WP_REST_Response($stats, 200);
@@ -787,6 +785,7 @@ function mco_exam_showcase_shortcode() {
                                         <li><?php echo $icon_list; ?> <?php echo esc_html($program['practice_exam']['numberOfQuestions']); ?> questions</li>
                                         <li><?php echo $icon_clock; ?> <?php echo esc_html($program['practice_exam']['durationMinutes']); ?> minutes</li>
                                         <li><?php echo $icon_target; ?> <?php echo esc_html($program['practice_exam']['passScore']); ?>% pass score</li>
+                                        <li><?php echo $icon_repeat; ?> 10 free attempts included</li>
                                     </ul>
                                 </div>
                                 <a href="<?php echo esc_url(MCO_EXAM_APP_URL . '#/test/' . $program['practice_id']); ?>" class="mco-subcard-btn mco-btn-practice"><?php echo $icon_zap; ?> Start Practice</a>
