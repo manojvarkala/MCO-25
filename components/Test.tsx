@@ -238,19 +238,8 @@ const Test: React.FC = () => {
             setExamStarted(true); // Fallback for browsers that don't support it
         }
     };
-
-  // Effect 5: Start Proctoring when exam begins
-  React.useEffect(() => {
-    if (examStarted && proctoringIframeRef.current?.contentWindow) {
-      const timer = setTimeout(() => {
-        proctoringIframeRef.current?.contentWindow?.postMessage('start-proctoring', '*');
-        toast.success('AI proctoring session started.');
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [examStarted]);
   
-  // Effect 6: Cleanup on unmount
+  // Effect 5: Cleanup on unmount
   React.useEffect(() => {
     return () => {
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -337,6 +326,12 @@ const Test: React.FC = () => {
                 allow="camera"
                 className="w-full h-[150px] md:h-[240px]"
                 style={{ border: 'none', borderRadius: '0 0 8px 8px' }}
+                onLoad={() => {
+                    if (proctoringIframeRef.current?.contentWindow) {
+                        proctoringIframeRef.current.contentWindow.postMessage('start-proctoring', '*');
+                        toast.success('AI proctoring session started.');
+                    }
+                }}
             ></iframe>
         </div>
       )}
