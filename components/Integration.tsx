@@ -2,7 +2,7 @@ import * as React from 'react';
 import toast from 'react-hot-toast';
 import { Copy } from 'lucide-react';
 
-export default function Integration() {
+const Integration: React.FC = () => {
     const phpCode = `<?php
 /**
  * Plugin Name:       MCO Exam App Integration (Unified)
@@ -686,4 +686,43 @@ function mco_add_custom_wc_styles_to_head() {
 function mco_custom_order_button_text() {
     return 'Complete Enrollment & Pay Securely';
 }
-?>
+?>`;
+
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(phpCode.trim())
+            .then(() => toast.success('Unified plugin code copied to clipboard!'))
+            .catch(err => {
+                console.error('Failed to copy text: ', err);
+                toast.error('Could not copy code.');
+            });
+    };
+
+    return (
+        <div className="max-w-4xl mx-auto space-y-8">
+            <h1 className="text-3xl font-extrabold text-slate-800">Unified Integration Plugin</h1>
+            
+            <div className="bg-white p-6 rounded-lg shadow">
+                <h2 className="text-xl font-bold mb-2">1. Unified Plugin Code</h2>
+                <p className="mb-4">
+                    This single plugin handles all necessary integrations: SSO, data sync, and WooCommerce cart/checkout styling.
+                </p>
+                <p className="mb-4">
+                    Copy the code below, save it as a new plugin file (e.g., <code>mco-unified-integration.php</code>) in your WordPress <code>/wp-content/plugins/</code> directory, and activate it. <strong>Important:</strong> After activating, you must define your <code>MCO_JWT_SECRET</code> in your <code>wp-config.php</code> file.
+                </p>
+                
+                <div className="bg-slate-800 text-white p-4 rounded-lg relative font-mono text-sm">
+                    <button 
+                        onClick={copyToClipboard} 
+                        className="absolute top-2 right-2 p-2 bg-slate-600 rounded-md hover:bg-slate-500 transition"
+                        title="Copy to clipboard"
+                    >
+                        <Copy size={16} />
+                    </button>
+                    <pre><code className="language-php">{phpCode.trim()}</code></pre>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Integration;
