@@ -3,6 +3,7 @@
 
 
 
+
 import * as React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -40,7 +41,6 @@ const Test: React.FC = () => {
   const [focusViolationCount, setFocusViolationCount] = React.useState(0);
 
   const timerIntervalRef = React.useRef<number | null>(null);
-  const proctoringIframeRef = React.useRef<HTMLIFrameElement>(null);
   const hasSubmittedRef = React.useRef(false);
   const progressKey = React.useMemo(() => `exam_progress_${examId}_${user?.id}`, [examId, user?.id]);
 
@@ -49,9 +49,6 @@ const Test: React.FC = () => {
     if (hasSubmittedRef.current) return;
     hasSubmittedRef.current = true;
 
-    if (proctoringIframeRef.current?.contentWindow) {
-        proctoringIframeRef.current.contentWindow.postMessage('stop-proctoring', '*');
-    }
     if (document.fullscreenElement) {
         document.exitFullscreen().catch(err => console.error("Could not exit fullscreen:", err));
     }
@@ -185,16 +182,9 @@ const Test: React.FC = () => {
       }
   }, [answers, currentQuestionIndex, questions, isLoading, examStarted, user?.id, progressKey]);
 
-  // Effect 4: Listeners for proctoring, focus, and fullscreen violations
+  // Effect 4: Listeners for focus and fullscreen violations
   React.useEffect(() => {
     if (!examStarted) return;
-
-    const handleProctoringMessage = (event: MessageEvent) => {
-        if (event.data === 'proctoring-violation-critical' && !hasSubmittedRef.current) {
-            toast.error('Critical proctoring violation detected. The exam will be terminated.', { duration: 5000 });
-            handleSubmit(true);
-        }
-    };
 
     const handleFocusViolation = (reason: string) => {
         if (hasSubmittedRef.current) return;
@@ -219,12 +209,10 @@ const Test: React.FC = () => {
         if (!document.fullscreenElement) handleFocusViolation("exiting fullscreen");
     };
 
-    window.addEventListener('message', handleProctoringMessage);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     return () => {
-        window.removeEventListener('message', handleProctoringMessage);
         document.removeEventListener('visibilitychange', handleVisibilityChange);
         document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
@@ -293,7 +281,6 @@ const Test: React.FC = () => {
                     <ul className="list-disc pl-5 text-red-700 text-sm mt-2 space-y-1">
                         <li><strong>Fullscreen Required:</strong> The exam will run in fullscreen mode to ensure focus.</li>
                         <li><strong>Stay on This Tab:</strong> Leaving this tab, minimizing the window, or exiting fullscreen will result in immediate termination of your exam.</li>
-                        <li><strong>AI Proctoring:</strong> This exam will be proctored using your camera. Ensure your face is visible at all times. Critical violations will terminate the exam.</li>
                         <li><strong>Single Session:</strong> Do not open another exam window or log in from another device.</li>
                         <li><strong>Timer:</strong> The timer starts immediately and cannot be paused.</li>
                     </ul>
@@ -315,29 +302,6 @@ const Test: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-white">
-      {examStarted && (
-        <div className="fixed top-4 right-4 z-50 bg-white shadow-lg rounded-lg border border-slate-300 w-[300px] md:w-[480px]">
-            <div className="bg-slate-100 text-slate-700 px-3 py-1 font-bold text-xs md:text-sm rounded-t-lg flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-                AI Proctoring Active
-            </div>
-            <iframe 
-                ref={proctoringIframeRef}
-                id="proctoring-iframe"
-                src="https://ai-proctoring-dun.vercel.app/#_" 
-                title="AI Proctoring Session"
-                allow="camera"
-                className="w-full h-[225px] md:h-[360px]"
-                style={{ border: 'none', borderRadius: '0 0 8px 8px' }}
-                onLoad={() => {
-                    if (proctoringIframeRef.current?.contentWindow) {
-                        proctoringIframeRef.current.contentWindow.postMessage('start-proctoring', '*');
-                        toast.success('AI proctoring session started.');
-                    }
-                }}
-            ></iframe>
-        </div>
-      )}
       <header className="flex-shrink-0 p-4 sm:p-6 border-b border-slate-200">
         <div className="flex justify-between items-start mb-4">
             <div>

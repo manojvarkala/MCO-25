@@ -25,16 +25,6 @@ const Instructions: React.FC = () => {
                     <p className="font-bold text-red-800">Please read carefully before starting any exam:</p>
                     <ul className="list-disc pl-5 text-red-700 space-y-2">
                         <li>
-                            <strong>AI Proctoring via Camera:</strong> Your exam session will be monitored using your device's camera. The AI proctoring system will be active throughout the exam. You must:
-                            <ul className="list-['-_'] pl-5 mt-1">
-                                <li>Remain visible in the camera frame at all times.</li>
-                                <li>Be in a well-lit, private room without other people present.</li>
-                                <li>Avoid looking away from the screen for extended periods.</li>
-                                <li>Not use any unauthorized materials like phones, notes, or other devices.</li>
-                            </ul>
-                            A critical violation detected by the AI proctor will result in immediate exam termination.
-                        </li>
-                        <li>
                             <strong>Browser Security (by Exam App):</strong> The exam environment itself is secured. You must:
                              <ul className="list-['-_'] pl-5 mt-1">
                                 <li>Take the exam in <strong>fullscreen mode</strong>. Exiting fullscreen is a violation.</li>
