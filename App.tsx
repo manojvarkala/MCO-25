@@ -3,6 +3,8 @@
 
 
 
+
+
 import * as React from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
@@ -35,6 +37,7 @@ import TermsOfService from './components/TermsOfService.tsx';
 import LivePurchaseNotification from './components/LivePurchaseNotification.tsx';
 import SidebarLayout from './components/SidebarLayout.tsx';
 import Integration from './components/Integration.tsx';
+import SuperAdminBlueprint from './components/SuperAdminBlueprint.tsx';
 
 // New Component for the promotional announcement
 const PromotionAnnouncement: React.FC = () => {
@@ -172,6 +175,7 @@ const AppContent: React.FC = () => {
                         <Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
                         <Route path="/integration" element={<ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute>} />
+                        <Route path="/superadmin-blueprint" element={<ProtectedRoute adminOnly={true}><SuperAdminBlueprint /></ProtectedRoute>} />
                     
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
