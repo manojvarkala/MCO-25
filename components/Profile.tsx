@@ -1,5 +1,6 @@
+
 import * as React from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -11,7 +12,7 @@ import Spinner from './Spinner.tsx';
 const Profile: React.FC = () => {
     const { user, token, updateUserName, wonPrize, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
-    const navigate = ReactRouterDOM.useNavigate();
+    const navigate = useNavigate();
 
     const [results, setResults] = React.useState<TestResult[]>([]);
     const [isEditingName, setIsEditingName] = React.useState(false);

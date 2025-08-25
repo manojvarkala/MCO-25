@@ -1,5 +1,6 @@
+
 import * as React from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult } from '../types.ts';
@@ -31,7 +32,7 @@ const StarRating: React.FC<{ rating: number; count: number; }> = ({ rating, coun
 
 
 const Dashboard: React.FC = () => {
-    const navigate = ReactRouterDOM.useNavigate();
+    const navigate = useNavigate();
     const { user, paidExamIds, isSubscribed, updateUserName, token, examPrices } = useAuth();
     const { activeOrg, inProgressExam } = useAppContext();
     const [results, setResults] = React.useState<TestResult[] | null>(null);
@@ -227,12 +228,12 @@ const Dashboard: React.FC = () => {
                                 <p className="text-sm">You have an unfinished session for: <strong>{inProgressExam.examName}</strong></p>
                             </div>
                         </div>
-                        <ReactRouterDOM.Link
+                        <Link
                             to={`/test/${inProgressExam.examId}`}
                             className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-amber-600 hover:bg-amber-700 flex-shrink-0"
                         >
                             Resume Exam
-                        </ReactRouterDOM.Link>
+                        </Link>
                     </div>
                 </div>
             )}

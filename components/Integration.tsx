@@ -11,7 +11,6 @@ export default function Integration() {
  * Author:            Annapoorna Infotech (Refactored)
  */
 
-
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // --- CONFIGURATION ---

@@ -1,5 +1,6 @@
+
 import * as React from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Question, UserAnswer, Exam, ExamProgress } from '../types.ts';
@@ -16,8 +17,8 @@ const formatTime = (seconds: number) => {
 };
 
 const Test: React.FC = () => {
-  const { examId } = ReactRouterDOM.useParams<{ examId: string }>();
-  const navigate = ReactRouterDOM.useNavigate();
+  const { examId } = useParams<{ examId: string }>();
+  const navigate = useNavigate();
   const { user, useFreeAttempt, isSubscribed, token } = useAuth();
   const { activeOrg, isInitializing } = useAppContext();
 
@@ -32,8 +33,13 @@ const Test: React.FC = () => {
   
   const timerIntervalRef = React.useRef<number | null>(null);
   const progressKey = React.useMemo(() => `exam_progress_${examId}_${user?.id}`, [examId, user?.id]);
+  const proctoringIframeRef = React.useRef<HTMLIFrameElement>(null);
 
   const handleSubmit = React.useCallback(async (isAutoSubmit = false) => {
+    if (proctoringIframeRef.current?.contentWindow) {
+        proctoringIframeRef.current.contentWindow.postMessage('stop-proctoring', '*');
+    }
+    
     if (isSubmitting) return;
     setIsSubmitting(true);
 
@@ -160,6 +166,18 @@ const Test: React.FC = () => {
       }
   }, [answers, currentQuestionIndex, questions, isLoading, user?.id, progressKey]);
 
+  // Effect 4: Start Proctoring
+  React.useEffect(() => {
+    if (examStarted && proctoringIframeRef.current?.contentWindow) {
+      // Use a timeout to ensure the iframe has loaded and is ready for the message
+      const timer = setTimeout(() => {
+        toast.success('AI proctoring session started.');
+        proctoringIframeRef.current?.contentWindow?.postMessage('start-proctoring', '*');
+      }, 1500); // Wait for iframe to load
+      return () => clearTimeout(timer);
+    }
+  }, [examStarted]);
+
   const handleAnswerSelect = (questionId: number, optionIndex: number) => {
     setAnswers(prev => new Map(prev).set(questionId, optionIndex));
   };
@@ -205,6 +223,7 @@ const Test: React.FC = () => {
                         <li><strong>Do not close or refresh this browser tab.</strong> Doing so may affect your timer and progress.</li>
                         <li><strong>Do not log in from another browser or device.</strong> This can cause session conflicts and may result in the loss of your current exam attempt.</li>
                         <li>Ensure you have a stable internet connection.</li>
+                        <li><strong>AI Proctoring:</strong> This exam will be proctored using your camera. Please ensure you are in a well-lit room and remain visible at all times.</li>
                     </ul>
                 </div>
                 
@@ -224,6 +243,23 @@ const Test: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-white">
+      {examStarted && (
+        <div className="fixed bottom-4 right-4 z-50 bg-white shadow-lg rounded-lg border border-slate-300 w-[250px] md:w-[400px]">
+            <div className="bg-slate-100 text-slate-700 px-3 py-1 font-bold text-xs md:text-sm rounded-t-lg flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                AI Proctoring Active
+            </div>
+            <iframe 
+                ref={proctoringIframeRef}
+                id="proctoring-iframe"
+                src="https://ai-proctoring-dun.vercel.app/#_" 
+                title="AI Proctoring Session"
+                allow="camera"
+                className="w-full h-[188px] md:h-[300px]"
+                style={{ border: 'none', borderRadius: '0 0 8px 8px' }}
+            ></iframe>
+        </div>
+      )}
       <header className="flex-shrink-0 p-4 sm:p-6 border-b border-slate-200">
         <div className="flex justify-between items-start mb-4">
             <div>

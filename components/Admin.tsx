@@ -1,5 +1,6 @@
+
 import * as React from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, SearchedUser, ExamStat } from '../types.ts';
@@ -209,13 +210,13 @@ const Admin: React.FC = () => {
                 <p className="text-slate-600 mb-6">
                     This is the master plugin for integrating the exam app with WordPress. It handles SSO, data sync, and WooCommerce styling.
                 </p>
-                <ReactRouterDOM.Link
+                <Link
                     to="/integration"
                     className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
                 >
                     <ExternalLink size={20} className="mr-2" />
                     Get Unified Plugin Code
-                </ReactRouterDOM.Link>
+                </Link>
             </div>
             
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
