@@ -1,6 +1,7 @@
 
+
 import * as React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useHistory } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook } from '../types.ts';
@@ -15,7 +16,7 @@ import { logoBase64 } from '../assets/logo.ts';
 
 const Results: React.FC = () => {
     const { testId } = useParams<{ testId: string }>();
-    const navigate = useNavigate();
+    const history = useHistory();
     const { user, token, paidExamIds, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     
@@ -43,7 +44,7 @@ const Results: React.FC = () => {
         if (!testId || !user || !activeOrg) {
             if(!user) toast.error("Authentication session has expired.");
             else toast.error("Required data is missing.");
-            navigate('/dashboard');
+            history.push('/dashboard');
             return;
         }
 
@@ -82,21 +83,21 @@ const Results: React.FC = () => {
 
                     } else {
                         toast.error("Could not find the configuration for this exam.");
-                        navigate('/dashboard');
+                        history.push('/dashboard');
                     }
                 } else {
                     toast.error("Could not find your test results.");
-                    navigate('/dashboard');
+                    history.push('/dashboard');
                 }
             } catch (error) {
                 toast.error("Failed to load results.");
-                navigate('/dashboard');
+                history.push('/dashboard');
             } finally {
                 setIsLoading(false);
             }
         };
         fetchResultAndExam();
-    }, [testId, user, activeOrg, navigate, paidExamIds]);
+    }, [testId, user, activeOrg, history, paidExamIds]);
 
     const handleGenerateFeedback = async () => {
         if (!result || !exam) return;
@@ -436,7 +437,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
             {((isPaidCertExam && isPass) || isAdmin) && (
                 <div className="text-center mb-8">
                     <button
-                        onClick={() => navigate(`/certificate/${result.testId}`)}
+                        onClick={() => history.push(`/certificate/${result.testId}`)}
                         className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105"
                     >
                         <FileDown size={20} />
@@ -646,7 +647,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
 
             <div className="text-center mt-8">
                 <button 
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => history.push('/dashboard')}
                     className="bg-slate-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-700 transition"
                 >
                     Back to Dashboard

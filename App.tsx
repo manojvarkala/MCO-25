@@ -1,6 +1,6 @@
 
 import * as React from 'react';
-import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { HashRouter, Redirect, Route, Switch, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
@@ -41,10 +41,10 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = false }) => {
   const { user } = useAuth();
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Redirect to="/" />;
   }
   if (adminOnly && !user.isAdmin) {
-    return <Navigate to="/dashboard" replace />;
+    return <Redirect to="/dashboard" />;
   }
   return <>{children}</>;
 };
@@ -82,35 +82,79 @@ const AppContent: React.FC = () => {
             {!isTestPage && <Header />}
             <div className="flex-grow w-full relative">
                 <main className={mainClasses}>
-                    <Routes>
+                    <Switch>
                         {/* Routes with generic sidebar */}
-                        <Route element={<SidebarLayout />}>
-                            <Route path="/instructions" element={<Instructions />} />
-                            <Route path="/bookstore" element={<BookStore />} />
-                            <Route path="/pricing" element={<Pricing />} />
-                            <Route path="/feedback" element={<Feedback />} />
-                            <Route path="/user-guide" element={<UserGuide />} />
-                            <Route path="/about-us" element={<AboutUs />} />
-                            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                            <Route path="/refund-policy" element={<RefundPolicy />} />
-                            <Route path="/terms-of-service" element={<TermsOfService />} />
-                            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                            <Route path="/results/:testId" element={<ProtectedRoute><Results /></ProtectedRoute>} />
+                        <Route path="/instructions">
+                            <SidebarLayout><Instructions /></SidebarLayout>
+                        </Route>
+                        <Route path="/bookstore">
+                            <SidebarLayout><BookStore /></SidebarLayout>
+                        </Route>
+                        <Route path="/pricing">
+                           <SidebarLayout><Pricing /></SidebarLayout>
+                        </Route>
+                        <Route path="/feedback">
+                            <SidebarLayout><Feedback /></SidebarLayout>
+                        </Route>
+                        <Route path="/user-guide">
+                            <SidebarLayout><UserGuide /></SidebarLayout>
+                        </Route>
+                        <Route path="/about-us">
+                           <SidebarLayout><AboutUs /></SidebarLayout>
+                        </Route>
+                        <Route path="/privacy-policy">
+                           <SidebarLayout><PrivacyPolicy /></SidebarLayout>
+                        </Route>
+                        <Route path="/refund-policy">
+                           <SidebarLayout><RefundPolicy /></SidebarLayout>
+                        </Route>
+                        <Route path="/terms-of-service">
+                           <SidebarLayout><TermsOfService /></SidebarLayout>
+                        </Route>
+                        <Route path="/profile">
+                          <ProtectedRoute>
+                            <SidebarLayout><Profile /></SidebarLayout>
+                          </ProtectedRoute>
+                        </Route>
+                        <Route path="/results/:testId">
+                          <ProtectedRoute>
+                            <SidebarLayout><Results /></SidebarLayout>
+                          </ProtectedRoute>
                         </Route>
 
                         {/* Routes with their own layout or no sidebar */}
-                        <Route path="/" element={<LandingPage />} />
-                        <Route path="/auth" element={<Login />} />
-                        <Route path="/checkout/:productSlug" element={<Checkout />} />
-                        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                        <Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
-                        <Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
-                        <Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
-                        <Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
-                        <Route path="/integration" element={<ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute>} />
+                        <Route exact path="/">
+                            <LandingPage />
+                        </Route>
+                        <Route path="/auth">
+                            <Login />
+                        </Route>
+                        <Route path="/checkout/:productSlug">
+                            <Checkout />
+                        </Route>
+                        <Route path="/dashboard">
+                            <ProtectedRoute><Dashboard /></ProtectedRoute>
+                        </Route>
+                        <Route path="/test/:examId">
+                            <ProtectedRoute><Test /></ProtectedRoute>
+                        </Route>
+                        <Route path="/certificate/sample">
+                            <ProtectedRoute><Certificate /></ProtectedRoute>
+                        </Route>
+                        <Route path="/certificate/:testId">
+                            <ProtectedRoute><Certificate /></ProtectedRoute>
+                        </Route>
+                        <Route path="/admin">
+                            <ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>
+                        </Route>
+                        <Route path="/integration">
+                            <ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute>
+                        </Route>
                     
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
+                        <Route path="*">
+                            <Redirect to="/" />
+                        </Route>
+                    </Switch>
                 </main>
                 {user && user.isAdmin && !isTestPage && <DebugSidebar />}
             </div>

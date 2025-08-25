@@ -1,13 +1,14 @@
 
+
 import * as React from 'react';
-import { useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { useLocation, useHistory, Redirect } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import toast from 'react-hot-toast';
 
 const Login: React.FC = () => {
     const location = useLocation();
-    const navigate = useNavigate();
+    const history = useHistory();
     const { user, loginWithToken } = useAuth();
     const [isLoading, setIsLoading] = React.useState(true);
     const wasAlreadyLoggedIn = React.useRef(!!user);
@@ -27,7 +28,7 @@ const Login: React.FC = () => {
                     const errorMessage = e.message || 'Invalid login token. Please try again.';
                     toast.error(errorMessage);
                     setIsLoading(false);
-                    navigate('/', { replace: true });
+                    history.replace('/');
                 }
             } else {
                 setIsLoading(false);
@@ -35,7 +36,7 @@ const Login: React.FC = () => {
         };
 
         handleLogin();
-    }, [location.search, loginWithToken, navigate]);
+    }, [location.search, loginWithToken, history]);
 
     if (isLoading && !user) {
         return (
@@ -61,11 +62,11 @@ const Login: React.FC = () => {
              }
         }
         
-        return <Navigate to={redirectTo} replace />;
+        return <Redirect to={redirectTo} />;
     }
 
     if (!isLoading && !user) {
-        return <Navigate to="/" replace />;
+        return <Redirect to="/" />;
     }
 
     return null;
