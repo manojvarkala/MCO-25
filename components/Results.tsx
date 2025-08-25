@@ -1,5 +1,3 @@
-
-
 import * as React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -424,108 +422,207 @@ Please provide a summary of the key areas I need to focus on based on these erro
 
     return (
         <div className="max-w-4xl mx-auto">
-        <div className="bg-white p-8 rounded-xl shadow-lg">
-            <h1 className="text-3xl font-bold text-slate-800 mb-4">Results for {exam.name}</h1>
-            
-            <div className={`text-center border-2 ${isPass ? 'border-green-200' : 'border-red-200'} bg-slate-50 rounded-lg p-6 mb-8`}>
-                <p className="text-lg text-slate-600">Your Score</p>
-                <p className={`text-7xl font-bold ${scoreColor}`}>{result.score}%</p>
-                <p className="text-slate-500 mt-2">({result.correctCount} out of {result.totalQuestions} correct)</p>
-                <p className={`mt-4 text-xl font-semibold ${scoreColor}`}>{isPass ? 'Congratulations, you passed!' : 'Unfortunately, you did not pass.'}</p>
-            </div>
-
-            {((isPaidCertExam && isPass) || isAdmin) && (
-                <div className="text-center mb-8">
-                    <button
-                        onClick={() => navigate(`/certificate/${result.testId}`)}
-                        className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105"
-                    >
-                        <FileDown size={20} />
-                        <span>{isAdmin && !isPass ? "View Certificate (Admin Override)" : "Download Your Certificate"}</span>
-                    </button>
+            <div className="bg-white p-8 rounded-xl shadow-lg">
+                <h1 className="text-3xl font-bold text-slate-800 mb-4">Results for {exam.name}</h1>
+                
+                <div className={`text-center border-2 ${isPass ? 'border-green-200' : 'border-red-200'} bg-slate-50 rounded-lg p-6 mb-8`}>
+                    <p className="text-lg text-slate-600">Your Score</p>
+                    <p className={`text-7xl font-bold ${scoreColor}`}>{result.score}%</p>
+                    <p className="text-slate-500 mt-2">({result.correctCount} out of {result.totalQuestions} correct)</p>
+                    <p className={`mt-4 text-xl font-semibold ${scoreColor}`}>{isPass ? 'Congratulations, you passed!' : 'Unfortunately, you did not pass.'}</p>
                 </div>
-            )}
-            
-            <div className="text-center mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
-                <h2 className="text-xl font-semibold text-slate-800 mb-4">Rate Your Experience</h2>
-                {submittedReview ? (
-                    <div>
-                        <p className="text-slate-600 mb-2">Thank you for your feedback!</p>
-                        <div className="flex justify-center items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                                <Star key={i} size={24} className={i < submittedReview.rating ? 'text-yellow-400 fill-current' : 'text-slate-300'} />
-                            ))}
-                        </div>
-                        {submittedReview.reviewText && (
-                            <blockquote className="mt-4 text-slate-500 italic border-l-4 border-slate-300 pl-4 text-left max-w-md mx-auto">
-                                "{submittedReview.reviewText}"
-                            </blockquote>
-                        )}
-                    </div>
-                ) : (
-                    <div className="max-w-md mx-auto">
-                        <div className="flex justify-center items-center gap-2 mb-4">
-                            {[...Array(5)].map((_, i) => (
-                                <Star
-                                    key={i}
-                                    size={32}
-                                    className={`cursor-pointer transition-colors ${(hoverRating || rating) > i ? 'text-yellow-400 fill-current' : 'text-slate-300'}`}
-                                    onMouseEnter={() => setHoverRating(i + 1)}
-                                    onMouseLeave={() => setHoverRating(0)}
-                                    onClick={() => setRating(i + 1)}
-                                />
-                            ))}
-                        </div>
-                        <textarea
-                            value={reviewText}
-                            onChange={(e) => setReviewText(e.target.value)}
-                            placeholder="Share your thoughts (optional)"
-                            className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
-                            rows={3}
-                        />
+
+                {((isPaidCertExam && isPass) || isAdmin) && (
+                    <div className="text-center mb-8">
                         <button
-                            onClick={handleSubmitReview}
-                            disabled={isSubmittingReview}
-                            className="mt-4 inline-flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-cyan-300"
+                            onClick={() => navigate(`/certificate/${result.testId}`)}
+                            className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105"
                         >
-                            {isSubmittingReview ? <Spinner /> : <MessageSquare size={16} />}
-                            <span>{isSubmittingReview ? 'Submitting...' : 'Submit Review'}</span>
+                            <FileDown size={20} />
+                            <span>{isAdmin && !isPass ? "View Certificate (Admin Override)" : "Download Your Certificate"}</span>
                         </button>
                     </div>
                 )}
-            </div>
-
-            {!isPass && (
-                <div className="text-center mb-8 p-6 bg-amber-50 border border-amber-200 rounded-lg">
-                    <h2 className="text-xl font-semibold text-amber-800 mb-4">Need some help?</h2>
-                    {canUseAiFeedback ? (
-                        <>
-                            <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Don't worry, practice makes perfect. Use our AI-powered tools to get personalized insights on your performance.</p>
-                            <div className="flex flex-col sm:flex-row justify-center gap-4">
-                                <button
-                                    onClick={handleGenerateFeedback}
-                                    disabled={isGeneratingFeedback || isGeneratingSummary}
-                                    title="Didn't pass? Let our AI create a custom study guide for you. It analyzes the questions you missed and explains the key topics to focus on for your next attempt."
-                                    className="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-amber-300"
-                                >
-                                    {isGeneratingFeedback ? <Spinner /> : <Sparkles size={20} />}
-                                    <span>{isGeneratingFeedback ? 'Generating...' : 'Get AI Question Feedback'}</span>
-                                </button>
-                                <button
-                                    onClick={handleGenerateSummary}
-                                    disabled={isGeneratingFeedback || isGeneratingSummary}
-                                    title="Get a high-level summary of your performance, including your weak and strong areas, with actionable study recommendations."
-                                    className="inline-flex items-center space-x-2 bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-sky-300"
-                                >
-                                    {isGeneratingSummary ? <Spinner /> : <BarChart size={20} />}
-                                    <span>{isGeneratingSummary ? 'Analyzing...' : 'Get AI Performance Summary'}</span>
-                                </button>
+                
+                <div className="text-center mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
+                    <h2 className="text-xl font-semibold text-slate-800 mb-4">Rate Your Experience</h2>
+                    {submittedReview ? (
+                        <div>
+                            <p className="text-slate-600 mb-2">Thank you for your feedback!</p>
+                            <div className="flex justify-center items-center gap-1">
+                                {[...Array(5)].map((_, i) => (
+                                    <Star key={i} size={24} className={i < submittedReview.rating ? 'text-yellow-400 fill-current' : 'text-slate-300'} />
+                                ))}
                             </div>
-                        </>
+                            {submittedReview.reviewText && (
+                                <blockquote className="mt-4 text-slate-500 italic border-l-4 border-slate-300 pl-4 text-left max-w-md mx-auto">
+                                    "{submittedReview.reviewText}"
+                                </blockquote>
+                            )}
+                        </div>
                     ) : (
-                        <>
-                             <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Unlock our AI-powered study guide to get personalized feedback. This premium feature is available to subscribers or with an exam purchase.</p>
-                             <button
-                                 disabled
-                                 title="This is a premium feature. Subscribe or purchase the certification exam to unlock the AI study guide. Access is removed for a specific exam after you pass it or use all 3 attempts."
-                                 className="inline-flex items-center space-x-2 bg-slate-400 text-white font-bold py-3 px-6 rounded-lg cursor-not-allowed"
+                        <div className="max-w-md mx-auto">
+                            <div className="flex justify-center items-center gap-2 mb-4">
+                                {[...Array(5)].map((_, i) => (
+                                    <Star
+                                        key={i}
+                                        size={32}
+                                        className={`cursor-pointer transition-colors ${(hoverRating || rating) > i ? 'text-yellow-400 fill-current' : 'text-slate-300'}`}
+                                        onMouseEnter={() => setHoverRating(i + 1)}
+                                        onMouseLeave={() => setHoverRating(0)}
+                                        onClick={() => setRating(i + 1)}
+                                    />
+                                ))}
+                            </div>
+                            <textarea
+                                value={reviewText}
+                                onChange={(e) => setReviewText(e.target.value)}
+                                placeholder="Share your thoughts (optional)"
+                                className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
+                                rows={3}
+                            />
+                            <button
+                                onClick={handleSubmitReview}
+                                disabled={isSubmittingReview}
+                                className="mt-4 inline-flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-cyan-300"
+                            >
+                                {isSubmittingReview ? <Spinner /> : <MessageSquare size={16} />}
+                                <span>{isSubmittingReview ? 'Submitting...' : 'Submit Review'}</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {!isPass && (
+                    <div className="text-center mb-8 p-6 bg-amber-50 border border-amber-200 rounded-lg">
+                        <h2 className="text-xl font-semibold text-amber-800 mb-4">Need some help?</h2>
+                        {canUseAiFeedback ? (
+                            <>
+                                <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Don't worry, practice makes perfect. Use our AI-powered tools to get personalized insights on your performance.</p>
+                                <div className="flex flex-col sm:flex-row justify-center gap-4">
+                                    <button
+                                        onClick={handleGenerateFeedback}
+                                        disabled={isGeneratingFeedback || isGeneratingSummary}
+                                        title="Didn't pass? Let our AI create a custom study guide for you. It analyzes the questions you missed and explains the key topics to focus on for your next attempt."
+                                        className="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-amber-300"
+                                    >
+                                        {isGeneratingFeedback ? <Spinner /> : <Sparkles size={20} />}
+                                        <span>{isGeneratingFeedback ? 'Generating...' : 'Get AI Question Feedback'}</span>
+                                    </button>
+                                    <button
+                                        onClick={handleGenerateSummary}
+                                        disabled={isGeneratingFeedback || isGeneratingSummary}
+                                        title="Get a high-level summary of your performance, including your weak and strong areas, with actionable study recommendations."
+                                        className="inline-flex items-center space-x-2 bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-sky-300"
+                                    >
+                                        {isGeneratingSummary ? <Spinner /> : <BarChart size={20} />}
+                                        <span>{isGeneratingSummary ? 'Analyzing...' : 'Get AI Performance Summary'}</span>
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                 <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Unlock our AI-powered study guide to get personalized feedback. This premium feature is available to subscribers or with an exam purchase.</p>
+                                 <button
+                                     disabled
+                                     title="This is a premium feature. Subscribe or purchase the certification exam to unlock the AI study guide. Access is removed for a specific exam after you pass it or use all 3 attempts."
+                                     className="inline-flex items-center space-x-2 bg-slate-400 text-white font-bold py-3 px-6 rounded-lg cursor-not-allowed">
+                                     <Lock size={16} />
+                                     <span>Unlock AI Feedback with Purchase or Subscription</span>
+                                 </button>
+                             </>
+                        )}
+                    </div>
+                )}
+                
+                {aiSummary && (
+                    <div className="mt-8 pt-8 border-t border-slate-200">
+                        <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center"><BarChart className="mr-3 text-cyan-500" /> AI Performance Summary</h2>
+                        <div className="bg-sky-50 p-6 rounded-lg border border-sky-200 whitespace-pre-wrap font-sans text-slate-700">
+                            {aiSummary}
+                        </div>
+                    </div>
+                )}
+
+                {aiFeedback && (
+                    <div className="mt-8 pt-8 border-t border-slate-200">
+                        <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center"><Sparkles className="mr-3 text-cyan-500" /> AI Question Feedback</h2>
+                        <div className="bg-amber-50 p-6 rounded-lg border border-amber-200 whitespace-pre-wrap font-sans text-slate-700">
+                            {aiFeedback}
+                        </div>
+                        <div className="text-center mt-6">
+                            <button
+                                onClick={handleDownloadFeedback}
+                                disabled={isDownloading}
+                                className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-blue-300"
+                            >
+                                {isDownloading ? <Spinner /> : <Download size={20} />}
+                                <span>{isDownloading ? 'Downloading...' : 'Download as Study Guide PDF'}</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                <div className="space-y-6 mt-8">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-4 border-b pb-2">Answer Review</h2>
+                    {exam.isPractice ? (
+                        result.review.map((item, index) => (
+                            <div key={item.questionId} className={`p-4 rounded-lg border-2 ${item.userAnswer === item.correctAnswer ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                                <p className="font-semibold text-slate-800 mb-2"><strong>Question {index + 1}:</strong> {item.question}</p>
+                                <div className="space-y-2 text-sm">
+                                    {item.options.map((option, optIndex) => {
+                                        const isCorrect = optIndex === item.correctAnswer;
+                                        const isUserAnswer = optIndex === item.userAnswer;
+                                        let optionClass = 'text-slate-600';
+                                        if (isCorrect) optionClass = 'text-green-800 font-bold';
+                                        if (isUserAnswer && !isCorrect) optionClass = 'text-red-800 line-through';
+
+                                        return (
+                                            <div key={optIndex} className={`flex items-start ${optionClass}`}>
+                                                {isCorrect && <Check size={16} className="mr-2 mt-0.5 text-green-600 flex-shrink-0" />}
+                                                {isUserAnswer && !isCorrect && <X size={16} className="mr-2 mt-0.5 text-red-600 flex-shrink-0" />}
+                                                {!isCorrect && !isUserAnswer && <div className="w-4 h-4 mr-2 flex-shrink-0"></div>}
+                                                <span className="flex-1">{option}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                 {item.userAnswer === -1 && <p className="text-sm text-yellow-800 mt-2">You did not answer this question.</p>}
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center p-6 bg-slate-100 rounded-lg">
+                            <p className="text-slate-600">Answer review is not available for certification exams to protect exam integrity.</p>
+                        </div>
+                    )}
+                </div>
+
+                {exam.recommendedBook && (
+                    <div className="mt-8 pt-8 border-t border-slate-200">
+                         <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center"><BookUp className="mr-3 text-cyan-500" /> Recommended Study Material</h2>
+                         <div className="bg-white rounded-lg shadow-md overflow-hidden border border-slate-200 flex flex-col sm:flex-row">
+                            <BookCover title={exam.recommendedBook.title} className="w-full sm:w-48 h-48 sm:h-auto" />
+                            <div className="p-6 flex flex-col justify-between">
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-800 mb-2">{exam.recommendedBook.title}</h3>
+                                    <p className="text-slate-600 text-sm mb-4">{exam.recommendedBook.description}</p>
+                                </div>
+                                <a 
+                                    href={getGeoAffiliateLink(exam.recommendedBook).url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="mt-auto self-start bg-yellow-400 hover:bg-yellow-500 text-slate-800 font-bold py-2 px-4 rounded-lg flex items-center gap-2"
+                                >
+                                    <ShieldCheck size={16} />
+                                    <span>Buy on {getGeoAffiliateLink(exam.recommendedBook).domainName}</span>
+                                </a>
+                            </div>
+                         </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default Results;
