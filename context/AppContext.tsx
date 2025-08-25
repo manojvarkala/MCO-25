@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { appData } from '../assets/appData.ts';
 import type { Organization, RecommendedBook, Exam, ExamProductCategory, InProgressExamInfo } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
@@ -29,8 +28,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [inProgressExam, setInProgressExam] = React.useState<InProgressExamInfo | null>(null);
 
   React.useEffect(() => {
-    const initializeApp = () => {
+    const initializeApp = async () => {
+        setIsInitializing(true);
         try {
+            const response = await fetch('/medical-coding-config.json');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const appData = await response.json();
+            
             const baseOrgs = JSON.parse(JSON.stringify(appData));
             
             const bookMap = new Map<string, RecommendedBook>();
@@ -89,7 +95,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
 
         } catch (error) {
-            console.error("Failed to initialize app config from local data:", error);
+            console.error("Failed to initialize app config from external JSON:", error);
             toast.error("Could not load application configuration.");
         } finally {
             setIsInitializing(false);
