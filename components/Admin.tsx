@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Link } from 'react-router-dom';
-import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent } from 'lucide-react';
+import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, SearchedUser, ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -242,33 +242,42 @@ const Admin: React.FC = () => {
                         <p><strong>Error:</strong> {statsError}</p>
                     </div>
                 ) : stats && stats.length > 0 ? (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-200">
-                                    <th className="p-3 text-sm font-semibold text-slate-600">Exam Name</th>
-                                    <th className="p-3 text-sm font-semibold text-slate-600 text-center">Total Sales</th>
-                                    <th className="p-3 text-sm font-semibold text-slate-600 text-center">Total Attempts</th>
-                                    <th className="p-3 text-sm font-semibold text-slate-600 text-center">Pass Rate</th>
+                     <div className="overflow-x-auto bg-white rounded-lg shadow">
+                        <table className="w-full text-sm text-left text-slate-500">
+                            <thead className="text-xs text-slate-700 uppercase bg-slate-100">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3">Exam Name</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Sales</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Attempts</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Passed</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Failed</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Pass Rate</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Avg. Score</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {stats.map((stat) => {
                                     const examConfig = activeOrg?.exams.find(exam => exam.id === stat.examId);
-                                    const passScore = examConfig ? examConfig.passScore : 70; // Default to 70 if exam config not found
-                                    const passRateColor = stat.passRate >= passScore ? 'text-green-600' : 'text-amber-600';
+                                    const passScore = examConfig ? examConfig.passScore : 70;
+                                    const passRateColor = stat.passRate >= passScore ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800';
+                                    const avgScoreColor = stat.averageScore >= passScore ? 'text-green-600' : 'text-amber-600';
 
                                     return (
-                                        <tr key={stat.examId} className="border-b border-slate-200 hover:bg-slate-50">
-                                            <td className="p-3 font-medium text-slate-800">{stat.examName}</td>
-                                            <td className="p-3 text-center text-slate-600 flex items-center justify-center gap-2">
-                                                <ShoppingCart size={14} className="text-blue-500"/> {stat.totalSales}
+                                        <tr key={stat.examId} className="bg-white border-b hover:bg-slate-50">
+                                            <th scope="row" className="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">
+                                                {stat.examName}
+                                            </th>
+                                            <td className="px-6 py-4 text-center">{stat.totalSales}</td>
+                                            <td className="px-6 py-4 text-center">{stat.totalAttempts}</td>
+                                            <td className="px-6 py-4 text-center text-green-600 font-medium">{stat.passed}</td>
+                                            <td className="px-6 py-4 text-center text-red-600 font-medium">{stat.failed}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={`px-2 py-1 font-semibold leading-tight rounded-full text-xs ${passRateColor}`}>
+                                                    {stat.passRate.toFixed(1)}%
+                                                </span>
                                             </td>
-                                            <td className="p-3 text-center text-slate-600 flex items-center justify-center gap-2">
-                                                <FileText size={14} className="text-green-500"/> {stat.totalAttempts}
-                                            </td>
-                                            <td className={`p-3 text-center font-semibold ${passRateColor} flex items-center justify-center gap-2`}>
-                                                <Percent size={14} /> {stat.passRate.toFixed(1)}%
+                                            <td className={`px-6 py-4 text-center font-bold ${avgScoreColor}`}>
+                                                {stat.averageScore.toFixed(1)}%
                                             </td>
                                         </tr>
                                     );

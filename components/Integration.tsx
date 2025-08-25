@@ -232,7 +232,7 @@ function mco_exam_register_rest_api() {
     register_rest_route('mco-app/v1', '/search-user', ['methods' => 'POST', 'callback' => 'mco_search_user_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/reset-spins', ['methods' => 'POST', 'callback' => 'mco_reset_spins_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
     register_rest_route('mco-app/v1', '/remove-prize', ['methods' => 'POST', 'callback' => 'mco_remove_prize_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
-    register_rest_route('mco-app/v1', '/exam-stats', ['methods' => 'POST', 'callback' => 'mco_get_exam_stats_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
+    register_rest_route('mco-app/v1', '/exam-stats', ['methods' => 'GET', 'callback' => 'mco_get_exam_stats_callback', 'permission_callback' => 'mco_exam_api_permission_check']);
 }
 
 function mco_exam_api_permission_check($request) {
@@ -519,12 +519,22 @@ function mco_get_exam_stats_callback($request) {
 
         $total_attempts = count($exam_attempts);
         $passed_attempts_count = 0;
+        $total_score = 0;
+
         if ($total_attempts > 0) {
              $passed_attempts_count = count(array_filter($exam_attempts, function($attempt) use ($config) {
                 return isset($attempt['score']) && $attempt['score'] >= $config['passScore'];
             }));
+            foreach ($exam_attempts as $attempt) {
+                if (isset($attempt['score'])) {
+                    $total_score += (float)$attempt['score'];
+                }
+            }
         }
+        
+        $failed_attempts_count = $total_attempts - $passed_attempts_count;
         $pass_rate = $total_attempts > 0 ? ($passed_attempts_count / $total_attempts) * 100 : 0;
+        $average_score = $total_attempts > 0 ? $total_score / $total_attempts : 0;
         
         if ($total_sales > 0 || $total_attempts > 0) {
             $stats[] = [
@@ -532,7 +542,10 @@ function mco_get_exam_stats_callback($request) {
                 'examName' => $config['name'],
                 'totalSales' => $total_sales,
                 'totalAttempts' => $total_attempts,
+                'passed' => $passed_attempts_count,
+                'failed' => $failed_attempts_count,
                 'passRate' => round($pass_rate, 2),
+                'averageScore' => round($average_score, 2)
             ];
         }
     }

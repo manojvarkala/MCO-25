@@ -301,6 +301,6 @@ export const googleSheetsService = {
     
     // --- NEW EXAM STATS ---
     getExamStats: async (token: string): Promise<ExamStat[]> => {
-        return apiFetch('/exam-stats', token, { method: 'POST' });
+        return apiFetch('/exam-stats', token, { method: 'GET' });
     },
 };

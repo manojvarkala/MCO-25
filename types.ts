@@ -183,4 +183,7 @@ export interface ExamStat {
     totalSales: number;
     totalAttempts: number;
     passRate: number; // Percentage
+    averageScore: number;
+    passed: number;
+    failed: number;
 }
