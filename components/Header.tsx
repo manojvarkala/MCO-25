@@ -1,5 +1,6 @@
 
 
+
 import * as React from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -11,19 +12,23 @@ const Header: React.FC = () => {
   const { activeOrg, setWheelModalOpen } = useAppContext();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false);
 
+  const mainSiteBaseUrl = activeOrg ? `https://www.${activeOrg.website}` : '';
+  
   const handleLogout = () => {
     logout();
-    // Redirect to the external WordPress site's logout page, then back to the app's home
-    const appHomeUrl = 'https://exams.coding-online.net';
-    const wpLogoutUrl = `https://www.coding-online.net/wp-login.php?action=logout&redirect_to=${encodeURIComponent(appHomeUrl)}`;
-    window.location.href = wpLogoutUrl;
+    if (mainSiteBaseUrl) {
+      // Redirect to the external WordPress site's logout page, then back to the app's home
+      const appHomeUrl = `https://${window.location.hostname}`;
+      const wpLogoutUrl = `${mainSiteBaseUrl}/wp-login.php?action=logout&redirect_to=${encodeURIComponent(appHomeUrl)}`;
+      window.location.href = wpLogoutUrl;
+    }
   };
 
   const headerLink = user ? "/#/dashboard" : "/#/";
   
-  // The custom login page is a WordPress page with the slug 'exam-login'
-  const loginUrl = `https://www.coding-online.net/exam-login/`;
-  const myAccountUrl = `https://www.coding-online.net/my-account/`;
+  const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
+  const myAccountUrl = `${mainSiteBaseUrl}/my-account/`;
+  const registerUrl = `${mainSiteBaseUrl}/wp-login.php?action=register`;
 
   const headerClasses = isSubscribed
     ? "shadow-lg sticky top-0 z-50 premium-header-gradient"
@@ -147,7 +152,7 @@ const Header: React.FC = () => {
                     <span>Login</span>
                 </a>
                 <a
-                    href="https://www.coding-online.net/wp-login.php?action=register"
+                    href={registerUrl}
                     className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
                     >
                     <UserPlus size={16} />

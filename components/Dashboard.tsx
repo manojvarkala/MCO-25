@@ -1,5 +1,6 @@
 
 
+
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -44,13 +45,15 @@ const Dashboard: React.FC = () => {
     const [isSavingName, setIsSavingName] = React.useState(false);
     const [name, setName] = React.useState(user?.name || '');
 
-    const loginUrl = 'https://www.coding-online.net/exam-login/';
+    const mainSiteBaseUrl = activeOrg ? `https://www.${activeOrg.website}` : '';
+
+    const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
     const appDashboardPath = '/dashboard';
     const syncUrl = `${loginUrl}?redirect_to=${encodeURIComponent(appDashboardPath)}`;
-    const browseExamsUrl = 'https://www.coding-online.net/exam-programs/';
+    const browseExamsUrl = `${mainSiteBaseUrl}/exam-programs/`;
 
-    const monthlySubUrl = 'https://www.coding-online.net/product/monthly-subscription/';
-    const yearlySubUrl = 'https://www.coding-online.net/product/yearly-subscription/';
+    const monthlySubUrl = `${mainSiteBaseUrl}/product/monthly-subscription/`;
+    const yearlySubUrl = `${mainSiteBaseUrl}/product/yearly-subscription/`;
 
     const monthlyPriceData = examPrices?.['sub-monthly'];
     const yearlyPriceData = examPrices?.['sub-yearly'];
@@ -467,7 +470,7 @@ const Dashboard: React.FC = () => {
                                                     {(() => {
                                                         const priceData = examPrices?.[certExam.productSku];
                                                         const url = priceData?.productId 
-                                                            ? `https://www.coding-online.net/cart/?add-to-cart=${priceData.productId}`
+                                                            ? `${mainSiteBaseUrl}/cart/?add-to-cart=${priceData.productId}`
                                                             : browseExamsUrl;
                                                         return (
                                                             <a
@@ -486,7 +489,7 @@ const Dashboard: React.FC = () => {
                                         
                                         {bundlePriceData ? (() => {
                                             const bundleUrl = bundlePriceData.productId
-                                                ? `https://www.coding-online.net/cart/?add-to-cart=${bundlePriceData.productId}`
+                                                ? `${mainSiteBaseUrl}/cart/?add-to-cart=${bundlePriceData.productId}`
                                                 : browseExamsUrl;
                                             return (
                                                 <div className={`flex flex-col justify-between p-4 rounded-lg border h-full ${bundleSubCardClasses}`}>

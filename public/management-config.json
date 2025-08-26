@@ -1,0 +1,14 @@
+{
+    "organizations": [
+        {
+            "id": "org-mgmt",
+            "name": "Management Certs",
+            "website": "management-certs.com",
+            "logo": "/logo.png",
+            "exams": [],
+            "examProductCategories": [],
+            "certificateTemplates": [],
+            "suggestedBooks": []
+        }
+    ]
+}

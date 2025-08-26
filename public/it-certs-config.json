@@ -1,0 +1,14 @@
+{
+    "organizations": [
+        {
+            "id": "org-it",
+            "name": "IT Certifications",
+            "website": "tech-exams.com",
+            "logo": "/logo.png",
+            "exams": [],
+            "examProductCategories": [],
+            "certificateTemplates": [],
+            "suggestedBooks": []
+        }
+    ]
+}

@@ -1,5 +1,6 @@
 
 
+
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -18,7 +19,10 @@ const LandingPage: React.FC = () => {
         }
     }, [user, navigate]);
 
-    const loginUrl = `https://www.coding-online.net/exam-login/`;
+    const mainSiteBaseUrl = activeOrg ? `https://www.${activeOrg.website}` : '';
+    const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
+    const registerUrl = `${mainSiteBaseUrl}/wp-login.php?action=register`;
+
 
     if (isLoading || !activeOrg || user) {
         return (
@@ -33,11 +37,11 @@ const LandingPage: React.FC = () => {
         <div className="text-center py-20">
             <h1 className="text-5xl font-extrabold text-slate-900 mb-4">Welcome to the Examination Portal</h1>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-8">
-                Your central hub for medical coding examinations. Please log in or register to access your dashboard and start your tests.
+                Your central hub for {activeOrg.name} examinations. Please log in or register to access your dashboard and start your tests.
             </p>
             <div className="flex justify-center items-center gap-4">
                 <a
-                    href="https://www.coding-online.net/wp-login.php?action=register"
+                    href={registerUrl}
                     className="flex items-center justify-center bg-cyan-600 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-cyan-700 transition"
                     >
                     <UserPlus size={20} className="mr-2"/>

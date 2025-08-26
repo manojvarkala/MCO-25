@@ -18,6 +18,29 @@ interface AppContextType {
 
 const AppContext = React.createContext<AppContextType | undefined>(undefined);
 
+const getConfigFile = (): string => {
+    const hostname = window.location.hostname;
+
+    // Vercel preview URLs, localhost, and the main production domain for MCO
+    if (hostname.endsWith('vercel.app') || hostname === 'exams.coding-online.net' || hostname === 'localhost') {
+        return '/medical-coding-config.json';
+    }
+
+    const domainMap: { [key: string]: string } = {
+        'exams.annapoornainfo.com': '/annapoorna-config.json',
+        // --- Placeholder domains for future tenants ---
+        'exams.lawprep.com': '/law-school-config.json',
+        'exams.civil-certs.com': '/civil-engineering-config.json',
+        'exams.tech-exams.com': '/it-certs-config.json',
+        'exams.finance-prep.com': '/finance-certs-config.json',
+        'exams.management-certs.com': '/management-config.json'
+    };
+    
+    // Fallback to default if no specific domain is matched
+    return domainMap[hostname] || '/medical-coding-config.json';
+};
+
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [organizations, setOrganizations] = React.useState<Organization[]>([]);
   const [activeOrg, setActiveOrg] = React.useState<Organization | null>(null);
@@ -31,13 +54,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const initializeApp = async () => {
         setIsInitializing(true);
         try {
-            const response = await fetch('/medical-coding-config.json');
+            const configFile = getConfigFile();
+            const response = await fetch(configFile);
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`HTTP error! Could not fetch ${configFile}. Status: ${response.status}`);
             }
             const configData = await response.json();
             
-            // FIX: Access the 'organizations' array from the fetched JSON object
             const baseOrgs = JSON.parse(JSON.stringify(configData.organizations || []));
             
             const bookMap = new Map<string, RecommendedBook>();
