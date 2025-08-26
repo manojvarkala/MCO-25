@@ -7,16 +7,15 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       MCO Exam App Integration (Unified)
  * Description:       A unified plugin to integrate the React examination app with WordPress, handling SSO, data sync, and WooCommerce cart/checkout styling.
- * Version:           11.0.0
- * Author:            Annapoorna Infotech (Refactored)
+ * Version:           12.0.0
+ * Author:            Annapoorna Infotech (Refactored for Multi-Tenant)
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // --- CONFIGURATION ---
 define('MCO_LOGIN_SLUG', 'exam-login');
-define('MCO_EXAM_APP_URL', 'https://exams.coding-online.net/');
-define('MCO_EXAM_APP_TEST_URL', 'https://mco-25.vercel.app/');
+// The MCO_EXAM_APP_URL is now set in the WP Admin settings page.
 // define('MCO_JWT_SECRET', 'your-very-strong-secret-key-that-is-long-and-random');
 define('MCO_DEBUG', true); // Enabled for troubleshooting. Check wp-content/debug.log
 // --- END CONFIGURATION ---
@@ -63,12 +62,37 @@ function mco_exam_app_init() {
 }
 
 function mco_debug_log($message) { if (defined('MCO_DEBUG') && MCO_DEBUG) error_log('MCO Exam App Debug: ' . print_r($message, true)); }
-function mco_check_dependencies() { if (!class_exists('WooCommerce')) echo '<div class="notice notice-error"><p><strong>MCO Exam App:</strong> WooCommerce is not active. Exam features will be limited.</p></div>'; if (!defined('MCO_JWT_SECRET') || strlen(MCO_JWT_SECRET) < 32) echo '<div class="notice notice-error"><p><strong>MCO Exam App:</strong> A secure <strong>MCO_JWT_SECRET</strong> is not defined in wp-config.php. SSO will not work.</p></div>';}
+function mco_check_dependencies() { 
+    if (!class_exists('WooCommerce')) echo '<div class="notice notice-error"><p><strong>MCO Exam App:</strong> WooCommerce is not active. Exam features will be limited.</p></div>'; 
+    if (!defined('MCO_JWT_SECRET') || strlen(MCO_JWT_SECRET) < 32) echo '<div class="notice notice-error"><p><strong>MCO Exam App:</strong> A secure <strong>MCO_JWT_SECRET</strong> is not defined in wp-config.php. SSO will not work.</p></div>';
+    if (empty(get_option('mco_exam_app_url'))) echo '<div class="notice notice-warning"><p><strong>MCO Exam App:</strong> The Exam Application URL is not set. Please <a href="' . admin_url('options-general.php?page=mco-exam-settings') . '">go to the settings page</a> to configure it.</p></div>';
+}
 function mco_exam_add_admin_menu() { add_options_page('MCO Exam App Settings', 'MCO Exam App', 'manage_options', 'mco-exam-settings', 'mco_exam_settings_page_html'); }
-function mco_exam_register_settings() { register_setting('mco_exam_app_settings_group', 'mco_exam_app_mode'); }
+function mco_exam_register_settings() { register_setting('mco_exam_app_settings_group', 'mco_exam_app_url'); }
 function mco_exam_settings_page_html() { if (!current_user_can('manage_options')) return; ?>
-    <div class="wrap"><h1><?php echo esc_html(get_admin_page_title()); ?></h1><p>Control the exam app version for redirects.</p><form action="options.php" method="post"><?php settings_fields('mco_exam_app_settings_group'); ?><table class="form-table"><tr><th scope="row">App Mode for Admins</th><td><fieldset><label><input type="radio" name="mco_exam_app_mode" value="production" <?php checked(get_option('mco_exam_app_mode'), 'production'); ?> /> Production</label><br/><label><input type="radio" name="mco_exam_app_mode" value="test" <?php checked(get_option('mco_exam_app_mode', 'test'), 'test'); ?> /> Test</label></fieldset></td></tr></table><?php submit_button('Save Settings'); ?></form></div><?php }
-function mco_get_exam_app_url($is_admin = false) { if ($is_admin) return get_option('mco_exam_app_mode', 'test') === 'production' ? MCO_EXAM_APP_URL : MCO_EXAM_APP_TEST_URL; return MCO_EXAM_APP_URL; }
+    <div class="wrap">
+        <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+        <p>Configure the connection to your React examination application.</p>
+        <form action="options.php" method="post">
+            <?php settings_fields('mco_exam_app_settings_group'); ?>
+            <table class="form-table">
+                <tr>
+                    <th scope="row"><label for="mco_exam_app_url">Exam Application URL</label></th>
+                    <td>
+                        <input type="url" id="mco_exam_app_url" name="mco_exam_app_url" value="<?php echo esc_attr(get_option('mco_exam_app_url')); ?>" class="regular-text" placeholder="https://exams.yourdomain.com" />
+                        <p class="description">Enter the full URL of your exam application. This is where users will be redirected after login and purchase.</p>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button('Save Settings'); ?>
+        </form>
+    </div>
+<?php }
+
+function mco_get_exam_app_url() {
+    $url = get_option('mco_exam_app_url', '');
+    return rtrim($url, '/'); // Ensure no trailing slash
+}
 
 
 // --- DATA SOURCE & JWT ---
@@ -179,6 +203,9 @@ function mco_generate_exam_jwt($user_id) {
 }
 
 function mco_redirect_after_purchase($order_id) {
+    $app_url = mco_get_exam_app_url();
+    if (empty($app_url)) return; // Don't redirect if URL is not configured
+
     if (!$order_id || !($order = wc_get_order($order_id)) || !($user_id = $order->get_customer_id())) {
         return;
     }
@@ -210,7 +237,7 @@ function mco_redirect_after_purchase($order_id) {
         }
 
         if ($token = mco_generate_exam_jwt($user_id)) {
-            wp_redirect(mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=/dashboard');
+            wp_redirect($app_url . '/#/auth?token=' . $token . '&redirect_to=/dashboard');
             exit;
         }
     }
@@ -563,6 +590,10 @@ function mco_exam_user_details_shortcode() { if (!is_user_logged_in()) return '<
 
 function mco_exam_login_shortcode() {
     if (!defined('MCO_JWT_SECRET')) return "<p class='mco-portal-error'>Configuration error: A strong MCO_JWT_SECRET must be defined in wp-config.php.</p>";
+    
+    $app_url = mco_get_exam_app_url();
+    if (empty($app_url)) return "<p class='mco-portal-error'>Configuration error: The Exam Application URL is not configured in the plugin settings.</p>";
+
     $login_error_message = ''; $user_id = 0;
     if ('POST' === $_SERVER['REQUEST_METHOD'] && !empty($_POST['mco_login_nonce']) && wp_verify_nonce($_POST['mco_login_nonce'], 'mco_login_action')) {
         $user = wp_signon(['user_login' => sanitize_user($_POST['log']), 'user_password' => $_POST['pwd'], 'remember' => true], false);
@@ -573,7 +604,7 @@ function mco_exam_login_shortcode() {
         }
     }
     if (is_user_logged_in() && $user_id === 0) { $user_id = get_current_user_id(); }
-    if ($user_id > 0) { $token = mco_generate_exam_jwt($user_id); if ($token) { $redirect_to = isset($_REQUEST['redirect_to']) ? esc_url_raw(urldecode($_REQUEST['redirect_to'])) : '/dashboard'; $final_url = mco_get_exam_app_url(user_can($user_id, 'administrator')) . '#/auth?token=' . $token . '&redirect_to=' . urlencode($redirect_to); echo "<div class='mco-portal-container' style='text-align:center;'><p>Login successful. Redirecting...</p><script>window.location.href='" . esc_url_raw($final_url) . "';</script></div>"; return; } else { $login_error_message = 'Could not create a secure session. Please contact support.'; } }
+    if ($user_id > 0) { $token = mco_generate_exam_jwt($user_id); if ($token) { $redirect_to = isset($_REQUEST['redirect_to']) ? esc_url_raw(urldecode($_REQUEST['redirect_to'])) : '/dashboard'; $final_url = $app_url . '/#/auth?token=' . $token . '&redirect_to=' . urlencode($redirect_to); echo "<div class='mco-portal-container' style='text-align:center;'><p>Login successful. Redirecting...</p><script>window.location.href='" . esc_url_raw($final_url) . "';</script></div>"; return; } else { $login_error_message = 'Could not create a secure session. Please contact support.'; } }
     ob_start(); ?>
     <style>.mco-portal-container{font-family:sans-serif;max-width:400px;margin:5% auto;padding:40px;background:#fff;border-radius:12px;box-shadow:0 10px 25px -5px rgba(0,0,0,.1)}.mco-portal-container h2{text-align:center;font-size:24px;margin-bottom:30px}.mco-portal-container .form-row{margin-bottom:20px}.mco-portal-container label{display:block;margin-bottom:8px;font-weight:600}.mco-portal-container input{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box}.mco-portal-container button{width:100%;padding:14px;background-color:#0891b2;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer}.mco-portal-container button:hover{background-color:#067a8e}.mco-portal-links{margin-top:20px;text-align:center}.mco-portal-error{color:red;text-align:center;margin-bottom:20px}</style>
     <div class="mco-portal-container">
@@ -788,7 +819,7 @@ function mco_exam_showcase_shortcode() {
                                         <li><?php echo $icon_repeat; ?> 10 free attempts included</li>
                                     </ul>
                                 </div>
-                                <a href="<?php echo esc_url(MCO_EXAM_APP_URL . '#/test/' . $program['practice_id']); ?>" class="mco-subcard-btn mco-btn-practice"><?php echo $icon_zap; ?> Start Practice</a>
+                                <a href="<?php echo esc_url(rtrim(mco_get_exam_app_url(), '/') . '/#/test/' . $program['practice_id']); ?>" class="mco-subcard-btn mco-btn-practice"><?php echo $icon_zap; ?> Start Practice</a>
                             </div>
                             
                             <div class="mco-subcard" style="<?php echo $subcard_style; ?>">
