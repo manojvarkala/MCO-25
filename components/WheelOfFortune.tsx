@@ -1,6 +1,7 @@
 import * as React from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
+import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import { Gift, X, Info } from 'lucide-react';
 import type { TokenPayload } from '../types.ts';
@@ -9,17 +10,6 @@ interface WheelOfFortuneProps {
     isOpen: boolean;
     onClose: () => void;
 }
-
-const allPossibleSegments = [
-    { label: "Annual Subscription", prizeId: "SUB_YEARLY" },
-    { label: "Weekly Subscription", prizeId: "SUB_WEEKLY" },
-    { label: "Free CPC Exam", prizeId: "EXAM_CPC" },
-    { label: "Monthly Subscription", prizeId: "SUB_MONTHLY" },
-    { label: "Better Luck Next Time", prizeId: "NEXT_TIME" },
-    { label: "Free CCA Exam", prizeId: "EXAM_CCA" },
-    { label: "Weekly Subscription", prizeId: "SUB_WEEKLY" },
-    { label: "Monthly Subscription", prizeId: "SUB_MONTHLY" },
-];
 
 const shuffleArray = <T,>(array: T[]): T[] => {
   let currentIndex = array.length, randomIndex;
@@ -33,10 +23,11 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 
 const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
     const { user, token, loginWithToken, spinsAvailable } = useAuth();
+    const { activeOrg } = useAppContext();
     const [isSpinning, setIsSpinning] = React.useState(false);
     const [rotation, setRotation] = React.useState(0);
     const [prizeResult, setPrizeResult] = React.useState<{ prizeId: string; prizeLabel: string; } | null>(null);
-    const [displaySegments, setDisplaySegments] = React.useState(allPossibleSegments);
+    const [displaySegments, setDisplaySegments] = React.useState<{ label: string; prizeId: string }[]>([]);
     const [conicGradient, setConicGradient] = React.useState('');
     
     const [dragY, setDragY] = React.useState(0);
@@ -45,10 +36,37 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
     const isDraggingRef = React.useRef(false);
     const startYRef = React.useRef(0);
 
-
     React.useEffect(() => {
-        const segmentsToShuffle = [...allPossibleSegments];
-        const shuffled = shuffleArray(segmentsToShuffle);
+        const genericPrizes = [
+            { label: "Annual Subscription", prizeId: "SUB_YEARLY" },
+            { label: "Monthly Subscription", prizeId: "SUB_MONTHLY" },
+            { label: "Better Luck Next Time", prizeId: "NEXT_TIME" },
+            { label: "Weekly Subscription", prizeId: "SUB_WEEKLY" },
+        ];
+    
+        if (!activeOrg) {
+            setDisplaySegments(shuffleArray(genericPrizes));
+            return;
+        }
+    
+        const examPrizes = activeOrg.exams
+            .filter(exam => !exam.isPractice && exam.price > 0)
+            .slice(0, 4) // Take up to 4 exams to keep the wheel balanced
+            .map(exam => ({
+                label: `Free ${exam.name}`,
+                prizeId: exam.productSku
+            }));
+    
+        const combinedPrizes = [...genericPrizes, ...examPrizes];
+        
+        const finalSegments = [];
+        let i = 0;
+        while (finalSegments.length < 8) {
+            finalSegments.push(combinedPrizes[i % combinedPrizes.length]);
+            i++;
+        }
+    
+        const shuffled = shuffleArray(finalSegments);
         setDisplaySegments(shuffled);
 
         const gradientString = shuffled.map((_, index) => {
@@ -59,7 +77,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
             return `${color} ${startAngle}deg ${endAngle}deg`;
         }).join(', ');
         setConicGradient(gradientString);
-    }, []);
+    }, [activeOrg]);
 
      React.useEffect(() => {
         if (prizeResult) {
@@ -265,7 +283,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                             className={`w-12 h-12 rounded-full ring-4 ring-amber-300/50 flex items-center justify-center cursor-grab active:cursor-grabbing ${isSpinning || prizeResult || (spinsAvailable === 0 && !user?.isAdmin) ? 'bg-zinc-600' : 'bg-amber-500'}`}
                             style={{ transform: `translateY(${dragY}px)` }}
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>
                         </div>
                         <div className="absolute top-4 text-xs text-zinc-400 pointer-events-none transform -rotate-90 origin-center tracking-widest">
                             SPIN
