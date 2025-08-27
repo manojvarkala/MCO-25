@@ -45,7 +45,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [organizations, setOrganizations] = React.useState<Organization[]>([]);
   const [activeOrg, setActiveOrg] = React.useState<Organization | null>(null);
   const [isInitializing, setIsInitializing] = React.useState(true);
-  const { user, examPrices, suggestedBooks } = useAuth();
+  const { user, examPrices, suggestedBooks, dynamicExams, dynamicCategories } = useAuth();
   const [isWheelModalOpen, setWheelModalOpen] = React.useState(false);
   const [inProgressExam, setInProgressExam] = React.useState<InProgressExamInfo | null>(null);
 
@@ -62,34 +62,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             
             const baseOrgs = JSON.parse(JSON.stringify(configData.organizations || []));
             
-            // Create a map of all available books from the dynamic list for efficient lookup
             const bookMap = new Map<string, RecommendedBook>();
             if (suggestedBooks) {
                 suggestedBooks.forEach(book => bookMap.set(book.id, book));
             }
 
             const processedOrgs = baseOrgs.map((org: Organization) => {
-                const processedExams = org.exams.map((exam: Exam): Exam => {
+                // Check if dynamic data exists from the JWT. If so, it's the source of truth for exams/categories.
+                const isDynamic = !!(dynamicExams && dynamicCategories);
+                const examsSource = isDynamic ? dynamicExams : org.exams;
+                const categoriesSource = isDynamic ? dynamicCategories : org.examProductCategories;
+
+                const processedExams = examsSource.map((exam: Exam): Exam => {
                     const priceData = examPrices && exam.productSku ? examPrices[exam.productSku] : null;
-                    // Link the book from our dynamic book map
                     const recommendedBook = exam.recommendedBookId ? bookMap.get(exam.recommendedBookId) : undefined;
                     
-                    const category = org.examProductCategories.find(
-                        (cat: ExamProductCategory) => cat.practiceExamId === exam.id || cat.certificationExamId === exam.id
-                    );
-
-                    if (!category || !category.questionSourceUrl) {
-                        console.error(`Configuration error: No question source URL found for exam "${exam.name}" (ID: ${exam.id}). Please check your config file.`);
-                        return {
-                            ...exam,
-                            questionSourceUrl: '', // Set to empty to prevent runtime errors on property access
-                            ...(priceData && { price: priceData.price, regularPrice: priceData.regularPrice }),
-                            ...(recommendedBook && { recommendedBook }),
-                        };
+                    let questionSourceUrl = exam.questionSourceUrl;
+                    
+                    // For static configs (old plugin), we still need to look up the question source URL from the category.
+                    if (!isDynamic) {
+                         const category = categoriesSource.find(
+                            (cat: ExamProductCategory) => cat.practiceExamId === exam.id || cat.certificationExamId === exam.id
+                        );
+                        if (!category || !category.questionSourceUrl) {
+                            console.error(`Static Config error: No question source URL for exam "${exam.name}" (ID: ${exam.id}).`);
+                            questionSourceUrl = '';
+                        } else {
+                            questionSourceUrl = category.questionSourceUrl;
+                        }
                     }
                     
-                    const questionSourceUrl = category.questionSourceUrl;
-
                     return {
                         ...exam,
                         questionSourceUrl,
@@ -97,8 +99,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         ...(recommendedBook && { recommendedBook }),
                     };
                 });
-                // Overwrite the static book list from the config file with the dynamic one from WordPress.
-                return { ...org, exams: processedExams, suggestedBooks: suggestedBooks || [] };
+                
+                // Overwrite the static lists from the config file with the dynamic ones if they exist.
+                return { 
+                    ...org, 
+                    exams: processedExams, 
+                    examProductCategories: categoriesSource,
+                    suggestedBooks: suggestedBooks || [] 
+                };
             });
             
             setOrganizations(processedOrgs);
@@ -123,7 +131,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     initializeApp();
-  }, [examPrices, suggestedBooks]); // Re-run when books are loaded from auth context
+  }, [examPrices, suggestedBooks, dynamicExams, dynamicCategories]);
 
   // Effect to detect in-progress exams
   React.useEffect(() => {

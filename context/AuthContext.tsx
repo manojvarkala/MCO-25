@@ -1,6 +1,6 @@
 import * as React from 'react';
 import toast from 'react-hot-toast';
-import type { User, TokenPayload, RecommendedBook } from '../types.ts';
+import type { User, TokenPayload, RecommendedBook, Exam, ExamProductCategory } from '../types.ts';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 
 interface AuthContextType {
@@ -14,6 +14,8 @@ interface AuthContextType {
   wheelModalDismissed: boolean;
   canSpinWheel: boolean;
   suggestedBooks: RecommendedBook[];
+  dynamicExams: Exam[] | null;
+  dynamicCategories: ExamProductCategory[] | null;
   loginWithToken: (token: string) => void;
   logout: () => void;
   useFreeAttempt: () => void;
@@ -94,6 +96,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return [];
       }
   });
+  const [dynamicExams, setDynamicExams] = React.useState<Exam[] | null>(() => {
+    try {
+        const stored = localStorage.getItem('dynamicExams');
+        return stored ? JSON.parse(stored) : null;
+    } catch {
+        return null;
+    }
+  });
+  const [dynamicCategories, setDynamicCategories] = React.useState<ExamProductCategory[] | null>(() => {
+      try {
+          const stored = localStorage.getItem('dynamicCategories');
+          return stored ? JSON.parse(stored) : null;
+      } catch {
+          return null;
+      }
+  });
+
   
   const canSpinWheel = React.useMemo(() => {
     if (!user) return false;
@@ -111,6 +130,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSpinsAvailable(0);
     setWonPrize(null);
     setSuggestedBooks([]);
+    setDynamicExams(null);
+    setDynamicCategories(null);
     localStorage.removeItem('examUser');
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
@@ -120,6 +141,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('wonPrize');
     localStorage.removeItem('activeOrg');
     localStorage.removeItem('suggestedBooks');
+    localStorage.removeItem('dynamicExams');
+    localStorage.removeItem('dynamicCategories');
     sessionStorage.removeItem('wheelModalDismissed');
     Object.keys(localStorage).forEach(key => {
         if (key.startsWith('exam_timer_') || key.startsWith('exam_results_')) {
@@ -202,6 +225,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setSuggestedBooks([]);
                 localStorage.removeItem('suggestedBooks');
             }
+            
+            // Handle dynamic exam data for backward compatibility
+            if (payload.exams && payload.examProductCategories) {
+                setDynamicExams(payload.exams);
+                setDynamicCategories(payload.examProductCategories);
+                localStorage.setItem('dynamicExams', JSON.stringify(payload.exams));
+                localStorage.setItem('dynamicCategories', JSON.stringify(payload.examProductCategories));
+            } else {
+                // This is for the old plugin that doesn't send this data.
+                setDynamicExams(null);
+                setDynamicCategories(null);
+                localStorage.removeItem('dynamicExams');
+                localStorage.removeItem('dynamicCategories');
+            }
+
 
             const spins = payload.spinsAvailable ?? 0;
             setSpinsAvailable(spins);
@@ -257,7 +295,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   return (
-    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel, suggestedBooks, loginWithToken, logout, useFreeAttempt, updateUserName, setWheelModalDismissed: updateWheelModalDismissed }}>
+    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel, suggestedBooks, dynamicExams, dynamicCategories, loginWithToken, logout, useFreeAttempt, updateUserName, setWheelModalDismissed: updateWheelModalDismissed }}>
       {children}
     </AuthContext.Provider>
   );
