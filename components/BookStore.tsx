@@ -39,7 +39,7 @@ const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
 
     return (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-1 transition-transform duration-300 border border-slate-100">
-            <BookCover title={book.title} className="w-full h-48" />
+            <BookCover book={book} className="w-full h-48" />
             <div className="p-6 flex flex-col flex-grow">
                 <h3 className="text-lg font-bold text-slate-800 mb-2 leading-tight">{book.title}</h3>
                 <p className="text-slate-600 text-sm mb-4 flex-grow">{book.description}</p>

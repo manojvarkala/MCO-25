@@ -1,6 +1,6 @@
 import * as React from 'react';
 import toast from 'react-hot-toast';
-import type { User, TokenPayload } from '../types.ts';
+import type { User, TokenPayload, RecommendedBook } from '../types.ts';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 
 interface AuthContextType {
@@ -13,6 +13,7 @@ interface AuthContextType {
   wonPrize: { prizeId: string; prizeLabel: string; } | null;
   wheelModalDismissed: boolean;
   canSpinWheel: boolean;
+  suggestedBooks: RecommendedBook[];
   loginWithToken: (token: string) => void;
   logout: () => void;
   useFreeAttempt: () => void;
@@ -85,6 +86,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
   });
+  const [suggestedBooks, setSuggestedBooks] = React.useState<RecommendedBook[]>(() => {
+      try {
+          const stored = localStorage.getItem('suggestedBooks');
+          return stored ? JSON.parse(stored) : [];
+      } catch {
+          return [];
+      }
+  });
   
   const canSpinWheel = React.useMemo(() => {
     if (!user) return false;
@@ -101,6 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsSubscribed(false);
     setSpinsAvailable(0);
     setWonPrize(null);
+    setSuggestedBooks([]);
     localStorage.removeItem('examUser');
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
@@ -109,6 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('spinsAvailable');
     localStorage.removeItem('wonPrize');
     localStorage.removeItem('activeOrg');
+    localStorage.removeItem('suggestedBooks');
     sessionStorage.removeItem('wheelModalDismissed');
     Object.keys(localStorage).forEach(key => {
         if (key.startsWith('exam_timer_') || key.startsWith('exam_results_')) {
@@ -184,6 +195,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 localStorage.removeItem('isSubscribed');
             }
             
+            if (payload.suggestedBooks) {
+                setSuggestedBooks(payload.suggestedBooks);
+                localStorage.setItem('suggestedBooks', JSON.stringify(payload.suggestedBooks));
+            } else {
+                setSuggestedBooks([]);
+                localStorage.removeItem('suggestedBooks');
+            }
+
             const spins = payload.spinsAvailable ?? 0;
             setSpinsAvailable(spins);
             localStorage.setItem('spinsAvailable', JSON.stringify(spins));
@@ -238,7 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   return (
-    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel, loginWithToken, logout, useFreeAttempt, updateUserName, setWheelModalDismissed: updateWheelModalDismissed }}>
+    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel, suggestedBooks, loginWithToken, logout, useFreeAttempt, updateUserName, setWheelModalDismissed: updateWheelModalDismissed }}>
       {children}
     </AuthContext.Provider>
   );

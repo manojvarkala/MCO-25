@@ -45,6 +45,7 @@ export interface TokenPayload {
     isSubscribed?: boolean;
     spinsAvailable?: number;
     wonPrize?: { prizeId: string; prizeLabel: string; };
+    suggestedBooks?: RecommendedBook[];
     iat?: number;
     exp?: number;
 }
@@ -75,6 +76,7 @@ export interface RecommendedBook {
     id: string;
     title: string;
     description: string;
+    thumbnailUrl?: string;
     affiliateLinks: { // These should be the full, final affiliate URLs
         com: string;
         in: string;

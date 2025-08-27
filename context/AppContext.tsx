@@ -45,8 +45,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [organizations, setOrganizations] = React.useState<Organization[]>([]);
   const [activeOrg, setActiveOrg] = React.useState<Organization | null>(null);
   const [isInitializing, setIsInitializing] = React.useState(true);
-  const [suggestedBooks, setSuggestedBooks] = React.useState<RecommendedBook[]>([]);
-  const { user, examPrices } = useAuth();
+  const { user, examPrices, suggestedBooks } = useAuth();
   const [isWheelModalOpen, setWheelModalOpen] = React.useState(false);
   const [inProgressExam, setInProgressExam] = React.useState<InProgressExamInfo | null>(null);
 
@@ -63,18 +62,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             
             const baseOrgs = JSON.parse(JSON.stringify(configData.organizations || []));
             
+            // Create a map of all available books from the dynamic list for efficient lookup
             const bookMap = new Map<string, RecommendedBook>();
-            baseOrgs.forEach((org: Organization) => {
-                if (org.suggestedBooks) {
-                    org.suggestedBooks.forEach(book => {
-                        if (!bookMap.has(book.id)) bookMap.set(book.id, book);
-                    });
-                }
-            });
+            if (suggestedBooks) {
+                suggestedBooks.forEach(book => bookMap.set(book.id, book));
+            }
 
             const processedOrgs = baseOrgs.map((org: Organization) => {
                 const processedExams = org.exams.map((exam: Exam): Exam => {
                     const priceData = examPrices && exam.productSku ? examPrices[exam.productSku] : null;
+                    // Link the book from our dynamic book map
                     const recommendedBook = exam.recommendedBookId ? bookMap.get(exam.recommendedBookId) : undefined;
                     
                     const category = org.examProductCategories.find(
@@ -100,7 +97,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         ...(recommendedBook && { recommendedBook }),
                     };
                 });
-                return { ...org, exams: processedExams };
+                // Overwrite the static book list from the config file with the dynamic one from WordPress.
+                return { ...org, exams: processedExams, suggestedBooks: suggestedBooks || [] };
             });
             
             setOrganizations(processedOrgs);
@@ -112,10 +110,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             
             if (newActiveOrg) {
               setActiveOrg(newActiveOrg);
-              setSuggestedBooks(newActiveOrg.suggestedBooks || []);
             } else {
               setActiveOrg(null);
-              setSuggestedBooks([]);
             }
 
         } catch (error) {
@@ -127,7 +123,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     initializeApp();
-  }, [examPrices]);
+  }, [examPrices, suggestedBooks]); // Re-run when books are loaded from auth context
 
   // Effect to detect in-progress exams
   React.useEffect(() => {
@@ -161,9 +157,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const org = organizations.find(o => o.id === orgId);
     if (org) {
         setActiveOrg(org);
-        if (org.suggestedBooks) {
-            setSuggestedBooks(org.suggestedBooks);
-        }
     }
   };
 
@@ -172,9 +165,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         prevOrgs.map(org => org.id === updatedOrg.id ? updatedOrg : org)
     );
     setActiveOrg(updatedOrg);
-    if (updatedOrg.suggestedBooks) {
-        setSuggestedBooks(updatedOrg.suggestedBooks);
-    }
   };
 
   return (
