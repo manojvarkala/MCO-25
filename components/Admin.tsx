@@ -1,8 +1,3 @@
-
-
-
-
-
 import * as React from 'react';
 import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -207,28 +202,11 @@ const Admin: React.FC = () => {
             
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                 <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
-                    <Cpu className="mr-3 text-cyan-500" />
-                    Superadmin: Platform Blueprint
-                </h2>
-                <p className="text-slate-600 mb-6">
-                   This application is built as a multi-tenant platform ("Annapoorna Examination App"). Access the blueprint for detailed instructions and flowcharts on how to onboard new clients and manage custom domains.
-                </p>
-                <a
-                    href="/#/superadmin-blueprint"
-                    className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
-                >
-                    <ExternalLink size={20} className="mr-2" />
-                    View Architectural Blueprint & Guide
-                </a>
-            </div>
-
-            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
                     <Code className="mr-3 text-cyan-500" />
                     WordPress Integration
                 </h2>
                 <p className="text-slate-600 mb-6">
-                    This is the master plugin for integrating the exam app with WordPress. It handles SSO, data sync, and WooCommerce styling.
+                    This is the master plugin for integrating the exam app with WordPress. It handles SSO, data sync, and WooCommerce styling. The "Platform Blueprint" guide is now included within the plugin's admin page on your WordPress site.
                 </p>
                 <a
                     href="/#/integration"
