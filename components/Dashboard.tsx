@@ -1,8 +1,8 @@
 
 
-
 import * as React from 'react';
-import { useNavigate } from 'react-router-dom';
+// Fix: Use useHistory from react-router-dom v5
+import { useHistory } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult } from '../types.ts';
@@ -34,7 +34,8 @@ const StarRating: React.FC<{ rating: number; count: number; }> = ({ rating, coun
 
 
 const Dashboard: React.FC = () => {
-    const navigate = useNavigate();
+    // Fix: Use useHistory for navigation in v5
+    const history = useHistory();
     const { user, paidExamIds, isSubscribed, updateUserName, token, examPrices } = useAuth();
     const { activeOrg, inProgressExam } = useAppContext();
     const [results, setResults] = React.useState<TestResult[] | null>(null);
@@ -415,7 +416,8 @@ const Dashboard: React.FC = () => {
                                                         toast.error(`You have "${inProgressExam.examName}" in progress. Please complete it first.`);
                                                         return;
                                                     }
-                                                    navigate(`/test/${practiceExam.id}`);
+                                                    // Fix: Use history.push for navigation
+                                                    history.push(`/test/${practiceExam.id}`);
                                                 }}
                                                 className="mt-3 w-full bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700 transition flex items-center justify-center"
                                             >
@@ -447,7 +449,8 @@ const Dashboard: React.FC = () => {
                                                                 toast.error(`You have "${inProgressExam.examName}" in progress. Please complete it first.`);
                                                                 return;
                                                             }
-                                                            navigate(`/test/${certExam.id}`);
+                                                            // Fix: Use history.push for navigation
+                                                            history.push(`/test/${certExam.id}`);
                                                         }}
                                                         disabled={!canTakeCertTest}
                                                         className="w-full flex items-center justify-center bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700 transition disabled:bg-slate-300 disabled:cursor-not-allowed"
@@ -538,7 +541,7 @@ const Dashboard: React.FC = () => {
                                         <div className="flex items-center gap-4">
                                             <p className={`font-bold text-lg ${result.score >= (activeOrg.exams.find(e => e.id === result.examId)?.passScore || 70) ? 'text-green-600' : 'text-red-600'}`}>{result.score}%</p>
                                             <button
-                                                onClick={() => navigate(`/results/${result.testId}`)}
+                                                onClick={() => history.push(`/results/${result.testId}`)}
                                                 className="bg-white border border-slate-300 text-slate-600 font-semibold py-2 px-4 rounded-lg hover:bg-slate-100 transition flex items-center"
                                             >
                                                 <Eye size={16} className="mr-2" />
@@ -585,7 +588,7 @@ const Dashboard: React.FC = () => {
                         </div>
                         <div className="mt-6 text-center">
                             <button
-                                onClick={() => navigate('/certificate/sample')}
+                                onClick={() => history.push('/certificate/sample')}
                                 className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
                             >
                                 <Award size={16} />

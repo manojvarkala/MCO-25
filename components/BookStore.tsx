@@ -8,25 +8,27 @@ import BookCover from '../assets/BookCover.tsx';
 const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
     const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } => {
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        let domainKey: keyof RecommendedBook['affiliateLinks'] = 'com';
-        let domainName = 'Amazon.com';
+        let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
+        let preferredDomain = 'Amazon.com';
 
+        // Determine preferred locale
         const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
-        
         if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
-            domainKey = 'in';
-            domainName = 'Amazon.in';
-        } 
-        else if (gccTimezones.some(tz => timeZone === tz)) {
-            domainKey = 'ae';
-            domainName = 'Amazon.ae';
+            preferredKey = 'in';
+            preferredDomain = 'Amazon.in';
+        } else if (gccTimezones.some(tz => timeZone === tz)) {
+            preferredKey = 'ae';
+            preferredDomain = 'Amazon.ae';
         }
         
-        const url = book.affiliateLinks[domainKey];
-        if (!url) {
-            return { url: book.affiliateLinks.com, domainName: 'Amazon.com', key: 'com' };
+        // Check if the preferred URL exists and is valid
+        const preferredUrl = book.affiliateLinks[preferredKey];
+        if (preferredUrl && preferredUrl.trim() !== '') {
+            return { url: preferredUrl, domainName: preferredDomain, key: preferredKey };
         }
-        return { url, domainName, key: domainKey };
+        
+        // Fallback to .com if preferred is not available or is an empty string
+        return { url: book.affiliateLinks.com, domainName: 'Amazon.com', key: 'com' };
     };
 
     const primaryLink = getGeoAffiliateLink(book);

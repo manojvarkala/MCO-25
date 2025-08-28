@@ -1,23 +1,24 @@
 
 
-
 import * as React from 'react';
-import { useNavigate } from 'react-router-dom';
+// Fix: Use useHistory from react-router-dom v5
+import { useHistory } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LogIn, UserPlus } from 'lucide-react';
 import LogoSpinner from './LogoSpinner.tsx';
 
 const LandingPage: React.FC = () => {
-    const navigate = useNavigate();
+    // Fix: Use useHistory for navigation in v5
+    const history = useHistory();
     const { user } = useAuth();
     const { activeOrg, isLoading } = useAppContext();
     
     React.useEffect(() => {
         if (user) {
-            navigate('/dashboard');
+            history.push('/dashboard');
         }
-    }, [user, navigate]);
+    }, [user, history]);
 
     const mainSiteBaseUrl = activeOrg ? `https://www.${activeOrg.website}` : '';
     const loginUrl = `${mainSiteBaseUrl}/exam-login/`;

@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+// Fix: Use useHistory from react-router-dom v5
+import { useParams, useHistory } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook } from '../types.ts';
@@ -14,7 +15,8 @@ import { logoBase64 } from '../assets/logo.ts';
 
 const Results: React.FC = () => {
     const { testId } = useParams<{ testId: string }>();
-    const navigate = useNavigate();
+    // Fix: Use useHistory for navigation in v5
+    const history = useHistory();
     const { user, token, paidExamIds, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     
@@ -42,7 +44,7 @@ const Results: React.FC = () => {
         if (!testId || !user || !activeOrg) {
             if(!user) toast.error("Authentication session has expired.");
             else toast.error("Required data is missing.");
-            navigate('/dashboard');
+            history.push('/dashboard');
             return;
         }
 
@@ -81,21 +83,21 @@ const Results: React.FC = () => {
 
                     } else {
                         toast.error("Could not find the configuration for this exam.");
-                        navigate('/dashboard');
+                        history.push('/dashboard');
                     }
                 } else {
                     toast.error("Could not find your test results.");
-                    navigate('/dashboard');
+                    history.push('/dashboard');
                 }
             } catch (error) {
                 toast.error("Failed to load results.");
-                navigate('/dashboard');
+                history.push('/dashboard');
             } finally {
                 setIsLoading(false);
             }
         };
         fetchResultAndExam();
-    }, [testId, user, activeOrg, navigate, paidExamIds]);
+    }, [testId, user, activeOrg, history, paidExamIds]);
 
     const handleGenerateFeedback = async () => {
         if (!result || !exam) return;
@@ -301,7 +303,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
             pdf.addPage();
             pageNum++;
             addWatermarkAndFooter(pageNum);
-            yPos = margin;
+            let yPos = margin;
             
             if (exam.recommendedBook) {
                 const { url, domainName } = getGeoAffiliateLink(exam.recommendedBook);
@@ -391,18 +393,27 @@ Please provide a summary of the key areas I need to focus on based on these erro
     
     const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } => {
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        let domainKey: keyof RecommendedBook['affiliateLinks'] = 'com';
-        let domainName = 'Amazon.com';
-
+        let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
+        let preferredDomain = 'Amazon.com';
+    
+        // Determine preferred locale
         const gccTimezones = ['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat'];
         if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
-            domainKey = 'in'; domainName = 'Amazon.in';
+            preferredKey = 'in';
+            preferredDomain = 'Amazon.in';
         } else if (gccTimezones.some(tz => timeZone === tz)) {
-            domainKey = 'ae'; domainName = 'Amazon.ae';
+            preferredKey = 'ae';
+            preferredDomain = 'Amazon.ae';
         }
-        
-        const url = book.affiliateLinks[domainKey];
-        return !url ? { url: book.affiliateLinks.com, domainName: 'Amazon.com' } : { url, domainName };
+    
+        // Check if the preferred URL exists and is valid
+        const preferredUrl = book.affiliateLinks[preferredKey];
+        if (preferredUrl && preferredUrl.trim() !== '') {
+            return { url: preferredUrl, domainName: preferredDomain };
+        }
+    
+        // Fallback to .com if preferred is not available or is an empty string
+        return { url: book.affiliateLinks.com, domainName: 'Amazon.com' };
     };
 
 
@@ -435,7 +446,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 {((isPaidCertExam && isPass) || isAdmin) && (
                     <div className="text-center mb-8">
                         <button
-                            onClick={() => navigate(`/certificate/${result.testId}`)}
+                            onClick={() => history.push(`/certificate/${result.testId}`)}
                             className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105"
                         >
                             <FileDown size={20} />
