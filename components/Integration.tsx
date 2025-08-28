@@ -7,7 +7,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       Exam App Integration Engine
  * Description:       A generic engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and styling.
- * Version:           24.4.0 (Definitive Production Version w/ Data Fixes)
+ * Version:           24.5.0 (Definitive Production Version w/ Data & Auto-Complete Fixes)
  * Author:            Annapoorna Infotech (Multi-Tenant Engine)
  */
 
@@ -18,7 +18,7 @@ register_activation_hook(__FILE__, 'mco_plugin_activate');
 register_deactivation_hook(__FILE__, 'mco_plugin_deactivate');
 
 function mco_plugin_activate() {
-    // Register CPTs before flushing rules
+    // Register CPTs before flushing rules to ensure they are available
     mco_register_custom_post_types();
     flush_rewrite_rules();
     set_transient('mco_admin_notice_activation', true, 5);
@@ -54,6 +54,9 @@ function mco_exam_app_init() {
 
     add_action('wp_head', 'mco_add_custom_styles_to_head');
     add_filter('woocommerce_order_button_text', 'mco_custom_order_button_text');
+
+    // Add auto-complete order hook
+    add_action('woocommerce_payment_complete', 'mco_auto_complete_virtual_order');
 }
 
 function mco_check_dependencies() { 
@@ -391,30 +394,12 @@ function mco_exam_get_payload($user_id) {
     $exam_prices = [];
 
     // FIX: Add pricing for global subscription products
-    $sub_products_query = new WP_Query([
-        'post_type' => 'product',
-        'posts_per_page' => -1,
-        'meta_query' => [
-            [
-                'key' => '_mco_product_type',
-                'value' => 'subscription_bundle',
-            ]
-        ]
-    ]);
-    if ($sub_products_query->have_posts()) {
-         while($sub_products_query->have_posts()) {
-            $sub_products_query->the_post();
-            $product = wc_get_product(get_the_ID());
-            if($product && $product->get_sku()) {
-                $exam_prices[$product->get_sku()] = [
-                    'price' => (float)$product->get_price(), 
-                    'regularPrice' => (float)$product->get_regular_price(), 
-                    'productId' => $product->get_id()
-                ];
-            }
+    $sub_products = wc_get_products(['type' => ['subscription', 'simple'], 'status' => 'publish', 'limit' => -1, 'meta_query' => [['key' => '_mco_product_type', 'value' => 'subscription_bundle']]]);
+    foreach ($sub_products as $product) {
+        if ($product && $product->get_sku()) {
+            $exam_prices[$product->get_sku()] = ['price' => (float)$product->get_price(), 'regularPrice' => (float)$product->get_regular_price(), 'productId' => $product->get_id()];
         }
     }
-    wp_reset_postdata();
 
     if (class_exists('WooCommerce')) {
         $customer_orders = wc_get_orders(['customer_id' => $user_id, 'status' => ['wc-completed', 'wc-processing']]);
@@ -560,6 +545,27 @@ function mco_add_custom_styles_to_head() {
 }
 
 function mco_custom_order_button_text() { return 'Complete Enrollment & Pay Securely'; }
+
+function mco_auto_complete_virtual_order( $order_id ) {
+    if ( ! $order_id ) return;
+    $order = wc_get_order( $order_id );
+    if ( ! $order || $order->has_status( array( 'completed', 'failed', 'cancelled', 'refunded' ) ) ) return;
+    $is_virtual_order = true;
+    if ( count( $order->get_items() ) > 0 ) {
+        foreach ( $order->get_items() as $item ) {
+            if ( ! $item->get_product()->is_virtual() ) {
+                $is_virtual_order = false;
+                break;
+            }
+        }
+    } else {
+        $is_virtual_order = false;
+    }
+    if ( $is_virtual_order ) {
+        $order->update_status( 'completed', 'Order automatically completed as it only contains virtual items.' );
+    }
+}
+
 
 // --- REST API IMPLEMENTATION ---
 function mco_exam_register_rest_api() {
@@ -709,9 +715,9 @@ function mco_get_exam_stats_callback(WP_REST_Request $request) {
             <h1 className="text-3xl font-extrabold text-slate-800">WordPress Integration Plugin</h1>
             
             <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-xl font-bold mb-2">Definitive Plugin (v24.4.0)</h2>
+                <h2 className="text-xl font-bold mb-2">Definitive Plugin (v24.5.0)</h2>
                 <p className="mb-4">
-                   This is the stable, database-driven integration plugin. It includes a built-in <strong>System Status</strong> tool to fix the "No route was found" error and has an improved login shortcode for automatic redirection. This version also includes fixes for fetching subscription prices and book affiliate links.
+                   This is the stable, database-driven integration plugin. It includes a built-in <strong>System Status</strong> tool to fix the "No route was found" error and has an improved login shortcode for automatic redirection. This version also includes fixes for fetching subscription prices and book affiliate links, and adds auto-completion for virtual orders.
                 </p>
                 <p className="mb-4">
                     Copy the code below and replace the content of your existing plugin file (e.g., <code>mco-exam-engine.php</code>) on your WordPress server.
