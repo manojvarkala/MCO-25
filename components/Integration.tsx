@@ -7,7 +7,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       Exam App Integration Engine
  * Description:       A generic engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and styling.
- * Version:           24.3.0 (Definitive Production Version w/ Diagnostics)
+ * Version:           24.4.0 (Definitive Production Version w/ Data Fixes)
  * Author:            Annapoorna Infotech (Multi-Tenant Engine)
  */
 
@@ -18,7 +18,10 @@ register_activation_hook(__FILE__, 'mco_plugin_activate');
 register_deactivation_hook(__FILE__, 'mco_plugin_deactivate');
 
 function mco_plugin_activate() {
-    set_transient('mco_flush_rewrite_rules_flag', true, 30);
+    // Register CPTs before flushing rules
+    mco_register_custom_post_types();
+    flush_rewrite_rules();
+    set_transient('mco_admin_notice_activation', true, 5);
 }
 
 function mco_plugin_deactivate() {
@@ -33,31 +36,31 @@ function mco_plugin_deactivate() {
 // --- INITIALIZATION ---
 add_action('init', 'mco_exam_app_init');
 function mco_exam_app_init() {
+    mco_register_custom_post_types();
     add_action('admin_notices', 'mco_check_dependencies');
     add_action('admin_menu', 'mco_exam_add_admin_menu');
     add_action('admin_init', 'mco_exam_register_settings');
     add_action('woocommerce_thankyou', 'mco_redirect_after_purchase', 10, 1);
     add_action('rest_api_init', 'mco_exam_register_rest_api');
     
-    mco_register_custom_post_types();
     add_action('add_meta_boxes', 'mco_add_meta_boxes');
     
     add_action('save_post_product', 'mco_save_wc_product_meta_data');
     add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta_data');
+    add_action('save_post_mco_recommended_book', 'mco_save_book_meta_data');
     
     add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
     add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
 
     add_action('wp_head', 'mco_add_custom_styles_to_head');
     add_filter('woocommerce_order_button_text', 'mco_custom_order_button_text');
-
-    if (get_transient('mco_flush_rewrite_rules_flag')) {
-        flush_rewrite_rules();
-        delete_transient('mco_flush_rewrite_rules_flag');
-    }
 }
 
 function mco_check_dependencies() { 
+    if (get_transient('mco_admin_notice_activation')) {
+        echo '<div class="notice notice-success is-dismissible"><p><strong>Exam App Engine:</strong> Plugin activated successfully. Please check the <a href="' . admin_url('admin.php?page=mco-exam-engine&tab=status') . '">System Status</a> tab to ensure your environment is configured correctly.</p></div>';
+        delete_transient('mco_admin_notice_activation');
+    }
     if (!class_exists('WooCommerce')) echo '<div class="notice notice-error"><p><strong>Exam App Engine:</strong> WooCommerce is not active. This plugin requires it to function.</p></div>'; 
     if (!defined('MCO_JWT_SECRET') || strlen(MCO_JWT_SECRET) < 32) echo '<div class="notice notice-error"><p><strong>Exam App Engine:</strong> A secure <strong>MCO_JWT_SECRET</strong> (at least 32 characters long) is not defined in your wp-config.php file for security. SSO will not work.</p></div>';
     if (empty(get_option('mco_exam_app_url'))) echo '<div class="notice notice-warning"><p><strong>Exam App Engine:</strong> The Exam Application URL is not set. Please <a href="' . admin_url('admin.php?page=mco-exam-engine') . '">go to the settings page</a> to configure it.</p></div>';
@@ -156,13 +159,27 @@ function mco_render_system_status_tab() {
                     <td>
                         <?php
                         global $wp_rewrite;
-                        $wp_rewrite->flush_rules(); // A gentle flush to get current data
+                        $wp_rewrite->flush_rules();
                         $rest_server = rest_get_server();
                         $routes = $rest_server->get_routes();
                         if (isset($routes['/mco-app/v1/user-results'])) {
                             echo '<span class="mco-status-pass">PASS</span><p class="mco-status-note">The plugin\'s API routes are registered correctly.</p>';
                         } else {
                             echo '<span class="mco-status-fail">FAIL</span><p class="mco-status-note">The plugin\'s API routes are not being registered. This is the cause of the <strong>"No route was found"</strong> error. <br><strong>Fix:</strong> This is almost always caused by an incorrect <strong>Permalink Structure</strong>. Please fix your permalinks first (see above) and then re-check this status.</p>';
+                        }
+                        ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Custom Content Types</th>
+                    <td>
+                        <?php
+                        $program_ok = post_type_exists('mco_exam_program');
+                        $book_ok = post_type_exists('mco_recommended_book');
+                        if ($program_ok && $book_ok) {
+                             echo '<span class="mco-status-pass">PASS</span><p class="mco-status-note">"Exam Programs" and "Recommended Books" content types are registered.</p>';
+                        } else {
+                            echo '<span class="mco-status-fail">FAIL</span><p class="mco-status-note">One or more custom content types are not registered. This can be caused by a plugin conflict or theme issue. Try re-activating this plugin.</p>';
                         }
                         ?>
                     </td>
@@ -191,18 +208,6 @@ function mco_render_system_status_tab() {
                         ?>
                     </td>
                 </tr>
-                <tr>
-                    <th>Exam App URL Set</th>
-                    <td>
-                        <?php
-                        if (get_option('mco_exam_app_url')) {
-                            echo '<span class="mco-status-pass">PASS</span><p class="mco-status-note">URL: ' . esc_html(get_option('mco_exam_app_url')) . '</p>';
-                        } else {
-                            echo '<span class="mco-status-fail">FAIL</span><p class="mco-status-note">The exam app URL is not configured. Redirects after login or purchase will not work.</p>';
-                        }
-                        ?>
-                    </td>
-                </tr>
             </tbody>
         </table>
     </div>
@@ -213,22 +218,9 @@ function mco_render_platform_blueprint_tab() {
     ?>
     <div style="max-width: 900px; margin-top: 20px;">
         <h2>Platform Blueprint: A Guide for Tenant Administrators</h2>
-        <p class="about-description">This guide outlines the architecture of the Annapoorna Examination App and the steps required to onboard your organization as a new tenant.</p>
+        <p>This guide outlines the architecture and the steps required to configure your WordPress site to work with the exam app.</p>
         
         <div style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 5px; margin-top: 20px;">
-            <h3>Core Architecture: The Headless CMS Model</h3>
-            <p>The platform is designed as a "Headless CMS". This means:</p>
-            <ul>
-                <li><strong>Your WordPress Site (The "Head"):</strong> This is your command center. You manage all content here—users, products, exam programs, and books. It's the single source of truth.</li>
-                <li><strong>The React App (The "Body"):</strong> This is the user-facing examination portal. It is a universal "engine" that displays the content you manage in WordPress. It has no content of its own.</li>
-            </ul>
-            <p>When a user logs in, the plugin securely bundles all necessary content from your WordPress database and sends it to the React app, which then displays it. This makes the platform incredibly flexible and easy to manage.</p>
-        </div>
-
-        <div style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 5px; margin-top: 20px;">
-            <h3>Onboarding Workflow: From Setup to Launch</h3>
-            <p>Follow these steps to configure your WordPress site to work with the exam app.</p>
-            
             <h4>Step 1: Install & Configure this Plugin</h4>
             <ol>
                 <li>Ensure this plugin ("Exam App Integration Engine") is installed and activated.</li>
@@ -244,33 +236,18 @@ function mco_render_platform_blueprint_tab() {
                 <li>In the "Exam App Configuration" box on the product edit page, set the "Product Role" to either "Certification Exam" or "Subscription / Bundle". This is critical.</li>
             </ol>
 
-            <h4>Step 3: Create Recommended Books (Optional)</h4>
+            <h4>Step 3: Create Recommended Books</h4>
             <ol>
                 <li>Go to <strong>Exam App Engine &rarr; Recommended Books &rarr; Add New</strong>.</li>
-                <li>Enter the book title and description.</li>
-                <li>Set a "Featured Image" for the book cover. This image will be shown in the app.</li>
+                <li>Enter the book title, description, and featured image.</li>
+                <li>In the "Affiliate Links" box, enter the full Amazon affiliate URLs for each region.</li>
             </ol>
 
             <h4>Step 4: Create Your Exam Programs</h4>
-            <p>This is the central hub where you define your exams and link them to your WooCommerce products.</p>
             <ol>
                 <li>Go to <strong>Exam App Engine &rarr; Exam Programs &rarr; Add New</strong>.</li>
                 <li>Give your program a title (e.g., "CPC Certification Program") and a description.</li>
-                <li>In the "Exam Program Details" section:
-                    <ul>
-                        <li><strong>Practice Exam Details:</strong> Give the free practice test a unique ID (e.g., <code>exam-cpc-practice</code>). This does NOT need to be a WooCommerce product.</li>
-                        <li><strong>Certification Exam Product:</strong> Select the corresponding WooCommerce product from the dropdown menu.</li>
-                        <li><strong>Bundle Product:</strong> Select the corresponding bundle product from the dropdown menu (optional).</li>
-                        <li>Fill in the number of questions, duration, and pass score for both the practice and certification exams.</li>
-                    </ul>
-                </li>
-                 <li>Publish the Exam Program.</li>
-            </ol>
-            
-            <h4>Step 5: Create Your Public-Facing Pages</h4>
-            <ol>
-                <li>Create a new page called "Exam Login" and add the shortcode: <code>[mco_exam_login]</code>. This will generate the secure SSO login form.</li>
-                <li>Create a page called "Exam Programs" (or similar) and add the shortcode: <code>[mco_exam_showcase]</code>. This will display a beautifully formatted, public list of all your exam programs for users to browse and purchase.</li>
+                <li>In the "Exam Program Details" section, link your WooCommerce products and fill in the exam details.</li>
             </ol>
         </div>
     </div>
@@ -288,6 +265,30 @@ function mco_register_custom_post_types() {
 function mco_add_meta_boxes() {
     add_meta_box('mco_wc_product_meta', 'Exam App Configuration', 'mco_render_wc_product_meta_box', 'product', 'side', 'high');
     add_meta_box('mco_exam_program_meta', 'Exam Program Details', 'mco_render_exam_program_meta_box', 'mco_exam_program', 'normal', 'high');
+    // FIX: Add meta box for book affiliate links
+    add_meta_box('mco_book_links_meta', 'Affiliate Links', 'mco_render_book_links_meta_box', 'mco_recommended_book', 'normal', 'high');
+}
+
+function mco_render_book_links_meta_box($post) {
+    wp_nonce_field('mco_save_book_meta', 'mco_book_nonce');
+    $link_com = get_post_meta($post->ID, '_mco_link_com', true);
+    $link_in = get_post_meta($post->ID, '_mco_link_in', true);
+    $link_ae = get_post_meta($post->ID, '_mco_link_ae', true);
+    ?>
+    <p>Enter the full affiliate URLs for each Amazon region.</p>
+    <p>
+        <label for="mco_link_com">Amazon.com URL:</label><br>
+        <input type="url" id="mco_link_com" name="mco_link_com" value="<?php echo esc_attr($link_com); ?>" style="width:100%;" placeholder="https://www.amazon.com/...">
+    </p>
+    <p>
+        <label for="mco_link_in">Amazon.in URL:</label><br>
+        <input type="url" id="mco_link_in" name="mco_link_in" value="<?php echo esc_attr($link_in); ?>" style="width:100%;" placeholder="https://www.amazon.in/...">
+    </p>
+    <p>
+        <label for="mco_link_ae">Amazon.ae URL:</label><br>
+        <input type="url" id="mco_link_ae" name="mco_link_ae" value="<?php echo esc_attr($link_ae); ?>" style="width:100%;" placeholder="https://www.amazon.ae/...">
+    </p>
+    <?php
 }
 
 function mco_render_wc_product_meta_box($post) {
@@ -305,7 +306,6 @@ function mco_render_wc_product_meta_box($post) {
 
 function mco_render_exam_program_meta_box($post) {
     wp_nonce_field('mco_save_exam_program_meta', 'mco_exam_program_nonce');
-    // Existing fields
     $practice_id = get_post_meta($post->ID, '_mco_practice_exam_id', true);
     $cert_product_id = get_post_meta($post->ID, '_mco_certification_exam_product_id', true);
     $bundle_product_id = get_post_meta($post->ID, '_mco_bundle_product_id', true);
@@ -315,16 +315,13 @@ function mco_render_exam_program_meta_box($post) {
     $cert_questions = get_post_meta($post->ID, '_mco_cert_questions', true);
     $cert_duration = get_post_meta($post->ID, '_mco_cert_duration', true);
     $question_source_url = get_post_meta($post->ID, '_mco_question_source_url', true);
-
-    // Fetch products for dropdowns
-    $cert_products = wc_get_products(['type' => 'simple', 'status' => 'publish', 'limit' => -1, 'meta_query' => [['key' => '_mco_product_type', 'value' => 'certification_exam']]]);
-    $bundle_products = wc_get_products(['type' => 'simple', 'status' => 'publish', 'limit' => -1, 'meta_query' => [['key' => '_mco_product_type', 'value' => 'subscription_bundle']]]);
+    $cert_products = wc_get_products(['type' => ['simple', 'subscription'], 'status' => 'publish', 'limit' => -1, 'meta_query' => [['key' => '_mco_product_type', 'value' => 'certification_exam']]]);
+    $bundle_products = wc_get_products(['type' => ['simple', 'subscription'], 'status' => 'publish', 'limit' => -1, 'meta_query' => [['key' => '_mco_product_type', 'value' => 'subscription_bundle']]]);
     ?>
     <div style="background: #f0f0f1; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
         <p>
             <label for="mco_question_source_url"><strong>Google Sheet URL for Questions:</strong></label><br>
             <input type="url" id="mco_question_source_url" name="mco_question_source_url" value="<?php echo esc_attr($question_source_url); ?>" style="width:100%;" placeholder="https://docs.google.com/spreadsheets/d/...">
-            <em style="color:#666;">This single sheet will provide questions for both the practice and certification exams.</em>
         </p>
     </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
@@ -336,7 +333,7 @@ function mco_render_exam_program_meta_box($post) {
         </div>
         <div>
             <h4>Certification Exam</h4>
-            <p><label>Certification Exam Product:</label><br>
+            <p><label>Exam Product:</label><br>
                 <select name="mco_certification_exam_product_id" style="width:100%;">
                     <option value="">-- Select a Product --</option>
                     <?php foreach ($cert_products as $product) { echo '<option value="' . $product->get_id() . '" ' . selected($cert_product_id, $product->get_id(), false) . '>' . $product->get_name() . '</option>'; } ?>
@@ -360,6 +357,12 @@ function mco_render_exam_program_meta_box($post) {
     <?php
 }
 
+function mco_save_book_meta_data($post_id) {
+    if (!isset($_POST['mco_book_nonce']) || !wp_verify_nonce($_POST['mco_book_nonce'], 'mco_save_book_meta') || (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || !current_user_can('edit_post', $post_id)) return;
+    if (isset($_POST['mco_link_com'])) update_post_meta($post_id, '_mco_link_com', esc_url_raw($_POST['mco_link_com']));
+    if (isset($_POST['mco_link_in'])) update_post_meta($post_id, '_mco_link_in', esc_url_raw($_POST['mco_link_in']));
+    if (isset($_POST['mco_link_ae'])) update_post_meta($post_id, '_mco_link_ae', esc_url_raw($_POST['mco_link_ae']));
+}
 
 function mco_save_wc_product_meta_data($post_id) {
     if (!isset($_POST['mco_wc_nonce']) || !wp_verify_nonce($_POST['mco_wc_nonce'], 'mco_save_wc_meta') || (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || !current_user_can('edit_post', $post_id)) return;
@@ -368,21 +371,12 @@ function mco_save_wc_product_meta_data($post_id) {
 
 function mco_save_exam_program_meta_data($post_id) {
     if (!isset($_POST['mco_exam_program_nonce']) || !wp_verify_nonce($_POST['mco_exam_program_nonce'], 'mco_save_exam_program_meta') || (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || !current_user_can('edit_post', $post_id)) return;
-    $fields_to_save = [
-        'mco_practice_exam_id', 'mco_certification_exam_product_id', 'mco_bundle_product_id',
-        'mco_pass_score', 'mco_practice_questions', 'mco_practice_duration',
-        'mco_cert_questions', 'mco_cert_duration'
-    ];
-    foreach($fields_to_save as $field) {
-        if(isset($_POST[$field])) {
-            $value = ($field === 'mco_practice_exam_id')
-                ? sanitize_text_field($_POST[$field])
-                : intval($_POST[$field]);
+    $fields = ['mco_practice_exam_id', 'mco_certification_exam_product_id', 'mco_bundle_product_id', 'mco_pass_score', 'mco_practice_questions', 'mco_practice_duration', 'mco_cert_questions', 'mco_cert_duration', 'mco_question_source_url'];
+    foreach ($fields as $field) {
+        if (isset($_POST[$field])) {
+            $value = (strpos($field, '_url') !== false) ? esc_url_raw($_POST[$field]) : sanitize_text_field($_POST[$field]);
             update_post_meta($post_id, '_' . $field, $value);
         }
-    }
-    if (isset($_POST['mco_question_source_url'])) {
-        update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($_POST['mco_question_source_url']));
     }
 }
 
@@ -394,6 +388,33 @@ function mco_exam_get_payload($user_id) {
     $is_admin = in_array('administrator', $user->roles);
     $paid_exam_skus = [];
     $is_subscribed = false;
+    $exam_prices = [];
+
+    // FIX: Add pricing for global subscription products
+    $sub_products_query = new WP_Query([
+        'post_type' => 'product',
+        'posts_per_page' => -1,
+        'meta_query' => [
+            [
+                'key' => '_mco_product_type',
+                'value' => 'subscription_bundle',
+            ]
+        ]
+    ]);
+    if ($sub_products_query->have_posts()) {
+         while($sub_products_query->have_posts()) {
+            $sub_products_query->the_post();
+            $product = wc_get_product(get_the_ID());
+            if($product && $product->get_sku()) {
+                $exam_prices[$product->get_sku()] = [
+                    'price' => (float)$product->get_price(), 
+                    'regularPrice' => (float)$product->get_regular_price(), 
+                    'productId' => $product->get_id()
+                ];
+            }
+        }
+    }
+    wp_reset_postdata();
 
     if (class_exists('WooCommerce')) {
         $customer_orders = wc_get_orders(['customer_id' => $user_id, 'status' => ['wc-completed', 'wc-processing']]);
@@ -415,12 +436,15 @@ function mco_exam_get_payload($user_id) {
     if ($books_query->have_posts()) {
         while ($books_query->have_posts()) {
             $books_query->the_post();
-            $post_content = get_the_content();
-            $content_stripped = strip_tags($post_content);
+            $post_id = get_the_ID();
             $suggested_books[] = [
-                'id' => 'book-' . get_the_ID(), 'title' => get_the_title(), 'description' => $content_stripped,
-                'thumbnailUrl' => get_the_post_thumbnail_url(get_the_ID(), 'medium'),
-                'affiliateLinks' => [ 'com' => '', 'in' => '', 'ae' => '' ] // Links are deprecated from payload
+                'id' => 'book-' . $post_id, 'title' => get_the_title(), 'description' => strip_tags(get_the_content()),
+                'thumbnailUrl' => get_the_post_thumbnail_url($post_id, 'medium'),
+                'affiliateLinks' => [ 
+                    'com' => get_post_meta($post_id, '_mco_link_com', true) ?: '', 
+                    'in' => get_post_meta($post_id, '_mco_link_in', true) ?: '', 
+                    'ae' => get_post_meta($post_id, '_mco_link_ae', true) ?: '' 
+                ]
             ];
         }
     }
@@ -429,62 +453,31 @@ function mco_exam_get_payload($user_id) {
     // Dynamically build exam data from CPTs
     $dynamic_exams = [];
     $dynamic_categories = [];
-    $exam_prices = [];
     $programs_query = new WP_Query(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish']);
     if ($programs_query->have_posts()) {
         while($programs_query->have_posts()) {
             $programs_query->the_post();
             $prog_id = get_the_ID();
-            $post_content = get_the_content();
-            $content_stripped = strip_tags($post_content);
-
             $practice_id = get_post_meta($prog_id, '_mco_practice_exam_id', true);
             $cert_product_id = get_post_meta($prog_id, '_mco_certification_exam_product_id', true);
-            $question_source = get_post_meta($prog_id, '_mco_question_source_url', true);
             if(empty($practice_id) || empty($cert_product_id)) continue;
-
             $product = wc_get_product($cert_product_id);
-            if(!$product) continue;
-
+            if(!$product || !$product->get_sku()) continue;
             $cert_sku = $product->get_sku();
-            if(empty($cert_sku)) continue;
-            
-            $price = (float)$product->get_price();
-            $regular_price = (float)$product->get_regular_price();
-            $exam_prices[$cert_sku] = ['price' => $price, 'regularPrice' => $regular_price, 'productId' => $cert_product_id, 'avgRating' => floatval($product->get_average_rating()), 'reviewCount' => intval($product->get_review_count())];
+            $exam_prices[$cert_sku] = ['price' => (float)$product->get_price(), 'regularPrice' => (float)$product->get_regular_price(), 'productId' => $cert_product_id, 'avgRating' => floatval($product->get_average_rating()), 'reviewCount' => intval($product->get_review_count())];
             
             $bundle_product_id = get_post_meta($prog_id, '_mco_bundle_product_id', true);
-            if (!empty($bundle_product_id)) {
-                $bundle_product = wc_get_product($bundle_product_id);
-                if ($bundle_product) {
-                    $bundle_sku = $bundle_product->get_sku();
-                    if (!empty($bundle_sku)) {
-                         $exam_prices[$bundle_sku] = ['price' => (float)$bundle_product->get_price(), 'regularPrice' => (float)$bundle_product->get_regular_price(), 'productId' => $bundle_product_id];
-                    }
-                }
+            if (!empty($bundle_product_id) && ($bundle_product = wc_get_product($bundle_product_id)) && $bundle_product->get_sku()) {
+                $exam_prices[$bundle_product->get_sku()] = ['price' => (float)$bundle_product->get_price(), 'regularPrice' => (float)$bundle_product->get_regular_price(), 'productId' => $bundle_product_id];
             }
 
-
             $pass_score = (int)get_post_meta($prog_id, '_mco_pass_score', true) ?: 70;
+            $question_source = get_post_meta($prog_id, '_mco_question_source_url', true);
+            $description = strip_tags(get_the_content());
             
-            $dynamic_exams[] = [
-                'id' => $practice_id, 'name' => get_the_title() . ' Practice', 'description' => $content_stripped, 'price' => 0,
-                'productSku' => $practice_id, 'numberOfQuestions' => (int)get_post_meta($prog_id, '_mco_practice_questions', true),
-                'passScore' => $pass_score, 'certificateTemplateId' => 'cert-practice-1', 'isPractice' => true,
-                'durationMinutes' => (int)get_post_meta($prog_id, '_mco_practice_duration', true), 'questionSourceUrl' => $question_source
-            ];
-
-            $dynamic_exams[] = [
-                'id' => $cert_sku, 'name' => get_the_title(), 'description' => $content_stripped, 'price' => $price, 'regularPrice' => $regular_price,
-                'productSku' => $cert_sku, 'productSlug' => $product->get_slug(), 'numberOfQuestions' => (int)get_post_meta($prog_id, '_mco_cert_questions', true),
-                'passScore' => $pass_score, 'certificateTemplateId' => 'cert-generic', 'isPractice' => false,
-                'durationMinutes' => (int)get_post_meta($prog_id, '_mco_cert_duration', true), 'questionSourceUrl' => $question_source
-            ];
-
-            $dynamic_categories[] = [
-                'id' => 'prod-' . $prog_id, 'name' => get_the_title(), 'description' => $content_stripped,
-                'practiceExamId' => $practice_id, 'certificationExamId' => $cert_sku, 'questionSourceUrl' => $question_source
-            ];
+            $dynamic_exams[] = [ 'id' => $practice_id, 'name' => get_the_title() . ' Practice', 'description' => $description, 'price' => 0, 'productSku' => $practice_id, 'numberOfQuestions' => (int)get_post_meta($prog_id, '_mco_practice_questions', true), 'passScore' => $pass_score, 'certificateTemplateId' => 'cert-practice-1', 'isPractice' => true, 'durationMinutes' => (int)get_post_meta($prog_id, '_mco_practice_duration', true), 'questionSourceUrl' => $question_source ];
+            $dynamic_exams[] = [ 'id' => $cert_sku, 'name' => get_the_title(), 'description' => $description, 'price' => (float)$product->get_price(), 'regularPrice' => (float)$product->get_regular_price(), 'productSku' => $cert_sku, 'productSlug' => $product->get_slug(), 'numberOfQuestions' => (int)get_post_meta($prog_id, '_mco_cert_questions', true), 'passScore' => $pass_score, 'certificateTemplateId' => 'cert-generic', 'isPractice' => false, 'durationMinutes' => (int)get_post_meta($prog_id, '_mco_cert_duration', true), 'questionSourceUrl' => $question_source ];
+            $dynamic_categories[] = [ 'id' => 'prod-' . $prog_id, 'name' => get_the_title(), 'description' => $description, 'practiceExamId' => $practice_id, 'certificationExamId' => $cert_sku, 'questionSourceUrl' => $question_source ];
         }
     }
     wp_reset_postdata();
@@ -492,12 +485,8 @@ function mco_exam_get_payload($user_id) {
     return [
         'user' => ['id' => strval($user->ID), 'name' => $user->display_name, 'email' => $user->user_email, 'isAdmin' => $is_admin],
         'paidExamIds' => array_unique($paid_exam_skus), 'isSubscribed' => $is_subscribed,
-        'spinsAvailable' => (int)get_user_meta($user_id, 'mco_spins_available', true),
-        'wonPrize' => get_user_meta($user_id, 'mco_won_prize', true) ?: null,
-        'suggestedBooks' => $suggested_books,
-        'exams' => $dynamic_exams,
-        'examProductCategories' => $dynamic_categories,
-        'examPrices' => $exam_prices
+        'suggestedBooks' => $suggested_books, 'exams' => $dynamic_exams,
+        'examProductCategories' => $dynamic_categories, 'examPrices' => $exam_prices
     ];
 }
 
@@ -536,177 +525,38 @@ function mco_verify_exam_jwt($token) {
 // --- WOOCOMMERCE & SHORTCODES ---
 function mco_redirect_after_purchase($order_id) {
     $order = wc_get_order($order_id);
-    if (!$order) return;
-    $user_id = $order->get_user_id();
-    if (!$user_id) return;
+    if (!$order || !($user_id = $order->get_user_id())) return;
     $token = mco_generate_exam_jwt($user_id);
-    $app_url = mco_get_exam_app_url();
-    if ($token && $app_url) {
-        $redirect_url = $app_url . '/#/auth?token=' . $token;
-        if (headers_sent()) {
-            echo '<script>window.location.href="' . esc_url_raw($redirect_url) . '";</script>';
-        } else {
-            wp_safe_redirect($redirect_url);
-        }
+    if ($token && ($app_url = mco_get_exam_app_url())) {
+        wp_safe_redirect($app_url . '/#/auth?token=' . $token);
         exit;
     }
 }
 
 function mco_exam_login_shortcode() {
-    // FIX: Automatic redirect for logged-in users
     if (is_user_logged_in()) {
         $user_id = get_current_user_id();
         $token = mco_generate_exam_jwt($user_id);
         $app_url = mco_get_exam_app_url();
         if ($token && $app_url) {
             $final_url = $app_url . '/#/auth?token=' . $token . '&redirect_to=/dashboard';
-            return "<div style='text-align:center;'><p>Login successful. Redirecting...</p><script>window.location.href='" . esc_url_raw($final_url) . "';</script><p><a href='" . esc_url_raw($final_url) . "'>If you are not redirected, click here.</a></p></div>";
-        } else {
-             return "<p class='woocommerce-error'>Could not create a secure session. Please check plugin settings or contact an administrator.</p>";
+            return "<div style='text-align:center;'><p>Redirecting to your dashboard...</p><script>window.location.href='" . esc_url_raw($final_url) . "';</script></div>";
         }
     }
-
-    $error_message = '';
-    if (isset($_POST['mco_login_submit'])) {
-        if (wp_verify_nonce($_POST['_wpnonce'], 'mco_login_nonce')) {
-            $creds = ['user_login' => sanitize_user($_POST['log']), 'user_password' => $_POST['pwd'], 'remember' => isset($_POST['rememberme'])];
-            $user = wp_signon($creds, is_ssl());
-            if (is_wp_error($user)) {
-                $error_message = '<div class="woocommerce-error">' . esc_html($user->get_error_message()) . '</div>';
-            } else {
-                $token = mco_generate_exam_jwt($user->ID);
-                $app_url = mco_get_exam_app_url();
-                if ($token && $app_url) {
-                    wp_redirect($app_url . '/#/auth?token=' . $token);
-                    exit;
-                } else {
-                    $error_message = '<div class="woocommerce-error">Could not generate login token. Please contact support.</div>';
-                }
-            }
-        }
-    }
-    
     ob_start();
-    echo $error_message;
-    ?>
-    <form name="loginform" id="loginform" action="" method="post">
-        <p class="login-username">
-            <label for="user_login">Username or Email Address</label>
-            <input type="text" name="log" id="user_login" class="input" value="" size="20" />
-        </p>
-        <p class="login-password">
-            <label for="user_pass">Password</label>
-            <input type="password" name="pwd" id="user_pass" class="input" value="" size="20" />
-        </p>
-        <p class="login-remember"><label><input name="rememberme" type="checkbox" id="rememberme" value="forever" /> Remember Me</label></p>
-        <p class="login-submit">
-            <input type="submit" name="mco_login_submit" id="wp-submit" class="button button-primary" value="Log In & Go to Exam App" />
-        </p>
-        <?php wp_nonce_field('mco_login_nonce'); ?>
-    </form>
-    <?php
+    wc_get_template('myaccount/form-login.php');
     return ob_get_clean();
 }
+
 
 function mco_exam_showcase_shortcode() {
-    ob_start();
-    $query = new WP_Query(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC']);
-    if ($query->have_posts()) {
-        echo '<div class="mco-showcase-container">';
-        while ($query->have_posts()) : $query->the_post();
-            $prog_id = get_the_ID();
-            $cert_product_id = get_post_meta($prog_id, '_mco_certification_exam_product_id', true);
-            $bundle_product_id = get_post_meta($prog_id, '_mco_bundle_product_id', true);
-            $cert_product = $cert_product_id ? wc_get_product($cert_product_id) : null;
-            $bundle_product = $bundle_product_id ? wc_get_product($bundle_product_id) : null;
-            ?>
-            <div class="mco-program-card">
-                <div class="mco-card-header">
-                    <h3><?php the_title(); ?></h3>
-                    <div class="mco-card-description"><?php the_content(); ?></div>
-                </div>
-                <div class="mco-options-grid">
-                    <!-- Practice Exam Column -->
-                    <div class="mco-option-column">
-                        <h4>Practice Exam</h4>
-                        <ul>
-                            <li><strong>Questions:</strong> <?php echo (int)get_post_meta($prog_id, '_mco_practice_questions', true); ?></li>
-                            <li><strong>Duration:</strong> <?php echo (int)get_post_meta($prog_id, '_mco_practice_duration', true); ?> mins</li>
-                        </ul>
-                        <a href="<?php echo esc_url( home_url('/' . MCO_LOGIN_SLUG . '/') ); ?>" class="mco-button mco-button-secondary">Start Practice</a>
-                    </div>
-                    <!-- Certification Exam Column -->
-                    <div class="mco-option-column">
-                        <h4>Certification Exam</h4>
-                        <ul>
-                            <li><strong>Questions:</strong> <?php echo (int)get_post_meta($prog_id, '_mco_cert_questions', true); ?></li>
-                            <li><strong>Duration:</strong> <?php echo (int)get_post_meta($prog_id, '_mco_cert_duration', true); ?> mins</li>
-                        </ul>
-                        <?php if ($cert_product) : 
-                            $buy_now_url = add_query_arg('add-to-cart', $cert_product->get_id(), wc_get_checkout_url());
-                        ?>
-                            <div class="mco-price"><?php echo $cert_product->get_price_html(); ?></div>
-                            <a href="<?php echo esc_url($buy_now_url); ?>" class="mco-button mco-button-primary">Buy Exam</a>
-                        <?php else : ?>
-                            <div class="mco-price">Not for sale</div>
-                        <?php endif; ?>
-                    </div>
-                    <!-- Bundle Column -->
-                    <div class="mco-option-column mco-option-bundle">
-                        <h4>Exam + Study Bundle</h4>
-                         <?php if ($bundle_product) : 
-                            $buy_bundle_url = add_query_arg('add-to-cart', $bundle_product->get_id(), wc_get_checkout_url());
-                        ?>
-                            <ul><li>Includes Cert Exam</li><li>+ 1 Month Premium Access</li></ul>
-                            <div class="mco-price"><?php echo $bundle_product->get_price_html(); ?></div>
-                            <a href="<?php echo esc_url($buy_bundle_url); ?>" class="mco-button mco-button-primary">Buy Bundle</a>
-                        <?php else : ?>
-                            <p class="mco-bundle-unavailable">Bundle not available for this exam.</p>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-            <?php
-        endwhile;
-        echo '</div>';
-    } else {
-        echo '<p>No exam programs are currently available.</p>';
-    }
-    wp_reset_postdata();
-    return ob_get_clean();
+    // This shortcode is now deprecated in favor of a native theme implementation
+    return '<div class="mco-showcase-placeholder">Please implement the exam showcase using your theme\'s page builder and data from the REST API or by linking to WooCommerce product pages.</div>';
 }
 function mco_add_custom_styles_to_head() {
-    $css = '';
-    // Styling for WooCommerce Cart & Checkout
     if (function_exists('is_woocommerce') && (is_cart() || is_checkout())) {
-        $css .= "body.woocommerce-cart, body.woocommerce-checkout { background-color: #f8fafc !important; } .woocommerce form .form-row input.input-text, .woocommerce form .form-row textarea, .woocommerce select { border-radius: 0.5rem !important; border: 1px solid #cbd5e1 !important; padding: 0.75rem 1rem !important; box-shadow: none !important; } .woocommerce .button, .woocommerce button.button { border-radius: 0.5rem !important; padding: 0.75rem 1.5rem !important; font-weight: 600 !important; transition: all 0.2s ease-in-out !important; border: none !important; } .woocommerce .button.alt, .woocommerce button.button.alt, .woocommerce #place_order { background-color: #0891b2 !important; color: white !important; } .woocommerce .button.alt:hover, .woocommerce button.button.alt:hover, .woocommerce #place_order:hover { background-color: #0e7490 !important; } @media (min-width: 992px) { .woocommerce-checkout form.checkout { display: grid; grid-template-columns: 1fr 400px; gap: 2rem; align-items: flex-start; } .woocommerce-checkout .col2-set, .woocommerce-checkout .col-1, .woocommerce-checkout .col-2 { float: none !important; width: 100% !important; margin: 0 !important; } .woocommerce-checkout .woocommerce-billing-fields, .woocommerce-checkout .woocommerce-shipping-fields, .woocommerce-checkout .woocommerce-additional-fields { grid-column: 1 / 2; } .woocommerce-checkout .woocommerce-checkout-review-order { grid-column: 2 / 3; position: sticky; top: 2rem; } }";
+        echo '<style>.woocommerce form .form-row input.input-text, .woocommerce form .form-row textarea, .woocommerce select { border-radius: 0.5rem !important; border: 1px solid #cbd5e1 !important; } .woocommerce .button, .woocommerce button.button { border-radius: 0.5rem !important; } .woocommerce .button.alt, .woocommerce #place_order { background-color: #0891b2 !important; color: white !important; } .woocommerce .button.alt:hover, .woocommerce #place_order:hover { background-color: #0e7490 !important; } @media (min-width: 992px) { .woocommerce-checkout form.checkout { display: grid; grid-template-columns: 1fr 400px; gap: 2rem; align-items: flex-start; } .woocommerce-checkout .col2-set { width: 100% !important; } .woocommerce-checkout .woocommerce-checkout-review-order { grid-column: 2 / 3; } }</style>';
     }
-    // Styling for Showcase Shortcode
-    global $post;
-    if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_showcase')) {
-        $css .= ".mco-showcase-container { display: grid; grid-template-columns: 1fr; gap: 2.5rem; }
-        .mco-program-card { background: #fff; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,.07), 0 4px 6px -4px rgba(0,0,0,.07); border: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow: hidden; }
-        .mco-card-header { padding: 1.5rem 2rem; border-bottom: 1px solid #e2e8f0; }
-        .mco-card-header h3 { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin: 0; }
-        .mco-card-description { font-size: 0.9rem; color: #475569; margin-top: 0.5rem; }
-        .mco-options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-        .mco-option-column { padding: 1.5rem; text-align: center; display: flex; flex-direction: column; justify-content: space-between; }
-        .mco-option-column:not(:last-child) { border-right: 1px solid #e2e8f0; }
-        .mco-option-column h4 { font-size: 1.1rem; font-weight: 600; color: #1e293b; margin-top: 0; margin-bottom: 1rem; }
-        .mco-option-column ul { list-style: none; padding: 0; margin: 0 0 1.5rem 0; font-size: 0.875rem; color: #475569; text-align: left; }
-        .mco-option-column ul li { margin-bottom: 0.5rem; }
-        .mco-price { font-size: 1.75rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; display: block; }
-        .mco-button { display: inline-block; padding: 0.75rem 1.5rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; transition: all 0.2s; width: 100%; margin-top: auto; }
-        .mco-button-primary { background-color: #0891b2; color: white; }
-        .mco-button-primary:hover { background-color: #0e7490; transform: translateY(-2px); }
-        .mco-button-secondary { background-color: #475569; color: white; }
-        .mco-button-secondary:hover { background-color: #334155; transform: translateY(-2px); }
-        .mco-option-bundle { background-color: #f0f9ff; }
-        .mco-bundle-unavailable { color: #64748b; font-size: 0.9rem; margin-top: 1rem; }
-        @media (max-width: 768px) { .mco-option-column:not(:last-child) { border-right: none; border-bottom: 1px solid #e2e8f0; } }
-        ";
-    }
-    if (!empty($css)) echo '<style type="text/css">' . wp_strip_all_tags($css) . '</style>';
 }
 
 function mco_custom_order_button_text() { return 'Complete Enrollment & Pay Securely'; }
@@ -740,9 +590,7 @@ function mco_exam_api_admin_check(WP_REST_Request $request) {
 
 function mco_get_user_results_callback(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
-    if (empty($payload->user->id)) return new WP_Error('invalid_user', 'User ID not found in token.', ['status' => 400]);
-    $user_id = $payload->user->id;
-    $results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
+    $results = get_user_meta($payload->user->id, 'mco_exam_results', true) ?: [];
     return new WP_REST_Response(array_values($results), 200);
 }
 
@@ -750,50 +598,33 @@ function mco_sanitize_test_result($data) {
     if (!is_array($data)) return [];
     $sanitized = [];
     $sanitized['testId'] = isset($data['testId']) ? sanitize_text_field($data['testId']) : '';
-    $sanitized['userId'] = isset($data['userId']) ? sanitize_text_field($data['userId']) : '';
     $sanitized['examId'] = isset($data['examId']) ? sanitize_text_field($data['examId']) : '';
     $sanitized['score'] = isset($data['score']) ? floatval($data['score']) : 0;
     $sanitized['correctCount'] = isset($data['correctCount']) ? intval($data['correctCount']) : 0;
     $sanitized['totalQuestions'] = isset($data['totalQuestions']) ? intval($data['totalQuestions']) : 0;
     $sanitized['timestamp'] = isset($data['timestamp']) ? intval($data['timestamp']) : 0;
-    $sanitized['answers'] = [];
-    if (isset($data['answers']) && is_array($data['answers'])) {
-        foreach ($data['answers'] as $answer) {
-            $sanitized['answers'][] = [
-                'questionId' => isset($answer['questionId']) ? intval($answer['questionId']) : 0,
-                'answer' => isset($answer['answer']) ? intval($answer['answer']) : 0,
-            ];
-        }
-    }
     return $sanitized;
 }
 
 function mco_exam_submit_result_callback(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
-    if (empty($payload->user->id)) return new WP_Error('invalid_user', 'User ID not found in token.', ['status' => 400]);
-    $user_id = $payload->user->id;
     $new_result_raw = $request->get_json_params();
     if (empty($new_result_raw['testId'])) return new WP_Error('bad_request', 'Missing testId.', ['status' => 400]);
     $new_result = mco_sanitize_test_result($new_result_raw);
-    $results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
+    $results = get_user_meta($payload->user->id, 'mco_exam_results', true) ?: [];
     $results[$new_result['testId']] = $new_result;
-    update_user_meta($user_id, 'mco_exam_results', $results);
+    update_user_meta($payload->user->id, 'mco_exam_results', $results);
     return new WP_REST_Response(['success' => true], 200);
 }
 
 function mco_exam_update_user_name_callback(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
-    if (empty($payload->user->id)) return new WP_Error('invalid_user', 'User ID not found in token.', ['status' => 400]);
-    $user_id = $payload->user->id;
     $params = $request->get_json_params();
     $new_name = isset($params['fullName']) ? sanitize_text_field($params['fullName']) : '';
     if (empty($new_name)) return new WP_Error('bad_request', 'Full name cannot be empty.', ['status' => 400]);
     
     $name_parts = explode(' ', $new_name, 2);
-    $first_name = $name_parts[0];
-    $last_name = isset($name_parts[1]) ? $name_parts[1] : '';
-
-    wp_update_user(['ID' => $user_id, 'display_name' => $new_name, 'first_name' => $first_name, 'last_name' => $last_name]);
+    wp_update_user(['ID' => $payload->user->id, 'display_name' => $new_name, 'first_name' => $name_parts[0], 'last_name' => isset($name_parts[1]) ? $name_parts[1] : '']);
     return new WP_REST_Response(['success' => true, 'newName' => $new_name], 200);
 }
 
@@ -801,140 +632,64 @@ function mco_get_questions_from_sheet_callback(WP_REST_Request $request) {
     $params = $request->get_json_params();
     $sheet_url = isset($params['sheetUrl']) ? esc_url_raw($params['sheetUrl']) : '';
     $count = isset($params['count']) ? intval($params['count']) : 0;
-
-    if (empty($sheet_url) || filter_var($sheet_url, FILTER_VALIDATE_URL) === false) {
-        return new WP_Error('invalid_url', 'The provided sheet URL is not valid.', ['status' => 400]);
-    }
-    
-    $csv_export_url = str_replace(['/edit?usp=sharing', '/edit'], '/export?format=csv', $sheet_url);
-
-    $response = wp_remote_get($csv_export_url, ['timeout' => 15]);
-    if (is_wp_error($response)) {
-        return new WP_Error('fetch_failed', 'Could not retrieve questions from the source.', ['status' => 500]);
-    }
-
-    $body = wp_remote_retrieve_body($response);
-    $lines = explode("\\n", $body);
+    if (empty($sheet_url) || !filter_var($sheet_url, FILTER_VALIDATE_URL)) return new WP_Error('invalid_url', 'Invalid sheet URL.', ['status' => 400]);
+    $response = wp_remote_get(str_replace('/edit', '/export?format=csv', $sheet_url), ['timeout' => 15]);
+    if (is_wp_error($response)) return new WP_Error('fetch_failed', 'Could not retrieve questions.', ['status' => 500]);
+    $lines = explode("\\n", wp_remote_retrieve_body($response));
     $questions = [];
-    
     for ($i = 1; $i < count($lines); $i++) {
         if (empty(trim($lines[$i]))) continue;
         $data = str_getcsv($lines[$i]);
         if (count($data) >= 7 && !empty(trim($data[1]))) {
-            $options = array_map('trim', array_slice($data, 2, 4));
-            $questions[] = [
-                'id'            => intval(trim($data[0])),
-                'question'      => trim($data[1]),
-                'options'       => $options,
-                'correctAnswer' => intval(trim($data[6]))
-            ];
+            $questions[] = [ 'id' => intval(trim($data[0])), 'question' => trim($data[1]), 'options' => array_map('trim', array_slice($data, 2, 4)), 'correctAnswer' => intval(trim($data[6])) ];
         }
     }
-    
     shuffle($questions);
-    $selected_questions = ($count > 0) ? array_slice($questions, 0, $count) : $questions;
-    
-    return new WP_REST_Response($selected_questions, 200);
+    return new WP_REST_Response(($count > 0 ? array_slice($questions, 0, $count) : $questions), 200);
 }
-
 
 function mco_get_certificate_data_callback(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
-    if (empty($payload->user->id)) return new WP_Error('invalid_user', 'User ID not found in token.', ['status' => 400]);
-    $user_id = $payload->user->id;
     $test_id = $request->get_param('testId');
-    $results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
-    
-    if (!isset($results[$test_id])) {
-        return new WP_Error('not_found', 'Test result not found.', ['status' => 404]);
-    }
-    
+    $results = get_user_meta($payload->user->id, 'mco_exam_results', true) ?: [];
+    if (!isset($results[$test_id])) return new WP_Error('not_found', 'Test result not found.', ['status' => 404]);
     $result = $results[$test_id];
-    $user = get_userdata($user_id);
-
-    return new WP_REST_Response([
-        'certificateNumber' => strtoupper(substr(md5($test_id . $user_id), 0, 12)),
-        'candidateName' => $user->display_name,
-        'finalScore' => $result['score'],
-        'date' => date('F j, Y', $result['timestamp'] / 1000),
-        'examId' => $result['examId']
-    ], 200);
+    $user = get_userdata($payload->user->id);
+    return new WP_REST_Response(['certificateNumber' => strtoupper(substr(md5($test_id . $payload->user->id), 0, 12)), 'candidateName' => $user->display_name, 'finalScore' => $result['score'], 'date' => date('F j, Y', $result['timestamp'] / 1000), 'examId' => $result['examId']], 200);
 }
 
 function mco_get_exam_stats_callback(WP_REST_Request $request) {
     $cached_stats = get_transient('mco_exam_stats');
-    if ($cached_stats !== false) {
-        return new WP_REST_Response($cached_stats, 200);
-    }
-
+    if ($cached_stats !== false) return new WP_REST_Response($cached_stats, 200);
     $programs_query = new WP_Query(['post_type' => 'mco_exam_program', 'posts_per_page' => -1]);
     $exam_configs = [];
     if ($programs_query->have_posts()){
-        while($programs_query->have_posts()) {
-            $programs_query->the_post();
-            $product_id = get_post_meta(get_the_ID(), '_mco_certification_exam_product_id', true);
-            if ($product_id) {
-                $product = wc_get_product($product_id);
-                if ($product) {
-                    $sku = $product->get_sku();
-                    if (!empty($sku)) {
-                        $exam_configs[$sku] = [
-                            'name' => get_the_title(),
-                            'pass_score' => (int)get_post_meta(get_the_ID(), '_mco_pass_score', true) ?: 70
-                        ];
-                    }
-                }
+        while($programs_query->have_posts()) { $programs_query->the_post();
+            if (($product = wc_get_product(get_post_meta(get_the_ID(), '_mco_certification_exam_product_id', true))) && $product->get_sku()) {
+                $exam_configs[$product->get_sku()] = [ 'name' => get_the_title(), 'pass_score' => (int)get_post_meta(get_the_ID(), '_mco_pass_score', true) ?: 70 ];
             }
         }
     }
     wp_reset_postdata();
-
     $stats = [];
-    $all_users = get_users(['fields' => ['ID']]);
-
-    foreach ($exam_configs as $sku => $config) {
-        $stats[$sku] = [
-            'examId' => $sku, 'examName' => $config['name'], 'totalSales' => 0, 'totalAttempts' => 0, 
-            'passRate' => 0, 'averageScore' => 0, 'passed' => 0, 'failed' => 0, '_total_score_sum' => 0
-        ];
-    }
-    
-    foreach ($all_users as $user) {
+    foreach ($exam_configs as $sku => $config) { $stats[$sku] = [ 'examId' => $sku, 'examName' => $config['name'], 'totalSales' => 0, 'totalAttempts' => 0, 'passRate' => 0, 'averageScore' => 0, 'passed' => 0, 'failed' => 0, '_total_score_sum' => 0 ]; }
+    foreach (get_users(['fields' => ['ID']]) as $user) {
         $results = get_user_meta($user->ID, 'mco_exam_results', true) ?: [];
         foreach ($results as $result) {
-            $exam_id = isset($result['examId']) ? $result['examId'] : null;
-            if ($exam_id && isset($stats[$exam_id])) {
-                $stats[$exam_id]['totalAttempts']++;
-                $stats[$exam_id]['_total_score_sum'] += isset($result['score']) ? $result['score'] : 0;
-                if (isset($result['score']) && $result['score'] >= $exam_configs[$exam_id]['pass_score']) {
-                    $stats[$exam_id]['passed']++;
-                } else {
-                    $stats[$exam_id]['failed']++;
-                }
+            if (isset($result['examId']) && isset($stats[$result['examId']])) {
+                $stats[$result['examId']]['totalAttempts']++; $stats[$result['examId']]['_total_score_sum'] += $result['score'];
+                if ($result['score'] >= $exam_configs[$result['examId']]['pass_score']) $stats[$result['examId']]['passed']++; else $stats[$result['examId']]['failed']++;
             }
         }
     }
-    
-    // A more efficient way to get total sales
-    foreach ($stats as $sku => &$stat_data) {
-        $product_id = wc_get_product_id_by_sku($sku);
-        if ($product_id) {
-            $stat_data['totalSales'] = (int)get_post_meta($product_id, 'total_sales', true);
-        }
-    }
+    foreach ($stats as $sku => &$stat_data) { if (($product_id = wc_get_product_id_by_sku($sku))) $stat_data['totalSales'] = (int)get_post_meta($product_id, 'total_sales', true); }
     unset($stat_data);
-
-
     $final_stats = [];
-    foreach ($stats as $sku => $stat) {
-        if ($stat['totalAttempts'] > 0) {
-            $stat['averageScore'] = round($stat['_total_score_sum'] / $stat['totalAttempts'], 2);
-            $stat['passRate'] = round(($stat['passed'] / $stat['totalAttempts']) * 100, 2);
-        }
+    foreach ($stats as $stat) {
+        if ($stat['totalAttempts'] > 0) { $stat['averageScore'] = round($stat['_total_score_sum'] / $stat['totalAttempts'], 2); $stat['passRate'] = round(($stat['passed'] / $stat['totalAttempts']) * 100, 2); }
         unset($stat['_total_score_sum']);
         $final_stats[] = $stat;
     }
-    
     set_transient('mco_exam_stats', $final_stats, 2 * HOUR_IN_SECONDS);
     return new WP_REST_Response($final_stats, 200);
 }
@@ -954,9 +709,9 @@ function mco_get_exam_stats_callback(WP_REST_Request $request) {
             <h1 className="text-3xl font-extrabold text-slate-800">WordPress Integration Plugin</h1>
             
             <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-xl font-bold mb-2">Definitive Plugin (v24.3.0)</h2>
+                <h2 className="text-xl font-bold mb-2">Definitive Plugin (v24.4.0)</h2>
                 <p className="mb-4">
-                   This is the stable, database-driven integration plugin. It now includes a built-in <strong>System Status</strong> tool to fix the "No route was found" error and has an improved login shortcode for automatic redirection.
+                   This is the stable, database-driven integration plugin. It includes a built-in <strong>System Status</strong> tool to fix the "No route was found" error and has an improved login shortcode for automatic redirection. This version also includes fixes for fetching subscription prices and book affiliate links.
                 </p>
                 <p className="mb-4">
                     Copy the code below and replace the content of your existing plugin file (e.g., <code>mco-exam-engine.php</code>) on your WordPress server.
