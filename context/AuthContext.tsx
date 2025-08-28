@@ -16,7 +16,8 @@ interface AuthContextType {
   suggestedBooks: RecommendedBook[];
   dynamicExams: Exam[] | null;
   dynamicCategories: ExamProductCategory[] | null;
-  loginWithToken: (token: string) => void;
+  // Fix: The loginWithToken function is async, so it returns a Promise.
+  loginWithToken: (token: string) => Promise<void>;
   logout: () => void;
   useFreeAttempt: () => void;
   updateUserName: (name: string) => void;

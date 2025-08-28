@@ -7,7 +7,7 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       Exam App Integration Engine
  * Description:       A generic engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and styling.
- * Version:           24.1.0 (Definitive Production Version)
+ * Version:           24.2.0 (Production w/ Diagnostics)
  * Author:            Annapoorna Infotech (Multi-Tenant Engine)
  */
 
@@ -33,7 +33,7 @@ function mco_plugin_deactivate() {
 // --- INITIALIZATION ---
 add_action('init', 'mco_exam_app_init');
 function mco_exam_app_init() {
-    add_action('admin_notices', 'mco_check_dependencies');
+    add_action('admin_notices', 'mco_check_dependencies_notices');
     add_action('admin_menu', 'mco_exam_add_admin_menu');
     add_action('admin_init', 'mco_exam_register_settings');
     add_action('woocommerce_thankyou', 'mco_redirect_after_purchase', 10, 1);
@@ -58,7 +58,7 @@ function mco_exam_app_init() {
     }
 }
 
-function mco_check_dependencies() { 
+function mco_check_dependencies_notices() { 
     if (!class_exists('WooCommerce')) echo '<div class="notice notice-error"><p><strong>Exam App Engine:</strong> WooCommerce is not active. This plugin requires it to function.</p></div>'; 
     if (!defined('MCO_JWT_SECRET') || strlen(MCO_JWT_SECRET) < 32) echo '<div class="notice notice-error"><p><strong>Exam App Engine:</strong> A secure <strong>MCO_JWT_SECRET</strong> (at least 32 characters long) is not defined in your wp-config.php file for security. SSO will not work.</p></div>';
     if (empty(get_option('mco_exam_app_url'))) echo '<div class="notice notice-warning"><p><strong>Exam App Engine:</strong> The Exam Application URL is not set. Please <a href="' . admin_url('admin.php?page=mco-exam-engine') . '">go to the settings page</a> to configure it.</p></div>';
@@ -66,32 +66,116 @@ function mco_check_dependencies() {
 
 // --- ADMIN MENU & PAGES ---
 function mco_exam_add_admin_menu() {
-    add_menu_page('Exam App Engine', 'Exam App Engine', 'manage_options', 'mco-exam-engine', 'mco_exam_settings_page_html', 'dashicons-analytics', 80);
-    add_submenu_page('mco-exam-engine', 'Engine Settings', 'Settings', 'manage_options', 'mco-exam-engine', 'mco_exam_settings_page_html');
+    add_menu_page('Exam App Engine', 'Exam App Engine', 'manage_options', 'mco-exam-engine', 'mco_exam_admin_page_router', 'dashicons-analytics', 80);
+    add_submenu_page('mco-exam-engine', 'Engine Settings', 'Settings', 'manage_options', 'mco-exam-engine', 'mco_exam_admin_page_router');
     add_submenu_page('mco-exam-engine', 'Platform Blueprint', 'Platform Blueprint', 'manage_options', 'mco-platform-blueprint', 'mco_platform_blueprint_page_html');
 }
 
 function mco_exam_register_settings() { register_setting('mco_exam_app_settings_group', 'mco_exam_app_url'); }
 
-function mco_exam_settings_page_html() {
+function mco_exam_admin_page_router() {
+    $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'settings';
     ?>
     <div class="wrap">
-        <h1>Exam App Engine Settings</h1>
-        <form method="post" action="options.php">
-            <?php settings_fields('mco_exam_app_settings_group'); ?>
-            <?php do_settings_sections('mco_exam_app_settings_group'); ?>
-            <table class="form-table">
-                <tr valign="top">
-                    <th scope="row">Exam Application URL</th>
-                    <td>
-                        <input type="url" name="mco_exam_app_url" value="<?php echo esc_attr(get_option('mco_exam_app_url')); ?>" class="regular-text" placeholder="https://exams.yourdomain.com" />
-                        <p class="description">Enter the full URL of your standalone React examination app. Do not include a trailing slash.</p>
-                    </td>
-                </tr>
-            </table>
-            <?php submit_button(); ?>
-        </form>
+        <h1>Exam App Engine</h1>
+        <h2 class="nav-tab-wrapper">
+            <a href="?page=mco-exam-engine&tab=settings" class="nav-tab <?php echo $active_tab == 'settings' ? 'nav-tab-active' : ''; ?>">Settings</a>
+            <a href="?page=mco-exam-engine&tab=status" class="nav-tab <?php echo $active_tab == 'status' ? 'nav-tab-active' : ''; ?>">System Status</a>
+        </h2>
+        <?php
+        if ($active_tab == 'settings') {
+            mco_exam_settings_page_html();
+        } else {
+            mco_exam_status_page_html();
+        }
+        ?>
     </div>
+    <?php
+}
+
+
+function mco_exam_settings_page_html() {
+    ?>
+    <form method="post" action="options.php">
+        <?php settings_fields('mco_exam_app_settings_group'); ?>
+        <?php do_settings_sections('mco_exam_app_settings_group'); ?>
+        <table class="form-table">
+            <tr valign="top">
+                <th scope="row">Exam Application URL</th>
+                <td>
+                    <input type="url" name="mco_exam_app_url" value="<?php echo esc_attr(get_option('mco_exam_app_url')); ?>" class="regular-text" placeholder="https://exams.yourdomain.com" />
+                    <p class="description">Enter the full URL of your standalone React examination app. Do not include a trailing slash.</p>
+                </td>
+            </tr>
+        </table>
+        <?php submit_button(); ?>
+    </form>
+    <?php
+}
+
+function mco_exam_status_page_html() {
+    $checks = [];
+    // 1. JWT Secret Check
+    $checks['jwt'] = [
+        'label' => 'JWT Security Secret',
+        'status' => (defined('MCO_JWT_SECRET') && strlen(MCO_JWT_SECRET) >= 32),
+        'message_ok' => 'The MCO_JWT_SECRET constant is correctly defined in wp-config.php.',
+        'message_fail' => 'The MCO_JWT_SECRET constant is missing or too short in your wp-config.php file. This is required for secure authentication. Please define it with a random string of at least 32 characters.'
+    ];
+    // 2. WooCommerce Check
+    $checks['woocommerce'] = [
+        'label' => 'WooCommerce Plugin',
+        'status' => class_exists('WooCommerce'),
+        'message_ok' => 'WooCommerce is active.',
+        'message_fail' => 'WooCommerce is not active. This plugin relies on it for product management and purchases.'
+    ];
+    // 3. Permalink Structure Check
+    $permalinks_ok = get_option('permalink_structure');
+    $checks['permalinks'] = [
+        'label' => 'Permalink Structure',
+        'status' => !empty($permalinks_ok),
+        'message_ok' => 'Permalinks are set to a custom structure, which is required for the REST API.',
+        'message_fail' => 'Your permalink structure is set to "Plain". The REST API may not work correctly. Please go to <a href="' . admin_url('options-permalink.php') . '">Settings &rarr; Permalinks</a> and choose any structure other than "Plain" (e.g., "Post name").'
+    ];
+    // 4. App URL Check
+    $app_url = get_option('mco_exam_app_url');
+    $checks['app_url'] = [
+        'label' => 'Exam App URL',
+        'status' => (!empty($app_url) && filter_var($app_url, FILTER_VALIDATE_URL)),
+        'message_ok' => 'The Exam App URL is configured: ' . esc_html($app_url),
+        'message_fail' => 'The Exam App URL is not set or is invalid. Please configure it under the "Settings" tab.'
+    ];
+
+    ?>
+    <h3>System Status Check</h3>
+    <p>This page helps diagnose common configuration issues. If any checks below fail, the application may not work as expected.</p>
+    <table class="wp-list-table widefat striped">
+        <thead>
+            <tr>
+                <th style="width: 20px;">Status</th>
+                <th>Check</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($checks as $check): ?>
+                <tr>
+                    <td>
+                        <?php if ($check['status']): ?>
+                            <span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span>
+                        <?php else: ?>
+                            <span class="dashicons dashicons-warning" style="color: #d63638;"></span>
+                        <?php endif; ?>
+                    </td>
+                    <td><strong><?php echo esc_html($check['label']); ?></strong></td>
+                    <td><?php echo $check['status'] ? $check['message_ok'] : $check['message_fail']; ?></td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    <p style="margin-top: 1rem;">
+        <strong>Troubleshooting Tip:</strong> If you are still experiencing issues with API routes (like a "No route was found" error), try re-saving your permalinks. Go to <a href="<?php echo admin_url('options-permalink.php'); ?>">Settings &rarr; Permalinks</a> and simply click the "Save Changes" button. This flushes WordPress's rewrite rules and often resolves routing problems.
+    </p>
     <?php
 }
 
@@ -120,6 +204,7 @@ function mco_platform_blueprint_page_html() {
                 <li>Ensure this plugin ("Exam App Integration Engine") is installed and activated.</li>
                 <li><strong>Crucial Security Step:</strong> Add a secure, random key to your <code>wp-config.php</code> file. Example: <code>define('MCO_JWT_SECRET', 'your-very-strong-secret-key-here');</code></li>
                 <li>Go to <strong>Exam App Engine &rarr; Settings</strong> in your admin menu and enter the URL of your exam application (e.g., <code>https://exams.your-domain.com</code>).</li>
+                <li>Go to the <strong>System Status</strong> tab to ensure all checks are passing.</li>
             </ol>
             
             <h3>Step 2: Create Your Products in WooCommerce</h3>
@@ -677,11 +762,11 @@ function mco_get_questions_from_sheet_callback(WP_REST_Request $request) {
         return new WP_Error('invalid_url', 'The provided sheet URL is not valid.', ['status' => 400]);
     }
     
-    $csv_export_url = str_replace('/edit?usp=sharing', '/export?format=csv', $sheet_url);
+    $csv_export_url = str_replace(['/edit?usp=sharing', '/edit'], '/export?format=csv', $sheet_url);
 
     $response = wp_remote_get($csv_export_url, ['timeout' => 15]);
     if (is_wp_error($response)) {
-        return new WP_Error('fetch_failed', 'Could not retrieve questions from the source.', ['status' => 500]);
+        return new WP_Error('fetch_failed', 'Could not retrieve questions from the source.', ['status' => 500, 'error' => $response->get_error_message()]);
     }
 
     $body = wp_remote_retrieve_body($response);

@@ -1,80 +1,64 @@
 
 
 import * as React from 'react';
-// Fix: Use react-router-dom v6 compatible imports
-import { useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import toast from 'react-hot-toast';
 
 const Login: React.FC = () => {
     const location = useLocation();
-    // Fix: Use useNavigate for navigation in v6
     const navigate = useNavigate();
     const { user, loginWithToken } = useAuth();
-    const [isLoading, setIsLoading] = React.useState(true);
     const wasAlreadyLoggedIn = React.useRef(!!user);
-    const tokenProcessed = React.useRef(false);
+    const hasProcessed = React.useRef(false);
 
     React.useEffect(() => {
+        if (hasProcessed.current) return;
+        hasProcessed.current = true;
+
         const searchParams = new URLSearchParams(location.search);
         const token = searchParams.get('token');
+        const redirectTo = searchParams.get('redirect_to') || '/dashboard';
 
-        const handleLogin = async () => {
-            if (token && !tokenProcessed.current) {
-                tokenProcessed.current = true; 
-                try {
-                    await loginWithToken(token);
-                    setIsLoading(false);
-                } catch (e: any) {
+        // If a token is present, we must process it for login or sync.
+        if (token) {
+            loginWithToken(token)
+                .then(() => {
+                    if (wasAlreadyLoggedIn.current) {
+                        toast.success('Exams synced successfully!');
+                    } else {
+                        toast.success('Logged in successfully!');
+                    }
+                    navigate(redirectTo, { replace: true });
+                })
+                .catch((e: any) => {
                     const errorMessage = e.message || 'Invalid login token. Please try again.';
                     toast.error(errorMessage);
-                    setIsLoading(false);
-                    // Fix: Use navigate for navigation
                     navigate('/', { replace: true });
-                }
-            } else {
-                setIsLoading(false);
-            }
-        };
-
-        handleLogin();
-    }, [location.search, loginWithToken, navigate]);
-
-    if (isLoading && !user) {
-        return (
-            <div className="flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg text-center">
-                    <h2 className="text-2xl font-bold text-slate-900">Finalizing Login</h2>
-                    <LogoSpinner />
-                    <p className="text-slate-500">Please wait while we securely log you in...</p>
-                </div>
-            </div>
-        );
-    }
-    
-    if (user) {
-        const searchParams = new URLSearchParams(location.search);
-        const redirectTo = searchParams.get('redirect_to') || '/dashboard';
-        
-        if (tokenProcessed.current) {
-             if (wasAlreadyLoggedIn.current) {
-                toast.success('Exams synced successfully!');
-             } else {
-                toast.success('Logged in successfully!');
-             }
+                });
+        } 
+        // If no token, but user is already logged in from a previous session.
+        else if (user) {
+            navigate(redirectTo, { replace: true });
+        } 
+        // No token and no user, redirect to the landing page.
+        else {
+            navigate('/', { replace: true });
         }
-        
-        // Fix: Use Navigate component for v6
-        return <Navigate to={redirectTo} />;
-    }
+    }, [user, location.search, loginWithToken, navigate]);
 
-    if (!isLoading && !user) {
-        // Fix: Use Navigate component for v6
-        return <Navigate to="/" />;
-    }
-
-    return null;
+    // This component's primary job is to process and redirect.
+    // It will show a loading screen for the brief moment it's mounted.
+    return (
+        <div className="flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg text-center">
+                <h2 className="text-2xl font-bold text-slate-900">Finalizing Login</h2>
+                <LogoSpinner />
+                <p className="text-slate-500">Please wait while we securely process your request...</p>
+            </div>
+        </div>
+    );
 };
 
 export default Login;
