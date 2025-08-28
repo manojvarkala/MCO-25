@@ -1,6 +1,6 @@
 import * as React from 'react';
-// Fix: Use useHistory from react-router-dom v5
-import { useParams, useHistory } from 'react-router-dom';
+// Fix: Use useNavigate from react-router-dom v6
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook } from '../types.ts';
@@ -15,8 +15,8 @@ import { logoBase64 } from '../assets/logo.ts';
 
 const Results: React.FC = () => {
     const { testId } = useParams<{ testId: string }>();
-    // Fix: Use useHistory for navigation in v5
-    const history = useHistory();
+    // Fix: Use useNavigate for navigation in v6
+    const navigate = useNavigate();
     const { user, token, paidExamIds, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     
@@ -44,7 +44,7 @@ const Results: React.FC = () => {
         if (!testId || !user || !activeOrg) {
             if(!user) toast.error("Authentication session has expired.");
             else toast.error("Required data is missing.");
-            history.push('/dashboard');
+            navigate('/dashboard');
             return;
         }
 
@@ -83,21 +83,21 @@ const Results: React.FC = () => {
 
                     } else {
                         toast.error("Could not find the configuration for this exam.");
-                        history.push('/dashboard');
+                        navigate('/dashboard');
                     }
                 } else {
                     toast.error("Could not find your test results.");
-                    history.push('/dashboard');
+                    navigate('/dashboard');
                 }
             } catch (error) {
                 toast.error("Failed to load results.");
-                history.push('/dashboard');
+                navigate('/dashboard');
             } finally {
                 setIsLoading(false);
             }
         };
         fetchResultAndExam();
-    }, [testId, user, activeOrg, history, paidExamIds]);
+    }, [testId, user, activeOrg, navigate, paidExamIds]);
 
     const handleGenerateFeedback = async () => {
         if (!result || !exam) return;
@@ -303,7 +303,8 @@ Please provide a summary of the key areas I need to focus on based on these erro
             pdf.addPage();
             pageNum++;
             addWatermarkAndFooter(pageNum);
-            let yPos = margin;
+            // Fix: Re-assign yPos for the new page instead of re-declaring it.
+            yPos = margin;
             
             if (exam.recommendedBook) {
                 const { url, domainName } = getGeoAffiliateLink(exam.recommendedBook);
@@ -413,7 +414,12 @@ Please provide a summary of the key areas I need to focus on based on these erro
         }
     
         // Fallback to .com if preferred is not available or is an empty string
-        return { url: book.affiliateLinks.com, domainName: 'Amazon.com' };
+        if (book.affiliateLinks.com && book.affiliateLinks.com.trim() !== '') {
+            return { url: book.affiliateLinks.com, domainName: 'Amazon.com' };
+        }
+        
+        // If both preferred and .com are invalid, return the original .com link (which is likely empty)
+        return { url: book.affiliateLinks.com || '', domainName: 'Amazon.com' };
     };
 
 
@@ -446,7 +452,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 {((isPaidCertExam && isPass) || isAdmin) && (
                     <div className="text-center mb-8">
                         <button
-                            onClick={() => history.push(`/certificate/${result.testId}`)}
+                            onClick={() => navigate(`/certificate/${result.testId}`)}
                             className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105"
                         >
                             <FileDown size={20} />
@@ -493,29 +499,33 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 </div>
 
 
-                {exam.recommendedBook && (
-                     <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
-                        <h2 className="text-xl font-semibold text-slate-800 mb-4">Recommended Study Material</h2>
-                        <div className="flex flex-col sm:flex-row items-center gap-6">
-                            <div className="flex-shrink-0 w-32 h-40">
-                                <BookCover book={exam.recommendedBook} className="w-full h-full rounded-md shadow-lg" />
-                            </div>
-                            <div className="flex-grow">
-                                <h3 className="text-lg font-bold text-slate-800">{exam.recommendedBook.title}</h3>
-                                <p className="text-sm text-slate-600 mt-2 mb-4">{exam.recommendedBook.description}</p>
-                                <a 
-                                    href={getGeoAffiliateLink(exam.recommendedBook).url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center space-x-2 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg transition"
-                                >
-                                    <BookUp size={16}/> 
-                                    <span>Buy on {getGeoAffiliateLink(exam.recommendedBook).domainName}</span>
-                                </a>
+                {exam.recommendedBook && (() => {
+                    const { url, domainName } = getGeoAffiliateLink(exam.recommendedBook);
+                    if (!url) return null; // Don't render if no valid URL was found
+                    return (
+                         <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
+                            <h2 className="text-xl font-semibold text-slate-800 mb-4">Recommended Study Material</h2>
+                            <div className="flex flex-col sm:flex-row items-center gap-6">
+                                <div className="flex-shrink-0 w-32 h-40">
+                                    <BookCover book={exam.recommendedBook} className="w-full h-full rounded-md shadow-lg" />
+                                </div>
+                                <div className="flex-grow">
+                                    <h3 className="text-lg font-bold text-slate-800">{exam.recommendedBook.title}</h3>
+                                    <p className="text-sm text-slate-600 mt-2 mb-4">{exam.recommendedBook.description}</p>
+                                    <a 
+                                        href={url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center space-x-2 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg transition"
+                                    >
+                                        <BookUp size={16}/> 
+                                        <span>Buy on {domainName}</span>
+                                    </a>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
 
             <div className="mt-8 bg-white p-8 rounded-xl shadow-lg">

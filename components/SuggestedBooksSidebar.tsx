@@ -26,7 +26,12 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
     }
 
     // Fallback to .com if preferred is not available or is an empty string
-    return { url: book.affiliateLinks.com, domainName: 'Amazon.com' };
+    if (book.affiliateLinks.com && book.affiliateLinks.com.trim() !== '') {
+        return { url: book.affiliateLinks.com, domainName: 'Amazon.com' };
+    }
+    
+    // If both preferred and .com are invalid, return the original .com link (which is likely empty)
+    return { url: book.affiliateLinks.com || '', domainName: 'Amazon.com' };
 };
 
 
@@ -45,6 +50,7 @@ const SuggestedBooksSidebar: React.FC = () => {
             <div className="space-y-6">
                 {suggestedBooks.map(book => {
                     const { url, domainName } = getGeoAffiliateLink(book);
+                    if (!url) return null; // Don't render if no valid URL
                     return (
                         <div key={book.id} className="bg-white rounded-lg shadow-md overflow-hidden border border-slate-200 transform hover:-translate-y-1 transition-transform duration-200">
                             <BookCover book={book} className="w-full h-32" />

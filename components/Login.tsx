@@ -1,16 +1,16 @@
 
 
 import * as React from 'react';
-// Fix: Use react-router-dom v5 compatible imports
-import { useLocation, useHistory, Redirect } from 'react-router-dom';
+// Fix: Use react-router-dom v6 compatible imports
+import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import toast from 'react-hot-toast';
 
 const Login: React.FC = () => {
     const location = useLocation();
-    // Fix: Use useHistory for navigation in v5
-    const history = useHistory();
+    // Fix: Use useNavigate for navigation in v6
+    const navigate = useNavigate();
     const { user, loginWithToken } = useAuth();
     const [isLoading, setIsLoading] = React.useState(true);
     const wasAlreadyLoggedIn = React.useRef(!!user);
@@ -30,8 +30,8 @@ const Login: React.FC = () => {
                     const errorMessage = e.message || 'Invalid login token. Please try again.';
                     toast.error(errorMessage);
                     setIsLoading(false);
-                    // Fix: Use history.replace for navigation
-                    history.replace('/');
+                    // Fix: Use navigate for navigation
+                    navigate('/', { replace: true });
                 }
             } else {
                 setIsLoading(false);
@@ -39,7 +39,7 @@ const Login: React.FC = () => {
         };
 
         handleLogin();
-    }, [location.search, loginWithToken, history]);
+    }, [location.search, loginWithToken, navigate]);
 
     if (isLoading && !user) {
         return (
@@ -65,13 +65,13 @@ const Login: React.FC = () => {
              }
         }
         
-        // Fix: Use Redirect component for v5
-        return <Redirect to={redirectTo} />;
+        // Fix: Use Navigate component for v6
+        return <Navigate to={redirectTo} />;
     }
 
     if (!isLoading && !user) {
-        // Fix: Use Redirect component for v5
-        return <Redirect to="/" />;
+        // Fix: Use Navigate component for v6
+        return <Navigate to="/" />;
     }
 
     return null;

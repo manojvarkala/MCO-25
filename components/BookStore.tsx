@@ -28,7 +28,20 @@ const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
         }
         
         // Fallback to .com if preferred is not available or is an empty string
-        return { url: book.affiliateLinks.com, domainName: 'Amazon.com', key: 'com' };
+        if (book.affiliateLinks.com && book.affiliateLinks.com.trim() !== '') {
+            return { url: book.affiliateLinks.com, domainName: 'Amazon.com', key: 'com' };
+        }
+
+        // If both fail, find the first available link to set as primary
+        const fallbackOrder: (keyof RecommendedBook['affiliateLinks'])[] = ['in', 'ae'];
+        for (const key of fallbackOrder) {
+             if (book.affiliateLinks[key] && book.affiliateLinks[key].trim() !== '') {
+                const domain = key === 'in' ? 'Amazon.in' : 'Amazon.ae';
+                return { url: book.affiliateLinks[key], domainName: domain, key };
+             }
+        }
+        
+        return { url: book.affiliateLinks.com || '', domainName: 'Amazon.com', key: 'com' };
     };
 
     const primaryLink = getGeoAffiliateLink(book);
@@ -37,7 +50,7 @@ const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
         { key: 'in' as const, name: '.in', url: book.affiliateLinks.in },
         { key: 'ae' as const, name: '.ae', url: book.affiliateLinks.ae }
     ];
-    const secondaryStores = allStores.filter(store => store.key !== primaryLink.key && store.url);
+    const secondaryStores = allStores.filter(store => store.key !== primaryLink.key && store.url && store.url.trim() !== '');
 
     return (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-1 transition-transform duration-300 border border-slate-100">
@@ -46,14 +59,16 @@ const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
                 <h3 className="text-lg font-bold text-slate-800 mb-2 leading-tight">{book.title}</h3>
                 <p className="text-slate-600 text-sm mb-4 flex-grow">{book.description}</p>
                 <div className="mt-auto pt-4 border-t border-slate-200 space-y-2">
-                    <a 
-                        href={primaryLink.url}
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="w-full text-center bg-yellow-400 hover:bg-yellow-500 text-slate-800 font-bold py-3 px-4 rounded-lg text-base flex items-center justify-center gap-2 transition-all transform hover:scale-105"
-                    >
-                        <ShoppingCart size={18} /> Buy on {primaryLink.domainName}
-                    </a>
+                    {primaryLink.url && (
+                        <a 
+                            href={primaryLink.url}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="w-full text-center bg-yellow-400 hover:bg-yellow-500 text-slate-800 font-bold py-3 px-4 rounded-lg text-base flex items-center justify-center gap-2 transition-all transform hover:scale-105"
+                        >
+                            <ShoppingCart size={18} /> Buy on {primaryLink.domainName}
+                        </a>
+                    )}
                     {secondaryStores.length > 0 && (
                         <div className="text-center pt-2">
                             <span className="text-xs text-slate-400">Other stores: </span>

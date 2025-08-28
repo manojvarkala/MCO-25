@@ -1,8 +1,8 @@
 
 
 import * as React from 'react';
-// Fix: Use useHistory from react-router-dom v5
-import { useHistory } from 'react-router-dom';
+// Fix: Use useNavigate from react-router-dom v6
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -14,8 +14,8 @@ import Spinner from './Spinner.tsx';
 const Profile: React.FC = () => {
     const { user, token, updateUserName, wonPrize, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
-    // Fix: Use useHistory for navigation in v5
-    const history = useHistory();
+    // Fix: Use useNavigate for navigation in v6
+    const navigate = useNavigate();
 
     const [results, setResults] = React.useState<TestResult[]>([]);
     const [isEditingName, setIsEditingName] = React.useState(false);
@@ -183,11 +183,11 @@ const Profile: React.FC = () => {
                                             <span>Passing Score: <strong>{exam.passScore}%</strong></span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <button onClick={() => history.push(`/results/${result.testId}`)} className="text-sm font-semibold text-cyan-600 hover:text-cyan-800 flex items-center gap-1">
+                                            <button onClick={() => navigate(`/results/${result.testId}`)} className="text-sm font-semibold text-cyan-600 hover:text-cyan-800 flex items-center gap-1">
                                                 View Details <ChevronRight size={16} />
                                             </button>
                                             {canGetCertificate && (
-                                                <button onClick={() => history.push(`/certificate/${result.testId}`)} className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+                                                <button onClick={() => navigate(`/certificate/${result.testId}`)} className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
                                                     <Award size={16} className="mr-2" /> Certificate
                                                 </button>
                                             )}

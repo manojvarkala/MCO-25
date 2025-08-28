@@ -1,7 +1,8 @@
 
+
 import * as React from 'react';
-// Fix: Use react-router-dom v5 compatible imports
-import { HashRouter, Redirect, Route, Switch, useLocation } from 'react-router-dom';
+// Fix: Use react-router-dom v6 compatible imports
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
@@ -96,12 +97,12 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = false }) => {
   const { user } = useAuth();
   if (!user) {
-    // Fix: Use <Redirect> for react-router-dom v5
-    return <Redirect to="/" />;
+    // Fix: Use <Navigate> for react-router-dom v6
+    return <Navigate to="/" />;
   }
   if (adminOnly && !user.isAdmin) {
-    // Fix: Use <Redirect> for react-router-dom v5
-    return <Redirect to="/dashboard" />;
+    // Fix: Use <Navigate> for react-router-dom v6
+    return <Navigate to="/dashboard" />;
   }
   return <>{children}</>;
 };
@@ -139,42 +140,42 @@ const AppContent: React.FC = () => {
             {!isTestPage && <Header />}
             <div className="flex-grow w-full relative">
                 <main className={mainClasses}>
-                    {/* Fix: Use <Switch> and v5 Route syntax */}
-                    <Switch>
+                    {/* Fix: Use <Routes> and v6 Route syntax */}
+                    <Routes>
                         {/* Routes with generic sidebar */}
-                        <Route path="/instructions"><SidebarLayout><Instructions /></SidebarLayout></Route>
-                        <Route path="/bookstore"><SidebarLayout><BookStore /></SidebarLayout></Route>
-                        <Route path="/pricing"><SidebarLayout><Pricing /></SidebarLayout></Route>
-                        <Route path="/feedback"><SidebarLayout><Feedback /></SidebarLayout></Route>
-                        <Route path="/user-guide"><SidebarLayout><UserGuide /></SidebarLayout></Route>
-                        <Route path="/about-us"><SidebarLayout><AboutUs /></SidebarLayout></Route>
-                        <Route path="/privacy-policy"><SidebarLayout><PrivacyPolicy /></SidebarLayout></Route>
-                        <Route path="/refund-policy"><SidebarLayout><RefundPolicy /></SidebarLayout></Route>
-                        <Route path="/terms-of-service"><SidebarLayout><TermsOfService /></SidebarLayout></Route>
-                        <Route path="/profile">
+                        <Route path="/instructions" element={<SidebarLayout><Instructions /></SidebarLayout>} />
+                        <Route path="/bookstore" element={<SidebarLayout><BookStore /></SidebarLayout>} />
+                        <Route path="/pricing" element={<SidebarLayout><Pricing /></SidebarLayout>} />
+                        <Route path="/feedback" element={<SidebarLayout><Feedback /></SidebarLayout>} />
+                        <Route path="/user-guide" element={<SidebarLayout><UserGuide /></SidebarLayout>} />
+                        <Route path="/about-us" element={<SidebarLayout><AboutUs /></SidebarLayout>} />
+                        <Route path="/privacy-policy" element={<SidebarLayout><PrivacyPolicy /></SidebarLayout>} />
+                        <Route path="/refund-policy" element={<SidebarLayout><RefundPolicy /></SidebarLayout>} />
+                        <Route path="/terms-of-service" element={<SidebarLayout><TermsOfService /></SidebarLayout>} />
+                        <Route path="/profile" element={
                           <ProtectedRoute>
                             <SidebarLayout><Profile /></SidebarLayout>
                           </ProtectedRoute>
-                        </Route>
-                        <Route path="/results/:testId">
+                        } />
+                        <Route path="/results/:testId" element={
                           <ProtectedRoute>
                             <SidebarLayout><Results /></SidebarLayout>
                           </ProtectedRoute>
-                        </Route>
+                        } />
 
                         {/* Routes with their own layout or no sidebar */}
-                        <Route exact path="/"><LandingPage /></Route>
-                        <Route path="/auth"><Login /></Route>
-                        <Route path="/checkout/:productSlug"><Checkout /></Route>
-                        <Route path="/dashboard"><ProtectedRoute><Dashboard /></ProtectedRoute></Route>
-                        <Route path="/test/:examId"><ProtectedRoute><Test /></ProtectedRoute></Route>
-                        <Route path="/certificate/sample"><ProtectedRoute><Certificate /></ProtectedRoute></Route>
-                        <Route path="/certificate/:testId"><ProtectedRoute><Certificate /></ProtectedRoute></Route>
-                        <Route path="/admin"><ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute></Route>
-                        <Route path="/integration"><ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute></Route>
+                        <Route path="/" element={<LandingPage />} />
+                        <Route path="/auth" element={<Login />} />
+                        <Route path="/checkout/:productSlug" element={<Checkout />} />
+                        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                        <Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
+                        <Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
+                        <Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
+                        <Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
+                        <Route path="/integration" element={<ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute>} />
                     
-                        <Redirect to="/" />
-                    </Switch>
+                        <Route path="*" element={<Navigate to="/" />} />
+                    </Routes>
                 </main>
                 {user && user.isAdmin && !isTestPage && <DebugSidebar />}
             </div>
