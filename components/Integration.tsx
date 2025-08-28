@@ -697,12 +697,13 @@ function mco_get_questions_from_sheet_callback(WP_REST_Request $request) {
     $count = isset($params['count']) ? intval($params['count']) : 0;
     if (empty($sheet_url) || !filter_var($sheet_url, FILTER_VALIDATE_URL)) return new WP_Error('invalid_url', 'Invalid sheet URL.', ['status' => 400]);
     
-    $response = wp_remote_get(str_replace('/edit', '/export?format=csv', $sheet_url), ['timeout' => 15]);
+    $csv_export_url = str_replace(['/edit?usp=sharing', '/edit'], '/export?format=csv', $sheet_url);
+    $response = wp_remote_get($csv_export_url, ['timeout' => 15]);
     if (is_wp_error($response)) return new WP_Error('fetch_failed', 'Could not retrieve questions.', ['status' => 500]);
     
     $body = wp_remote_retrieve_body($response);
     $lines = preg_split('/\\r\\n?|\\n/', $body);
-    array_shift($lines); // Remove header row
+    array_shift($lines);
     
     $questions = [];
     foreach ($lines as $line) {
