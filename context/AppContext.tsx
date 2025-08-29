@@ -54,7 +54,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsInitializing(true);
         try {
             const configFile = getConfigFile();
-            const response = await fetch('/' + configFile);
+            // Create a robust URL to the config file, handling any subdirectory deployments.
+            const configUrl = new URL(configFile, document.baseURI).href;
+            const response = await fetch(configUrl);
+
             if (!response.ok) {
                 throw new Error(`HTTP error! Could not fetch ${configFile}. Status: ${response.status}`);
             }

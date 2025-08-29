@@ -1,6 +1,3 @@
-
-
-
 import * as React from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -12,21 +9,29 @@ const Header: React.FC = () => {
   const { activeOrg, setWheelModalOpen } = useAppContext();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false);
 
-  const mainSiteBaseUrl = activeOrg ? `https://www.${activeOrg.website}` : '';
+  // Updated URL generation with fallback
+  const mainSiteBaseUrl = React.useMemo(() => {
+    if (activeOrg) {
+        return `https://www.${activeOrg.website}`;
+    }
+    // Fallback logic for when config fails to load
+    const hostname = window.location.hostname;
+    if (hostname.includes('coding-online.net')) return 'https://www.coding-online.net';
+    if (hostname.includes('annapoornainfo.com')) return 'https://www.annapoornainfo.com';
+    return '';
+  }, [activeOrg]);
   
   const handleLogout = () => {
     logout();
-    if (mainSiteBaseUrl) {
-      // Redirect to the external WordPress site's logout page, then back to the app's home
-      const appHomeUrl = `https://${window.location.hostname}`;
-      const wpLogoutUrl = `${mainSiteBaseUrl}/wp-login.php?action=logout&redirect_to=${encodeURIComponent(appHomeUrl)}`;
-      window.location.href = wpLogoutUrl;
-    }
+    // Redirect to the app's home page instead of WordPress logout
+    // This keeps the user logged into the main site.
+    window.location.href = '/#/';
   };
 
   const headerLink = user ? "/#/dashboard" : "/#/";
   
-  const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
+  // Use /my-account/ as it's a standard WC page and a safer default than a custom slug.
+  const loginUrl = `${mainSiteBaseUrl}/my-account/`;
   const myAccountUrl = `${mainSiteBaseUrl}/my-account/`;
   const registerUrl = `${mainSiteBaseUrl}/wp-login.php?action=register`;
 
