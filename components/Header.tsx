@@ -30,8 +30,8 @@ const Header: React.FC = () => {
 
   const headerLink = user ? "/#/dashboard" : "/#/";
   
-  // Use /my-account/ as it's a standard WC page and a safer default than a custom slug.
-  const loginUrl = `${mainSiteBaseUrl}/my-account/`;
+  // Use /exam-login/ to ensure the token redirect flow is initiated correctly.
+  const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
   const myAccountUrl = `${mainSiteBaseUrl}/my-account/`;
   const registerUrl = `${mainSiteBaseUrl}/wp-login.php?action=register`;
 

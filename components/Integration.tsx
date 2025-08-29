@@ -7,11 +7,13 @@ const Integration: React.FC = () => {
 /**
  * Plugin Name:       Exam App Integration Engine
  * Description:       A generic engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and styling.
- * Version:           24.5.1 (Definitive Production Version w/ Syntax & Shortcode Fix)
+ * Version:           24.5.2 (Auto-flush rewrite rules on update)
  * Author:            Annapoorna Infotech (Multi-Tenant Engine)
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
+
+define('MCO_PLUGIN_VERSION', '24.5.2');
 
 // --- ACTIVATION / DEACTIVATION HOOKS ---
 register_activation_hook(__FILE__, 'mco_plugin_activate');
@@ -21,10 +23,12 @@ function mco_plugin_activate() {
     mco_register_custom_post_types();
     flush_rewrite_rules();
     set_transient('mco_admin_notice_activation', true, 5);
+    add_option('mco_plugin_version', MCO_PLUGIN_VERSION);
 }
 
 function mco_plugin_deactivate() {
     flush_rewrite_rules();
+    delete_option('mco_plugin_version');
 }
 
 // --- CONFIGURATION ---
@@ -55,6 +59,18 @@ function mco_exam_app_init() {
     add_filter('woocommerce_order_button_text', 'mco_custom_order_button_text');
 
     add_action('woocommerce_payment_complete', 'mco_auto_complete_virtual_order');
+
+    // Auto-flush rewrite rules on version update to prevent "No route found" errors.
+    $current_version = get_option('mco_plugin_version', '1.0.0');
+    if (version_compare($current_version, MCO_PLUGIN_VERSION, '<')) {
+        set_transient('mco_needs_flush', true, 30);
+        update_option('mco_plugin_version', MCO_PLUGIN_VERSION);
+    }
+
+    if (get_transient('mco_needs_flush')) {
+        flush_rewrite_rules();
+        delete_transient('mco_needs_flush');
+    }
 }
 
 function mco_check_dependencies() { 
@@ -810,7 +826,7 @@ function mco_get_exam_stats_callback(WP_REST_Request $request) {
             <h1 className="text-3xl font-extrabold text-slate-800">WordPress Integration Plugin</h1>
             
             <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-xl font-bold mb-2">Definitive Plugin (v24.5.1)</h2>
+                <h2 className="text-xl font-bold mb-2">Definitive Plugin (v24.5.2)</h2>
                 <p className="mb-4">
                    This is the stable, database-driven integration plugin. It includes a built-in <strong>System Status</strong> tool to fix the "No route was found" error and has an improved login shortcode for automatic redirection. This version also includes fixes for fetching subscription prices and book affiliate links, and adds auto-completion for virtual orders.
                 </p>
