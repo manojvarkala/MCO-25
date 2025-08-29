@@ -33,6 +33,7 @@ import TermsOfService from './components/TermsOfService.tsx';
 import LivePurchaseNotification from './components/LivePurchaseNotification.tsx';
 import SidebarLayout from './components/SidebarLayout.tsx';
 import Integration from './components/Integration.tsx';
+import UpdateNameModal from './components/UpdateNameModal.tsx';
 
 // New Component for the promotional announcement
 const PromotionAnnouncement: React.FC = () => {
@@ -111,6 +112,7 @@ const AppContent: React.FC = () => {
     const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed } = useAuth();
     const { isWheelModalOpen, setWheelModalOpen } = useAppContext();
     const location = useLocation();
+    const [isNameModalOpen, setIsNameModalOpen] = React.useState(false);
     
     const isTestPage = location.pathname.startsWith('/test/');
 
@@ -122,12 +124,24 @@ const AppContent: React.FC = () => {
         }
     }, [canSpinWheel, wheelModalDismissed, setWheelModalOpen]);
 
+    React.useEffect(() => {
+        // Show the modal to update name if it looks like a username and hasn't been shown this session
+        if (user && user.name && !user.name.includes(' ') && !sessionStorage.getItem('nameUpdateModalShown')) {
+            const timer = setTimeout(() => {
+                setIsNameModalOpen(true);
+                sessionStorage.setItem('nameUpdateModalShown', 'true');
+            }, 2000); // Delay slightly after login
+            return () => clearTimeout(timer);
+        }
+    }, [user]);
+
     const mainClasses = isTestPage 
         ? "py-8" 
         : "container mx-auto px-4 py-8";
 
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800">
+            {user && <UpdateNameModal isOpen={isNameModalOpen} onClose={() => setIsNameModalOpen(false)} />}
             {canSpinWheel && (
               <WheelOfFortune 
                 isOpen={isWheelModalOpen} 
