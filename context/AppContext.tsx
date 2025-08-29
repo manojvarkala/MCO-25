@@ -23,21 +23,21 @@ const getConfigFile = (): string => {
 
     // Vercel preview URLs, localhost, and the main production domain for MCO
     if (hostname.endsWith('vercel.app') || hostname === 'exams.coding-online.net' || hostname === 'localhost') {
-        return '/medical-coding-config.json';
+        return 'medical-coding-config.json';
     }
 
     const domainMap: { [key: string]: string } = {
-        'exams.annapoornainfo.com': '/annapoorna-config.json',
+        'exams.annapoornainfo.com': 'annapoorna-config.json',
         // --- Placeholder domains for future tenants ---
-        'exams.lawprep.com': '/law-school-config.json',
-        'exams.civil-certs.com': '/civil-engineering-config.json',
-        'exams.tech-exams.com': '/it-certs-config.json',
-        'exams.finance-prep.com': '/finance-certs-config.json',
-        'exams.management-certs.com': '/management-config.json'
+        'exams.lawprep.com': 'law-school-config.json',
+        'exams.civil-certs.com': 'civil-engineering-config.json',
+        'exams.tech-exams.com': 'it-certs-config.json',
+        'exams.finance-prep.com': 'finance-certs-config.json',
+        'exams.management-certs.com': 'management-config.json'
     };
     
     // Fallback to default if no specific domain is matched
-    return domainMap[hostname] || '/medical-coding-config.json';
+    return domainMap[hostname] || 'medical-coding-config.json';
 };
 
 
