@@ -71,8 +71,10 @@ export interface CertificateTemplate {
     body: string;
     signature1Name: string;
     signature1Title: string;
+    signature1ImageBase64?: string;
     signature2Name: string;
     signature2Title: string;
+    signature2ImageBase64?: string;
 }
 
 export interface RecommendedBook {

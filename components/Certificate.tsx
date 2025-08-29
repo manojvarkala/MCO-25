@@ -1,5 +1,6 @@
 
 
+
 import * as React from 'react';
 // Fix: Use useNavigate from react-router-dom v6
 import { useParams, useNavigate } from 'react-router-dom';
@@ -12,7 +13,6 @@ import LogoSpinner from './LogoSpinner.tsx';
 import { Download, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { signatureBase64 } from '../assets/signature.ts';
 import { logoBase64 } from '../assets/logo.ts';
 import { useAppContext } from '../context/AppContext.tsx';
 
@@ -146,6 +146,7 @@ const Certificate: React.FC = () => {
 
     const { organization, template } = certData;
     const bodyText = template.body.replace('{finalScore}', certData.finalScore.toString());
+    const hasTwoSignatures = !!(template.signature2Name && template.signature2ImageBase64);
 
     return (
         <>
@@ -198,22 +199,41 @@ const Certificate: React.FC = () => {
                     </div>
                     
                     <div className="pt-4 mt-auto">
-                         <div className="flex justify-center items-center w-full">
-                            <div className="text-center w-72">
-                               <img 
-                                  src={signatureBase64} 
-                                  alt={`${template.signature1Name} Signature`}
-                                  className="h-16 mx-auto object-contain mb-2"
+                         <div className={`flex ${hasTwoSignatures ? 'justify-around' : 'justify-center'} items-end w-full`}>
+                            {template.signature1Name && template.signature1ImageBase64 && (
+                                <div className="text-center w-72">
+                                <img 
+                                    src={template.signature1ImageBase64} 
+                                    alt={`${template.signature1Name} Signature`}
+                                    className="h-16 mx-auto object-contain mb-2"
                                 />
-                               <div className="border-t border-slate-400 pt-2">
-                                  <p className="text-sm text-slate-700 tracking-wider">
-                                    <strong>{template.signature1Name}</strong>
-                                  </p>
-                                  <p className="text-xs text-slate-600 tracking-wider">
-                                    {template.signature1Title}
-                                  </p>
-                               </div>
-                            </div>
+                                <div className="border-t border-slate-400 pt-2">
+                                    <p className="text-sm text-slate-700 tracking-wider">
+                                        <strong>{template.signature1Name}</strong>
+                                    </p>
+                                    <p className="text-xs text-slate-600 tracking-wider">
+                                        {template.signature1Title}
+                                    </p>
+                                </div>
+                                </div>
+                            )}
+                            {hasTwoSignatures && (
+                                <div className="text-center w-72">
+                                <img 
+                                    src={template.signature2ImageBase64} 
+                                    alt={`${template.signature2Name} Signature`}
+                                    className="h-16 mx-auto object-contain mb-2"
+                                />
+                                <div className="border-t border-slate-400 pt-2">
+                                    <p className="text-sm text-slate-700 tracking-wider">
+                                        <strong>{template.signature2Name}</strong>
+                                    </p>
+                                    <p className="text-xs text-slate-600 tracking-wider">
+                                        {template.signature2Title}
+                                    </p>
+                                </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="w-full flex justify-between text-xs text-slate-500 pt-2 border-t border-slate-300 mt-6">
@@ -247,14 +267,25 @@ const Certificate: React.FC = () => {
                         <p style={{ fontSize: '16px', color: '#334155', lineHeight: '1.625', maxWidth: '896px' }} dangerouslySetInnerHTML={{ __html: bodyText }} />
                     </div>
                     <div style={{ paddingTop: '16px', marginTop: 'auto' }}>
-                        <div className="flex justify-center items-center w-full">
-                            <div className="text-center" style={{ width: '288px' }}>
-                                <img src={signatureBase64} alt={`${template.signature1Name} Signature`} style={{ height: '64px', margin: '0 auto 8px', objectFit: 'contain' }} />
-                                <div style={{ borderTop: '1px solid #94a3b8', paddingTop: '8px' }}>
-                                    <p style={{ fontSize: '14px', color: '#334155', letterSpacing: '0.05em' }}><strong>{template.signature1Name}</strong></p>
-                                    <p style={{ fontSize: '12px', color: '#475569', letterSpacing: '0.05em' }}>{template.signature1Title}</p>
+                        <div className={`flex ${hasTwoSignatures ? 'justify-around' : 'justify-center'} items-end w-full`}>
+                           {template.signature1Name && template.signature1ImageBase64 && (
+                                <div className="text-center" style={{ width: '288px' }}>
+                                    <img src={template.signature1ImageBase64} alt={`${template.signature1Name} Signature`} style={{ height: '64px', margin: '0 auto 8px', objectFit: 'contain' }} />
+                                    <div style={{ borderTop: '1px solid #94a3b8', paddingTop: '8px' }}>
+                                        <p style={{ fontSize: '14px', color: '#334155', letterSpacing: '0.05em' }}><strong>{template.signature1Name}</strong></p>
+                                        <p style={{ fontSize: '12px', color: '#475569', letterSpacing: '0.05em' }}>{template.signature1Title}</p>
+                                    </div>
                                 </div>
-                            </div>
+                           )}
+                           {hasTwoSignatures && (
+                                <div className="text-center" style={{ width: '288px' }}>
+                                    <img src={template.signature2ImageBase64} alt={`${template.signature2Name} Signature`} style={{ height: '64px', margin: '0 auto 8px', objectFit: 'contain' }} />
+                                    <div style={{ borderTop: '1px solid #94a3b8', paddingTop: '8px' }}>
+                                        <p style={{ fontSize: '14px', color: '#334155', letterSpacing: '0.05em' }}><strong>{template.signature2Name}</strong></p>
+                                        <p style={{ fontSize: '12px', color: '#475569', letterSpacing: '0.05em' }}>{template.signature2Title}</p>
+                                    </div>
+                                </div>
+                           )}
                         </div>
                         <div className="w-full flex justify-between" style={{ color: '#64748b', fontSize: '12px', paddingTop: '8px', borderTop: '1px solid #cbd5e1', marginTop: '24px' }}>
                             <span>Certificate No: <strong>{certData.certificateNumber}</strong></span>
