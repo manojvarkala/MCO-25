@@ -161,22 +161,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [user, activeOrg]);
 
 
-  const setActiveOrgById = (orgId: string) => {
+  const setActiveOrgById = React.useCallback((orgId: string) => {
     const org = organizations.find(o => o.id === orgId);
     if (org) {
         setActiveOrg(org);
     }
-  };
+  }, [organizations]);
 
-  const updateActiveOrg = (updatedOrg: Organization) => {
+  const updateActiveOrg = React.useCallback((updatedOrg: Organization) => {
     setOrganizations(prevOrgs => 
         prevOrgs.map(org => org.id === updatedOrg.id ? updatedOrg : org)
     );
     setActiveOrg(updatedOrg);
-  };
+  }, []);
+
+  const value = React.useMemo(() => ({
+    organizations,
+    activeOrg,
+    isLoading: isInitializing,
+    isInitializing,
+    setActiveOrgById,
+    updateActiveOrg,
+    suggestedBooks,
+    isWheelModalOpen,
+    setWheelModalOpen,
+    inProgressExam
+  }), [
+    organizations, activeOrg, isInitializing, setActiveOrgById,
+    updateActiveOrg, suggestedBooks, isWheelModalOpen, setWheelModalOpen, inProgressExam
+  ]);
 
   return (
-    <AppContext.Provider value={{ organizations, activeOrg, isLoading: isInitializing, isInitializing, setActiveOrgById, updateActiveOrg, suggestedBooks, isWheelModalOpen, setWheelModalOpen, inProgressExam }}>
+    <AppContext.Provider value={value}>
       {children}
     </AppContext.Provider>
   );

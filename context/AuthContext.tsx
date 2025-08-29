@@ -285,18 +285,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
   
-  const updateWheelModalDismissed = (dismissed: boolean) => {
+  const updateWheelModalDismissed = React.useCallback((dismissed: boolean) => {
     setWheelModalDismissed(dismissed);
     try {
         sessionStorage.setItem('wheelModalDismissed', String(dismissed));
     } catch (e) {
         console.error("Could not set sessionStorage item.", e);
     }
-  };
+  }, []);
 
+
+  const value = React.useMemo(() => ({
+    user,
+    token,
+    paidExamIds,
+    examPrices,
+    isSubscribed,
+    spinsAvailable,
+    wonPrize,
+    wheelModalDismissed,
+    canSpinWheel,
+    suggestedBooks,
+    dynamicExams,
+    dynamicCategories,
+    loginWithToken,
+    logout,
+    useFreeAttempt,
+    updateUserName,
+    setWheelModalDismissed: updateWheelModalDismissed
+  }), [
+    user, token, paidExamIds, examPrices, isSubscribed,
+    spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel,
+    suggestedBooks, dynamicExams, dynamicCategories, loginWithToken,
+    logout, useFreeAttempt, updateUserName, updateWheelModalDismissed
+  ]);
 
   return (
-    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel, suggestedBooks, dynamicExams, dynamicCategories, loginWithToken, logout, useFreeAttempt, updateUserName, setWheelModalDismissed: updateWheelModalDismissed }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
