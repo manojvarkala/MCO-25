@@ -1,5 +1,4 @@
-
-import * as React from 'react';
+import React, { FC, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -11,12 +10,12 @@ interface UpdateNameModalProps {
     onClose: () => void;
 }
 
-const UpdateNameModal: React.FC<UpdateNameModalProps> = ({ isOpen, onClose }) => {
+const UpdateNameModal: FC<UpdateNameModalProps> = ({ isOpen, onClose }) => {
     const { user, token, updateUserName } = useAuth();
-    const [name, setName] = React.useState(user?.name || '');
-    const [isSaving, setIsSaving] = React.useState(false);
+    const [name, setName] = useState(user?.name || '');
+    const [isSaving, setIsSaving] = useState(false);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (user) {
             setName(user.name);
         }

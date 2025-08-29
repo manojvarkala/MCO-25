@@ -1,16 +1,16 @@
-import * as React from 'react';
+import React, { FC, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, Users, Gift, Star } from 'lucide-react';
 import { logoBase64 } from '../assets/logo.ts';
 
-const Header: React.FC = () => {
+const Header: FC = () => {
   const { user, logout, canSpinWheel, isSubscribed } = useAuth();
   const { activeOrg, setWheelModalOpen } = useAppContext();
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   // Updated URL generation with fallback
-  const mainSiteBaseUrl = React.useMemo(() => {
+  const mainSiteBaseUrl = useMemo(() => {
     if (activeOrg) {
         return `https://www.${activeOrg.website}`;
     }

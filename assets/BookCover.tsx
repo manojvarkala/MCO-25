@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { FC } from 'react';
 import type { RecommendedBook } from '../types.ts';
 
 interface BookCoverProps {
@@ -6,7 +6,7 @@ interface BookCoverProps {
   className?: string;
 }
 
-const BookCover: React.FC<BookCoverProps> = ({ book, className }) => {
+const BookCover: FC<BookCoverProps> = ({ book, className }) => {
   // If a custom thumbnail URL is provided, use it.
   if (book.thumbnailUrl) {
     return (

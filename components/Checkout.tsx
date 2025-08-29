@@ -1,12 +1,11 @@
-
-import * as React from 'react';
+import React, { FC, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import Spinner from './Spinner.tsx';
 
-const Checkout: React.FC = () => {
+const Checkout: FC = () => {
     const { productSlug } = useParams<{ productSlug: string }>();
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (productSlug) {
             const redirectTimer = setTimeout(() => {
                 const checkoutUrl = `https://www.coding-online.net/product/${productSlug}/`;

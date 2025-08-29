@@ -1,6 +1,4 @@
-
-
-import * as React from 'react';
+import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // Fix: Use react-router-dom v6 compatible imports
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
@@ -36,12 +34,12 @@ import Integration from './components/Integration.tsx';
 import UpdateNameModal from './components/UpdateNameModal.tsx';
 
 // New Component for the promotional announcement
-const PromotionAnnouncement: React.FC = () => {
-    const [isVisible, setIsVisible] = React.useState(false);
-    const [isHiding, setIsHiding] = React.useState(false);
+const PromotionAnnouncement: FC = () => {
+    const [isVisible, setIsVisible] = useState(false);
+    const [isHiding, setIsHiding] = useState(false);
     const announcementKey = 'announcementDismissed_1_dollar_offer_sept15';
 
-    React.useEffect(() => {
+    useEffect(() => {
         const dismissed = sessionStorage.getItem(announcementKey);
         if (!dismissed) {
             const timer = setTimeout(() => setIsVisible(true), 2500);
@@ -91,11 +89,11 @@ const PromotionAnnouncement: React.FC = () => {
 
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children: ReactNode;
   adminOnly?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = false }) => {
+const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }) => {
   const { user } = useAuth();
   if (!user) {
     // Fix: Use <Navigate> for react-router-dom v6
@@ -108,15 +106,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = f
   return <>{children}</>;
 };
 
-const AppContent: React.FC = () => {
+const AppContent: FC = () => {
     const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed } = useAuth();
     const { isWheelModalOpen, setWheelModalOpen } = useAppContext();
     const location = useLocation();
-    const [isNameModalOpen, setIsNameModalOpen] = React.useState(false);
+    const [isNameModalOpen, setIsNameModalOpen] = useState(false);
     
     const isTestPage = location.pathname.startsWith('/test/');
 
-    React.useEffect(() => {
+    useEffect(() => {
         // Show the wheel modal only for eligible users who haven't already dismissed it this session.
         if (canSpinWheel && !wheelModalDismissed) {
             const timer = setTimeout(() => setWheelModalOpen(true), 1500);
@@ -124,7 +122,7 @@ const AppContent: React.FC = () => {
         }
     }, [canSpinWheel, wheelModalDismissed, setWheelModalOpen]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         // Show the modal to update name if it looks like a username and hasn't been shown this session
         if (user && user.name && !user.name.includes(' ') && !sessionStorage.getItem('nameUpdateModalShown')) {
             const timer = setTimeout(() => {
@@ -201,7 +199,7 @@ const AppContent: React.FC = () => {
 };
 
 
-const App: React.FC = () => {
+const App: FC = () => {
   return (
     <AuthProvider>
       <AppProvider>

@@ -1,9 +1,7 @@
-
-
-import * as React from 'react';
+import React, { FC } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 
-const Footer: React.FC = () => {
+const Footer: FC = () => {
   const { user } = useAuth();
 
   return (

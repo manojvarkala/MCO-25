@@ -1,11 +1,11 @@
-import * as React from 'react';
+import React, { FC } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import type { RecommendedBook } from '../types.ts';
 import { ShoppingCart, BookOpenCheck } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 
-const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
+const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
     const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } => {
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
@@ -93,7 +93,7 @@ const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
     );
 };
 
-const BookStore: React.FC = () => {
+const BookStore: FC = () => {
     const { suggestedBooks, isInitializing } = useAppContext();
 
     if (isInitializing) {

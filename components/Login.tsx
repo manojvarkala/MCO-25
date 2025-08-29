@@ -1,19 +1,17 @@
-
-
-import * as React from 'react';
+import React, { FC, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import toast from 'react-hot-toast';
 
-const Login: React.FC = () => {
+const Login: FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, loginWithToken } = useAuth();
-    const wasAlreadyLoggedIn = React.useRef(!!user);
-    const hasProcessed = React.useRef(false);
+    const wasAlreadyLoggedIn = useRef(!!user);
+    const hasProcessed = useRef(false);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (hasProcessed.current) return;
         hasProcessed.current = true;
 

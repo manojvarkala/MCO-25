@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { FC, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -10,7 +10,7 @@ import { useAppContext } from '../context/AppContext.tsx';
 import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
 
-const StarRating: React.FC<{ rating: number; count: number; }> = ({ rating, count }) => {
+const StarRating: FC<{ rating: number; count: number; }> = ({ rating, count }) => {
     if (count === 0) return null;
 
     const fullStars = Math.floor(rating);
@@ -29,15 +29,15 @@ const StarRating: React.FC<{ rating: number; count: number; }> = ({ rating, coun
     );
 };
 
-const Dashboard: React.FC = () => {
+const Dashboard: FC = () => {
     const navigate = useNavigate();
     const { user, token, paidExamIds, examPrices, isSubscribed } = useAuth();
     const { activeOrg, isInitializing, inProgressExam } = useAppContext();
-    const [results, setResults] = React.useState<TestResult[]>([]);
-    const [isLoadingResults, setIsLoadingResults] = React.useState(true);
-    const [stats, setStats] = React.useState<{ avg: number; best: number; completed: number } | null>(null);
+    const [results, setResults] = useState<TestResult[]>([]);
+    const [isLoadingResults, setIsLoadingResults] = useState(true);
+    const [stats, setStats] = useState<{ avg: number; best: number; completed: number } | null>(null);
 
-    const mainSiteBaseUrl = React.useMemo(() => {
+    const mainSiteBaseUrl = useMemo(() => {
         if (activeOrg) {
             return `https://www.${activeOrg.website}`;
         }
@@ -49,7 +49,7 @@ const Dashboard: React.FC = () => {
 
     const syncUrl = `${mainSiteBaseUrl}/my-account/`;
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (user) {
             setIsLoadingResults(true);
             const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);

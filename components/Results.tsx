@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { FC, useState, useEffect } from 'react';
 // Fix: Use useNavigate from react-router-dom v6
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -13,34 +13,34 @@ import BookCover from '../assets/BookCover.tsx';
 import jsPDF from 'jspdf';
 import { logoBase64 } from '../assets/logo.ts';
 
-const Results: React.FC = () => {
+const Results: FC = () => {
     const { testId } = useParams<{ testId: string }>();
     // Fix: Use useNavigate for navigation in v6
     const navigate = useNavigate();
     const { user, token, paidExamIds, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     
-    const [result, setResult] = React.useState<TestResult | null>(null);
-    const [exam, setExam] = React.useState<Exam | null>(null);
-    const [isLoading, setIsLoading] = React.useState(true);
-    const [aiFeedback, setAiFeedback] = React.useState<string>('');
-    const [isGeneratingFeedback, setIsGeneratingFeedback] = React.useState(false);
-    const [aiSummary, setAiSummary] = React.useState<string>('');
-    const [isGeneratingSummary, setIsGeneratingSummary] = React.useState(false);
-    const [isDownloading, setIsDownloading] = React.useState(false);
+    const [result, setResult] = useState<TestResult | null>(null);
+    const [exam, setExam] = useState<Exam | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [aiFeedback, setAiFeedback] = useState<string>('');
+    const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+    const [aiSummary, setAiSummary] = useState<string>('');
+    const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
-    const [rating, setRating] = React.useState(0);
-    const [hoverRating, setHoverRating] = React.useState(0);
-    const [reviewText, setReviewText] = React.useState('');
-    const [isSubmittingReview, setIsSubmittingReview] = React.useState(false);
-    const [submittedReview, setSubmittedReview] = React.useState<{rating: number; reviewText: string} | null>(null);
+    const [rating, setRating] = useState(0);
+    const [hoverRating, setHoverRating] = useState(0);
+    const [reviewText, setReviewText] = useState('');
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+    const [submittedReview, setSubmittedReview] = useState<{rating: number; reviewText: string} | null>(null);
     
-    const [isPurchased, setIsPurchased] = React.useState(false);
-    const [attemptsExceeded, setAttemptsExceeded] = React.useState(false);
-    const [hasPassedCert, setHasPassedCert] = React.useState(false);
+    const [isPurchased, setIsPurchased] = useState(false);
+    const [attemptsExceeded, setAttemptsExceeded] = useState(false);
+    const [hasPassedCert, setHasPassedCert] = useState(false);
 
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!testId || !user || !activeOrg) {
             if(!user) toast.error("Authentication session has expired.");
             else toast.error("Required data is missing.");

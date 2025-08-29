@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { FC, useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -21,22 +21,22 @@ const shuffleArray = <T,>(array: T[]): T[] => {
   return array;
 };
 
-const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
+const WheelOfFortune: FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
     const { user, token, loginWithToken, spinsAvailable } = useAuth();
     const { activeOrg } = useAppContext();
-    const [isSpinning, setIsSpinning] = React.useState(false);
-    const [rotation, setRotation] = React.useState(0);
-    const [prizeResult, setPrizeResult] = React.useState<{ prizeId: string; prizeLabel: string; } | null>(null);
-    const [displaySegments, setDisplaySegments] = React.useState<{ label: string; prizeId: string }[]>([]);
-    const [conicGradient, setConicGradient] = React.useState('');
+    const [isSpinning, setIsSpinning] = useState(false);
+    const [rotation, setRotation] = useState(0);
+    const [prizeResult, setPrizeResult] = useState<{ prizeId: string; prizeLabel: string; } | null>(null);
+    const [displaySegments, setDisplaySegments] = useState<{ label: string; prizeId: string }[]>([]);
+    const [conicGradient, setConicGradient] = useState('');
     
-    const [dragY, setDragY] = React.useState(0);
-    const dragYRef = React.useRef(0);
-    const sliderHandleRef = React.useRef<HTMLDivElement>(null);
-    const isDraggingRef = React.useRef(false);
-    const startYRef = React.useRef(0);
+    const [dragY, setDragY] = useState(0);
+    const dragYRef = useRef(0);
+    const sliderHandleRef = useRef<HTMLDivElement>(null);
+    const isDraggingRef = useRef(false);
+    const startYRef = useRef(0);
 
-    React.useEffect(() => {
+    useEffect(() => {
         const genericPrizes = [
             { label: "Annual Subscription", prizeId: "SUB_YEARLY" },
             { label: "Monthly Subscription", prizeId: "SUB_MONTHLY" },
@@ -79,7 +79,7 @@ const WheelOfFortune: React.FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
         setConicGradient(gradientString);
     }, [activeOrg]);
 
-     React.useEffect(() => {
+     useEffect(() => {
         if (prizeResult) {
             if (prizeResult.prizeId !== 'NEXT_TIME') {
                 toast.success(`Congratulations! You won: ${prizeResult.prizeLabel}. Your prize has been activated.`, { duration: 5000 });

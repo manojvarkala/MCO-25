@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { FC, useState, useEffect, useCallback } from 'react';
 import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, SearchedUser, ExamStat } from '../types.ts';
@@ -15,31 +15,31 @@ const prizeOptions = [
     { id: 'EXAM_CCA', label: 'Free CCA Exam' },
 ];
 
-const Admin: React.FC = () => {
+const Admin: FC = () => {
     const { activeOrg, updateActiveOrg } = useAppContext();
     const { token } = useAuth();
 
     // State for exam customization
-    const [editingExamId, setEditingExamId] = React.useState<string | null>(null);
-    const [editedExamData, setEditedExamData] = React.useState<Partial<Exam>>({});
+    const [editingExamId, setEditingExamId] = useState<string | null>(null);
+    const [editedExamData, setEditedExamData] = useState<Partial<Exam>>({});
     
     // State for user prize management
-    const [searchTerm, setSearchTerm] = React.useState('');
-    const [isSearching, setIsSearching] = React.useState(false);
-    const [searchResults, setSearchResults] = React.useState<SearchedUser[]>([]);
-    const [selectedUser, setSelectedUser] = React.useState<SearchedUser | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchResults, setSearchResults] = useState<SearchedUser[]>([]);
+    const [selectedUser, setSelectedUser] = useState<SearchedUser | null>(null);
 
-    const [spinsToAdd, setSpinsToAdd] = React.useState('1');
-    const [prizeToGrant, setPrizeToGrant] = React.useState(prizeOptions[0].id);
-    const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [spinsToAdd, setSpinsToAdd] = useState('1');
+    const [prizeToGrant, setPrizeToGrant] = useState(prizeOptions[0].id);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     
     // State for exam stats
-    const [stats, setStats] = React.useState<ExamStat[] | null>(null);
-    const [isLoadingStats, setIsLoadingStats] = React.useState(true);
-    const [statsError, setStatsError] = React.useState<string | null>(null);
+    const [stats, setStats] = useState<ExamStat[] | null>(null);
+    const [isLoadingStats, setIsLoadingStats] = useState(true);
+    const [statsError, setStatsError] = useState<string | null>(null);
 
 
-    const fetchStats = React.useCallback(async () => {
+    const fetchStats = useCallback(async () => {
         if (!token) return;
         setIsLoadingStats(true);
         setStatsError(null);
@@ -53,7 +53,7 @@ const Admin: React.FC = () => {
         }
     }, [token]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         fetchStats();
     }, [fetchStats]);
 

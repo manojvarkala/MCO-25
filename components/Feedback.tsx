@@ -1,15 +1,15 @@
-import * as React from 'react';
+import React, { FC, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import { Send, MessageSquare } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
-const Feedback: React.FC = () => {
+const Feedback: FC = () => {
     const { token } = useAuth();
-    const [category, setCategory] = React.useState('General Feedback');
-    const [message, setMessage] = React.useState('');
-    const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [category, setCategory] = useState('General Feedback');
+    const [message, setMessage] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

@@ -1,18 +1,18 @@
-import * as React from 'react';
+import React, { FC, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { DebugData } from '../types.ts';
 import { Bug, X, Server, User, ShoppingCart, FileText, CheckCircle, AlertTriangle } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
-const DebugSidebar: React.FC = () => {
+const DebugSidebar: FC = () => {
     const { token } = useAuth();
-    const [isOpen, setIsOpen] = React.useState(false);
-    const [isLoading, setIsLoading] = React.useState(false);
-    const [error, setError] = React.useState<string | null>(null);
-    const [debugData, setDebugData] = React.useState<DebugData | null>(null);
+    const [isOpen, setIsOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [debugData, setDebugData] = useState<DebugData | null>(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!isOpen || !token) {
             setDebugData(null);
             return;
@@ -49,7 +49,7 @@ const DebugSidebar: React.FC = () => {
         };
     }, [isOpen, token]);
 
-    const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
+    const Section: FC<{ title: string; icon: ReactNode; children: ReactNode }> = ({ title, icon, children }) => (
         <div className="mb-4">
             <h3 className="text-lg font-semibold text-cyan-300 mb-2 flex items-center gap-2 border-b border-slate-700 pb-1">
                 {icon} {title}

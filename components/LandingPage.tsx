@@ -1,6 +1,4 @@
-
-
-import * as React from 'react';
+import React, { FC, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -8,12 +6,12 @@ import { LogIn, UserPlus, CheckCircle, Sparkles, Award } from 'lucide-react';
 import LogoSpinner from './LogoSpinner.tsx';
 import { logoBase64 } from '../assets/logo.ts';
 
-const LandingPage: React.FC = () => {
+const LandingPage: FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { activeOrg, isInitializing } = useAppContext();
     
-    React.useEffect(() => {
+    useEffect(() => {
         if (user) {
             navigate('/dashboard');
         }

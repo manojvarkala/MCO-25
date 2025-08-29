@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
 import type { Organization, RecommendedBook, Exam, ExamProductCategory, InProgressExamInfo } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
@@ -16,7 +16,7 @@ interface AppContextType {
   inProgressExam: InProgressExamInfo | null;
 }
 
-const AppContext = React.createContext<AppContextType | undefined>(undefined);
+const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const getConfigFile = (): string => {
     const hostname = window.location.hostname;
@@ -41,15 +41,15 @@ const getConfigFile = (): string => {
 };
 
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [organizations, setOrganizations] = React.useState<Organization[]>([]);
-  const [activeOrg, setActiveOrg] = React.useState<Organization | null>(null);
-  const [isInitializing, setIsInitializing] = React.useState(true);
+export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
   const { user, examPrices, suggestedBooks, dynamicExams, dynamicCategories } = useAuth();
-  const [isWheelModalOpen, setWheelModalOpen] = React.useState(false);
-  const [inProgressExam, setInProgressExam] = React.useState<InProgressExamInfo | null>(null);
+  const [isWheelModalOpen, setWheelModalOpen] = useState(false);
+  const [inProgressExam, setInProgressExam] = useState<InProgressExamInfo | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const initializeApp = async () => {
         setIsInitializing(true);
         try {
@@ -137,7 +137,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [examPrices, suggestedBooks, dynamicExams, dynamicCategories]);
 
   // Effect to detect in-progress exams
-  React.useEffect(() => {
+  useEffect(() => {
     if (!user || !activeOrg) {
         setInProgressExam(null);
         return;
@@ -164,21 +164,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [user, activeOrg]);
 
 
-  const setActiveOrgById = React.useCallback((orgId: string) => {
+  const setActiveOrgById = useCallback((orgId: string) => {
     const org = organizations.find(o => o.id === orgId);
     if (org) {
         setActiveOrg(org);
     }
   }, [organizations]);
 
-  const updateActiveOrg = React.useCallback((updatedOrg: Organization) => {
+  const updateActiveOrg = useCallback((updatedOrg: Organization) => {
     setOrganizations(prevOrgs => 
         prevOrgs.map(org => org.id === updatedOrg.id ? updatedOrg : org)
     );
     setActiveOrg(updatedOrg);
   }, []);
 
-  const value = React.useMemo(() => ({
+  const value = useMemo(() => ({
     organizations,
     activeOrg,
     isLoading: isInitializing,
@@ -202,7 +202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 };
 
 export const useAppContext = (): AppContextType => {
-  const context = React.useContext(AppContext);
+  const context = useContext(AppContext);
   if (context === undefined) {
     throw new Error('useAppContext must be used within an AppProvider');
   }

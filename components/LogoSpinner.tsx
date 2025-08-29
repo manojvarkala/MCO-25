@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { logoBase64 } from '../assets/logo.ts';
 
 const LogoSpinner: React.FC = () => {

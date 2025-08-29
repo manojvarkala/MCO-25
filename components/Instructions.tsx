@@ -1,8 +1,6 @@
+import React, { FC } from 'react';
 
-
-import * as React from 'react';
-
-const Instructions: React.FC = () => {
+const Instructions: FC = () => {
     return (
         <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
             <h1 className="text-3xl font-bold text-slate-800 mb-4">Platform Instructions</h1>

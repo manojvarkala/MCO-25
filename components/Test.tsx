@@ -1,6 +1,4 @@
-
-
-import * as React from 'react';
+import React, { FC, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 // Fix: Use useNavigate from react-router-dom v6
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -21,29 +19,29 @@ const formatTime = (seconds: number) => {
 const MAX_FOCUS_VIOLATIONS = 3;
 const FOCUS_VIOLATION_TOAST_ID = 'focus-violation-toast';
 
-const Test: React.FC = () => {
+const Test: FC = () => {
   const { examId } = useParams<{ examId: string }>();
   // Fix: Use useNavigate for navigation in v6
   const navigate = useNavigate();
   const { user, useFreeAttempt, isSubscribed, token } = useAuth();
   const { activeOrg, isInitializing } = useAppContext();
 
-  const [examConfig, setExamConfig] = React.useState<Exam | null>(null);
-  const [questions, setQuestions] = React.useState<Question[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
-  const [answers, setAnswers] = React.useState<Map<number, number>>(new Map());
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [timeLeft, setTimeLeft] = React.useState<number | null>(null);
-  const [examStarted, setExamStarted] = React.useState(false);
-  const [focusViolationCount, setFocusViolationCount] = React.useState(0);
+  const [examConfig, setExamConfig] = useState<Exam | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<Map<number, number>>(new Map());
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [examStarted, setExamStarted] = useState(false);
+  const [focusViolationCount, setFocusViolationCount] = useState(0);
 
-  const timerIntervalRef = React.useRef<number | null>(null);
-  const hasSubmittedRef = React.useRef(false);
-  const progressKey = React.useMemo(() => `exam_progress_${examId}_${user?.id}`, [examId, user?.id]);
+  const timerIntervalRef = useRef<number | null>(null);
+  const hasSubmittedRef = useRef(false);
+  const progressKey = useMemo(() => `exam_progress_${examId}_${user?.id}`, [examId, user?.id]);
 
 
-  const handleSubmit = React.useCallback(async (isAutoSubmit = false) => {
+  const handleSubmit = useCallback(async (isAutoSubmit = false) => {
     if (hasSubmittedRef.current) return;
     hasSubmittedRef.current = true;
 
@@ -87,7 +85,7 @@ const Test: React.FC = () => {
   }, [examId, navigate, token, user, isSubmitting, questions, answers, progressKey]);
   
   // Effect 1: Load questions and saved progress.
-  React.useEffect(() => {
+  useEffect(() => {
     if (isInitializing || !examId || !activeOrg || !user || !token) {
         return;
     }
@@ -143,7 +141,7 @@ const Test: React.FC = () => {
   }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, useFreeAttempt, progressKey]);
 
   // Effect 2: Manage the timer.
-  React.useEffect(() => {
+  useEffect(() => {
     if (!examStarted || isLoading || !examConfig || !user || !examId) return;
 
     const timerKey = `exam_timer_${examId}_${user.id}`;
@@ -169,7 +167,7 @@ const Test: React.FC = () => {
   }, [examStarted, isLoading, examConfig, user, examId, handleSubmit]);
 
   // Effect 3: Save progress to localStorage
-  React.useEffect(() => {
+  useEffect(() => {
       if (!isLoading && examStarted && questions.length > 0 && user?.id) {
           const progress: ExamProgress = {
               questions,
@@ -181,7 +179,7 @@ const Test: React.FC = () => {
   }, [answers, currentQuestionIndex, questions, isLoading, examStarted, user?.id, progressKey]);
 
   // Effect 4: Listeners for focus and fullscreen violations
-  React.useEffect(() => {
+  useEffect(() => {
     if (!examStarted) return;
 
     const handleFocusViolation = (reason: string) => {
@@ -229,7 +227,7 @@ const Test: React.FC = () => {
     };
   
   // Effect 5: Cleanup on unmount
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         if (document.fullscreenElement) document.exitFullscreen().catch(err => console.error(err));

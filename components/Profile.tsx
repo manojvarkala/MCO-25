@@ -1,6 +1,4 @@
-
-
-import * as React from 'react';
+import React, { FC, useState, useEffect } from 'react';
 // Fix: Use useNavigate from react-router-dom v6
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -11,19 +9,19 @@ import type { TestResult, Exam } from '../types.ts';
 import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight, Gift, Star } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
-const Profile: React.FC = () => {
+const Profile: FC = () => {
     const { user, token, updateUserName, wonPrize, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     // Fix: Use useNavigate for navigation in v6
     const navigate = useNavigate();
 
-    const [results, setResults] = React.useState<TestResult[]>([]);
-    const [isEditingName, setIsEditingName] = React.useState(false);
-    const [isSavingName, setIsSavingName] = React.useState(false);
-    const [name, setName] = React.useState(user?.name || '');
-    const [isLoadingResults, setIsLoadingResults] = React.useState(true);
+    const [results, setResults] = useState<TestResult[]>([]);
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [isSavingName, setIsSavingName] = useState(false);
+    const [name, setName] = useState(user?.name || '');
+    const [isLoadingResults, setIsLoadingResults] = useState(true);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (user && token) {
             setIsLoadingResults(true);
             const cachedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
@@ -40,7 +38,7 @@ const Profile: React.FC = () => {
         }
     }, [user, token]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (user) {
             setName(user.name);
         }
