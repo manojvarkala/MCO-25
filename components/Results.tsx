@@ -542,7 +542,6 @@ Please provide a summary of the key areas I need to focus on based on these erro
                              <div className="flex gap-2">
                                 <button 
                                     onClick={handleGenerateSummary}
-                                    // Fix: Convert string state to boolean for the disabled attribute.
                                     disabled={isGeneratingSummary || !!aiSummary}
                                     className="inline-flex items-center space-x-2 bg-white/20 hover:bg-white/30 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
                                 >
@@ -551,7 +550,6 @@ Please provide a summary of the key areas I need to focus on based on these erro
                                 </button>
                                 <button 
                                     onClick={handleGenerateFeedback}
-                                    // Fix: Convert string state to boolean for the disabled attribute.
                                     disabled={isGeneratingFeedback || !!aiFeedback}
                                     className="inline-flex items-center space-x-2 bg-white/20 hover:bg-white/30 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
                                 >
