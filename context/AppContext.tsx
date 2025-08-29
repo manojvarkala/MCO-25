@@ -54,7 +54,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsInitializing(true);
         try {
             const configFile = getConfigFile();
-            const response = await fetch(configFile);
+            const response = await fetch('/' + configFile);
             if (!response.ok) {
                 throw new Error(`HTTP error! Could not fetch ${configFile}. Status: ${response.status}`);
             }
