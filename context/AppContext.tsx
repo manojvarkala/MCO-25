@@ -18,29 +18,6 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const getConfigFile = (): string => {
-    const hostname = window.location.hostname;
-
-    // Vercel preview URLs, localhost, and the main production domain for MCO
-    if (hostname.endsWith('vercel.app') || hostname === 'exams.coding-online.net' || hostname === 'localhost') {
-        return 'medical-coding-config.json';
-    }
-
-    const domainMap: { [key: string]: string } = {
-        'exams.annapoornainfo.com': 'annapoorna-config.json',
-        // --- Placeholder domains for future tenants ---
-        'exams.lawprep.com': 'law-school-config.json',
-        'exams.civil-certs.com': 'civil-engineering-config.json',
-        'exams.tech-exams.com': 'it-certs-config.json',
-        'exams.finance-prep.com': 'finance-certs-config.json',
-        'exams.management-certs.com': 'management-config.json'
-    };
-    
-    // Fallback to default if no specific domain is matched
-    return domainMap[hostname] || 'medical-coding-config.json';
-};
-
-
 export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
@@ -53,13 +30,10 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const initializeApp = async () => {
         setIsInitializing(true);
         try {
-            const configFile = getConfigFile();
-            // Create a robust URL to the config file, handling any subdirectory deployments.
-            const configUrl = new URL(configFile, document.baseURI).href;
-            const response = await fetch(configUrl);
+            const response = await fetch('/api/app-config');
 
             if (!response.ok) {
-                throw new Error(`HTTP error! Could not fetch ${configFile}. Status: ${response.status}`);
+                throw new Error(`HTTP error! Could not fetch app configuration from WordPress. Status: ${response.status}`);
             }
             const configData = await response.json();
             
@@ -126,7 +100,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             }
 
         } catch (error) {
-            console.error("Failed to initialize app config from external JSON:", error);
+            console.error("Failed to initialize app config from WordPress API:", error);
             toast.error("Could not load application configuration.");
         } finally {
             setIsInitializing(false);
