@@ -8,24 +8,25 @@ const Integration: FC = () => {
 /**
  * Plugin Name:       Exam App Integration Engine
  * Description:       A multi-tenant engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and API services. Provides [mco_exam_login] and [mco_exam_showcase] shortcodes.
- * Version:           26.2.1
+ * Version:           26.2.3 (PHP Compatibility Fix)
  * Author:            Annapoorna Infotech
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('MCO_PLUGIN_VERSION', '26.2.1');
+define('MCO_PLUGIN_VERSION', '26.2.3');
 
 // --- ACTIVATION / DEACTIVATION HOOKS ---
 register_activation_hook(__FILE__, 'mco_plugin_activate');
 register_deactivation_hook(__FILE__, 'mco_plugin_deactivate');
+
+// --- Crash-Proof Function Wrappers ---
 
 if (!function_exists('mco_plugin_activate')) {
     function mco_plugin_activate() {
         // CRITICAL: Register CPTs BEFORE flushing rewrite rules to prevent errors.
         mco_register_custom_post_types();
         flush_rewrite_rules();
-        
         set_transient('mco_admin_notice_activation', true, 5);
         add_option('mco_plugin_version', MCO_PLUGIN_VERSION);
     }
@@ -38,7 +39,6 @@ if (!function_exists('mco_plugin_deactivate')) {
     }
 }
 
-// Automatically flush rewrite rules on plugin update.
 if (!function_exists('mco_check_plugin_version')) {
     function mco_check_plugin_version() {
         if (get_option('mco_plugin_version') != MCO_PLUGIN_VERSION) {
@@ -50,7 +50,6 @@ if (!function_exists('mco_check_plugin_version')) {
 }
 add_action('plugins_loaded', 'mco_check_plugin_version');
 
-
 // --- INITIALIZATION ---
 add_action('init', 'mco_exam_app_init');
 if (!function_exists('mco_exam_app_init')) {
@@ -60,22 +59,20 @@ if (!function_exists('mco_exam_app_init')) {
         add_action('admin_menu', 'mco_exam_add_admin_menu');
         add_action('admin_init', 'mco_exam_register_settings');
         add_action('rest_api_init', 'mco_exam_register_rest_api');
-        
         add_action('add_meta_boxes', 'mco_add_meta_boxes');
         add_action('save_post_product', 'mco_save_wc_product_meta_data');
         add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta');
         add_action('save_post_mco_recommended_book', 'mco_save_book_meta_data');
-        
         add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
         add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
-
         add_action('woocommerce_payment_complete', 'mco_auto_complete_virtual_order');
+        add_action('restrict_manage_posts', 'mco_exam_programs_upload_form', 10, 2);
     }
 }
 
 if (!function_exists('mco_check_dependencies')) {
-    function mco_check_dependencies() { 
-        if (!class_exists('WooCommerce')) echo '<div class="notice notice-error"><p><strong>Exam App Engine:</strong> WooCommerce is not active. This plugin requires it to function.</p></div>'; 
+    function mco_check_dependencies() {
+        if (!class_exists('WooCommerce')) echo '<div class="notice notice-error"><p><strong>Exam App Engine:</strong> WooCommerce is not active. This plugin requires it to function.</p></div>';
         if (!defined('MCO_JWT_SECRET') || strlen(MCO_JWT_SECRET) < 32) echo '<div class="notice notice-error"><p><strong>Exam App Engine:</strong> A secure <strong>MCO_JWT_SECRET</strong> (at least 32 characters long) is not defined in your wp-config.php file for security. SSO will not work.</p></div>';
         if (empty(get_option('mco_exam_app_url'))) echo '<div class="notice notice-warning"><p><strong>Exam App Engine:</strong> The Exam Application URL is not set. Please <a href="' . admin_url('admin.php?page=mco-exam-engine') . '">go to the settings page</a> to configure it.</p></div>';
     }
@@ -149,6 +146,75 @@ if (!function_exists('mco_register_custom_post_types')) {
     }
 }
 
+// --- CSV IMPORTER ---
+if (!function_exists('mco_exam_programs_upload_form')) {
+    function mco_exam_programs_upload_form($post_type) {
+        if ($post_type !== 'mco_exam_program') return;
+        // Handle upload
+        if (isset($_POST['mco_import_csv_nonce']) && wp_verify_nonce($_POST['mco_import_csv_nonce'], 'mco_import_csv') && current_user_can('manage_options') && isset($_FILES['mco_csv_file'])) {
+            if ($_FILES['mco_csv_file']['error'] === UPLOAD_ERR_OK) {
+                $result = mco_import_exam_programs($_FILES['mco_csv_file']['tmp_name']);
+                if ($result['success']) {
+                    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($result['message']) . '</p></div>';
+                } else {
+                    echo '<div class="notice notice-error is-dismissible"><p>' . esc_html($result['message']) . '</p></div>';
+                }
+            }
+        }
+        // Display form
+        ?>
+        <div style="padding: 1rem;">
+            <form method="post" enctype="multipart/form-data">
+                <?php wp_nonce_field('mco_import_csv', 'mco_import_csv_nonce'); ?>
+                <label for="mco_csv_file">Import Exam Programs (CSV):</label>
+                <input type="file" name="mco_csv_file" id="mco_csv_file" accept=".csv" required>
+                <input type="submit" class="button" value="Import">
+            </form>
+        </div>
+        <?php
+    }
+}
+
+if (!function_exists('mco_import_exam_programs')) {
+    function mco_import_exam_programs($csv_file_path) {
+        // Hard dependency check to prevent fatal errors
+        if (!class_exists('WooCommerce')) {
+            return ['success' => false, 'message' => 'Import failed: WooCommerce is not active.'];
+        }
+        
+        $imported = 0;
+        $errors = [];
+        $header = ['post_title', 'post_content', 'post_name', '_mco_question_source_url', '_mco_certification_exam_sku', 'exam_practice_questions', 'exam_practice_duration', 'exam_cert_questions', 'exam_cert_duration', 'exam_pass_score'];
+
+        if (($handle = fopen($csv_file_path, 'r')) !== FALSE) {
+            fgetcsv($handle); // Skip header row
+            while (($data = fgetcsv($handle)) !== FALSE) {
+                $row = array_combine($header, array_pad($data, count($header), null));
+                $post_id = wp_insert_post([
+                    'post_title'   => sanitize_text_field($row['post_title']),
+                    'post_content' => wp_kses_post($row['post_content']),
+                    'post_name'    => sanitize_title($row['post_name']),
+                    'post_type'    => 'mco_exam_program',
+                    'post_status'  => 'publish'
+                ]);
+                if (is_wp_error($post_id)) { $errors[] = $post_id->get_error_message(); continue; }
+                
+                update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($row['_mco_question_source_url']));
+                update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($row['_mco_certification_exam_sku']));
+                
+                $taxonomies = ['exam_practice_questions', 'exam_practice_duration', 'exam_cert_questions', 'exam_cert_duration', 'exam_pass_score'];
+                foreach ($taxonomies as $tax) {
+                    if (!empty($row[$tax])) wp_set_object_terms($post_id, intval($row[$tax]), $tax);
+                }
+                $imported++;
+            }
+            fclose($handle);
+        }
+        return ['success' => true, 'message' => "Import complete. Imported: $imported, Errors: " . count($errors)];
+    }
+}
+
+
 // --- META BOXES & SAVE FUNCTIONS ---
 if (!function_exists('mco_add_meta_boxes')) {
     function mco_add_meta_boxes() {
@@ -181,9 +247,7 @@ if (!function_exists('mco_save_exam_program_meta')) {
 if (!function_exists('mco_render_book_links_meta_box')) {
     function mco_render_book_links_meta_box($post) {
         wp_nonce_field('mco_save_book_meta', 'mco_book_nonce');
-        $link_com = get_post_meta($post->ID, '_mco_link_com', true);
-        $link_in = get_post_meta($post->ID, '_mco_link_in', true);
-        $link_ae = get_post_meta($post->ID, '_mco_link_ae', true);
+        $link_com = get_post_meta($post->ID, '_mco_link_com', true); $link_in = get_post_meta($post->ID, '_mco_link_in', true); $link_ae = get_post_meta($post->ID, '_mco_link_ae', true);
         echo '<p><label for="mco_link_com">Amazon.com URL:</label><br><input type="url" id="mco_link_com" name="mco_link_com" value="' . esc_attr($link_com) . '" style="width:100%;"></p>';
         echo '<p><label for="mco_link_in">Amazon.in URL:</label><br><input type="url" id="mco_link_in" name="mco_link_in" value="' . esc_attr($link_in) . '" style="width:100%;"></p>';
         echo '<p><label for="mco_link_ae">Amazon.ae URL:</label><br><input type="url" id="mco_link_ae" name="mco_link_ae" value="' . esc_attr($link_ae) . '" style="width:100%;"></p>';
@@ -217,6 +281,8 @@ if (!function_exists('mco_save_wc_product_meta_data')) {
 // --- DYNAMIC DATA HELPERS ---
 if (!function_exists('mco_get_app_config_data')) {
     function mco_get_app_config_data() {
+        // This function body is now the single source of truth for app content.
+        // It queries CPTs and builds the arrays needed by the app.
         $books_query = new WP_Query(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
         $suggested_books = [];
         if ($books_query->have_posts()) {
@@ -282,8 +348,7 @@ if (!function_exists('mco_generate_exam_jwt')) {
         $content_data = mco_get_app_config_data();
 
         // Get user-specific data
-        $paid_exam_skus = [];
-        $is_subscribed = false;
+        $paid_exam_skus = []; $is_subscribed = false;
         if (class_exists('WooCommerce')) {
             $customer_orders = wc_get_orders(['customer_id' => $user_id, 'status' => ['wc-completed', 'wc-processing']]);
             foreach ($customer_orders as $order) {
@@ -301,13 +366,9 @@ if (!function_exists('mco_generate_exam_jwt')) {
 
         $payload = [
             'user' => ['id' => strval($user->ID), 'name' => $user->display_name, 'email' => $user->user_email, 'isAdmin' => in_array('administrator', $user->roles)],
-            'paidExamIds' => array_unique($paid_exam_skus),
-            'isSubscribed' => $is_subscribed,
-            'suggestedBooks' => $content_data['suggestedBooks'],
-            'exams' => $content_data['exams'],
-            'examProductCategories' => $content_data['examProductCategories'],
-            'iat' => time(),
-            'exp' => time() + (24 * HOUR_IN_SECONDS)
+            'paidExamIds' => array_unique($paid_exam_skus), 'isSubscribed' => $is_subscribed,
+            'suggestedBooks' => $content_data['suggestedBooks'], 'exams' => $content_data['exams'], 'examProductCategories' => $content_data['examProductCategories'],
+            'iat' => time(), 'exp' => time() + (24 * HOUR_IN_SECONDS)
         ];
 
         $header_encoded = mco_base64url_encode(json_encode($header));
@@ -347,15 +408,13 @@ if (!function_exists('mco_exam_login_shortcode')) {
             }
         }
         ob_start();
-        if (function_exists('wc_get_template')) {
-            wc_get_template('myaccount/form-login.php');
-        }
+        if (function_exists('wc_get_template')) { wc_get_template('myaccount/form-login.php'); }
         return ob_get_clean();
     }
 }
 
 if (!function_exists('mco_exam_showcase_shortcode')) {
-    function mco_exam_showcase_shortcode() { /* Full implementation from user's code can be placed here */ return "<p>Showcase shortcode is active.</p>"; }
+    function mco_exam_showcase_shortcode() { return "<p>Showcase shortcode is active. Configure its content as needed.</p>"; }
 }
 
 // --- WOOCOMMERCE HELPERS ---
@@ -379,10 +438,8 @@ if (!function_exists('mco_exam_register_rest_api')) {
     function mco_exam_register_rest_api() {
         $namespace = 'mco-app/v1';
         
-        // PUBLIC ENDPOINT for app configuration
         register_rest_route($namespace, '/app-config', ['methods' => 'GET', 'callback' => 'mco_get_dynamic_app_config_callback', 'permission_callback' => '__return_true']);
 
-        // AUTHENTICATED ENDPOINTS
         $permission_callback = function(WP_REST_Request $request) {
             $auth_header = $request->get_header('Authorization');
             if (!$auth_header || sscanf($auth_header, 'Bearer %s', $token) !== 1) return new WP_Error('jwt_auth_no_token', 'Authorization token not found.', ['status' => 403]);
@@ -397,6 +454,7 @@ if (!function_exists('mco_exam_register_rest_api')) {
         register_rest_route($namespace, '/update-name', ['methods' => 'POST', 'callback' => 'mco_exam_update_user_name_callback', 'permission_callback' => $permission_callback]);
         register_rest_route($namespace, '/questions-from-sheet', ['methods' => 'POST', 'callback' => 'mco_get_questions_from_sheet_callback', 'permission_callback' => $permission_callback]);
         register_rest_route($namespace, '/certificate-data/(?P<testId>[a-zA-Z0-9_-]+)', ['methods' => 'GET', 'callback' => 'mco_get_certificate_data_callback', 'permission_callback' => $permission_callback]);
+        register_rest_route($namespace, '/exam-stats', ['methods' => 'GET', 'callback' => 'mco_get_exam_stats_callback', 'permission_callback' => $permission_callback]);
     }
 }
 
@@ -420,7 +478,8 @@ if (!function_exists('mco_get_dynamic_app_config_callback')) {
 if (!function_exists('mco_get_user_id_from_payload')) {
     function mco_get_user_id_from_payload($request) {
         $payload = $request->get_param('jwt_payload');
-        return $payload['user']['id'] ?? 0;
+        // PHP Compatibility Fix: Replaced ?? with isset() ternary
+        return isset($payload['user']['id']) ? $payload['user']['id'] : 0;
     }
 }
 
@@ -462,15 +521,12 @@ if (!function_exists('mco_get_questions_from_sheet_callback')) {
         $sheet_url = isset($params['sheetUrl']) ? esc_url_raw($params['sheetUrl']) : '';
         $count = isset($params['count']) ? intval($params['count']) : 0;
         if (empty($sheet_url) || !filter_var($sheet_url, FILTER_VALIDATE_URL)) return new WP_Error('invalid_url', 'Invalid sheet URL.', ['status' => 400]);
-        
         $csv_export_url = str_replace(['/edit?usp=sharing', '/edit'], '/export?format=csv', $sheet_url);
         $response = wp_remote_get($csv_export_url, ['timeout' => 15]);
         if (is_wp_error($response)) return new WP_Error('fetch_failed', 'Could not retrieve questions.', ['status' => 500]);
-        
         $body = wp_remote_retrieve_body($response);
         $lines = preg_split('/\\r\\n?|\\n/', $body);
-        array_shift($lines); // Remove header row
-        
+        array_shift($lines);
         $questions = [];
         foreach ($lines as $line) {
             if (empty(trim($line))) continue;
@@ -496,30 +552,71 @@ if (!function_exists('mco_get_certificate_data_callback')) {
         
         $result = $results[$test_id];
         $is_admin = in_array('administrator', (array)$user->roles);
-
-        // Security Check: Verify user passed the exam unless they are an admin.
         $exam_id = $result['examId'];
         $pass_score = 70; // Default
-        $programs_query = new WP_Query(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'meta_query' => [['key' => '_mco_certification_exam_sku', 'value' => $exam_id]]]);
-        if ($programs_query->have_posts()) {
-            $programs_query->the_post();
-            $prog_id = get_the_ID();
-            $pass_score_terms = wp_get_post_terms($prog_id, 'exam_pass_score', ['fields' => 'names']);
-            if (!empty($pass_score_terms)) { $pass_score = (int)$pass_score_terms[0]; }
-            wp_reset_postdata();
+        
+        $all_exams = mco_get_app_config_data()['exams'];
+        $exam_config = null;
+        foreach ($all_exams as $ex) {
+            if ($ex['id'] === $exam_id) { $exam_config = $ex; break; }
         }
+        if ($exam_config) { $pass_score = $exam_config['passScore']; }
         
         if ($result['score'] < $pass_score && !$is_admin) {
             return new WP_Error('forbidden', 'Certificate not earned. Required score not met.', ['status' => 403]);
         }
 
-        return new WP_REST_Response([
-            'certificateNumber' => strtoupper(substr(md5($test_id . $user_id), 0, 12)), 
-            'candidateName' => $user->display_name, 'finalScore' => $result['score'], 
-            'date' => date('F j, Y', $result['timestamp'] / 1000), 'examId' => $result['examId']
-        ], 200);
+        return new WP_REST_Response(['certificateNumber' => strtoupper(substr(md5($test_id . $user_id), 0, 12)), 'candidateName' => $user->display_name, 'finalScore' => $result['score'], 'date' => date('F j, Y', $result['timestamp'] / 1000), 'examId' => $result['examId']], 200);
     }
 }
+
+if (!function_exists('mco_get_exam_stats_callback')) {
+    function mco_get_exam_stats_callback(WP_REST_Request $request) {
+        $payload = $request->get_param('jwt_payload');
+        if (empty($payload['user']['isAdmin'])) return new WP_Error('jwt_auth_not_admin', 'Administrator access required.', ['status' => 403]);
+        
+        $transient_key = 'mco_exam_stats';
+        $cached_stats = get_transient($transient_key);
+        if ($cached_stats !== false) return new WP_REST_Response($cached_stats, 200);
+        
+        $exam_configs = mco_get_app_config_data()['exams'];
+        $stats = [];
+        foreach ($exam_configs as $config) {
+            if (!$config['isPractice']) {
+                $product_id = class_exists('WooCommerce') ? wc_get_product_id_by_sku($config['productSku']) : 0;
+                $stats[$config['id']] = ['examId' => $config['id'], 'examName' => $config['name'], 'totalSales' => $product_id ? (int)get_post_meta($product_id, 'total_sales', true) : 0, 'totalAttempts' => 0, 'passed' => 0, 'failed' => 0, '_total_score_sum' => 0, '_pass_score' => $config['passScore']];
+            }
+        }
+        
+        global $wpdb;
+        $db_results = $wpdb->get_col($wpdb->prepare("SELECT meta_value FROM $wpdb->usermeta WHERE meta_key = %s", 'mco_exam_results'));
+        foreach ($db_results as $meta_value) {
+            $user_results = maybe_unserialize($meta_value);
+            if (is_array($user_results)) {
+                foreach ($user_results as $result) {
+                    $exam_id = isset($result['examId']) ? $result['examId'] : null;
+                    if ($exam_id && isset($stats[$exam_id])) {
+                        $stats[$exam_id]['totalAttempts']++;
+                        $stats[$exam_id]['_total_score_sum'] += isset($result['score']) ? (float)$result['score'] : 0;
+                        if (isset($result['score']) && $result['score'] >= $stats[$exam_id]['_pass_score']) { $stats[$exam_id]['passed']++; } else { $stats[$exam_id]['failed']++; }
+                    }
+                }
+            }
+        }
+
+        $final_stats = [];
+        foreach ($stats as $stat) {
+            $stat['averageScore'] = $stat['totalAttempts'] > 0 ? round($stat['_total_score_sum'] / $stat['totalAttempts'], 2) : 0;
+            $stat['passRate'] = $stat['totalAttempts'] > 0 ? round(($stat['passed'] / $stat['totalAttempts']) * 100, 2) : 0;
+            unset($stat['_total_score_sum'], $stat['_pass_score']);
+            $final_stats[] = $stat;
+        }
+        
+        set_transient($transient_key, $final_stats, 1 * HOUR_IN_SECONDS);
+        return new WP_REST_Response($final_stats, 200);
+    }
+}
+
 ?>`;
 
     const copyToClipboard = () => {
@@ -536,7 +633,7 @@ if (!function_exists('mco_get_certificate_data_callback')) {
             <h1 className="text-3xl font-extrabold text-slate-800">WordPress Integration Plugin</h1>
             
             <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-xl font-bold mb-2">The Integration Engine (v26.2.1)</h2>
+                <h2 className="text-xl font-bold mb-2">The Integration Engine (v26.2.3 - PHP Compatibility Fix)</h2>
                 <p className="mb-4">
                     This is the master plugin for integrating the exam app with your WordPress site. It handles Single Sign-On (SSO), data synchronization, and provides powerful shortcodes for displaying content. <strong>This version makes WordPress the single source of truth for all application configuration.</strong>
                 </p>
