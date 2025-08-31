@@ -8,24 +8,19 @@ const Integration: FC = () => {
 /**
  * Plugin Name:       Exam App Integration Engine
  * Description:       A multi-tenant engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and API services. Provides [exam_login] and [exam_program_page] shortcodes.
- * Version:           26.0.0 (Server-Centric Architecture)
+ * Version:           26.0.1 (Dynamic Config Engine)
  * Author:            Annapoorna Infotech
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define('MCO_PLUGIN_VERSION', '26.0.0');
+define('MCO_PLUGIN_VERSION', '26.0.1');
 
 // --- ACTIVATION / DEACTIVATION HOOKS ---
 register_activation_hook(__FILE__, 'mco_plugin_activate');
 register_deactivation_hook(__FILE__, 'mco_plugin_deactivate');
 
 function mco_plugin_activate() {
-    if (!file_exists(plugin_dir_path(__FILE__) . 'data')) {
-        mkdir(plugin_dir_path(__FILE__) . 'data', 0755, true);
-        file_put_contents(plugin_dir_path(__FILE__) . 'data/medical-coding-config.json', '{"organizations":[]}');
-        file_put_contents(plugin_dir_path(__FILE__) . 'data/annapoorna-config.json', '{"organizations":[]}');
-    }
     mco_register_rest_api_routes();
     flush_rewrite_rules();
     set_transient('mco_admin_notice_activation', true, 5);
@@ -163,14 +158,6 @@ function mco_generate_jwt_token_for_user($user) {
         'paidExamIds' => array_values(array_unique($paid_exam_skus)), 'examPrices' => $exam_prices, 'isSubscribed' => $is_subscribed,
         'spinsAvailable' => $spins_available, 'wonPrize' => $won_prize, 'iat' => time(), 'exp' => time() + (24 * 60 * 60)
     ];
-    
-    $config = mco_get_app_config_data_array();
-    if($config) {
-        $first_org = isset($config['organizations'][0]) ? $config['organizations'][0] : [];
-        $payload_data['suggestedBooks'] = $first_org['suggestedBooks'] ?? [];
-        $payload_data['exams'] = $first_org['exams'] ?? [];
-        $payload_data['examProductCategories'] = $first_org['examProductCategories'] ?? [];
-    }
 
     $payload = json_encode($payload_data);
     $base64UrlHeader = base64url_encode($header);
@@ -179,17 +166,6 @@ function mco_generate_jwt_token_for_user($user) {
     $base64UrlSignature = base64url_encode($signature_raw);
     
     return "$base64UrlHeader.$base64UrlPayload.$base64UrlSignature";
-}
-
-// --- CONFIGURATION DATA SOURCE ---
-function mco_get_app_config_data_array() {
-    $host = $_SERVER['HTTP_HOST'] ?? 'default';
-    if (strpos($host, 'annapoornainfo.com') !== false) {
-        $config_path = plugin_dir_path(__FILE__) . 'data/annapoorna-config.json';
-    } else {
-        $config_path = plugin_dir_path(__FILE__) . 'data/medical-coding-config.json';
-    }
-    return file_exists($config_path) ? json_decode(file_get_contents($config_path), true) : ['organizations' => []];
 }
 
 // --- JWT Verifier & User Fetcher ---
@@ -226,7 +202,7 @@ function mco_register_rest_api_routes() {
         return !is_wp_error($user) && in_array('administrator', $user->roles);
     };
 
-    register_rest_route($namespace, '/app-config', ['methods' => 'GET', 'callback' => 'mco_get_app_config_data', 'permission_callback' => '__return_true']);
+    register_rest_route($namespace, '/app-config', ['methods' => 'GET', 'callback' => 'mco_get_dynamic_app_config_callback', 'permission_callback' => '__return_true']);
     register_rest_route($namespace, '/user-results', ['methods' => 'GET', 'callback' => 'mco_get_user_results', 'permission_callback' => $permission_callback]);
     register_rest_route($namespace, '/submit-result', ['methods' => 'POST', 'callback' => 'mco_submit_user_result', 'permission_callback' => $permission_callback]);
     register_rest_route($namespace, '/certificate-data/(?P<testId>[a-zA-Z0-9-]+)', ['methods' => 'GET', 'callback' => 'mco_get_certificate_data', 'permission_callback' => $permission_callback]);
@@ -245,7 +221,63 @@ function mco_register_rest_api_routes() {
 }
 
 // --- API CALLBACKS ---
-function mco_get_app_config_data() { return new WP_REST_Response(mco_get_app_config_data_array(), 200); }
+function mco_get_dynamic_app_config_callback() {
+    $books_query = new WP_Query(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
+    $suggested_books = [];
+    if ($books_query->have_posts()) {
+        while ($books_query->have_posts()) {
+            $books_query->the_post();
+            $post_id = get_the_ID();
+            $suggested_books[] = [
+                'id' => 'book-' . $post_id, 'title' => get_the_title(), 'description' => strip_tags(get_the_content()),
+                'thumbnailUrl' => has_post_thumbnail() ? get_the_post_thumbnail_url($post_id, 'medium') : '',
+                'affiliateLinks' => [ 'com' => get_post_meta($post_id, '_mco_link_com', true) ?: '', 'in' => get_post_meta($post_id, '_mco_link_in', true) ?: '', 'ae' => get_post_meta($post_id, '_mco_link_ae', true) ?: '' ]
+            ];
+        }
+    }
+    wp_reset_postdata();
+
+    $dynamic_exams = [];
+    $dynamic_categories = [];
+    $programs_query = new WP_Query(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish']);
+    if ($programs_query->have_posts()) {
+        while ($programs_query->have_posts()) {
+            $programs_query->the_post();
+            $prog_id = get_the_ID();
+            $practice_id = get_post_field('post_name', $prog_id) . '-practice';
+            $cert_sku = get_post_meta($prog_id, '_mco_certification_exam_sku', true);
+            if (empty($practice_id) || empty($cert_sku) || !class_exists('WooCommerce')) continue;
+            
+            $product = wc_get_product(wc_get_product_id_by_sku($cert_sku));
+            if (!$product || !$product->get_sku()) continue;
+
+            $pass_score = wp_get_post_terms($prog_id, 'exam_pass_score', ['fields' => 'names']); $pass_score = !empty($pass_score) ? (int)$pass_score[0] : 70;
+            $practice_q = wp_get_post_terms($prog_id, 'exam_practice_questions', ['fields' => 'names']);
+            $practice_d = wp_get_post_terms($prog_id, 'exam_practice_duration', ['fields' => 'names']);
+            $cert_q = wp_get_post_terms($prog_id, 'exam_cert_questions', ['fields' => 'names']);
+            $cert_d = wp_get_post_terms($prog_id, 'exam_cert_duration', ['fields' => 'names']);
+            $question_source = get_post_meta($prog_id, '_mco_question_source_url', true);
+            $description = strip_tags(get_the_content());
+
+            $dynamic_exams[] = [ 'id' => $practice_id, 'name' => get_the_title() . ' Practice', 'description' => $description, 'price' => 0, 'productSku' => $practice_id, 'numberOfQuestions' => !empty($practice_q) ? (int)$practice_q[0] : 25, 'passScore' => $pass_score, 'certificateTemplateId' => 'cert-practice-1', 'isPractice' => true, 'durationMinutes' => !empty($practice_d) ? (int)$practice_d[0] : 60, 'questionSourceUrl' => $question_source, 'recommendedBookId' => '' ];
+            $dynamic_exams[] = [ 'id' => $cert_sku, 'name' => get_the_title(), 'description' => $description, 'price' => (float)$product->get_price(), 'regularPrice' => (float)$product->get_regular_price(), 'productSku' => $cert_sku, 'productSlug' => $product->get_slug(), 'numberOfQuestions' => !empty($cert_q) ? (int)$cert_q[0] : 100, 'passScore' => $pass_score, 'certificateTemplateId' => 'cert-generic', 'isPractice' => false, 'durationMinutes' => !empty($cert_d) ? (int)$cert_d[0] : 240, 'questionSourceUrl' => $question_source, 'recommendedBookId' => '' ];
+            $dynamic_categories[] = [ 'id' => 'prod-' . $prog_id, 'name' => get_the_title(), 'description' => $description, 'practiceExamId' => $practice_id, 'certificationExamId' => $cert_sku, 'questionSourceUrl' => $question_source ];
+        }
+    }
+    wp_reset_postdata();
+
+    $certificate_templates = [
+        ['id' => 'cert-generic', 'title' => 'Certificate of Completion', 'body' => 'For successfully completing the exam with a score of <strong>{finalScore}%</strong>.', 'signature1Name' => 'Program Director', 'signature1Title' => get_bloginfo('name'), 'signature1ImageBase64' => '', 'signature2Name' => '', 'signature2Title' => '', 'signature2ImageBase64' => ''],
+        ['id' => 'cert-practice-1', 'title' => 'Certificate of Proficiency', 'body' => 'For demonstrating proficiency with a score of <strong>{finalScore}%</strong>.', 'signature1Name' => 'Program Director', 'signature1Title' => get_bloginfo('name'), 'signature1ImageBase64' => '', 'signature2Name' => '', 'signature2Title' => '', 'signature2ImageBase64' => '']
+    ];
+
+    $organization = [
+        'id' => 'org-' . sanitize_title(get_bloginfo('name')), 'name' => get_bloginfo('name'), 'website' => preg_replace('#^https?://#', '', get_site_url()),
+        'logo' => '/logo.png', 'exams' => $dynamic_exams, 'examProductCategories' => $dynamic_categories, 'certificateTemplates' => $certificate_templates, 'suggestedBooks' => $suggested_books
+    ];
+    return new WP_REST_Response(['organizations' => [$organization]], 200);
+}
+
 
 function mco_get_user_results(WP_REST_Request $req) {
     $user = mco_get_user_from_jwt($req);
@@ -268,16 +300,29 @@ function mco_get_certificate_data(WP_REST_Request $req) {
     $test_id = $req['testId'];
     $results = get_user_meta($user->ID, 'mco_exam_results', true);
     if (empty($results) || !isset($results[$test_id])) return new WP_Error('not_found', 'Test result not found.', ['status' => 404]);
+    
     $result = $results[$test_id];
-    $config = mco_get_app_config_data_array();
-    $exam = current(array_filter($config['organizations'][0]['exams'], fn($e) => $e['id'] === $result['examId']));
-    if (!$exam) return new WP_Error('not_found', 'Exam configuration not found.', ['status' => 404]);
-    if ($result['score'] < $exam['passScore'] && !in_array('administrator', $user->roles)) return new WP_Error('forbidden', 'Certificate not earned for this exam.', ['status' => 403]);
+    $exam_sku = $result['examId'];
+    $args = ['post_type' => 'mco_exam_program', 'posts_per_page' => 1, 'meta_query' => [['key' => '_mco_certification_exam_sku', 'value' => $exam_sku, 'compare' => '=']]];
+    $program_query = new WP_Query($args);
+    $pass_score = 70; // Default
+    if ($program_query->have_posts()) {
+        $program_query->the_post();
+        $pass_score_terms = wp_get_post_terms(get_the_ID(), 'exam_pass_score', ['fields' => 'names']);
+        if (!empty($pass_score_terms)) $pass_score = (int)$pass_score_terms[0];
+        wp_reset_postdata();
+    }
+    
+    if ($result['score'] < $pass_score && !in_array('administrator', (array)$user->roles)) {
+        return new WP_Error('forbidden', 'Certificate not earned for this exam. Required score not met.', ['status' => 403]);
+    }
+
     return new WP_REST_Response([
         'certificateNumber' => strtoupper(substr(md5($user->ID . $test_id), 0, 10)), 'candidateName' => $user->display_name,
         'finalScore' => $result['score'], 'date' => date('F j, Y', $result['timestamp'] / 1000), 'examId' => $result['examId'],
     ], 200);
 }
+
 
 function mco_update_user_name(WP_REST_Request $req) {
     $user = mco_get_user_from_jwt($req);
@@ -288,9 +333,40 @@ function mco_update_user_name(WP_REST_Request $req) {
 }
 
 function mco_get_questions_from_sheet(WP_REST_Request $req) {
-    // A full implementation would use Google API client library or cURL to fetch from sheetUrl.
-    // This is a placeholder for demonstration.
-    return new WP_REST_Response([], 501, ['message' => 'Not implemented. The server must be configured to fetch from Google Sheets.']);
+    $params = $req->get_json_params();
+    $sheet_url = isset($params['sheetUrl']) ? esc_url_raw($params['sheetUrl']) : '';
+    $count = isset($params['count']) ? intval($params['count']) : 0;
+    if (empty($sheet_url) || !filter_var($sheet_url, FILTER_VALIDATE_URL) || strpos($sheet_url, 'docs.google.com/spreadsheets') === false) {
+        return new WP_Error('invalid_url', 'Invalid or non-Google Sheets URL provided.', ['status' => 400]);
+    }
+
+    $csv_export_url = rtrim(str_replace('/edit', '/export?format=csv&gid=0', $sheet_url), '&');
+    $response = wp_remote_get($csv_export_url, ['timeout' => 20]);
+    if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+        return new WP_Error('fetch_failed', 'Could not retrieve questions from the provided Google Sheet URL. Please ensure it is public.', ['status' => 500]);
+    }
+    
+    $body = wp_remote_retrieve_body($response);
+    $lines = preg_split('/\\r\\n?|\\n/', $body);
+    if (count($lines) < 2) return new WP_REST_Response([], 200);
+    
+    array_shift($lines); // Remove header
+    $questions = [];
+    foreach ($lines as $line) {
+        if (empty(trim($line))) continue;
+        $data = str_getcsv($line);
+        if (count($data) >= 7 && !empty(trim($data[1]))) { // ID, Question, 4 Options, Correct Answer Index
+            $questions[] = [ 
+                'id' => intval(trim($data[0])), 'question' => trim($data[1]), 
+                'options' => array_map('trim', array_slice($data, 2, 4)), 'correctAnswer' => intval(trim($data[6]))
+            ];
+        }
+    }
+    
+    if (empty($questions)) return new WP_Error('no_questions', 'No valid questions found in the sheet.', ['status' => 404]);
+    
+    shuffle($questions);
+    return new WP_REST_Response(($count > 0 ? array_slice($questions, 0, $count) : $questions), 200);
 }
 
 function mco_submit_feedback(WP_REST_Request $req) {
@@ -307,12 +383,11 @@ function mco_submit_review(WP_REST_Request $req) {
     if (!class_exists('WooCommerce')) return new WP_Error('no_woocommerce', 'WooCommerce is not active.', ['status' => 500]);
     $user = mco_get_user_from_jwt($req);
     $params = $req->get_json_params();
-    $config = mco_get_app_config_data_array();
-    $exam = current(array_filter($config['organizations'][0]['exams'], fn($e) => $e['id'] === $params['examId']));
-    $product = wc_get_product_id_by_sku($exam['productSku']);
-    if (!$product) return new WP_Error('not_found', 'Product for review not found.', ['status' => 404]);
+    $exam_sku = sanitize_text_field($params['examId']);
+    $product_id = wc_get_product_id_by_sku($exam_sku);
+    if (!$product_id) return new WP_Error('not_found', 'Product for review not found.', ['status' => 404]);
     
-    $commentdata = ['comment_post_ID' => $product, 'comment_author' => $user->display_name, 'comment_author_email' => $user->user_email,
+    $commentdata = ['comment_post_ID' => $product_id, 'comment_author' => $user->display_name, 'comment_author_email' => $user->user_email,
         'comment_content' => sanitize_textarea_field($params['reviewText']), 'user_id' => $user->ID, 'comment_type' => 'review', 'comment_approved' => 1,];
     $comment_id = wp_insert_comment($commentdata);
     update_comment_meta($comment_id, 'rating', intval($params['rating']));
@@ -391,8 +466,6 @@ function mco_exam_login_shortcode() {
 }
 
 function mco_exam_program_page_shortcode() {
-    // This shortcode can be expanded to display dynamic content from the config.
-    // For now, it provides a simple link to the app.
     $app_url = get_option('mco_exam_app_url');
     if (!$app_url) return '<p>Exam portal URL not set.</p>';
     return '<a href="'.esc_url($app_url).'" class="button">Browse All Exam Programs</a>';
@@ -433,9 +506,7 @@ function mco_handle_my_account_redirect() {
                     <strong>Instructions:</strong>
                     <ol className="list-decimal pl-5 space-y-2 mt-2">
                         <li>Copy the code below and save it as a new PHP file (e.g., <code>mco-integration-engine.php</code>).</li>
-                        <li>Create a folder named <code>data</code> inside your new plugin folder.</li>
-                        <li>Inside <code>data</code>, place your configuration files: <code>medical-coding-config.json</code> and <code>annapoorna-config.json</code>. The plugin will automatically select the correct one based on the domain.</li>
-                        <li>Upload the entire plugin folder to your WordPress <code>/wp-content/plugins/</code> directory.</li>
+                        <li>Upload the plugin to your WordPress <code>/wp-content/plugins/</code> directory.</li>
                         <li>Activate it from your WordPress admin dashboard and configure the settings.</li>
                     </ol>
                 </p>
