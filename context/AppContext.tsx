@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, createContext, useCon
 import type { Organization, RecommendedBook, Exam, ExamProductCategory, InProgressExamInfo } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
+import { getApiEndpoint } from '../services/apiConfig.ts';
 
 interface AppContextType {
   organizations: Organization[];
@@ -38,7 +39,8 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const initializeApp = async () => {
         setIsInitializing(true);
         try {
-            const response = await fetch('/api/app-config');
+            const API_BASE_URL = getApiEndpoint();
+            const response = await fetch(`${API_BASE_URL}/app-config`);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! Could not fetch app configuration from WordPress. Status: ${response.status}`);

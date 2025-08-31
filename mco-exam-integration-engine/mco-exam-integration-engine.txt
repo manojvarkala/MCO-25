@@ -13,8 +13,6 @@ define('MCO_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('MCO_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 // --- FAILSAFE DEPENDENCY CHECK ---
-// This runs on every admin page load to ensure dependencies are met.
-// If not, it deactivates the plugin to prevent a site-wide crash.
 if (!function_exists('mco_failsafe_dependency_check')) {
     function mco_failsafe_dependency_check() {
         if (!class_exists('WooCommerce')) {
@@ -41,7 +39,6 @@ register_deactivation_hook(__FILE__, 'mco_plugin_deactivate');
 
 if (!function_exists('mco_plugin_activate')) {
     function mco_plugin_activate() {
-        // Activation needs CPTS to be registered before flushing.
         require_once MCO_PLUGIN_DIR . 'includes/mco-cpts.php';
         mco_register_custom_post_types();
         flush_rewrite_rules();
@@ -59,23 +56,57 @@ if (!function_exists('mco_plugin_deactivate')) {
 // --- INITIALIZATION ---
 if (!function_exists('mco_plugin_init')) {
     function mco_plugin_init() {
-        // Stop if failsafe check will deactivate plugin.
         if (!class_exists('WooCommerce')) {
             return;
         }
 
-        // Include all the functional parts of the plugin.
         require_once MCO_PLUGIN_DIR . 'includes/mco-cpts.php';
         require_once MCO_PLUGIN_DIR . 'includes/mco-admin.php';
         require_once MCO_PLUGIN_DIR . 'includes/mco-data.php';
         require_once MCO_PLUGIN_DIR . 'includes/mco-api.php';
         require_once MCO_PLUGIN_DIR . 'includes/mco-shortcodes.php';
 
-        // Register hooks for the included files
         mco_register_cpt_hooks();
         mco_register_admin_hooks();
         mco_register_api_hooks();
         mco_register_shortcode_hooks();
+
+        // Add CORS support for direct API calls from the React app
+        add_action('rest_api_init', 'mco_add_cors_support');
     }
 }
 add_action('plugins_loaded', 'mco_plugin_init');
+
+
+// --- CORS SUPPORT FOR DYNAMIC FRONTEND ---
+if (!function_exists('mco_add_cors_support')) {
+    function mco_add_cors_support() {
+        $app_url = get_option('mco_exam_app_url');
+        if (empty($app_url)) {
+            return; // Don't add headers if the app URL isn't configured.
+        }
+
+        $allowed_origin = rtrim($app_url, '/');
+
+        remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
+        add_filter('rest_pre_serve_request', function ($value) use ($allowed_origin) {
+            $origin = get_http_origin();
+            
+            // Only allow requests from the configured app URL
+            if ($origin && $origin === $allowed_origin) {
+                header('Access-Control-Allow-Origin: ' . esc_url($allowed_origin));
+                header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+                header('Access-Control-Allow-Credentials: true');
+                header('Access-Control-Allow-Headers: Authorization, Content-Type');
+            }
+            
+            // Handle pre-flight OPTIONS request and exit
+            if ('OPTIONS' === $_SERVER['REQUEST_METHOD'] && $origin === $allowed_origin) {
+                status_header(200);
+                exit();
+            }
+
+            return $value;
+        }, 15);
+    }
+}
