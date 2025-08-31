@@ -4,12 +4,16 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import { Send, MessageSquare } from 'lucide-react';
 import Spinner from './Spinner.tsx';
+import { useAppContext } from '../context/AppContext.tsx';
 
 const Feedback: FC = () => {
     const { token } = useAuth();
+    const { activeOrg } = useAppContext();
     const [category, setCategory] = useState('General Feedback');
     const [message, setMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    const loginUrl = activeOrg ? `https://www.${activeOrg.website}/exam-login/` : '#';
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -100,7 +104,7 @@ const Feedback: FC = () => {
                     </button>
                     {!token && (
                          <p className="text-xs text-center text-red-600 mt-2">
-                            Please <a href="https://www.coding-online.net/exam-login/" className="underline">log in</a> to submit feedback.
+                            Please <a href={loginUrl} className="underline">log in</a> to submit feedback.
                          </p>
                     )}
                 </div>

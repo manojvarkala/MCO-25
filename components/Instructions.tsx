@@ -1,6 +1,12 @@
 import React, { FC } from 'react';
+import { useAppContext } from '../context/AppContext.tsx';
 
 const Instructions: FC = () => {
+    const { activeOrg } = useAppContext();
+
+    const websiteUrl = activeOrg ? `https://www.${activeOrg.website}` : '#';
+    const websiteName = activeOrg ? activeOrg.website : 'our main site';
+
     return (
         <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
             <h1 className="text-3xl font-bold text-slate-800 mb-4">Platform Instructions</h1>
@@ -9,7 +15,7 @@ const Instructions: FC = () => {
                 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Login and Access</h2>
                 <p>
-                    All users must log in through our main site, <a href="https://www.coding-online.net" target="_blank" rel="noopener noreferrer" className="text-cyan-600">coding-online.net</a>. Your account there will grant you access to this portal. 
+                    All users must log in through our main site, <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="text-cyan-600">{websiteName}</a>. Your account there will grant you access to this portal. 
                     If you have purchased any certification exams, they will be automatically synced to your dashboard upon logging in.
                 </p>
 

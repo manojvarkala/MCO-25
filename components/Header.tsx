@@ -49,7 +49,7 @@ const Header: FC = () => {
         {activeOrg ? (
             <a href={headerLink} className="flex items-center space-x-3">
                  <img
-                    src={logoBase64}
+                    src={activeOrg.logo || logoBase64}
                     alt={`${activeOrg.name} Logo`}
                     className="h-14 w-14 object-contain"
                 />

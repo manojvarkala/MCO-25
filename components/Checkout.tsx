@@ -1,20 +1,33 @@
-import React, { FC, useEffect } from 'react';
+import React, { FC, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import Spinner from './Spinner.tsx';
+import { useAppContext } from '../context/AppContext.tsx';
 
 const Checkout: FC = () => {
     const { productSlug } = useParams<{ productSlug: string }>();
+    const { activeOrg } = useAppContext();
+
+    const mainSiteBaseUrl = useMemo(() => {
+        if (activeOrg) {
+            return `https://www.${activeOrg.website}`;
+        }
+        // Fallback logic for when config fails to load
+        const hostname = window.location.hostname;
+        if (hostname.includes('coding-online.net')) return 'https://www.coding-online.net';
+        if (hostname.includes('annapoornainfo.com')) return 'https://www.annapoornainfo.com';
+        return '';
+    }, [activeOrg]);
 
     useEffect(() => {
-        if (productSlug) {
+        if (productSlug && mainSiteBaseUrl) {
             const redirectTimer = setTimeout(() => {
-                const checkoutUrl = `https://www.coding-online.net/product/${productSlug}/`;
+                const checkoutUrl = `${mainSiteBaseUrl}/product/${productSlug}/`;
                 window.location.href = checkoutUrl;
             }, 2000); // 2-second delay before redirecting
 
             return () => clearTimeout(redirectTimer);
         }
-    }, [productSlug]);
+    }, [productSlug, mainSiteBaseUrl]);
 
     return (
         <div className="flex flex-col items-center justify-center py-20 px-4">

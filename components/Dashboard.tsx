@@ -51,7 +51,16 @@ const Dashboard: FC = () => {
         return '';
     }, [activeOrg]);
 
-    const syncUrl = `${mainSiteBaseUrl}/my-account/`;
+    const handleSync = () => {
+        if (mainSiteBaseUrl) {
+            // Redirect to the login page on the main site.
+            // If the user is logged in there, the shortcode will generate a new token
+            // and redirect back to the app's /auth route to sync data.
+            window.location.href = `${mainSiteBaseUrl}/exam-login/`;
+        } else {
+            toast.error("Could not determine the main site URL to sync.");
+        }
+    };
 
     useEffect(() => {
         if (user) {
@@ -84,9 +93,9 @@ const Dashboard: FC = () => {
                         <h1 className="text-3xl font-bold text-slate-800">Welcome back, {user.name}!</h1>
                         <p className="text-slate-500 mt-1">Ready to ace your next exam?</p>
                     </div>
-                    <a href={syncUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition">
+                    <button onClick={handleSync} className="flex-shrink-0 flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition">
                         <RefreshCw size={16} /> Sync My Exams
-                    </a>
+                    </button>
                 </div>
                 
                 {inProgressExam && (
