@@ -1,5 +1,7 @@
+
+
 import React, { FC, useState, useEffect } from 'react';
-// Fix: Use useNavigate from react-router-dom v6
+// Fix: Update react-router-dom imports to v6 syntax.
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';

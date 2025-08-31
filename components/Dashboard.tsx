@@ -1,4 +1,7 @@
+
+
 import React, { FC, useState, useEffect, useMemo } from 'react';
+// Fix: Update react-router-dom imports to v6 syntax.
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -30,6 +33,7 @@ const StarRating: FC<{ rating: number; count: number; }> = ({ rating, count }) =
 };
 
 const Dashboard: FC = () => {
+    // Fix: Use useNavigate for v6 compatibility.
     const navigate = useNavigate();
     const { user, token, paidExamIds, examPrices, isSubscribed } = useAuth();
     const { activeOrg, isInitializing, inProgressExam } = useAppContext();

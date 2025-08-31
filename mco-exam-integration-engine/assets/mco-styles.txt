@@ -1,0 +1,152 @@
+/* WooCommerce Cart and Checkout Styles */
+body.woocommerce-cart, body.woocommerce-checkout {
+    background-color: #f8fafc !important;
+}
+.woocommerce form .form-row input.input-text, 
+.woocommerce form .form-row textarea, 
+.woocommerce select {
+    border-radius: 0.5rem !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 0.75rem 1rem !important;
+    box-shadow: none !important;
+}
+.woocommerce .button, 
+.woocommerce button.button {
+    border-radius: 0.5rem !important;
+    padding: 0.75rem 1.5rem !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease-in-out !important;
+    border: none !important;
+}
+.woocommerce .button.alt, 
+.woocommerce button.button.alt, 
+.woocommerce #place_order {
+    background-color: #0891b2 !important;
+    color: white !important;
+}
+.woocommerce .button.alt:hover, 
+.woocommerce button.button.alt:hover, 
+.woocommerce #place_order:hover {
+    background-color: #0e7490 !important;
+}
+@media (min-width: 992px) {
+    .woocommerce-checkout form.checkout {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 2rem;
+        align-items: flex-start;
+    }
+    .woocommerce-checkout .col2-set {
+        width: 100% !important;
+    }
+    .woocommerce-checkout .woocommerce-checkout-review-order {
+        grid-column: 2 / 3;
+    }
+}
+
+/* Exam Showcase Shortcode Styles */
+.mco-showcase-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+}
+.mco-program-card {
+    background: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,.07), 0 4px 6px -4px rgba(0,0,0,.07);
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.mco-card-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+.mco-card-header h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+.mco-card-description {
+    font-size: 0.9rem;
+    color: #475569;
+    margin-top: 0.5rem;
+}
+.mco-options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.mco-option-column {
+    padding: 1.5rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.mco-option-column:not(:last-child) {
+    border-right: 1px solid #e2e8f0;
+}
+.mco-option-column h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+.mco-option-column ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.5rem 0;
+    font-size: 0.875rem;
+    color: #475569;
+    text-align: left;
+}
+.mco-option-column ul li {
+    margin-bottom: 0.5rem;
+}
+.mco-price {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 1rem;
+    display: block;
+}
+.mco-button {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+    width: 100%;
+    margin-top: auto;
+}
+.mco-button-primary {
+    background-color: #0891b2;
+    color: white;
+}
+.mco-button-primary:hover {
+    background-color: #0e7490;
+}
+.mco-button-secondary {
+    background-color: #475569;
+    color: white;
+}
+.mco-button-secondary:hover {
+    background-color: #334155;
+}
+.mco-option-bundle {
+    background-color: #f0f9ff;
+}
+.mco-bundle-unavailable {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+@media (max-width: 768px) {
+    .mco-option-column:not(:last-child) {
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+    }
+}

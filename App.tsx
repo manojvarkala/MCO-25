@@ -1,5 +1,7 @@
+
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
-// Fix: Use react-router-dom v6 compatible imports
+// Fix: Update react-router-dom imports to v6 syntax.
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
@@ -32,6 +34,9 @@ import LivePurchaseNotification from './components/LivePurchaseNotification.tsx'
 import SidebarLayout from './components/SidebarLayout.tsx';
 import Integration from './components/Integration.tsx';
 import UpdateNameModal from './components/UpdateNameModal.tsx';
+import PurchaseNotifier from './components/PurchaseNotifier.tsx';
+import WooCommerceStyling from './components/WooCommerceStyling.tsx';
+import SuperAdminBlueprint from './components/SuperAdminBlueprint.tsx';
 
 // New Component for the promotional announcement
 const PromotionAnnouncement: FC = () => {
@@ -97,11 +102,11 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }
   const { user } = useAuth();
   if (!user) {
     // Fix: Use <Navigate> for react-router-dom v6
-    return <Navigate to="/" />;
+    return <Navigate to="/" replace />;
   }
   if (adminOnly && !user.isAdmin) {
     // Fix: Use <Navigate> for react-router-dom v6
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
 };
@@ -185,8 +190,11 @@ const AppContent: FC = () => {
                         <Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
                         <Route path="/integration" element={<ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute>} />
+                        <Route path="/purchase-notifier" element={<ProtectedRoute adminOnly={true}><PurchaseNotifier /></ProtectedRoute>} />
+                        <Route path="/woocommerce-styling" element={<ProtectedRoute adminOnly={true}><WooCommerceStyling /></ProtectedRoute>} />
+                        <Route path="/super-admin-blueprint" element={<ProtectedRoute adminOnly={true}><SuperAdminBlueprint /></ProtectedRoute>} />
                     
-                        <Route path="*" element={<Navigate to="/" />} />
+                        <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </main>
                 {user && user.isAdmin && !isTestPage && <DebugSidebar />}

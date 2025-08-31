@@ -1,0 +1,44 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+// Hook registration
+if (!function_exists('mco_register_cpt_hooks')) {
+    function mco_register_cpt_hooks() {
+        add_action('init', 'mco_register_custom_post_types');
+    }
+}
+
+// --- CUSTOM POST TYPES & TAXONOMIES ---
+if (!function_exists('mco_register_custom_post_types')) {
+    function mco_register_custom_post_types() {
+        $taxonomies = [
+            'exam_practice_questions'  => 'Practice Questions',
+            'exam_practice_duration'   => 'Practice Duration',
+            'exam_cert_questions'      => 'Certification Questions',
+            'exam_cert_duration'       => 'Certification Duration',
+            'exam_pass_score'          => 'Pass Score'
+        ];
+        foreach ($taxonomies as $slug => $name) {
+            register_taxonomy($slug, 'mco_exam_program', [
+                'labels' => ['name' => $name], 
+                'public' => true, 
+                'hierarchical' => false, 
+                'show_in_rest' => true
+            ]);
+        }
+
+        register_post_type('mco_exam_program', [
+            'labels' => ['name' => 'Exam Programs', 'singular_name' => 'Exam Program'],
+            'public' => true, 'has_archive' => true, 'show_in_menu' => false, 'show_in_rest' => true,
+            'supports' => ['title', 'editor', 'thumbnail'], 
+            'taxonomies' => array_keys($taxonomies),
+            'rewrite' => ['slug' => 'exam-programs'],
+        ]);
+
+        register_post_type('mco_recommended_book', [ 
+            'labels' => ['name' => 'Recommended Books', 'singular_name' => 'Book'], 
+            'public' => true, 'has_archive' => false, 'show_in_menu' => false, 'show_in_rest' => true,
+            'supports' => ['title', 'editor', 'thumbnail'] 
+        ]);
+    }
+}

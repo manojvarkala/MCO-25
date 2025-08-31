@@ -1,4 +1,7 @@
+
+
 import React, { FC, useEffect } from 'react';
+// Fix: Update react-router-dom imports to v6 syntax.
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -7,12 +10,14 @@ import LogoSpinner from './LogoSpinner.tsx';
 import { logoBase64 } from '../assets/logo.ts';
 
 const LandingPage: FC = () => {
+    // Fix: Use useNavigate for v6 compatibility.
     const navigate = useNavigate();
     const { user } = useAuth();
     const { activeOrg, isInitializing } = useAppContext();
     
     useEffect(() => {
         if (user) {
+            // Fix: Use navigate for v6 compatibility.
             navigate('/dashboard');
         }
     }, [user, navigate]);

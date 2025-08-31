@@ -1,5 +1,8 @@
+
+
+
 import React, { FC, useState, useEffect, useRef } from 'react';
-// Fix: Use useNavigate from react-router-dom v6
+// Fix: Update react-router-dom imports to v6 syntax.
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -121,7 +124,8 @@ const Certificate: FC = () => {
             const pdfHeight = pdf.internal.pageSize.getHeight();
             
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Certificate-of-Completion-${certData.candidateName.replace(/\\s+/g, '_')}.pdf`);
+// Fix: Corrected the regular expression to properly replace whitespace characters in the filename.
+            pdf.save(`Certificate-of-Completion-${certData.candidateName.replace(/\s+/g, '_')}.pdf`);
             toast.dismiss(toastId);
             toast.success("Certificate downloaded!");
         } catch(error) {

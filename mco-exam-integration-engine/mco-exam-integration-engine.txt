@@ -1,0 +1,81 @@
+<?php
+/**
+ * Plugin Name:       Exam App Integration Engine
+ * Description:       A multi-tenant engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and API services. Provides [mco_exam_login] and [mco_exam_showcase] shortcodes.
+ * Version:           26.4.0 (Multi-file w/ CSS)
+ * Author:            Annapoorna Infotech
+ */
+
+if (!defined('ABSPATH')) exit;
+
+define('MCO_PLUGIN_VERSION', '26.4.0');
+define('MCO_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('MCO_PLUGIN_URL', plugin_dir_url(__FILE__));
+
+// --- FAILSAFE DEPENDENCY CHECK ---
+// This runs on every admin page load to ensure dependencies are met.
+// If not, it deactivates the plugin to prevent a site-wide crash.
+if (!function_exists('mco_failsafe_dependency_check')) {
+    function mco_failsafe_dependency_check() {
+        if (!class_exists('WooCommerce')) {
+            add_action('admin_notices', 'mco_dependency_error_notice');
+            deactivate_plugins(plugin_basename(__FILE__));
+            if (isset($_GET['activate'])) {
+                unset($_GET['activate']);
+            }
+        }
+    }
+}
+if (!function_exists('mco_dependency_error_notice')) {
+    function mco_dependency_error_notice() {
+        echo '<div class="notice notice-error is-dismissible">';
+        echo '<p><strong>Exam App Integration Engine</strong> has been automatically deactivated because it requires the <strong>WooCommerce</strong> plugin to be installed and active. Please install or activate WooCommerce, then try activating this plugin again.</p>';
+        echo '</div>';
+    }
+}
+add_action('admin_init', 'mco_failsafe_dependency_check');
+
+// --- ACTIVATION / DEACTIVATION HOOKS ---
+register_activation_hook(__FILE__, 'mco_plugin_activate');
+register_deactivation_hook(__FILE__, 'mco_plugin_deactivate');
+
+if (!function_exists('mco_plugin_activate')) {
+    function mco_plugin_activate() {
+        // Activation needs CPTS to be registered before flushing.
+        require_once MCO_PLUGIN_DIR . 'includes/mco-cpts.php';
+        mco_register_custom_post_types();
+        flush_rewrite_rules();
+        add_option('mco_plugin_version', MCO_PLUGIN_VERSION);
+    }
+}
+
+if (!function_exists('mco_plugin_deactivate')) {
+    function mco_plugin_deactivate() {
+        flush_rewrite_rules();
+        delete_option('mco_plugin_version');
+    }
+}
+
+// --- INITIALIZATION ---
+if (!function_exists('mco_plugin_init')) {
+    function mco_plugin_init() {
+        // Stop if failsafe check will deactivate plugin.
+        if (!class_exists('WooCommerce')) {
+            return;
+        }
+
+        // Include all the functional parts of the plugin.
+        require_once MCO_PLUGIN_DIR . 'includes/mco-cpts.php';
+        require_once MCO_PLUGIN_DIR . 'includes/mco-admin.php';
+        require_once MCO_PLUGIN_DIR . 'includes/mco-data.php';
+        require_once MCO_PLUGIN_DIR . 'includes/mco-api.php';
+        require_once MCO_PLUGIN_DIR . 'includes/mco-shortcodes.php';
+
+        // Register hooks for the included files
+        mco_register_cpt_hooks();
+        mco_register_admin_hooks();
+        mco_register_api_hooks();
+        mco_register_shortcode_hooks();
+    }
+}
+add_action('plugins_loaded', 'mco_plugin_init');

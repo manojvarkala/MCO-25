@@ -1,0 +1,127 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+// Hook registration
+if (!function_exists('mco_register_shortcode_hooks')) {
+    function mco_register_shortcode_hooks() {
+        add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
+        add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
+        add_action('woocommerce_payment_complete', 'mco_auto_complete_virtual_order');
+        add_action('wp_enqueue_scripts', 'mco_enqueue_plugin_styles');
+    }
+}
+
+// --- STYLESHEET ENQUEUE ---
+if (!function_exists('mco_enqueue_plugin_styles')) {
+    function mco_enqueue_plugin_styles() {
+        global $post;
+        // Load styles on cart/checkout, or on any page that contains the showcase shortcode.
+        if (
+            (function_exists('is_woocommerce') && (is_cart() || is_checkout())) ||
+            (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_showcase'))
+        ) {
+            wp_enqueue_style(
+                'mco-styles', 
+                MCO_PLUGIN_URL . 'assets/mco-styles.css', 
+                [], 
+                MCO_PLUGIN_VERSION
+            );
+        }
+    }
+}
+
+// --- SHORTCODES ---
+if (!function_exists('mco_exam_login_shortcode')) {
+    function mco_exam_login_shortcode() {
+        if (is_user_logged_in()) {
+            $user_id = get_current_user_id();
+            $token = mco_generate_exam_jwt($user_id);
+            $app_url = mco_get_exam_app_url();
+            if ($token && $app_url) {
+                $final_url = $app_url . '/#/auth?token=' . $token;
+                return "<div style='text-align:center;'><p>Redirecting to your dashboard...</p><script>window.location.href='" . esc_url_raw($final_url) . "';</script></div>";
+            }
+        }
+        ob_start();
+        if (function_exists('wc_get_template')) { wc_get_template('myaccount/form-login.php'); }
+        return ob_get_clean();
+    }
+}
+
+if (!function_exists('mco_exam_showcase_shortcode')) {
+    function mco_exam_showcase_shortcode() {
+        ob_start();
+        $query = new WP_Query([
+            'post_type' => 'mco_exam_program',
+            'posts_per_page' => -1,
+            'post_status' => 'publish'
+        ]);
+        if ($query->have_posts()) {
+            echo '<div class="mco-showcase-container">';
+            while ($query->have_posts()) {
+                $query->the_post();
+                $prog_id = get_the_ID();
+                $cert_sku = get_post_meta($prog_id, '_mco_certification_exam_sku', true);
+                if (empty($cert_sku)) continue;
+
+                $cert_product = wc_get_product(wc_get_product_id_by_sku($cert_sku));
+                if (!$cert_product) continue;
+                
+                // For simplicity, this example doesn't show a separate bundle. It can be added back if needed.
+                $practice_q = wp_get_post_terms($prog_id, 'exam_practice_questions', ['fields' => 'names']);
+                $practice_d = wp_get_post_terms($prog_id, 'exam_practice_duration', ['fields' => 'names']);
+                $cert_q = wp_get_post_terms($prog_id, 'exam_cert_questions', ['fields' => 'names']);
+                $cert_d = wp_get_post_terms($prog_id, 'exam_cert_duration', ['fields' => 'names']);
+                ?>
+                <div class="mco-program-card">
+                    <div class="mco-card-header">
+                        <h3><?php the_title(); ?></h3>
+                        <div class="mco-card-description"><?php echo wp_strip_all_tags(get_the_content()); ?></div>
+                    </div>
+                    <div class="mco-options-grid">
+                        <div class="mco-option-column">
+                            <h4>Practice Exam</h4>
+                            <ul>
+                                <li><strong>Questions:</strong> <?php echo !empty($practice_q) ? esc_html($practice_q[0]) : 'N/A'; ?></li>
+                                <li><strong>Duration:</strong> <?php echo !empty($practice_d) ? esc_html($practice_d[0]) . ' mins' : 'N/A'; ?></li>
+                            </ul>
+                            <a href="<?php echo esc_url(home_url('/exam-login/')); ?>" class="mco-button mco-button-secondary">Start Practice</a>
+                        </div>
+                        <div class="mco-option-column mco-option-bundle">
+                            <h4>Certification Exam</h4>
+                            <ul>
+                                <li><strong>Questions:</strong> <?php echo !empty($cert_q) ? esc_html($cert_q[0]) : 'N/A'; ?></li>
+                                <li><strong>Duration:</strong> <?php echo !empty($cert_d) ? esc_html($cert_d[0]) . ' mins' : 'N/A'; ?></li>
+                            </ul>
+                            <div class="mco-price"><?php echo $cert_product->get_price_html(); ?></div>
+                            <a href="<?php echo esc_url($cert_product->add_to_cart_url()); ?>" class="mco-button mco-button-primary">Buy Now</a>
+                        </div>
+                    </div>
+                </div>
+                <?php
+            }
+            echo '</div>';
+        } else {
+            echo '<p>No exam programs available.</p>';
+        }
+        wp_reset_postdata();
+        return ob_get_clean();
+    }
+}
+
+
+// --- WOOCOMMERCE HELPERS ---
+if (!function_exists('mco_auto_complete_virtual_order')) {
+    function mco_auto_complete_virtual_order($order_id) {
+        if (!$order_id) return;
+        $order = wc_get_order($order_id);
+        if (!$order || $order->has_status(['completed', 'failed', 'cancelled', 'refunded'])) return;
+        $is_virtual_order = true;
+        if (count($order->get_items()) > 0) {
+            foreach ($order->get_items() as $item) {
+                if (!$item->get_product()->is_virtual()) { $is_virtual_order = false; break; }
+            }
+        } else { $is_virtual_order = false; }
+        if ($is_virtual_order) { $order->update_status('completed'); }
+    }
+}

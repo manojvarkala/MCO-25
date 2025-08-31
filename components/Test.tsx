@@ -1,8 +1,10 @@
+
 import React, { FC, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-// Fix: Use useNavigate from react-router-dom v6
+// Fix: Update react-router-dom imports to v6 syntax.
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
+// Fix: Added ExamProgress to type imports for saving progress.
 import type { Question, UserAnswer, Exam, ExamProgress } from '../types.ts';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -166,238 +168,219 @@ const Test: FC = () => {
     };
   }, [examStarted, isLoading, examConfig, user, examId, handleSubmit]);
 
-  // Effect 3: Save progress to localStorage
-  useEffect(() => {
-      if (!isLoading && examStarted && questions.length > 0 && user?.id) {
-          const progress: ExamProgress = {
-              questions,
-              answers: Array.from(answers.entries()).map(([questionId, answer]) => ({ questionId, answer })),
-              currentQuestionIndex,
-          };
-          localStorage.setItem(progressKey, JSON.stringify(progress));
-      }
-  }, [answers, currentQuestionIndex, questions, isLoading, examStarted, user?.id, progressKey]);
+    // Fix: Added missing logic to save progress and handle focus violations, and to render the component UI.
+    // Effect 3: Save progress.
+    useEffect(() => {
+        if (!examStarted || questions.length === 0) return;
+        try {
+            const progress: ExamProgress = {
+                questions,
+                answers: Array.from(answers.entries()).map(([questionId, answer]) => ({ questionId, answer })),
+                currentQuestionIndex
+            };
+            localStorage.setItem(progressKey, JSON.stringify(progress));
+        } catch (error) {
+            console.error("Failed to save progress:", error);
+        }
+    }, [answers, currentQuestionIndex, questions, progressKey, examStarted]);
 
-  // Effect 4: Listeners for focus and fullscreen violations
-  useEffect(() => {
-    if (!examStarted) return;
+    // Effect 4: Handle focus and fullscreen.
+    useEffect(() => {
+        if (!examStarted || examConfig?.isPractice) return;
 
-    const handleFocusViolation = (reason: string) => {
-        if (hasSubmittedRef.current) return;
-        const newCount = focusViolationCount + 1;
-        setFocusViolationCount(newCount);
-
-        if (newCount >= MAX_FOCUS_VIOLATIONS) {
-            toast.error(`Violation ${newCount}/${MAX_FOCUS_VIOLATIONS}: Exam terminated for ${reason}.`, { id: FOCUS_VIOLATION_TOAST_ID, duration: 6000 });
-            handleSubmit(true);
-        } else {
-            toast.error(`Warning ${newCount}/${MAX_FOCUS_VIOLATIONS}: ${reason} is a violation. Return to the exam immediately.`, { id: FOCUS_VIOLATION_TOAST_ID, duration: 10000 });
-             if (reason.includes("exiting fullscreen")) {
-                document.documentElement.requestFullscreen().catch(err => console.error(err));
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                setFocusViolationCount(prev => prev + 1);
             }
+        };
+        const handleFullscreenChange = () => {
+            if (!document.fullscreenElement) {
+                setFocusViolationCount(prev => prev + 1);
+            }
+        };
+        
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        };
+    }, [examStarted, examConfig?.isPractice]);
+
+    // Effect 5: Handle focus violation side-effects.
+    useEffect(() => {
+        if (focusViolationCount > 0 && focusViolationCount <= MAX_FOCUS_VIOLATIONS) {
+            toast.error(
+                `Focus Violation (${focusViolationCount}/${MAX_FOCUS_VIOLATIONS}): You must stay in fullscreen and on this tab. Leaving again may terminate your exam.`,
+                { id: FOCUS_VIOLATION_TOAST_ID, duration: 6000 }
+            );
         }
-    };
+        if (focusViolationCount > MAX_FOCUS_VIOLATIONS) {
+            toast.error("Exam terminated due to multiple focus violations.", { id: FOCUS_VIOLATION_TOAST_ID, duration: 6000 });
+            handleSubmit(true); // Auto-submit
+        }
+    }, [focusViolationCount, handleSubmit]);
 
-    const handleVisibilityChange = () => {
-        if (document.hidden) handleFocusViolation("switching tabs");
-    };
-    const handleFullscreenChange = () => {
-        if (!document.fullscreenElement) handleFocusViolation("exiting fullscreen");
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-    return () => {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, [examStarted, handleSubmit, focusViolationCount]);
-
-   const handleStartExam = () => {
-        const element = document.documentElement;
-        if (element.requestFullscreen) {
-            element.requestFullscreen().catch(err => {
-                toast.error(`Fullscreen is required. Please allow it to start. Error: ${err.message}`, { duration: 6000 });
-            });
-            setExamStarted(true); // Start exam immediately on request
+    const startExam = async () => {
+        if (examConfig && !examConfig.isPractice) {
+            try {
+                await document.documentElement.requestFullscreen();
+                setExamStarted(true);
+            } catch (err) {
+                toast.error("Fullscreen is required to start the exam.");
+            }
         } else {
-            setExamStarted(true); // Fallback for browsers that don't support it
+            setExamStarted(true);
         }
     };
-  
-  // Effect 5: Cleanup on unmount
-  useEffect(() => {
-    return () => {
-        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-        if (document.fullscreenElement) document.exitFullscreen().catch(err => console.error(err));
+
+    const handleAnswerSelect = (optionIndex: number) => {
+        const currentQuestionId = questions[currentQuestionIndex].id;
+        setAnswers(new Map(answers.set(currentQuestionId, optionIndex)));
     };
-  }, []);
 
-  const handleAnswerSelect = (questionId: number, optionIndex: number) => {
-    setAnswers(prev => new Map(prev).set(questionId, optionIndex));
-  };
+    const currentQuestion = questions[currentQuestionIndex];
+    const selectedAnswer = currentQuestion ? answers.get(currentQuestion.id) : undefined;
 
-  const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
+    if (isLoading || isInitializing) {
+        return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4 text-slate-600">Loading Exam...</p></div>;
     }
-  };
-
-  const handlePrev = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
+    
+    if (!examConfig) {
+        return <div className="text-center p-8">Exam configuration could not be loaded.</div>;
     }
-  };
-  
-  const handleDoubleClickOption = (questionId: number, optionIndex: number) => {
-    handleAnswerSelect(questionId, optionIndex);
-    if (currentQuestionIndex < questions.length - 1) {
-        setTimeout(() => handleNext(), 200);
-    }
-  };
 
-  if (isInitializing || isLoading || !examConfig) {
-    return <div className="flex flex-col items-center justify-center h-screen bg-white"><LogoSpinner /><p className="mt-4 text-slate-600">Loading your test...</p></div>;
-  }
-  
-  if (questions.length === 0 && !isLoading) {
-    return <div className="text-center p-8 bg-white h-screen flex items-center justify-center"><p>No questions available for this exam.</p></div>
-  }
-  
-  if (!examStarted) {
-    return (
-        <div className="flex flex-col items-center justify-center h-screen bg-white p-4">
-            <div className="max-w-2xl w-full bg-slate-50 p-8 rounded-xl shadow-lg border border-slate-200 text-center">
-                <h1 className="text-3xl font-bold text-slate-800 mb-2">Ready to start?</h1>
-                <p className="text-slate-600 mb-6">You are about to begin the <strong>{examConfig.name}</strong>.</p>
-                
-                <div className="bg-red-50 border-l-4 border-red-500 p-4 my-6 text-left">
-                    <p className="font-bold text-red-800 flex items-center gap-2"><AlertTriangle size={20}/> Important Rules - Please Read Carefully</p>
-                    <ul className="list-disc pl-5 text-red-700 text-sm mt-2 space-y-1">
-                        <li><strong>Fullscreen Required:</strong> The exam will run in fullscreen mode to ensure focus.</li>
-                        <li><strong>Stay on This Tab:</strong> Leaving this tab, minimizing the window, or exiting fullscreen will result in immediate termination of your exam.</li>
-                        <li><strong>Single Session:</strong> Do not open another exam window or log in from another device.</li>
-                        <li><strong>Timer:</strong> The timer starts immediately and cannot be paused.</li>
-                    </ul>
+    if (!examStarted) {
+        return (
+            <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-lg text-center">
+                <h1 className="text-3xl font-bold text-slate-800 mb-2">{examConfig.name}</h1>
+                <p className="text-slate-500 mb-6">{examConfig.description}</p>
+                <div className="grid grid-cols-2 gap-4 text-lg mb-8">
+                    <div className="bg-slate-100 p-4 rounded-lg">
+                        <p className="font-bold">{examConfig.numberOfQuestions}</p>
+                        <p className="text-sm text-slate-600">Questions</p>
+                    </div>
+                    <div className="bg-slate-100 p-4 rounded-lg">
+                        <p className="font-bold">{examConfig.durationMinutes}</p>
+                        <p className="text-sm text-slate-600">Minutes</p>
+                    </div>
                 </div>
-                
+                {!examConfig.isPractice && (
+                    <div className="bg-red-50 border-l-4 border-red-500 p-4 my-4 text-left">
+                        <p className="font-bold text-red-800 flex items-center gap-2"><AlertTriangle size={16}/> Important Rules</p>
+                        <ul className="list-disc pl-5 text-red-700 space-y-1 text-sm mt-2">
+                            <li>This exam must be taken in <strong>fullscreen mode</strong>.</li>
+                            <li>Do not exit fullscreen or switch to another tab/application.</li>
+                            <li>Violating these rules multiple times will automatically terminate your exam.</li>
+                        </ul>
+                    </div>
+                )}
                 <button
-                    onClick={handleStartExam}
-                    className="w-full max-w-xs mx-auto bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg transition text-lg"
+                    onClick={startExam}
+                    className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 px-8 rounded-lg text-xl transition-transform transform hover:scale-105"
                 >
-                    I Understand, Start Exam
+                    Start Exam
                 </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="max-w-7xl mx-auto">
+            <div className="bg-slate-800 text-white rounded-t-lg p-4 flex justify-between items-center sticky top-0 z-10">
+                <h1 className="text-xl font-bold">{examConfig.name}</h1>
+                <div className="flex items-center gap-2 bg-slate-700 px-3 py-1 rounded-full text-lg">
+                    <Clock size={20} />
+                    <span>{timeLeft !== null ? formatTime(timeLeft) : 'Loading...'}</span>
+                </div>
+            </div>
+            <div className="bg-white p-2 sm:p-4 rounded-b-lg shadow-lg">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Left: Question Navigator */}
+                    <div className="md:col-span-1 bg-slate-50 p-3 rounded-lg border border-slate-200 h-full max-h-96 md:max-h-full overflow-y-auto">
+                        <h2 className="font-bold mb-2">Questions ({answers.size}/{questions.length})</h2>
+                        <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                            {questions.map((q, index) => (
+                                <button
+                                    key={q.id}
+                                    onClick={() => setCurrentQuestionIndex(index)}
+                                    className={`w-10 h-10 rounded-md text-sm font-semibold transition ${
+                                        index === currentQuestionIndex 
+                                        ? 'bg-cyan-600 text-white ring-2 ring-offset-2 ring-cyan-500' 
+                                        : answers.has(q.id) 
+                                        ? 'bg-slate-300 text-slate-800'
+                                        : 'bg-white border border-slate-300 hover:bg-slate-100'
+                                    }`}
+                                >
+                                    {index + 1}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Right: Current Question */}
+                    <div className="md:col-span-2">
+                        {currentQuestion ? (
+                            <div className="p-4">
+                                <p className="text-slate-500 mb-2">Question {currentQuestionIndex + 1} of {questions.length}</p>
+                                <h2 className="text-xl font-semibold text-slate-800 mb-6 leading-relaxed">{currentQuestion.question}</h2>
+                                <div className="space-y-4">
+                                    {currentQuestion.options.map((option, index) => (
+                                        <label key={index} className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition ${
+                                            selectedAnswer === index
+                                            ? 'bg-cyan-50 border-cyan-500'
+                                            : 'bg-white border-slate-200 hover:border-cyan-300'
+                                        }`}>
+                                            <input
+                                                type="radio"
+                                                name={`question-${currentQuestion.id}`}
+                                                checked={selectedAnswer === index}
+                                                onChange={() => handleAnswerSelect(index)}
+                                                className="h-5 w-5 text-cyan-600 focus:ring-cyan-500"
+                                            />
+                                            <span className="ml-4 text-slate-700">{option}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <p>No question loaded.</p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Footer: Navigation and Submit */}
+                <div className="mt-6 pt-4 border-t border-slate-200 flex justify-between items-center">
+                    <button
+                        onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+                        disabled={currentQuestionIndex === 0}
+                        className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
+                    >
+                        <ChevronLeft size={16} /> Previous
+                    </button>
+                    {currentQuestionIndex === questions.length - 1 ? (
+                        <button
+                            onClick={() => handleSubmit()}
+                            disabled={isSubmitting}
+                            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105"
+                        >
+                            {isSubmitting ? <Spinner /> : <Send size={16} />}
+                            {isSubmitting ? 'Submitting...' : 'Submit Exam'}
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
+                            disabled={currentQuestionIndex === questions.length - 1}
+                            className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
+                        >
+                            Next <ChevronRight size={16} />
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );
-  }
-
-  const currentQuestion = questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
-
-  return (
-    <div className="flex flex-col h-screen bg-white">
-      <header className="flex-shrink-0 p-4 sm:p-6 border-b border-slate-200">
-        <div className="flex justify-between items-start mb-4">
-            <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-800">{examConfig.name}</h1>
-                <p className="text-sm text-slate-500">Question {currentQuestionIndex + 1} of {questions.length}</p>
-            </div>
-        </div>
-        <div className="w-full bg-slate-200 rounded-full h-2">
-            <div className="bg-cyan-600 h-2 rounded-full" style={{ width: `${progress}%` }}></div>
-        </div>
-      </header>
-      
-      <div className="flex-shrink-0 p-3 border-b border-slate-200 overflow-x-auto">
-        <div className="flex flex-nowrap gap-2">
-          {questions.map((q, index) => {
-            const isAnswered = answers.has(q.id);
-            const isCurrent = index === currentQuestionIndex;
-            let buttonClass = 'border-slate-300 bg-white hover:bg-slate-100 text-slate-600';
-            if (isCurrent) {
-              buttonClass = 'bg-cyan-600 border-cyan-600 text-white ring-2 ring-offset-1 ring-cyan-500';
-            } else if (isAnswered) {
-              buttonClass = 'bg-slate-200 border-slate-300 hover:bg-slate-300 text-slate-700';
-            }
-            return (
-              <button
-                key={q.id}
-                onClick={() => setCurrentQuestionIndex(index)}
-                className={`flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-xs font-bold border transition-colors duration-200 ${buttonClass}`}
-                aria-label={`Go to question ${index + 1}`}
-              >
-                {index + 1}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      
-      <main className="flex-grow p-6 sm:p-8 overflow-y-auto">
-        <div className="mb-8">
-            <p className="text-lg font-semibold text-slate-700 leading-relaxed">{currentQuestion.question}</p>
-        </div>
-        <div className="space-y-4">
-            {currentQuestion.options.map((option, index) => (
-            <label 
-                key={index} 
-                onDoubleClick={() => handleDoubleClickOption(currentQuestion.id, index)}
-                className={`flex items-start p-4 border rounded-lg cursor-pointer transition ${answers.get(currentQuestion.id) === index ? 'bg-cyan-50 border-cyan-500 ring-2 ring-cyan-500' : 'border-slate-300 hover:border-cyan-400'}`}>
-                <input
-                type="radio"
-                name={`question-${currentQuestion.id}`}
-                checked={answers.get(currentQuestion.id) === index}
-                onChange={() => handleAnswerSelect(currentQuestion.id, index)}
-                className="h-5 w-5 mt-0.5 text-cyan-600 focus:ring-cyan-500 border-slate-300"
-                />
-                <span className="ml-4 text-slate-700">{option}</span>
-            </label>
-            ))}
-        </div>
-      </main>
-      
-      <footer className="flex-shrink-0 p-4 sm:p-6 border-t border-slate-200 bg-white">
-        <div className="flex justify-between items-center">
-            <button
-            onClick={handlePrev}
-            disabled={currentQuestionIndex === 0 || isSubmitting}
-            className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
-            >
-            <ChevronLeft size={16} />
-            <span>Previous</span>
-            </button>
-
-            {timeLeft !== null && (
-                <div className="flex items-center space-x-2 bg-slate-100 text-slate-700 font-bold py-2 px-4 rounded-lg">
-                    <Clock size={20} />
-                    <span>{formatTime(timeLeft)}</span>
-                </div>
-            )}
-            
-            {currentQuestionIndex === questions.length - 1 ? (
-            <button
-                onClick={() => handleSubmit(false)}
-                disabled={isSubmitting}
-                className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition disabled:bg-green-300 disabled:cursor-not-allowed"
-            >
-                {isSubmitting ? <Spinner /> : <><Send size={16}/> <span>Submit</span></>}
-            </button>
-            ) : (
-            <button
-                onClick={handleNext}
-                disabled={isSubmitting}
-                className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition"
-            >
-                <span>Next</span>
-                <ChevronRight size={16} />
-            </button>
-            )}
-        </div>
-      </footer>
-    </div>
-  );
 };
-
+// Fix: Added a default export for the component.
 export default Test;

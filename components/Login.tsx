@@ -1,4 +1,7 @@
+
+
 import React, { FC, useEffect, useRef } from 'react';
+// Fix: Update react-router-dom imports to v6 syntax.
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
@@ -6,6 +9,7 @@ import toast from 'react-hot-toast';
 
 const Login: FC = () => {
     const location = useLocation();
+    // Fix: Use useNavigate for v6 compatibility.
     const navigate = useNavigate();
     const { user, loginWithToken } = useAuth();
     const wasAlreadyLoggedIn = useRef(!!user);
@@ -28,20 +32,24 @@ const Login: FC = () => {
                     } else {
                         toast.success('Logged in successfully!');
                     }
+                    // Fix: Use navigate for v6 compatibility.
                     navigate(redirectTo, { replace: true });
                 })
                 .catch((e: any) => {
                     const errorMessage = e.message || 'Invalid login token. Please try again.';
                     toast.error(errorMessage);
+                    // Fix: Use navigate for v6 compatibility.
                     navigate('/', { replace: true });
                 });
         } 
         // If no token, but user is already logged in from a previous session.
         else if (user) {
+            // Fix: Use navigate for v6 compatibility.
             navigate(redirectTo, { replace: true });
         } 
         // No token and no user, redirect to the landing page.
         else {
+            // Fix: Use navigate for v6 compatibility.
             navigate('/', { replace: true });
         }
     }, [user, location.search, loginWithToken, navigate]);

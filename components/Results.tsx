@@ -1,5 +1,8 @@
+
+
+
 import React, { FC, useState, useEffect } from 'react';
-// Fix: Use useNavigate from react-router-dom v6
+// Fix: Update react-router-dom imports to v6 syntax.
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -201,6 +204,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
             const pageHeight = pdf.internal.pageSize.getHeight();
             const margin = 15;
             let pageNum = 1;
+            let yPos = margin;
     
             const addWatermarkAndFooter = (pageNumber: number) => {
                 // Watermark
@@ -249,7 +253,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
             pdf.addPage();
             pageNum++;
             addWatermarkAndFooter(pageNum);
-            let yPos = margin;
+            yPos = margin;
             
             const contentWidth = pageWidth - margin * 2;
             const lines = aiFeedback.split('\n');
@@ -303,7 +307,6 @@ Please provide a summary of the key areas I need to focus on based on these erro
             pdf.addPage();
             pageNum++;
             addWatermarkAndFooter(pageNum);
-            // Fix: Re-assign yPos for the new page instead of re-declaring it.
             yPos = margin;
             
             if (exam.recommendedBook) {
