@@ -11,14 +11,7 @@ const Header: FC = () => {
 
   // Updated URL generation with fallback
   const mainSiteBaseUrl = useMemo(() => {
-    if (activeOrg) {
-        return `https://www.${activeOrg.website}`;
-    }
-    // Fallback logic for when config fails to load
-    const hostname = window.location.hostname;
-    if (hostname.includes('coding-online.net')) return 'https://www.coding-online.net';
-    if (hostname.includes('annapoornainfo.com')) return 'https://www.annapoornainfo.com';
-    return '';
+    return activeOrg ? `https://www.${activeOrg.website}` : '';
   }, [activeOrg]);
   
   const handleLogout = () => {

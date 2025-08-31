@@ -1,5 +1,6 @@
 
 
+
 import React, { FC, useState, useEffect, useMemo } from 'react';
 // Fix: Update react-router-dom imports to v6 syntax.
 import { useNavigate } from 'react-router-dom';
@@ -42,13 +43,7 @@ const Dashboard: FC = () => {
     const [stats, setStats] = useState<{ avg: number; best: number; completed: number } | null>(null);
 
     const mainSiteBaseUrl = useMemo(() => {
-        if (activeOrg) {
-            return `https://www.${activeOrg.website}`;
-        }
-        const hostname = window.location.hostname;
-        if (hostname.includes('coding-online.net')) return 'https://www.coding-online.net';
-        if (hostname.includes('annapoornainfo.com')) return 'https://www.annapoornainfo.com';
-        return '';
+        return activeOrg ? `https://www.${activeOrg.website}` : '';
     }, [activeOrg]);
 
     const handleSync = () => {

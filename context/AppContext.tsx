@@ -20,7 +20,15 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
+  const [activeOrg, setActiveOrg] = useState<Organization | null>(() => {
+    try {
+        const storedOrg = localStorage.getItem('activeOrg');
+        return storedOrg ? JSON.parse(storedOrg) : null;
+    } catch (e) {
+        console.error("Failed to parse activeOrg from localStorage", e);
+        return null;
+    }
+  });
   const [isInitializing, setIsInitializing] = useState(true);
   const { user, examPrices, suggestedBooks, dynamicExams, dynamicCategories } = useAuth();
   const [isWheelModalOpen, setWheelModalOpen] = useState(false);
@@ -95,8 +103,10 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             
             if (newActiveOrg) {
               setActiveOrg(newActiveOrg);
+              localStorage.setItem('activeOrg', JSON.stringify(newActiveOrg));
             } else {
               setActiveOrg(null);
+              localStorage.removeItem('activeOrg');
             }
 
         } catch (error) {
@@ -142,6 +152,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const org = organizations.find(o => o.id === orgId);
     if (org) {
         setActiveOrg(org);
+        localStorage.setItem('activeOrg', JSON.stringify(org));
     }
   }, [organizations]);
 
@@ -150,6 +161,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         prevOrgs.map(org => org.id === updatedOrg.id ? updatedOrg : org)
     );
     setActiveOrg(updatedOrg);
+    localStorage.setItem('activeOrg', JSON.stringify(updatedOrg));
   }, []);
 
   const value = useMemo(() => ({
