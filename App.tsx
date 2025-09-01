@@ -143,7 +143,7 @@ const AppContent: FC = () => {
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800">
             {user && <UpdateNameModal isOpen={isNameModalOpen} onClose={() => setIsNameModalOpen(false)} />}
-            {canSpinWheel && (
+            {canSpinWheel && isWheelModalOpen && (
               <WheelOfFortune 
                 isOpen={isWheelModalOpen} 
                 onClose={() => {
