@@ -31,9 +31,10 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   });
   const [isInitializing, setIsInitializing] = useState(true);
-  const { user, examPrices, suggestedBooks, dynamicExams, dynamicCategories } = useAuth();
+  const { user, examPrices } = useAuth();
   const [isWheelModalOpen, setWheelModalOpen] = useState(false);
   const [inProgressExam, setInProgressExam] = useState<InProgressExamInfo | null>(null);
+  const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>([]);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -49,50 +50,33 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             
             const baseOrgs = JSON.parse(JSON.stringify(configData.organizations || []));
             
-            const bookMap = new Map<string, RecommendedBook>();
-            if (suggestedBooks) {
-                suggestedBooks.forEach(book => bookMap.set(book.id, book));
-            }
-
             const processedOrgs = baseOrgs.map((org: Organization) => {
-                // Check if dynamic data exists from the JWT. If so, it's the source of truth for exams/categories.
-                const isDynamic = !!(dynamicExams && dynamicCategories);
-                const examsSource = isDynamic ? dynamicExams : org.exams;
-                const categoriesSource = isDynamic ? dynamicCategories : org.examProductCategories;
+                // The API response is now the single source of truth for configuration.
+                const examsSource = org.exams;
+                const categoriesSource = org.examProductCategories;
+                const booksSource = org.suggestedBooks || [];
+                
+                setSuggestedBooks(booksSource);
 
+                const bookMap = new Map<string, RecommendedBook>();
+                booksSource.forEach(book => bookMap.set(book.id, book));
+                
                 const processedExams = examsSource.map((exam: Exam): Exam => {
                     const priceData = examPrices && exam.productSku ? examPrices[exam.productSku] : null;
                     const recommendedBook = exam.recommendedBookId ? bookMap.get(exam.recommendedBookId) : undefined;
                     
-                    let questionSourceUrl = exam.questionSourceUrl;
-                    
-                    // For static configs (old plugin), we still need to look up the question source URL from the category.
-                    if (!isDynamic) {
-                         const category = categoriesSource.find(
-                            (cat: ExamProductCategory) => cat.practiceExamId === exam.id || cat.certificationExamId === exam.id
-                        );
-                        if (!category || !category.questionSourceUrl) {
-                            console.error(`Static Config error: No question source URL for exam "${exam.name}" (ID: ${exam.id}).`);
-                            questionSourceUrl = '';
-                        } else {
-                            questionSourceUrl = category.questionSourceUrl;
-                        }
-                    }
-                    
                     return {
                         ...exam,
-                        questionSourceUrl,
                         ...(priceData && { price: priceData.price, regularPrice: priceData.regularPrice }),
                         ...(recommendedBook && { recommendedBook }),
                     };
                 });
                 
-                // Overwrite the static lists from the config file with the dynamic ones if they exist.
                 return { 
                     ...org, 
                     exams: processedExams, 
                     examProductCategories: categoriesSource,
-                    suggestedBooks: suggestedBooks || [] 
+                    suggestedBooks: booksSource 
                 };
             });
             
@@ -120,7 +104,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
 
     initializeApp();
-  }, [examPrices, suggestedBooks, dynamicExams, dynamicCategories]);
+  }, [examPrices]);
 
   // Effect to detect in-progress exams
   useEffect(() => {

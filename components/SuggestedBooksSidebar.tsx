@@ -37,8 +37,18 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
 
 const SuggestedBooksSidebar: React.FC = () => {
     const { suggestedBooks } = useAppContext();
+    
+    // Memoize the random selection so it doesn't change on every render
+    const randomBooks = React.useMemo(() => {
+        if (!suggestedBooks || suggestedBooks.length === 0) {
+            return [];
+        }
+        // Shuffle the array and take the first 3
+        return [...suggestedBooks].sort(() => 0.5 - Math.random()).slice(0, 3);
+    }, [suggestedBooks]);
 
-    if (!suggestedBooks || suggestedBooks.length === 0) {
+
+    if (randomBooks.length === 0) {
         return null;
     }
 
@@ -48,7 +58,7 @@ const SuggestedBooksSidebar: React.FC = () => {
                 <BookOpen className="mr-3 text-cyan-500" /> Study Hall
             </h3>
             <div className="space-y-6">
-                {suggestedBooks.map(book => {
+                {randomBooks.map(book => {
                     const { url, domainName } = getGeoAffiliateLink(book);
                     if (!url) return null; // Don't render if no valid URL
                     return (

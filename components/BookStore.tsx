@@ -46,9 +46,9 @@ const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
 
     const primaryLink = getGeoAffiliateLink(book);
     const allStores = [
-        { key: 'com' as const, name: '.com', url: book.affiliateLinks.com },
-        { key: 'in' as const, name: '.in', url: book.affiliateLinks.in },
-        { key: 'ae' as const, name: '.ae', url: book.affiliateLinks.ae }
+        { key: 'com' as const, name: 'Amazon.com', url: book.affiliateLinks.com },
+        { key: 'in' as const, name: 'Amazon.in', url: book.affiliateLinks.in },
+        { key: 'ae' as const, name: 'Amazon.ae', url: book.affiliateLinks.ae }
     ];
     const secondaryStores = allStores.filter(store => store.key !== primaryLink.key && store.url && store.url.trim() !== '');
 
@@ -69,24 +69,17 @@ const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
                             <ShoppingCart size={18} /> Buy on {primaryLink.domainName}
                         </a>
                     )}
-                    {secondaryStores.length > 0 && (
-                        <div className="text-center pt-2">
-                            <span className="text-xs text-slate-400">Other stores: </span>
-                            {secondaryStores.map((store, index) => (
-                                <React.Fragment key={store.key}>
-                                    <a 
-                                        href={store.url}
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="text-xs text-cyan-600 hover:underline font-semibold"
-                                    >
-                                    {store.name}
-                                    </a>
-                                    {index < secondaryStores.length - 1 && <span className="text-xs text-slate-400 mx-1">|</span>}
-                                </React.Fragment>
-                            ))}
-                        </div>
-                    )}
+                    {secondaryStores.map((store) => (
+                         <a 
+                            key={store.key}
+                            href={store.url}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-all"
+                        >
+                           Buy on {store.name}
+                        </a>
+                    ))}
                 </div>
             </div>
         </div>
