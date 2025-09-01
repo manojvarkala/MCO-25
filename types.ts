@@ -102,6 +102,7 @@ export interface Exam {
     recommendedBook?: RecommendedBook;
     recommendedBookId?: string;
     isPractice: boolean;
+    isProctored?: boolean;
     durationMinutes: number;
     productSku: string;
     productSlug?: string;

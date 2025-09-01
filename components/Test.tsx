@@ -21,9 +21,9 @@ const formatTime = (seconds: number) => {
 const MAX_FOCUS_VIOLATIONS = 3;
 const FOCUS_VIOLATION_TOAST_ID = 'focus-violation-toast';
 
+
 const Test: FC = () => {
   const { examId } = useParams<{ examId: string }>();
-  // Fix: Use useNavigate for navigation in v6
   const navigate = useNavigate();
   const { user, useFreeAttempt, isSubscribed, token } = useAuth();
   const { activeOrg, isInitializing } = useAppContext();
@@ -36,17 +36,19 @@ const Test: FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [examStarted, setExamStarted] = useState(false);
+  
+  // Browser-based proctoring state
   const [focusViolationCount, setFocusViolationCount] = useState(0);
-
+  
   const timerIntervalRef = useRef<number | null>(null);
   const hasSubmittedRef = useRef(false);
   const progressKey = useMemo(() => `exam_progress_${examId}_${user?.id}`, [examId, user?.id]);
 
 
-  const handleSubmit = useCallback(async (isAutoSubmit = false) => {
+  const handleSubmit = useCallback(async (isAutoSubmit = false, reason = "") => {
     if (hasSubmittedRef.current) return;
     hasSubmittedRef.current = true;
-
+    
     if (document.fullscreenElement) {
         document.exitFullscreen().catch(err => console.error("Could not exit fullscreen:", err));
     }
@@ -72,6 +74,8 @@ const Test: FC = () => {
             hasSubmittedRef.current = false; // Reset submit lock
             return;
         }
+    } else if (reason) {
+        toast.error(`Exam submitted automatically: ${reason}`, { duration: 6000 });
     }
     
     try {
@@ -88,9 +92,7 @@ const Test: FC = () => {
   
   // Effect 1: Load questions and saved progress.
   useEffect(() => {
-    if (isInitializing || !examId || !activeOrg || !user || !token) {
-        return;
-    }
+    if (isInitializing || !examId || !activeOrg || !user || !token) return;
 
     const config = activeOrg.exams.find(e => e.id === examId);
     if (!config) {
@@ -116,15 +118,14 @@ const Test: FC = () => {
             }
             
             const savedProgressJSON = localStorage.getItem(progressKey);
-            if (savedProgressJSON && document.fullscreenElement) { // Only resume if already in fullscreen
+            if (savedProgressJSON) {
                 const savedProgress: ExamProgress = JSON.parse(savedProgressJSON);
                 setQuestions(savedProgress.questions);
                 setAnswers(new Map(savedProgress.answers.map(a => [a.questionId, a.answer])));
                 setCurrentQuestionIndex(savedProgress.currentQuestionIndex);
-                setExamStarted(true);
                 toast.success("Resumed your previous session.");
+                setExamStarted(true); // Auto-start if progress exists
             } else {
-                localStorage.removeItem(progressKey); // Clear any stale progress
                 const fetchedQuestions = await googleSheetsService.getQuestions(config, token);
                 setQuestions(fetchedQuestions);
                 setAnswers(new Map());
@@ -138,7 +139,6 @@ const Test: FC = () => {
             setIsLoading(false);
         }
     };
-    
     loadTest();
   }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, useFreeAttempt, progressKey]);
 
@@ -159,79 +159,56 @@ const Test: FC = () => {
         setTimeLeft(remaining);
         if (remaining === 0) {
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-            handleSubmit(true);
+            handleSubmit(true, "Time expired.");
         }
     }, 1000);
 
-    return () => {
-        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    };
+    return () => { if (timerIntervalRef.current) clearInterval(timerIntervalRef.current); };
   }, [examStarted, isLoading, examConfig, user, examId, handleSubmit]);
 
-    // Fix: Added missing logic to save progress and handle focus violations, and to render the component UI.
     // Effect 3: Save progress.
     useEffect(() => {
         if (!examStarted || questions.length === 0) return;
         try {
-            const progress: ExamProgress = {
-                questions,
-                answers: Array.from(answers.entries()).map(([questionId, answer]) => ({ questionId, answer })),
-                currentQuestionIndex
-            };
+            const progress: ExamProgress = { questions, answers: Array.from(answers.entries()).map(([questionId, answer]) => ({ questionId, answer })), currentQuestionIndex };
             localStorage.setItem(progressKey, JSON.stringify(progress));
-        } catch (error) {
-            console.error("Failed to save progress:", error);
-        }
+        } catch (error) { console.error("Failed to save progress:", error); }
     }, [answers, currentQuestionIndex, questions, progressKey, examStarted]);
 
-    // Effect 4: Handle focus and fullscreen.
+    // Effect 4: Handle focus and fullscreen for proctored exams.
     useEffect(() => {
-        if (!examStarted || examConfig?.isPractice) return;
-
-        const handleVisibilityChange = () => {
-            if (document.hidden) {
-                setFocusViolationCount(prev => prev + 1);
-            }
-        };
-        const handleFullscreenChange = () => {
-            if (!document.fullscreenElement) {
-                setFocusViolationCount(prev => prev + 1);
-            }
-        };
-        
+        if (!examStarted || !examConfig?.isProctored) return;
+        const handleVisibilityChange = () => { if (document.hidden) setFocusViolationCount(prev => prev + 1); };
+        const handleFullscreenChange = () => { if (!document.fullscreenElement) setFocusViolationCount(prev => prev + 1); };
         document.addEventListener('visibilitychange', handleVisibilityChange);
         document.addEventListener('fullscreenchange', handleFullscreenChange);
-
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             document.removeEventListener('fullscreenchange', handleFullscreenChange);
         };
-    }, [examStarted, examConfig?.isPractice]);
+    }, [examStarted, examConfig?.isProctored]);
 
     // Effect 5: Handle focus violation side-effects.
     useEffect(() => {
         if (focusViolationCount > 0 && focusViolationCount <= MAX_FOCUS_VIOLATIONS) {
-            toast.error(
-                `Focus Violation (${focusViolationCount}/${MAX_FOCUS_VIOLATIONS}): You must stay in fullscreen and on this tab. Leaving again may terminate your exam.`,
-                { id: FOCUS_VIOLATION_TOAST_ID, duration: 6000 }
-            );
+            toast.error(`Focus Violation (${focusViolationCount}/${MAX_FOCUS_VIOLATIONS}): You must stay in fullscreen and on this tab.`, { id: FOCUS_VIOLATION_TOAST_ID, duration: 6000 });
         }
         if (focusViolationCount > MAX_FOCUS_VIOLATIONS) {
-            toast.error("Exam terminated due to multiple focus violations.", { id: FOCUS_VIOLATION_TOAST_ID, duration: 6000 });
-            handleSubmit(true); // Auto-submit
+            handleSubmit(true, "Multiple focus violations.");
         }
     }, [focusViolationCount, handleSubmit]);
 
-    const startExam = async () => {
-        if (examConfig && !examConfig.isPractice) {
-            try {
+
+    const handleStartExamFlow = async () => {
+        if (!examConfig) return;
+        try {
+            // Only force fullscreen for proctored exams
+            if (examConfig.isProctored) {
                 await document.documentElement.requestFullscreen();
-                setExamStarted(true);
-            } catch (err) {
-                toast.error("Fullscreen is required to start the exam.");
             }
-        } else {
             setExamStarted(true);
+        } catch (err) {
+            toast.error("Fullscreen is required to start this exam.");
         }
     };
 
@@ -252,34 +229,26 @@ const Test: FC = () => {
     }
 
     if (!examStarted) {
+        // Pre-exam start screen
         return (
             <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-lg text-center">
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">{examConfig.name}</h1>
                 <p className="text-slate-500 mb-6">{examConfig.description}</p>
                 <div className="grid grid-cols-2 gap-4 text-lg mb-8">
-                    <div className="bg-slate-100 p-4 rounded-lg">
-                        <p className="font-bold">{examConfig.numberOfQuestions}</p>
-                        <p className="text-sm text-slate-600">Questions</p>
-                    </div>
-                    <div className="bg-slate-100 p-4 rounded-lg">
-                        <p className="font-bold">{examConfig.durationMinutes}</p>
-                        <p className="text-sm text-slate-600">Minutes</p>
-                    </div>
+                    <div className="bg-slate-100 p-4 rounded-lg"><p className="font-bold">{examConfig.numberOfQuestions}</p><p className="text-sm text-slate-600">Questions</p></div>
+                    <div className="bg-slate-100 p-4 rounded-lg"><p className="font-bold">{examConfig.durationMinutes}</p><p className="text-sm text-slate-600">Minutes</p></div>
                 </div>
-                {!examConfig.isPractice && (
+                {examConfig.isProctored && (
                     <div className="bg-red-50 border-l-4 border-red-500 p-4 my-4 text-left">
                         <p className="font-bold text-red-800 flex items-center gap-2"><AlertTriangle size={16}/> Important Rules</p>
                         <ul className="list-disc pl-5 text-red-700 space-y-1 text-sm mt-2">
                             <li>This exam must be taken in <strong>fullscreen mode</strong>.</li>
                             <li>Do not exit fullscreen or switch to another tab/application.</li>
-                            <li>Violating these rules multiple times will automatically terminate your exam.</li>
+                            <li>Violations will be tracked and may result in exam termination.</li>
                         </ul>
                     </div>
                 )}
-                <button
-                    onClick={startExam}
-                    className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 px-8 rounded-lg text-xl transition-transform transform hover:scale-105"
-                >
+                <button onClick={handleStartExamFlow} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 px-8 rounded-lg text-xl transition-transform transform hover:scale-105">
                     Start Exam
                 </button>
             </div>
@@ -287,7 +256,7 @@ const Test: FC = () => {
     }
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto relative">
             <div className="bg-slate-800 text-white rounded-t-lg p-4 flex justify-between items-center sticky top-0 z-10">
                 <h1 className="text-xl font-bold">{examConfig.name}</h1>
                 <div className="flex items-center gap-2 bg-slate-700 px-3 py-1 rounded-full text-lg">
@@ -297,29 +266,16 @@ const Test: FC = () => {
             </div>
             <div className="bg-white p-2 sm:p-4 rounded-b-lg shadow-lg">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Left: Question Navigator */}
                     <div className="md:col-span-1 bg-slate-50 p-3 rounded-lg border border-slate-200 h-full max-h-96 md:max-h-full overflow-y-auto">
                         <h2 className="font-bold mb-2">Questions ({answers.size}/{questions.length})</h2>
                         <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-4 lg:grid-cols-5 gap-2">
                             {questions.map((q, index) => (
-                                <button
-                                    key={q.id}
-                                    onClick={() => setCurrentQuestionIndex(index)}
-                                    className={`w-10 h-10 rounded-md text-sm font-semibold transition ${
-                                        index === currentQuestionIndex 
-                                        ? 'bg-cyan-600 text-white ring-2 ring-offset-2 ring-cyan-500' 
-                                        : answers.has(q.id) 
-                                        ? 'bg-slate-300 text-slate-800'
-                                        : 'bg-white border border-slate-300 hover:bg-slate-100'
-                                    }`}
-                                >
+                                <button key={q.id} onClick={() => setCurrentQuestionIndex(index)} className={`w-10 h-10 rounded-md text-sm font-semibold transition ${ index === currentQuestionIndex ? 'bg-cyan-600 text-white ring-2 ring-offset-2 ring-cyan-500' : answers.has(q.id) ? 'bg-slate-300 text-slate-800' : 'bg-white border border-slate-300 hover:bg-slate-100' }`}>
                                     {index + 1}
                                 </button>
                             ))}
                         </div>
                     </div>
-
-                    {/* Right: Current Question */}
                     <div className="md:col-span-2">
                         {currentQuestion ? (
                             <div className="p-4">
@@ -327,53 +283,27 @@ const Test: FC = () => {
                                 <h2 className="text-xl font-semibold text-slate-800 mb-6 leading-relaxed">{currentQuestion.question}</h2>
                                 <div className="space-y-4">
                                     {currentQuestion.options.map((option, index) => (
-                                        <label key={index} className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition ${
-                                            selectedAnswer === index
-                                            ? 'bg-cyan-50 border-cyan-500'
-                                            : 'bg-white border-slate-200 hover:border-cyan-300'
-                                        }`}>
-                                            <input
-                                                type="radio"
-                                                name={`question-${currentQuestion.id}`}
-                                                checked={selectedAnswer === index}
-                                                onChange={() => handleAnswerSelect(index)}
-                                                className="h-5 w-5 text-cyan-600 focus:ring-cyan-500"
-                                            />
+                                        <label key={index} className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition ${ selectedAnswer === index ? 'bg-cyan-50 border-cyan-500' : 'bg-white border-slate-200 hover:border-cyan-300' }`}>
+                                            <input type="radio" name={`question-${currentQuestion.id}`} checked={selectedAnswer === index} onChange={() => handleAnswerSelect(index)} className="h-5 w-5 text-cyan-600 focus:ring-cyan-500"/>
                                             <span className="ml-4 text-slate-700">{option}</span>
                                         </label>
                                     ))}
                                 </div>
                             </div>
-                        ) : (
-                            <p>No question loaded.</p>
-                        )}
+                        ) : <p>No question loaded.</p>}
                     </div>
                 </div>
-
-                {/* Footer: Navigation and Submit */}
                 <div className="mt-6 pt-4 border-t border-slate-200 flex justify-between items-center">
-                    <button
-                        onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
-                        disabled={currentQuestionIndex === 0}
-                        className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
-                    >
+                    <button onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))} disabled={currentQuestionIndex === 0} className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50">
                         <ChevronLeft size={16} /> Previous
                     </button>
                     {currentQuestionIndex === questions.length - 1 ? (
-                        <button
-                            onClick={() => handleSubmit()}
-                            disabled={isSubmitting}
-                            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105"
-                        >
+                        <button onClick={() => handleSubmit()} disabled={isSubmitting} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105">
                             {isSubmitting ? <Spinner /> : <Send size={16} />}
                             {isSubmitting ? 'Submitting...' : 'Submit Exam'}
                         </button>
                     ) : (
-                        <button
-                            onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
-                            disabled={currentQuestionIndex === questions.length - 1}
-                            className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
-                        >
+                        <button onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))} disabled={currentQuestionIndex === questions.length - 1} className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50">
                             Next <ChevronRight size={16} />
                         </button>
                     )}
@@ -382,5 +312,4 @@ const Test: FC = () => {
         </div>
     );
 };
-// Fix: Added a default export for the component.
 export default Test;

@@ -1,5 +1,5 @@
 import React, { FC, useState, useEffect, useCallback } from 'react';
-import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu } from 'lucide-react';
+import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu, Video } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, SearchedUser, ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -68,6 +68,7 @@ const Admin: FC = () => {
             durationMinutes: exam.durationMinutes,
             questionSourceUrl: exam.questionSourceUrl,
             isPractice: exam.isPractice,
+            isProctored: exam.isProctored,
             certificateTemplateId: exam.certificateTemplateId,
             recommendedBookId: exam.recommendedBookId || '',
         });
@@ -449,10 +450,16 @@ const Admin: FC = () => {
                                     </select>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                    <input type="checkbox" name="isPractice" id="isPractice" checked={!!editedExamData.isPractice} onChange={handleCheckboxChange} className="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500" />
-                                    <label htmlFor="isPractice" className="ml-2 block text-sm text-slate-900">Is Practice Exam?</label>
+                            <div className="flex items-center justify-between flex-wrap gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center">
+                                        <input type="checkbox" name="isPractice" id="isPractice" checked={!!editedExamData.isPractice} onChange={handleCheckboxChange} className="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500" />
+                                        <label htmlFor="isPractice" className="ml-2 block text-sm text-slate-900">Is Practice Exam?</label>
+                                    </div>
+                                     <div className="flex items-center">
+                                        <input type="checkbox" name="isProctored" id="isProctored" checked={!!editedExamData.isProctored} onChange={handleCheckboxChange} className="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500" />
+                                        <label htmlFor="isProctored" className="ml-2 block text-sm text-slate-900 flex items-center gap-1"><Cpu size={14} /> Enable Browser Proctoring?</label>
+                                    </div>
                                 </div>
                                 <div className="flex justify-end space-x-2 pt-2">
                                     <button onClick={handleCancel} className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition">

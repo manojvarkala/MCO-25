@@ -1,6 +1,6 @@
 import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, SpinWheelResult, SearchedUser, ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { getApiEndpoint } from './apiConfig.ts';
 
 const apiFetch = async (endpoint: string, token: string, options: RequestInit = {}) => {

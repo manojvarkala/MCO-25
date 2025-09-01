@@ -2,13 +2,13 @@
 /**
  * Plugin Name:       Exam App Integration Engine
  * Description:       A multi-tenant engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and API services. Provides [mco_exam_login] and [mco_exam_showcase] shortcodes.
- * Version:           26.4.0 (Multi-file w/ CSS)
+ * Version:           26.9.0 (Book CSV Importer Added)
  * Author:            Annapoorna Infotech
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('MCO_PLUGIN_VERSION', '26.4.0');
+define('MCO_PLUGIN_VERSION', '26.9.0');
 define('MCO_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('MCO_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -42,7 +42,7 @@ if (!function_exists('mco_plugin_activate')) {
         require_once MCO_PLUGIN_DIR . 'includes/mco-cpts.php';
         mco_register_custom_post_types();
         flush_rewrite_rules();
-        add_option('mco_plugin_version', MCO_PLUGIN_VERSION);
+        update_option('mco_plugin_version', MCO_PLUGIN_VERSION);
     }
 }
 
@@ -53,9 +53,16 @@ if (!function_exists('mco_plugin_deactivate')) {
     }
 }
 
-// --- INITIALIZATION ---
+// --- INITIALIZATION & UPDATE CHECKER ---
 if (!function_exists('mco_plugin_init')) {
     function mco_plugin_init() {
+        // On init, check if the plugin version has changed. If so, flush rewrite rules.
+        // This ensures API routes are always correctly registered after an update.
+        if (get_option('mco_plugin_version') !== MCO_PLUGIN_VERSION) {
+            flush_rewrite_rules();
+            update_option('mco_plugin_version', MCO_PLUGIN_VERSION);
+        }
+        
         if (!class_exists('WooCommerce')) {
             return;
         }
@@ -72,41 +79,59 @@ if (!function_exists('mco_plugin_init')) {
         mco_register_shortcode_hooks();
 
         // Add CORS support for direct API calls from the React app
-        add_action('rest_api_init', 'mco_add_cors_support');
+        add_action('rest_api_init', function() {
+            remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
+            add_filter('rest_pre_serve_request', function($value) {
+                mco_add_cors_support();
+                return $value;
+            }, 15);
+        });
     }
 }
-add_action('plugins_loaded', 'mco_plugin_init');
+add_action('init', 'mco_plugin_init');
 
 
 // --- CORS SUPPORT FOR DYNAMIC FRONTEND ---
 if (!function_exists('mco_add_cors_support')) {
     function mco_add_cors_support() {
-        $app_url = get_option('mco_exam_app_url');
-        if (empty($app_url)) {
-            return; // Don't add headers if the app URL isn't configured.
+        $origin = get_http_origin();
+        if (!$origin) {
+            return; // Not a CORS request.
         }
 
-        $allowed_origin = rtrim($app_url, '/');
+        $allowed_origins = [];
 
-        remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
-        add_filter('rest_pre_serve_request', function ($value) use ($allowed_origin) {
-            $origin = get_http_origin();
+        // 1. Always allow the origin configured in the admin settings for specific overrides.
+        $app_url_setting = get_option('mco_exam_app_url');
+        if (!empty($app_url_setting)) {
+            $allowed_origins[] = rtrim($app_url_setting, '/');
+        }
+
+        // 2. Add convention-based origins to support multi-tenancy automatically.
+        // This allows an app at 'exams.client.com' to talk to a backend at 'www.client.com'.
+        $site_host = parse_url(site_url(), PHP_URL_HOST);
+        if ($site_host) {
+            $base_domain = preg_replace('/^www\./', '', $site_host);
+            $scheme = parse_url(site_url(), PHP_URL_SCHEME) ?: 'https';
             
-            // Only allow requests from the configured app URL
-            if ($origin && $origin === $allowed_origin) {
-                header('Access-Control-Allow-Origin: ' . esc_url($allowed_origin));
-                header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-                header('Access-Control-Allow-Credentials: true');
-                header('Access-Control-Allow-Headers: Authorization, Content-Type');
-            }
-            
-            // Handle pre-flight OPTIONS request and exit
-            if ('OPTIONS' === $_SERVER['REQUEST_METHOD'] && $origin === $allowed_origin) {
+            // Allow from primary subdomain convention 'exams.'
+            $allowed_origins[] = $scheme . '://exams.' . $base_domain;
+            // Also allow from 'app.' as another common convention.
+            $allowed_origins[] = $scheme . '://app.' . $base_domain;
+        }
+
+        $allowed_origins = array_unique(array_filter($allowed_origins));
+
+        if (in_array($origin, $allowed_origins)) {
+            header('Access-Control-Allow-Origin: ' . esc_url($origin));
+            header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+            header('Access-Control-Allow-Credentials: true');
+            header('Access-Control-Allow-Headers: Authorization, Content-Type');
+
+            if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
                 status_header(200);
                 exit();
             }
-
-            return $value;
-        }, 15);
+        }
     }
 }

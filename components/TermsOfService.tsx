@@ -37,14 +37,14 @@ const TermsOfService: React.FC = () => {
 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">5. Proctoring and Exam Integrity</h2>
                 <p>
-                    By starting any certification or practice exam on the Service, you consent to be monitored to ensure the integrity of the examination process. This monitoring includes:
+                    For certain exams, the Service employs browser-based monitoring to ensure the integrity of the examination process. By starting a proctored exam, you agree to the following conditions:
                 </p>
                 <ul>
-                    <li><strong>AI Proctoring:</strong> You agree to grant the Service temporary access to your device's camera for the duration of the exam. An AI-powered system will monitor the video feed for potential violations, such as leaving the view, presence of other individuals, or use of unauthorized materials.</li>
-                    <li><strong>Browser Monitoring:</strong> The Service will enforce a secure testing environment. This includes requiring fullscreen mode and detecting if you navigate away from the exam tab.</li>
+                    <li><strong>Fullscreen Requirement:</strong> You must take the exam in fullscreen mode. The system will prompt you to enter fullscreen before the exam begins.</li>
+                    <li><strong>Focus Monitoring:</strong> You must remain on the exam tab at all times. Navigating to another browser tab, switching to another application, or minimizing the browser window will be considered a violation.</li>
                 </ul>
                 <p>
-                    Violating these conditions, as determined by either the AI proctoring system or the browser monitoring functions, may result in the immediate termination of your exam. In such cases, the exam attempt will be considered forfeited, and no refund will be issued.
+                    Leaving fullscreen or navigating away from the exam will be flagged as a violation. A set number of violations will result in the immediate and automatic termination of your exam. In such cases, the exam attempt will be considered forfeited, and no refund will be issued.
                 </p>
 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">6. Termination</h2>
