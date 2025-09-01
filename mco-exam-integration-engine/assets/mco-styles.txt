@@ -270,14 +270,14 @@ body.woocommerce-page {
     border-bottom: 2px solid #0891b2;
 }
 
-/* NEW: Styles for Study Hall Sidebar on Exam Program CPT */
-.mco-single-exam-layout {
+/* Study Hall Sidebar on Exam Program CPT (Strengthened) */
+.single-mco_exam_program .mco-single-exam-layout {
     display: grid;
     grid-template-columns: 1fr;
     gap: 2rem;
 }
 @media (min-width: 992px) {
-    .mco-single-exam-layout {
+    .single-mco_exam_program .mco-single-exam-layout {
         grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
     }
 }
@@ -288,13 +288,14 @@ body.woocommerce-page {
     border: 1px solid #e2e8f0;
 }
 .mco-study-hall-sidebar h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin-top: 0;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 0.75rem;
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    margin-top: 0 !important;
+    margin-bottom: 1.5rem !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding-bottom: 0.75rem !important;
+    line-height: 1.2 !important;
 }
 .mco-sidebar-book-card {
     display: flex;
@@ -311,10 +312,11 @@ body.woocommerce-page {
     border-radius: 0.25rem;
 }
 .mco-sidebar-book-content h4 {
-    margin: 0 0 0.75rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #334155;
+    margin: 0 0 0.75rem !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    color: #334155 !important;
+    line-height: 1.3 !important;
 }
 .mco-sidebar-book-button {
     display: inline-block;

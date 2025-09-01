@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import React, { FC, useState, useRef, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import type { RecommendedBook } from '../types.ts';
@@ -52,12 +52,42 @@ const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
     ];
     const secondaryStores = allStores.filter(store => store.key !== primaryLink.key && store.url && store.url.trim() !== '');
 
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [canExpand, setCanExpand] = useState(false);
+    const descriptionRef = useRef<HTMLParagraphElement>(null);
+
+    useEffect(() => {
+        if (descriptionRef.current && descriptionRef.current.scrollHeight > descriptionRef.current.clientHeight) {
+            setCanExpand(true);
+        }
+    }, [book.description]);
+
     return (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-1 transition-transform duration-300 border border-slate-100">
             <BookCover book={book} className="w-full h-48" />
             <div className="p-6 flex flex-col flex-grow">
                 <h3 className="text-lg font-bold text-slate-800 mb-2 leading-tight">{book.title}</h3>
-                <p className="text-slate-600 text-sm mb-4 flex-grow">{book.description}</p>
+                
+                <div className="flex-grow">
+                    <p
+                        ref={descriptionRef}
+                        className={`text-slate-600 text-sm mb-4 transition-[max-height] duration-500 ease-in-out overflow-hidden ${isExpanded ? 'max-h-96' : 'max-h-20'}`}
+                    >
+                        {book.description}
+                    </p>
+                </div>
+
+                {canExpand && (
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="text-sm text-cyan-600 hover:text-cyan-800 font-semibold self-start mb-4 flex items-center gap-1 -mt-4"
+                        aria-expanded={isExpanded}
+                    >
+                        {isExpanded ? 'Read Less' : 'Read More'}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                )}
+
                 <div className="mt-auto pt-4 border-t border-slate-200 space-y-2">
                     {primaryLink.url && (
                         <a 

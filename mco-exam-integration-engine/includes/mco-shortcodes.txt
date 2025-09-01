@@ -9,12 +9,12 @@ if (!function_exists('mco_register_shortcode_hooks')) {
         add_action('woocommerce_payment_complete', 'mco_auto_complete_virtual_order');
         add_action('wp_enqueue_scripts', 'mco_enqueue_plugin_styles');
         add_action('wp_footer', 'mco_add_purchase_notifier_to_footer');
-        // Hook for the sidebar on exam program pages
         add_filter('the_content', 'mco_add_sidebar_to_exam_programs');
+        add_action('wp', 'mco_inject_ad_blocker_css'); // Hook for ad blocker
     }
 }
 
-// --- STYLESHEET ENQUEUE ---
+// --- CSS INJECTION & STYLESHEET ENQUEUE ---
 if (!function_exists('mco_enqueue_plugin_styles')) {
     function mco_enqueue_plugin_styles() {
         global $post;
@@ -29,6 +29,31 @@ if (!function_exists('mco_enqueue_plugin_styles')) {
                 [], 
                 MCO_PLUGIN_VERSION
             );
+        }
+    }
+}
+
+if (!function_exists('mco_inject_ad_blocker_css')) {
+    function mco_inject_ad_blocker_css() {
+        global $post;
+        if (
+            (function_exists('is_woocommerce') && (is_cart() || is_checkout())) ||
+            (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_showcase'))
+        ) {
+            add_action('wp_head', function() {
+                echo '<style>
+                    /* Common Ad Selectors */
+                    .adsbygoogle, ins.adsbygoogle, div[id*="ad-"], div[class*="ad-"],
+                    #ad-container, .ad-wrapper, .ad-banner, .google-ad {
+                        display: none !important;
+                        visibility: hidden !important;
+                        height: 0 !important;
+                        width: 0 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+                </style>';
+            });
         }
     }
 }

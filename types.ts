@@ -46,6 +46,7 @@ export interface TokenPayload {
     spinsAvailable?: number;
     wonPrize?: { prizeId: string; prizeLabel: string; };
     suggestedBooks?: RecommendedBook[];
+    isSpinWheelEnabled?: boolean;
     // Add dynamic data from the new plugin version for backward compatibility
     exams?: Exam[];
     examProductCategories?: ExamProductCategory[];

@@ -1,6 +1,7 @@
 
 
 
+
 import React, { FC, useState, useEffect, useMemo } from 'react';
 // Fix: Update react-router-dom imports to v6 syntax.
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +14,28 @@ import { FlaskConical, Trophy, RefreshCw, Star, BarChart, Clock, PlayCircle } fr
 import { useAppContext } from '../context/AppContext.tsx';
 import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
+
+const DescriptionWithHashtags: FC<{ text: string }> = ({ text }) => {
+    // Regex to find hashtags and split the text, keeping the hashtags as separate items
+    const hashtagRegex = /(#[\w-]+)/g;
+    const parts = text.split(hashtagRegex);
+  
+    return (
+      <>
+        {parts.map((part, index) => {
+          if (hashtagRegex.test(part)) {
+            return (
+              <span key={index} className="inline-block bg-cyan-100 text-cyan-800 text-xs font-medium ml-1 px-2.5 py-0.5 rounded-full">
+                {part}
+              </span>
+            );
+          }
+          return part;
+        })}
+      </>
+    );
+};
+
 
 const StarRating: FC<{ rating: number; count: number; }> = ({ rating, count }) => {
     if (count === 0) return null;
@@ -121,7 +144,9 @@ const Dashboard: FC = () => {
                     return (
                         <div key={category.id} className="bg-white p-6 rounded-xl shadow-md">
                             <h2 className="text-2xl font-bold text-slate-800">{category.name}</h2>
-                            <p className="text-slate-500 mt-1 mb-4">{category.description}</p>
+                            <p className="text-slate-500 mt-1 mb-4">
+                                <DescriptionWithHashtags text={category.description} />
+                            </p>
                             {priceData && <StarRating rating={priceData.avgRating || 0} count={priceData.reviewCount || 0} />}
 
                             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">

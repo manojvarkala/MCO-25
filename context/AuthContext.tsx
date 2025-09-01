@@ -16,6 +16,7 @@ interface AuthContextType {
   suggestedBooks: RecommendedBook[];
   dynamicExams: Exam[] | null;
   dynamicCategories: ExamProductCategory[] | null;
+  isSpinWheelEnabled: boolean;
   // Fix: The loginWithToken function is async, so it returns a Promise.
   loginWithToken: (token: string) => Promise<void>;
   logout: () => void;
@@ -113,13 +114,21 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
           return null;
       }
   });
+  const [isSpinWheelEnabled, setIsSpinWheelEnabled] = useState<boolean>(() => {
+      try {
+          const stored = localStorage.getItem('isSpinWheelEnabled');
+          return stored ? JSON.parse(stored) : false;
+      } catch {
+          return false;
+      }
+  });
 
   
   const canSpinWheel = useMemo(() => {
-    if (!user) return false;
+    if (!user || !isSpinWheelEnabled) return false;
     if (user.isAdmin) return true; // Admins can always spin for testing
     return spinsAvailable > 0;
-  }, [user, spinsAvailable]);
+  }, [user, spinsAvailable, isSpinWheelEnabled]);
 
 
   const logout = useCallback(() => {
@@ -133,6 +142,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setSuggestedBooks([]);
     setDynamicExams(null);
     setDynamicCategories(null);
+    setIsSpinWheelEnabled(false);
     localStorage.removeItem('examUser');
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
@@ -144,6 +154,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     localStorage.removeItem('suggestedBooks');
     localStorage.removeItem('dynamicExams');
     localStorage.removeItem('dynamicCategories');
+    localStorage.removeItem('isSpinWheelEnabled');
     sessionStorage.removeItem('wheelModalDismissed');
     Object.keys(localStorage).forEach(key => {
         if (key.startsWith('exam_timer_') || key.startsWith('exam_results_')) {
@@ -246,6 +257,10 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setSpinsAvailable(spins);
             localStorage.setItem('spinsAvailable', JSON.stringify(spins));
 
+            const spinWheelEnabled = payload.isSpinWheelEnabled ?? false;
+            setIsSpinWheelEnabled(spinWheelEnabled);
+            localStorage.setItem('isSpinWheelEnabled', JSON.stringify(spinWheelEnabled));
+
 
             if (payload.wonPrize) {
                 setWonPrize(payload.wonPrize);
@@ -308,6 +323,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     suggestedBooks,
     dynamicExams,
     dynamicCategories,
+    isSpinWheelEnabled,
     loginWithToken,
     logout,
     useFreeAttempt,
@@ -316,7 +332,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }), [
     user, token, paidExamIds, examPrices, isSubscribed,
     spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel,
-    suggestedBooks, dynamicExams, dynamicCategories, loginWithToken,
+    suggestedBooks, dynamicExams, dynamicCategories, isSpinWheelEnabled, loginWithToken,
     logout, useFreeAttempt, updateUserName, updateWheelModalDismissed
   ]);
 

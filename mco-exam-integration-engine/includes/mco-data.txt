@@ -97,6 +97,7 @@ if (!function_exists('mco_generate_exam_jwt')) {
         $payload = [
             'user' => ['id' => strval($user->ID), 'name' => $user->display_name, 'email' => $user->user_email, 'isAdmin' => in_array('administrator', $user->roles)],
             'paidExamIds' => array_unique($paid_exam_skus), 'isSubscribed' => $is_subscribed,
+            'isSpinWheelEnabled' => (bool)get_option('mco_spin_wheel_enabled', 0),
             'suggestedBooks' => $content_data['suggestedBooks'], 'exams' => $content_data['exams'], 'examProductCategories' => $content_data['examProductCategories'],
             'iat' => time(), 'exp' => time() + (24 * HOUR_IN_SECONDS)
         ];
