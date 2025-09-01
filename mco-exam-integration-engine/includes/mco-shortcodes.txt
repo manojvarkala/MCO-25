@@ -104,13 +104,10 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
                 $query->the_post();
                 $prog_id = get_the_ID();
                 $cert_sku = get_post_meta($prog_id, '_mco_certification_exam_sku', true);
-                $bundle_sku = get_post_meta($prog_id, '_mco_bundle_sku', true);
                 if (empty($cert_sku)) continue;
 
                 $cert_product = wc_get_product(wc_get_product_id_by_sku($cert_sku));
-                if (!is_a($cert_product, 'WC_Product')) continue;
-
-                $bundle_product = !empty($bundle_sku) ? wc_get_product(wc_get_product_id_by_sku($bundle_sku)) : null;
+                if (!$cert_product) continue;
                 
                 $rating = (float)$cert_product->get_average_rating();
                 $review_count = (int)$cert_product->get_review_count();
@@ -159,21 +156,10 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
                         <div class="mco-option-column mco-best-value">
                             <div class="mco-best-value-banner">&#9733; Best Value Bundle</div>
                             <h4>Exam & Study Tools</h4>
-                             <?php if ($bundle_product): ?>
-                                <div class="mco-price"><?php echo $bundle_product->get_price_html(); ?></div>
-                                <ul class="mco-features-list">
-                                    <li><span class="mco-feature-icon">&#10003;</span> <strong>Includes Certification Exam</strong></li>
-                                    <li><span class="mco-feature-icon">&#10003;</span> 1-Month Unlimited Practice</li>
-                                    <li><span class="mco-feature-icon">&#10003;</span> 1-Month Unlimited AI Feedback</li>
-                                    <li><span class="mco-feature-icon">&#10003;</span> Priority Support</li>
-                                </ul>
-                                <a href="<?php echo esc_url($bundle_product->add_to_cart_url()); ?>" class="mco-button mco-button-primary">Buy Bundle</a>
-                            <?php else: ?>
-                                <div class="mco-bundle-unavailable">
-                                    <p>Get this exam plus unlimited practice and AI feedback with a subscription!</p>
-                                    <a href="<?php echo esc_url(home_url('/pricing/')); ?>" class="mco-button mco-button-primary" style="margin-top:1rem;">View Plans</a>
-                                </div>
-                            <?php endif; ?>
+                            <div class="mco-bundle-unavailable">
+                                <p>Get this exam plus unlimited practice and AI feedback with a subscription!</p>
+                                <a href="<?php echo esc_url(home_url('/pricing/')); ?>" class="mco-button mco-button-primary" style="margin-top:1rem;">View Plans</a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -201,7 +187,7 @@ if (!function_exists('mco_add_sidebar_to_exam_programs')) {
             $sidebar_html .= '<h3>Study Hall</h3>';
             foreach ($books as $book_post) {
                 $book_id = $book_post->ID;
-                $link_com = get_post_meta($book_id, '_mco_affiliate_link_com', true);
+                $link_com = get_post_meta($book_id, '_mco_link_com', true);
                 if (empty($link_com)) continue; // Only show books with a primary link
 
                 $sidebar_html .= '<div class="mco-sidebar-book-card">';

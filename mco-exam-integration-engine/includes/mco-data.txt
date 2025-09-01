@@ -22,9 +22,9 @@ if (!function_exists('mco_get_app_config_data')) {
                     'description' => html_entity_decode(strip_tags(get_the_content())),
                     'thumbnailUrl' => get_the_post_thumbnail_url($post_id, 'medium'),
                     'affiliateLinks' => [ 
-                        'com' => get_post_meta($post_id, '_mco_affiliate_link_com', true) ?: '', 
-                        'in' => get_post_meta($post_id, '_mco_affiliate_link_in', true) ?: '', 
-                        'ae' => get_post_meta($post_id, '_mco_affiliate_link_ae', true) ?: '' 
+                        'com' => get_post_meta($post_id, '_mco_link_com', true) ?: '', 
+                        'in' => get_post_meta($post_id, '_mco_link_in', true) ?: '', 
+                        'ae' => get_post_meta($post_id, '_mco_link_ae', true) ?: '' 
                     ]
                 ];
             }
@@ -44,7 +44,7 @@ if (!function_exists('mco_get_app_config_data')) {
                 $product_id = wc_get_product_id_by_sku($cert_sku);
                 if (!$product_id) continue;
                 $product = wc_get_product($product_id);
-                if (!$product || !$product->get_sku()) continue;
+                if (!$product) continue;
 
                 $pass_score_terms = wp_get_post_terms($prog_id, 'exam_pass_score', ['fields' => 'names']); $pass_score = !empty($pass_score_terms) ? (int)$pass_score_terms[0] : 70;
                 $practice_q_terms = wp_get_post_terms($prog_id, 'exam_practice_questions', ['fields' => 'names']);
