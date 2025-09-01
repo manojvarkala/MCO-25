@@ -1,6 +1,3 @@
-
-
-
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // Fix: Update react-router-dom imports to v6 syntax.
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
