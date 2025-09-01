@@ -17,9 +17,15 @@ if (!function_exists('mco_get_app_config_data')) {
                 $books_query->the_post();
                 $post_id = get_the_ID();
                 $suggested_books[] = [
-                    'id' => 'book-' . $post_id, 'title' => get_the_title(), 'description' => strip_tags(get_the_content()),
+                    'id' => 'book-' . $post_id, 
+                    'title' => html_entity_decode(get_the_title()), 
+                    'description' => html_entity_decode(strip_tags(get_the_content())),
                     'thumbnailUrl' => get_the_post_thumbnail_url($post_id, 'medium'),
-                    'affiliateLinks' => [ 'com' => get_post_meta($post_id, '_mco_link_com', true) ?: '', 'in' => get_post_meta($post_id, '_mco_link_in', true) ?: '', 'ae' => get_post_meta($post_id, '_mco_link_ae', true) ?: '' ]
+                    'affiliateLinks' => [ 
+                        'com' => get_post_meta($post_id, '_mco_affiliate_link_com', true) ?: '', 
+                        'in' => get_post_meta($post_id, '_mco_affiliate_link_in', true) ?: '', 
+                        'ae' => get_post_meta($post_id, '_mco_affiliate_link_ae', true) ?: '' 
+                    ]
                 ];
             }
         }
@@ -46,11 +52,11 @@ if (!function_exists('mco_get_app_config_data')) {
                 $cert_q_terms = wp_get_post_terms($prog_id, 'exam_cert_questions', ['fields' => 'names']);
                 $cert_d_terms = wp_get_post_terms($prog_id, 'exam_cert_duration', ['fields' => 'names']);
                 $question_source = get_post_meta($prog_id, '_mco_question_source_url', true);
-                $description = strip_tags(get_the_content());
+                $description = html_entity_decode(strip_tags(get_the_content()));
 
-                $dynamic_exams[] = [ 'id' => $practice_id, 'name' => get_the_title() . ' Practice', 'description' => $description, 'price' => 0, 'productSku' => $practice_id, 'numberOfQuestions' => !empty($practice_q_terms) ? (int)$practice_q_terms[0] : 25, 'passScore' => $pass_score, 'certificateTemplateId' => 'cert-practice-1', 'isPractice' => true, 'durationMinutes' => !empty($practice_d_terms) ? (int)$practice_d_terms[0] : 60, 'questionSourceUrl' => $question_source ];
-                $dynamic_exams[] = [ 'id' => $cert_sku, 'name' => get_the_title(), 'description' => $description, 'price' => (float)$product->get_price(), 'regularPrice' => (float)$product->get_regular_price(), 'productSku' => $cert_sku, 'productSlug' => $product->get_slug(), 'numberOfQuestions' => !empty($cert_q_terms) ? (int)$cert_q_terms[0] : 100, 'passScore' => $pass_score, 'certificateTemplateId' => 'cert-generic', 'isPractice' => false, 'durationMinutes' => !empty($cert_d_terms) ? (int)$cert_d_terms[0] : 240, 'questionSourceUrl' => $question_source ];
-                $dynamic_categories[] = [ 'id' => 'prod-' . $prog_id, 'name' => get_the_title(), 'description' => $description, 'practiceExamId' => $practice_id, 'certificationExamId' => $cert_sku, 'questionSourceUrl' => $question_source ];
+                $dynamic_exams[] = [ 'id' => $practice_id, 'name' => html_entity_decode(get_the_title()) . ' Practice', 'description' => $description, 'price' => 0, 'productSku' => $practice_id, 'numberOfQuestions' => !empty($practice_q_terms) ? (int)$practice_q_terms[0] : 25, 'passScore' => $pass_score, 'certificateTemplateId' => 'cert-practice-1', 'isPractice' => true, 'durationMinutes' => !empty($practice_d_terms) ? (int)$practice_d_terms[0] : 60, 'questionSourceUrl' => $question_source ];
+                $dynamic_exams[] = [ 'id' => $cert_sku, 'name' => html_entity_decode(get_the_title()), 'description' => $description, 'price' => (float)$product->get_price(), 'regularPrice' => (float)$product->get_regular_price(), 'productSku' => $cert_sku, 'productSlug' => $product->get_slug(), 'numberOfQuestions' => !empty($cert_q_terms) ? (int)$cert_q_terms[0] : 100, 'passScore' => $pass_score, 'certificateTemplateId' => 'cert-generic', 'isPractice' => false, 'durationMinutes' => !empty($cert_d_terms) ? (int)$cert_d_terms[0] : 240, 'questionSourceUrl' => $question_source ];
+                $dynamic_categories[] = [ 'id' => 'prod-' . $prog_id, 'name' => html_entity_decode(get_the_title()), 'description' => $description, 'practiceExamId' => $practice_id, 'certificationExamId' => $cert_sku, 'questionSourceUrl' => $question_source ];
             }
         }
         wp_reset_postdata();

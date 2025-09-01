@@ -7,21 +7,15 @@ export const getApiEndpoint = (): string => {
         return '/api';
     }
 
-    // Production logic: Dynamically determine the backend from the frontend hostname.
+    // Production logic: Use an explicit mapping for robustness across multiple domains.
     const hostname = window.location.hostname;
-
-    // This convention-based approach supports multi-tenancy without frontend code changes.
-    // e.g., an app at 'exams.client.com' will target 'www.client.com'.
-    // e.g., an app at 'client.com' will target 'www.client.com'.
-    const parts = hostname.split('.');
     
-    // For domains with at least 2 parts (e.g., 'domain.com')
-    if (parts.length >= 2) {
-        // If it's a subdomain (e.g., 'exams.domain.com'), get 'domain.com'. Otherwise, use the full hostname.
-        const mainDomain = (parts.length > 2) ? parts.slice(1).join('.') : hostname;
-        return `https://www.${mainDomain}/wp-json/mco-app/v1`;
-    }
+    const hostnameApiMap: { [key: string]: string } = {
+        'exams.coding-online.net': 'https://www.coding-online.net/wp-json/mco-app/v1',
+        'exams.annapoornainfo.com': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
+        'mco-25.vercel.app': 'https://www.annapoornainfo.com/wp-json/mco-app/v1' // Default the Vercel domain to a primary client
+    };
 
-    // Fallback to the primary known domain if the hostname is unusual (e.g., just 'localhost' in a production context).
-    return 'https://www.annapoornainfo.com/wp-json/mco-app/v1';
+    // Return the mapped URL or a sensible fallback.
+    return hostnameApiMap[hostname] || 'https://www.annapoornainfo.com/wp-json/mco-app/v1';
 };
