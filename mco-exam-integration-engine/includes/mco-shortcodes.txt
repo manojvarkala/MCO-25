@@ -9,6 +9,8 @@ if (!function_exists('mco_register_shortcode_hooks')) {
         add_action('woocommerce_payment_complete', 'mco_auto_complete_virtual_order');
         add_action('wp_enqueue_scripts', 'mco_enqueue_plugin_styles');
         add_action('wp_footer', 'mco_add_purchase_notifier_to_footer');
+        // Hook for the sidebar on exam program pages
+        add_filter('the_content', 'mco_add_sidebar_to_exam_programs');
     }
 }
 
@@ -18,7 +20,8 @@ if (!function_exists('mco_enqueue_plugin_styles')) {
         global $post;
         if (
             (function_exists('is_woocommerce') && (is_cart() || is_checkout() || is_product())) ||
-            (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_showcase'))
+            (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_showcase')) ||
+            (is_singular('mco_exam_program'))
         ) {
             wp_enqueue_style(
                 'mco-styles', 
@@ -80,20 +83,18 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
                 if (empty($cert_sku)) continue;
 
                 $cert_product = wc_get_product(wc_get_product_id_by_sku($cert_sku));
-                if (!$cert_product) continue;
+                if (!is_a($cert_product, 'WC_Product')) continue;
 
                 $bundle_product = !empty($bundle_sku) ? wc_get_product(wc_get_product_id_by_sku($bundle_sku)) : null;
                 
-                // Real and dummy ratings logic
                 $rating = (float)$cert_product->get_average_rating();
                 $review_count = (int)$cert_product->get_review_count();
-                if ($review_count < 5) { // Threshold for dummy data
-                    // Generate a plausible high rating and a decent number of reviews based on post title for consistency
+                if ($review_count < 5) {
                     $seed = crc32(get_the_title());
                     srand($seed);
-                    $rating = 4.2 + (rand(0, 7) / 10); // Generates a rating between 4.2 and 4.9
+                    $rating = 4.2 + (rand(0, 7) / 10);
                     $review_count = rand(15, 150);
-                    srand(); // Reset seed to avoid affecting other random generations
+                    srand();
                 }
 
                 $practice_q = wp_get_post_terms($prog_id, 'exam_practice_questions', ['fields' => 'names']);
@@ -108,7 +109,6 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
                         <div class="mco-card-description"><?php echo wp_strip_all_tags(get_the_content()); ?></div>
                     </div>
                     <div class="mco-options-grid">
-                        <!-- Practice Column -->
                         <div class="mco-option-column">
                             <h4>Practice Exam</h4>
                             <div class="mco-price">Free</div>
@@ -120,7 +120,6 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
                             </ul>
                             <a href="<?php echo esc_url(home_url('/exam-login/')); ?>" class="mco-button mco-button-secondary">Start Practice</a>
                         </div>
-                        <!-- Certification Column -->
                         <div class="mco-option-column">
                             <h4>Certification Exam</h4>
                             <div class="mco-price"><?php echo $cert_product->get_price_html(); ?></div>
@@ -132,7 +131,6 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
                             </ul>
                             <a href="<?php echo esc_url($cert_product->add_to_cart_url()); ?>" class="mco-button mco-button-primary">Buy Exam</a>
                         </div>
-                         <!-- Bundle Column -->
                         <div class="mco-option-column mco-best-value">
                             <div class="mco-best-value-banner">&#9733; Best Value Bundle</div>
                             <h4>Exam & Study Tools</h4>
@@ -165,6 +163,40 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
     }
 }
 
+// --- NEW SIDEBAR FOR EXAM PROGRAM CPT ---
+if (!function_exists('mco_add_sidebar_to_exam_programs')) {
+    function mco_add_sidebar_to_exam_programs($content) {
+        if (is_singular('mco_exam_program') && in_the_loop() && is_main_query()) {
+            $books = mco_get_random_recommended_books(3);
+            if (empty($books)) {
+                return $content;
+            }
+            
+            $sidebar_html = '<aside class="mco-study-hall-sidebar">';
+            $sidebar_html .= '<h3>Study Hall</h3>';
+            foreach ($books as $book_post) {
+                $book_id = $book_post->ID;
+                $link_com = get_post_meta($book_id, '_mco_affiliate_link_com', true);
+                if (empty($link_com)) continue; // Only show books with a primary link
+
+                $sidebar_html .= '<div class="mco-sidebar-book-card">';
+                if (has_post_thumbnail($book_id)) {
+                    $sidebar_html .= '<div class="mco-sidebar-book-thumbnail">' . get_the_post_thumbnail($book_id, 'thumbnail') . '</div>';
+                }
+                $sidebar_html .= '<div class="mco-sidebar-book-content">';
+                $sidebar_html .= '<h4>' . esc_html($book_post->post_title) . '</h4>';
+                $sidebar_html .= '<a href="' . esc_url($link_com) . '" target="_blank" rel="noopener noreferrer" class="mco-sidebar-book-button">Buy on Amazon</a>';
+                $sidebar_html .= '</div></div>';
+            }
+            $sidebar_html .= '</aside>';
+
+            return '<div class="mco-single-exam-layout"><main class="mco-exam-main-content">' . $content . '</main>' . $sidebar_html . '</div>';
+        }
+        return $content;
+    }
+}
+
+
 if (!function_exists('mco_add_purchase_notifier_to_footer')) {
     function mco_add_purchase_notifier_to_footer() {
         if (is_admin()) return;
@@ -180,7 +212,6 @@ if (!function_exists('mco_add_purchase_notifier_to_footer')) {
         }
         if (empty($cert_exams)) $cert_exams[] = 'Certification Exam';
         ?>
-        <!-- START: MCO Live Purchase Notifier -->
         <div id="mco-purchase-notifier" style="display: none; position: fixed; bottom: 1.5rem; left: 1.5rem; z-index: 9999; background-color: white; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); border: 1px solid #e5e7eb; width: 100%; max-width: 320px; font-family: sans-serif; opacity: 0; transform: translateY(20px); transition: transform 0.5s ease-out, opacity 0.5s ease-out;">
             <div style="display: flex; align-items: flex-start;">
                 <div style="background-color: #dcfce7; padding: 0.5rem; border-radius: 9999px; margin-right: 1rem;">
