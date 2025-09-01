@@ -2,13 +2,13 @@
 /**
  * Plugin Name:       Exam App Integration Engine
  * Description:       A multi-tenant engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and API services. Provides [mco_exam_login] and [mco_exam_showcase] shortcodes.
- * Version:           26.9.0 (Book CSV Importer Added)
+ * Version:           27.2.0 (Fixed CSV Template Download)
  * Author:            Annapoorna Infotech
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('MCO_PLUGIN_VERSION', '26.9.0');
+define('MCO_PLUGIN_VERSION', '27.2.0');
 define('MCO_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('MCO_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -73,7 +73,10 @@ if (!function_exists('mco_plugin_init')) {
         require_once MCO_PLUGIN_DIR . 'includes/mco-api.php';
         require_once MCO_PLUGIN_DIR . 'includes/mco-shortcodes.php';
 
-        mco_register_cpt_hooks();
+        // CRITICAL FIX: Register Custom Post Types directly within the 'init' action.
+        // This ensures they are available before any other hooks (like admin_menu or rest_api_init) need them.
+        mco_register_custom_post_types();
+
         mco_register_admin_hooks();
         mco_register_api_hooks();
         mco_register_shortcode_hooks();
@@ -135,3 +138,4 @@ if (!function_exists('mco_add_cors_support')) {
         }
     }
 }
+?>

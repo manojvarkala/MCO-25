@@ -16,6 +16,10 @@ if (!function_exists('mco_register_admin_hooks')) {
         add_action('admin_enqueue_scripts', 'mco_enqueue_admin_scripts');
         add_action('admin_footer-edit.php', 'mco_add_import_modals_to_footer');
         
+        // CSV Template Download Hooks
+        add_action('admin_post_mco_download_exam_template', 'mco_handle_exam_csv_template_download');
+        add_action('admin_post_mco_download_book_template', 'mco_handle_book_csv_template_download');
+
         // Exam Importer AJAX
         add_action('wp_ajax_mco_import_exams_csv_start', 'mco_handle_ajax_import_exams_start');
         add_action('wp_ajax_mco_import_exams_csv_batch', 'mco_handle_ajax_import_exams_batch');
@@ -113,24 +117,188 @@ if (!function_exists('mco_add_import_modals_to_footer')) {
 // --- EXAM IMPORTER ---
 if (!function_exists('mco_render_exam_import_modal')) {
     function mco_render_exam_import_modal() {
-        $template_url = add_query_arg(['mco_action' => 'download_exam_template'], admin_url('admin-post.php'));
+        $template_url = add_query_arg(['action' => 'mco_download_exam_template'], admin_url('admin-post.php'));
         ?>
-        <div id="mco-exam-import-modal" class="mco-import-modal" style="display:none; /* ... modal styles ... */">
-             <!-- Modal content here, similar to before -->
+        <div id="mco-exam-import-modal" class="mco-import-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000;">
+            <div style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:2rem; border-radius:8px; width:90%; max-width:500px;">
+                <button class="mco-modal-close" style="position:absolute; top:1rem; right:1rem; border:none; background:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+                <h2>Import Exam Programs (CSV)</h2>
+                <div class="mco-import-initial-view">
+                    <p>Upload a CSV file to create or update exam programs. Use the <strong>post_name</strong> column to update existing programs.</p>
+                    <p><a href="<?php echo esc_url($template_url); ?>" class="button">Download CSV Template</a></p>
+                    <hr style="margin: 1rem 0;">
+                    <form class="mco-import-form" id="mco-exam-import-form" method="post" enctype="multipart/form-data">
+                        <?php wp_nonce_field('mco_import_exams_nonce', 'mco_import_exams_nonce'); ?>
+                        <p><label for="mco_exam_csv_file"><strong>Upload Your CSV File:</strong></label><br><input type="file" name="mco_exam_csv_file" id="mco_exam_csv_file" accept=".csv" required></p>
+                        <p><input type="submit" class="button button-primary" value="Start Import"></p>
+                    </form>
+                </div>
+                <div class="mco-import-progress-view" style="display:none;">
+                    <p>Importing... Please do not close this window.</p>
+                    <div style="background:#eee; border-radius:4px; padding:2px; margin-bottom:1rem;"><div class="mco-progress-bar" style="background:#0073aa; height:20px; width:0%; border-radius:2px; transition: width 0.3s ease;"></div></div>
+                    <div class="mco-import-feedback" style="max-height: 200px; overflow-y: auto; background: #f9f9f9; border: 1px solid #ccc; padding: 10px; border-radius: 4px; margin-bottom: 1rem;"></div>
+                    <button class="mco-cancel-import button">Cancel Import</button>
+                </div>
+            </div>
         </div>
         <script>
-            // JS for exam import, similar to before, but targeting exam-specific IDs and AJAX actions
+        jQuery(document).ready(function($){
+            var examImporter = { totalRows: 0, processedRows: 0, transientKey: '', isCancelled: false };
+            $('#mco-exam-import-form').on('submit', function(e){
+                e.preventDefault();
+                $(this).closest('.mco-import-modal').find('.mco-import-initial-view').hide();
+                $(this).closest('.mco-import-modal').find('.mco-import-progress-view').show();
+                $('.mco-import-feedback').html('');
+                examImporter.isCancelled = false;
+                var formData = new FormData(this);
+                formData.append('action', 'mco_import_exams_csv_start');
+                $.ajax({
+                    url: ajaxurl, type: 'POST', data: formData, processData: false, contentType: false,
+                    success: function(response) {
+                        if (response.success) {
+                            examImporter.totalRows = response.data.total_rows;
+                            examImporter.transientKey = response.data.transient_key;
+                            examImporter.processedRows = 0;
+                            $('.mco-import-feedback').text('Found ' + examImporter.totalRows + ' exam programs. Starting process...');
+                            processExamBatch(1);
+                        } else { $('.mco-import-feedback').html('<p style="color:red;"><strong>Error:</strong> ' + response.data + '</p>'); }
+                    },
+                    error: function() { $('.mco-import-feedback').html('<p style="color:red;"><strong>Error:</strong> Server error during setup.</p>'); }
+                });
+            });
+            function processExamBatch(batchNumber) {
+                if (examImporter.isCancelled) return;
+                $.ajax({
+                    url: ajaxurl, type: 'POST',
+                    data: { action: 'mco_import_exams_csv_batch', nonce: '<?php echo wp_create_nonce("mco_import_exams_batch_nonce"); ?>', transient_key: examImporter.transientKey, batch: batchNumber },
+                    success: function(response) {
+                        if (examImporter.isCancelled) return;
+                        if (response.success) {
+                            examImporter.processedRows += response.data.processed;
+                            let percent = examImporter.totalRows > 0 ? Math.min(100, Math.round((examImporter.processedRows / examImporter.totalRows) * 100)) : 0;
+                            $('.mco-progress-bar').css('width', percent + '%');
+                            $('.mco-import-feedback').text('Processed ' + examImporter.processedRows + ' of ' + examImporter.totalRows + ' exams...');
+                            if (response.data.done) {
+                                $('.mco-import-feedback').html('<p style="color:green;"><strong>Import complete!</strong> Page will reload.</p>');
+                                setTimeout(function(){ location.reload(); }, 2000);
+                            } else { processExamBatch(batchNumber + 1); }
+                        } else { $('.mco-import-feedback').append('<p style="color:red;"><strong>Batch Error:</strong> ' + response.data + '</p>'); }
+                    },
+                    error: function() { if (examImporter.isCancelled) return; $('.mco-import-feedback').append('<p style="color:red;"><strong>Error:</strong> Server error during batch processing.</p>'); }
+                });
+            }
+            $('#mco-exam-import-modal .mco-cancel-import').on('click', function(){
+                if (!examImporter.isCancelled) {
+                    examImporter.isCancelled = true;
+                    $(this).prop('disabled', true).text('Cancelling...');
+                    $.ajax({
+                        url: ajaxurl, type: 'POST',
+                        data: { action: 'mco_import_exams_csv_cancel', nonce: '<?php echo wp_create_nonce("mco_import_exams_cancel_nonce"); ?>', transient_key: examImporter.transientKey },
+                        success: function(response) { $('.mco-import-feedback').html('<p style="color:orange;"><strong>Import cancelled.</strong> Reloading...</p>'); setTimeout(function(){ location.reload(); }, 2000); }
+                    });
+                }
+            });
+        });
         </script>
         <?php
     }
 }
-// AJAX handlers for exams: mco_handle_ajax_import_exams_start, mco_handle_ajax_import_exams_batch, etc.
+
+if (!function_exists('mco_handle_ajax_import_exams_start')) {
+    function mco_handle_ajax_import_exams_start() {
+        if (!check_admin_referer('mco_import_exams_nonce', 'mco_import_exams_nonce') || !current_user_can('manage_options') || !isset($_FILES['mco_exam_csv_file'])) wp_send_json_error('Security check failed or file not found.');
+        $file = $_FILES['mco_exam_csv_file'];
+        if ($file['error'] !== UPLOAD_ERR_OK) wp_send_json_error('File upload error.');
+        $handle = fopen($file['tmp_name'], 'r');
+        $header = fgetcsv($handle);
+        $expected_header = ['post_title','post_content','post_name','_mco_question_source_url','exam_practice_questions','exam_practice_duration','exam_cert_questions','exam_cert_duration','exam_pass_score','_mco_certification_exam_sku','_mco_bundle_sku'];
+        if (array_map('trim', $header) !== $expected_header) { fclose($handle); wp_send_json_error('Invalid CSV header. Please use the exam template.'); }
+        $total_rows = 0; while (fgetcsv($handle) !== false) { $total_rows++; } fclose($handle);
+        $upload_dir = wp_upload_dir();
+        $temp_filename = wp_unique_filename($upload_dir['path'], $file['name']);
+        $temp_filepath = $upload_dir['path'] . '/' . $temp_filename;
+        if (!move_uploaded_file($file['tmp_name'], $temp_filepath)) wp_send_json_error('Could not move uploaded file.');
+        $transient_key = 'mco_import_exams_' . md5($temp_filepath);
+        set_transient($transient_key, ['filepath' => $temp_filepath, 'total_rows' => $total_rows], HOUR_IN_SECONDS);
+        wp_send_json_success(['total_rows' => $total_rows, 'transient_key' => $transient_key]);
+    }
+}
+
+if (!function_exists('mco_handle_ajax_import_exams_batch')) {
+    function mco_handle_ajax_import_exams_batch() {
+        check_ajax_referer('mco_import_exams_batch_nonce', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error('Permission denied.');
+        $transient_key = sanitize_key($_POST['transient_key']);
+        $import_data = get_transient($transient_key);
+        if (false === $import_data) wp_send_json_error('Import session expired.');
+        $batch_size = 20; $batch_number = intval($_POST['batch']); $offset = ($batch_number - 1) * $batch_size;
+        $result = mco_import_exams_batch_logic($import_data['filepath'], $offset, $batch_size);
+        $done = ($offset + $result['processed']) >= $import_data['total_rows'] || $result['processed'] < $batch_size;
+        if ($done) { unlink($import_data['filepath']); delete_transient($transient_key); }
+        wp_send_json_success(['processed' => $result['processed'], 'done' => $done]);
+    }
+}
+
+if (!function_exists('mco_import_exams_batch_logic')) {
+    function mco_import_exams_batch_logic($csv_file_path, $offset, $limit) {
+        $processed = 0;
+        $header = ['post_title','post_content','post_name','_mco_question_source_url','exam_practice_questions','exam_practice_duration','exam_cert_questions','exam_cert_duration','exam_pass_score','_mco_certification_exam_sku','_mco_bundle_sku'];
+        $taxonomies = ['exam_practice_questions', 'exam_practice_duration', 'exam_cert_questions', 'exam_cert_duration', 'exam_pass_score'];
+        $handle = fopen($csv_file_path, 'r');
+        fgetcsv($handle); // Skip header
+        for ($i = 0; $i < $offset; $i++) { if (fgetcsv($handle) === false) break; }
+        while ($processed < $limit && ($data = fgetcsv($handle)) !== FALSE) {
+            $row = array_combine($header, array_pad($data, count($header), null));
+            $processed++;
+            $post_slug = sanitize_title($row['post_name']);
+            if (empty($post_slug)) continue;
+            $existing_post = get_page_by_path($post_slug, OBJECT, 'mco_exam_program');
+            $post_data = ['post_title' => sanitize_text_field($row['post_title']), 'post_content' => wp_kses_post($row['post_content']), 'post_name' => $post_slug, 'post_type' => 'mco_exam_program', 'post_status' => 'publish'];
+            if ($existing_post) { $post_data['ID'] = $existing_post->ID; $post_id = wp_update_post($post_data, true); } else { $post_id = wp_insert_post($post_data, true); }
+            if (!is_wp_error($post_id)) {
+                update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($row['_mco_question_source_url']));
+                update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($row['_mco_certification_exam_sku']));
+                update_post_meta($post_id, '_mco_bundle_sku', sanitize_text_field($row['_mco_bundle_sku']));
+                foreach ($taxonomies as $tax) {
+                    $value = sanitize_text_field($row[$tax]);
+                    if (is_numeric($value) && $value !== '') { wp_set_object_terms($post_id, [(string)intval($value)], $tax); } else { wp_set_object_terms($post_id, [], $tax); }
+                }
+            }
+        }
+        fclose($handle);
+        return ['processed' => $processed];
+    }
+}
+
+if (!function_exists('mco_handle_ajax_import_exams_cancel')) {
+    function mco_handle_ajax_import_exams_cancel() {
+        check_ajax_referer('mco_import_exams_cancel_nonce', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error('Permission denied.');
+        $transient_key = sanitize_key($_POST['transient_key']);
+        $import_data = get_transient($transient_key);
+        if ($import_data && isset($import_data['filepath'])) { unlink($import_data['filepath']); delete_transient($transient_key); }
+        wp_send_json_success('Import cancelled.');
+    }
+}
+
+if (!function_exists('mco_handle_exam_csv_template_download')) {
+    function mco_handle_exam_csv_template_download() {
+        if (!current_user_can('manage_options')) wp_die('Permission denied.');
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="exam_programs_template.csv"');
+        $header = ['post_title','post_content','post_name','_mco_question_source_url','exam_practice_questions','exam_practice_duration','exam_cert_questions','exam_cert_duration','exam_pass_score','_mco_certification_exam_sku','_mco_bundle_sku'];
+        $output = fopen('php://output', 'w');
+        fputcsv($output, $header);
+        fclose($output);
+        exit;
+    }
+}
 
 
 // --- BOOK IMPORTER ---
 if (!function_exists('mco_render_book_import_modal')) {
     function mco_render_book_import_modal() {
-        $template_url = add_query_arg(['mco_action' => 'download_book_template'], admin_url('admin-post.php'));
+        $template_url = add_query_arg(['action' => 'mco_download_book_template'], admin_url('admin-post.php'));
         ?>
         <div id="mco-book-import-modal" class="mco-import-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000;">
             <div style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:2rem; border-radius:8px; width:90%; max-width:500px;">
@@ -229,11 +397,6 @@ if (!function_exists('mco_handle_book_csv_template_download')) {
         exit;
     }
 }
-add_action('admin_post_mco_action', function() {
-    if (isset($_GET['mco_action']) && $_GET['mco_action'] === 'download_book_template') mco_handle_book_csv_template_download();
-    if (isset($_GET['mco_action']) && $_GET['mco_action'] === 'download_exam_template') mco_handle_exam_csv_template_download();
-});
-
 
 if (!function_exists('mco_handle_ajax_import_books_start')) {
     function mco_handle_ajax_import_books_start() {

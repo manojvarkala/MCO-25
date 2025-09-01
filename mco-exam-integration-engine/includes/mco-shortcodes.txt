@@ -17,7 +17,7 @@ if (!function_exists('mco_enqueue_plugin_styles')) {
     function mco_enqueue_plugin_styles() {
         global $post;
         if (
-            (function_exists('is_woocommerce') && (is_cart() || is_checkout())) ||
+            (function_exists('is_woocommerce') && (is_cart() || is_checkout() || is_product())) ||
             (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_showcase'))
         ) {
             wp_enqueue_style(

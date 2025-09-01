@@ -1,12 +1,8 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-// Hook registration
-if (!function_exists('mco_register_cpt_hooks')) {
-    function mco_register_cpt_hooks() {
-        add_action('init', 'mco_register_custom_post_types');
-    }
-}
+// Note: The hook registration function has been removed from this file to fix a timing issue.
+// The mco_register_custom_post_types() function is now called directly from the main plugin file's 'init' action.
 
 // --- CUSTOM POST TYPES & TAXONOMIES ---
 if (!function_exists('mco_register_custom_post_types')) {
