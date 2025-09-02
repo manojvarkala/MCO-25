@@ -19,14 +19,20 @@ export const getApiEndpoint = (): string => {
 
     // 3. Dynamic logic for multi-tenancy.
     // If the app is on a dedicated subdomain like 'exams.' or 'app.',
-    // assume the WordPress backend is on the parent domain.
+    // we need to determine the correct canonical domain for the WordPress backend.
     if (apiHost.startsWith('exams.') || apiHost.startsWith('app.')) {
-        apiHost = apiHost.substring(apiHost.indexOf('.') + 1);
+        const baseDomain = apiHost.substring(apiHost.indexOf('.') + 1);
+        
+        // This is a hardcoded exception for a known domain that does not use 'www'
+        if (baseDomain === 'annapoornainfo.com') {
+            apiHost = baseDomain;
+        } else {
+            // For other domains, assume the canonical WordPress URL uses 'www'.
+            // This is to avoid CORS issues with servers that redirect from non-www to www.
+            apiHost = 'www.' + baseDomain;
+        }
     }
     
     // 4. Construct the final URL.
-    // The previous logic that forced a 'www' subdomain has been removed
-    // to support domains that do not use 'www' as their canonical address.
-    
     return `https://${apiHost}/wp-json/mco-app/v1`;
 };
