@@ -9,7 +9,7 @@ export const getApiEndpoint = (): string => {
 
     // 2. Handle specific known hosts (e.g., Vercel staging).
     const staticHosts: { [key: string]: string } = {
-        'mco-25.vercel.app': 'https://annapoornainfo.com/wp-json/mco-app/v1',
+        'mco-25.vercel.app': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
     };
     if (staticHosts[hostname]) {
         return staticHosts[hostname];
