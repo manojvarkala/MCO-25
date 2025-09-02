@@ -20,14 +20,17 @@ export const getApiEndpoint = (): string => {
     // 3. Dynamic logic for multi-tenancy.
     // If the app is on a dedicated subdomain like 'exams.' or 'app.',
     // assume the WordPress backend is on the parent domain.
-    // This will turn 'exams.coding-online.net' into 'coding-online.net'.
     if (apiHost.startsWith('exams.') || apiHost.startsWith('app.')) {
         apiHost = apiHost.substring(apiHost.indexOf('.') + 1);
     }
     
-    // 4. Construct the final URL. This logic is more flexible.
-    // It will use 'coding-online.net' if the app is at 'exams.coding-online.net'.
-    // It relies on the server to handle redirects from non-www to www if necessary,
-    // which is a more reliable approach than forcing a 'www' prefix that may be incorrect.
+    // 4. Construct the final URL.
+    // To solve cross-origin issues, we now enforce the 'www' convention for the backend API,
+    // as this is the most common setup for production WordPress sites.
+    // This turns 'coding-online.net' into 'www.coding-online.net'.
+    if (!apiHost.startsWith('www.') && apiHost.split('.').length === 2) {
+        apiHost = `www.${apiHost}`;
+    }
+    
     return `https://${apiHost}/wp-json/mco-app/v1`;
 };
