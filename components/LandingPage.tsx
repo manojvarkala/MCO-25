@@ -1,8 +1,9 @@
 
 
+
 import React, { FC, useEffect } from 'react';
-// Fix: Update react-router-dom imports to v6 syntax.
-import { useNavigate } from 'react-router-dom';
+// Fix: Use namespace import for react-router-dom to resolve module exports.
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LogIn, UserPlus, CheckCircle, Sparkles, Award } from 'lucide-react';
@@ -11,7 +12,7 @@ import { logoBase64 } from '../assets/logo.ts';
 
 const LandingPage: FC = () => {
     // Fix: Use useNavigate for v6 compatibility.
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
     const { user } = useAuth();
     const { activeOrg, isInitializing } = useAppContext();
     

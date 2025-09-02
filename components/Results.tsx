@@ -1,9 +1,12 @@
 
 
 
+
+
+
 import React, { FC, useState, useEffect } from 'react';
-// Fix: Update react-router-dom imports to v6 syntax.
-import { useParams, useNavigate } from 'react-router-dom';
+// Fix: Use namespace import for react-router-dom to resolve module exports.
+import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook } from '../types.ts';
@@ -17,9 +20,9 @@ import jsPDF from 'jspdf';
 import { logoBase64 } from '../assets/logo.ts';
 
 const Results: FC = () => {
-    const { testId } = useParams<{ testId: string }>();
+    const { testId } = ReactRouterDOM.useParams<{ testId: string }>();
     // Fix: Use useNavigate for navigation in v6
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
     const { user, token, paidExamIds, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     
@@ -54,6 +57,16 @@ const Results: FC = () => {
         const existingReview = localStorage.getItem(`review_${testId}`);
         if (existingReview) {
             setSubmittedReview(JSON.parse(existingReview));
+        }
+
+        // Load cached AI feedback and summary
+        const cachedFeedback = localStorage.getItem(`ai_feedback_${testId}`);
+        if (cachedFeedback) {
+            setAiFeedback(cachedFeedback);
+        }
+        const cachedSummary = localStorage.getItem(`ai_summary_${testId}`);
+        if (cachedSummary) {
+            setAiSummary(cachedSummary);
         }
 
         const fetchResultAndExam = () => {
@@ -131,6 +144,9 @@ Please provide a summary of the key areas I need to focus on based on these erro
 `;
             const feedback = await googleSheetsService.getAIFeedback(prompt);
             setAiFeedback(feedback);
+            if (testId) {
+                localStorage.setItem(`ai_feedback_${testId}`, feedback);
+            }
             toast.success("AI feedback generated!", { id: toastId });
         } catch (error: any) {
             toast.error(error.message || "Failed to generate feedback.", { id: toastId });
@@ -184,6 +200,9 @@ Please provide a summary of the key areas I need to focus on based on these erro
 
             const summary = await googleSheetsService.getAIFeedback(prompt);
             setAiSummary(summary);
+            if (testId) {
+                localStorage.setItem(`ai_summary_${testId}`, summary);
+            }
             toast.success("AI summary generated!", { id: toastId });
 
         } catch (error: any) {

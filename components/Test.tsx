@@ -1,7 +1,8 @@
 
+
 import React, { FC, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-// Fix: Update react-router-dom imports to v6 syntax.
-import { useParams, useNavigate } from 'react-router-dom';
+// Fix: Use namespace import for react-router-dom to resolve module exports.
+import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 // Fix: Added ExamProgress to type imports for saving progress.
@@ -23,8 +24,8 @@ const FOCUS_VIOLATION_TOAST_ID = 'focus-violation-toast';
 
 
 const Test: FC = () => {
-  const { examId } = useParams<{ examId: string }>();
-  const navigate = useNavigate();
+  const { examId } = ReactRouterDOM.useParams<{ examId: string }>();
+  const navigate = ReactRouterDOM.useNavigate();
   const { user, useFreeAttempt, isSubscribed, token } = useAuth();
   const { activeOrg, isInitializing } = useAppContext();
 

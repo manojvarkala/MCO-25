@@ -2,9 +2,10 @@
 
 
 
+
 import React, { FC, useState, useEffect, useMemo } from 'react';
-// Fix: Update react-router-dom imports to v6 syntax.
-import { useNavigate } from 'react-router-dom';
+// Fix: Use namespace import for react-router-dom to resolve module exports.
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult } from '../types.ts';
@@ -58,7 +59,7 @@ const StarRating: FC<{ rating: number; count: number; }> = ({ rating, count }) =
 
 const Dashboard: FC = () => {
     // Fix: Use useNavigate for v6 compatibility.
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
     const { user, token, paidExamIds, examPrices, isSubscribed } = useAuth();
     const { activeOrg, isInitializing, inProgressExam } = useAppContext();
     const [results, setResults] = useState<TestResult[]>([]);

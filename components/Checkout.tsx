@@ -1,10 +1,11 @@
+
 import React, { FC, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import Spinner from './Spinner.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 
 const Checkout: FC = () => {
-    const { productSlug } = useParams<{ productSlug: string }>();
+    const { productSlug } = ReactRouterDOM.useParams<{ productSlug: string }>();
     const { activeOrg } = useAppContext();
 
     const mainSiteBaseUrl = useMemo(() => {
