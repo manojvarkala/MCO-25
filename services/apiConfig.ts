@@ -9,7 +9,7 @@ export const getApiEndpoint = (): string => {
 
     // 2. Handle specific known hosts (e.g., Vercel staging).
     const staticHosts: { [key: string]: string } = {
-        'mco-25.vercel.app': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
+        'mco-25.vercel.app': 'https://annapoornainfo.com/wp-json/mco-app/v1',
     };
     if (staticHosts[hostname]) {
         return staticHosts[hostname];
@@ -25,12 +25,8 @@ export const getApiEndpoint = (): string => {
     }
     
     // 4. Construct the final URL.
-    // To solve cross-origin issues, we now enforce the 'www' convention for the backend API,
-    // as this is the most common setup for production WordPress sites.
-    // This turns 'coding-online.net' into 'www.coding-online.net'.
-    if (!apiHost.startsWith('www.') && apiHost.split('.').length === 2) {
-        apiHost = `www.${apiHost}`;
-    }
+    // The previous logic that forced a 'www' subdomain has been removed
+    // to support domains that do not use 'www' as their canonical address.
     
     return `https://${apiHost}/wp-json/mco-app/v1`;
 };

@@ -3,8 +3,19 @@ if (!defined('ABSPATH')) exit;
 
 // --- DYNAMIC DATA HELPERS ---
 if (!function_exists('mco_get_exam_app_url')) {
-    function mco_get_exam_app_url() { 
-        return rtrim(get_option('mco_exam_app_url', ''), '/'); 
+    function mco_get_exam_app_url() {
+        $url = get_option('mco_exam_app_url', '');
+        if (empty($url)) {
+            return '';
+        }
+        // Parse the URL to be robust against user input errors (e.g., extra slashes, fragments)
+        $url_parts = parse_url($url);
+        $scheme   = isset($url_parts['scheme']) ? $url_parts['scheme'] . '://' : '';
+        $host     = isset($url_parts['host']) ? $url_parts['host'] : '';
+        $port     = isset($url_parts['port']) ? ':' . $url_parts['port'] : '';
+        $path     = isset($url_parts['path']) ? rtrim($url_parts['path'], '/') : '';
+        // Reconstruct the base URL cleanly, ensuring no fragments or query strings are included.
+        return $scheme . $host . $port . $path;
     }
 }
 
