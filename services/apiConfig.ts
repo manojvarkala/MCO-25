@@ -15,22 +15,19 @@ export const getApiEndpoint = (): string => {
         return staticHosts[hostname];
     }
     
-    let apiHost = hostname;
+    // New, more robust logic for multi-tenancy
+    // 1. Find the base domain by removing common subdomains.
+    const baseDomain = hostname.replace(/^(www\.|app\.|exams\.)/, '');
 
-    // 3. Dynamic logic for multi-tenancy.
-    // If the app is on a dedicated subdomain like 'exams.' or 'app.',
-    // we need to determine the correct canonical domain for the WordPress backend.
-    if (apiHost.startsWith('exams.') || apiHost.startsWith('app.')) {
-        const baseDomain = apiHost.substring(apiHost.indexOf('.') + 1);
-        
-        // This is a hardcoded exception for a known domain that does not use 'www'
-        if (baseDomain === 'annapoornainfo.com') {
-            apiHost = baseDomain;
-        } else {
-            // For other domains, assume the canonical WordPress URL uses 'www'.
-            // This is to avoid CORS issues with servers that redirect from non-www to www.
-            apiHost = 'www.' + baseDomain;
-        }
+    let apiHost;
+
+    // 2. Handle exceptions where the canonical domain does NOT use 'www'.
+    if (baseDomain === 'annapoornainfo.com') {
+        apiHost = 'annapoornainfo.com';
+    } else {
+        // 3. For all other cases, assume the canonical WordPress URL uses 'www'.
+        // This prevents CORS issues with servers that redirect from the bare domain.
+        apiHost = 'www.' + baseDomain;
     }
     
     // 4. Construct the final URL.
