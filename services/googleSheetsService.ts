@@ -15,10 +15,9 @@ const apiFetch = async (endpoint: string, token: string, options: RequestInit = 
     const isProxied = API_BASE_URL.startsWith('/');
     
     // FIX: Ensure a single slash between the base URL and the endpoint to prevent routing errors.
-    // The previous concatenation could create a double slash (e.g., ".../v1//user-results"),
-    // which the WordPress REST API fails to match.
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
-    const fullUrl = `${API_BASE_URL}/${cleanEndpoint}`;
+    // The previous concatenation logic was brittle and could create a double slash (e.g., ".../v1//user-results"),
+    // which the WordPress REST API fails to match. This new logic is more robust.
+    const fullUrl = `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
     
     const urlWithCacheBuster = new URL(fullUrl, isProxied ? window.location.origin : undefined);
     urlWithCacheBuster.searchParams.append('mco_cb', Date.now().toString());
