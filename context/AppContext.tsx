@@ -41,7 +41,14 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setIsInitializing(true);
         try {
             const API_BASE_URL = getApiEndpoint();
-            const response = await fetch(`${API_BASE_URL}/app-config`);
+            const isProxied = API_BASE_URL.startsWith('/');
+            // FIX: Use a more robust URL construction method, similar to the main apiFetch service.
+            // This prevents potential issues with double slashes and correctly resolves relative paths in dev mode.
+            const endpoint = 'app-config';
+            const fullUrl = `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
+            const finalUrl = new URL(fullUrl, isProxied ? window.location.origin : undefined).toString();
+            
+            const response = await fetch(finalUrl);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! Could not fetch app configuration from WordPress. Status: ${response.status}`);
