@@ -1,7 +1,10 @@
-// Fix: Use `process.env.NODE_ENV` to check for development mode to avoid issues with Vite client type definitions.
+// Fix: Added a triple-slash directive to include Vite's client types.
+/// <reference types="vite/client" />
+
+// In Vite, import.meta.env.DEV is the standard way to check for development mode.
 export const getApiEndpoint = (): string => {
     // 1. Vite dev mode uses the proxy.
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
         return '/api';
     }
 
@@ -19,10 +22,9 @@ export const getApiEndpoint = (): string => {
     // 1. Find the base domain by removing common subdomains.
     const baseDomain = hostname.replace(/^(www\.|app\.|exams\.)/, '');
     
-    // 2. Assume the canonical WordPress URL uses 'www'.
-    // This is the most common and robust configuration, preventing CORS issues 
-    // with servers that redirect from the bare domain (e.g., example.com -> www.example.com).
-    const apiHost = 'www.' + baseDomain;
+    // 2. Assume the canonical WordPress URL is on the base domain.
+    // This is a common pattern for headless setups where the app is on a subdomain (like www or app).
+    const apiHost = baseDomain;
     
     // 3. Construct the final URL.
     return `https://${apiHost}/wp-json/mco-app/v1`;
