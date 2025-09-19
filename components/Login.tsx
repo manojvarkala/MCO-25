@@ -1,17 +1,18 @@
 
 
 
+
 import React, { FC, useEffect, useRef } from 'react';
-// Fix: Use namespace import for react-router-dom to resolve module exports.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Use named imports for react-router-dom v6 components and hooks.
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import toast from 'react-hot-toast';
 
 const Login: FC = () => {
-    const location = ReactRouterDOM.useLocation();
+    const location = useLocation();
     // Fix: Use useNavigate for v6 compatibility.
-    const navigate = ReactRouterDOM.useNavigate();
+    const navigate = useNavigate();
     const { user, loginWithToken } = useAuth();
     const wasAlreadyLoggedIn = useRef(!!user);
     const hasProcessed = useRef(false);

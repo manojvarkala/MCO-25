@@ -276,7 +276,12 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             sessionStorage.removeItem('wheelModalDismissed');
 
             // Sync results in the background after successful login
-            await googleSheetsService.syncResults(payload.user, jwtToken);
+            try {
+                await googleSheetsService.syncResults(payload.user, jwtToken);
+            } catch (syncError: any) {
+                console.error("Background sync on login failed:", syncError.message);
+                toast.error("Could not sync your exam history. Locally saved results will be shown.");
+            }
 
         } else {
             throw new Error("Invalid token payload structure.");

@@ -1,7 +1,8 @@
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
-// Fix: Use namespace import for react-router-dom to resolve module exports.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Use named imports for react-router-dom v6 components and hooks.
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
@@ -101,11 +102,11 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }
   const { user } = useAuth();
   if (!user) {
     // Fix: Use <Navigate> for react-router-dom v6
-    return <ReactRouterDOM.Navigate to="/" replace />;
+    return <Navigate to="/" replace />;
   }
   if (adminOnly && !user.isAdmin) {
     // Fix: Use <Navigate> for react-router-dom v6
-    return <ReactRouterDOM.Navigate to="/dashboard" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
 };
@@ -113,7 +114,7 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }
 const AppContent: FC = () => {
     const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed } = useAuth();
     const { isWheelModalOpen, setWheelModalOpen } = useAppContext();
-    const location = ReactRouterDOM.useLocation();
+    const location = useLocation();
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
     
     const isTestPage = location.pathname.startsWith('/test/');
@@ -157,44 +158,44 @@ const AppContent: FC = () => {
             <div className="flex-grow w-full relative">
                 <main className={mainClasses}>
                     {/* Fix: Use <Routes> and v6 Route syntax */}
-                    <ReactRouterDOM.Routes>
+                    <Routes>
                         {/* Routes with generic sidebar */}
-                        <ReactRouterDOM.Route path="/instructions" element={<SidebarLayout><Instructions /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/bookstore" element={<SidebarLayout><BookStore /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/pricing" element={<SidebarLayout><Pricing /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/feedback" element={<SidebarLayout><Feedback /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/user-guide" element={<SidebarLayout><UserGuide /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/about-us" element={<SidebarLayout><AboutUs /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/privacy-policy" element={<SidebarLayout><PrivacyPolicy /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/refund-policy" element={<SidebarLayout><RefundPolicy /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/terms-of-service" element={<SidebarLayout><TermsOfService /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/profile" element={
+                        <Route path="/instructions" element={<SidebarLayout><Instructions /></SidebarLayout>} />
+                        <Route path="/bookstore" element={<SidebarLayout><BookStore /></SidebarLayout>} />
+                        <Route path="/pricing" element={<SidebarLayout><Pricing /></SidebarLayout>} />
+                        <Route path="/feedback" element={<SidebarLayout><Feedback /></SidebarLayout>} />
+                        <Route path="/user-guide" element={<SidebarLayout><UserGuide /></SidebarLayout>} />
+                        <Route path="/about-us" element={<SidebarLayout><AboutUs /></SidebarLayout>} />
+                        <Route path="/privacy-policy" element={<SidebarLayout><PrivacyPolicy /></SidebarLayout>} />
+                        <Route path="/refund-policy" element={<SidebarLayout><RefundPolicy /></SidebarLayout>} />
+                        <Route path="/terms-of-service" element={<SidebarLayout><TermsOfService /></SidebarLayout>} />
+                        <Route path="/profile" element={
                           <ProtectedRoute>
                             <SidebarLayout><Profile /></SidebarLayout>
                           </ProtectedRoute>
                         } />
-                        <ReactRouterDOM.Route path="/results/:testId" element={
+                        <Route path="/results/:testId" element={
                           <ProtectedRoute>
                             <SidebarLayout><Results /></SidebarLayout>
                           </ProtectedRoute>
                         } />
 
                         {/* Routes with their own layout or no sidebar */}
-                        <ReactRouterDOM.Route path="/" element={<LandingPage />} />
-                        <ReactRouterDOM.Route path="/auth" element={<Login />} />
-                        <ReactRouterDOM.Route path="/checkout/:productSlug" element={<Checkout />} />
-                        <ReactRouterDOM.Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/integration" element={<ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/purchase-notifier" element={<ProtectedRoute adminOnly={true}><PurchaseNotifier /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/woocommerce-styling" element={<ProtectedRoute adminOnly={true}><WooCommerceStyling /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/super-admin-blueprint" element={<ProtectedRoute adminOnly={true}><SuperAdminBlueprint /></ProtectedRoute>} />
+                        <Route path="/" element={<LandingPage />} />
+                        <Route path="/auth" element={<Login />} />
+                        <Route path="/checkout/:productSlug" element={<Checkout />} />
+                        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                        <Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
+                        <Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
+                        <Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
+                        <Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
+                        <Route path="/integration" element={<ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute>} />
+                        <Route path="/purchase-notifier" element={<ProtectedRoute adminOnly={true}><PurchaseNotifier /></ProtectedRoute>} />
+                        <Route path="/woocommerce-styling" element={<ProtectedRoute adminOnly={true}><WooCommerceStyling /></ProtectedRoute>} />
+                        <Route path="/super-admin-blueprint" element={<ProtectedRoute adminOnly={true}><SuperAdminBlueprint /></ProtectedRoute>} />
                     
-                        <ReactRouterDOM.Route path="*" element={<ReactRouterDOM.Navigate to="/" replace />} />
-                    </ReactRouterDOM.Routes>
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
                 </main>
                 {user && user.isAdmin && !isTestPage && <DebugSidebar />}
             </div>
@@ -210,10 +211,10 @@ const App: FC = () => {
   return (
     <AuthProvider>
       <AppProvider>
-        <ReactRouterDOM.HashRouter>
+        <HashRouter>
             <AppContent />
             <Toaster position="top-right" reverseOrder={false} />
-        </ReactRouterDOM.HashRouter>
+        </HashRouter>
       </AppProvider>
     </AuthProvider>
   );

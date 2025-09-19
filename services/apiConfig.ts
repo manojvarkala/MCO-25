@@ -1,10 +1,12 @@
-/// <reference types="vite/client" />
+// FIX: Declare a global constant for development mode, defined in vite.config.ts, to avoid issues with vite/client types.
+declare const __DEV__: boolean;
 
 // This file determines the correct API endpoint based on the environment.
 // It uses Vite's `import.meta.env.DEV` to detect development mode.
 export const getApiEndpoint = (): string => {
     // 1. In development mode, Vite's proxy is used, which is configured to point to `/api`.
-    if (import.meta.env.DEV) {
+    // FIX: Use the __DEV__ global constant instead of import.meta.env.DEV.
+    if (__DEV__) {
         return '/api';
     }
 

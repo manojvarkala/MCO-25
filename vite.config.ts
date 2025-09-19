@@ -12,7 +12,9 @@ export default defineConfig(({ mode }) => {
       base: '/', // Use root path for assets
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        // FIX: Define a global constant to check for development mode to resolve type errors.
+        '__DEV__': mode === 'development',
       },
       resolve: {
         alias: {

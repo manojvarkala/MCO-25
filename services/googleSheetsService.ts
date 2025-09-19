@@ -85,11 +85,31 @@ export const googleSheetsService = {
     
     // --- RESULTS HANDLING (CACHE-FIRST APPROACH) ---
     syncResults: async (user: User, token: string): Promise<void> => {
-        // This function is intended to sync with a server. In a standalone/offline-first
-        // setup, this would cause "Failed to fetch" errors. We make it a no-op that
-        // resolves immediately, as all results are managed via local storage.
-        console.log("Syncing results is disabled in offline mode. Local results will be used.");
-        return Promise.resolve();
+        try {
+            // The API returns an array of TestResult objects
+            const serverResults: TestResult[] = await apiFetch('/user-results', token) || [];
+
+            // The API returns an array, but we store it as an object keyed by testId
+            const resultsObject: { [testId: string]: TestResult } = {};
+            serverResults.forEach(result => {
+                resultsObject[result.testId] = result;
+            });
+
+            // Get local results
+            const key = `exam_results_${user.id}`;
+            const storedResults = localStorage.getItem(key);
+            const localResults = storedResults ? JSON.parse(storedResults) : {};
+
+            // Merge, giving precedence to server data
+            const mergedResults = { ...localResults, ...resultsObject };
+            
+            localStorage.setItem(key, JSON.stringify(mergedResults));
+            console.log('Results successfully synced with the server.');
+        } catch (error) {
+            console.error("Failed to sync results with server:", error);
+            // Re-throw the error so UI components can handle it (e.g., show a toast)
+            throw error;
+        }
     },
 
     getLocalTestResultsForUser: (userId: string): TestResult[] => {
