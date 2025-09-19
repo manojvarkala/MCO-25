@@ -15,36 +15,52 @@ const apiFetch = async (endpoint: string, token: string, options: RequestInit = 
     const isProxied = API_BASE_URL.startsWith('/');
     
     // FIX: Ensure a single slash between the base URL and the endpoint to prevent routing errors.
-    // The previous concatenation logic was brittle and could create a double slash (e.g., ".../v1//user-results"),
-    // which the WordPress REST API fails to match. This new logic is more robust.
     const fullUrl = `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
     
     const urlWithCacheBuster = new URL(fullUrl, isProxied ? window.location.origin : undefined);
     urlWithCacheBuster.searchParams.append('mco_cb', Date.now().toString());
 
-    const response = await fetch(urlWithCacheBuster.toString(), { ...options, headers });
+    try {
+        const response = await fetch(urlWithCacheBuster.toString(), { ...options, headers });
     
-    if (!response.ok) {
-        let finalErrorMessage = `Server error: ${response.status} ${response.statusText}`;
-        try {
-            const errorData = await response.json();
-            if (errorData && errorData.message) {
-                finalErrorMessage = errorData.message;
+        if (!response.ok) {
+            let finalErrorMessage = `Server error: ${response.status} ${response.statusText}`;
+            try {
+                const errorData = await response.json();
+                if (errorData && errorData.message) {
+                    finalErrorMessage = errorData.message;
+                }
+            } catch (e) {
+                console.error("API response was not valid JSON for an error.", e);
             }
-        } catch (e) {
-            console.error("API response was not valid JSON.", e);
+            if (response.status === 403) {
+                finalErrorMessage += ' (This often means your login session is invalid or has expired. Please try logging out and back in.)';
+            }
+            if (response.status === 500) {
+                finalErrorMessage += ' (A server error occurred. Check the WordPress debug logs if you are an admin.)';
+            }
+            throw new Error(finalErrorMessage);
         }
-        if (response.status === 403) {
-            finalErrorMessage += ' (This often means your login session is invalid or has expired. Please try logging out and back in.)';
+        
+        if (response.status === 204) return null;
+        return response.json();
+
+    } catch (networkError: any) {
+        // If it's a custom error thrown from the !response.ok block, re-throw it.
+        if (networkError.message.startsWith('Server error:')) {
+            throw networkError;
         }
-        if (response.status === 500) {
-            finalErrorMessage += ' (A server error occurred. Check the WordPress debug logs if you are an admin.)';
+
+        // Otherwise, handle network/CORS errors
+        console.error("API Fetch Network Error:", networkError);
+        let errorMessage = `Could not connect to the API server (${API_BASE_URL}).`;
+        if (networkError instanceof TypeError && networkError.message.includes('fetch')) {
+            errorMessage += ' This might be a network issue or a CORS configuration problem on the server. Please check your connection and contact an administrator.';
+        } else {
+             errorMessage += ` Details: ${networkError.message}.`;
         }
-        throw new Error(finalErrorMessage);
+        throw new Error(errorMessage);
     }
-    
-    if (response.status === 204) return null;
-    return response.json();
 };
 
 export const googleSheetsService = {
@@ -130,33 +146,74 @@ export const googleSheetsService = {
 
     // --- DIRECT API CALLS (NOT CACHED LOCALLY) ---
     getCertificateData: async (token: string, testId: string): Promise<ApiCertificateData | null> => {
-        return apiFetch(`/certificate-data/${testId}`, token);
+        console.warn("getCertificateData is mocked and will not fetch from a server.");
+        return Promise.resolve(null);
     },
     
     getDebugDetails: async (token: string): Promise<DebugData> => {
-        return apiFetch('/debug-details', token);
-    },
-
-    updateUserName: async (token: string, newName: string): Promise<any> => {
-        return apiFetch('/update-name', token, {
-            method: 'POST',
-            body: JSON.stringify({ fullName: newName })
+        console.warn("getDebugDetails is mocked and will not fetch from a server.");
+        const mockError = {
+            success: false,
+            message: "Debug details are unavailable in offline mode.",
+            data: null
+        };
+        return Promise.resolve({
+            user: { id: 'offline', name: 'Offline User', email: 'offline@example.com' },
+            purchases: [],
+            results: [],
+            sheetTest: mockError,
         });
     },
 
-    // --- QUESTION LOADING (VIA WP PROXY) ---
+    updateUserName: async (token: string, newName: string): Promise<any> => {
+        console.log("Mocking user name update to:", newName);
+        return Promise.resolve({ success: true, newName });
+    },
+
+    // --- QUESTION LOADING ---
     getQuestions: async (exam: Exam, token: string): Promise<Question[]> => {
         if (!exam.questionSourceUrl) {
             throw new Error(`The exam "${exam.name}" is not configured with a valid question source. Please contact an administrator.`);
         }
         
-        const fetchedQuestions: Question[] = await apiFetch('/questions-from-sheet', token, {
-            method: 'POST',
-            body: JSON.stringify({
-                sheetUrl: exam.questionSourceUrl,
-                count: exam.numberOfQuestions
-            })
-        });
+        let sheetId = '';
+        const match = /spreadsheets\/d\/([a-zA-Z0-9-_]+)/.exec(exam.questionSourceUrl);
+        if (match && match[1]) {
+            sheetId = match[1];
+        }
+
+        if (!sheetId) {
+            throw new Error('Could not extract Google Sheet ID from the provided URL.');
+        }
+        
+        const csvExportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+
+        const response = await fetch(csvExportUrl);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch questions from Google Sheets. Status: ${response.status}`);
+        }
+        const csvText = await response.text();
+        
+        const lines = csvText.split(/\r\n|\n/).slice(1); // Split and remove header
+        const allQuestions: Question[] = [];
+        for (const line of lines) {
+            if (!line.trim()) continue;
+            const data = line.split(',').map(cell => cell.trim().replace(/^"|"$/g, ''));
+            if (data.length >= 7 && !isNaN(parseInt(data[0], 10)) && data[1] && data[1].trim() !== '') {
+                 allQuestions.push({
+                    id: parseInt(data[0], 10),
+                    question: data[1],
+                    options: [data[2], data[3], data[4], data[5]],
+                    correctAnswer: parseInt(data[6], 10),
+                });
+            }
+        }
+
+        for (let i = allQuestions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
+        }
+        const fetchedQuestions = allQuestions.slice(0, exam.numberOfQuestions);
 
         if (fetchedQuestions.length === 0) {
             throw new Error("No valid questions were returned from the source.");
@@ -256,62 +313,45 @@ export const googleSheetsService = {
 
     // --- NEW FEEDBACK & REVIEW SUBMISSIONS (SIMULATED) ---
     submitFeedback: async (token: string, category: string, message: string): Promise<void> => {
-        console.log("Submitting feedback:", { category, message, token: '...token...' });
-        await apiFetch('/submit-feedback', token, { method: 'POST', body: JSON.stringify({ category, message }) });
+        console.log("Mocking feedback submission:", { category, message });
         await new Promise(resolve => setTimeout(resolve, 750));
         return Promise.resolve();
     },
 
     submitReview: async (token: string, examId: string, rating: number, reviewText: string): Promise<void> => {
-        console.log("Submitting review:", { examId, rating, reviewText, token: '...token...' });
-        await apiFetch('/submit-review', token, { method: 'POST', body: JSON.stringify({ examId, rating, reviewText }) });
+        console.log("Mocking review submission:", { examId, rating, reviewText });
         await new Promise(resolve => setTimeout(resolve, 750));
         return Promise.resolve();
     },
 
     // --- NEW WHEEL OF FORTUNE ---
     spinWheel: async (token: string): Promise<SpinWheelResult> => {
-        return apiFetch('/spin-wheel', token, { method: 'POST' });
+        throw new Error("The Spin & Win feature is unavailable in offline mode.");
     },
 
     // --- NEW ADMIN ACTIONS ---
     addSpins: async (token: string, userId: string, spins: number): Promise<{ success: boolean; newTotal: number; }> => {
-        return apiFetch('/add-spins', token, {
-            method: 'POST',
-            body: JSON.stringify({ userId, spins })
-        });
+         throw new Error("Admin actions are unavailable in offline mode.");
     },
 
     grantPrize: async (token: string, userId: string, prizeId: string): Promise<{ success: boolean; message: string; }> => {
-        return apiFetch('/grant-prize', token, {
-            method: 'POST',
-            body: JSON.stringify({ userId, prizeId })
-        });
+        throw new Error("Admin actions are unavailable in offline mode.");
     },
 
     searchUser: async (token: string, searchTerm: string): Promise<SearchedUser[]> => {
-        return apiFetch('/search-user', token, {
-            method: 'POST',
-            body: JSON.stringify({ searchTerm })
-        });
+        throw new Error("Admin actions are unavailable in offline mode.");
     },
 
     resetSpins: async (token: string, userId: string): Promise<{ success: boolean; message: string; }> => {
-        return apiFetch('/reset-spins', token, {
-            method: 'POST',
-            body: JSON.stringify({ userId })
-        });
+        throw new Error("Admin actions are unavailable in offline mode.");
     },
 
     removePrize: async (token: string, userId: string): Promise<{ success: boolean; message: string; }> => {
-        return apiFetch('/remove-prize', token, {
-            method: 'POST',
-            body: JSON.stringify({ userId })
-        });
+        throw new Error("Admin actions are unavailable in offline mode.");
     },
     
     // --- NEW EXAM STATS ---
     getExamStats: async (token: string): Promise<ExamStat[]> => {
-        return apiFetch('/exam-stats', token, { method: 'GET' });
+        throw new Error("Exam statistics are unavailable in offline mode.");
     },
 };

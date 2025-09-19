@@ -40,35 +40,17 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const initializeApp = async () => {
         setIsInitializing(true);
         try {
-            const API_BASE_URL = getApiEndpoint();
-            const isProxied = API_BASE_URL.startsWith('/');
-<<<<<<< HEAD
-            const endpoint = 'app-config';
-            const fullUrl = `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
-            
-            const urlWithCacheBuster = new URL(fullUrl, isProxied ? window.location.origin : undefined);
-            urlWithCacheBuster.searchParams.append('mco_cb', Date.now().toString());
-            
-            const response = await fetch(urlWithCacheBuster.toString());
-=======
-            // FIX: Use a more robust URL construction method, similar to the main apiFetch service.
-            // This prevents potential issues with double slashes and correctly resolves relative paths in dev mode.
-            const endpoint = 'app-config';
-            const fullUrl = `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
-            const finalUrl = new URL(fullUrl, isProxied ? window.location.origin : undefined).toString();
-            
-            const response = await fetch(finalUrl);
->>>>>>> 9fbc59a88f168ddc0c4f0558c8248c65be4f95b7
-
+            // FIX: Load configuration from a local static file instead of a remote API
+            // to ensure the app can run in a standalone environment.
+            const response = await fetch('/medical-coding-config.json');
             if (!response.ok) {
-                throw new Error(`HTTP error! Could not fetch app configuration from WordPress. Status: ${response.status}`);
+                throw new Error(`HTTP error! Could not fetch app configuration. Status: ${response.status}`);
             }
             const configData = await response.json();
             
             const baseOrgs = JSON.parse(JSON.stringify(configData.organizations || []));
             
             const processedOrgs = baseOrgs.map((org: Organization) => {
-                // The API response is now the single source of truth for configuration.
                 const examsSource = org.exams;
                 const categoriesSource = org.examProductCategories;
                 const booksSource = org.suggestedBooks || [];
@@ -113,7 +95,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             }
 
         } catch (error) {
-            console.error("Failed to initialize app config from WordPress API:", error);
+            console.error("Failed to initialize app config:", error);
             toast.error("Could not load application configuration.");
         } finally {
             setIsInitializing(false);
