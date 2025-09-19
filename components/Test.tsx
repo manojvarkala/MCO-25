@@ -1,5 +1,3 @@
-
-
 import React, { FC, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 // Fix: Use namespace import for react-router-dom to resolve module exports.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -217,6 +215,24 @@ const Test: FC = () => {
         const currentQuestionId = questions[currentQuestionIndex].id;
         setAnswers(new Map(answers.set(currentQuestionId, optionIndex)));
     };
+    
+    const timePercentage = useMemo(() => {
+        if (timeLeft === null || !examConfig) return 100;
+        const totalDuration = examConfig.durationMinutes * 60;
+        if (totalDuration <= 0) return 100;
+        return (timeLeft / totalDuration) * 100;
+    }, [timeLeft, examConfig]);
+
+    const { timerColorClass, progressBarColorClass } = useMemo(() => {
+        if (timePercentage < 20) {
+            return { timerColorClass: 'text-red-400', progressBarColorClass: 'bg-red-600' };
+        }
+        if (timePercentage < 50) {
+            return { timerColorClass: 'text-yellow-400', progressBarColorClass: 'bg-yellow-500' };
+        }
+        return { timerColorClass: 'text-white', progressBarColorClass: 'bg-cyan-400' };
+    }, [timePercentage]);
+
 
     const currentQuestion = questions[currentQuestionIndex];
     const selectedAnswer = currentQuestion ? answers.get(currentQuestion.id) : undefined;
@@ -258,11 +274,27 @@ const Test: FC = () => {
 
     return (
         <div className="max-w-7xl mx-auto relative">
-            <div className="bg-slate-800 text-white rounded-t-lg p-4 flex justify-between items-center sticky top-0 z-10">
-                <h1 className="text-xl font-bold">{examConfig.name}</h1>
-                <div className="flex items-center gap-2 bg-slate-700 px-3 py-1 rounded-full text-lg">
-                    <Clock size={20} />
-                    <span>{timeLeft !== null ? formatTime(timeLeft) : 'Loading...'}</span>
+             <div className="bg-slate-800 text-white rounded-t-lg sticky top-0 z-10 shadow-md">
+                <div className="p-4 flex justify-between items-center">
+                    <h1 className="text-xl font-bold">{examConfig.name}</h1>
+                    <div className={`flex items-center gap-2 bg-slate-900/50 px-6 py-2 rounded-full text-2xl font-bold font-mono transition-colors duration-500 ${timerColorClass}`}>
+                        <Clock size={22} />
+                        <span>{timeLeft !== null ? formatTime(timeLeft) : 'Loading...'}</span>
+                    </div>
+                </div>
+                <div className="w-full bg-slate-700 h-2">
+                    <div 
+                        className={`h-full ${progressBarColorClass}`} 
+                        style={{ 
+                            width: `${timePercentage}%`,
+                            transition: 'width 1s linear, background-color 0.5s ease'
+                        }}
+                        role="progressbar"
+                        aria-valuenow={timeLeft !== null ? timeLeft : examConfig.durationMinutes * 60}
+                        aria-valuemin={0}
+                        aria-valuemax={examConfig.durationMinutes * 60}
+                        aria-label="Time remaining"
+                    ></div>
                 </div>
             </div>
             <div className="bg-white p-2 sm:p-4 rounded-b-lg shadow-lg">

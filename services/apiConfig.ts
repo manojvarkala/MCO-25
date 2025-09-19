@@ -1,4 +1,4 @@
-// Fix: The triple-slash directive is required for TypeScript to recognize Vite's `import.meta.env` and must be at the top of the file.
+// Fix: The triple-slash directive must be the very first content in the file for TypeScript to correctly recognize Vite's client-side types like `import.meta.env`. A comment was preventing it from being processed.
 /// <reference types="vite/client" />
 
 // This file determines the correct API endpoint based on the environment.

@@ -142,23 +142,25 @@ export const googleSheetsService = {
     },
     
     getDebugDetails: async (token: string): Promise<DebugData> => {
-        console.warn("getDebugDetails is mocked and will not fetch from a server.");
-        const mockError = {
-            success: false,
-            message: "Debug details are unavailable in offline mode.",
-            data: null
-        };
-        return Promise.resolve({
-            user: { id: 'offline', name: 'Offline User', email: 'offline@example.com' },
-            purchases: [],
-            results: [],
-            sheetTest: mockError,
-        });
+        try {
+            const data = await apiFetch('/debug-details', token);
+            return data as DebugData;
+        } catch (error) {
+            console.error("Failed to get debug details:", error);
+            throw error;
+        }
     },
 
     updateUserName: async (token: string, newName: string): Promise<any> => {
-        console.log("Mocking user name update to:", newName);
-        return Promise.resolve({ success: true, newName });
+        try {
+            return await apiFetch('/update-name', token, {
+                method: 'POST',
+                body: JSON.stringify({ fullName: newName }),
+            });
+        } catch (error) {
+            console.error("Failed to update user name:", error);
+            throw error;
+        }
     },
 
     // --- QUESTION LOADING ---
@@ -304,45 +306,109 @@ export const googleSheetsService = {
 
     // --- NEW FEEDBACK & REVIEW SUBMISSIONS (SIMULATED) ---
     submitFeedback: async (token: string, category: string, message: string): Promise<void> => {
-        console.log("Mocking feedback submission:", { category, message });
-        await new Promise(resolve => setTimeout(resolve, 750));
-        return Promise.resolve();
+        try {
+            await apiFetch('/submit-feedback', token, {
+                method: 'POST',
+                body: JSON.stringify({ category, message }),
+            });
+        } catch (error) {
+            console.error("Failed to submit feedback:", error);
+            throw error;
+        }
     },
 
     submitReview: async (token: string, examId: string, rating: number, reviewText: string): Promise<void> => {
-        console.log("Mocking review submission:", { examId, rating, reviewText });
-        await new Promise(resolve => setTimeout(resolve, 750));
-        return Promise.resolve();
+        try {
+            await apiFetch('/submit-review', token, {
+                method: 'POST',
+                body: JSON.stringify({ examId, rating, reviewText }),
+            });
+        } catch (error) {
+            console.error("Failed to submit review:", error);
+            throw error;
+        }
     },
 
     // --- NEW WHEEL OF FORTUNE ---
     spinWheel: async (token: string): Promise<SpinWheelResult> => {
-        throw new Error("The Spin & Win feature is unavailable in offline mode.");
+        try {
+            return await apiFetch('/spin-wheel', token, {
+                method: 'POST',
+            });
+        } catch (error) {
+            console.error("Failed to spin wheel:", error);
+            throw error;
+        }
     },
 
     // --- NEW ADMIN ACTIONS ---
     addSpins: async (token: string, userId: string, spins: number): Promise<{ success: boolean; newTotal: number; }> => {
-         throw new Error("Admin actions are unavailable in offline mode.");
+        try {
+            return await apiFetch('/admin/add-spins', token, {
+                method: 'POST',
+                body: JSON.stringify({ userId, spins }),
+            });
+        } catch (error) {
+            console.error("Failed to add spins:", error);
+            throw error;
+        }
     },
 
     grantPrize: async (token: string, userId: string, prizeId: string): Promise<{ success: boolean; message: string; }> => {
-        throw new Error("Admin actions are unavailable in offline mode.");
+        try {
+            return await apiFetch('/admin/grant-prize', token, {
+                method: 'POST',
+                body: JSON.stringify({ userId, prizeId }),
+            });
+        } catch (error) {
+            console.error("Failed to grant prize:", error);
+            throw error;
+        }
     },
 
     searchUser: async (token: string, searchTerm: string): Promise<SearchedUser[]> => {
-        throw new Error("Admin actions are unavailable in offline mode.");
+        try {
+            return await apiFetch('/admin/search-user', token, {
+                method: 'POST',
+                body: JSON.stringify({ searchTerm }),
+            });
+        } catch (error) {
+            console.error("Failed to search user:", error);
+            throw error;
+        }
     },
 
     resetSpins: async (token: string, userId: string): Promise<{ success: boolean; message: string; }> => {
-        throw new Error("Admin actions are unavailable in offline mode.");
+        try {
+            return await apiFetch('/admin/reset-spins', token, {
+                method: 'POST',
+                body: JSON.stringify({ userId }),
+            });
+        } catch (error) {
+            console.error("Failed to reset spins:", error);
+            throw error;
+        }
     },
 
     removePrize: async (token: string, userId: string): Promise<{ success: boolean; message: string; }> => {
-        throw new Error("Admin actions are unavailable in offline mode.");
+        try {
+            return await apiFetch('/admin/remove-prize', token, {
+                method: 'POST',
+                body: JSON.stringify({ userId }),
+            });
+        } catch (error) {
+            console.error("Failed to remove prize:", error);
+            throw error;
+        }
     },
     
     // --- NEW EXAM STATS ---
     getExamStats: async (token: string): Promise<ExamStat[]> => {
-        throw new Error("Exam statistics are unavailable in offline mode.");
+        try {
+            return await apiFetch('/exam-stats', token);
+        } catch (error) {
+            console.error("Failed to get exam stats:", error);
+            throw error;
+        }
     },
 };
