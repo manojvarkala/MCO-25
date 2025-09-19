@@ -106,14 +106,21 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setOrganizations(processedOrgs);
 
             const currentActiveOrgId = activeOrg?.id;
-            const newActiveOrg = currentActiveOrgId
+            let newActiveOrg = currentActiveOrgId
               ? processedOrgs.find(o => o.id === currentActiveOrgId)
-              : (processedOrgs[0] || null);
+              : undefined;
+
+            // FIX: If the stored org wasn't found in the current config (e.g., user switched domains),
+            // or if there was no stored org, gracefully default to the first one available.
+            if (!newActiveOrg) {
+                newActiveOrg = processedOrgs[0] || null;
+            }
             
             if (newActiveOrg) {
               setActiveOrg(newActiveOrg);
               localStorage.setItem('activeOrg', JSON.stringify(newActiveOrg));
             } else {
+              // This case now correctly implies that the config file was truly empty.
               setActiveOrg(null);
               localStorage.removeItem('activeOrg');
             }
