@@ -83,13 +83,25 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
                 const bookMap = new Map<string, RecommendedBook>();
                 booksSource.forEach(book => bookMap.set(book.id, book));
+
+                // Create a map from exam ID to its category's question source URL
+                const categoryUrlMap = new Map<string, string>();
+                categoriesSource.forEach((cat: ExamProductCategory) => {
+                    if (cat.questionSourceUrl) {
+                        if (cat.practiceExamId) categoryUrlMap.set(cat.practiceExamId, cat.questionSourceUrl);
+                        if (cat.certificationExamId) categoryUrlMap.set(cat.certificationExamId, cat.questionSourceUrl);
+                    }
+                });
                 
                 const processedExams = examsSource.map((exam: Exam): Exam => {
                     const priceData = examPrices && exam.productSku ? examPrices[exam.productSku] : null;
                     const recommendedBook = exam.recommendedBookId ? bookMap.get(exam.recommendedBookId) : undefined;
-                    
+                    // FIX: Populate questionSourceUrl from the category map. Fallback to exam's own URL if it exists.
+                    const questionSourceUrl = categoryUrlMap.get(exam.id) || exam.questionSourceUrl;
+
                     return {
                         ...exam,
+                        questionSourceUrl,
                         ...(priceData && { price: priceData.price, regularPrice: priceData.regularPrice }),
                         ...(recommendedBook && { recommendedBook }),
                     };
