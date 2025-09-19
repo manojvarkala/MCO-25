@@ -96,13 +96,29 @@ if (!function_exists('mco_get_questions_from_sheet_callback')) {
         $params = $request->get_json_params();
         $sheet_url = isset($params['sheetUrl']) ? esc_url_raw($params['sheetUrl']) : '';
         $count = isset($params['count']) ? intval($params['count']) : 0;
-        if (empty($sheet_url) || !filter_var($sheet_url, FILTER_VALIDATE_URL)) return new WP_Error('invalid_url', 'Invalid sheet URL.', ['status' => 400]);
-        $csv_export_url = str_replace(['/edit?usp=sharing', '/edit'], '/export?format=csv', $sheet_url);
+        if (empty($sheet_url) || !filter_var($sheet_url, FILTER_VALIDATE_URL)) {
+             return new WP_Error('invalid_url', 'Invalid or empty sheet URL provided.', ['status' => 400]);
+        }
+
+        // --- FIX: Robustly parse the Sheet ID from various URL formats ---
+        $sheet_id = '';
+        if (preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
+            $sheet_id = $matches[1];
+        }
+
+        if (empty($sheet_id)) {
+            return new WP_Error('invalid_sheet_url', 'Could not extract Google Sheet ID from the provided URL.', ['status' => 400]);
+        }
+
+        $csv_export_url = 'https://docs.google.com/spreadsheets/d/' . $sheet_id . '/export?format=csv';
+        // --- END FIX ---
+
         $response = wp_remote_get($csv_export_url, ['timeout' => 15]);
-        if (is_wp_error($response)) return new WP_Error('fetch_failed', 'Could not retrieve questions.', ['status' => 500]);
+        if (is_wp_error($response)) return new WP_Error('fetch_failed', 'Could not retrieve questions from Google Sheets.', ['status' => 500]);
+        
         $body = wp_remote_retrieve_body($response);
         $lines = preg_split('/\\r\\n?|\\n/', $body);
-        array_shift($lines);
+        array_shift($lines); // Remove header row
         $questions = [];
         foreach ($lines as $line) {
             if (empty(trim($line))) continue;
@@ -195,3 +211,4 @@ if (!function_exists('mco_get_exam_stats_callback')) {
         return new WP_REST_Response($final_stats, 200);
     }
 }
+?>

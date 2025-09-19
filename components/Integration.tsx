@@ -8,7 +8,7 @@ const Integration: FC = () => {
             <h1 className="text-3xl font-extrabold text-slate-800">WordPress Integration Plugin</h1>
             
             <div className="bg-white p-6 rounded-lg shadow-lg border border-slate-200">
-                <h2 className="text-xl font-bold mb-2 text-slate-800">The Integration Engine (v26.4.0)</h2>
+                <h2 className="text-xl font-bold mb-2 text-slate-800">The Integration Engine (v27.4.0)</h2>
                 <p className="mb-4 text-slate-600">
                     This is the master plugin for integrating the exam app with your WordPress site. It handles Single Sign-On (SSO), data synchronization, CORS headers, and provides powerful shortcodes for displaying content.
                 </p>
@@ -19,19 +19,28 @@ const Integration: FC = () => {
                         </div>
                         <div className="ml-3">
                             <p className="text-sm text-cyan-700">
-                                The plugin files are located inside the <strong>`mco-exam-integration-engine`</strong> folder within this project's source code.
+                                The plugin files are located inside the <strong>`mco-exam-integration-engine`</strong> folder within this project's source code. You will need to prepare these files before uploading.
                             </p>
                         </div>
                     </div>
                 </div>
                 
                 <h3 className="text-lg font-semibold text-slate-700 mt-6">Installation Instructions:</h3>
-                <ol className="list-decimal pl-5 space-y-2 mt-2 text-slate-600">
+                <ol className="list-decimal pl-5 space-y-3 mt-2 text-slate-600">
                     <li>
                         Locate the <strong>`mco-exam-integration-engine`</strong> directory in the source files of this application.
                     </li>
+                    <li className="bg-amber-50 p-3 rounded-md border border-amber-200">
+                        <strong className="text-amber-800">Crucial Step: Rename Files</strong><br />
+                        Before zipping, you must rename the files from <code>.txt</code> to their correct extensions for WordPress to recognize them.
+                        <ul className="list-disc pl-5 mt-2 text-sm">
+                            <li>The main file <code>mco-exam-integration-engine.txt</code> must be renamed to <strong><code>mco-exam-integration-engine.php</code></strong>.</li>
+                            <li>In the <code>/includes/</code> folder, rename all <code>.txt</code> files to <strong><code>.php</code></strong>.</li>
+                            <li>In the <code>/assets/</code> folder, rename <code>mco-styles.txt</code> to <strong><code>mco-styles.css</code></strong>.</li>
+                        </ul>
+                    </li>
                     <li>
-                        Create a <strong>.zip</strong> file of the entire <strong>`mco-exam-integration-engine`</strong> directory.
+                        After renaming, create a <strong>.zip</strong> file of the entire <strong>`mco-exam-integration-engine`</strong> directory.
                     </li>
                     <li>
                         In your WordPress admin dashboard, navigate to <strong>Plugins &rarr; Add New &rarr; Upload Plugin</strong>.
@@ -39,7 +48,7 @@ const Integration: FC = () => {
                     <li>
                         Choose the .zip file you just created and click "Install Now".
                     </li>
-                    <li>
+                     <li>
                         Activate the plugin after installation.
                     </li>
                      <li>
