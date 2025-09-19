@@ -3,6 +3,7 @@
 
 
 
+
 import React, { FC, useState, useEffect, useRef } from 'react';
 // Fix: Use namespace import for react-router-dom to resolve module exports.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -79,7 +80,7 @@ const Certificate: FC = () => {
             
             setIsLoading(true);
             try {
-                const partialData = await googleSheetsService.getCertificateData(token, testId);
+                const partialData = await googleSheetsService.getCertificateData(token, testId, user);
                 if (partialData && partialData.examId) {
                     const exam = activeOrg.exams.find(e => e.id === partialData.examId);
                     const template = activeOrg.certificateTemplates.find(t => t.id === exam?.certificateTemplateId);

@@ -85,35 +85,11 @@ export const googleSheetsService = {
     
     // --- RESULTS HANDLING (CACHE-FIRST APPROACH) ---
     syncResults: async (user: User, token: string): Promise<void> => {
-        try {
-            const remoteData = await apiFetch('/user-results', token);
-
-            // Defensive check: Ensure the API returned a valid array.
-            if (!Array.isArray(remoteData)) {
-                console.warn("Sync received non-array data for results, treating as empty.", remoteData);
-                // Set empty results in localStorage to clear any stale data.
-                localStorage.setItem(`exam_results_${user.id}`, JSON.stringify({}));
-                console.log("Results synced with server (empty or invalid data received).");
-                return; // Exit gracefully without showing an error toast.
-            }
-
-            const remoteResults: TestResult[] = remoteData;
-            const resultsMap = remoteResults.reduce((acc, result) => {
-                // Defensive check: Ensure each result has a testId before adding it to the map.
-                if (result && result.testId) {
-                    acc[result.testId] = result;
-                } else {
-                    console.warn("Skipping invalid result object during sync:", result);
-                }
-                return acc;
-            }, {} as { [key: string]: TestResult });
-
-            localStorage.setItem(`exam_results_${user.id}`, JSON.stringify(resultsMap));
-            console.log("Results successfully synced with server.");
-        } catch (error) {
-            console.error("Background sync failed:", error);
-            toast.error("Server sync failed. Displaying cached results.");
-        }
+        // This function is intended to sync with a server. In a standalone/offline-first
+        // setup, this would cause "Failed to fetch" errors. We make it a no-op that
+        // resolves immediately, as all results are managed via local storage.
+        console.log("Syncing results is disabled in offline mode. Local results will be used.");
+        return Promise.resolve();
     },
 
     getLocalTestResultsForUser: (userId: string): TestResult[] => {
@@ -145,9 +121,24 @@ export const googleSheetsService = {
     },
 
     // --- DIRECT API CALLS (NOT CACHED LOCALLY) ---
-    getCertificateData: async (token: string, testId: string): Promise<ApiCertificateData | null> => {
-        console.warn("getCertificateData is mocked and will not fetch from a server.");
-        return Promise.resolve(null);
+    getCertificateData: async (token: string, testId: string, user: User): Promise<ApiCertificateData | null> => {
+        console.log("Generating certificate data from local results for offline functionality.");
+        try {
+            const result = googleSheetsService.getTestResult(user, testId);
+            if (result) {
+                return {
+                    certificateNumber: `MCO-${result.timestamp}`, // Generate a unique-ish number
+                    candidateName: user.name,
+                    finalScore: result.score,
+                    date: new Date(result.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                    examId: result.examId,
+                };
+            }
+            return null;
+        } catch (error) {
+            console.error("Failed to generate certificate data from local storage", error);
+            return null;
+        }
     },
     
     getDebugDetails: async (token: string): Promise<DebugData> => {

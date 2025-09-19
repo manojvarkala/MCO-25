@@ -40,11 +40,27 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const initializeApp = async () => {
         setIsInitializing(true);
         try {
-            // FIX: Load configuration from a local static file instead of a remote API
-            // to ensure the app can run in a standalone environment.
-            const response = await fetch('/medical-coding-config.json');
+            const getConfigFile = () => {
+                const hostname = window.location.hostname;
+                // Specific host for the Vercel preview environment
+                if (hostname === 'mco-25.vercel.app') {
+                    return '/annapoorna-config.json';
+                }
+                if (hostname.includes('annapoornainfo.com')) {
+                    return '/annapoorna-config.json';
+                }
+                if (hostname.includes('coding-online.net')) {
+                    return '/medical-coding-config.json';
+                }
+                // Fallback for localhost and any other domain
+                return '/medical-coding-config.json';
+            };
+
+            const configFile = getConfigFile();
+            const response = await fetch(configFile);
+
             if (!response.ok) {
-                throw new Error(`HTTP error! Could not fetch app configuration. Status: ${response.status}`);
+                throw new Error(`HTTP error! Could not fetch app configuration from ${configFile}. Status: ${response.status}`);
             }
             const configData = await response.json();
             
