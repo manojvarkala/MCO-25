@@ -1,39 +1,30 @@
-// FIX: Declare a global constant for development mode, defined in vite.config.ts, to avoid issues with vite/client types.
-declare const __DEV__: boolean;
-
-// This file determines the correct API endpoint based on the environment.
-// It uses Vite's `import.meta.env.DEV` to detect development mode.
-export const getApiEndpoint = (): string => {
-    // 1. In development mode, Vite's proxy is used, which is configured to point to `/api`.
-    // FIX: Use the __DEV__ global constant instead of import.meta.env.DEV.
-    if (__DEV__) {
-        return '/api';
-    }
-
-    const hostname = window.location.hostname;
-
-    // 2. Handle specific known hosts (e.g., Vercel staging). This provides an override.
-    const staticHosts: { [key: string]: string } = {
-        'mco-25.vercel.app': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
-        'www.annapoornainfo.com': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
-        'annapoornainfo.com': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
-        // FIX: Force www for coding-online.net to ensure API routing works correctly.
-        'www.coding-online.net': 'https://www.coding-online.net/wp-json/mco-app/v1',
-        'coding-online.net': 'https://www.coding-online.net/wp-json/mco-app/v1',
-    };
-    if (staticHosts[hostname]) {
-        return staticHosts[hostname];
-    }
-    
-    // 3. For multi-tenancy, derive the canonical API URL.
-    const parts = hostname.split('.');
-    
-    // If it's a non-www subdomain (e.g., app.domain.com), assume API is on www.domain.com
-    if (parts.length >= 3 && parts[0] !== 'www') {
-        const baseDomain = parts.slice(1).join('.');
-        return `https://www.${baseDomain}/wp-json/mco-app/v1`;
-    }
-
-    // Otherwise, if it's domain.com or www.domain.com, use the current hostname directly.
-    return `https://${hostname}/wp-json/mco-app/v1`;
-};
+{
+  "name": "Annapoorna-examination-App",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npx vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.3",
+    "react-hot-toast": "^2.4.1",
+    "lucide-react": "^0.378.0",
+    "jspdf": "^2.5.1",
+    "html2canvas": "^1.4.1",
+    "@google/genai": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "typescript": "~5.3.3",
+    "vite": "^5.1.4"
+  },
+  "overrides": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
