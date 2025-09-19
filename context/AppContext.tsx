@@ -42,6 +42,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         try {
             const API_BASE_URL = getApiEndpoint();
             const isProxied = API_BASE_URL.startsWith('/');
+<<<<<<< HEAD
             const endpoint = 'app-config';
             const fullUrl = `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
             
@@ -49,6 +50,15 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             urlWithCacheBuster.searchParams.append('mco_cb', Date.now().toString());
             
             const response = await fetch(urlWithCacheBuster.toString());
+=======
+            // FIX: Use a more robust URL construction method, similar to the main apiFetch service.
+            // This prevents potential issues with double slashes and correctly resolves relative paths in dev mode.
+            const endpoint = 'app-config';
+            const fullUrl = `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
+            const finalUrl = new URL(fullUrl, isProxied ? window.location.origin : undefined).toString();
+            
+            const response = await fetch(finalUrl);
+>>>>>>> 9fbc59a88f168ddc0c4f0558c8248c65be4f95b7
 
             if (!response.ok) {
                 throw new Error(`HTTP error! Could not fetch app configuration from WordPress. Status: ${response.status}`);
