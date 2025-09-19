@@ -1,4 +1,3 @@
-// Fix: The triple-slash directive must be the very first content in the file for TypeScript to correctly recognize Vite's client-side types like `import.meta.env`. A comment was preventing it from being processed.
 /// <reference types="vite/client" />
 
 // This file determines the correct API endpoint based on the environment.
@@ -14,6 +13,9 @@ export const getApiEndpoint = (): string => {
     // 2. Handle specific known hosts (e.g., Vercel staging). This provides an override.
     const staticHosts: { [key: string]: string } = {
         'mco-25.vercel.app': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
+        // FIX: Force non-www for coding-online.net to resolve API routing issues.
+        'www.coding-online.net': 'https://coding-online.net/wp-json/mco-app/v1',
+        'coding-online.net': 'https://coding-online.net/wp-json/mco-app/v1',
     };
     if (staticHosts[hostname]) {
         return staticHosts[hostname];
