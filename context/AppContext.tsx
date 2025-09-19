@@ -49,17 +49,17 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setIsInitializing(true);
         try {
             const getConfigFile = () => {
-                const hostname = window.location.hostname;
+                const hostname = window.location.hostname.replace(/^www\./, ''); // Normalize by removing www.
+
                 // Specific host for the Vercel preview environment
-                if (hostname === 'mco-25.vercel.app') {
+                if (hostname === 'mco-25.vercel.app' || hostname.endsWith('annapoornainfo.com')) {
                     return '/annapoorna-config.json';
                 }
-                if (hostname.includes('annapoornainfo.com')) {
-                    return '/annapoorna-config.json';
-                }
-                if (hostname.includes('coding-online.net')) {
+                
+                if (hostname.endsWith('coding-online.net')) {
                     return '/medical-coding-config.json';
                 }
+                
                 // Fallback for localhost and any other domain
                 return '/medical-coding-config.json';
             };
@@ -68,7 +68,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             const response = await fetch(configFile);
 
             if (!response.ok) {
-                throw new Error(`HTTP error! Could not fetch app configuration from ${configFile}. Status: ${response.status}`);
+                throw new Error(`Could not fetch app configuration from ${configFile}. Server responded with status: ${response.status} ${response.statusText}`);
             }
             const configData = await response.json();
             
@@ -110,8 +110,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
               ? processedOrgs.find(o => o.id === currentActiveOrgId)
               : undefined;
 
-            // FIX: If the stored org wasn't found in the current config (e.g., user switched domains),
-            // or if there was no stored org, gracefully default to the first one available.
             if (!newActiveOrg) {
                 newActiveOrg = processedOrgs[0] || null;
             }
@@ -120,14 +118,13 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
               setActiveOrg(newActiveOrg);
               localStorage.setItem('activeOrg', JSON.stringify(newActiveOrg));
             } else {
-              // This case now correctly implies that the config file was truly empty.
               setActiveOrg(null);
               localStorage.removeItem('activeOrg');
             }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to initialize app config:", error);
-            toast.error("Could not load application configuration.");
+            toast.error(error.message || "Could not load application configuration.", { duration: 6000 });
         } finally {
             setIsInitializing(false);
         }
