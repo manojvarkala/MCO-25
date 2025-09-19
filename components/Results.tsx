@@ -1,4 +1,11 @@
-import * as React from 'react';
+
+
+
+
+
+
+import React, { FC, useState, useEffect } from 'react';
+// Fix: Use namespace import for react-router-dom to resolve module exports.
 import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -12,33 +19,34 @@ import BookCover from '../assets/BookCover.tsx';
 import jsPDF from 'jspdf';
 import { logoBase64 } from '../assets/logo.ts';
 
-const Results: React.FC = () => {
+const Results: FC = () => {
     const { testId } = ReactRouterDOM.useParams<{ testId: string }>();
+    // Fix: Use useNavigate for navigation in v6
     const navigate = ReactRouterDOM.useNavigate();
     const { user, token, paidExamIds, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     
-    const [result, setResult] = React.useState<TestResult | null>(null);
-    const [exam, setExam] = React.useState<Exam | null>(null);
-    const [isLoading, setIsLoading] = React.useState(true);
-    const [aiFeedback, setAiFeedback] = React.useState<string>('');
-    const [isGeneratingFeedback, setIsGeneratingFeedback] = React.useState(false);
-    const [aiSummary, setAiSummary] = React.useState<string>('');
-    const [isGeneratingSummary, setIsGeneratingSummary] = React.useState(false);
-    const [isDownloading, setIsDownloading] = React.useState(false);
+    const [result, setResult] = useState<TestResult | null>(null);
+    const [exam, setExam] = useState<Exam | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [aiFeedback, setAiFeedback] = useState<string>('');
+    const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+    const [aiSummary, setAiSummary] = useState<string>('');
+    const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
-    const [rating, setRating] = React.useState(0);
-    const [hoverRating, setHoverRating] = React.useState(0);
-    const [reviewText, setReviewText] = React.useState('');
-    const [isSubmittingReview, setIsSubmittingReview] = React.useState(false);
-    const [submittedReview, setSubmittedReview] = React.useState<{rating: number; reviewText: string} | null>(null);
+    const [rating, setRating] = useState(0);
+    const [hoverRating, setHoverRating] = useState(0);
+    const [reviewText, setReviewText] = useState('');
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+    const [submittedReview, setSubmittedReview] = useState<{rating: number; reviewText: string} | null>(null);
     
-    const [isPurchased, setIsPurchased] = React.useState(false);
-    const [attemptsExceeded, setAttemptsExceeded] = React.useState(false);
-    const [hasPassedCert, setHasPassedCert] = React.useState(false);
+    const [isPurchased, setIsPurchased] = useState(false);
+    const [attemptsExceeded, setAttemptsExceeded] = useState(false);
+    const [hasPassedCert, setHasPassedCert] = useState(false);
 
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!testId || !user || !activeOrg) {
             if(!user) toast.error("Authentication session has expired.");
             else toast.error("Required data is missing.");
@@ -49,6 +57,16 @@ const Results: React.FC = () => {
         const existingReview = localStorage.getItem(`review_${testId}`);
         if (existingReview) {
             setSubmittedReview(JSON.parse(existingReview));
+        }
+
+        // Load cached AI feedback and summary
+        const cachedFeedback = localStorage.getItem(`ai_feedback_${testId}`);
+        if (cachedFeedback) {
+            setAiFeedback(cachedFeedback);
+        }
+        const cachedSummary = localStorage.getItem(`ai_summary_${testId}`);
+        if (cachedSummary) {
+            setAiSummary(cachedSummary);
         }
 
         const fetchResultAndExam = () => {
@@ -126,6 +144,9 @@ Please provide a summary of the key areas I need to focus on based on these erro
 `;
             const feedback = await googleSheetsService.getAIFeedback(prompt);
             setAiFeedback(feedback);
+            if (testId) {
+                localStorage.setItem(`ai_feedback_${testId}`, feedback);
+            }
             toast.success("AI feedback generated!", { id: toastId });
         } catch (error: any) {
             toast.error(error.message || "Failed to generate feedback.", { id: toastId });
@@ -179,6 +200,9 @@ Please provide a summary of the key areas I need to focus on based on these erro
 
             const summary = await googleSheetsService.getAIFeedback(prompt);
             setAiSummary(summary);
+            if (testId) {
+                localStorage.setItem(`ai_summary_${testId}`, summary);
+            }
             toast.success("AI summary generated!", { id: toastId });
 
         } catch (error: any) {
@@ -199,6 +223,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
             const pageHeight = pdf.internal.pageSize.getHeight();
             const margin = 15;
             let pageNum = 1;
+            let yPos = margin;
     
             const addWatermarkAndFooter = (pageNumber: number) => {
                 // Watermark
@@ -247,7 +272,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
             pdf.addPage();
             pageNum++;
             addWatermarkAndFooter(pageNum);
-            let yPos = margin;
+            yPos = margin;
             
             const contentWidth = pageWidth - margin * 2;
             const lines = aiFeedback.split('\n');
@@ -391,18 +416,32 @@ Please provide a summary of the key areas I need to focus on based on these erro
     
     const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } => {
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        let domainKey: keyof RecommendedBook['affiliateLinks'] = 'com';
-        let domainName = 'Amazon.com';
-
+        let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
+        let preferredDomain = 'Amazon.com';
+    
+        // Determine preferred locale
         const gccTimezones = ['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat'];
         if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
-            domainKey = 'in'; domainName = 'Amazon.in';
+            preferredKey = 'in';
+            preferredDomain = 'Amazon.in';
         } else if (gccTimezones.some(tz => timeZone === tz)) {
-            domainKey = 'ae'; domainName = 'Amazon.ae';
+            preferredKey = 'ae';
+            preferredDomain = 'Amazon.ae';
+        }
+    
+        // Check if the preferred URL exists and is valid
+        const preferredUrl = book.affiliateLinks[preferredKey];
+        if (preferredUrl && preferredUrl.trim() !== '') {
+            return { url: preferredUrl, domainName: preferredDomain };
+        }
+    
+        // Fallback to .com if preferred is not available or is an empty string
+        if (book.affiliateLinks.com && book.affiliateLinks.com.trim() !== '') {
+            return { url: book.affiliateLinks.com, domainName: 'Amazon.com' };
         }
         
-        const url = book.affiliateLinks[domainKey];
-        return !url ? { url: book.affiliateLinks.com, domainName: 'Amazon.com' } : { url, domainName };
+        // If both preferred and .com are invalid, return the original .com link (which is likely empty)
+        return { url: book.affiliateLinks.com || '', domainName: 'Amazon.com' };
     };
 
 
@@ -422,236 +461,187 @@ Please provide a summary of the key areas I need to focus on based on these erro
 
     return (
         <div className="max-w-4xl mx-auto">
-        <div className="bg-white p-8 rounded-xl shadow-lg">
-            <h1 className="text-3xl font-bold text-slate-800 mb-4">Results for {exam.name}</h1>
-            
-            <div className={`text-center border-2 ${isPass ? 'border-green-200' : 'border-red-200'} bg-slate-50 rounded-lg p-6 mb-8`}>
-                <p className="text-lg text-slate-600">Your Score</p>
-                <p className={`text-7xl font-bold ${scoreColor}`}>{result.score}%</p>
-                <p className="text-slate-500 mt-2">({result.correctCount} out of {result.totalQuestions} correct)</p>
-                <p className={`mt-4 text-xl font-semibold ${scoreColor}`}>{isPass ? 'Congratulations, you passed!' : 'Unfortunately, you did not pass.'}</p>
-            </div>
-
-            {((isPaidCertExam && isPass) || isAdmin) && (
-                <div className="text-center mb-8">
-                    <button
-                        onClick={() => navigate(`/certificate/${result.testId}`)}
-                        className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105"
-                    >
-                        <FileDown size={20} />
-                        <span>{isAdmin && !isPass ? "View Certificate (Admin Override)" : "Download Your Certificate"}</span>
-                    </button>
+            <div className="bg-white p-8 rounded-xl shadow-lg">
+                <h1 className="text-3xl font-bold text-slate-800 mb-4">Results for {exam.name}</h1>
+                
+                <div className={`text-center border-2 ${isPass ? 'border-green-200' : 'border-red-200'} bg-slate-50 rounded-lg p-6 mb-8`}>
+                    <p className="text-lg text-slate-600">Your Score</p>
+                    <p className={`text-7xl font-bold ${scoreColor}`}>{result.score}%</p>
+                    <p className="text-slate-500 mt-2">({result.correctCount} out of {result.totalQuestions} correct)</p>
+                    <p className={`mt-4 text-xl font-semibold ${scoreColor}`}>{isPass ? 'Congratulations, you passed!' : 'Unfortunately, you did not pass.'}</p>
                 </div>
-            )}
-            
-            <div className="text-center mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
-                <h2 className="text-xl font-semibold text-slate-800 mb-4">Rate Your Experience</h2>
-                {submittedReview ? (
-                    <div>
-                        <p className="text-slate-600 mb-2">Thank you for your feedback!</p>
-                        <div className="flex justify-center items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                                <Star key={i} size={24} className={i < submittedReview.rating ? 'text-yellow-400 fill-current' : 'text-slate-300'} />
-                            ))}
-                        </div>
-                        {submittedReview.reviewText && (
-                            <blockquote className="mt-4 text-slate-500 italic border-l-4 border-slate-300 pl-4 text-left max-w-md mx-auto">
-                                "{submittedReview.reviewText}"
-                            </blockquote>
-                        )}
-                    </div>
-                ) : (
-                    <div className="max-w-md mx-auto">
-                        <div className="flex justify-center items-center gap-2 mb-4">
-                            {[...Array(5)].map((_, i) => (
-                                <Star
-                                    key={i}
-                                    size={32}
-                                    className={`cursor-pointer transition-colors ${(hoverRating || rating) > i ? 'text-yellow-400 fill-current' : 'text-slate-300'}`}
-                                    onMouseEnter={() => setHoverRating(i + 1)}
-                                    onMouseLeave={() => setHoverRating(0)}
-                                    onClick={() => setRating(i + 1)}
-                                />
-                            ))}
-                        </div>
-                        <textarea
-                            value={reviewText}
-                            onChange={(e) => setReviewText(e.target.value)}
-                            placeholder="Share your thoughts (optional)"
-                            className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
-                            rows={3}
-                        />
+
+                {((isPaidCertExam && isPass) || isAdmin) && (
+                    <div className="text-center mb-8">
                         <button
-                            onClick={handleSubmitReview}
-                            disabled={isSubmittingReview}
-                            className="mt-4 inline-flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-cyan-300"
+                            onClick={() => navigate(`/certificate/${result.testId}`)}
+                            className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105"
                         >
-                            {isSubmittingReview ? <Spinner /> : <MessageSquare size={16} />}
-                            <span>{isSubmittingReview ? 'Submitting...' : 'Submit Review'}</span>
+                            <FileDown size={20} />
+                            <span>{isAdmin && !isPass ? "View Certificate (Admin Override)" : "Download Your Certificate"}</span>
                         </button>
                     </div>
                 )}
-            </div>
-
-            {!isPass && (
-                <div className="text-center mb-8 p-6 bg-amber-50 border border-amber-200 rounded-lg">
-                    <h2 className="text-xl font-semibold text-amber-800 mb-4">Need some help?</h2>
-                    {canUseAiFeedback ? (
-                        <>
-                            <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Don't worry, practice makes perfect. Use our AI-powered tools to get personalized insights on your performance.</p>
-                            <div className="flex flex-col sm:flex-row justify-center gap-4">
-                                <button
-                                    onClick={handleGenerateFeedback}
-                                    disabled={isGeneratingFeedback || isGeneratingSummary}
-                                    title="Didn't pass? Let our AI create a custom study guide for you. It analyzes the questions you missed and explains the key topics to focus on for your next attempt."
-                                    className="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-amber-300"
-                                >
-                                    {isGeneratingFeedback ? <Spinner /> : <Sparkles size={20} />}
-                                    <span>{isGeneratingFeedback ? 'Generating...' : 'Get AI Question Feedback'}</span>
-                                </button>
-                                <button
-                                    onClick={handleGenerateSummary}
-                                    disabled={isGeneratingFeedback || isGeneratingSummary}
-                                    title="Get a high-level summary of your performance, including your weak and strong areas, with actionable study recommendations."
-                                    className="inline-flex items-center space-x-2 bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-sky-300"
-                                >
-                                    {isGeneratingSummary ? <Spinner /> : <BarChart size={20} />}
-                                    <span>{isGeneratingSummary ? 'Analyzing...' : 'Get AI Performance Summary'}</span>
-                                </button>
-                            </div>
-                        </>
+                
+                <div className="text-center mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
+                    <h2 className="text-xl font-semibold text-slate-800 mb-4">Rate Your Experience</h2>
+                    {submittedReview ? (
+                        <div className="text-center text-green-700 bg-green-50 p-4 rounded-md">
+                            <p>Thank you for your review!</p>
+                        </div>
                     ) : (
-                        <>
-                             <p className="text-amber-700 max-w-2xl mx-auto mt-2 mb-4">Unlock our AI-powered study guide to get personalized feedback. This premium feature is available to subscribers or with an exam purchase.</p>
-                             <button
-                                 disabled
-                                 title="This is a premium feature. Subscribe or purchase the certification exam to unlock the AI study guide. Access is removed for a specific exam after you pass it or use all 3 attempts."
-                                 className="inline-flex items-center space-x-2 bg-slate-400 text-white font-bold py-3 px-6 rounded-lg cursor-not-allowed"
-                             >
-                                <Lock size={20} />
-                                <span>AI Feedback Locked</span>
+                        <div className="space-y-4">
+                            <div className="flex justify-center">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                        key={star}
+                                        onClick={() => setRating(star)}
+                                        onMouseEnter={() => setHoverRating(star)}
+                                        onMouseLeave={() => setHoverRating(0)}
+                                        className={`w-8 h-8 cursor-pointer transition-colors ${ (hoverRating || rating) >= star ? 'text-yellow-400 fill-current' : 'text-slate-300' }`}
+                                    />
+                                ))}
+                            </div>
+                            <textarea 
+                                value={reviewText}
+                                onChange={(e) => setReviewText(e.target.value)}
+                                placeholder="Tell us more about your experience (optional)..."
+                                className="w-full p-2 border border-slate-300 rounded-md"
+                                rows={3}
+                            />
+                            <button 
+                                onClick={handleSubmitReview}
+                                disabled={isSubmittingReview}
+                                className="inline-flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition disabled:bg-slate-400"
+                            >
+                                {isSubmittingReview ? <Spinner /> : <span>Submit Review</span>}
                             </button>
-                            <a href="#/pricing" className="mt-3 inline-block text-sm text-cyan-600 hover:underline">
-                                View Purchase & Subscription Options
-                            </a>
-                        </>
+                        </div>
                     )}
                 </div>
-            )}
 
-            {isGeneratingFeedback && (
-                <div className="p-4 bg-slate-50 rounded-lg text-center">
-                    <LogoSpinner />
-                    <p className="mt-2 text-slate-600">Our AI is analyzing your results... this may take a moment.</p>
-                </div>
-            )}
-            
-            {isGeneratingSummary && !aiSummary && (
-                 <div className="p-4 bg-slate-50 rounded-lg text-center">
-                    <LogoSpinner />
-                    <p className="mt-2 text-slate-600">Our AI is generating your performance summary...</p>
-                </div>
-            )}
 
-            {aiSummary && (
-                 <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h2 className="text-2xl font-semibold text-slate-700 flex items-center gap-2"><BarChart className="text-blue-500" /> AI Performance Summary</h2>
-                    <div className="prose prose-slate max-w-none whitespace-pre-wrap mt-4">{aiSummary}</div>
-                </div>
-            )}
-
-            {aiFeedback && (
-                 <div className="mt-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-semibold text-slate-700 flex items-center gap-2"><Sparkles className="text-cyan-500" /> AI Study Guide</h2>
-                        <button
-                            onClick={handleDownloadFeedback}
-                            disabled={isDownloading}
-                            className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 font-semibold py-2 px-4 rounded-lg hover:bg-blue-200 transition disabled:bg-slate-200 disabled:text-slate-500"
-                        >
-                            {isDownloading ? <Spinner /> : <Download size={16} />}
-                            <span>{isDownloading ? 'Generating...' : 'Download PDF'}</span>
-                        </button>
-                    </div>
-                    <div className="prose prose-slate max-w-none whitespace-pre-wrap">{aiFeedback}</div>
-                </div>
-            )}
-            
-            {isPaidCertExam && !isPass && (
-                <div className="text-center p-6 bg-slate-50 border border-slate-200 rounded-lg mt-8">
-                        <h2 className="text-xl font-semibold text-slate-700">Answer Review Not Available</h2>
-                        <p className="text-slate-600 max-w-2xl mx-auto mt-2">To protect the integrity of the certification exam and ensure fairness for all candidates, a detailed answer review is not provided for paid tests.</p>
-                </div>
-            )}
-
-            {exam.recommendedBook && (() => {
-                const { url, domainName } = getGeoAffiliateLink(exam.recommendedBook!);
-                return (
-                    <div className="text-center p-6 bg-blue-50 border border-blue-200 rounded-lg mt-8">
-                        <h2 className="text-xl font-semibold text-blue-800 mb-4">Recommended Study Material</h2>
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-left">
-                            <BookCover title={exam.recommendedBook!.title} className="w-32 h-40 rounded-lg shadow-md flex-shrink-0" />
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-800">{exam.recommendedBook!.title}</h3>
-                                <p className="text-slate-600 mt-1 mb-4 max-w-md">{exam.recommendedBook!.description}</p>
-                                <a 
-                                    href={url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    aria-label={`Buy ${exam.recommendedBook!.title} on ${domainName}`}
-                                    className="inline-flex items-center space-x-2 bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105"
-                                >
-                                    <BookUp size={20} />
-                                    <span>Buy on {domainName}</span>
-                                </a>
-                                <p className="text-xs text-slate-500 mt-2 max-w-md">
-                                    As an Amazon Associate, we earn from qualifying purchases. Using our links doesn't cost you anything extra and helps support our platform! Please note that book availability may vary by region.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                );
-            })()} 
-            
-            {!isPaidCertExam && (
-                <div className="mt-8">
-                    <h2 className="text-2xl font-semibold text-slate-700 mb-4">Answer Review</h2>
-                    <div className="space-y-6">
-                        {result.review.map((item, index) => (
-                            <div key={item.questionId} className="border border-slate-200 rounded-lg p-4">
-                                <p className="font-semibold text-slate-800 mb-3">{index + 1}. {item.question}</p>
-                                <div className="space-y-2">
-                                    {item.options.map((option, optionIndex) => {
-                                        const isUserAnswer = item.userAnswer === optionIndex;
-                                        const isCorrectAnswer = item.correctAnswer === optionIndex;
-                                        let bgClass = 'bg-slate-50';
-                                        if (isCorrectAnswer) bgClass = 'bg-green-100 border-green-400';
-                                        else if (isUserAnswer && !isCorrectAnswer) bgClass = 'bg-red-100 border-red-400';
-
-                                        return (
-                                            <div key={optionIndex} className={`flex items-center p-3 rounded border ${bgClass}`}>
-                                                {isUserAnswer && !isCorrectAnswer && <X size={18} className="text-red-600 mr-2 shrink-0" />}
-                                                {isCorrectAnswer && <Check size={18} className="text-green-600 mr-2 shrink-0" />}
-                                                <span className="text-slate-700">{option}</span>
-                                            </div>
-                                        );
-                                    })}
+                {exam.recommendedBook && (() => {
+                    const { url, domainName } = getGeoAffiliateLink(exam.recommendedBook);
+                    if (!url) return null; // Don't render if no valid URL was found
+                    return (
+                         <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
+                            <h2 className="text-xl font-semibold text-slate-800 mb-4">Recommended Study Material</h2>
+                            <div className="flex flex-col sm:flex-row items-center gap-6">
+                                <div className="flex-shrink-0 w-32 h-40">
+                                    <BookCover book={exam.recommendedBook} className="w-full h-full rounded-md shadow-lg" />
+                                </div>
+                                <div className="flex-grow">
+                                    <h3 className="text-lg font-bold text-slate-800">{exam.recommendedBook.title}</h3>
+                                    <p className="text-sm text-slate-600 mt-2 mb-4">{exam.recommendedBook.description}</p>
+                                    <a 
+                                        href={url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center space-x-2 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg transition"
+                                    >
+                                        <BookUp size={16}/> 
+                                        <span>Buy on {domainName}</span>
+                                    </a>
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            <div className="text-center mt-8">
-                <button 
-                    onClick={() => navigate('/dashboard')}
-                    className="bg-slate-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-700 transition"
-                >
-                    Back to Dashboard
-                </button>
+                        </div>
+                    );
+                })()}
             </div>
-        </div>
+
+            <div className="mt-8 bg-white p-8 rounded-xl shadow-lg">
+                 <div className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-6 rounded-lg mb-8">
+                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <Sparkles className="h-10 w-10 text-yellow-300" />
+                            <div>
+                                <h2 className="text-2xl font-bold">AI-Powered Feedback</h2>
+                                <p className="text-purple-200">Unlock your personalized study guide.</p>
+                            </div>
+                        </div>
+                        {canUseAiFeedback ? (
+                             <div className="flex gap-2">
+                                <button 
+                                    onClick={handleGenerateSummary}
+                                    disabled={isGeneratingSummary || !!aiSummary}
+                                    className="inline-flex items-center space-x-2 bg-white/20 hover:bg-white/30 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
+                                >
+                                    {isGeneratingSummary ? <Spinner /> : <BarChart size={16}/>}
+                                    <span>{aiSummary ? 'Summary Generated' : 'Performance Summary'}</span>
+                                </button>
+                                <button 
+                                    onClick={handleGenerateFeedback}
+                                    disabled={isGeneratingFeedback || !!aiFeedback}
+                                    className="inline-flex items-center space-x-2 bg-white/20 hover:bg-white/30 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
+                                >
+                                    {isGeneratingFeedback ? <Spinner /> : <ShieldCheck size={16}/>}
+                                    <span>{aiFeedback ? 'Feedback Generated' : 'Detailed Feedback'}</span>
+                                </button>
+                             </div>
+                        ) : (
+                            <div className="flex items-center gap-2 bg-white/10 p-2 rounded-md text-sm">
+                                <Lock size={16} />
+                                <span>{isSubscribed ? 'AI enabled for subscribers' : 'Available for subscribers or on purchased exams'}</span>
+                            </div>
+                        )}
+                     </div>
+                </div>
+
+                {aiSummary && (
+                    <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
+                        <h3 className="text-xl font-semibold text-slate-800 mb-4">AI Performance Summary</h3>
+                        <div className="prose prose-slate max-w-none whitespace-pre-wrap">{aiSummary}</div>
+                    </div>
+                )}
+                
+                {aiFeedback && (
+                    <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-semibold text-slate-800">AI Detailed Feedback</h3>
+                            <button 
+                                onClick={handleDownloadFeedback}
+                                disabled={isDownloading}
+                                className="inline-flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition disabled:bg-green-300"
+                            >
+                                {isDownloading ? <Spinner/> : <Download size={16}/>}
+                                <span>Download as PDF</span>
+                            </button>
+                        </div>
+                        <div className="prose prose-slate max-w-none whitespace-pre-wrap">{aiFeedback}</div>
+                    </div>
+                )}
+
+                {exam.isPractice && (
+                    <div>
+                        <h2 className="text-2xl font-bold text-slate-800 mb-4">Answer Review</h2>
+                        <div className="space-y-6">
+                            {result.review.map((item) => (
+                                <div key={item.questionId} className={`p-4 rounded-lg border-2 ${item.userAnswer === item.correctAnswer ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                                    <p className="font-semibold text-slate-800 mb-3">{item.question}</p>
+                                    <div className="space-y-2 text-sm">
+                                        {item.options.map((option, index) => {
+                                            const isCorrect = index === item.correctAnswer;
+                                            const isUserAnswer = index === item.userAnswer;
+                                            let indicator = <span className="w-5 h-5"></span>; // Placeholder
+                                            if (isCorrect) indicator = <Check className="w-5 h-5 text-green-600" />;
+                                            if (isUserAnswer && !isCorrect) indicator = <X className="w-5 h-5 text-red-600" />;
+
+                                            return (
+                                                <div key={index} className={`flex items-start p-2 rounded ${isCorrect ? 'bg-green-100' : ''} ${isUserAnswer && !isCorrect ? 'bg-red-100' : ''}`}>
+                                                    <div className="flex-shrink-0 mr-2">{indicator}</div>
+                                                    <p className="flex-grow">{option}</p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {item.userAnswer === -1 && <p className="text-sm text-slate-500 mt-2">You did not answer this question.</p>}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

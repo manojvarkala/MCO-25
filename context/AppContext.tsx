@@ -1,8 +1,8 @@
-import * as React from 'react';
-import { appData } from '../assets/appData.ts';
-import type { Organization, RecommendedBook, Exam, ExamProductCategory } from '../types.ts';
+import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
+import type { Organization, RecommendedBook, Exam, ExamProductCategory, InProgressExamInfo } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
+import { getApiEndpoint } from '../services/apiConfig.ts';
 
 interface AppContextType {
   organizations: Organization[];
@@ -14,61 +14,77 @@ interface AppContextType {
   suggestedBooks: RecommendedBook[];
   isWheelModalOpen: boolean;
   setWheelModalOpen: (isOpen: boolean) => void;
+  inProgressExam: InProgressExamInfo | null;
 }
 
-const AppContext = React.createContext<AppContextType | undefined>(undefined);
+const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [organizations, setOrganizations] = React.useState<Organization[]>([]);
-  const [activeOrg, setActiveOrg] = React.useState<Organization | null>(null);
-  const [isInitializing, setIsInitializing] = React.useState(true);
-  const [suggestedBooks, setSuggestedBooks] = React.useState<RecommendedBook[]>([]);
-  const { examPrices } = useAuth();
-  const [isWheelModalOpen, setWheelModalOpen] = React.useState(false);
+export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [activeOrg, setActiveOrg] = useState<Organization | null>(() => {
+    try {
+        const storedOrg = localStorage.getItem('activeOrg');
+        return storedOrg ? JSON.parse(storedOrg) : null;
+    } catch (e) {
+        console.error("Failed to parse activeOrg from localStorage", e);
+        return null;
+    }
+  });
+  const [isInitializing, setIsInitializing] = useState(true);
+  const { user, examPrices } = useAuth();
+  const [isWheelModalOpen, setWheelModalOpen] = useState(false);
+  const [inProgressExam, setInProgressExam] = useState<InProgressExamInfo | null>(null);
+  const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>([]);
 
-  React.useEffect(() => {
-    const initializeApp = () => {
+  useEffect(() => {
+    const initializeApp = async () => {
+        setIsInitializing(true);
         try {
-            const baseOrgs = JSON.parse(JSON.stringify(appData));
+            const API_BASE_URL = getApiEndpoint();
+            const isProxied = API_BASE_URL.startsWith('/');
+            const endpoint = 'app-config';
+            const fullUrl = `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
             
-            const bookMap = new Map<string, RecommendedBook>();
-            baseOrgs.forEach((org: Organization) => {
-                if (org.suggestedBooks) {
-                    org.suggestedBooks.forEach(book => {
-                        if (!bookMap.has(book.id)) bookMap.set(book.id, book);
-                    });
-                }
-            });
+            const urlWithCacheBuster = new URL(fullUrl, isProxied ? window.location.origin : undefined);
+            urlWithCacheBuster.searchParams.append('mco_cb', Date.now().toString());
+            
+            const response = await fetch(urlWithCacheBuster.toString());
 
+            if (!response.ok) {
+                throw new Error(`HTTP error! Could not fetch app configuration from WordPress. Status: ${response.status}`);
+            }
+            const configData = await response.json();
+            
+            const baseOrgs = JSON.parse(JSON.stringify(configData.organizations || []));
+            
             const processedOrgs = baseOrgs.map((org: Organization) => {
-                const processedExams = org.exams.map((exam: Exam): Exam => {
+                // The API response is now the single source of truth for configuration.
+                const examsSource = org.exams;
+                const categoriesSource = org.examProductCategories;
+                const booksSource = org.suggestedBooks || [];
+                
+                setSuggestedBooks(booksSource);
+
+                const bookMap = new Map<string, RecommendedBook>();
+                booksSource.forEach(book => bookMap.set(book.id, book));
+                
+                const processedExams = examsSource.map((exam: Exam): Exam => {
                     const priceData = examPrices && exam.productSku ? examPrices[exam.productSku] : null;
                     const recommendedBook = exam.recommendedBookId ? bookMap.get(exam.recommendedBookId) : undefined;
                     
-                    const category = org.examProductCategories.find(
-                        (cat: ExamProductCategory) => cat.practiceExamId === exam.id || cat.certificationExamId === exam.id
-                    );
-
-                    if (!category || !category.questionSourceUrl) {
-                        console.error(`Configuration error: No question source URL found for exam "${exam.name}" (ID: ${exam.id}). Please check appData.ts.`);
-                        return {
-                            ...exam,
-                            questionSourceUrl: '', // Set to empty to prevent runtime errors on property access
-                            ...(priceData && { price: priceData.price, regularPrice: priceData.regularPrice }),
-                            ...(recommendedBook && { recommendedBook }),
-                        };
-                    }
-                    
-                    const questionSourceUrl = category.questionSourceUrl;
-
                     return {
                         ...exam,
-                        questionSourceUrl,
                         ...(priceData && { price: priceData.price, regularPrice: priceData.regularPrice }),
                         ...(recommendedBook && { recommendedBook }),
                     };
                 });
-                return { ...org, exams: processedExams };
+                
+                return { 
+                    ...org, 
+                    exams: processedExams, 
+                    examProductCategories: categoriesSource,
+                    suggestedBooks: booksSource 
+                };
             });
             
             setOrganizations(processedOrgs);
@@ -80,14 +96,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             
             if (newActiveOrg) {
               setActiveOrg(newActiveOrg);
-              setSuggestedBooks(newActiveOrg.suggestedBooks || []);
+              localStorage.setItem('activeOrg', JSON.stringify(newActiveOrg));
             } else {
               setActiveOrg(null);
-              setSuggestedBooks([]);
+              localStorage.removeItem('activeOrg');
             }
 
         } catch (error) {
-            console.error("Failed to initialize app config from local data:", error);
+            console.error("Failed to initialize app config from WordPress API:", error);
             toast.error("Could not load application configuration.");
         } finally {
             setIsInitializing(false);
@@ -97,36 +113,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     initializeApp();
   }, [examPrices]);
 
+  // Effect to detect in-progress exams
+  useEffect(() => {
+    if (!user || !activeOrg) {
+        setInProgressExam(null);
+        return;
+    }
+    
+    let foundExam: InProgressExamInfo | null = null;
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(`exam_progress_`) && key.endsWith(`_${user.id}`)) {
+                const examId = key.split('_')[2];
+                const examDetails = activeOrg.exams.find(e => e.id === examId);
+                if (examDetails) {
+                    foundExam = { examId: examDetails.id, examName: examDetails.name };
+                    break; 
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Failed to check for in-progress exams:", error);
+    }
+    setInProgressExam(foundExam);
 
-  const setActiveOrgById = (orgId: string) => {
+  }, [user, activeOrg]);
+
+
+  const setActiveOrgById = useCallback((orgId: string) => {
     const org = organizations.find(o => o.id === orgId);
     if (org) {
         setActiveOrg(org);
-        if (org.suggestedBooks) {
-            setSuggestedBooks(org.suggestedBooks);
-        }
+        localStorage.setItem('activeOrg', JSON.stringify(org));
     }
-  };
+  }, [organizations]);
 
-  const updateActiveOrg = (updatedOrg: Organization) => {
+  const updateActiveOrg = useCallback((updatedOrg: Organization) => {
     setOrganizations(prevOrgs => 
         prevOrgs.map(org => org.id === updatedOrg.id ? updatedOrg : org)
     );
     setActiveOrg(updatedOrg);
-    if (updatedOrg.suggestedBooks) {
-        setSuggestedBooks(updatedOrg.suggestedBooks);
-    }
-  };
+    localStorage.setItem('activeOrg', JSON.stringify(updatedOrg));
+  }, []);
+
+  const value = useMemo(() => ({
+    organizations,
+    activeOrg,
+    isLoading: isInitializing,
+    isInitializing,
+    setActiveOrgById,
+    updateActiveOrg,
+    suggestedBooks,
+    isWheelModalOpen,
+    setWheelModalOpen,
+    inProgressExam
+  }), [
+    organizations, activeOrg, isInitializing, setActiveOrgById,
+    updateActiveOrg, suggestedBooks, isWheelModalOpen, setWheelModalOpen, inProgressExam
+  ]);
 
   return (
-    <AppContext.Provider value={{ organizations, activeOrg, isLoading: isInitializing, isInitializing, setActiveOrgById, updateActiveOrg, suggestedBooks, isWheelModalOpen, setWheelModalOpen }}>
+    <AppContext.Provider value={value}>
       {children}
     </AppContext.Provider>
   );
 };
 
 export const useAppContext = (): AppContextType => {
-  const context = React.useContext(AppContext);
+  const context = useContext(AppContext);
   if (context === undefined) {
     throw new Error('useAppContext must be used within an AppProvider');
   }

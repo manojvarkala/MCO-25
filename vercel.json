@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://www.coding-online.net/wp-json/mco-app/v1/$1"
+      "source": "/(.*)",
+      "destination": "/"
     }
   ]
 }

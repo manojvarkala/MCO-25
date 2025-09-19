@@ -45,6 +45,11 @@ export interface TokenPayload {
     isSubscribed?: boolean;
     spinsAvailable?: number;
     wonPrize?: { prizeId: string; prizeLabel: string; };
+    suggestedBooks?: RecommendedBook[];
+    isSpinWheelEnabled?: boolean;
+    // Add dynamic data from the new plugin version for backward compatibility
+    exams?: Exam[];
+    examProductCategories?: ExamProductCategory[];
     iat?: number;
     exp?: number;
 }
@@ -67,14 +72,17 @@ export interface CertificateTemplate {
     body: string;
     signature1Name: string;
     signature1Title: string;
+    signature1ImageBase64?: string;
     signature2Name: string;
     signature2Title: string;
+    signature2ImageBase64?: string;
 }
 
 export interface RecommendedBook {
     id: string;
     title: string;
     description: string;
+    thumbnailUrl?: string;
     affiliateLinks: { // These should be the full, final affiliate URLs
         com: string;
         in: string;
@@ -95,6 +103,7 @@ export interface Exam {
     recommendedBook?: RecommendedBook;
     recommendedBookId?: string;
     isPractice: boolean;
+    isProctored?: boolean;
     durationMinutes: number;
     productSku: string;
     productSlug?: string;
@@ -161,4 +170,29 @@ export interface SearchedUser {
     id: string;
     name: string;
     email: string;
+}
+
+// Data structure for saving exam progress
+export interface ExamProgress {
+    questions: Question[];
+    answers: UserAnswer[];
+    currentQuestionIndex: number;
+}
+
+// Information about an exam the user has started but not finished
+export interface InProgressExamInfo {
+    examId: string;
+    examName: string;
+}
+
+// Data for the new Exam Statistics panel
+export interface ExamStat {
+    examId: string;
+    examName: string;
+    totalSales: number;
+    totalAttempts: number;
+    passRate: number; // Percentage
+    averageScore: number;
+    passed: number;
+    failed: number;
 }

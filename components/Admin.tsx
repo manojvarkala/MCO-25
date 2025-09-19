@@ -1,7 +1,7 @@
-import * as React from 'react';
-import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck } from 'lucide-react';
+import React, { FC, useState, useEffect, useCallback } from 'react';
+import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu, Video } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
-import type { Exam, SearchedUser } from '../types.ts';
+import type { Exam, SearchedUser, ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -15,24 +15,47 @@ const prizeOptions = [
     { id: 'EXAM_CCA', label: 'Free CCA Exam' },
 ];
 
-const Admin: React.FC = () => {
-    const wpAdminUrl = 'https://www.coding-online.net/wp-admin/options-general.php?page=mco-exam-settings';
+const Admin: FC = () => {
     const { activeOrg, updateActiveOrg } = useAppContext();
     const { token } = useAuth();
 
     // State for exam customization
-    const [editingExamId, setEditingExamId] = React.useState<string | null>(null);
-    const [editedExamData, setEditedExamData] = React.useState<Partial<Exam>>({});
+    const [editingExamId, setEditingExamId] = useState<string | null>(null);
+    const [editedExamData, setEditedExamData] = useState<Partial<Exam>>({});
     
     // State for user prize management
-    const [searchTerm, setSearchTerm] = React.useState('');
-    const [isSearching, setIsSearching] = React.useState(false);
-    const [searchResults, setSearchResults] = React.useState<SearchedUser[]>([]);
-    const [selectedUser, setSelectedUser] = React.useState<SearchedUser | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchResults, setSearchResults] = useState<SearchedUser[]>([]);
+    const [selectedUser, setSelectedUser] = useState<SearchedUser | null>(null);
 
-    const [spinsToAdd, setSpinsToAdd] = React.useState('1');
-    const [prizeToGrant, setPrizeToGrant] = React.useState(prizeOptions[0].id);
-    const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [spinsToAdd, setSpinsToAdd] = useState('1');
+    const [prizeToGrant, setPrizeToGrant] = useState(prizeOptions[0].id);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // State for exam stats
+    const [stats, setStats] = useState<ExamStat[] | null>(null);
+    const [isLoadingStats, setIsLoadingStats] = useState(true);
+    const [statsError, setStatsError] = useState<string | null>(null);
+
+
+    const fetchStats = useCallback(async () => {
+        if (!token) return;
+        setIsLoadingStats(true);
+        setStatsError(null);
+        try {
+            const data = await googleSheetsService.getExamStats(token);
+            setStats(data);
+        } catch (error: any) {
+            setStatsError(error.message || 'Failed to load statistics.');
+        } finally {
+            setIsLoadingStats(false);
+        }
+    }, [token]);
+
+    useEffect(() => {
+        fetchStats();
+    }, [fetchStats]);
 
 
     const handleEditClick = (exam: Exam) => {
@@ -45,6 +68,7 @@ const Admin: React.FC = () => {
             durationMinutes: exam.durationMinutes,
             questionSourceUrl: exam.questionSourceUrl,
             isPractice: exam.isPractice,
+            isProctored: exam.isProctored,
             certificateTemplateId: exam.certificateTemplateId,
             recommendedBookId: exam.recommendedBookId || '',
         });
@@ -179,21 +203,89 @@ const Admin: React.FC = () => {
             
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                 <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
-                    <Settings className="mr-3 text-cyan-500" />
-                    Application Mode
+                    <Code className="mr-3 text-cyan-500" />
+                    WordPress Integration
                 </h2>
                 <p className="text-slate-600 mb-6">
-                    This setting controls the exam app version used for redirects from WordPress. This must be configured directly in your WordPress admin dashboard.
+                    This is the master plugin for integrating the exam app with WordPress. It handles SSO, data sync, and WooCommerce styling. The "Platform Blueprint" guide is now included within the plugin's admin page on your WordPress site.
                 </p>
                 <a
-                    href={wpAdminUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href="/#/integration"
                     className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
                 >
                     <ExternalLink size={20} className="mr-2" />
-                    Go to WordPress Mode Settings
+                    Get Unified Plugin Code
                 </a>
+            </div>
+            
+            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold text-slate-800 flex items-center">
+                        <BarChart3 className="mr-3 text-cyan-500" />
+                        Exam Statistics
+                    </h2>
+                    <button onClick={fetchStats} disabled={isLoadingStats} className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 px-4 rounded-lg transition disabled:bg-slate-200 disabled:text-slate-400">
+                        <RefreshCw size={16} className={isLoadingStats ? 'animate-spin' : ''} />
+                        Refresh
+                    </button>
+                </div>
+                <p className="text-slate-600 mb-6">
+                    Overview of sales and attempts for each certification exam. Data is fetched directly from your WordPress backend.
+                </p>
+                
+                {isLoadingStats ? (
+                    <div className="flex justify-center items-center h-48"><Spinner /></div>
+                ) : statsError ? (
+                    <div className="text-center py-10 text-red-500 bg-red-50 p-4 rounded-lg">
+                        <p><strong>Error:</strong> {statsError}</p>
+                    </div>
+                ) : stats && stats.length > 0 ? (
+                     <div className="overflow-x-auto bg-white rounded-lg shadow">
+                        <table className="w-full text-sm text-left text-slate-500">
+                            <thead className="text-xs text-slate-700 uppercase bg-slate-100">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3">Exam Name</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Sales</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Attempts</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Passed</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Failed</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Pass Rate</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Avg. Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {stats.map((stat) => {
+                                    const examConfig = activeOrg?.exams.find(exam => exam.id === stat.examId);
+                                    const passScore = examConfig ? examConfig.passScore : 70;
+                                    const passRateColor = stat.passRate >= passScore ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800';
+                                    const avgScoreColor = stat.averageScore >= passScore ? 'text-green-600' : 'text-amber-600';
+
+                                    return (
+                                        <tr key={stat.examId} className="bg-white border-b hover:bg-slate-50">
+                                            <th scope="row" className="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">
+                                                {stat.examName}
+                                            </th>
+                                            <td className="px-6 py-4 text-center">{stat.totalSales}</td>
+                                            <td className="px-6 py-4 text-center">{stat.totalAttempts}</td>
+                                            <td className="px-6 py-4 text-center text-green-600 font-medium">{stat.passed}</td>
+                                            <td className="px-6 py-4 text-center text-red-600 font-medium">{stat.failed}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={`px-2 py-1 font-semibold leading-tight rounded-full text-xs ${passRateColor}`}>
+                                                    {stat.passRate.toFixed(1)}%
+                                                </span>
+                                            </td>
+                                            <td className={`px-6 py-4 text-center font-bold ${avgScoreColor}`}>
+                                                {stat.averageScore.toFixed(1)}%
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <p className="text-center text-slate-500 py-10">No statistics available.</p>
+                )}
             </div>
 
              <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
@@ -358,10 +450,16 @@ const Admin: React.FC = () => {
                                     </select>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                    <input type="checkbox" name="isPractice" id="isPractice" checked={!!editedExamData.isPractice} onChange={handleCheckboxChange} className="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500" />
-                                    <label htmlFor="isPractice" className="ml-2 block text-sm text-slate-900">Is Practice Exam?</label>
+                            <div className="flex items-center justify-between flex-wrap gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center">
+                                        <input type="checkbox" name="isPractice" id="isPractice" checked={!!editedExamData.isPractice} onChange={handleCheckboxChange} className="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500" />
+                                        <label htmlFor="isPractice" className="ml-2 block text-sm text-slate-900">Is Practice Exam?</label>
+                                    </div>
+                                     <div className="flex items-center">
+                                        <input type="checkbox" name="isProctored" id="isProctored" checked={!!editedExamData.isProctored} onChange={handleCheckboxChange} className="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500" />
+                                        <label htmlFor="isProctored" className="ml-2 block text-sm text-slate-900 flex items-center gap-1"><Cpu size={14} /> Enable Browser Proctoring?</label>
+                                    </div>
                                 </div>
                                 <div className="flex justify-end space-x-2 pt-2">
                                     <button onClick={handleCancel} className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition">
@@ -376,7 +474,7 @@ const Admin: React.FC = () => {
                     </div>
                 )}
             </div>
-
+            
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                 <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
                     <Lightbulb className="mr-3 text-cyan-500" />

@@ -1,28 +1,32 @@
-import * as React from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import React, { FC, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, Users, Gift, Star } from 'lucide-react';
 import { logoBase64 } from '../assets/logo.ts';
 
-const Header: React.FC = () => {
+const Header: FC = () => {
   const { user, logout, canSpinWheel, isSubscribed } = useAuth();
   const { activeOrg, setWheelModalOpen } = useAppContext();
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
+  // Updated URL generation with fallback
+  const mainSiteBaseUrl = useMemo(() => {
+    return activeOrg ? `https://www.${activeOrg.website}` : '';
+  }, [activeOrg]);
+  
   const handleLogout = () => {
     logout();
-    // Redirect to the external WordPress site's logout page, then back to the app's home
-    const appHomeUrl = 'https://exams.coding-online.net';
-    const wpLogoutUrl = `https://www.coding-online.net/wp-login.php?action=logout&redirect_to=${encodeURIComponent(appHomeUrl)}`;
-    window.location.href = wpLogoutUrl;
+    // Redirect to the app's home page instead of WordPress logout
+    // This keeps the user logged into the main site.
+    window.location.href = '/#/';
   };
 
-  const headerLink = user ? "/dashboard" : "/";
+  const headerLink = user ? "/#/dashboard" : "/#/";
   
-  // The custom login page is a WordPress page with the slug 'exam-login'
-  const loginUrl = `https://www.coding-online.net/exam-login/`;
-  const myAccountUrl = `https://www.coding-online.net/my-account/`;
+  // Use /exam-login/ to ensure the token redirect flow is initiated correctly.
+  const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
+  const myAccountUrl = `${mainSiteBaseUrl}/my-account/`;
+  const registerUrl = `${mainSiteBaseUrl}/wp-login.php?action=register`;
 
   const headerClasses = isSubscribed
     ? "shadow-lg sticky top-0 z-50 premium-header-gradient"
@@ -36,9 +40,9 @@ const Header: React.FC = () => {
     <header className={headerClasses}>
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         {activeOrg ? (
-            <ReactRouterDOM.Link to={headerLink} className="flex items-center space-x-3">
+            <a href={headerLink} className="flex items-center space-x-3">
                  <img
-                    src={logoBase64}
+                    src={activeOrg.logo || logoBase64}
                     alt={`${activeOrg.name} Logo`}
                     className="h-14 w-14 object-contain"
                 />
@@ -57,7 +61,7 @@ const Header: React.FC = () => {
                         {activeOrg.website}
                     </span>
                 </div>
-            </ReactRouterDOM.Link>
+            </a>
         ) : (
              <div className="flex items-center space-x-3">
                  <div className="h-14 w-14 bg-slate-200 rounded-full animate-pulse"></div>
@@ -79,51 +83,51 @@ const Header: React.FC = () => {
                     <span className="hidden sm:inline">Spin & Win</span>
                 </button>
             )}
-            <ReactRouterDOM.Link 
-                to="/pricing"
+            <a 
+                href="/#/pricing"
                 className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}
                 title="View Plans and Pricing"
             >
                 <Tag size={20} />
                 <span className="hidden sm:inline font-semibold">Pricing</span>
-            </ReactRouterDOM.Link>
-           <ReactRouterDOM.Link 
-                to="/bookstore"
+            </a>
+           <a 
+                href="/#/bookstore"
                 className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}
                 title="Recommended Books"
             >
                 <BookMarked size={20} />
                 <span className="hidden sm:inline font-semibold">Book Store</span>
-            </ReactRouterDOM.Link>
-            <ReactRouterDOM.Link 
-                to="/about-us"
+            </a>
+            <a 
+                href="/#/about-us"
                 className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}
                 title="About Us"
             >
                 <Users size={20} />
                 <span className="hidden sm:inline font-semibold">About Us</span>
-            </ReactRouterDOM.Link>
+            </a>
           {user ? (
             <>
               <div className="relative" onMouseEnter={() => setIsProfileMenuOpen(true)} onMouseLeave={() => setIsProfileMenuOpen(false)}>
-                <ReactRouterDOM.Link to="/profile" className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`} title="View your profile">
+                <a href="/#/profile" className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`} title="View your profile">
                     {isSubscribed && <Star size={16} className="text-yellow-400 fill-current" />}
                     <UserCircle size={20} />
                     <span className="hidden sm:inline">Profile</span>
-                </ReactRouterDOM.Link>
+                </a>
                  {isProfileMenuOpen && (
                     <div className={`absolute right-0 top-full pt-2 w-56 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50 ${isSubscribed ? 'bg-slate-800' : 'bg-white'}`}>
                         <div className="px-4 py-2 text-xs text-slate-400">Welcome, {user.name}</div>
-                         <ReactRouterDOM.Link to="/profile" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
+                         <a href="/#/profile" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
                             <User size={14}/> Profile Details
-                        </ReactRouterDOM.Link>
+                        </a>
                         <a href={myAccountUrl} target="_blank" rel="noopener noreferrer" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
                            <UserCircle size={14}/> My Account (Main Site)
                         </a>
                         {user.isAdmin && (
-                            <ReactRouterDOM.Link to="/admin" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
+                            <a href="/#/admin" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
                                <Shield size={14}/> Admin Panel
-                            </ReactRouterDOM.Link>
+                            </a>
                         )}
                     </div>
                 )}
@@ -146,7 +150,7 @@ const Header: React.FC = () => {
                     <span>Login</span>
                 </a>
                 <a
-                    href="https://www.coding-online.net/wp-login.php?action=register"
+                    href={registerUrl}
                     className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
                     >
                     <UserPlus size={16} />

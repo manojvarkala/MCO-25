@@ -1,37 +1,43 @@
-import * as React from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import React, { FC } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
+import { useAppContext } from '../context/AppContext.tsx';
 
-const Footer: React.FC = () => {
+const Footer: FC = () => {
   const { user } = useAuth();
+  const { activeOrg } = useAppContext();
+
+  if (!activeOrg) {
+    return (
+        <footer className="bg-white mt-auto">
+            <div className="container mx-auto px-4 py-4 text-center text-slate-500 text-sm">
+                <div className="animate-pulse">
+                    <div className="h-4 bg-slate-200 rounded w-3/4 mx-auto mb-2"></div>
+                    <div className="h-4 bg-slate-200 rounded w-1/2 mx-auto"></div>
+                </div>
+            </div>
+        </footer>
+    );
+  }
 
   return (
     <footer className="bg-white mt-auto">
       <div className="container mx-auto px-4 py-4 text-center text-slate-500 text-sm">
         <div className="flex justify-center items-center space-x-4 mb-2 flex-wrap">
-            <ReactRouterDOM.Link to="/instructions" className="text-cyan-600 hover:underline">Instructions</ReactRouterDOM.Link>
+            <a href="/#/instructions" className="text-cyan-600 hover:underline">Instructions</a>
             <span className="text-slate-300">|</span>
-            <ReactRouterDOM.Link to="/user-guide" className="text-cyan-600 hover:underline">User Guide</ReactRouterDOM.Link>
+            <a href="/#/user-guide" className="text-cyan-600 hover:underline">User Guide</a>
             <span className="text-slate-300">|</span>
-            <ReactRouterDOM.Link to="/about-us" className="text-cyan-600 hover:underline">About Us</ReactRouterDOM.Link>
+            <a href="/#/about-us" className="text-cyan-600 hover:underline">About Us</a>
             <span className="text-slate-300">|</span>
-            <ReactRouterDOM.Link to="/feedback" className="text-cyan-600 hover:underline">Feedback</ReactRouterDOM.Link>
-            {user && user.isAdmin && (
-              <>
-                <span className="text-slate-300">|</span>
-                <ReactRouterDOM.Link to="/integration" className="text-cyan-600 hover:underline">Integration</ReactRouterDOM.Link>
-                <span className="text-slate-300">|</span>
-                <ReactRouterDOM.Link to="/purchase-notifier" className="text-cyan-600 hover:underline">Notifier Script</ReactRouterDOM.Link>
-              </>
-            )}
+            <a href="/#/feedback" className="text-cyan-600 hover:underline">Feedback</a>
             <span className="text-slate-300">|</span>
-            <ReactRouterDOM.Link to="/terms-of-service" className="text-cyan-600 hover:underline">Terms of Service</ReactRouterDOM.Link>
+            <a href="/#/terms-of-service" className="text-cyan-600 hover:underline">Terms of Service</a>
             <span className="text-slate-300">|</span>
-            <ReactRouterDOM.Link to="/privacy-policy" className="text-cyan-600 hover:underline">Privacy Policy</ReactRouterDOM.Link>
+            <a href="/#/privacy-policy" className="text-cyan-600 hover:underline">Privacy Policy</a>
             <span className="text-slate-300">|</span>
-            <ReactRouterDOM.Link to="/refund-policy" className="text-cyan-600 hover:underline">Refund Policy</ReactRouterDOM.Link>
+            <a href="/#/refund-policy" className="text-cyan-600 hover:underline">Refund Policy</a>
         </div>
-        <p>&copy; {new Date().getFullYear()} Medical Coding Online | Powered by Annapoorna Examination App. All Rights Reserved.</p>
+        <p>&copy; {new Date().getFullYear()} {activeOrg.name}. All Rights Reserved.</p>
         <p>An <a href="https://annapoornainfo.com" target="_blank" rel="noopener noreferrer" className="text-cyan-600 hover:underline">Annapoorna Infotech</a> Venture.</p>
       </div>
     </footer>

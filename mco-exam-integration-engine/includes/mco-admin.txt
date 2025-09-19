@@ -1,0 +1,185 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+// Hook registration
+if (!function_exists('mco_register_admin_hooks')) {
+    function mco_register_admin_hooks() {
+        add_action('admin_notices', 'mco_admin_notices');
+        add_action('admin_menu', 'mco_exam_add_admin_menu');
+        add_action('add_meta_boxes', 'mco_add_meta_boxes');
+        add_action('save_post_product', 'mco_save_wc_product_meta_data');
+        add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta');
+        add_action('save_post_mco_recommended_book', 'mco_save_book_meta_data');
+    }
+}
+if (!function_exists('mco_register_admin_tabs')) {
+    function mco_register_admin_tabs() {
+        add_action('admin_init', 'mco_register_settings_and_fields');
+    }
+}
+
+if (!function_exists('mco_admin_notices')) {
+    function mco_admin_notices() {
+        if (!defined('MCO_JWT_SECRET') || strlen(MCO_JWT_SECRET) < 32) echo '<div class="notice notice-error"><p><strong>Exam App Engine:</strong> A secure <strong>MCO_JWT_SECRET</strong> (at least 32 characters long) is not defined in your wp-config.php file for security. SSO will not work.</p></div>';
+        if (empty(get_option('mco_exam_app_url'))) echo '<div class="notice notice-warning"><p><strong>Exam App Engine:</strong> The Exam Application URL is not set. Please <a href="' . admin_url('admin.php?page=mco-exam-engine') . '">go to the settings page</a> to configure it.</p></div>';
+    }
+}
+
+// --- ADMIN MENU & PAGES ---
+if (!function_exists('mco_exam_add_admin_menu')) {
+    function mco_exam_add_admin_menu() {
+        add_menu_page('Exam App Engine', 'Exam App Engine', 'manage_options', 'mco-exam-engine', 'mco_render_settings_page', 'dashicons-analytics', 80);
+        add_submenu_page('mco-exam-engine', 'Exam Programs', 'Exam Programs', 'manage_options', 'edit.php?post_type=mco_exam_program');
+        add_submenu_page('mco-exam-engine', 'Recommended Books', 'Recommended Books', 'manage_options', 'edit.php?post_type=mco_recommended_book');
+    }
+}
+
+if (!function_exists('mco_render_settings_page')) {
+    function mco_render_settings_page() {
+        $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'main_settings';
+        ?>
+        <div class="wrap">
+            <h1>Exam App Engine Settings</h1>
+            <h2 class="nav-tab-wrapper">
+                <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
+                <a href="?page=mco-exam-engine&tab=feature_management" class="nav-tab <?php echo $active_tab == 'feature_management' ? 'nav-tab-active' : ''; ?>">Feature Management</a>
+                <a href="?page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
+            </h2>
+            <form method="post" action="options.php">
+                <?php
+                if ($active_tab == 'main_settings') {
+                    settings_fields('mco_main_settings_group');
+                    do_settings_sections('mco_main_settings_page');
+                } elseif ($active_tab == 'feature_management') {
+                    settings_fields('mco_feature_management_group');
+                    do_settings_sections('mco_feature_management_page');
+                } elseif ($active_tab == 'tools') {
+                    mco_render_tools_tab();
+                }
+                if ($active_tab != 'tools') {
+                    submit_button();
+                }
+                ?>
+            </form>
+        </div>
+        <?php
+    }
+}
+
+if (!function_exists('mco_register_settings_and_fields')) {
+    function mco_register_settings_and_fields() {
+        // Main Settings
+        register_setting('mco_main_settings_group', 'mco_exam_app_url');
+        add_settings_section('mco_main_section', 'Core Configuration', null, 'mco_main_settings_page');
+        add_settings_field('mco_exam_app_url_field', 'Exam Application URL', 'mco_render_app_url_field', 'mco_main_settings_page', 'mco_main_section');
+
+        // Feature Management
+        register_setting('mco_feature_management_group', 'mco_spin_wheel_enabled');
+        add_settings_section('mco_feature_section', 'Feature Toggles', null, 'mco_feature_management_page');
+        add_settings_field('mco_spin_wheel_enabled_field', 'Spin & Win Feature', 'mco_render_spin_wheel_field', 'mco_feature_management_page', 'mco_feature_section');
+    }
+}
+
+if (!function_exists('mco_render_app_url_field')) {
+    function mco_render_app_url_field() {
+        $url = get_option('mco_exam_app_url');
+        echo '<input type="url" name="mco_exam_app_url" value="' . esc_attr($url) . '" class="regular-text" placeholder="https://exams.yourdomain.com">';
+        echo '<p class="description">Enter the full URL of your standalone React examination app. Do not include a trailing slash.</p>';
+    }
+}
+
+if (!function_exists('mco_render_spin_wheel_field')) {
+    function mco_render_spin_wheel_field() {
+        $enabled = get_option('mco_spin_wheel_enabled', 0);
+        echo '<label><input type="checkbox" name="mco_spin_wheel_enabled" value="1" ' . checked(1, $enabled, false) . '> Enable the "Spin & Win" feature for users.</label>';
+        echo '<p class="description">When enabled, eligible users will see a "Spin & Win" button and pop-up. When disabled, the feature is hidden from all users.</p>';
+    }
+}
+
+if (!function_exists('mco_render_tools_tab')) {
+    function mco_render_tools_tab() {
+        if (isset($_POST['mco_flush_rewrites']) && check_admin_referer('mco_flush_rewrites_nonce')) {
+            flush_rewrite_rules(true); // Hard flush
+            echo '<div class="notice notice-success is-dismissible"><p>API routes have been successfully refreshed.</p></div>';
+        }
+        ?>
+        <h3>Maintenance Tools</h3>
+        <p>Use these tools to troubleshoot issues with the plugin.</p>
+        <table class="form-table">
+            <tr valign="top">
+                <th scope="row">API Routes</th>
+                <td>
+                    <form method="post" action="">
+                        <?php wp_nonce_field('mco_flush_rewrites_nonce'); ?>
+                        <input type="hidden" name="mco_flush_rewrites" value="1">
+                        <p>If you are seeing "No route was found" errors in the app, your API routes might be stale. Clicking this button will force WordPress to rebuild its internal API route list.</p>
+                        <?php submit_button('Force Refresh API Routes', 'secondary', 'submit_flush', false); ?>
+                    </form>
+                </td>
+            </tr>
+        </table>
+        <?php
+    }
+}
+
+// --- META BOXES & SAVE FUNCTIONS ---
+if (!function_exists('mco_add_meta_boxes')) {
+    function mco_add_meta_boxes() {
+        add_meta_box('mco_wc_product_meta', 'Exam App Configuration', 'mco_render_wc_product_meta_box', 'product', 'side', 'high');
+        add_meta_box('mco_exam_program_meta', 'Exam Program Details', 'mco_render_exam_program_meta_box', 'mco_exam_program', 'normal', 'high');
+        add_meta_box('mco_book_links_meta', 'Affiliate Links', 'mco_render_book_links_meta_box', 'mco_recommended_book', 'normal', 'high');
+    }
+}
+
+if (!function_exists('mco_render_exam_program_meta_box')) {
+    function mco_render_exam_program_meta_box($post) {
+        wp_nonce_field('mco_save_exam_meta', 'mco_exam_nonce');
+        $source_url = get_post_meta($post->ID, '_mco_question_source_url', true);
+        $cert_sku = get_post_meta($post->ID, '_mco_certification_exam_sku', true);
+        echo '<p><label for="mco_question_source_url">Question Source Google Sheet URL:</label><br><input type="url" id="mco_question_source_url" name="mco_question_source_url" value="' . esc_attr($source_url) . '" style="width:100%;"></p>';
+        echo '<p><label for="mco_certification_exam_sku">Certification Exam Product SKU:</label><br><input type="text" id="mco_certification_exam_sku" name="mco_certification_exam_sku" value="' . esc_attr($cert_sku) . '" style="width:100%;"></p>';
+    }
+}
+
+if (!function_exists('mco_save_exam_program_meta')) {
+    function mco_save_exam_program_meta($post_id) {
+        if (!isset($_POST['mco_exam_nonce']) || !wp_verify_nonce($_POST['mco_exam_nonce'], 'mco_save_exam_meta') || (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)) return;
+        if (isset($_POST['mco_question_source_url'])) update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($_POST['mco_question_source_url']));
+        if (isset($_POST['mco_certification_exam_sku'])) update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($_POST['mco_certification_exam_sku']));
+    }
+}
+
+if (!function_exists('mco_render_book_links_meta_box')) {
+    function mco_render_book_links_meta_box($post) {
+        wp_nonce_field('mco_save_book_meta', 'mco_book_nonce');
+        $link_com = get_post_meta($post->ID, '_mco_link_com', true); $link_in = get_post_meta($post->ID, '_mco_link_in', true); $link_ae = get_post_meta($post->ID, '_mco_link_ae', true);
+        echo '<p><label for="mco_link_com">Amazon.com URL:</label><br><input type="url" id="mco_link_com" name="mco_link_com" value="' . esc_attr($link_com) . '" style="width:100%;"></p>';
+        echo '<p><label for="mco_link_in">Amazon.in URL:</label><br><input type="url" id="mco_link_in" name="mco_link_in" value="' . esc_attr($link_in) . '" style="width:100%;"></p>';
+        echo '<p><label for="mco_link_ae">Amazon.ae URL:</label><br><input type="url" id="mco_link_ae" name="mco_link_ae" value="' . esc_attr($link_ae) . '" style="width:100%;"></p>';
+    }
+}
+
+if (!function_exists('mco_save_book_meta_data')) {
+    function mco_save_book_meta_data($post_id) {
+        if (!isset($_POST['mco_book_nonce']) || !wp_verify_nonce($_POST['mco_book_nonce'], 'mco_save_book_meta') || (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)) return;
+        if (isset($_POST['mco_link_com'])) update_post_meta($post_id, '_mco_link_com', esc_url_raw($_POST['mco_link_com']));
+        if (isset($_POST['mco_link_in'])) update_post_meta($post_id, '_mco_link_in', esc_url_raw($_POST['mco_link_in']));
+        if (isset($_POST['mco_link_ae'])) update_post_meta($post_id, '_mco_link_ae', esc_url_raw($_POST['mco_link_ae']));
+    }
+}
+
+if (!function_exists('mco_render_wc_product_meta_box')) {
+    function mco_render_wc_product_meta_box($post) {
+        wp_nonce_field('mco_save_wc_meta', 'mco_wc_nonce');
+        $product_type = get_post_meta($post->ID, '_mco_product_type', true);
+        echo '<label for="mco_product_type">Product Role:</label><select name="mco_product_type" id="mco_product_type" style="width:100%;"><option value="" ' . selected($product_type, '', false) . '>None</option><option value="certification_exam" ' . selected($product_type, 'certification_exam', false) . '>Certification Exam</option><option value="subscription_bundle" ' . selected($product_type, 'subscription_bundle', false) . '>Subscription / Bundle</option></select>';
+    }
+}
+
+if (!function_exists('mco_save_wc_product_meta_data')) {
+    function mco_save_wc_product_meta_data($post_id) {
+        if (!isset($_POST['mco_wc_nonce']) || !wp_verify_nonce($_POST['mco_wc_nonce'], 'mco_save_wc_meta') || (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)) return;
+        if (isset($_POST['mco_product_type'])) update_post_meta($post_id, '_mco_product_type', sanitize_text_field($_POST['mco_product_type']));
+    }
+}
+?>

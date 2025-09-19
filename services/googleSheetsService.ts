@@ -1,9 +1,7 @@
-import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, SpinWheelResult, SearchedUser } from '../types.ts';
+import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, SpinWheelResult, SearchedUser, ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
-import { GoogleGenAI } from "@google/genai";
-
-// --- API Client for WordPress Backend ---
-const WP_API_BASE = '/api'; // Use the proxy for all API calls
+import { GoogleGenAI, Type } from "@google/genai";
+import { getApiEndpoint } from './apiConfig.ts';
 
 const apiFetch = async (endpoint: string, token: string, options: RequestInit = {}) => {
     const headers: HeadersInit = {
@@ -13,8 +11,15 @@ const apiFetch = async (endpoint: string, token: string, options: RequestInit = 
        headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // Use a cache-busting parameter to help bypass aggressive proxy/firewall rules
-    const urlWithCacheBuster = new URL(`${WP_API_BASE}${endpoint}`, window.location.origin);
+    const API_BASE_URL = getApiEndpoint();
+    const isProxied = API_BASE_URL.startsWith('/');
+    
+    // FIX: Ensure a single slash between the base URL and the endpoint to prevent routing errors.
+    // The previous concatenation logic was brittle and could create a double slash (e.g., ".../v1//user-results"),
+    // which the WordPress REST API fails to match. This new logic is more robust.
+    const fullUrl = `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
+    
+    const urlWithCacheBuster = new URL(fullUrl, isProxied ? window.location.origin : undefined);
     urlWithCacheBuster.searchParams.append('mco_cb', Date.now().toString());
 
     const response = await fetch(urlWithCacheBuster.toString(), { ...options, headers });
@@ -23,15 +28,12 @@ const apiFetch = async (endpoint: string, token: string, options: RequestInit = 
         let finalErrorMessage = `Server error: ${response.status} ${response.statusText}`;
         try {
             const errorData = await response.json();
-            // WP_Error objects have 'code' and 'message' properties.
             if (errorData && errorData.message) {
                 finalErrorMessage = errorData.message;
             }
         } catch (e) {
-            // The response was not JSON, stick with the original HTTP error.
             console.error("API response was not valid JSON.", e);
         }
-        // Add specific advice for common, critical errors
         if (response.status === 403) {
             finalErrorMessage += ' (This often means your login session is invalid or has expired. Please try logging out and back in.)';
         }
@@ -41,7 +43,7 @@ const apiFetch = async (endpoint: string, token: string, options: RequestInit = 
         throw new Error(finalErrorMessage);
     }
     
-    if (response.status === 204) return null; // Handle No Content responses
+    if (response.status === 204) return null;
     return response.json();
 };
 
@@ -53,7 +55,6 @@ export const googleSheetsService = {
             throw new Error("The AI feedback feature is not configured. Please contact support.");
         }
         try {
-            // Initialize the AI client only when the function is called
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
@@ -69,11 +70,28 @@ export const googleSheetsService = {
     // --- RESULTS HANDLING (CACHE-FIRST APPROACH) ---
     syncResults: async (user: User, token: string): Promise<void> => {
         try {
-            const remoteResults: TestResult[] = await apiFetch('/user-results', token);
+            const remoteData = await apiFetch('/user-results', token);
+
+            // Defensive check: Ensure the API returned a valid array.
+            if (!Array.isArray(remoteData)) {
+                console.warn("Sync received non-array data for results, treating as empty.", remoteData);
+                // Set empty results in localStorage to clear any stale data.
+                localStorage.setItem(`exam_results_${user.id}`, JSON.stringify({}));
+                console.log("Results synced with server (empty or invalid data received).");
+                return; // Exit gracefully without showing an error toast.
+            }
+
+            const remoteResults: TestResult[] = remoteData;
             const resultsMap = remoteResults.reduce((acc, result) => {
-                acc[result.testId] = result;
+                // Defensive check: Ensure each result has a testId before adding it to the map.
+                if (result && result.testId) {
+                    acc[result.testId] = result;
+                } else {
+                    console.warn("Skipping invalid result object during sync:", result);
+                }
                 return acc;
             }, {} as { [key: string]: TestResult });
+
             localStorage.setItem(`exam_results_${user.id}`, JSON.stringify(resultsMap));
             console.log("Results successfully synced with server.");
         } catch (error) {
@@ -86,7 +104,11 @@ export const googleSheetsService = {
         try {
             const storedResults = localStorage.getItem(`exam_results_${userId}`);
             if (storedResults) {
-                return Object.values(JSON.parse(storedResults));
+                const resultsData = JSON.parse(storedResults);
+                // Ensure we have an object before calling Object.values
+                if (resultsData && typeof resultsData === 'object') {
+                    return Object.values(resultsData);
+                }
             }
             return [];
         } catch (error) {
@@ -144,31 +166,25 @@ export const googleSheetsService = {
             console.warn(`Warning: Not enough unique questions available for ${exam.name}. Requested ${exam.numberOfQuestions}, but only found ${fetchedQuestions.length}.`);
         }
         
-        // --- Shuffle options for each question ---
         const shuffledQuestions = fetchedQuestions.map(question => {
             if (!question.options || question.options.length === 0) {
-                return question; // Return as-is if no options
+                return question;
             }
 
-            // Store the correct answer's text before shuffling
             const correctAnswerText = question.options[question.correctAnswer - 1];
-
-            // Create an array of option objects to shuffle
             let optionsToShuffle = [...question.options];
             
-            // Fisher-Yates shuffle algorithm
             for (let i = optionsToShuffle.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [optionsToShuffle[i], optionsToShuffle[j]] = [optionsToShuffle[j], optionsToShuffle[i]];
             }
 
-            // Find the new index of the correct answer
             const newCorrectAnswerIndex = optionsToShuffle.findIndex(option => option === correctAnswerText);
 
             return {
                 ...question,
                 options: optionsToShuffle,
-                correctAnswer: newCorrectAnswerIndex + 1, // Update to new 1-based index
+                correctAnswer: newCorrectAnswerIndex + 1,
             };
         });
 
@@ -211,7 +227,6 @@ export const googleSheetsService = {
             review,
         };
 
-        // Step 1: Save locally immediately for a fast UI response.
         try {
             const key = `exam_results_${user.id}`;
             const storedResults = localStorage.getItem(key);
@@ -223,7 +238,6 @@ export const googleSheetsService = {
             toast.error("Could not save your test result locally.");
         }
         
-        // Step 2: Asynchronously send the result to the WordPress backend.
         (async () => {
             try {
                 await apiFetch('/submit-result', token, {
@@ -237,24 +251,21 @@ export const googleSheetsService = {
             }
         })();
 
-        // Return the result immediately.
         return Promise.resolve(newResult);
     },
 
     // --- NEW FEEDBACK & REVIEW SUBMISSIONS (SIMULATED) ---
     submitFeedback: async (token: string, category: string, message: string): Promise<void> => {
         console.log("Submitting feedback:", { category, message, token: '...token...' });
-        // In a real app, this would be an API call like:
         await apiFetch('/submit-feedback', token, { method: 'POST', body: JSON.stringify({ category, message }) });
-        await new Promise(resolve => setTimeout(resolve, 750)); // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 750));
         return Promise.resolve();
     },
 
     submitReview: async (token: string, examId: string, rating: number, reviewText: string): Promise<void> => {
         console.log("Submitting review:", { examId, rating, reviewText, token: '...token...' });
-        // In a real app, this would be an API call like:
         await apiFetch('/submit-review', token, { method: 'POST', body: JSON.stringify({ examId, rating, reviewText }) });
-        await new Promise(resolve => setTimeout(resolve, 750)); // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 750));
         return Promise.resolve();
     },
 
@@ -297,5 +308,10 @@ export const googleSheetsService = {
             method: 'POST',
             body: JSON.stringify({ userId })
         });
+    },
+    
+    // --- NEW EXAM STATS ---
+    getExamStats: async (token: string): Promise<ExamStat[]> => {
+        return apiFetch('/exam-stats', token, { method: 'GET' });
     },
 };

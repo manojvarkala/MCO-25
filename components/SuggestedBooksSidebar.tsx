@@ -6,25 +6,49 @@ import BookCover from '../assets/BookCover.tsx';
 
 const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } => {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    let domainKey: keyof RecommendedBook['affiliateLinks'] = 'com';
-    let domainName = 'Amazon.com';
+    let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
+    let preferredDomain = 'Amazon.com';
 
+    // Determine preferred locale
     const gccTimezones = ['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat'];
     if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
-        domainKey = 'in'; domainName = 'Amazon.in';
+        preferredKey = 'in';
+        preferredDomain = 'Amazon.in';
     } else if (gccTimezones.some(tz => timeZone === tz)) {
-        domainKey = 'ae'; domainName = 'Amazon.ae';
+        preferredKey = 'ae';
+        preferredDomain = 'Amazon.ae';
     }
     
-    const url = book.affiliateLinks[domainKey];
-    return !url || url.trim() === '' ? { url: book.affiliateLinks.com, domainName: 'Amazon.com' } : { url, domainName };
+    // Check if the preferred URL exists and is valid
+    const preferredUrl = book.affiliateLinks[preferredKey];
+    if (preferredUrl && preferredUrl.trim() !== '') {
+        return { url: preferredUrl, domainName: preferredDomain };
+    }
+
+    // Fallback to .com if preferred is not available or is an empty string
+    if (book.affiliateLinks.com && book.affiliateLinks.com.trim() !== '') {
+        return { url: book.affiliateLinks.com, domainName: 'Amazon.com' };
+    }
+    
+    // If both preferred and .com are invalid, return the original .com link (which is likely empty)
+    return { url: book.affiliateLinks.com || '', domainName: 'Amazon.com' };
 };
 
 
 const SuggestedBooksSidebar: React.FC = () => {
     const { suggestedBooks } = useAppContext();
+    
+    // Memoize the random selection so it doesn't change on every render
+    const randomBooks = React.useMemo(() => {
+        if (!suggestedBooks || suggestedBooks.length === 0) {
+            return [];
+        }
+        // Shuffle the array and take the first 3
+        return [...suggestedBooks].sort(() => 0.5 - Math.random()).slice(0, 3);
+    }, [suggestedBooks]);
 
-    if (!suggestedBooks || suggestedBooks.length === 0) {
+
+    if (randomBooks.length === 0) {
         return null;
     }
 
@@ -34,11 +58,12 @@ const SuggestedBooksSidebar: React.FC = () => {
                 <BookOpen className="mr-3 text-cyan-500" /> Study Hall
             </h3>
             <div className="space-y-6">
-                {suggestedBooks.map(book => {
+                {randomBooks.map(book => {
                     const { url, domainName } = getGeoAffiliateLink(book);
+                    if (!url) return null; // Don't render if no valid URL
                     return (
                         <div key={book.id} className="bg-white rounded-lg shadow-md overflow-hidden border border-slate-200 transform hover:-translate-y-1 transition-transform duration-200">
-                            <BookCover title={book.title} className="w-full h-32" />
+                            <BookCover book={book} className="w-full h-32" />
                             <div className="p-4">
                                 <h4 className="font-bold text-slate-800 text-sm mb-3 leading-tight">{book.title}</h4>
                                 <a 

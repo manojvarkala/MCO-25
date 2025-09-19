@@ -1,6 +1,6 @@
-import * as React from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useContext, createContext, FC, ReactNode } from 'react';
 import toast from 'react-hot-toast';
-import type { User, TokenPayload } from '../types.ts';
+import type { User, TokenPayload, RecommendedBook, Exam, ExamProductCategory } from '../types.ts';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 
 interface AuthContextType {
@@ -13,17 +13,22 @@ interface AuthContextType {
   wonPrize: { prizeId: string; prizeLabel: string; } | null;
   wheelModalDismissed: boolean;
   canSpinWheel: boolean;
-  loginWithToken: (token: string) => void;
+  suggestedBooks: RecommendedBook[];
+  dynamicExams: Exam[] | null;
+  dynamicCategories: ExamProductCategory[] | null;
+  isSpinWheelEnabled: boolean;
+  // Fix: The loginWithToken function is async, so it returns a Promise.
+  loginWithToken: (token: string) => Promise<void>;
   logout: () => void;
   useFreeAttempt: () => void;
   updateUserName: (name: string) => void;
   setWheelModalDismissed: (dismissed: boolean) => void;
 }
 
-const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = React.useState<User | null>(() => {
+export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(() => {
     try {
         const storedUser = localStorage.getItem('examUser');
         return storedUser ? JSON.parse(storedUser) : null;
@@ -32,10 +37,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
     }
   });
-  const [token, setToken] = React.useState<string | null>(() => {
+  const [token, setToken] = useState<string | null>(() => {
     return localStorage.getItem('authToken');
   });
-  const [paidExamIds, setPaidExamIds] = React.useState<string[]>(() => {
+  const [paidExamIds, setPaidExamIds] = useState<string[]>(() => {
       try {
         const storedIds = localStorage.getItem('paidExamIds');
         return storedIds ? JSON.parse(storedIds) : [];
@@ -44,7 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return [];
       }
   });
-  const [examPrices, setExamPrices] = React.useState<{ [id: string]: { price: number; regularPrice?: number; productId?: number; avgRating?: number; reviewCount?: number; } } | null>(() => {
+  const [examPrices, setExamPrices] = useState<{ [id: string]: { price: number; regularPrice?: number; productId?: number; avgRating?: number; reviewCount?: number; } } | null>(() => {
     try {
         const storedPrices = localStorage.getItem('examPrices');
         return storedPrices ? JSON.parse(storedPrices) : null;
@@ -53,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
     }
   });
-  const [isSubscribed, setIsSubscribed] = React.useState<boolean>(() => {
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(() => {
     try {
         const storedSubscribed = localStorage.getItem('isSubscribed');
         return storedSubscribed ? JSON.parse(storedSubscribed) : false;
@@ -62,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
     }
   });
-  const [spinsAvailable, setSpinsAvailable] = React.useState<number>(() => {
+  const [spinsAvailable, setSpinsAvailable] = useState<number>(() => {
       try {
           const stored = localStorage.getItem('spinsAvailable');
           return stored ? JSON.parse(stored) : 0;
@@ -70,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return 0;
       }
   });
-  const [wonPrize, setWonPrize] = React.useState<{ prizeId: string; prizeLabel: string; } | null>(() => {
+  const [wonPrize, setWonPrize] = useState<{ prizeId: string; prizeLabel: string; } | null>(() => {
     try {
         const stored = localStorage.getItem('wonPrize');
         return stored ? JSON.parse(stored) : null;
@@ -78,22 +83,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
     }
   });
-  const [wheelModalDismissed, setWheelModalDismissed] = React.useState<boolean>(() => {
+  const [wheelModalDismissed, setWheelModalDismissed] = useState<boolean>(() => {
       try {
         return sessionStorage.getItem('wheelModalDismissed') === 'true';
       } catch {
         return false;
       }
   });
+  const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>(() => {
+      try {
+          const stored = localStorage.getItem('suggestedBooks');
+          return stored ? JSON.parse(stored) : [];
+      } catch {
+          return [];
+      }
+  });
+  const [dynamicExams, setDynamicExams] = useState<Exam[] | null>(() => {
+    try {
+        const stored = localStorage.getItem('dynamicExams');
+        return stored ? JSON.parse(stored) : null;
+    } catch {
+        return null;
+    }
+  });
+  const [dynamicCategories, setDynamicCategories] = useState<ExamProductCategory[] | null>(() => {
+      try {
+          const stored = localStorage.getItem('dynamicCategories');
+          return stored ? JSON.parse(stored) : null;
+      } catch {
+          return null;
+      }
+  });
+  const [isSpinWheelEnabled, setIsSpinWheelEnabled] = useState<boolean>(() => {
+      try {
+          const stored = localStorage.getItem('isSpinWheelEnabled');
+          return stored ? JSON.parse(stored) : false;
+      } catch {
+          return false;
+      }
+  });
+
   
-  const canSpinWheel = React.useMemo(() => {
-    if (!user) return false;
+  const canSpinWheel = useMemo(() => {
+    if (!user || !isSpinWheelEnabled) return false;
     if (user.isAdmin) return true; // Admins can always spin for testing
     return spinsAvailable > 0;
-  }, [user, spinsAvailable]);
+  }, [user, spinsAvailable, isSpinWheelEnabled]);
 
 
-  const logout = React.useCallback(() => {
+  const logout = useCallback(() => {
     setUser(null);
     setPaidExamIds([]);
     setToken(null);
@@ -101,6 +139,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsSubscribed(false);
     setSpinsAvailable(0);
     setWonPrize(null);
+    setSuggestedBooks([]);
+    setDynamicExams(null);
+    setDynamicCategories(null);
+    setIsSpinWheelEnabled(false);
     localStorage.removeItem('examUser');
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
@@ -109,6 +151,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('spinsAvailable');
     localStorage.removeItem('wonPrize');
     localStorage.removeItem('activeOrg');
+    localStorage.removeItem('suggestedBooks');
+    localStorage.removeItem('dynamicExams');
+    localStorage.removeItem('dynamicCategories');
+    localStorage.removeItem('isSpinWheelEnabled');
     sessionStorage.removeItem('wheelModalDismissed');
     Object.keys(localStorage).forEach(key => {
         if (key.startsWith('exam_timer_') || key.startsWith('exam_results_')) {
@@ -117,7 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const checkTokenExpiration = () => {
         const storedToken = localStorage.getItem('authToken');
         if (storedToken) {
@@ -153,7 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [logout]);
 
 
-  const loginWithToken = React.useCallback(async (jwtToken: string) => {
+  const loginWithToken = useCallback(async (jwtToken: string) => {
     try {
         const parts = jwtToken.split('.');
         if (parts.length !== 3) throw new Error("Invalid JWT format.");
@@ -184,9 +230,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 localStorage.removeItem('isSubscribed');
             }
             
+            if (payload.suggestedBooks) {
+                setSuggestedBooks(payload.suggestedBooks);
+                localStorage.setItem('suggestedBooks', JSON.stringify(payload.suggestedBooks));
+            } else {
+                setSuggestedBooks([]);
+                localStorage.removeItem('suggestedBooks');
+            }
+            
+            // Handle dynamic exam data for backward compatibility
+            if (payload.exams && payload.examProductCategories) {
+                setDynamicExams(payload.exams);
+                setDynamicCategories(payload.examProductCategories);
+                localStorage.setItem('dynamicExams', JSON.stringify(payload.exams));
+                localStorage.setItem('dynamicCategories', JSON.stringify(payload.examProductCategories));
+            } else {
+                // This is for the old plugin that doesn't send this data.
+                setDynamicExams(null);
+                setDynamicCategories(null);
+                localStorage.removeItem('dynamicExams');
+                localStorage.removeItem('dynamicCategories');
+            }
+
+
             const spins = payload.spinsAvailable ?? 0;
             setSpinsAvailable(spins);
             localStorage.setItem('spinsAvailable', JSON.stringify(spins));
+
+            const spinWheelEnabled = payload.isSpinWheelEnabled ?? false;
+            setIsSpinWheelEnabled(spinWheelEnabled);
+            localStorage.setItem('isSpinWheelEnabled', JSON.stringify(spinWheelEnabled));
 
 
             if (payload.wonPrize) {
@@ -215,11 +288,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [logout]);
 
-  const useFreeAttempt = React.useCallback(() => {
+  const useFreeAttempt = useCallback(() => {
     console.log('User has started a free practice attempt.');
   }, []);
 
-  const updateUserName = React.useCallback((name: string) => {
+  const updateUserName = useCallback((name: string) => {
     if (user) {
       const updatedUser = { ...user, name };
       setUser(updatedUser);
@@ -227,25 +300,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
   
-  const updateWheelModalDismissed = (dismissed: boolean) => {
+  const updateWheelModalDismissed = useCallback((dismissed: boolean) => {
     setWheelModalDismissed(dismissed);
     try {
         sessionStorage.setItem('wheelModalDismissed', String(dismissed));
     } catch (e) {
         console.error("Could not set sessionStorage item.", e);
     }
-  };
+  }, []);
 
+
+  const value = useMemo(() => ({
+    user,
+    token,
+    paidExamIds,
+    examPrices,
+    isSubscribed,
+    spinsAvailable,
+    wonPrize,
+    wheelModalDismissed,
+    canSpinWheel,
+    suggestedBooks,
+    dynamicExams,
+    dynamicCategories,
+    isSpinWheelEnabled,
+    loginWithToken,
+    logout,
+    useFreeAttempt,
+    updateUserName,
+    setWheelModalDismissed: updateWheelModalDismissed
+  }), [
+    user, token, paidExamIds, examPrices, isSubscribed,
+    spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel,
+    suggestedBooks, dynamicExams, dynamicCategories, isSpinWheelEnabled, loginWithToken,
+    logout, useFreeAttempt, updateUserName, updateWheelModalDismissed
+  ]);
 
   return (
-    <AuthContext.Provider value={{ user, token, paidExamIds, examPrices, isSubscribed, spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel, loginWithToken, logout, useFreeAttempt, updateUserName, setWheelModalDismissed: updateWheelModalDismissed }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = (): AuthContextType => {
-  const context = React.useContext(AuthContext);
+  const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }

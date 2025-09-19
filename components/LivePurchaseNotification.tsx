@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { FC, useState, useEffect } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 
@@ -25,14 +25,14 @@ const locations = [
   'Addis Ababa, ET', 'Algiers, DZ', 'Kolkata, IN', 'Guangzhou, CN', 'Casablanca, MA', 'Ankara, TR', 'Belfast, UK', 'Tunis, TN',
   'Seattle, WA'
 ];
-const LivePurchaseNotification: React.FC = () => {
+const LivePurchaseNotification: FC = () => {
     const { activeOrg } = useAppContext();
-    const [isVisible, setIsVisible] = React.useState(false);
-    const [notification, setNotification] = React.useState({ name: '', location: '', exam: '', time: '' });
+    const [isVisible, setIsVisible] = useState(false);
+    const [notification, setNotification] = useState({ name: '', location: '', exam: '', time: '' });
 
     const certificationExams = activeOrg?.exams.filter(e => !e.isPractice && e.price > 0).map(e => e.name) || [];
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!activeOrg || certificationExams.length === 0) {
             return;
         }

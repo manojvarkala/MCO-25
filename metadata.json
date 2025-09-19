@@ -1,6 +1,6 @@
 {
-  "name": "Medical Coding Online Examination ",
+  "name": "Annapoorna Online Examination App",
   "description": "A dynamic online platform for creating and delivering various examination modules, including practice tests for professional certifications.",
-  "requestFramePermissions": [],
-  "prompt": ""
+  "prompt": "",
+  "requestFramePermissions": []
 }

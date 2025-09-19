@@ -1,82 +1,122 @@
-import * as React from 'react';
+import React, { FC, useState, useRef, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import type { RecommendedBook } from '../types.ts';
 import { ShoppingCart, BookOpenCheck } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 
-const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
+const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
     const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } => {
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        let domainKey: keyof RecommendedBook['affiliateLinks'] = 'com';
-        let domainName = 'Amazon.com';
+        let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
+        let preferredDomain = 'Amazon.com';
 
+        // Determine preferred locale
         const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
-        
         if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
-            domainKey = 'in';
-            domainName = 'Amazon.in';
-        } 
-        else if (gccTimezones.some(tz => timeZone === tz)) {
-            domainKey = 'ae';
-            domainName = 'Amazon.ae';
+            preferredKey = 'in';
+            preferredDomain = 'Amazon.in';
+        } else if (gccTimezones.some(tz => timeZone === tz)) {
+            preferredKey = 'ae';
+            preferredDomain = 'Amazon.ae';
         }
         
-        const url = book.affiliateLinks[domainKey];
-        if (!url) {
+        // Check if the preferred URL exists and is valid
+        const preferredUrl = book.affiliateLinks[preferredKey];
+        if (preferredUrl && preferredUrl.trim() !== '') {
+            return { url: preferredUrl, domainName: preferredDomain, key: preferredKey };
+        }
+        
+        // Fallback to .com if preferred is not available or is an empty string
+        if (book.affiliateLinks.com && book.affiliateLinks.com.trim() !== '') {
             return { url: book.affiliateLinks.com, domainName: 'Amazon.com', key: 'com' };
         }
-        return { url, domainName, key: domainKey };
+
+        // If both fail, find the first available link to set as primary
+        const fallbackOrder: (keyof RecommendedBook['affiliateLinks'])[] = ['in', 'ae'];
+        for (const key of fallbackOrder) {
+             if (book.affiliateLinks[key] && book.affiliateLinks[key].trim() !== '') {
+                const domain = key === 'in' ? 'Amazon.in' : 'Amazon.ae';
+                return { url: book.affiliateLinks[key], domainName: domain, key };
+             }
+        }
+        
+        return { url: book.affiliateLinks.com || '', domainName: 'Amazon.com', key: 'com' };
     };
 
     const primaryLink = getGeoAffiliateLink(book);
     const allStores = [
-        { key: 'com' as const, name: '.com', url: book.affiliateLinks.com },
-        { key: 'in' as const, name: '.in', url: book.affiliateLinks.in },
-        { key: 'ae' as const, name: '.ae', url: book.affiliateLinks.ae }
+        { key: 'com' as const, name: 'Amazon.com', url: book.affiliateLinks.com },
+        { key: 'in' as const, name: 'Amazon.in', url: book.affiliateLinks.in },
+        { key: 'ae' as const, name: 'Amazon.ae', url: book.affiliateLinks.ae }
     ];
-    const secondaryStores = allStores.filter(store => store.key !== primaryLink.key && store.url);
+    const secondaryStores = allStores.filter(store => store.key !== primaryLink.key && store.url && store.url.trim() !== '');
+
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [canExpand, setCanExpand] = useState(false);
+    const descriptionRef = useRef<HTMLParagraphElement>(null);
+
+    useEffect(() => {
+        if (descriptionRef.current && descriptionRef.current.scrollHeight > descriptionRef.current.clientHeight) {
+            setCanExpand(true);
+        }
+    }, [book.description]);
 
     return (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-1 transition-transform duration-300 border border-slate-100">
-            <BookCover title={book.title} className="w-full h-48" />
+            <BookCover book={book} className="w-full h-48" />
             <div className="p-6 flex flex-col flex-grow">
                 <h3 className="text-lg font-bold text-slate-800 mb-2 leading-tight">{book.title}</h3>
-                <p className="text-slate-600 text-sm mb-4 flex-grow">{book.description}</p>
-                <div className="mt-auto pt-4 border-t border-slate-200 space-y-2">
-                    <a 
-                        href={primaryLink.url}
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="w-full text-center bg-yellow-400 hover:bg-yellow-500 text-slate-800 font-bold py-3 px-4 rounded-lg text-base flex items-center justify-center gap-2 transition-all transform hover:scale-105"
+                
+                <div className="flex-grow">
+                    <p
+                        ref={descriptionRef}
+                        className={`text-slate-600 text-sm mb-4 transition-[max-height] duration-500 ease-in-out overflow-hidden ${isExpanded ? 'max-h-96' : 'max-h-20'}`}
                     >
-                        <ShoppingCart size={18} /> Buy on {primaryLink.domainName}
-                    </a>
-                    {secondaryStores.length > 0 && (
-                        <div className="text-center pt-2">
-                            <span className="text-xs text-slate-400">Other stores: </span>
-                            {secondaryStores.map((store, index) => (
-                                <React.Fragment key={store.key}>
-                                    <a 
-                                        href={store.url}
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="text-xs text-cyan-600 hover:underline font-semibold"
-                                    >
-                                    {store.name}
-                                    </a>
-                                    {index < secondaryStores.length - 1 && <span className="text-xs text-slate-400 mx-1">|</span>}
-                                </React.Fragment>
-                            ))}
-                        </div>
+                        {book.description}
+                    </p>
+                </div>
+
+                {canExpand && (
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="text-sm text-cyan-600 hover:text-cyan-800 font-semibold self-start mb-4 flex items-center gap-1 -mt-4"
+                        aria-expanded={isExpanded}
+                    >
+                        {isExpanded ? 'Read Less' : 'Read More'}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                )}
+
+                <div className="mt-auto pt-4 border-t border-slate-200 space-y-2">
+                    {primaryLink.url && (
+                        <a 
+                            href={primaryLink.url}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="w-full text-center bg-yellow-400 hover:bg-yellow-500 text-slate-800 font-bold py-3 px-4 rounded-lg text-base flex items-center justify-center gap-2 transition-all transform hover:scale-105"
+                        >
+                            <ShoppingCart size={18} /> Buy on {primaryLink.domainName}
+                        </a>
                     )}
+                    {secondaryStores.map((store) => (
+                         <a 
+                            key={store.key}
+                            href={store.url}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-all"
+                        >
+                           Buy on {store.name}
+                        </a>
+                    ))}
                 </div>
             </div>
         </div>
     );
 };
 
-const BookStore: React.FC = () => {
+const BookStore: FC = () => {
     const { suggestedBooks, isInitializing } = useAppContext();
 
     if (isInitializing) {
@@ -102,7 +142,7 @@ const BookStore: React.FC = () => {
             </div>
 
             {suggestedBooks.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                     {suggestedBooks.map(book => (
                         <BookCard key={book.id} book={book} />
                     ))}

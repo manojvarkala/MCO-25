@@ -1,0 +1,14 @@
+{
+    "organizations": [
+        {
+            "id": "org-civil",
+            "name": "Civil Engineering Certs",
+            "website": "civil-certs.com",
+            "logo": "/logo.png",
+            "exams": [],
+            "examProductCategories": [],
+            "certificateTemplates": [],
+            "suggestedBooks": []
+        }
+    ]
+}

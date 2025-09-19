@@ -1,20 +1,27 @@
-import * as React from 'react';
+
+import React, { FC, useEffect, useMemo } from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import Spinner from './Spinner.tsx';
+import { useAppContext } from '../context/AppContext.tsx';
 
-const Checkout: React.FC = () => {
+const Checkout: FC = () => {
     const { productSlug } = ReactRouterDOM.useParams<{ productSlug: string }>();
+    const { activeOrg } = useAppContext();
 
-    React.useEffect(() => {
-        if (productSlug) {
+    const mainSiteBaseUrl = useMemo(() => {
+        return activeOrg ? `https://www.${activeOrg.website}` : '';
+    }, [activeOrg]);
+
+    useEffect(() => {
+        if (productSlug && mainSiteBaseUrl) {
             const redirectTimer = setTimeout(() => {
-                const checkoutUrl = `https://www.coding-online.net/product/${productSlug}/`;
+                const checkoutUrl = `${mainSiteBaseUrl}/product/${productSlug}/`;
                 window.location.href = checkoutUrl;
             }, 2000); // 2-second delay before redirecting
 
             return () => clearTimeout(redirectTimer);
         }
-    }, [productSlug]);
+    }, [productSlug, mainSiteBaseUrl]);
 
     return (
         <div className="flex flex-col items-center justify-center py-20 px-4">

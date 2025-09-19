@@ -1,7 +1,12 @@
+import React, { FC } from 'react';
+import { useAppContext } from '../context/AppContext.tsx';
 
-import * as React from 'react';
+const Instructions: FC = () => {
+    const { activeOrg } = useAppContext();
 
-const Instructions: React.FC = () => {
+    const websiteUrl = activeOrg ? `https://www.${activeOrg.website}` : '#';
+    const websiteName = activeOrg ? activeOrg.website : 'our main site';
+
     return (
         <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
             <h1 className="text-3xl font-bold text-slate-800 mb-4">Platform Instructions</h1>
@@ -10,7 +15,7 @@ const Instructions: React.FC = () => {
                 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Login and Access</h2>
                 <p>
-                    All users must log in through our main site, <a href="https://www.coding-online.net" target="_blank" rel="noopener noreferrer" className="text-cyan-600">coding-online.net</a>. Your account there will grant you access to this portal. 
+                    All users must log in through our main site, <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="text-cyan-600">{websiteName}</a>. Your account there will grant you access to this portal. 
                     If you have purchased any certification exams, they will be automatically synced to your dashboard upon logging in.
                 </p>
 
@@ -18,6 +23,22 @@ const Instructions: React.FC = () => {
                 <p>
                     From your dashboard, you can access both free practice tests and your purchased certification exams. Please ensure your full name is correct on the dashboard, as this will be used on your certificate.
                 </p>
+
+                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Important: During the Exam</h2>
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 my-4">
+                    <p className="font-bold text-red-800">Please read carefully before starting any exam:</p>
+                    <ul className="list-disc pl-5 text-red-700 space-y-2">
+                        <li>
+                            <strong>Browser Security (by Exam App):</strong> The exam environment itself is secured. You must:
+                             <ul className="list-['-_'] pl-5 mt-1">
+                                <li>Take the exam in <strong>fullscreen mode</strong>. Exiting fullscreen is a violation.</li>
+                                <li><strong>Stay on the exam tab.</strong> Navigating away, minimizing the window, or switching to another application will be flagged. Multiple violations will terminate your exam.</li>
+                            </ul>
+                        </li>
+                        <li><strong>Single Session Rule:</strong> Only have one exam session open at a time. Do not attempt to log in from another browser or device while your exam is in progress.</li>
+                        <li><strong>Stable Connection:</strong> Ensure you have a stable internet connection before starting.</li>
+                    </ul>
+                </div>
                 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Results and Certificates</h2>
                 <p>
