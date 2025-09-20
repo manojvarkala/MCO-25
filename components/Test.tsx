@@ -245,8 +245,7 @@ const Test: FC = () => {
 
     const currentQuestion = questions[currentQuestionIndex];
     const selectedAnswer = currentQuestion ? answers.get(currentQuestion.id) : undefined;
-    const isLastQuestion = questions.length > 0 && currentQuestionIndex === questions.length - 1;
-    const isLastQuestionAnswered = isLastQuestion && selectedAnswer !== undefined;
+    const isLastQuestion = currentQuestionIndex === questions.length - 1;
 
     if (isLoading || isInitializing) {
         return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4 text-slate-600">Loading Exam...</p></div>;
@@ -342,22 +341,25 @@ const Test: FC = () => {
                         <ChevronLeft size={16} /> Previous
                     </button>
                     
-                    <button 
-                        onClick={handleNext} 
-                        disabled={isLastQuestion} 
-                        className={`flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50 ${isLastQuestionAnswered ? 'hidden' : 'flex'}`}
-                    >
-                        Next <ChevronRight size={16} />
-                    </button>
-                    
-                    <button 
-                        onClick={() => handleSubmit()} 
-                        disabled={isSubmitting} 
-                        className={`flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105 ${isLastQuestionAnswered ? 'flex' : 'hidden'}`}
-                    >
-                        {isSubmitting ? <Spinner /> : <Send size={16} />}
-                        {isSubmitting ? 'Submitting...' : 'Submit Exam'}
-                    </button>
+                    {!isLastQuestion && (
+                         <button 
+                            onClick={handleNext} 
+                            className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+                        >
+                            Next <ChevronRight size={16} />
+                        </button>
+                    )}
+                   
+                    {isLastQuestion && (
+                        <button 
+                            onClick={() => handleSubmit()} 
+                            disabled={isSubmitting || selectedAnswer === undefined} 
+                            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed"
+                        >
+                            {isSubmitting ? <Spinner /> : <Send size={16} />}
+                            {isSubmitting ? 'Submitting...' : 'Submit Exam'}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
