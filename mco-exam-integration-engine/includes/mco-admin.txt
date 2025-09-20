@@ -1,4 +1,3 @@
-
 <?php
 if (!defined('ABSPATH')) exit;
 
@@ -107,14 +106,20 @@ if (!function_exists('mco_render_spin_wheel_field')) {
 if (!function_exists('mco_render_app_management_tab')) {
     function mco_render_app_management_tab() {
         ?>
-        <h3>Live App Updates</h3>
-        <p>This plugin now provides a <strong>live API endpoint</strong> that the examination app uses to fetch the latest content automatically. This means your content updates are now seamless and real-time.</p>
+        <h3>App Content Publisher</h3>
+        <p>This tool allows you to generate a static configuration file containing all the latest exam programs, books, and product information from your WordPress site.</p>
         <p><strong>Your New Workflow:</strong></p>
-        <ol style="list-style-type: decimal; padding-left: 20px;">
-            <li>Simply <strong>add or update</strong> your "Exam Programs" or "Recommended Books" here in WordPress.</li>
-            <li><strong>That's it!</strong> The next time a user opens or refreshes the app, it will automatically check for changes and download the latest content from your site.</li>
+        <ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 1rem;">
+            <li>First, make any desired changes to your "Exam Programs" or "Recommended Books" in WordPress.</li>
+            <li>Once you are ready to publish the changes, return to this tab.</li>
+            <li>Click the button below to generate and download the <code>medical-coding-config.json</code> file.</li>
+            <li>Provide this downloaded file to your app developer to include in the next deployment of the examination app.</li>
         </ol>
-        <p>There is no longer a need to manually download a configuration file. The app and the plugin handle the synchronization for you.</p>
+        <form method="post" action="<?php echo esc_url(admin_url('admin-ajax.php')); ?>">
+            <input type="hidden" name="action" value="mco_download_config">
+            <?php wp_nonce_field('mco_download_config_nonce', 'mco_download_nonce'); ?>
+            <?php submit_button('Download App Configuration File', 'primary', 'submit_download_config', false); ?>
+        </form>
         <?php
     }
 }

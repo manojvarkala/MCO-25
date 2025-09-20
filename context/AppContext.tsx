@@ -1,10 +1,12 @@
 
+
+
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
 import type { Organization, RecommendedBook, Exam, ExamProductCategory, InProgressExamInfo } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
-import { getAppConfigPath, getApiBaseUrl } from '../services/apiConfig.ts';
-import { googleSheetsService } from '../services/googleSheetsService.ts';
+import { getAppConfigPath } from '../services/apiConfig.ts';
+import { logoBase64 } from '../assets/logo.ts';
 
 interface AppContextType {
   organizations: Organization[];
@@ -37,6 +39,11 @@ const processConfigData = (configData: any) => {
     let allBooks: RecommendedBook[] = [];
 
     processedOrgs.forEach((org: Organization) => {
+        // If the logo is missing or is the placeholder, inject the real one.
+        if (!org.logo || org.logo === '/logo.png') {
+            org.logo = logoBase64;
+        }
+
         const bookMap = new Map<string, RecommendedBook>();
         (org.suggestedBooks || []).forEach(book => bookMap.set(book.id, book));
         if (org.suggestedBooks) allBooks.push(...org.suggestedBooks);
@@ -75,79 +82,42 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [isWheelModalOpen, setWheelModalOpen] = useState(false);
   const [inProgressExam, setInProgressExam] = useState<InProgressExamInfo | null>(null);
+  // FIX: Corrected syntax for useState generic type and initial value.
   const [examPrices, setExamPrices] = useState<{ [key: string]: any } | null>(null);
   const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>([]);
 
+  // Effect 1: Load static config from bundled JSON file on startup.
   useEffect(() => {
-    const initializeAndSyncConfig = async () => {
+    const loadStaticConfig = async () => {
         setIsInitializing(true);
-        let configToProcess: any | null = null;
-        let localVersion = "0";
-        const configCacheKey = `mco_app_config_${getApiBaseUrl()}`;
-
-        // Step 1: Try loading from localStorage cache first for speed.
         try {
-            const cachedConfig = localStorage.getItem(configCacheKey);
-            if (cachedConfig) {
-                configToProcess = JSON.parse(cachedConfig);
-                localVersion = configToProcess.version || "0";
+            const configPath = getAppConfigPath();
+            const response = await fetch(configPath);
+            if (!response.ok) throw new Error(`Could not fetch static config from ${configPath}.`);
+            const configData = await response.json();
+            
+            const processedData = processConfigData(configData);
+            if (processedData) {
+                setOrganizations(processedData.processedOrgs);
+                setExamPrices(processedData.allPrices);
+                setSuggestedBooks(processedData.allBooks);
+                
+                const currentOrgId = localStorage.getItem('activeOrgId') || processedData.processedOrgs[0]?.id;
+                const newActiveOrg = processedData.processedOrgs.find((o: Organization) => o.id === currentOrgId) || processedData.processedOrgs[0] || null;
+                setActiveOrg(newActiveOrg);
             }
-        } catch (e) {
-            console.error("Failed to parse cached config:", e);
-        }
 
-        // Step 2: If no cache, load the bundled static file as a fallback.
-        if (!configToProcess) {
-            try {
-                const configPath = getAppConfigPath();
-                const response = await fetch(configPath);
-                if (!response.ok) throw new Error(`Could not fetch static config from ${configPath}.`);
-                configToProcess = await response.json();
-                localVersion = configToProcess.version || "0";
-            } catch (error: any) {
-                toast.error(error.message || "Could not load initial app configuration.");
-                setIsInitializing(false);
-                return;
-            }
-        }
-        
-        // At this point, we have some config to show, so we can process it and stop initializing.
-        const processedInitialData = processConfigData(configToProcess);
-        if (processedInitialData) {
-            setOrganizations(processedInitialData.processedOrgs);
-            setExamPrices(processedInitialData.allPrices);
-            setSuggestedBooks(processedInitialData.allBooks);
-            const currentOrgId = localStorage.getItem('activeOrgId') || processedInitialData.processedOrgs[0]?.id;
-            const newActiveOrg = processedInitialData.processedOrgs.find((o: Organization) => o.id === currentOrgId) || processedInitialData.processedOrgs[0] || null;
-            setActiveOrg(newActiveOrg);
-        }
-        setIsInitializing(false);
-
-        // Step 3: Fetch the latest config from the live API and update if it's newer.
-        try {
-            const liveConfig = await googleSheetsService.apiFetch('app_config', null); // Public endpoint
-            if (liveConfig && liveConfig.version && liveConfig.version > localVersion) {
-                const processedLiveData = processConfigData(liveConfig);
-                if (processedLiveData) {
-                    setOrganizations(processedLiveData.processedOrgs);
-                    setExamPrices(processedLiveData.allPrices);
-                    setSuggestedBooks(processedLiveData.allBooks);
-                    const currentOrgId = localStorage.getItem('activeOrgId') || processedLiveData.processedOrgs[0]?.id;
-                    const newActiveOrg = processedLiveData.processedOrgs.find((o: Organization) => o.id === currentOrgId) || processedLiveData.processedOrgs[0] || null;
-                    setActiveOrg(newActiveOrg);
-                    localStorage.setItem(configCacheKey, JSON.stringify(liveConfig));
-                    console.log("App content updated to latest version from server.");
-                }
-            }
-        } catch (error) {
-            console.warn("Could not sync with live server, using cached/local data.", error);
+        } catch (error: any) {
+            toast.error(error.message || "Could not load application configuration.");
+        } finally {
+            setIsInitializing(false);
         }
     };
-
-    initializeAndSyncConfig();
+    loadStaticConfig();
   }, []);
 
 
+  // Effect 2: Check for in-progress exams when user logs in or active org changes.
   useEffect(() => {
     if (!user || !activeOrg) {
         setInProgressExam(null);
@@ -179,12 +149,11 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const org = organizations.find(o => o.id === orgId);
     if (org) {
         setActiveOrg(org);
-        localStorage.setItem('activeOrgId', org.id); // Store only ID now
+        localStorage.setItem('activeOrgId', org.id);
     }
   }, [organizations]);
 
   const updateActiveOrg = useCallback((updatedOrg: Organization) => {
-    // This is now primarily for client-side edits in the Admin panel.
     const updatedOrganizations = organizations.map(org => org.id === updatedOrg.id ? updatedOrg : org);
     setOrganizations(updatedOrganizations);
     setActiveOrg(updatedOrg);

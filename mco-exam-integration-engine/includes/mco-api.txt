@@ -1,15 +1,10 @@
-
 <?php
 if (!defined('ABSPATH')) exit;
 
 // Hook registration for all admin-ajax actions
 if (!function_exists('mco_register_api_hooks')) {
     function mco_register_api_hooks() {
-        // Public endpoint for fetching live app configuration
-        add_action('wp_ajax_nopriv_mco_app_config', 'mco_ajax_callback_app_config');
-        add_action('wp_ajax_mco_app_config', 'mco_ajax_callback_app_config');
-
-        // Authenticated endpoints
+        // Authenticated endpoints for general users
         $auth_actions = [
             'user_results', 'submit_result', 'update_name', 'questions_from_sheet', 
             'certificate_data', 'exam_stats', 'submit_feedback', 'submit_review', 'spin_wheel'
@@ -21,7 +16,7 @@ if (!function_exists('mco_register_api_hooks')) {
         // Admin-only endpoints
         $admin_actions = [
             'debug_details', 'admin_add_spins', 'admin_grant_prize', 'admin_search_user',
-            'admin_reset_spins', 'admin_remove_prize'
+            'admin_reset_spins', 'admin_remove_prize', 'download_config'
         ];
         foreach ($admin_actions as $action) {
             add_action("wp_ajax_mco_{$action}", "mco_ajax_admin_wrapper");
@@ -54,12 +49,26 @@ function mco_ajax_auth_wrapper() {
 
 function mco_ajax_admin_wrapper() {
     mco_add_cors_support();
-    $token = isset($_POST['token']) ? sanitize_text_field($_POST['token']) : '';
-    if (empty($token)) {
+    $token_in_post = isset($_POST['token']) ? sanitize_text_field($_POST['token']) : '';
+    
+    // The download config action uses a nonce, not a token
+    $is_download_action = str_replace('wp_ajax_mco_', '', current_action()) === 'download_config';
+    if ($is_download_action) {
+        if (!isset($_POST['mco_download_nonce']) || !wp_verify_nonce($_POST['mco_download_nonce'], 'mco_download_config_nonce')) {
+             wp_send_json_error(['message' => 'Security check failed.'], 403);
+        }
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Administrator access required.'], 403);
+        }
+        mco_ajax_callback_download_config(); // Call directly
+        return;
+    }
+
+    if (empty($token_in_post)) {
         wp_send_json_error(['message' => 'Authorization token not found.'], 403);
     }
 
-    $payload = mco_verify_exam_jwt($token);
+    $payload = mco_verify_exam_jwt($token_in_post);
     if (!$payload || !isset($payload['user']['id']) || empty($payload['user']['isAdmin'])) {
         wp_send_json_error(['message' => 'Administrator access required.'], 403);
     }
@@ -76,14 +85,17 @@ function mco_ajax_admin_wrapper() {
 
 
 // --- API LOGIC CALLBACKS (Called by wrappers) ---
-
-function mco_ajax_callback_app_config() {
-    mco_add_cors_support();
-    
+function mco_ajax_callback_download_config() {
     $config_data = mco_get_static_app_config_data_structure();
     
-    wp_send_json_success($config_data);
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="medical-coding-config.json"');
+    header('Pragma: no-cache');
+    
+    echo json_encode($config_data, JSON_PRETTY_PRINT);
+    wp_die();
 }
+
 
 function mco_get_static_app_config_data_structure() {
     $post_types_for_version = ['mco_exam_program', 'mco_recommended_book', 'product'];
@@ -159,7 +171,7 @@ function mco_ajax_callback_questions_from_sheet($payload) {
     }
 
     $sheet_id = '';
-    if (preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
+    if (preg_match('/spreadsheets\\/d\\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
         $sheet_id = $matches[1];
     }
 
