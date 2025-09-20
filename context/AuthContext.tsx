@@ -273,7 +273,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 toast.success(isSyncOnly ? 'Exams synced successfully!' : 'Logged in successfully!');
             } catch (syncError: any) {
                 console.error("Background sync on login failed:", syncError.message);
-                const successPart = isSyncOnly ? 'Exams synhronized.' : 'Login successful.';
+                const successPart = isSyncOnly ? 'Exams synchronized.' : 'Login successful.';
                 toast.error(
                     `${successPart} Could not sync your exam history. Locally saved results will be shown. Error: ${syncError.message}`,
                     { duration: 10000 }

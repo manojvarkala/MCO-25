@@ -21,7 +21,12 @@ const apiFetch = async (endpoint: string, token: string, options: RequestInit = 
     urlWithCacheBuster.searchParams.append('mco_cb', Date.now().toString());
 
     try {
-        const response = await fetch(urlWithCacheBuster.toString(), { ...options, headers });
+        const fetchOptions: RequestInit = {
+            ...options,
+            headers,
+            credentials: 'include'
+        };
+        const response = await fetch(urlWithCacheBuster.toString(), fetchOptions);
     
         if (!response.ok) {
             let finalErrorMessage = `Server error: ${response.status} ${response.statusText}`;
