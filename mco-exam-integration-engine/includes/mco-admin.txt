@@ -45,22 +45,27 @@ if (!function_exists('mco_render_settings_page')) {
                 <a href="?page=mco-exam-engine&tab=feature_management" class="nav-tab <?php echo $active_tab == 'feature_management' ? 'nav-tab-active' : ''; ?>">Feature Management</a>
                 <a href="?page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
             </h2>
-            <form method="post" action="options.php">
-                <?php
-                if ($active_tab == 'main_settings') {
-                    settings_fields('mco_main_settings_group');
-                    do_settings_sections('mco_main_settings_page');
-                } elseif ($active_tab == 'feature_management') {
-                    settings_fields('mco_feature_management_group');
-                    do_settings_sections('mco_feature_management_page');
-                } elseif ($active_tab == 'tools') {
-                    mco_render_tools_tab();
-                }
-                if ($active_tab != 'tools') {
-                    submit_button();
-                }
+            <?php
+            // FIX: Conditionally render the main form to prevent nesting forms on the Tools tab.
+            if ($active_tab == 'tools') {
+                mco_render_tools_tab();
+            } else {
                 ?>
-            </form>
+                <form method="post" action="options.php">
+                    <?php
+                    if ($active_tab == 'main_settings') {
+                        settings_fields('mco_main_settings_group');
+                        do_settings_sections('mco_main_settings_page');
+                    } elseif ($active_tab == 'feature_management') {
+                        settings_fields('mco_feature_management_group');
+                        do_settings_sections('mco_feature_management_page');
+                    }
+                    submit_button();
+                    ?>
+                </form>
+                <?php
+            }
+            ?>
         </div>
         <?php
     }
@@ -84,7 +89,7 @@ if (!function_exists('mco_render_app_url_field')) {
     function mco_render_app_url_field() {
         $url = get_option('mco_exam_app_url');
         echo '<input type="url" name="mco_exam_app_url" value="' . esc_attr($url) . '" class="regular-text" placeholder="https://exams.yourdomain.com">';
-        echo '<p class="description">Enter the full URL of your standalone React examination app. Do not include a trailing slash.</p>';
+        echo '<p class="description"><strong>Crucial:</strong> Enter the main, canonical URL of your standalone React examination app (e.g., `https://exams.yourdomain.com`). The plugin will automatically handle both `www` and non-`www` versions for security checks (CORS), but it\'s best to use the primary address. Ensure the protocol (`https://`) is correct. Do not include a path or a trailing slash.</p>';
     }
 }
 
@@ -112,7 +117,7 @@ if (!function_exists('mco_render_tools_tab')) {
                     <form method="post" action="">
                         <?php wp_nonce_field('mco_flush_rewrites_nonce'); ?>
                         <input type="hidden" name="mco_flush_rewrites" value="1">
-                        <p>If you are seeing "No route was found" errors in the app, your API routes might be stale. Clicking this button will force WordPress to rebuild its internal API route list.</p>
+                        <p><strong>If you are seeing "No route was found" or other API errors in the exam app, your API routes might be stale or incorrect.</strong> Clicking this button will force WordPress to rebuild its internal API route list. This is often necessary after plugin activation or updates. If this doesn't work, try re-saving your permalinks under Settings &rarr; Permalinks.</p>
                         <?php submit_button('Force Refresh API Routes', 'secondary', 'submit_flush', false); ?>
                     </form>
                 </td>

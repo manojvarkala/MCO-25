@@ -36,17 +36,21 @@ if (!function_exists('mco_exam_register_rest_api')) {
 // --- API CALLBACKS ---
 if (!function_exists('mco_get_dynamic_app_config_callback')) {
     function mco_get_dynamic_app_config_callback() {
-        $content_data = mco_get_app_config_data();
         $certificate_templates = [
             ['id' => 'cert-generic', 'title' => 'Certificate of Completion', 'body' => 'For passing the exam with a score of <strong>{finalScore}%</strong>.', 'signature1Name' => 'Program Director', 'signature1Title' => get_bloginfo('name'), 'signature1ImageBase64' => '', 'signature2Name' => '', 'signature2Title' => '', 'signature2ImageBase64' => ''],
             ['id' => 'cert-practice-1', 'title' => 'Certificate of Proficiency', 'body' => 'For demonstrating proficiency with a score of <strong>{finalScore}%</strong>.', 'signature1Name' => 'Training Coordinator', 'signature1Title' => get_bloginfo('name'), 'signature1ImageBase64' => '', 'signature2Name' => '', 'signature2Title' => '', 'signature2ImageBase64' => '']
         ];
+        $content_data = mco_get_app_config_data();
         $organization = [
             'id' => 'org-' . sanitize_title(get_bloginfo('name')), 'name' => get_bloginfo('name'), 'website' => preg_replace('#^https?://(www\\.)?#', '', get_site_url()),
             'logo' => has_site_icon() ? get_site_icon_url(256) : '', 'exams' => $content_data['exams'], 'examProductCategories' => $content_data['examProductCategories'], 
             'certificateTemplates' => $certificate_templates, 'suggestedBooks' => $content_data['suggestedBooks']
         ];
-        return new WP_REST_Response(['organizations' => [$organization]], 200);
+        $response_payload = [
+            'organizations' => [$organization],
+            'examPrices' => $content_data['examPrices']
+        ];
+        return new WP_REST_Response($response_payload, 200);
     }
 }
 

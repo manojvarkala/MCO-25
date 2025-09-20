@@ -2,13 +2,28 @@
 /**
  * Plugin Name:       Exam App Integration Engine
  * Description:       A multi-tenant engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and API services. Provides [mco_exam_login] and [mco_exam_showcase] shortcodes.
- * Version:           27.4.0 (Feature Management & Tools)
+ * Version:           28.1.0 (Flexible CORS & API)
  * Author:            Annapoorna Infotech
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('MCO_PLUGIN_VERSION', '27.4.0');
+// --- NEW: Handle OPTIONS requests early for CORS Preflight ---
+if (!function_exists('mco_handle_preflight_requests')) {
+    function mco_handle_preflight_requests() {
+        if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+            // Our existing CORS function already has the logic to check the origin and send headers.
+            // It also gracefully exits for OPTIONS requests if the origin is allowed.
+            mco_add_cors_support();
+        }
+    }
+}
+// Hook into 'init' with an early priority to catch the request before routing.
+// This allows us to respond to preflight checks without needing a valid WP route.
+add_action('init', 'mco_handle_preflight_requests', 5);
+
+
+define('MCO_PLUGIN_VERSION', '28.1.0');
 define('MCO_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('MCO_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -95,65 +110,55 @@ if (!function_exists('mco_plugin_init')) {
 add_action('init', 'mco_plugin_init');
 
 
-// --- CORS SUPPORT FOR DYNAMIC FRONTEND ---
+// --- CORS SUPPORT FOR DYNAMIC FRONTEND (FLEXIBLE & ROBUST) ---
 if (!function_exists('mco_add_cors_support')) {
     function mco_add_cors_support() {
-        $origin = get_http_origin();
-        if (!$origin) {
+        $request_origin = get_http_origin();
+        if (!$request_origin) {
             return; // Not a CORS request.
         }
 
-        $is_allowed = false;
-
-        // 1. Check against the explicitly configured URL in settings. This is the highest priority override.
         $app_url_setting = get_option('mco_exam_app_url');
-        if (!empty($app_url_setting)) {
-            $setting_origin = rtrim($app_url_setting, '/');
-            if ($origin === $setting_origin) {
-                $is_allowed = true;
-            }
+        if (empty($app_url_setting)) {
+            return; // No URL configured.
         }
 
-        // 2. If not allowed by the explicit setting, dynamically check if the origin is a subdomain of this site.
-        // This provides flexible multi-tenancy support without hardcoding subdomain names like 'exams.' or 'app.'.
-        if (!$is_allowed) {
-            $site_host = parse_url(site_url(), PHP_URL_HOST);
-            $origin_host = parse_url($origin, PHP_URL_HOST);
+        $parsed_setting = parse_url(rtrim($app_url_setting, '/'));
+        if (!isset($parsed_setting['host'])) {
+            return; // Invalid URL in settings.
+        }
 
-            if ($site_host && $origin_host) {
-                // Remove 'www.' to get the base domain for comparison.
-                $base_domain = preg_replace('/^www\\./', '', $site_host);
+        $scheme = $parsed_setting['scheme'] ?? 'https';
+        $host = $parsed_setting['host'];
+        $port = isset($parsed_setting['port']) ? ':' . $parsed_setting['port'] : '';
 
-                // An origin is allowed if:
-                // a) It's the exact same host (e.g., www.example.com)
-                // b) It's the base domain (e.g., example.com)
-                // c) It's any subdomain of the base domain (e.g., exams.example.com, app.example.com, etc.)
-                if (
-                    $origin_host === $site_host ||
-                    $origin_host === $base_domain ||
-                    preg_match('/\\.' . preg_quote($base_domain) . '$/', $origin_host)
-                ) {
-                    $is_allowed = true;
-                }
-            }
+        // Create an array of potential valid origins to be more flexible.
+        $allowed_origins = [];
+        $allowed_origins[] = "{$scheme}://{$host}{$port}";
+
+        // Add www/non-www variations to the allowed list.
+        if (strpos($host, 'www.') === 0) {
+            $non_www_host = substr($host, 4);
+            $allowed_origins[] = "{$scheme}://{$non_www_host}{$port}";
+        } else {
+            $www_host = 'www.' . $host;
+            $allowed_origins[] = "{$scheme}://{$www_host}{$port}";
         }
         
-        // Allow known Vercel preview domain for staging
-        if (!$is_allowed && $origin === 'https://mco-25.vercel.app') {
-            $is_allowed = true;
-        }
-
-        if ($is_allowed) {
-            header('Access-Control-Allow-Origin: ' . esc_url($origin));
+        // The request origin must be in our allowed list.
+        if (in_array($request_origin, $allowed_origins, true)) {
+            header('Access-Control-Allow-Origin: ' . esc_url($request_origin));
             header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
             header('Access-Control-Allow-Credentials: true');
             header('Access-Control-Allow-Headers: Authorization, Content-Type');
+            header('Vary: Origin'); // Good practice for caching proxies
 
             if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
                 status_header(200);
                 exit();
             }
         }
+        // If the origin doesn't match, no headers are sent, and the browser will block the request as intended.
     }
 }
 ?>

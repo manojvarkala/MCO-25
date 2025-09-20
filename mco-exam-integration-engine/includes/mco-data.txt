@@ -132,7 +132,6 @@ if (!function_exists('mco_generate_exam_jwt')) {
         if (!$user) return false;
 
         $header = ['alg' => 'HS256', 'typ' => 'JWT'];
-        $content_data = mco_get_app_config_data();
 
         $paid_exam_skus = []; $is_subscribed = false;
         $customer_orders = wc_get_orders(['customer_id' => $user_id, 'status' => ['wc-completed', 'wc-processing']]);
@@ -148,13 +147,16 @@ if (!function_exists('mco_generate_exam_jwt')) {
         }
         if (class_exists('WC_Subscriptions') && wcs_user_has_subscription($user_id, '', 'active')) $is_subscribed = true;
         
+        $spins_available = (int) get_user_meta($user_id, 'mco_spins_available', true) ?: 0;
+        $won_prize = get_user_meta($user_id, 'mco_won_prize', true);
+
         $payload = [
             'user' => ['id' => strval($user->ID), 'name' => $user->display_name, 'email' => $user->user_email, 'isAdmin' => in_array('administrator', $user->roles)],
-            'paidExamIds' => array_unique($paid_exam_skus), 
+            'paidExamIds' => array_unique($paid_exam_skus),
             'isSubscribed' => $is_subscribed,
-            'examPrices' => $content_data['examPrices'],
             'isSpinWheelEnabled' => (bool)get_option('mco_spin_wheel_enabled', 0),
-            'suggestedBooks' => $content_data['suggestedBooks'], 'exams' => $content_data['exams'], 'examProductCategories' => $content_data['examProductCategories'],
+            'spinsAvailable' => $spins_available,
+            'wonPrize' => empty($won_prize) ? null : $won_prize,
             'iat' => time(), 'exp' => time() + (24 * HOUR_IN_SECONDS)
         ];
 

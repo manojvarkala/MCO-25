@@ -3,7 +3,8 @@ import toast from 'react-hot-toast';
 import { GoogleGenAI, Type } from "@google/genai";
 import { getApiEndpoint } from './apiConfig.ts';
 
-const apiFetch = async (endpoint: string, token: string, options: RequestInit = {}) => {
+// FIX: Allow token to be null for public endpoints.
+const apiFetch = async (endpoint: string, token: string | null, options: RequestInit = {}) => {
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
     };
@@ -69,6 +70,8 @@ const apiFetch = async (endpoint: string, token: string, options: RequestInit = 
 };
 
 export const googleSheetsService = {
+    // FIX: Expose apiFetch so it can be used by other parts of the application like AppContext.
+    apiFetch,
     // --- AI FEEDBACK ---
     getAIFeedback: async (prompt: string): Promise<string> => {
         if (!process.env.API_KEY) {

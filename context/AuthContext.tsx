@@ -1,21 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo, useContext, createContext, FC, ReactNode } from 'react';
 import toast from 'react-hot-toast';
-import type { User, TokenPayload, RecommendedBook, Exam, ExamProductCategory } from '../types.ts';
+import type { User, TokenPayload } from '../types.ts';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   paidExamIds: string[];
-  examPrices: { [id: string]: { price: number; regularPrice?: number; productId?: number; avgRating?: number; reviewCount?: number; } } | null;
   isSubscribed: boolean;
   spinsAvailable: number;
   wonPrize: { prizeId: string; prizeLabel: string; } | null;
   wheelModalDismissed: boolean;
   canSpinWheel: boolean;
-  suggestedBooks: RecommendedBook[];
-  dynamicExams: Exam[] | null;
-  dynamicCategories: ExamProductCategory[] | null;
   isSpinWheelEnabled: boolean;
   loginWithToken: (token: string, isSyncOnly?: boolean) => Promise<void>;
   logout: () => void;
@@ -47,15 +43,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
           console.error("Failed to parse paidExamIds from localStorage", error);
           return [];
       }
-  });
-  const [examPrices, setExamPrices] = useState<{ [id: string]: { price: number; regularPrice?: number; productId?: number; avgRating?: number; reviewCount?: number; } } | null>(() => {
-    try {
-        const storedPrices = localStorage.getItem('examPrices');
-        return storedPrices ? JSON.parse(storedPrices) : null;
-    } catch (error) {
-        console.error("Failed to parse examPrices from localStorage", error);
-        return null;
-    }
   });
   const [isSubscribed, setIsSubscribed] = useState<boolean>(() => {
     try {
@@ -89,30 +76,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         return false;
       }
   });
-  const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>(() => {
-      try {
-          const stored = localStorage.getItem('suggestedBooks');
-          return stored ? JSON.parse(stored) : [];
-      } catch {
-          return [];
-      }
-  });
-  const [dynamicExams, setDynamicExams] = useState<Exam[] | null>(() => {
-    try {
-        const stored = localStorage.getItem('dynamicExams');
-        return stored ? JSON.parse(stored) : null;
-    } catch {
-        return null;
-    }
-  });
-  const [dynamicCategories, setDynamicCategories] = useState<ExamProductCategory[] | null>(() => {
-      try {
-          const stored = localStorage.getItem('dynamicCategories');
-          return stored ? JSON.parse(stored) : null;
-      } catch {
-          return null;
-      }
-  });
   const [isSpinWheelEnabled, setIsSpinWheelEnabled] = useState<boolean>(() => {
       try {
           const stored = localStorage.getItem('isSpinWheelEnabled');
@@ -134,25 +97,17 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setUser(null);
     setPaidExamIds([]);
     setToken(null);
-    setExamPrices(null);
     setIsSubscribed(false);
     setSpinsAvailable(0);
     setWonPrize(null);
-    setSuggestedBooks([]);
-    setDynamicExams(null);
-    setDynamicCategories(null);
     setIsSpinWheelEnabled(false);
     localStorage.removeItem('examUser');
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
-    localStorage.removeItem('examPrices');
     localStorage.removeItem('isSubscribed');
     localStorage.removeItem('spinsAvailable');
     localStorage.removeItem('wonPrize');
     localStorage.removeItem('activeOrg');
-    localStorage.removeItem('suggestedBooks');
-    localStorage.removeItem('dynamicExams');
-    localStorage.removeItem('dynamicCategories');
     localStorage.removeItem('isSpinWheelEnabled');
     sessionStorage.removeItem('wheelModalDismissed');
     Object.keys(localStorage).forEach(key => {
@@ -216,37 +171,12 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             localStorage.setItem('paidExamIds', JSON.stringify(payload.paidExamIds));
             localStorage.setItem('authToken', jwtToken);
 
-            if (payload.examPrices) {
-                setExamPrices(payload.examPrices);
-                localStorage.setItem('examPrices', JSON.stringify(payload.examPrices));
-            }
-
             if (payload.isSubscribed) {
                 setIsSubscribed(payload.isSubscribed);
                 localStorage.setItem('isSubscribed', JSON.stringify(payload.isSubscribed));
             } else {
                 setIsSubscribed(false);
                 localStorage.removeItem('isSubscribed');
-            }
-            
-            if (payload.suggestedBooks) {
-                setSuggestedBooks(payload.suggestedBooks);
-                localStorage.setItem('suggestedBooks', JSON.stringify(payload.suggestedBooks));
-            } else {
-                setSuggestedBooks([]);
-                localStorage.removeItem('suggestedBooks');
-            }
-            
-            if (payload.exams && payload.examProductCategories) {
-                setDynamicExams(payload.exams);
-                setDynamicCategories(payload.examProductCategories);
-                localStorage.setItem('dynamicExams', JSON.stringify(payload.exams));
-                localStorage.setItem('dynamicCategories', JSON.stringify(payload.examProductCategories));
-            } else {
-                setDynamicExams(null);
-                setDynamicCategories(null);
-                localStorage.removeItem('dynamicExams');
-                localStorage.removeItem('dynamicCategories');
             }
 
             const spins = payload.spinsAvailable ?? 0;
@@ -316,15 +246,11 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     user,
     token,
     paidExamIds,
-    examPrices,
     isSubscribed,
     spinsAvailable,
     wonPrize,
     wheelModalDismissed,
     canSpinWheel,
-    suggestedBooks,
-    dynamicExams,
-    dynamicCategories,
     isSpinWheelEnabled,
     loginWithToken,
     logout,
@@ -332,9 +258,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     updateUserName,
     setWheelModalDismissed: updateWheelModalDismissed
   }), [
-    user, token, paidExamIds, examPrices, isSubscribed,
+    user, token, paidExamIds, isSubscribed,
     spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel,
-    suggestedBooks, dynamicExams, dynamicCategories, isSpinWheelEnabled, loginWithToken,
+    isSpinWheelEnabled, loginWithToken,
     logout, useFreeAttempt, updateUserName, updateWheelModalDismissed
   ]);
 

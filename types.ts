@@ -41,15 +41,10 @@ export interface TestResult {
 export interface TokenPayload {
     user: User;
     paidExamIds: string[];
-    examPrices?: { [examId: string]: { price: number; regularPrice?: number; productId?: number; avgRating?: number; reviewCount?: number; } };
     isSubscribed?: boolean;
     spinsAvailable?: number;
     wonPrize?: { prizeId: string; prizeLabel: string; };
-    suggestedBooks?: RecommendedBook[];
     isSpinWheelEnabled?: boolean;
-    // Add dynamic data from the new plugin version for backward compatibility
-    exams?: Exam[];
-    examProductCategories?: ExamProductCategory[];
     iat?: number;
     exp?: number;
 }

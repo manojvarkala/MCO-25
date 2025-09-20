@@ -1,11 +1,10 @@
 import * as React from 'react';
 import { Check, Star, ShoppingBag } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
-import { useAuth } from '../context/AuthContext.tsx';
 
 const Pricing: React.FC = () => {
-    const { activeOrg } = useAppContext();
-    const { examPrices } = useAuth();
+    // FIX: Get examPrices from the AppContext, where global config is managed, instead of AuthContext.
+    const { activeOrg, examPrices } = useAppContext();
     
     const monthlySubUrl = 'https://www.coding-online.net/product/monthly-subscription/';
     const yearlySubUrl = 'https://www.coding-online.net/product/yearly-subscription/';
