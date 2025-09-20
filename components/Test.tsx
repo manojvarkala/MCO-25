@@ -245,8 +245,7 @@ const Test: FC = () => {
 
     const currentQuestion = questions[currentQuestionIndex];
     const selectedAnswer = currentQuestion ? answers.get(currentQuestion.id) : undefined;
-    const isLastQuestion = currentQuestionIndex === questions.length - 1;
-
+    
     if (isLoading || isInitializing) {
         return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4 text-slate-600">Loading Exam...</p></div>;
     }
@@ -341,16 +340,14 @@ const Test: FC = () => {
                         <ChevronLeft size={16} /> Previous
                     </button>
                     
-                    {!isLastQuestion && (
+                    {currentQuestionIndex < questions.length - 1 ? (
                          <button 
                             onClick={handleNext} 
                             className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition"
                         >
                             Next <ChevronRight size={16} />
                         </button>
-                    )}
-                   
-                    {isLastQuestion && (
+                    ) : (
                         <button 
                             onClick={() => handleSubmit()} 
                             disabled={isSubmitting || selectedAnswer === undefined} 
