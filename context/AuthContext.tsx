@@ -200,7 +200,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
             try {
                 await googleSheetsService.syncResults(payload.user, jwtToken);
-                toast.success(isSyncOnly ? 'Exams synced successfully!' : 'Logged in successfully!');
+                toast.success(isSyncOnly ? 'Exams synchronized successfully!' : 'Logged in successfully!');
             } catch (syncError: any) {
                 console.error("Background sync on login failed:", syncError.message);
                 const successPart = isSyncOnly ? 'Exams synchronized.' : 'Login successful.';

@@ -8,13 +8,11 @@ if (!function_exists('mco_get_exam_app_url')) {
         if (empty($url)) {
             return '';
         }
-        // Parse the URL to be robust against user input errors (e.g., extra slashes, fragments)
         $url_parts = parse_url($url);
         $scheme   = isset($url_parts['scheme']) ? $url_parts['scheme'] . '://' : '';
         $host     = isset($url_parts['host']) ? $url_parts['host'] : '';
         $port     = isset($url_parts['port']) ? ':' . $url_parts['port'] : '';
         $path     = isset($url_parts['path']) ? rtrim($url_parts['path'], '/') : '';
-        // Reconstruct the base URL cleanly, ensuring no fragments or query strings are included.
         return $scheme . $host . $port . $path;
     }
 }
@@ -44,7 +42,7 @@ if (!function_exists('mco_get_app_config_data')) {
 
         $dynamic_exams = [];
         $dynamic_categories = [];
-        $exam_prices = []; // Initialize exam prices array
+        $exam_prices = [];
 
         $programs_query = new WP_Query(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish']);
         if ($programs_query->have_posts()) {
@@ -72,7 +70,6 @@ if (!function_exists('mco_get_app_config_data')) {
                 $dynamic_exams[] = [ 'id' => $cert_sku, 'name' => html_entity_decode(get_the_title()), 'description' => $description, 'price' => (float)$product->get_price(), 'regularPrice' => (float)$product->get_regular_price(), 'productSku' => $cert_sku, 'productSlug' => $product->get_slug(), 'numberOfQuestions' => !empty($cert_q_terms) ? (int)$cert_q_terms[0] : 100, 'passScore' => $pass_score, 'certificateTemplateId' => 'cert-generic', 'isPractice' => false, 'durationMinutes' => !empty($cert_d_terms) ? (int)$cert_d_terms[0] : 240, 'questionSourceUrl' => $question_source ];
                 $dynamic_categories[] = [ 'id' => 'prod-' . $prog_id, 'name' => html_entity_decode(get_the_title()), 'description' => $description, 'practiceExamId' => $practice_id, 'certificationExamId' => $cert_sku, 'questionSourceUrl' => $question_source ];
                 
-                // Populate exam_prices for this certification exam
                 $exam_prices[$cert_sku] = [
                     'price' => (float)$product->get_price(),
                     'regularPrice' => (float)$product->get_regular_price(),
@@ -84,17 +81,12 @@ if (!function_exists('mco_get_app_config_data')) {
         }
         wp_reset_postdata();
 
-        // Also get prices for standalone subscription/bundle products
         $sub_query_args = [
             'post_type' => 'product',
             'posts_per_page' => -1,
             'meta_query' => [
-                [
-                    'key'     => '_mco_product_type',
-                    'value'   => 'subscription_bundle',
-                    'compare' => '=',
-                ],
-            ],
+                ['key' => '_mco_product_type', 'value' => 'subscription_bundle', 'compare' => '=']
+            ]
         ];
         $sub_products_query = new WP_Query($sub_query_args);
         if ($sub_products_query->have_posts()) {
@@ -104,11 +96,11 @@ if (!function_exists('mco_get_app_config_data')) {
                 if ($product && $product->get_sku()) {
                     $sku = $product->get_sku();
                     $exam_prices[$sku] = [
-                        'price'        => (float) $product->get_price(),
+                        'price' => (float) $product->get_price(),
                         'regularPrice' => (float) $product->get_regular_price(),
-                        'productId'    => $product->get_id(),
-                        'avgRating'    => (float) $product->get_average_rating(),
-                        'reviewCount'  => (int) $product->get_review_count(),
+                        'productId' => $product->get_id(),
+                        'avgRating' => (float) $product->get_average_rating(),
+                        'reviewCount' => (int) $product->get_review_count()
                     ];
                 }
             }
@@ -133,23 +125,31 @@ if (!function_exists('mco_generate_exam_jwt')) {
 
         $header = ['alg' => 'HS256', 'typ' => 'JWT'];
 
-        $paid_exam_skus = []; $is_subscribed = false;
+        $paid_exam_skus = []; 
+        $is_subscribed = false;
         $customer_orders = wc_get_orders(['customer_id' => $user_id, 'status' => ['wc-completed', 'wc-processing']]);
         foreach ($customer_orders as $order) {
             foreach ($order->get_items() as $item) {
                 $product = $item->get_product();
                 if ($product) {
                     $product_type = $product->get_meta('_mco_product_type');
-                    if ($product_type === 'certification_exam') $paid_exam_skus[] = $product->get_sku();
-                    if ($product_type === 'subscription_bundle') $is_subscribed = true;
+                    if ($product_type === 'certification_exam') {
+                        $paid_exam_skus[] = $product->get_sku();
+                    }
+                    if ($product_type === 'subscription_bundle') {
+                        $is_subscribed = true;
+                    }
                 }
             }
         }
-        if (class_exists('WC_Subscriptions') && wcs_user_has_subscription($user_id, '', 'active')) $is_subscribed = true;
+        if (class_exists('WC_Subscriptions') && wcs_user_has_subscription($user_id, '', 'active')) {
+            $is_subscribed = true;
+        }
         
         $spins_available = (int) get_user_meta($user_id, 'mco_spins_available', true) ?: 0;
         $won_prize = get_user_meta($user_id, 'mco_won_prize', true);
 
+        // Lightweight payload: Only contains user-specific data.
         $payload = [
             'user' => ['id' => strval($user->ID), 'name' => $user->display_name, 'email' => $user->user_email, 'isAdmin' => in_array('administrator', $user->roles)],
             'paidExamIds' => array_unique($paid_exam_skus),
@@ -157,7 +157,8 @@ if (!function_exists('mco_generate_exam_jwt')) {
             'isSpinWheelEnabled' => (bool)get_option('mco_spin_wheel_enabled', 0),
             'spinsAvailable' => $spins_available,
             'wonPrize' => empty($won_prize) ? null : $won_prize,
-            'iat' => time(), 'exp' => time() + (24 * HOUR_IN_SECONDS)
+            'iat' => time(), 
+            'exp' => time() + (24 * HOUR_IN_SECONDS)
         ];
 
         $header_encoded = mco_base64url_encode(json_encode($header));
@@ -183,7 +184,6 @@ if (!function_exists('mco_verify_exam_jwt')) {
     }
 }
 
-// Helper function to get random recommended books for the sidebar
 if (!function_exists('mco_get_random_recommended_books')) {
     function mco_get_random_recommended_books($count = 3) {
         $transient_key = 'mco_all_books_cache';

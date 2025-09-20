@@ -4,6 +4,8 @@
 
 
 
+
+
 import React, { FC, useState, useEffect, useRef } from 'react';
 // FIX: Use named imports for react-router-dom v6 components and hooks.
 import { useParams, useNavigate } from 'react-router-dom';
@@ -80,7 +82,8 @@ const Certificate: FC = () => {
             
             setIsLoading(true);
             try {
-                const partialData = await googleSheetsService.getCertificateData(token, testId, user);
+                // The user object is no longer needed here; it's derived from the token on the backend.
+                const partialData = await googleSheetsService.getCertificateData(token, testId);
                 if (partialData && partialData.examId) {
                     const exam = activeOrg.exams.find(e => e.id === partialData.examId);
                     const template = activeOrg.certificateTemplates.find(t => t.id === exam?.certificateTemplateId);

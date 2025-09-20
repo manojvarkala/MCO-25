@@ -1,11 +1,3 @@
-
-
-
-
-
-
-
-
 import React, { FC, useState, useEffect, useMemo } from 'react';
 // FIX: Use named imports for react-router-dom v6 components and hooks.
 import { useNavigate } from 'react-router-dom';
@@ -63,9 +55,7 @@ const StarRating: FC<{ rating: number; count: number; }> = ({ rating, count }) =
 const Dashboard: FC = () => {
     // Fix: Use useNavigate for v6 compatibility.
     const navigate = useNavigate();
-    // FIX: Removed `examPrices` from useAuth as it's not part of auth context.
     const { user, token, paidExamIds, isSubscribed } = useAuth();
-    // FIX: Get `examPrices` from useAppContext where global app config resides.
     const { activeOrg, isInitializing, inProgressExam, examPrices } = useAppContext();
     const [results, setResults] = useState<TestResult[]>([]);
     const [isLoadingResults, setIsLoadingResults] = useState(true);

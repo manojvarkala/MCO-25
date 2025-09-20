@@ -1,3 +1,4 @@
+
 <?php
 if (!defined('ABSPATH')) exit;
 
@@ -43,12 +44,14 @@ if (!function_exists('mco_render_settings_page')) {
             <h2 class="nav-tab-wrapper">
                 <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
                 <a href="?page=mco-exam-engine&tab=feature_management" class="nav-tab <?php echo $active_tab == 'feature_management' ? 'nav-tab-active' : ''; ?>">Feature Management</a>
+                <a href="?page=mco-exam-engine&tab=app_management" class="nav-tab <?php echo $active_tab == 'app_management' ? 'nav-tab-active' : ''; ?>">App Management</a>
                 <a href="?page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
             </h2>
             <?php
-            // FIX: Conditionally render the main form to prevent nesting forms on the Tools tab.
             if ($active_tab == 'tools') {
                 mco_render_tools_tab();
+            } elseif ($active_tab == 'app_management') {
+                mco_render_app_management_tab();
             } else {
                 ?>
                 <form method="post" action="options.php">
@@ -98,6 +101,21 @@ if (!function_exists('mco_render_spin_wheel_field')) {
         $enabled = get_option('mco_spin_wheel_enabled', 0);
         echo '<label><input type="checkbox" name="mco_spin_wheel_enabled" value="1" ' . checked(1, $enabled, false) . '> Enable the "Spin & Win" feature for users.</label>';
         echo '<p class="description">When enabled, eligible users will see a "Spin & Win" button and pop-up. When disabled, the feature is hidden from all users.</p>';
+    }
+}
+
+if (!function_exists('mco_render_app_management_tab')) {
+    function mco_render_app_management_tab() {
+        ?>
+        <h3>Live App Updates</h3>
+        <p>This plugin now provides a <strong>live API endpoint</strong> that the examination app uses to fetch the latest content automatically. This means your content updates are now seamless and real-time.</p>
+        <p><strong>Your New Workflow:</strong></p>
+        <ol style="list-style-type: decimal; padding-left: 20px;">
+            <li>Simply <strong>add or update</strong> your "Exam Programs" or "Recommended Books" here in WordPress.</li>
+            <li><strong>That's it!</strong> The next time a user opens or refreshes the app, it will automatically check for changes and download the latest content from your site.</li>
+        </ol>
+        <p>There is no longer a need to manually download a configuration file. The app and the plugin handle the synchronization for you.</p>
+        <?php
     }
 }
 

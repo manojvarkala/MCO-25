@@ -1,27 +1,32 @@
 // FIX: Declare a global constant for development mode, defined in vite.config.ts, to avoid issues with vite/client types.
 declare const __DEV__: boolean;
 
-// This file determines the correct API endpoint based on the environment.
-export const getApiEndpoint = (): string => {
-    // In development mode, Vite's proxy is used, which is configured to point to `/api`.
+// Returns the base URL for the WordPress backend (for user-specific API calls)
+export const getApiBaseUrl = (): string => {
     if (__DEV__) {
         return '/api';
     }
 
-    // In production, use an explicit map for known hostnames to prevent errors
-    // from trying to dynamically derive the API's location. This is more reliable.
     const hostname = window.location.hostname.replace(/^www\./, '');
-
     const apiHostMap: { [key: string]: string } = {
         'coding-online.net': 'https://www.coding-online.net',
         'annapoornainfo.com': 'https://annapoornainfo.com',
-        'mco-25.vercel.app': 'https://annapoornainfo.com'
-        // For multi-tenancy, add other app domains and their WP API hosts here.
-        // e.g., 'exams.client-site.com': 'https://www.client-site.com',
+        'mco-25.vercel.app': 'https://annapoornainfo.com' // Vercel preview domain
     };
     
-    // Use the mapped host or default to the current host if not found.
-    const apiHost = apiHostMap[hostname] || `https://${window.location.hostname}`;
-    
-    return `${apiHost}/wp-json/mco-app/v1`;
+    return apiHostMap[hostname] || `https://${window.location.hostname}`;
+};
+
+// Returns the path to the static configuration file based on the app's hostname.
+export const getAppConfigPath = (): string => {
+    const hostname = window.location.hostname.replace(/^www\./, '');
+
+    const configMap: { [key: string]: string } = {
+        'coding-online.net': '/medical-coding-config.json',
+        'annapoornainfo.com': '/annapoorna-config.json',
+        'mco-25.vercel.app': '/annapoornainfo.com'
+    };
+
+    // Default for localhost or unknown domains allows easier development
+    return configMap[hostname] || '/medical-coding-config.json';
 };

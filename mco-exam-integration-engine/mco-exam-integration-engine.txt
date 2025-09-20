@@ -1,29 +1,14 @@
 <?php
 /**
  * Plugin Name:       Exam App Integration Engine
- * Description:       A multi-tenant engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and API services. Provides [mco_exam_login] and [mco_exam_showcase] shortcodes.
- * Version:           28.1.0 (Flexible CORS & API)
+ * Description:       A multi-tenant engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and API services via admin-ajax.
+ * Version:           28.2.0 (AJAX API Refactor)
  * Author:            Annapoorna Infotech
  */
 
 if (!defined('ABSPATH')) exit;
 
-// --- NEW: Handle OPTIONS requests early for CORS Preflight ---
-if (!function_exists('mco_handle_preflight_requests')) {
-    function mco_handle_preflight_requests() {
-        if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-            // Our existing CORS function already has the logic to check the origin and send headers.
-            // It also gracefully exits for OPTIONS requests if the origin is allowed.
-            mco_add_cors_support();
-        }
-    }
-}
-// Hook into 'init' with an early priority to catch the request before routing.
-// This allows us to respond to preflight checks without needing a valid WP route.
-add_action('init', 'mco_handle_preflight_requests', 5);
-
-
-define('MCO_PLUGIN_VERSION', '28.1.0');
+define('MCO_PLUGIN_VERSION', '28.2.0');
 define('MCO_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('MCO_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -71,8 +56,6 @@ if (!function_exists('mco_plugin_deactivate')) {
 // --- INITIALIZATION & UPDATE CHECKER ---
 if (!function_exists('mco_plugin_init')) {
     function mco_plugin_init() {
-        // On init, check if the plugin version has changed. If so, flush rewrite rules.
-        // This ensures API routes are always correctly registered after an update.
         if (get_option('mco_plugin_version') !== MCO_PLUGIN_VERSION) {
             flush_rewrite_rules();
             update_option('mco_plugin_version', MCO_PLUGIN_VERSION);
@@ -88,55 +71,39 @@ if (!function_exists('mco_plugin_init')) {
         require_once MCO_PLUGIN_DIR . 'includes/mco-api.php';
         require_once MCO_PLUGIN_DIR . 'includes/mco-shortcodes.php';
 
-        // CRITICAL FIX: Register Custom Post Types directly within the 'init' action.
-        // This ensures they are available before any other hooks (like admin_menu or rest_api_init) need them.
         mco_register_custom_post_types();
-
         mco_register_admin_hooks();
         mco_register_admin_tabs();
-        mco_register_api_hooks();
+        mco_register_api_hooks(); // This now registers admin-ajax hooks
         mco_register_shortcode_hooks();
-
-        // Add CORS support for direct API calls from the React app
-        add_action('rest_api_init', function() {
-            remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
-            add_filter('rest_pre_serve_request', function($value) {
-                mco_add_cors_support();
-                return $value;
-            }, 15);
-        });
     }
 }
 add_action('init', 'mco_plugin_init');
 
-
-// --- CORS SUPPORT FOR DYNAMIC FRONTEND (FLEXIBLE & ROBUST) ---
+// --- CORS SUPPORT FOR DYNAMIC FRONTEND (Required for admin-ajax cross-domain) ---
 if (!function_exists('mco_add_cors_support')) {
     function mco_add_cors_support() {
         $request_origin = get_http_origin();
         if (!$request_origin) {
-            return; // Not a CORS request.
+            return;
         }
 
         $app_url_setting = get_option('mco_exam_app_url');
         if (empty($app_url_setting)) {
-            return; // No URL configured.
+            return;
         }
 
         $parsed_setting = parse_url(rtrim($app_url_setting, '/'));
         if (!isset($parsed_setting['host'])) {
-            return; // Invalid URL in settings.
+            return;
         }
 
         $scheme = $parsed_setting['scheme'] ?? 'https';
         $host = $parsed_setting['host'];
         $port = isset($parsed_setting['port']) ? ':' . $parsed_setting['port'] : '';
-
-        // Create an array of potential valid origins to be more flexible.
+        
         $allowed_origins = [];
         $allowed_origins[] = "{$scheme}://{$host}{$port}";
-
-        // Add www/non-www variations to the allowed list.
         if (strpos($host, 'www.') === 0) {
             $non_www_host = substr($host, 4);
             $allowed_origins[] = "{$scheme}://{$non_www_host}{$port}";
@@ -145,20 +112,18 @@ if (!function_exists('mco_add_cors_support')) {
             $allowed_origins[] = "{$scheme}://{$www_host}{$port}";
         }
         
-        // The request origin must be in our allowed list.
         if (in_array($request_origin, $allowed_origins, true)) {
             header('Access-Control-Allow-Origin: ' . esc_url($request_origin));
-            header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+            header('Access-Control-Allow-Methods: POST, OPTIONS');
             header('Access-Control-Allow-Credentials: true');
             header('Access-Control-Allow-Headers: Authorization, Content-Type');
-            header('Vary: Origin'); // Good practice for caching proxies
+            header('Vary: Origin');
 
             if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
                 status_header(200);
                 exit();
             }
         }
-        // If the origin doesn't match, no headers are sent, and the browser will block the request as intended.
     }
 }
 ?>
