@@ -17,7 +17,6 @@ import LogoSpinner from './LogoSpinner.tsx';
 import { Check, X, FileDown, BookUp, ShieldCheck, Sparkles, Download, Star, MessageSquare, Lock, BarChart } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 import jsPDF from 'jspdf';
-import { logoBase64 } from '../assets/logo.ts';
 
 const Results: FC = () => {
     const { testId } = useParams<{ testId: string }>();
@@ -243,7 +242,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
             // --- Page 1: Cover Page ---
             pdf.setFillColor(240, 248, 255);
             pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-            if (logoBase64) pdf.addImage(logoBase64, 'PNG', margin, margin, 20, 20);
+            if (activeOrg && activeOrg.logo) pdf.addImage(activeOrg.logo, 'PNG', margin, margin, 20, 20);
             
             pdf.setFontSize(26);
             pdf.setTextColor(15, 23, 42);

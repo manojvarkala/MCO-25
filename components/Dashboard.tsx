@@ -133,7 +133,9 @@ const Dashboard: FC = () => {
                     const certResults = results.filter(r => r.examId === certExam.id);
                     const hasPassedCert = certResults.some(r => r.score >= certExam.passScore);
                     const attemptsUsed = certResults.length;
-                    const attemptsExceeded = attemptsUsed >= 3;
+                    // FIX: Make attempt calculation more robust to prevent negative numbers.
+                    const attemptsLeft = Math.max(0, 3 - attemptsUsed);
+                    const attemptsExceeded = attemptsLeft === 0;
                     
                     const priceData = examPrices ? examPrices[certExam.productSku] : null;
 
@@ -165,7 +167,7 @@ const Dashboard: FC = () => {
                                                 <div className="mt-4 text-center text-red-700 bg-red-100 p-2 rounded-md font-semibold">Attempts Used</div>
                                             ) : (
                                                 <button onClick={() => navigate(`/test/${certExam.id}`)} className="mt-4 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition">
-                                                    Start Exam ({3 - attemptsUsed} left)
+                                                    Start Exam ({attemptsLeft} left)
                                                 </button>
                                             )}
                                         </>

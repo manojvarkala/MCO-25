@@ -110,6 +110,19 @@ function mco_get_static_app_config_data_structure() {
     
     $version = get_gmt_from_date($latest_mod_date, 'YmdHis');
 
+    $logo_base64 = '';
+    if (has_site_icon()) {
+        $logo_url = get_site_icon_url(512);
+        $response = wp_remote_get($logo_url, ['timeout' => 10]);
+        if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
+            $image_data = wp_remote_retrieve_body($response);
+            $mime_type = wp_remote_retrieve_header($response, 'content-type');
+            if ($image_data && $mime_type) {
+                $logo_base64 = 'data:' . $mime_type . ';base64,' . base64_encode($image_data);
+            }
+        }
+    }
+
     $certificate_templates = [
         ['id' => 'cert-generic', 'title' => 'Certificate of Completion', 'body' => 'For passing the exam with a score of <strong>{finalScore}%</strong>.', 'signature1Name' => 'Program Director', 'signature1Title' => get_bloginfo('name'), 'signature1ImageBase64' => '', 'signature2Name' => '', 'signature2Title' => '', 'signature2ImageBase64' => ''],
         ['id' => 'cert-practice-1', 'title' => 'Certificate of Proficiency', 'body' => 'For demonstrating proficiency with a score of <strong>{finalScore}%</strong>.', 'signature1Name' => 'Training Coordinator', 'signature1Title' => get_bloginfo('name'), 'signature1ImageBase64' => '', 'signature2Name' => '', 'signature2Title' => '', 'signature2ImageBase64' => '']
@@ -119,7 +132,7 @@ function mco_get_static_app_config_data_structure() {
     
     $organization = [
         'id' => 'org-' . sanitize_title(get_bloginfo('name')), 'name' => get_bloginfo('name'), 'website' => preg_replace('#^https?://(www\\.)?#', '', get_site_url()),
-        'logo' => has_site_icon() ? get_site_icon_url(256) : '', 'exams' => $content_data['exams'], 'examProductCategories' => $content_data['examProductCategories'], 
+        'logo' => $logo_base64, 'exams' => $content_data['exams'], 'examProductCategories' => $content_data['examProductCategories'], 
         'certificateTemplates' => $certificate_templates, 'suggestedBooks' => $content_data['suggestedBooks']
     ];
     
@@ -128,6 +141,79 @@ function mco_get_static_app_config_data_structure() {
         'organizations' => [$organization]
     ];
 }
+
+// FIX: Implemented the missing debug_details API callback.
+function mco_ajax_callback_debug_details($payload) {
+    $user_id = intval($payload['user']['id']);
+    $user = get_userdata($user_id);
+    if (!$user) {
+        wp_send_json_error(['message' => 'User not found.'], 404);
+    }
+
+    // Get purchases
+    $paid_exam_skus = []; 
+    $customer_orders = wc_get_orders(['customer_id' => $user_id, 'status' => ['wc-completed', 'wc-processing']]);
+    foreach ($customer_orders as $order) {
+        foreach ($order->get_items() as $item) {
+            $product = $item->get_product();
+            if ($product && $product->get_meta('_mco_product_type') === 'certification_exam') {
+                $paid_exam_skus[] = $product->get_sku();
+            }
+        }
+    }
+
+    // Get results
+    $results = get_user_meta($user_id, 'mco_exam_results', true);
+    $results_array = is_array($results) ? array_values($results) : [];
+    
+    // Test sheet connectivity (using the first available sheet URL from config)
+    $sheet_test = ['success' => false, 'message' => 'No question source URL found to test.'];
+    $config_data = mco_get_app_config_data();
+    $first_exam_with_sheet = null;
+    if (!empty($config_data['exams'])) {
+        foreach($config_data['exams'] as $exam) {
+            if (!empty($exam['questionSourceUrl'])) {
+                $first_exam_with_sheet = $exam;
+                break;
+            }
+        }
+    }
+    
+    if ($first_exam_with_sheet) {
+        $sheet_url = $first_exam_with_sheet['questionSourceUrl'];
+        $sheet_id = '';
+        if (preg_match('/spreadsheets\\/d\\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
+            $sheet_id = $matches[1];
+        }
+        if ($sheet_id) {
+            $csv_export_url = 'https://docs.google.com/spreadsheets/d/' . $sheet_id . '/export?format=csv&gid=0';
+            $response = wp_remote_get($csv_export_url, ['timeout' => 10]);
+            if (is_wp_error($response)) {
+                $sheet_test = ['success' => false, 'message' => 'Connection to Google Sheets failed: ' . $response->get_error_message()];
+            } else {
+                $body = wp_remote_retrieve_body($response);
+                $lines = preg_split('/\\r\\n?|\\n/', $body);
+                $sheet_test = [
+                    'success' => true, 
+                    'message' => 'Successfully connected and retrieved ' . (count($lines) - 1) . ' rows.',
+                    'data' => ['first_row' => isset($lines[1]) ? str_getcsv($lines[1]) : 'empty']
+                ];
+            }
+        } else {
+            $sheet_test['message'] = 'Could not parse Sheet ID from URL: ' . $sheet_url;
+        }
+    }
+
+    $debug_data = [
+        'user' => ['id' => strval($user->ID), 'name' => $user->display_name, 'email' => $user->user_email],
+        'purchases' => array_unique($paid_exam_skus),
+        'results' => $results_array,
+        'sheetTest' => $sheet_test,
+    ];
+
+    wp_send_json_success($debug_data);
+}
+
 
 function mco_ajax_callback_user_results($payload) {
     $user_id = intval($payload['user']['id']);

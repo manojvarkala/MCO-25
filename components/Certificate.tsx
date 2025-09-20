@@ -6,6 +6,8 @@
 
 
 
+
+
 import React, { FC, useState, useEffect, useRef } from 'react';
 // FIX: Use named imports for react-router-dom v6 components and hooks.
 import { useParams, useNavigate } from 'react-router-dom';
@@ -18,7 +20,6 @@ import LogoSpinner from './LogoSpinner.tsx';
 import { Download, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { logoBase64 } from '../assets/logo.ts';
 import { useAppContext } from '../context/AppContext.tsx';
 
 const Watermark: FC<{ text: string }> = ({ text }) => (
@@ -183,7 +184,7 @@ const Certificate: FC = () => {
                 <div className="w-full h-full border-2 border-teal-700 flex flex-col p-6">
                     
                     <div className="flex items-center space-x-3">
-                        <img src={logoBase64} alt={`${organization.name} Logo`} className="h-14 w-14 object-contain" />
+                        <img src={organization.logo} alt={`${organization.name} Logo`} className="h-14 w-14 object-contain" />
                         <div className="flex flex-col text-left">
                             <span className="text-2xl font-bold text-slate-800 font-serif">{organization.name}</span>
                             <span className="text-sm text-slate-500 font-serif">{organization.website}</span>
@@ -259,7 +260,7 @@ const Certificate: FC = () => {
                 {testId !== 'sample' && <Watermark text={organization.name} />}
                 <div className="w-full h-full flex flex-col" style={{ padding: '24px', border: '8px solid #115e59' }}>
                     <div className="flex items-center" style={{ gap: '12px' }}>
-                        <img src={logoBase64} alt={`${organization.name} Logo`} style={{ height: '56px', width: '56px', objectFit: 'contain' }} />
+                        <img src={organization.logo} alt={`${organization.name} Logo`} style={{ height: '56px', width: '56px', objectFit: 'contain' }} />
                         <div className="flex flex-col text-left">
                             <span className="font-bold font-serif" style={{ fontSize: '24px', color: '#1e293b' }}>{organization.name}</span>
                             <span className="font-serif" style={{ fontSize: '14px', color: '#64748b' }}>{organization.website}</span>

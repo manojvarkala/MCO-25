@@ -213,7 +213,16 @@ const Test: FC = () => {
 
     const handleAnswerSelect = (optionIndex: number) => {
         const currentQuestionId = questions[currentQuestionIndex].id;
-        setAnswers(new Map(answers.set(currentQuestionId, optionIndex)));
+        // FIX: Use functional update with a new Map to ensure immutable state updates.
+        setAnswers(prevAnswers => new Map(prevAnswers).set(currentQuestionId, optionIndex));
+    };
+
+    const handlePrev = () => {
+        setCurrentQuestionIndex(prev => Math.max(0, prev - 1));
+    };
+
+    const handleNext = () => {
+        setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1));
     };
     
     const timePercentage = useMemo(() => {
@@ -236,6 +245,8 @@ const Test: FC = () => {
 
     const currentQuestion = questions[currentQuestionIndex];
     const selectedAnswer = currentQuestion ? answers.get(currentQuestion.id) : undefined;
+    const isLastQuestion = questions.length > 0 && currentQuestionIndex === questions.length - 1;
+    const isLastQuestionAnswered = isLastQuestion && selectedAnswer !== undefined;
 
     if (isLoading || isInitializing) {
         return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4 text-slate-600">Loading Exam...</p></div>;
@@ -327,19 +338,26 @@ const Test: FC = () => {
                     </div>
                 </div>
                 <div className="mt-6 pt-4 border-t border-slate-200 flex justify-between items-center">
-                    <button onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))} disabled={currentQuestionIndex === 0} className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50">
+                    <button onClick={handlePrev} disabled={currentQuestionIndex === 0} className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50">
                         <ChevronLeft size={16} /> Previous
                     </button>
-                    {currentQuestionIndex === questions.length - 1 ? (
-                        <button onClick={() => handleSubmit()} disabled={isSubmitting} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105">
-                            {isSubmitting ? <Spinner /> : <Send size={16} />}
-                            {isSubmitting ? 'Submitting...' : 'Submit Exam'}
-                        </button>
-                    ) : (
-                        <button onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))} disabled={currentQuestionIndex === questions.length - 1} className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50">
-                            Next <ChevronRight size={16} />
-                        </button>
-                    )}
+                    
+                    <button 
+                        onClick={handleNext} 
+                        disabled={isLastQuestion} 
+                        className={`flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50 ${isLastQuestionAnswered ? 'hidden' : 'flex'}`}
+                    >
+                        Next <ChevronRight size={16} />
+                    </button>
+                    
+                    <button 
+                        onClick={() => handleSubmit()} 
+                        disabled={isSubmitting} 
+                        className={`flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105 ${isLastQuestionAnswered ? 'flex' : 'hidden'}`}
+                    >
+                        {isSubmitting ? <Spinner /> : <Send size={16} />}
+                        {isSubmitting ? 'Submitting...' : 'Submit Exam'}
+                    </button>
                 </div>
             </div>
         </div>

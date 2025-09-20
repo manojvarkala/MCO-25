@@ -1,12 +1,13 @@
 
 
 
+
+
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
 import type { Organization, RecommendedBook, Exam, ExamProductCategory, InProgressExamInfo } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
 import { getAppConfigPath } from '../services/apiConfig.ts';
-import { logoBase64 } from '../assets/logo.ts';
 
 interface AppContextType {
   organizations: Organization[];
@@ -39,11 +40,6 @@ const processConfigData = (configData: any) => {
     let allBooks: RecommendedBook[] = [];
 
     processedOrgs.forEach((org: Organization) => {
-        // If the logo is missing or is the placeholder, inject the real one.
-        if (!org.logo || org.logo === '/logo.png') {
-            org.logo = logoBase64;
-        }
-
         const bookMap = new Map<string, RecommendedBook>();
         (org.suggestedBooks || []).forEach(book => bookMap.set(book.id, book));
         if (org.suggestedBooks) allBooks.push(...org.suggestedBooks);

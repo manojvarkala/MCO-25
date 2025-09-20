@@ -2,7 +2,6 @@ import React, { FC, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, Users, Gift, Star } from 'lucide-react';
-import { logoBase64 } from '../assets/logo.ts';
 
 const Header: FC = () => {
   const { user, logout, canSpinWheel, isSubscribed } = useAuth();
@@ -42,7 +41,7 @@ const Header: FC = () => {
         {activeOrg ? (
             <a href={headerLink} className="flex items-center space-x-3">
                  <img
-                    src={activeOrg.logo || logoBase64}
+                    src={activeOrg.logo}
                     alt={`${activeOrg.name} Logo`}
                     className="h-14 w-14 object-contain"
                 />
