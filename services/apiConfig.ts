@@ -2,38 +2,26 @@
 declare const __DEV__: boolean;
 
 // This file determines the correct API endpoint based on the environment.
-// It uses Vite's `import.meta.env.DEV` to detect development mode.
 export const getApiEndpoint = (): string => {
-    // 1. In development mode, Vite's proxy is used, which is configured to point to `/api`.
-    // FIX: Use the __DEV__ global constant instead of import.meta.env.DEV.
+    // In development mode, Vite's proxy is used, which is configured to point to `/api`.
     if (__DEV__) {
         return '/api';
     }
 
-    const hostname = window.location.hostname;
+    // In production, use an explicit map for known hostnames to prevent errors
+    // from trying to dynamically derive the API's location. This is more reliable.
+    const hostname = window.location.hostname.replace(/^www\./, '');
 
-    // 2. Handle specific known hosts (e.g., Vercel staging). This provides an override.
-    const staticHosts: { [key: string]: string } = {
-        'mco-25.vercel.app': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
-        'www.annapoornainfo.com': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
-        'annapoornainfo.com': 'https://annapoornainfo.com/wp-json/mco-app/v1',
-        // FIX: Consistently use the www domain for coding-online.net as per user instruction.
-        'www.coding-online.net': 'https://www.coding-online.net/wp-json/mco-app/v1',
-        'coding-online.net': 'https://www.coding-online.net/wp-json/mco-app/v1',
+    const apiHostMap: { [key: string]: string } = {
+        'coding-online.net': 'https://www.coding-online.net',
+        'annapoornainfo.com': 'https://annapoornainfo.com',
+        'mco-25.vercel.app': 'https://annapoornainfo.com'
+        // For multi-tenancy, add other app domains and their WP API hosts here.
+        // e.g., 'exams.client-site.com': 'https://www.client-site.com',
     };
-    if (staticHosts[hostname]) {
-        return staticHosts[hostname];
-    }
     
-    // 3. For multi-tenancy, derive the canonical API URL.
-    const parts = hostname.split('.');
+    // Use the mapped host or default to the current host if not found.
+    const apiHost = apiHostMap[hostname] || `https://${window.location.hostname}`;
     
-    // If it's a non-www subdomain (e.g., app.domain.com), assume API is on www.domain.com
-    if (parts.length >= 3 && parts[0] !== 'www') {
-        const baseDomain = parts.slice(1).join('.');
-        return `https://www.${baseDomain}/wp-json/mco-app/v1`;
-    }
-
-    // Otherwise, if it's domain.com or www.domain.com, use the current hostname directly.
-    return `https://${hostname}/wp-json/mco-app/v1`;
+    return `${apiHost}/wp-json/mco-app/v1`;
 };

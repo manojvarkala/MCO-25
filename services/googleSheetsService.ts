@@ -193,77 +193,57 @@ export const googleSheetsService = {
         if (!exam.questionSourceUrl) {
             throw new Error(`The exam "${exam.name}" is not configured with a valid question source. Please contact an administrator.`);
         }
-        
-        let sheetId = '';
-        const match = /spreadsheets\/d\/([a-zA-Z0-9-_]+)/.exec(exam.questionSourceUrl);
-        if (match && match[1]) {
-            sheetId = match[1];
-        }
 
-        if (!sheetId) {
-            throw new Error('Could not extract Google Sheet ID from the provided URL.');
-        }
-        
-        const csvExportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+        try {
+            // Use the authenticated API proxy endpoint to fetch questions securely
+            const fetchedQuestions: Question[] = await apiFetch('/questions-from-sheet', token, {
+                method: 'POST',
+                body: JSON.stringify({
+                    sheetUrl: exam.questionSourceUrl,
+                    count: exam.numberOfQuestions
+                })
+            });
 
-        const response = await fetch(csvExportUrl);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch questions from Google Sheets. Status: ${response.status}`);
-        }
-        const csvText = await response.text();
-        
-        const lines = csvText.split(/\r\n|\n/).slice(1); // Split and remove header
-        const allQuestions: Question[] = [];
-        for (const line of lines) {
-            if (!line.trim()) continue;
-            const data = line.split(',').map(cell => cell.trim().replace(/^"|"$/g, ''));
-            if (data.length >= 7 && !isNaN(parseInt(data[0], 10)) && data[1] && data[1].trim() !== '') {
-                 allQuestions.push({
-                    id: parseInt(data[0], 10),
-                    question: data[1],
-                    options: [data[2], data[3], data[4], data[5]],
-                    correctAnswer: parseInt(data[6], 10),
-                });
+            if (!fetchedQuestions || fetchedQuestions.length === 0) {
+                throw new Error("No valid questions were returned from the source. Please check the Google Sheet configuration and ensure it is public.");
             }
-        }
-
-        for (let i = allQuestions.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
-        }
-        const fetchedQuestions = allQuestions.slice(0, exam.numberOfQuestions);
-
-        if (fetchedQuestions.length === 0) {
-            throw new Error("No valid questions were returned from the source.");
-        }
-
-        if (fetchedQuestions.length < exam.numberOfQuestions) {
-            console.warn(`Warning: Not enough unique questions available for ${exam.name}. Requested ${exam.numberOfQuestions}, but only found ${fetchedQuestions.length}.`);
-        }
-        
-        const shuffledQuestions = fetchedQuestions.map(question => {
-            if (!question.options || question.options.length === 0) {
-                return question;
-            }
-
-            const correctAnswerText = question.options[question.correctAnswer - 1];
-            let optionsToShuffle = [...question.options];
             
-            for (let i = optionsToShuffle.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [optionsToShuffle[i], optionsToShuffle[j]] = [optionsToShuffle[j], optionsToShuffle[i]];
+            if (fetchedQuestions.length < exam.numberOfQuestions) {
+                console.warn(`Warning: Not enough unique questions available for ${exam.name}. Requested ${exam.numberOfQuestions}, but only found ${fetchedQuestions.length}.`);
             }
 
-            const newCorrectAnswerIndex = optionsToShuffle.findIndex(option => option === correctAnswerText);
+            // Shuffle options for each question to randomize them for each attempt.
+            const shuffledQuestions = fetchedQuestions.map(question => {
+                if (!question.options || question.options.length === 0) {
+                    return question;
+                }
+                // The correct answer from the sheet is 1-based index. Let's get the text.
+                const correctAnswerText = question.options[question.correctAnswer - 1];
+                
+                // Shuffle the options array
+                let optionsToShuffle = [...question.options];
+                for (let i = optionsToShuffle.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [optionsToShuffle[i], optionsToShuffle[j]] = [optionsToShuffle[j], optionsToShuffle[i]];
+                }
 
-            return {
-                ...question,
-                options: optionsToShuffle,
-                correctAnswer: newCorrectAnswerIndex + 1,
-            };
-        });
+                // Find the new index of the correct answer text
+                const newCorrectAnswerIndex = optionsToShuffle.findIndex(option => option === correctAnswerText);
 
-        return shuffledQuestions;
+                return {
+                    ...question,
+                    options: optionsToShuffle,
+                    // Return the new 1-based index
+                    correctAnswer: newCorrectAnswerIndex + 1,
+                };
+            });
+
+            return shuffledQuestions;
+
+        } catch (error) {
+            console.error("Failed to get questions via API proxy:", error);
+            throw error; // Re-throw the error from apiFetch or our custom error
+        }
     },
     
     // --- DUAL-MODE SUBMISSION ---

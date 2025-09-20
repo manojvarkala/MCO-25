@@ -176,9 +176,15 @@ const Dashboard: FC = () => {
                                             )}
                                         </>
                                      ) : (
-                                        <a href={`/#/checkout/${certExam.productSlug}`} className="mt-4 w-full text-center bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg transition">
-                                            {priceData && priceData.price > 0 ? `Buy Exam - $${priceData.price}` : 'Buy Exam'}
-                                        </a>
+                                        certExam.productSlug ? (
+                                            <a href={`/#/checkout/${certExam.productSlug}`} className="mt-4 w-full text-center bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg transition">
+                                                {priceData && priceData.price > 0 ? `Buy Exam - $${priceData.price}` : 'Buy Exam'}
+                                            </a>
+                                        ) : (
+                                            <button disabled className="mt-4 w-full text-center bg-slate-400 text-white font-semibold py-2 px-4 rounded-lg cursor-not-allowed">
+                                                Not Available
+                                            </button>
+                                        )
                                      )}
                                 </div>
                             </div>
