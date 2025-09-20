@@ -14,8 +14,8 @@ export const getApiEndpoint = (): string => {
 
     // 2. Handle specific known hosts (e.g., Vercel staging). This provides an override.
     const staticHosts: { [key: string]: string } = {
-        'mco-25.vercel.app': 'https://annapoornainfo.com/wp-json/mco-app/v1',
-        'www.annapoornainfo.com': 'https://annapoornainfo.com/wp-json/mco-app/v1',
+        'mco-25.vercel.app': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
+        'www.annapoornainfo.com': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
         'annapoornainfo.com': 'https://annapoornainfo.com/wp-json/mco-app/v1',
         // FIX: Consistently use the www domain for coding-online.net as per user instruction.
         'www.coding-online.net': 'https://www.coding-online.net/wp-json/mco-app/v1',
