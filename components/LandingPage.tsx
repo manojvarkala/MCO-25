@@ -68,7 +68,7 @@ const LandingPage: FC = () => {
 
             {/* Right Side: Login Box */}
             <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-2xl border border-slate-200">
-                <img src={activeOrg.logo} alt={`${activeOrg.name} Logo`} className="h-20 w-20 mx-auto mb-4 object-contain" />
+                {activeOrg.logo && <img src={activeOrg.logo} alt={`${activeOrg.name} Logo`} className="h-20 w-20 mx-auto mb-4 object-contain" />}
                 <h2 className="text-2xl font-bold text-center text-slate-800 mb-2">Get Started</h2>
                 <p className="text-slate-500 text-center mb-6">Log in or create an account to access your dashboard and begin your journey.</p>
                 

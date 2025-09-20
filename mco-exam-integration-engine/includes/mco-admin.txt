@@ -112,8 +112,8 @@ if (!function_exists('mco_render_app_management_tab')) {
         <ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 1rem;">
             <li>First, make any desired changes to your "Exam Programs" or "Recommended Books" in WordPress.</li>
             <li>Once you are ready to publish the changes, return to this tab.</li>
-            <li>Click the button below to generate and download the <code>medical-coding-config.json</code> file.</li>
-            <li>Provide this downloaded file to your app developer to include in the next deployment of the examination app.</li>
+            <li>Click the button below to generate and download the site-specific configuration file (e.g., <code>your-domain-com-config.json</code>).</li>
+            <li style="background-color: #fffbe6; padding: 5px; border-left: 3px solid #facc15;"><strong>Important:</strong> Provide this downloaded file to your app developer. They must rename it to match the file expected by the app (e.g., <code>medical-coding-config.json</code> or <code>annapoorna-config.json</code>) and place it in the app's <code>/public/</code> directory before deployment.</li>
         </ol>
         <form method="post" action="<?php echo esc_url(admin_url('admin-ajax.php')); ?>">
             <input type="hidden" name="action" value="mco_download_config">

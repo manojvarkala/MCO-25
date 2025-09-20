@@ -88,8 +88,13 @@ function mco_ajax_admin_wrapper() {
 function mco_ajax_callback_download_config() {
     $config_data = mco_get_static_app_config_data_structure();
     
+    $site_url = get_site_url();
+    $host = parse_url($site_url, PHP_URL_HOST);
+    $filename_base = str_replace('.', '-', $host); 
+    $filename = sanitize_file_name($filename_base . '-config.json');
+
     header('Content-Type: application/json');
-    header('Content-Disposition: attachment; filename="medical-coding-config.json"');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
     header('Pragma: no-cache');
     
     echo json_encode($config_data, JSON_PRETTY_PRINT);

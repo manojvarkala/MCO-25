@@ -38,7 +38,7 @@ const Header: FC = () => {
   return (
     <header className={headerClasses}>
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        {activeOrg ? (
+        {activeOrg && activeOrg.logo ? (
             <a href={headerLink} className="flex items-center space-x-3">
                  <img
                     src={activeOrg.logo}
