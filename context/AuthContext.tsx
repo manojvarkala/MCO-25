@@ -17,8 +17,7 @@ interface AuthContextType {
   dynamicExams: Exam[] | null;
   dynamicCategories: ExamProductCategory[] | null;
   isSpinWheelEnabled: boolean;
-  // Fix: The loginWithToken function is async, so it returns a Promise.
-  loginWithToken: (token: string) => Promise<void>;
+  loginWithToken: (token: string, isSyncOnly?: boolean) => Promise<void>;
   logout: () => void;
   useFreeAttempt: () => void;
   updateUserName: (name: string) => void;
@@ -199,7 +198,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, [logout]);
 
 
-  const loginWithToken = useCallback(async (jwtToken: string) => {
+  const loginWithToken = useCallback(async (jwtToken: string, isSyncOnly: boolean = false) => {
     try {
         const parts = jwtToken.split('.');
         if (parts.length !== 3) throw new Error("Invalid JWT format.");
@@ -238,20 +237,17 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('suggestedBooks');
             }
             
-            // Handle dynamic exam data for backward compatibility
             if (payload.exams && payload.examProductCategories) {
                 setDynamicExams(payload.exams);
                 setDynamicCategories(payload.examProductCategories);
                 localStorage.setItem('dynamicExams', JSON.stringify(payload.exams));
                 localStorage.setItem('dynamicCategories', JSON.stringify(payload.examProductCategories));
             } else {
-                // This is for the old plugin that doesn't send this data.
                 setDynamicExams(null);
                 setDynamicCategories(null);
                 localStorage.removeItem('dynamicExams');
                 localStorage.removeItem('dynamicCategories');
             }
-
 
             const spins = payload.spinsAvailable ?? 0;
             setSpinsAvailable(spins);
@@ -261,7 +257,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setIsSpinWheelEnabled(spinWheelEnabled);
             localStorage.setItem('isSpinWheelEnabled', JSON.stringify(spinWheelEnabled));
 
-
             if (payload.wonPrize) {
                 setWonPrize(payload.wonPrize);
                 localStorage.setItem('wonPrize', JSON.stringify(payload.wonPrize));
@@ -270,17 +265,19 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('wonPrize');
             }
 
-
-            // Reset session-based dismissal state on new login
             setWheelModalDismissed(false);
             sessionStorage.removeItem('wheelModalDismissed');
 
-            // Sync results in the background after successful login
             try {
                 await googleSheetsService.syncResults(payload.user, jwtToken);
+                toast.success(isSyncOnly ? 'Exams synced successfully!' : 'Logged in successfully!');
             } catch (syncError: any) {
                 console.error("Background sync on login failed:", syncError.message);
-                toast.error("Could not sync your exam history. Locally saved results will be shown.");
+                const successPart = isSyncOnly ? 'Exams synhronized.' : 'Login successful.';
+                toast.error(
+                    `${successPart} Could not sync your exam history. Locally saved results will be shown. Error: ${syncError.message}`,
+                    { duration: 10000 }
+                );
             }
 
         } else {
