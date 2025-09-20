@@ -1,174 +1,39 @@
-<?php
-/**
- * Plugin Name:       Exam App Integration Engine
- * Description:       A multi-tenant engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and API services. Provides [mco_exam_login] and [mco_exam_showcase] shortcodes.
- * Version:           27.4.0 (Feature Management & Tools)
- * Author:            Annapoorna Infotech
- */
+// FIX: Declare a global constant for development mode, defined in vite.config.ts, to avoid issues with vite/client types.
+declare const __DEV__: boolean;
 
-if (!defined('ABSPATH')) exit;
-
-// --- NEW: Handle OPTIONS requests early for CORS Preflight ---
-if (!function_exists('mco_handle_preflight_requests')) {
-    function mco_handle_preflight_requests() {
-        if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-            // Our existing CORS function already has the logic to check the origin and send headers.
-            // It also gracefully exits for OPTIONS requests if the origin is allowed.
-            mco_add_cors_support();
-        }
+// This file determines the correct API endpoint based on the environment.
+// It uses Vite's `import.meta.env.DEV` to detect development mode.
+export const getApiEndpoint = (): string => {
+    // 1. In development mode, Vite's proxy is used, which is configured to point to `/api`.
+    // FIX: Use the __DEV__ global constant instead of import.meta.env.DEV.
+    if (__DEV__) {
+        return '/api';
     }
-}
-// Hook into 'init' with an early priority to catch the request before routing.
-// This allows us to respond to preflight checks without needing a valid WP route.
-add_action('init', 'mco_handle_preflight_requests', 5);
 
+    const hostname = window.location.hostname;
 
-define('MCO_PLUGIN_VERSION', '27.4.0');
-define('MCO_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('MCO_PLUGIN_URL', plugin_dir_url(__FILE__));
-
-// --- FAILSAFE DEPENDENCY CHECK ---
-if (!function_exists('mco_failsafe_dependency_check')) {
-    function mco_failsafe_dependency_check() {
-        if (!class_exists('WooCommerce')) {
-            add_action('admin_notices', 'mco_dependency_error_notice');
-            deactivate_plugins(plugin_basename(__FILE__));
-            if (isset($_GET['activate'])) {
-                unset($_GET['activate']);
-            }
-        }
+    // 2. Handle specific known hosts (e.g., Vercel staging). This provides an override.
+    const staticHosts: { [key: string]: string } = {
+        'mco-25.vercel.app': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
+        'www.annapoornainfo.com': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
+        'annapoornainfo.com': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
+        // FIX: Consistently use the www domain for coding-online.net as per user instruction.
+        'www.coding-online.net': 'https://www.coding-online.net/wp-json/mco-app/v1',
+        'coding-online.net': 'https://www.coding-online.net/wp-json/mco-app/v1',
+    };
+    if (staticHosts[hostname]) {
+        return staticHosts[hostname];
     }
-}
-if (!function_exists('mco_dependency_error_notice')) {
-    function mco_dependency_error_notice() {
-        echo '<div class="notice notice-error is-dismissible">';
-        echo '<p><strong>Exam App Integration Engine</strong> has been automatically deactivated because it requires the <strong>WooCommerce</strong> plugin to be installed and active. Please install or activate WooCommerce, then try activating this plugin again.</p>';
-        echo '</div>';
+    
+    // 3. For multi-tenancy, derive the canonical API URL.
+    const parts = hostname.split('.');
+    
+    // If it's a non-www subdomain (e.g., app.domain.com), assume API is on www.domain.com
+    if (parts.length >= 3 && parts[0] !== 'www') {
+        const baseDomain = parts.slice(1).join('.');
+        return `https://www.${baseDomain}/wp-json/mco-app/v1`;
     }
-}
-add_action('admin_init', 'mco_failsafe_dependency_check');
 
-// --- ACTIVATION / DEACTIVATION HOOKS ---
-register_activation_hook(__FILE__, 'mco_plugin_activate');
-register_deactivation_hook(__FILE__, 'mco_plugin_deactivate');
-
-if (!function_exists('mco_plugin_activate')) {
-    function mco_plugin_activate() {
-        require_once MCO_PLUGIN_DIR . 'includes/mco-cpts.php';
-        mco_register_custom_post_types();
-        flush_rewrite_rules();
-        update_option('mco_plugin_version', MCO_PLUGIN_VERSION);
-    }
-}
-
-if (!function_exists('mco_plugin_deactivate')) {
-    function mco_plugin_deactivate() {
-        flush_rewrite_rules();
-        delete_option('mco_plugin_version');
-    }
-}
-
-// --- INITIALIZATION & UPDATE CHECKER ---
-if (!function_exists('mco_plugin_init')) {
-    function mco_plugin_init() {
-        // On init, check if the plugin version has changed. If so, flush rewrite rules.
-        // This ensures API routes are always correctly registered after an update.
-        if (get_option('mco_plugin_version') !== MCO_PLUGIN_VERSION) {
-            flush_rewrite_rules();
-            update_option('mco_plugin_version', MCO_PLUGIN_VERSION);
-        }
-        
-        if (!class_exists('WooCommerce')) {
-            return;
-        }
-
-        require_once MCO_PLUGIN_DIR . 'includes/mco-cpts.php';
-        require_once MCO_PLUGIN_DIR . 'includes/mco-admin.php';
-        require_once MCO_PLUGIN_DIR . 'includes/mco-data.php';
-        require_once MCO_PLUGIN_DIR . 'includes/mco-api.php';
-        require_once MCO_PLUGIN_DIR . 'includes/mco-shortcodes.php';
-
-        // CRITICAL FIX: Register Custom Post Types directly within the 'init' action.
-        // This ensures they are available before any other hooks (like admin_menu or rest_api_init) need them.
-        mco_register_custom_post_types();
-
-        mco_register_admin_hooks();
-        mco_register_admin_tabs();
-        mco_register_api_hooks();
-        mco_register_shortcode_hooks();
-
-        // Add CORS support for direct API calls from the React app
-        add_action('rest_api_init', function() {
-            remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
-            add_filter('rest_pre_serve_request', function($value) {
-                mco_add_cors_support();
-                return $value;
-            }, 15);
-        });
-    }
-}
-add_action('init', 'mco_plugin_init');
-
-
-// --- CORS SUPPORT FOR DYNAMIC FRONTEND ---
-if (!function_exists('mco_add_cors_support')) {
-    function mco_add_cors_support() {
-        $origin = get_http_origin();
-        if (!$origin) {
-            return; // Not a CORS request.
-        }
-
-        $is_allowed = false;
-
-        // 1. Check against the explicitly configured URL in settings. This is the highest priority override.
-        $app_url_setting = get_option('mco_exam_app_url');
-        if (!empty($app_url_setting)) {
-            $setting_origin = rtrim($app_url_setting, '/');
-            if ($origin === $setting_origin) {
-                $is_allowed = true;
-            }
-        }
-
-        // 2. If not allowed by the explicit setting, dynamically check if the origin is a subdomain of this site.
-        // This provides flexible multi-tenancy support without hardcoding subdomain names like 'exams.' or 'app.'.
-        if (!$is_allowed) {
-            $site_host = parse_url(site_url(), PHP_URL_HOST);
-            $origin_host = parse_url($origin, PHP_URL_HOST);
-
-            if ($site_host && $origin_host) {
-                // Remove 'www.' to get the base domain for comparison.
-                $base_domain = preg_replace('/^www\\./', '', $site_host);
-
-                // An origin is allowed if:
-                // a) It's the exact same host (e.g., www.example.com)
-                // b) It's the base domain (e.g., example.com)
-                // c) It's any subdomain of the base domain (e.g., exams.example.com, app.example.com, etc.)
-                if (
-                    $origin_host === $site_host ||
-                    $origin_host === $base_domain ||
-                    preg_match('/\\.' . preg_quote($base_domain) . '$/', $origin_host)
-                ) {
-                    $is_allowed = true;
-                }
-            }
-        }
-        
-        // Allow known Vercel preview domain for staging
-        if (!$is_allowed && $origin === 'https://mco-25.vercel.app') {
-            $is_allowed = true;
-        }
-
-        if ($is_allowed) {
-            header('Access-Control-Allow-Origin: ' . esc_url($origin));
-            header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-            header('Access-Control-Allow-Credentials: true');
-            header('Access-Control-Allow-Headers: Authorization, Content-Type');
-
-            if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
-                status_header(200);
-                exit();
-            }
-        }
-    }
-}
-?>
+    // Otherwise, if it's domain.com or www.domain.com, use the current hostname directly.
+    return `https://${hostname}/wp-json/mco-app/v1`;
+};
