@@ -1,35 +1,64 @@
-/// <reference types="vite/client" />
+// FIX: Declare a global constant for development mode, defined in vite.config.ts, to avoid issues with vite/client types.
+declare const __DEV__: boolean;
 
-// This file determines the correct API endpoint based on the environment.
-// It uses Vite's `import.meta.env.DEV` to detect development mode.
-export const getApiEndpoint = (): string => {
-    // 1. In development mode, Vite's proxy is used, which is configured to point to `/api`.
-    if (import.meta.env.DEV) {
+interface TenantConfig {
+    apiBaseUrl: string;
+    configPath: string;
+}
+
+const tenantMap: { [key: string]: TenantConfig } = {
+    'coding-online.net': {
+        apiBaseUrl: 'https://www.coding-online.net',
+        configPath: '/medical-coding-config.json',
+    },
+    'annapoornainfo.com': {
+        apiBaseUrl: 'https://annapoornainfo.com',
+        configPath: '/annapoorna-config.json',
+    },
+    // Explicitly handle the exam subdomain to ensure it maps to the correct config and API
+    'exam.annapoornainfo.com': {
+        apiBaseUrl: 'https://annapoornainfo.com',
+        configPath: '/annapoorna-config.json',
+    },
+    // Handle Vercel preview environments
+    'mco-25.vercel.app': {
+        apiBaseUrl: 'https://annapoornainfo.com',
+        configPath: '/annapoorna-config.json',
+    },
+    // Default for local development
+    'localhost': {
+        apiBaseUrl: 'https://www.coding-online.net',
+        configPath: '/medical-coding-config.json',
+    }
+};
+
+const getTenantConfig = (): TenantConfig => {
+    const hostname = window.location.hostname.replace(/^www\./, '');
+    
+    // Find the most specific match first (e.g., 'exam.annapoornainfo.com' before 'annapoornainfo.com')
+    const sortedKeys = Object.keys(tenantMap).sort((a, b) => b.length - a.length);
+
+    for (const key of sortedKeys) {
+        if (hostname.endsWith(key)) {
+            return tenantMap[key];
+        }
+    }
+    
+    // Fallback to a sensible default if no match is found
+    return tenantMap['coding-online.net'];
+}
+
+
+// Returns the base URL for the WordPress backend (for user-specific API calls)
+export const getApiBaseUrl = (): string => {
+    if (__DEV__) {
+        // In dev mode, Vite proxy is used.
         return '/api';
     }
+    return getTenantConfig().apiBaseUrl;
+};
 
-    const hostname = window.location.hostname;
-
-    // 2. Handle specific known hosts (e.g., Vercel staging). This provides an override.
-    const staticHosts: { [key: string]: string } = {
-        'mco-25.vercel.app': 'https://www.annapoornainfo.com/wp-json/mco-app/v1',
-        // FIX: Force www for coding-online.net to ensure API routing works correctly.
-        'www.coding-online.net': 'https://www.coding-online.net/wp-json/mco-app/v1',
-        'coding-online.net': 'https://www.coding-online.net/wp-json/mco-app/v1',
-    };
-    if (staticHosts[hostname]) {
-        return staticHosts[hostname];
-    }
-    
-    // 3. For multi-tenancy, derive the canonical API URL.
-    const parts = hostname.split('.');
-    
-    // If it's a non-www subdomain (e.g., app.domain.com), assume API is on www.domain.com
-    if (parts.length >= 3 && parts[0] !== 'www') {
-        const baseDomain = parts.slice(1).join('.');
-        return `https://www.${baseDomain}/wp-json/mco-app/v1`;
-    }
-
-    // Otherwise, if it's domain.com or www.domain.com, use the current hostname directly.
-    return `https://${hostname}/wp-json/mco-app/v1`;
+// Returns the path to the static configuration file based on the app's hostname.
+export const getAppConfigPath = (): string => {
+    return getTenantConfig().configPath;
 };

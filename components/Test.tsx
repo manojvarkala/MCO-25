@@ -1,6 +1,6 @@
 import React, { FC, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-// Fix: Use namespace import for react-router-dom to resolve module exports.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Use named imports for react-router-dom v6 components and hooks.
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 // Fix: Added ExamProgress to type imports for saving progress.
@@ -22,9 +22,9 @@ const FOCUS_VIOLATION_TOAST_ID = 'focus-violation-toast';
 
 
 const Test: FC = () => {
-  const { examId } = ReactRouterDOM.useParams<{ examId: string }>();
-  const navigate = ReactRouterDOM.useNavigate();
-  const { user, useFreeAttempt, isSubscribed, token } = useAuth();
+  const { examId } = useParams<{ examId: string }>();
+  const navigate = useNavigate();
+  const { user, isSubscribed, token } = useAuth();
   const { activeOrg, isInitializing } = useAppContext();
 
   const [examConfig, setExamConfig] = useState<Exam | null>(null);
@@ -109,7 +109,6 @@ const Test: FC = () => {
                     const practiceAttempts = userResults.filter(r => r.examId === config.id).length;
                     if (practiceAttempts >= 10) throw new Error("You have used all 10 free practice attempts.");
                 }
-                useFreeAttempt();
             } else {
                 const certResults = userResults.filter(r => r.examId === config.id);
                 if (certResults.some(r => r.score >= config.passScore)) throw new Error("You have already passed this exam.");
@@ -139,7 +138,7 @@ const Test: FC = () => {
         }
     };
     loadTest();
-  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, useFreeAttempt, progressKey]);
+  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, progressKey]);
 
   // Effect 2: Manage the timer.
   useEffect(() => {
@@ -213,7 +212,16 @@ const Test: FC = () => {
 
     const handleAnswerSelect = (optionIndex: number) => {
         const currentQuestionId = questions[currentQuestionIndex].id;
-        setAnswers(new Map(answers.set(currentQuestionId, optionIndex)));
+        // FIX: Use functional update with a new Map to ensure immutable state updates.
+        setAnswers(prevAnswers => new Map(prevAnswers).set(currentQuestionId, optionIndex));
+    };
+
+    const handlePrev = () => {
+        setCurrentQuestionIndex(prev => Math.max(0, prev - 1));
+    };
+
+    const handleNext = () => {
+        setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1));
     };
     
     const timePercentage = useMemo(() => {
@@ -236,7 +244,7 @@ const Test: FC = () => {
 
     const currentQuestion = questions[currentQuestionIndex];
     const selectedAnswer = currentQuestion ? answers.get(currentQuestion.id) : undefined;
-
+    
     if (isLoading || isInitializing) {
         return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4 text-slate-600">Loading Exam...</p></div>;
     }
@@ -327,17 +335,25 @@ const Test: FC = () => {
                     </div>
                 </div>
                 <div className="mt-6 pt-4 border-t border-slate-200 flex justify-between items-center">
-                    <button onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))} disabled={currentQuestionIndex === 0} className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50">
+                    <button onClick={handlePrev} disabled={currentQuestionIndex === 0} className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50">
                         <ChevronLeft size={16} /> Previous
                     </button>
-                    {currentQuestionIndex === questions.length - 1 ? (
-                        <button onClick={() => handleSubmit()} disabled={isSubmitting} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105">
-                            {isSubmitting ? <Spinner /> : <Send size={16} />}
-                            {isSubmitting ? 'Submitting...' : 'Submit Exam'}
+                    
+                    {currentQuestionIndex < questions.length - 1 ? (
+                         <button 
+                            onClick={handleNext} 
+                            className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+                        >
+                            Next <ChevronRight size={16} />
                         </button>
                     ) : (
-                        <button onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))} disabled={currentQuestionIndex === questions.length - 1} className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50">
-                            Next <ChevronRight size={16} />
+                        <button 
+                            onClick={() => handleSubmit()} 
+                            disabled={isSubmitting || selectedAnswer === undefined} 
+                            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed"
+                        >
+                            {isSubmitting ? <Spinner /> : <Send size={16} />}
+                            {isSubmitting ? 'Submitting...' : 'Submit Exam'}
                         </button>
                     )}
                 </div>

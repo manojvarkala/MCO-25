@@ -1,17 +1,13 @@
 
-
-
-
-
 import React, { FC, useState, useEffect, useMemo } from 'react';
-// Fix: Use namespace import for react-router-dom to resolve module exports.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Use named imports for react-router-dom v6 components and hooks.
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { FlaskConical, Trophy, RefreshCw, Star, BarChart, Clock, PlayCircle } from 'lucide-react';
+import { FlaskConical, Trophy, RefreshCw, Star, BarChart, Clock, PlayCircle, Award, Target, TrendingUp } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import toast from 'react-hot-toast';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
@@ -59,9 +55,9 @@ const StarRating: FC<{ rating: number; count: number; }> = ({ rating, count }) =
 
 const Dashboard: FC = () => {
     // Fix: Use useNavigate for v6 compatibility.
-    const navigate = ReactRouterDOM.useNavigate();
-    const { user, token, paidExamIds, examPrices, isSubscribed } = useAuth();
-    const { activeOrg, isInitializing, inProgressExam } = useAppContext();
+    const navigate = useNavigate();
+    const { user, token, paidExamIds, isSubscribed } = useAuth();
+    const { activeOrg, isInitializing, inProgressExam, examPrices } = useAppContext();
     const [results, setResults] = useState<TestResult[]>([]);
     const [isLoadingResults, setIsLoadingResults] = useState(true);
     const [stats, setStats] = useState<{ avg: number; best: number; completed: number } | null>(null);
@@ -102,17 +98,18 @@ const Dashboard: FC = () => {
         return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4 text-slate-600">Loading Dashboard...</p></div>;
     }
     
+    // FIX: Add defensive checks to prevent crashes if config data is missing.
     const { examProductCategories: categories, exams } = activeOrg;
     
     return (
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             <div className="lg:col-span-2 space-y-8">
-                <div className="bg-white p-6 rounded-xl shadow-md flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="bg-gradient-to-r from-cyan-500 to-purple-600 text-white p-6 rounded-xl shadow-lg flex flex-col sm:flex-row justify-between items-start gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-800">Welcome back, {user.name}!</h1>
-                        <p className="text-slate-500 mt-1">Ready to ace your next exam?</p>
+                        <h1 className="text-3xl font-bold">Welcome back, {user.name}!</h1>
+                        <p className="text-purple-100 mt-1">Ready to ace your next exam?</p>
                     </div>
-                    <button onClick={handleSync} className="flex-shrink-0 flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition">
+                    <button onClick={handleSync} className="flex-shrink-0 flex items-center gap-2 bg-white/20 hover:bg-white/30 font-semibold py-2 px-4 rounded-lg transition">
                         <RefreshCw size={16} /> Sync My Exams
                     </button>
                 </div>
@@ -129,56 +126,67 @@ const Dashboard: FC = () => {
                     </div>
                 )}
 
-                {categories.map(category => {
-                    const practiceExam = exams.find(e => e.id === category.practiceExamId);
-                    const certExam = exams.find(e => e.id === category.certificationExamId);
+                {(categories || []).map(category => {
+                    const practiceExam = (exams || []).find(e => e.id === category.practiceExamId);
+                    const certExam = (exams || []).find(e => e.id === category.certificationExamId);
                     if (!practiceExam || !certExam) return null;
 
                     const isCertPurchased = paidExamIds.includes(certExam.productSku) || isSubscribed;
                     const certResults = results.filter(r => r.examId === certExam.id);
                     const hasPassedCert = certResults.some(r => r.score >= certExam.passScore);
                     const attemptsUsed = certResults.length;
-                    const attemptsExceeded = attemptsUsed >= 3;
+                    // FIX: Make attempt calculation more robust to prevent negative numbers.
+                    const attemptsLeft = Math.max(0, 3 - attemptsUsed);
+                    const attemptsExceeded = attemptsLeft === 0;
                     
                     const priceData = examPrices ? examPrices[certExam.productSku] : null;
 
                     return (
-                        <div key={category.id} className="bg-white p-6 rounded-xl shadow-md">
-                            <h2 className="text-2xl font-bold text-slate-800">{category.name}</h2>
-                            <p className="text-slate-500 mt-1 mb-4">
-                                <DescriptionWithHashtags text={category.description} />
-                            </p>
-                            {priceData && <StarRating rating={priceData.avgRating || 0} count={priceData.reviewCount || 0} />}
+                        <div key={category.id} className="bg-white rounded-xl shadow-md overflow-hidden">
+                            <div className="h-2 bg-cyan-500"></div>
+                            <div className="p-6">
+                                <h2 className="text-2xl font-bold text-slate-800">{category.name}</h2>
+                                <p className="text-slate-500 mt-1 mb-4">
+                                    <DescriptionWithHashtags text={category.description} />
+                                </p>
+                                {priceData && <StarRating rating={priceData.avgRating || 0} count={priceData.reviewCount || 0} />}
 
-                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-col">
-                                    <h3 className="font-bold text-slate-700 flex items-center gap-2"><FlaskConical size={16} /> Free Practice</h3>
-                                    <p className="text-sm text-slate-500 mt-2 flex-grow">{practiceExam.numberOfQuestions} questions, {practiceExam.durationMinutes} mins</p>
-                                    <button onClick={() => navigate(`/test/${practiceExam.id}`)} className="mt-4 w-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition">
-                                        Start Practice
-                                    </button>
-                                </div>
-                                
-                                <div className={`p-4 rounded-lg border flex flex-col ${isCertPurchased ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}>
-                                     <h3 className="font-bold text-slate-700 flex items-center gap-2"><Trophy size={16}/> Certification Exam</h3>
-                                     <p className="text-sm text-slate-500 mt-2 flex-grow">{certExam.numberOfQuestions} questions, {certExam.durationMinutes} mins</p>
-                                     {isCertPurchased ? (
-                                        <>
-                                            {hasPassedCert ? (
-                                                <div className="mt-4 text-center text-green-700 bg-green-100 p-2 rounded-md font-semibold">Passed!</div>
-                                            ) : attemptsExceeded ? (
-                                                <div className="mt-4 text-center text-red-700 bg-red-100 p-2 rounded-md font-semibold">Attempts Used</div>
+                                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-col">
+                                        <h3 className="font-bold text-slate-700 flex items-center gap-2"><FlaskConical size={16} /> Free Practice</h3>
+                                        <p className="text-sm text-slate-500 mt-2 flex-grow">{practiceExam.numberOfQuestions} questions, {practiceExam.durationMinutes} mins</p>
+                                        <button onClick={() => navigate(`/test/${practiceExam.id}`)} className="mt-4 w-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-transform transform hover:-translate-y-0.5 shadow-md hover:shadow-lg">
+                                            Start Practice
+                                        </button>
+                                    </div>
+                                    
+                                    <div className={`p-4 rounded-lg border flex flex-col ${isCertPurchased ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}>
+                                         <h3 className="font-bold text-slate-700 flex items-center gap-2"><Trophy size={16}/> Certification Exam</h3>
+                                         <p className="text-sm text-slate-500 mt-2 flex-grow">{certExam.numberOfQuestions} questions, {certExam.durationMinutes} mins</p>
+                                         {isCertPurchased ? (
+                                            <>
+                                                {hasPassedCert ? (
+                                                    <div className="mt-4 text-center text-green-700 bg-green-100 p-2 rounded-md font-semibold">Passed!</div>
+                                                ) : attemptsExceeded ? (
+                                                    <div className="mt-4 text-center text-red-700 bg-red-100 p-2 rounded-md font-semibold">Attempts Used</div>
+                                                ) : (
+                                                    <button onClick={() => navigate(`/test/${certExam.id}`)} className="mt-4 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-transform transform hover:-translate-y-0.5 shadow-md hover:shadow-lg">
+                                                        Start Exam ({attemptsLeft} left)
+                                                    </button>
+                                                )}
+                                            </>
+                                         ) : (
+                                            certExam.productSlug ? (
+                                                <a href={`/#/checkout/${certExam.productSlug}`} className="mt-4 w-full text-center bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg transition-transform transform hover:-translate-y-0.5 shadow-md hover:shadow-lg">
+                                                    {priceData && priceData.price > 0 ? `Buy Exam - $${priceData.price}` : 'Buy Exam'}
+                                                </a>
                                             ) : (
-                                                <button onClick={() => navigate(`/test/${certExam.id}`)} className="mt-4 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition">
-                                                    Start Exam ({3 - attemptsUsed} left)
+                                                <button disabled className="mt-4 w-full text-center bg-slate-400 text-white font-semibold py-2 px-4 rounded-lg cursor-not-allowed">
+                                                    Not Available
                                                 </button>
-                                            )}
-                                        </>
-                                     ) : (
-                                        <a href={`/#/checkout/${certExam.productSlug}`} className="mt-4 w-full text-center bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg transition">
-                                            {priceData && priceData.price > 0 ? `Buy Exam - $${priceData.price}` : 'Buy Exam'}
-                                        </a>
-                                     )}
+                                            )
+                                         )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -189,10 +197,22 @@ const Dashboard: FC = () => {
                  <div className="bg-white p-6 rounded-xl shadow-md">
                      <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><BarChart className="mr-3 text-cyan-500"/> My Stats</h3>
                      {isLoadingResults ? <Spinner/> : stats ? (
-                         <div className="space-y-3 text-slate-600">
-                             <div className="flex justify-between items-baseline"><span >Exams Completed</span> <span className="font-bold text-2xl text-slate-800">{stats.completed}</span></div>
-                             <div className="flex justify-between items-baseline"><span>Average Score</span> <span className="font-bold text-2xl text-slate-800">{stats.avg}%</span></div>
-                             <div className="flex justify-between items-baseline"><span>Best Score</span> <span className="font-bold text-2xl text-green-600">{stats.best}%</span></div>
+                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                            <div className="bg-slate-50 p-4 rounded-lg">
+                                <Award className="mx-auto h-8 w-8 text-slate-500 mb-2" />
+                                <p className="font-bold text-2xl text-slate-800">{stats.completed}</p>
+                                <p className="text-sm text-slate-500">Completed</p>
+                            </div>
+                            <div className="bg-slate-50 p-4 rounded-lg">
+                                <Target className="mx-auto h-8 w-8 text-slate-500 mb-2" />
+                                <p className="font-bold text-2xl text-slate-800">{stats.avg}%</p>
+                                <p className="text-sm text-slate-500">Avg. Score</p>
+                            </div>
+                            <div className="bg-green-50 p-4 rounded-lg">
+                                <TrendingUp className="mx-auto h-8 w-8 text-green-600 mb-2" />
+                                <p className="font-bold text-2xl text-green-600">{stats.best}%</p>
+                                <p className="text-sm text-green-700">Best Score</p>
+                            </div>
                          </div>
                      ) : <p className="text-slate-500 text-sm">No results yet. Take an exam to see your stats!</p>}
                 </div>

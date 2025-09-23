@@ -1,7 +1,8 @@
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
-// Fix: Use namespace import for react-router-dom to resolve module exports.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Use named imports for react-router-dom v6 components and hooks.
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
@@ -33,64 +34,6 @@ import LivePurchaseNotification from './components/LivePurchaseNotification.tsx'
 import SidebarLayout from './components/SidebarLayout.tsx';
 import Integration from './components/Integration.tsx';
 import UpdateNameModal from './components/UpdateNameModal.tsx';
-import PurchaseNotifier from './components/PurchaseNotifier.tsx';
-import WooCommerceStyling from './components/WooCommerceStyling.tsx';
-import SuperAdminBlueprint from './components/SuperAdminBlueprint.tsx';
-
-// New Component for the promotional announcement
-const PromotionAnnouncement: FC = () => {
-    const [isVisible, setIsVisible] = useState(false);
-    const [isHiding, setIsHiding] = useState(false);
-    const announcementKey = 'announcementDismissed_1_dollar_offer_sept15';
-
-    useEffect(() => {
-        const dismissed = sessionStorage.getItem(announcementKey);
-        if (!dismissed) {
-            const timer = setTimeout(() => setIsVisible(true), 2500);
-            return () => clearTimeout(timer);
-        }
-    }, []);
-
-    const handleClose = () => {
-        setIsHiding(true);
-        sessionStorage.setItem(announcementKey, 'true');
-        setTimeout(() => {
-            setIsVisible(false);
-        }, 500); // Match duration of fade-out animation
-    };
-    
-    if (!isVisible) return null;
-
-    const MegaphoneIcon = () => (
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
-    );
-    const CloseIcon = () => (
-         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-    );
-
-    return (
-        <div className={`fixed bottom-4 right-4 z-50 transition-all duration-500 ease-in-out ${isHiding ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-             <div className="relative bg-gradient-to-br from-cyan-500 to-purple-600 text-white shadow-2xl w-full rounded-2xl p-6 max-w-md">
-                <button onClick={handleClose} className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors" aria-label="Dismiss announcement">
-                   <CloseIcon />
-                </button>
-                <div className="flex items-center gap-5">
-                    <div className="bg-white/20 p-3 rounded-full hidden sm:block">
-                        <MegaphoneIcon />
-                    </div>
-                    <div className="flex-grow">
-                        <h3 className="font-extrabold text-xl sm:text-2xl text-white">Limited Time Offer!</h3>
-                        <p className="text-base sm:text-lg text-white/90 mt-1">
-                            All certification exams are just <span className="font-black text-yellow-300 text-2xl sm:text-3xl">$1</span> as an introductory offer!
-                        </p>
-                        <p className="text-sm text-white/80 mt-2">This promotion ends September 15th.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -101,11 +44,11 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }
   const { user } = useAuth();
   if (!user) {
     // Fix: Use <Navigate> for react-router-dom v6
-    return <ReactRouterDOM.Navigate to="/" replace />;
+    return <Navigate to="/" replace />;
   }
   if (adminOnly && !user.isAdmin) {
     // Fix: Use <Navigate> for react-router-dom v6
-    return <ReactRouterDOM.Navigate to="/dashboard" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
 };
@@ -113,7 +56,7 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }
 const AppContent: FC = () => {
     const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed } = useAuth();
     const { isWheelModalOpen, setWheelModalOpen } = useAppContext();
-    const location = ReactRouterDOM.useLocation();
+    const location = useLocation();
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
     
     const isTestPage = location.pathname.startsWith('/test/');
@@ -157,50 +100,46 @@ const AppContent: FC = () => {
             <div className="flex-grow w-full relative">
                 <main className={mainClasses}>
                     {/* Fix: Use <Routes> and v6 Route syntax */}
-                    <ReactRouterDOM.Routes>
+                    <Routes>
                         {/* Routes with generic sidebar */}
-                        <ReactRouterDOM.Route path="/instructions" element={<SidebarLayout><Instructions /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/bookstore" element={<SidebarLayout><BookStore /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/pricing" element={<SidebarLayout><Pricing /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/feedback" element={<SidebarLayout><Feedback /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/user-guide" element={<SidebarLayout><UserGuide /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/about-us" element={<SidebarLayout><AboutUs /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/privacy-policy" element={<SidebarLayout><PrivacyPolicy /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/refund-policy" element={<SidebarLayout><RefundPolicy /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/terms-of-service" element={<SidebarLayout><TermsOfService /></SidebarLayout>} />
-                        <ReactRouterDOM.Route path="/profile" element={
+                        <Route path="/instructions" element={<SidebarLayout><Instructions /></SidebarLayout>} />
+                        <Route path="/bookstore" element={<SidebarLayout><BookStore /></SidebarLayout>} />
+                        <Route path="/pricing" element={<SidebarLayout><Pricing /></SidebarLayout>} />
+                        <Route path="/feedback" element={<SidebarLayout><Feedback /></SidebarLayout>} />
+                        <Route path="/user-guide" element={<SidebarLayout><UserGuide /></SidebarLayout>} />
+                        <Route path="/about-us" element={<SidebarLayout><AboutUs /></SidebarLayout>} />
+                        <Route path="/privacy-policy" element={<SidebarLayout><PrivacyPolicy /></SidebarLayout>} />
+                        <Route path="/refund-policy" element={<SidebarLayout><RefundPolicy /></SidebarLayout>} />
+                        <Route path="/terms-of-service" element={<SidebarLayout><TermsOfService /></SidebarLayout>} />
+                        <Route path="/profile" element={
                           <ProtectedRoute>
                             <SidebarLayout><Profile /></SidebarLayout>
                           </ProtectedRoute>
                         } />
-                        <ReactRouterDOM.Route path="/results/:testId" element={
+                        <Route path="/results/:testId" element={
                           <ProtectedRoute>
                             <SidebarLayout><Results /></SidebarLayout>
                           </ProtectedRoute>
                         } />
 
                         {/* Routes with their own layout or no sidebar */}
-                        <ReactRouterDOM.Route path="/" element={<LandingPage />} />
-                        <ReactRouterDOM.Route path="/auth" element={<Login />} />
-                        <ReactRouterDOM.Route path="/checkout/:productSlug" element={<Checkout />} />
-                        <ReactRouterDOM.Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/integration" element={<ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/purchase-notifier" element={<ProtectedRoute adminOnly={true}><PurchaseNotifier /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/woocommerce-styling" element={<ProtectedRoute adminOnly={true}><WooCommerceStyling /></ProtectedRoute>} />
-                        <ReactRouterDOM.Route path="/super-admin-blueprint" element={<ProtectedRoute adminOnly={true}><SuperAdminBlueprint /></ProtectedRoute>} />
+                        <Route path="/" element={<LandingPage />} />
+                        <Route path="/auth" element={<Login />} />
+                        <Route path="/checkout/:productSlug" element={<Checkout />} />
+                        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                        <Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
+                        <Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
+                        <Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
+                        <Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
+                        <Route path="/integration" element={<ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute>} />
                     
-                        <ReactRouterDOM.Route path="*" element={<ReactRouterDOM.Navigate to="/" replace />} />
-                    </ReactRouterDOM.Routes>
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
                 </main>
                 {user && user.isAdmin && !isTestPage && <DebugSidebar />}
             </div>
             {!isTestPage && <Footer />}
             {!isTestPage && <LivePurchaseNotification />}
-            {!isTestPage && <PromotionAnnouncement />}
         </div>
     );
 };
@@ -210,10 +149,10 @@ const App: FC = () => {
   return (
     <AuthProvider>
       <AppProvider>
-        <ReactRouterDOM.HashRouter>
+        <HashRouter>
             <AppContent />
             <Toaster position="top-right" reverseOrder={false} />
-        </ReactRouterDOM.HashRouter>
+        </HashRouter>
       </AppProvider>
     </AuthProvider>
   );

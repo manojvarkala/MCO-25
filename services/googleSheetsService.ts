@@ -1,57 +1,58 @@
 import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, SpinWheelResult, SearchedUser, ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
 import { GoogleGenAI, Type } from "@google/genai";
-import { getApiEndpoint } from './apiConfig.ts';
+import { getApiBaseUrl } from './apiConfig.ts';
 
-const apiFetch = async (endpoint: string, token: string, options: RequestInit = {}) => {
-    const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-    };
+const apiFetch = async (action: string, token: string | null, data: Record<string, any> = {}) => {
+    const API_BASE_URL = getApiBaseUrl();
+    const fullUrl = `${API_BASE_URL}/wp-admin/admin-ajax.php`;
+
+    // Use FormData for compatibility with admin-ajax.php
+    const formData = new FormData();
+    formData.append('action', `mco_${action}`); // All WP actions are prefixed
+    
     if (token) {
-       headers['Authorization'] = `Bearer ${token}`;
+        formData.append('token', token);
     }
 
-    const API_BASE_URL = getApiEndpoint();
-    const isProxied = API_BASE_URL.startsWith('/');
-    
-    // FIX: Ensure a single slash between the base URL and the endpoint to prevent routing errors.
-    const fullUrl = `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
-    
-    const urlWithCacheBuster = new URL(fullUrl, isProxied ? window.location.origin : undefined);
-    urlWithCacheBuster.searchParams.append('mco_cb', Date.now().toString());
+    // Append other data to the form
+    for (const key in data) {
+        if (data.hasOwnProperty(key)) {
+            formData.append(key, data[key]);
+        }
+    }
 
     try {
-        const response = await fetch(urlWithCacheBuster.toString(), { ...options, headers });
+        const response = await fetch(fullUrl, {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+        });
     
         if (!response.ok) {
-            let finalErrorMessage = `Server error: ${response.status} ${response.statusText}`;
-            try {
-                const errorData = await response.json();
-                if (errorData && errorData.message) {
-                    finalErrorMessage = errorData.message;
-                }
-            } catch (e) {
-                console.error("API response was not valid JSON for an error.", e);
-            }
-            if (response.status === 403) {
-                finalErrorMessage += ' (This often means your login session is invalid or has expired. Please try logging out and back in.)';
-            }
-            if (response.status === 500) {
-                finalErrorMessage += ' (A server error occurred. Check the WordPress debug logs if you are an admin.)';
+            let finalErrorMessage = `Server error: ${response.status}`;
+            const textError = await response.text();
+            if (textError.toLowerCase().includes('<!doctype html')) {
+                finalErrorMessage = `Unexpected token '<', "${textError.substring(0, 15)}..." is not valid JSON`;
+            } else if (response.statusText) {
+                finalErrorMessage = `Server error: ${response.status} ${response.statusText}`;
             }
             throw new Error(finalErrorMessage);
         }
         
-        if (response.status === 204) return null;
-        return response.json();
+        const jsonResponse = await response.json();
+
+        if (jsonResponse.success === false) {
+            throw new Error(jsonResponse.data?.message || jsonResponse.data || 'An unknown API error occurred.');
+        }
+        
+        return jsonResponse.data;
 
     } catch (networkError: any) {
-        // If it's a custom error thrown from the !response.ok block, re-throw it.
-        if (networkError.message.startsWith('Server error:')) {
+        if (networkError.message.startsWith('Server error:') || networkError.message.startsWith('Unexpected token')) {
             throw networkError;
         }
 
-        // Otherwise, handle network/CORS errors
         console.error("API Fetch Network Error:", networkError);
         let errorMessage = `Could not connect to the API server (${API_BASE_URL}).`;
         if (networkError instanceof TypeError && networkError.message.includes('fetch')) {
@@ -64,6 +65,7 @@ const apiFetch = async (endpoint: string, token: string, options: RequestInit = 
 };
 
 export const googleSheetsService = {
+    apiFetch,
     // --- AI FEEDBACK ---
     getAIFeedback: async (prompt: string): Promise<string> => {
         if (!process.env.API_KEY) {
@@ -85,11 +87,26 @@ export const googleSheetsService = {
     
     // --- RESULTS HANDLING (CACHE-FIRST APPROACH) ---
     syncResults: async (user: User, token: string): Promise<void> => {
-        // This function is intended to sync with a server. In a standalone/offline-first
-        // setup, this would cause "Failed to fetch" errors. We make it a no-op that
-        // resolves immediately, as all results are managed via local storage.
-        console.log("Syncing results is disabled in offline mode. Local results will be used.");
-        return Promise.resolve();
+        try {
+            const serverResults: TestResult[] = await apiFetch('user_results', token) || [];
+
+            const resultsObject: { [testId: string]: TestResult } = {};
+            serverResults.forEach(result => {
+                resultsObject[result.testId] = result;
+            });
+
+            const key = `exam_results_${user.id}`;
+            const storedResults = localStorage.getItem(key);
+            const localResults = storedResults ? JSON.parse(storedResults) : {};
+
+            const mergedResults = { ...localResults, ...resultsObject };
+            
+            localStorage.setItem(key, JSON.stringify(mergedResults));
+            console.log('Results successfully synced with the server.');
+        } catch (error) {
+            console.error("Failed to sync results with server:", error);
+            throw error;
+        }
     },
 
     getLocalTestResultsForUser: (userId: string): TestResult[] => {
@@ -97,7 +114,6 @@ export const googleSheetsService = {
             const storedResults = localStorage.getItem(`exam_results_${userId}`);
             if (storedResults) {
                 const resultsData = JSON.parse(storedResults);
-                // Ensure we have an object before calling Object.values
                 if (resultsData && typeof resultsData === 'object') {
                     return Object.values(resultsData);
                 }
@@ -121,30 +137,18 @@ export const googleSheetsService = {
     },
 
     // --- DIRECT API CALLS (NOT CACHED LOCALLY) ---
-    getCertificateData: async (token: string, testId: string, user: User): Promise<ApiCertificateData | null> => {
-        console.log("Generating certificate data from local results for offline functionality.");
+    getCertificateData: async (token: string, testId: string): Promise<ApiCertificateData> => {
         try {
-            const result = googleSheetsService.getTestResult(user, testId);
-            if (result) {
-                return {
-                    certificateNumber: `MCO-${result.timestamp}`, // Generate a unique-ish number
-                    candidateName: user.name,
-                    finalScore: result.score,
-                    date: new Date(result.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-                    examId: result.examId,
-                };
-            }
-            return null;
+            return await apiFetch('certificate_data', token, { testId });
         } catch (error) {
-            console.error("Failed to generate certificate data from local storage", error);
-            return null;
+            console.error("Failed to get certificate data from server:", error);
+            throw error;
         }
     },
     
     getDebugDetails: async (token: string): Promise<DebugData> => {
         try {
-            const data = await apiFetch('/debug-details', token);
-            return data as DebugData;
+            return await apiFetch('debug_details', token);
         } catch (error) {
             console.error("Failed to get debug details:", error);
             throw error;
@@ -153,10 +157,7 @@ export const googleSheetsService = {
 
     updateUserName: async (token: string, newName: string): Promise<any> => {
         try {
-            return await apiFetch('/update-name', token, {
-                method: 'POST',
-                body: JSON.stringify({ fullName: newName }),
-            });
+            return await apiFetch('update_name', token, { fullName: newName });
         } catch (error) {
             console.error("Failed to update user name:", error);
             throw error;
@@ -168,77 +169,48 @@ export const googleSheetsService = {
         if (!exam.questionSourceUrl) {
             throw new Error(`The exam "${exam.name}" is not configured with a valid question source. Please contact an administrator.`);
         }
-        
-        let sheetId = '';
-        const match = /spreadsheets\/d\/([a-zA-Z0-9-_]+)/.exec(exam.questionSourceUrl);
-        if (match && match[1]) {
-            sheetId = match[1];
-        }
 
-        if (!sheetId) {
-            throw new Error('Could not extract Google Sheet ID from the provided URL.');
-        }
-        
-        const csvExportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+        try {
+            const fetchedQuestions: Question[] = await apiFetch('questions_from_sheet', token, {
+                sheetUrl: exam.questionSourceUrl,
+                count: exam.numberOfQuestions
+            });
 
-        const response = await fetch(csvExportUrl);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch questions from Google Sheets. Status: ${response.status}`);
-        }
-        const csvText = await response.text();
-        
-        const lines = csvText.split(/\r\n|\n/).slice(1); // Split and remove header
-        const allQuestions: Question[] = [];
-        for (const line of lines) {
-            if (!line.trim()) continue;
-            const data = line.split(',').map(cell => cell.trim().replace(/^"|"$/g, ''));
-            if (data.length >= 7 && !isNaN(parseInt(data[0], 10)) && data[1] && data[1].trim() !== '') {
-                 allQuestions.push({
-                    id: parseInt(data[0], 10),
-                    question: data[1],
-                    options: [data[2], data[3], data[4], data[5]],
-                    correctAnswer: parseInt(data[6], 10),
-                });
+            if (!fetchedQuestions || fetchedQuestions.length === 0) {
+                throw new Error("No valid questions were returned from the source. Please check the Google Sheet configuration and ensure it is public.");
             }
-        }
-
-        for (let i = allQuestions.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
-        }
-        const fetchedQuestions = allQuestions.slice(0, exam.numberOfQuestions);
-
-        if (fetchedQuestions.length === 0) {
-            throw new Error("No valid questions were returned from the source.");
-        }
-
-        if (fetchedQuestions.length < exam.numberOfQuestions) {
-            console.warn(`Warning: Not enough unique questions available for ${exam.name}. Requested ${exam.numberOfQuestions}, but only found ${fetchedQuestions.length}.`);
-        }
-        
-        const shuffledQuestions = fetchedQuestions.map(question => {
-            if (!question.options || question.options.length === 0) {
-                return question;
-            }
-
-            const correctAnswerText = question.options[question.correctAnswer - 1];
-            let optionsToShuffle = [...question.options];
             
-            for (let i = optionsToShuffle.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [optionsToShuffle[i], optionsToShuffle[j]] = [optionsToShuffle[j], optionsToShuffle[i]];
+            if (fetchedQuestions.length < exam.numberOfQuestions) {
+                console.warn(`Warning: Not enough unique questions available for ${exam.name}. Requested ${exam.numberOfQuestions}, but only found ${fetchedQuestions.length}.`);
             }
 
-            const newCorrectAnswerIndex = optionsToShuffle.findIndex(option => option === correctAnswerText);
+            const shuffledQuestions = fetchedQuestions.map(question => {
+                if (!question.options || question.options.length === 0) {
+                    return question;
+                }
+                const correctAnswerText = question.options[question.correctAnswer - 1];
+                
+                let optionsToShuffle = [...question.options];
+                for (let i = optionsToShuffle.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [optionsToShuffle[i], optionsToShuffle[j]] = [optionsToShuffle[j], optionsToShuffle[i]];
+                }
 
-            return {
-                ...question,
-                options: optionsToShuffle,
-                correctAnswer: newCorrectAnswerIndex + 1,
-            };
-        });
+                const newCorrectAnswerIndex = optionsToShuffle.findIndex(option => option === correctAnswerText);
 
-        return shuffledQuestions;
+                return {
+                    ...question,
+                    options: optionsToShuffle,
+                    correctAnswer: newCorrectAnswerIndex + 1,
+                };
+            });
+
+            return shuffledQuestions;
+
+        } catch (error) {
+            console.error("Failed to get questions via API proxy:", error);
+            throw error;
+        }
     },
     
     // --- DUAL-MODE SUBMISSION ---
@@ -290,10 +262,8 @@ export const googleSheetsService = {
         
         (async () => {
             try {
-                await apiFetch('/submit-result', token, {
-                    method: 'POST',
-                    body: JSON.stringify(newResult)
-                });
+                // We need to stringify the complex object to send it via FormData
+                await apiFetch('submit_result', token, { result: JSON.stringify(newResult) });
                 console.log('Result successfully synced with the server.');
             } catch (error) {
                 console.error("Failed to sync result with server:", error);
@@ -304,13 +274,10 @@ export const googleSheetsService = {
         return Promise.resolve(newResult);
     },
 
-    // --- NEW FEEDBACK & REVIEW SUBMISSIONS (SIMULATED) ---
+    // --- NEW FEEDBACK & REVIEW SUBMISSIONS ---
     submitFeedback: async (token: string, category: string, message: string): Promise<void> => {
         try {
-            await apiFetch('/submit-feedback', token, {
-                method: 'POST',
-                body: JSON.stringify({ category, message }),
-            });
+            await apiFetch('submit_feedback', token, { category, message });
         } catch (error) {
             console.error("Failed to submit feedback:", error);
             throw error;
@@ -319,10 +286,7 @@ export const googleSheetsService = {
 
     submitReview: async (token: string, examId: string, rating: number, reviewText: string): Promise<void> => {
         try {
-            await apiFetch('/submit-review', token, {
-                method: 'POST',
-                body: JSON.stringify({ examId, rating, reviewText }),
-            });
+            await apiFetch('submit_review', token, { examId, rating, reviewText });
         } catch (error) {
             console.error("Failed to submit review:", error);
             throw error;
@@ -332,9 +296,7 @@ export const googleSheetsService = {
     // --- NEW WHEEL OF FORTUNE ---
     spinWheel: async (token: string): Promise<SpinWheelResult> => {
         try {
-            return await apiFetch('/spin-wheel', token, {
-                method: 'POST',
-            });
+            return await apiFetch('spin_wheel', token, {});
         } catch (error) {
             console.error("Failed to spin wheel:", error);
             throw error;
@@ -344,10 +306,7 @@ export const googleSheetsService = {
     // --- NEW ADMIN ACTIONS ---
     addSpins: async (token: string, userId: string, spins: number): Promise<{ success: boolean; newTotal: number; }> => {
         try {
-            return await apiFetch('/admin/add-spins', token, {
-                method: 'POST',
-                body: JSON.stringify({ userId, spins }),
-            });
+            return await apiFetch('admin_add_spins', token, { userId, spins });
         } catch (error) {
             console.error("Failed to add spins:", error);
             throw error;
@@ -356,10 +315,7 @@ export const googleSheetsService = {
 
     grantPrize: async (token: string, userId: string, prizeId: string): Promise<{ success: boolean; message: string; }> => {
         try {
-            return await apiFetch('/admin/grant-prize', token, {
-                method: 'POST',
-                body: JSON.stringify({ userId, prizeId }),
-            });
+            return await apiFetch('admin_grant_prize', token, { userId, prizeId });
         } catch (error) {
             console.error("Failed to grant prize:", error);
             throw error;
@@ -368,10 +324,7 @@ export const googleSheetsService = {
 
     searchUser: async (token: string, searchTerm: string): Promise<SearchedUser[]> => {
         try {
-            return await apiFetch('/admin/search-user', token, {
-                method: 'POST',
-                body: JSON.stringify({ searchTerm }),
-            });
+            return await apiFetch('admin_search_user', token, { searchTerm });
         } catch (error) {
             console.error("Failed to search user:", error);
             throw error;
@@ -380,10 +333,7 @@ export const googleSheetsService = {
 
     resetSpins: async (token: string, userId: string): Promise<{ success: boolean; message: string; }> => {
         try {
-            return await apiFetch('/admin/reset-spins', token, {
-                method: 'POST',
-                body: JSON.stringify({ userId }),
-            });
+            return await apiFetch('admin_reset_spins', token, { userId });
         } catch (error) {
             console.error("Failed to reset spins:", error);
             throw error;
@@ -392,10 +342,7 @@ export const googleSheetsService = {
 
     removePrize: async (token: string, userId: string): Promise<{ success: boolean; message: string; }> => {
         try {
-            return await apiFetch('/admin/remove-prize', token, {
-                method: 'POST',
-                body: JSON.stringify({ userId }),
-            });
+            return await apiFetch('admin_remove_prize', token, { userId });
         } catch (error) {
             console.error("Failed to remove prize:", error);
             throw error;
@@ -405,7 +352,7 @@ export const googleSheetsService = {
     // --- NEW EXAM STATS ---
     getExamStats: async (token: string): Promise<ExamStat[]> => {
         try {
-            return await apiFetch('/exam-stats', token);
+            return await apiFetch('exam_stats', token);
         } catch (error) {
             console.error("Failed to get exam stats:", error);
             throw error;

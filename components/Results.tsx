@@ -5,8 +5,8 @@
 
 
 import React, { FC, useState, useEffect } from 'react';
-// Fix: Use namespace import for react-router-dom to resolve module exports.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Use named imports for react-router-dom v6 components and hooks.
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook } from '../types.ts';
@@ -17,12 +17,11 @@ import LogoSpinner from './LogoSpinner.tsx';
 import { Check, X, FileDown, BookUp, ShieldCheck, Sparkles, Download, Star, MessageSquare, Lock, BarChart } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 import jsPDF from 'jspdf';
-import { logoBase64 } from '../assets/logo.ts';
 
 const Results: FC = () => {
-    const { testId } = ReactRouterDOM.useParams<{ testId: string }>();
+    const { testId } = useParams<{ testId: string }>();
     // Fix: Use useNavigate for navigation in v6
-    const navigate = ReactRouterDOM.useNavigate();
+    const navigate = useNavigate();
     const { user, token, paidExamIds, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     
@@ -243,7 +242,7 @@ Please provide a summary of the key areas I need to focus on based on these erro
             // --- Page 1: Cover Page ---
             pdf.setFillColor(240, 248, 255);
             pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-            if (logoBase64) pdf.addImage(logoBase64, 'PNG', margin, margin, 20, 20);
+            if (activeOrg && activeOrg.logo) pdf.addImage(activeOrg.logo, 'PNG', margin, margin, 20, 20);
             
             pdf.setFontSize(26);
             pdf.setTextColor(15, 23, 42);

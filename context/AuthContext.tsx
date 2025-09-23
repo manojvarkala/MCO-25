@@ -1,26 +1,20 @@
 import React, { useState, useEffect, useCallback, useMemo, useContext, createContext, FC, ReactNode } from 'react';
 import toast from 'react-hot-toast';
-import type { User, TokenPayload, RecommendedBook, Exam, ExamProductCategory } from '../types.ts';
+import type { User, TokenPayload } from '../types.ts';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   paidExamIds: string[];
-  examPrices: { [id: string]: { price: number; regularPrice?: number; productId?: number; avgRating?: number; reviewCount?: number; } } | null;
   isSubscribed: boolean;
   spinsAvailable: number;
   wonPrize: { prizeId: string; prizeLabel: string; } | null;
   wheelModalDismissed: boolean;
   canSpinWheel: boolean;
-  suggestedBooks: RecommendedBook[];
-  dynamicExams: Exam[] | null;
-  dynamicCategories: ExamProductCategory[] | null;
   isSpinWheelEnabled: boolean;
-  // Fix: The loginWithToken function is async, so it returns a Promise.
-  loginWithToken: (token: string) => Promise<void>;
+  loginWithToken: (token: string, isSyncOnly?: boolean) => Promise<void>;
   logout: () => void;
-  useFreeAttempt: () => void;
   updateUserName: (name: string) => void;
   setWheelModalDismissed: (dismissed: boolean) => void;
 }
@@ -48,15 +42,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
           console.error("Failed to parse paidExamIds from localStorage", error);
           return [];
       }
-  });
-  const [examPrices, setExamPrices] = useState<{ [id: string]: { price: number; regularPrice?: number; productId?: number; avgRating?: number; reviewCount?: number; } } | null>(() => {
-    try {
-        const storedPrices = localStorage.getItem('examPrices');
-        return storedPrices ? JSON.parse(storedPrices) : null;
-    } catch (error) {
-        console.error("Failed to parse examPrices from localStorage", error);
-        return null;
-    }
   });
   const [isSubscribed, setIsSubscribed] = useState<boolean>(() => {
     try {
@@ -90,30 +75,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         return false;
       }
   });
-  const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>(() => {
-      try {
-          const stored = localStorage.getItem('suggestedBooks');
-          return stored ? JSON.parse(stored) : [];
-      } catch {
-          return [];
-      }
-  });
-  const [dynamicExams, setDynamicExams] = useState<Exam[] | null>(() => {
-    try {
-        const stored = localStorage.getItem('dynamicExams');
-        return stored ? JSON.parse(stored) : null;
-    } catch {
-        return null;
-    }
-  });
-  const [dynamicCategories, setDynamicCategories] = useState<ExamProductCategory[] | null>(() => {
-      try {
-          const stored = localStorage.getItem('dynamicCategories');
-          return stored ? JSON.parse(stored) : null;
-      } catch {
-          return null;
-      }
-  });
   const [isSpinWheelEnabled, setIsSpinWheelEnabled] = useState<boolean>(() => {
       try {
           const stored = localStorage.getItem('isSpinWheelEnabled');
@@ -135,25 +96,17 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setUser(null);
     setPaidExamIds([]);
     setToken(null);
-    setExamPrices(null);
     setIsSubscribed(false);
     setSpinsAvailable(0);
     setWonPrize(null);
-    setSuggestedBooks([]);
-    setDynamicExams(null);
-    setDynamicCategories(null);
     setIsSpinWheelEnabled(false);
     localStorage.removeItem('examUser');
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
-    localStorage.removeItem('examPrices');
     localStorage.removeItem('isSubscribed');
     localStorage.removeItem('spinsAvailable');
     localStorage.removeItem('wonPrize');
     localStorage.removeItem('activeOrg');
-    localStorage.removeItem('suggestedBooks');
-    localStorage.removeItem('dynamicExams');
-    localStorage.removeItem('dynamicCategories');
     localStorage.removeItem('isSpinWheelEnabled');
     sessionStorage.removeItem('wheelModalDismissed');
     Object.keys(localStorage).forEach(key => {
@@ -199,7 +152,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, [logout]);
 
 
-  const loginWithToken = useCallback(async (jwtToken: string) => {
+  const loginWithToken = useCallback(async (jwtToken: string, isSyncOnly: boolean = false) => {
     try {
         const parts = jwtToken.split('.');
         if (parts.length !== 3) throw new Error("Invalid JWT format.");
@@ -217,11 +170,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             localStorage.setItem('paidExamIds', JSON.stringify(payload.paidExamIds));
             localStorage.setItem('authToken', jwtToken);
 
-            if (payload.examPrices) {
-                setExamPrices(payload.examPrices);
-                localStorage.setItem('examPrices', JSON.stringify(payload.examPrices));
-            }
-
             if (payload.isSubscribed) {
                 setIsSubscribed(payload.isSubscribed);
                 localStorage.setItem('isSubscribed', JSON.stringify(payload.isSubscribed));
@@ -229,29 +177,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 setIsSubscribed(false);
                 localStorage.removeItem('isSubscribed');
             }
-            
-            if (payload.suggestedBooks) {
-                setSuggestedBooks(payload.suggestedBooks);
-                localStorage.setItem('suggestedBooks', JSON.stringify(payload.suggestedBooks));
-            } else {
-                setSuggestedBooks([]);
-                localStorage.removeItem('suggestedBooks');
-            }
-            
-            // Handle dynamic exam data for backward compatibility
-            if (payload.exams && payload.examProductCategories) {
-                setDynamicExams(payload.exams);
-                setDynamicCategories(payload.examProductCategories);
-                localStorage.setItem('dynamicExams', JSON.stringify(payload.exams));
-                localStorage.setItem('dynamicCategories', JSON.stringify(payload.examProductCategories));
-            } else {
-                // This is for the old plugin that doesn't send this data.
-                setDynamicExams(null);
-                setDynamicCategories(null);
-                localStorage.removeItem('dynamicExams');
-                localStorage.removeItem('dynamicCategories');
-            }
-
 
             const spins = payload.spinsAvailable ?? 0;
             setSpinsAvailable(spins);
@@ -261,7 +186,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setIsSpinWheelEnabled(spinWheelEnabled);
             localStorage.setItem('isSpinWheelEnabled', JSON.stringify(spinWheelEnabled));
 
-
             if (payload.wonPrize) {
                 setWonPrize(payload.wonPrize);
                 localStorage.setItem('wonPrize', JSON.stringify(payload.wonPrize));
@@ -270,13 +194,20 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('wonPrize');
             }
 
-
-            // Reset session-based dismissal state on new login
             setWheelModalDismissed(false);
             sessionStorage.removeItem('wheelModalDismissed');
 
-            // Sync results in the background after successful login
-            await googleSheetsService.syncResults(payload.user, jwtToken);
+            try {
+                await googleSheetsService.syncResults(payload.user, jwtToken);
+                toast.success(isSyncOnly ? 'Exams synchronized successfully!' : 'Logged in successfully!');
+            } catch (syncError: any) {
+                console.error("Background sync on login failed:", syncError.message);
+                const successPart = isSyncOnly ? 'Exams synchronized.' : 'Login successful.';
+                toast.error(
+                    `${successPart} Could not sync your exam history. Locally saved results will be shown. Error: ${syncError.message}`,
+                    { duration: 10000 }
+                );
+            }
 
         } else {
             throw new Error("Invalid token payload structure.");
@@ -287,10 +218,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         throw new Error("Invalid authentication token.");
     }
   }, [logout]);
-
-  const useFreeAttempt = useCallback(() => {
-    console.log('User has started a free practice attempt.');
-  }, []);
 
   const updateUserName = useCallback((name: string) => {
     if (user) {
@@ -314,26 +241,21 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     user,
     token,
     paidExamIds,
-    examPrices,
     isSubscribed,
     spinsAvailable,
     wonPrize,
     wheelModalDismissed,
     canSpinWheel,
-    suggestedBooks,
-    dynamicExams,
-    dynamicCategories,
     isSpinWheelEnabled,
     loginWithToken,
     logout,
-    useFreeAttempt,
     updateUserName,
     setWheelModalDismissed: updateWheelModalDismissed
   }), [
-    user, token, paidExamIds, examPrices, isSubscribed,
+    user, token, paidExamIds, isSubscribed,
     spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel,
-    suggestedBooks, dynamicExams, dynamicCategories, isSpinWheelEnabled, loginWithToken,
-    logout, useFreeAttempt, updateUserName, updateWheelModalDismissed
+    isSpinWheelEnabled, loginWithToken,
+    logout, updateUserName, updateWheelModalDismissed
   ]);
 
   return (

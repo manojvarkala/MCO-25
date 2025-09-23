@@ -1,0 +1,14 @@
+{
+    "organizations": [
+        {
+            "id": "org-finance",
+            "name": "Finance Certifications",
+            "website": "finance-prep.com",
+            "logo": "/logo.png",
+            "exams": [],
+            "examProductCategories": [],
+            "certificateTemplates": [],
+            "suggestedBooks": []
+        }
+    ]
+}

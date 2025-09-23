@@ -12,7 +12,9 @@ export default defineConfig(({ mode }) => {
       base: '/', // Use root path for assets
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        // FIX: Define a global constant to check for development mode to resolve type errors.
+        '__DEV__': mode === 'development',
       },
       resolve: {
         alias: {
@@ -27,7 +29,8 @@ export default defineConfig(({ mode }) => {
                 '/api': {
                     target: env.VITE_API_TARGET_URL || 'https://www.annapoornainfo.com',
                     changeOrigin: true,
-                    rewrite: (path) => path.replace(/^\/api/, '/wp-json/mco-app/v1'),
+                    // Rewrite to strip the /api prefix, allowing any path to be proxied
+                    rewrite: (path) => path.replace(/^\/api/, ''),
                     secure: false,
                 }
             }

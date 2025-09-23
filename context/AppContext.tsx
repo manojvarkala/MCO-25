@@ -1,8 +1,15 @@
+
+
+
+
+
+
+
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
 import type { Organization, RecommendedBook, Exam, ExamProductCategory, InProgressExamInfo } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
-import { getApiEndpoint } from '../services/apiConfig.ts';
+import { getAppConfigPath } from '../services/apiConfig.ts';
 
 interface AppContextType {
   organizations: Organization[];
@@ -15,6 +22,7 @@ interface AppContextType {
   isWheelModalOpen: boolean;
   setWheelModalOpen: (isOpen: boolean) => void;
   inProgressExam: InProgressExamInfo | null;
+  examPrices: { [key: string]: any } | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -27,113 +35,87 @@ export const useAppContext = (): AppContextType => {
   return context;
 };
 
+const processConfigData = (configData: any) => {
+    if (!configData || !configData.organizations) return null;
+    const processedOrgs: Organization[] = JSON.parse(JSON.stringify(configData.organizations));
+    const allPrices: { [key: string]: any } = {};
+    let allBooks: RecommendedBook[] = [];
+
+    processedOrgs.forEach((org: Organization) => {
+        const bookMap = new Map<string, RecommendedBook>();
+        (org.suggestedBooks || []).forEach(book => bookMap.set(book.id, book));
+        if (org.suggestedBooks) allBooks.push(...org.suggestedBooks);
+        
+        const categoryUrlMap = new Map<string, string>();
+        (org.examProductCategories || []).forEach((cat: ExamProductCategory) => {
+            if (cat.questionSourceUrl) {
+                if (cat.practiceExamId) categoryUrlMap.set(cat.practiceExamId, cat.questionSourceUrl);
+                if (cat.certificationExamId) categoryUrlMap.set(cat.certificationExamId, cat.questionSourceUrl);
+            }
+        });
+
+        org.exams = (org.exams || []).map((exam: Exam): Exam => {
+            if (exam.productSku) {
+                allPrices[exam.productSku] = {
+                    price: exam.price,
+                    regularPrice: exam.regularPrice,
+                };
+            }
+            const recommendedBook = exam.recommendedBookId ? bookMap.get(exam.recommendedBookId) : undefined;
+            const questionSourceUrl = categoryUrlMap.get(exam.id) || exam.questionSourceUrl;
+
+            return { ...exam, questionSourceUrl, recommendedBook };
+        });
+    });
+
+    return { processedOrgs, allPrices, allBooks };
+};
+
+
 export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [activeOrg, setActiveOrg] = useState<Organization | null>(() => {
-    try {
-        const storedOrg = localStorage.getItem('activeOrg');
-        return storedOrg ? JSON.parse(storedOrg) : null;
-    } catch (e) {
-        console.error("Failed to parse activeOrg from localStorage", e);
-        return null;
-    }
-  });
+  const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
-  const { user, examPrices } = useAuth();
+  
+  const { user } = useAuth();
   const [isWheelModalOpen, setWheelModalOpen] = useState(false);
   const [inProgressExam, setInProgressExam] = useState<InProgressExamInfo | null>(null);
+  // FIX: Corrected syntax for useState generic type and initial value.
+  const [examPrices, setExamPrices] = useState<{ [key: string]: any } | null>(null);
   const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>([]);
 
+  // Effect 1: Load static config from bundled JSON file on startup.
   useEffect(() => {
-    const initializeApp = async () => {
+    const loadStaticConfig = async () => {
         setIsInitializing(true);
         try {
-            const getConfigFile = () => {
-                const hostname = window.location.hostname.replace(/^www\./, ''); // Normalize by removing www.
-
-                // Specific host for the Vercel preview environment
-                if (hostname === 'mco-25.vercel.app' || hostname.endsWith('annapoornainfo.com')) {
-                    return '/annapoorna-config.json';
-                }
-                
-                if (hostname.endsWith('coding-online.net')) {
-                    return '/medical-coding-config.json';
-                }
-                
-                // Fallback for localhost and any other domain
-                return '/medical-coding-config.json';
-            };
-
-            const configFile = getConfigFile();
-            const response = await fetch(configFile);
-
-            if (!response.ok) {
-                throw new Error(`Could not fetch app configuration from ${configFile}. Server responded with status: ${response.status} ${response.statusText}`);
-            }
+            const configPath = getAppConfigPath();
+            const response = await fetch(configPath);
+            if (!response.ok) throw new Error(`Could not fetch static config from ${configPath}.`);
             const configData = await response.json();
             
-            const baseOrgs = JSON.parse(JSON.stringify(configData.organizations || []));
-            
-            const processedOrgs = baseOrgs.map((org: Organization) => {
-                const examsSource = org.exams;
-                const categoriesSource = org.examProductCategories;
-                const booksSource = org.suggestedBooks || [];
+            const processedData = processConfigData(configData);
+            if (processedData) {
+                setOrganizations(processedData.processedOrgs);
+                setExamPrices(processedData.allPrices);
+                setSuggestedBooks(processedData.allBooks);
                 
-                setSuggestedBooks(booksSource);
-
-                const bookMap = new Map<string, RecommendedBook>();
-                booksSource.forEach(book => bookMap.set(book.id, book));
-                
-                const processedExams = examsSource.map((exam: Exam): Exam => {
-                    const priceData = examPrices && exam.productSku ? examPrices[exam.productSku] : null;
-                    const recommendedBook = exam.recommendedBookId ? bookMap.get(exam.recommendedBookId) : undefined;
-                    
-                    return {
-                        ...exam,
-                        ...(priceData && { price: priceData.price, regularPrice: priceData.regularPrice }),
-                        ...(recommendedBook && { recommendedBook }),
-                    };
-                });
-                
-                return { 
-                    ...org, 
-                    exams: processedExams, 
-                    examProductCategories: categoriesSource,
-                    suggestedBooks: booksSource 
-                };
-            });
-            
-            setOrganizations(processedOrgs);
-
-            const currentActiveOrgId = activeOrg?.id;
-            let newActiveOrg = currentActiveOrgId
-              ? processedOrgs.find(o => o.id === currentActiveOrgId)
-              : undefined;
-
-            if (!newActiveOrg) {
-                newActiveOrg = processedOrgs[0] || null;
-            }
-            
-            if (newActiveOrg) {
-              setActiveOrg(newActiveOrg);
-              localStorage.setItem('activeOrg', JSON.stringify(newActiveOrg));
-            } else {
-              setActiveOrg(null);
-              localStorage.removeItem('activeOrg');
+                const currentOrgId = localStorage.getItem('activeOrgId') || processedData.processedOrgs[0]?.id;
+                const newActiveOrg = processedData.processedOrgs.find((o: Organization) => o.id === currentOrgId) || processedData.processedOrgs[0] || null;
+                setActiveOrg(newActiveOrg);
             }
 
         } catch (error: any) {
-            console.error("Failed to initialize app config:", error);
-            toast.error(error.message || "Could not load application configuration.", { duration: 6000 });
+            toast.error(error.message || "Could not load application configuration.");
         } finally {
             setIsInitializing(false);
         }
     };
+    loadStaticConfig();
+  }, []);
 
-    initializeApp();
-  }, [examPrices]);
 
-  // Effect to detect in-progress exams
+  // Effect 2: Check for in-progress exams when user logs in or active org changes.
   useEffect(() => {
     if (!user || !activeOrg) {
         setInProgressExam(null);
@@ -165,17 +147,15 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const org = organizations.find(o => o.id === orgId);
     if (org) {
         setActiveOrg(org);
-        localStorage.setItem('activeOrg', JSON.stringify(org));
+        localStorage.setItem('activeOrgId', org.id);
     }
   }, [organizations]);
 
   const updateActiveOrg = useCallback((updatedOrg: Organization) => {
-    setOrganizations(prevOrgs => 
-        prevOrgs.map(org => org.id === updatedOrg.id ? updatedOrg : org)
-    );
+    const updatedOrganizations = organizations.map(org => org.id === updatedOrg.id ? updatedOrg : org);
+    setOrganizations(updatedOrganizations);
     setActiveOrg(updatedOrg);
-    localStorage.setItem('activeOrg', JSON.stringify(updatedOrg));
-  }, []);
+  }, [organizations]);
 
   const value = useMemo(() => ({
     organizations,
@@ -187,10 +167,11 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     suggestedBooks,
     isWheelModalOpen,
     setWheelModalOpen,
-    inProgressExam
+    inProgressExam,
+    examPrices
   }), [
     organizations, activeOrg, isInitializing, setActiveOrgById,
-    updateActiveOrg, suggestedBooks, isWheelModalOpen, setWheelModalOpen, inProgressExam
+    updateActiveOrg, suggestedBooks, isWheelModalOpen, setWheelModalOpen, inProgressExam, examPrices
   ]);
 
   return (

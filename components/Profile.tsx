@@ -1,9 +1,6 @@
-
-
-
 import React, { FC, useState, useEffect } from 'react';
-// Fix: Use namespace import for react-router-dom to resolve module exports.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Use named imports for react-router-dom v6 components and hooks.
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -16,7 +13,7 @@ const Profile: FC = () => {
     const { user, token, updateUserName, wonPrize, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     // Fix: Use useNavigate for navigation in v6
-    const navigate = ReactRouterDOM.useNavigate();
+    const navigate = useNavigate();
 
     const [results, setResults] = useState<TestResult[]>([]);
     const [isEditingName, setIsEditingName] = useState(false);
@@ -27,17 +24,29 @@ const Profile: FC = () => {
     useEffect(() => {
         if (user && token) {
             setIsLoadingResults(true);
+    
+            // Immediately load and display any cached results
             const cachedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
             cachedResults.sort((a, b) => b.timestamp - a.timestamp);
             setResults(cachedResults);
-            setIsLoadingResults(false);
-
-            // Sync with server in the background to get latest results
-            googleSheetsService.syncResults(user, token).then(() => {
-                const updatedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
-                updatedResults.sort((a, b) => b.timestamp - a.timestamp);
-                setResults(updatedResults);
-            });
+    
+            // Sync with the server to get the latest data
+            const performSync = async () => {
+                try {
+                    await googleSheetsService.syncResults(user, token);
+                    // After syncing, re-read from local storage which is now up-to-date
+                    const updatedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
+                    updatedResults.sort((a, b) => b.timestamp - a.timestamp);
+                    setResults(updatedResults);
+                } catch (error: any) {
+                    toast.error(error.message || "Could not sync exam history.");
+                } finally {
+                    // Sync is complete (or failed), so stop loading spinner
+                    setIsLoadingResults(false);
+                }
+            };
+    
+            performSync();
         }
     }, [user, token]);
 

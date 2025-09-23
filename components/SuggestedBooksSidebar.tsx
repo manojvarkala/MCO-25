@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { FC, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { RecommendedBook } from '../types.ts';
 import { BookUp, BookOpen } from 'lucide-react';
@@ -35,11 +35,11 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
 };
 
 
-const SuggestedBooksSidebar: React.FC = () => {
+const SuggestedBooksSidebar: FC = () => {
     const { suggestedBooks } = useAppContext();
     
     // Memoize the random selection so it doesn't change on every render
-    const randomBooks = React.useMemo(() => {
+    const randomBooks = useMemo(() => {
         if (!suggestedBooks || suggestedBooks.length === 0) {
             return [];
         }

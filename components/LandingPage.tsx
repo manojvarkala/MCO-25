@@ -1,18 +1,20 @@
 
 
 
+
+
+
 import React, { FC, useEffect } from 'react';
-// Fix: Use namespace import for react-router-dom to resolve module exports.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Use named imports for react-router-dom v6 components and hooks.
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LogIn, UserPlus, CheckCircle, Sparkles, Award } from 'lucide-react';
 import LogoSpinner from './LogoSpinner.tsx';
-import { logoBase64 } from '../assets/logo.ts';
 
 const LandingPage: FC = () => {
     // Fix: Use useNavigate for v6 compatibility.
-    const navigate = ReactRouterDOM.useNavigate();
+    const navigate = useNavigate();
     const { user } = useAuth();
     const { activeOrg, isInitializing } = useAppContext();
     
@@ -66,7 +68,7 @@ const LandingPage: FC = () => {
 
             {/* Right Side: Login Box */}
             <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-2xl border border-slate-200">
-                <img src={logoBase64} alt={`${activeOrg.name} Logo`} className="h-20 w-20 mx-auto mb-4" />
+                {activeOrg.logo && <img src={activeOrg.logo} alt={`${activeOrg.name} Logo`} className="h-20 w-20 mx-auto mb-4 object-contain" />}
                 <h2 className="text-2xl font-bold text-center text-slate-800 mb-2">Get Started</h2>
                 <p className="text-slate-500 text-center mb-6">Log in or create an account to access your dashboard and begin your journey.</p>
                 
