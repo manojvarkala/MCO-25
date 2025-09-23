@@ -24,7 +24,11 @@ const FOCUS_VIOLATION_TOAST_ID = 'focus-violation-toast';
 const Test: FC = () => {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
+<<<<<<< HEAD
   const { user, isSubscribed, token } = useAuth();
+=======
+  const { user, useFreeAttempt, isSubscribed, token } = useAuth();
+>>>>>>> 998daae9c4729a3ed68adac8b5eade0c6a24d7bc
   const { activeOrg, isInitializing } = useAppContext();
 
   const [examConfig, setExamConfig] = useState<Exam | null>(null);

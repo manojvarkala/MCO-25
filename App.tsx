@@ -132,6 +132,12 @@ const AppContent: FC = () => {
                         <Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
                         <Route path="/integration" element={<ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute>} />
+<<<<<<< HEAD
+=======
+                        <Route path="/purchase-notifier" element={<ProtectedRoute adminOnly={true}><PurchaseNotifier /></ProtectedRoute>} />
+                        <Route path="/woocommerce-styling" element={<ProtectedRoute adminOnly={true}><WooCommerceStyling /></ProtectedRoute>} />
+                        <Route path="/super-admin-blueprint" element={<ProtectedRoute adminOnly={true}><SuperAdminBlueprint /></ProtectedRoute>} />
+>>>>>>> 998daae9c4729a3ed68adac8b5eade0c6a24d7bc
                     
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>

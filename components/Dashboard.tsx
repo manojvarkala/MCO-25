@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 
+=======
+>>>>>>> 998daae9c4729a3ed68adac8b5eade0c6a24d7bc
 import React, { FC, useState, useEffect, useMemo } from 'react';
 // FIX: Use named imports for react-router-dom v6 components and hooks.
 import { useNavigate } from 'react-router-dom';

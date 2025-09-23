@@ -255,7 +255,11 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     user, token, paidExamIds, isSubscribed,
     spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel,
     isSpinWheelEnabled, loginWithToken,
+<<<<<<< HEAD
     logout, updateUserName, updateWheelModalDismissed
+=======
+    logout, useFreeAttempt, updateUserName, updateWheelModalDismissed
+>>>>>>> 998daae9c4729a3ed68adac8b5eade0c6a24d7bc
   ]);
 
   return (
