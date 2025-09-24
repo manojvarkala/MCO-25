@@ -68,9 +68,11 @@ export interface CertificateTemplate {
     signature1Name: string;
     signature1Title: string;
     signature1ImageBase64?: string;
+    signature1ImageBase64Ref?: string;
     signature2Name: string;
     signature2Title: string;
     signature2ImageBase64?: string;
+    signature2ImageBase64Ref?: string;
 }
 
 export interface RecommendedBook {
@@ -118,6 +120,7 @@ export interface Organization {
     name: string;
     website: string;
     logo: string;
+    signatureAssets?: { [key: string]: string; };
     exams: Exam[];
     examProductCategories: ExamProductCategory[];
     certificateTemplates: CertificateTemplate[];
