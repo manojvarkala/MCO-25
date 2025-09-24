@@ -1,4 +1,3 @@
-
 {
     "organizations": [
         {
@@ -7,7 +6,7 @@
             "website": "coding-online.net",
             "logo": "https://www.coding-online.net/wp-content/uploads/2022/10/co_logo_1_B-1-1.png",
             "signatureAssets": {
-                "drAmeliaReed": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzNTAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMzUwIDEwMCI+CiAgPHN0eWxlPgogICAgLnNpZy1mb250IHsgZm9udC1mYW1pbHk6ICdEYW5jaW5nIFNjcmlwdCcsIGN1cnNpdmU7IGZvbnQtc2l6ZTogNTBweDsgZm9udC13ZWlnaHQ6IDcwMDsgZmlsbDogIzFlMjkyYjsgfQogIDwvc3R5bGU+CiAgPHRleHQgeD0iMTAiIHk9IjcwIiBjbGFzcz0ic2lnLWZvbnQiPk1hbm9qIEJhbGFrcmlzaG5hbjwvdGV4dD4KPC9zdmc+"
+                "drAmeliaReed": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzNTAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMzUwIDEwMCI+CiAgPHN0eWxlPgogICAgLnNpZy1mb250IHsgZm9udC1mYW1pbHk6ICdEYW5jaW5nIFNjcmlwdCcsIGN1cnNpdmU7IGZvbnQtc2l6ZTogNTBweDsgZm9udC13ZWlnaHQ6IDcwMDsgZmlsbDogIzFlMjkyYjsgfQogIDwvc3R5bGU+CiAgPHRleHQgeD0iMTAiIHk9IjcwIiBjbGFzcz0ic2lnLWZvbnQiPkRyLiBBbWVsaWEgUmVlZDwvdGV4dD4KPC9zdmc+"
             },
             "exams": [
                 { "id": "exam-cpc-practice", "name": "CPC Free Practice", "description": "A practice test to prepare for the CPC certification.", "price": 0, "productSku": "exam-cpc-practice", "numberOfQuestions": 25, "passScore": 70, "certificateTemplateId": "cert-practice-1", "isPractice": true, "durationMinutes": 60},
