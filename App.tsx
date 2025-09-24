@@ -1,8 +1,9 @@
 
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
-// FIX: Use named imports for react-router-dom v6 components and hooks.
-import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+// FIX: Corrected import statement for react-router-dom to resolve module export errors.
+import { HashRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';

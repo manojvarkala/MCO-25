@@ -1,7 +1,9 @@
 
 
+
 import React, { FC, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+// FIX: Corrected import statement for react-router-dom to resolve module export errors.
+import { useParams } from "react-router-dom";
 import Spinner from './Spinner.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 

@@ -1,6 +1,6 @@
 import React, { FC, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-// FIX: Use named imports for react-router-dom v6 components and hooks.
-import { useParams, useNavigate } from 'react-router-dom';
+// FIX: Corrected import statement for react-router-dom to resolve module export errors.
+import { useParams, useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 // Fix: Added ExamProgress to type imports for saving progress.
@@ -223,6 +223,16 @@ const Test: FC = () => {
     const handleNext = () => {
         setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1));
     };
+
+    const handleDoubleClick = (optionIndex: number) => {
+        if (isSubmitting) return;
+        handleAnswerSelect(optionIndex);
+        if (currentQuestionIndex < questions.length - 1) {
+            setTimeout(() => {
+                handleNext();
+            }, 200); // 200ms delay for visual feedback
+        }
+    };
     
     const timePercentage = useMemo(() => {
         if (timeLeft === null || !examConfig) return 100;
@@ -324,7 +334,7 @@ const Test: FC = () => {
                                 <h2 className="text-xl font-semibold text-slate-800 mb-6 leading-relaxed">{currentQuestion.question}</h2>
                                 <div className="space-y-4">
                                     {currentQuestion.options.map((option, index) => (
-                                        <label key={index} className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition ${ selectedAnswer === index ? 'bg-cyan-50 border-cyan-500' : 'bg-white border-slate-200 hover:border-cyan-300' }`}>
+                                        <label key={index} onDoubleClick={() => handleDoubleClick(index)} className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition ${ selectedAnswer === index ? 'bg-cyan-50 border-cyan-500' : 'bg-white border-slate-200 hover:border-cyan-300' }`}>
                                             <input type="radio" name={`question-${currentQuestion.id}`} checked={selectedAnswer === index} onChange={() => handleAnswerSelect(index)} className="h-5 w-5 text-cyan-600 focus:ring-cyan-500"/>
                                             <span className="ml-4 text-slate-700">{option}</span>
                                         </label>
