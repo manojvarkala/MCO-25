@@ -5,7 +5,7 @@
             "id": "org-annapoorna",
             "name": "Annapoorna Infotech",
             "website": "annapoornainfo.com",
-            "logo": "/logo.png",
+            "logo": "https://annapoornainfo.com/wp-content/uploads/2024/04/cropped-Annapoorna-Infotech-logo-1.png",
             "signatureAssets": {
                 "manojBalakrishnan": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzNTAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMzUwIDEwMCI+CiAgPHN0eWxlPgogICAgLnNpZy1mb250IHsgZm9udC1mYW1pbHk6ICdEYW5jaW5nIFNjcmlwdCcsIGN1cnNpdmU7IGZvbnQtc2l6ZTogNTBweDsgZm9udC13ZWlnaHQ6IDcwMDsgZmlsbDogIzFlMjkyYjsgfQogIDwvc3R5bGU+CiAgPHRleHQgeD0iMTAiIHk9IjcwIiBjbGFzcz0ic2lnLWZvbnQiPk1hbm9qIEJhbGFrcmlzaG5hbjwvdGV4dD4KPC9zdmc+"
             },
