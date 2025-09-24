@@ -2,11 +2,7 @@ import React, { FC } from 'react';
 import { Check, Star, ShoppingBag } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 
-<<<<<<< HEAD
 const Pricing: FC = () => {
-=======
-const Pricing: React.FC = () => {
->>>>>>> 998daae9c4729a3ed68adac8b5eade0c6a24d7bc
     const { activeOrg, examPrices } = useAppContext();
     
     const monthlySubUrl = 'https://www.coding-online.net/product/monthly-subscription/';
