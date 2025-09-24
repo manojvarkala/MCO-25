@@ -6,30 +6,20 @@ interface TenantConfig {
     configPath: string;
 }
 
+const unifiedConfig: TenantConfig = {
+    apiBaseUrl: 'https://annapoornainfo.com',
+    configPath: '/annapoorna-config.json',
+};
+
 const tenantMap: { [key: string]: TenantConfig } = {
-    'coding-online.net': {
-        apiBaseUrl: 'https://www.coding-online.net',
-        configPath: '/medical-coding-config.json',
-    },
-    'annapoornainfo.com': {
-        apiBaseUrl: 'https://annapoornainfo.com',
-        configPath: '/annapoorna-config.json',
-    },
+    'coding-online.net': unifiedConfig,
+    'annapoornainfo.com': unifiedConfig,
     // Explicitly handle the exam subdomain to ensure it maps to the correct config and API
-    'exam.annapoornainfo.com': {
-        apiBaseUrl: 'https://annapoornainfo.com',
-        configPath: '/annapoorna-config.json',
-    },
+    'exam.annapoornainfo.com': unifiedConfig,
     // Handle Vercel preview environments
-    'mco-25.vercel.app': {
-        apiBaseUrl: 'https://annapoornainfo.com',
-        configPath: '/annapoorna-config.json',
-    },
+    'mco-25.vercel.app': unifiedConfig,
     // Default for local development
-    'localhost': {
-        apiBaseUrl: 'https://www.coding-online.net',
-        configPath: '/medical-coding-config.json',
-    }
+    'localhost': unifiedConfig
 };
 
 const getTenantConfig = (): TenantConfig => {
@@ -45,7 +35,7 @@ const getTenantConfig = (): TenantConfig => {
     }
     
     // Fallback to a sensible default if no match is found
-    return tenantMap['coding-online.net'];
+    return tenantMap['annapoornainfo.com'];
 }
 
 
