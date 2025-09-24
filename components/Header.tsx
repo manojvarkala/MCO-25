@@ -1,12 +1,13 @@
 import React, { FC, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
-import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, Users, Gift, Star } from 'lucide-react';
+import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, Users, Gift, Star, List } from 'lucide-react';
 
 const Header: FC = () => {
   const { user, logout, canSpinWheel, isSubscribed } = useAuth();
   const { activeOrg, setWheelModalOpen } = useAppContext();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isCategoriesMenuOpen, setIsCategoriesMenuOpen] = useState(false);
 
   // Updated URL generation with fallback
   const mainSiteBaseUrl = useMemo(() => {
@@ -34,6 +35,8 @@ const Header: FC = () => {
   const linkClasses = isSubscribed
     ? "text-slate-300 hover:text-white"
     : "text-slate-600 hover:text-cyan-600";
+    
+  const examCategories = activeOrg?.examProductCategories || [];
 
   return (
     <header className={headerClasses}>
@@ -98,6 +101,30 @@ const Header: FC = () => {
                 <BookMarked size={20} />
                 <span className="hidden sm:inline font-semibold">Book Store</span>
             </a>
+            {examCategories.length > 0 && (
+                <div className="relative" onMouseEnter={() => setIsCategoriesMenuOpen(true)} onMouseLeave={() => setIsCategoriesMenuOpen(false)}>
+                    <a href="/#/dashboard" className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`} title="View Exam Programs">
+                        <List size={20} />
+                        <span className="hidden sm:inline font-semibold">Exam Programs</span>
+                    </a>
+                    {isCategoriesMenuOpen && (
+                        <div className={`absolute left-0 top-full pt-2 w-64 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50 ${isSubscribed ? 'bg-slate-800' : 'bg-white'}`}>
+                            <div className="py-1">
+                                {examCategories.map(category => (
+                                    <a
+                                        key={category.id}
+                                        href={`/#/dashboard#${category.id}`}
+                                        onClick={() => setIsCategoriesMenuOpen(false)}
+                                        className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}
+                                    >
+                                        {category.name}
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
             <a 
                 href="/#/about-us"
                 className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}

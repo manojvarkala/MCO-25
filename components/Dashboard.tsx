@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useEffect, useMemo } from 'react';
 // FIX: Use named imports for react-router-dom v6 components and hooks.
 import { useNavigate } from 'react-router-dom';
@@ -142,7 +143,7 @@ const Dashboard: FC = () => {
                     const priceData = examPrices ? examPrices[certExam.productSku] : null;
 
                     return (
-                        <div key={category.id} className="bg-white rounded-xl shadow-md overflow-hidden">
+                        <div key={category.id} id={category.id} className="bg-white rounded-xl shadow-md overflow-hidden scroll-mt-24">
                             <div className="h-2 bg-cyan-500"></div>
                             <div className="p-6">
                                 <h2 className="text-2xl font-bold text-slate-800">{category.name}</h2>
