@@ -3,60 +3,44 @@ import toast from 'react-hot-toast';
 import { GoogleGenAI, Type } from "@google/genai";
 import { getApiBaseUrl } from './apiConfig.ts';
 
-const apiFetch = async (action: string, token: string | null, data: Record<string, any> = {}) => {
+const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string | null, data: Record<string, any> = {}) => {
     const API_BASE_URL = getApiBaseUrl();
-    const fullUrl = `${API_BASE_URL}/wp-admin/admin-ajax.php`;
+    const fullUrl = `${API_BASE_URL}/wp-json/mco-app/v1${endpoint}`;
 
-    // Use FormData for compatibility with admin-ajax.php
-    const formData = new FormData();
-    formData.append('action', `mco_${action}`); // All WP actions are prefixed
-    
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+    };
     if (token) {
-        formData.append('token', token);
+        headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // Append other data to the form
-    for (const key in data) {
-        if (data.hasOwnProperty(key)) {
-            formData.append(key, data[key]);
-        }
+    const config: RequestInit = {
+        method,
+        headers,
+    };
+    
+    let urlToFetch = fullUrl;
+
+    if (method === 'POST') {
+        config.body = JSON.stringify(data);
     }
 
     try {
-        const response = await fetch(fullUrl, {
-            method: 'POST',
-            body: formData,
-            credentials: 'include'
-        });
-    
-        if (!response.ok) {
-            let finalErrorMessage = `Server error: ${response.status}`;
-            const textError = await response.text();
-            if (textError.toLowerCase().includes('<!doctype html')) {
-                finalErrorMessage = `Unexpected token '<', "${textError.substring(0, 15)}..." is not valid JSON`;
-            } else if (response.statusText) {
-                finalErrorMessage = `Server error: ${response.status} ${response.statusText}`;
-            }
-            throw new Error(finalErrorMessage);
-        }
-        
+        const response = await fetch(urlToFetch, config);
         const jsonResponse = await response.json();
 
-        if (jsonResponse.success === false) {
-            throw new Error(jsonResponse.data?.message || jsonResponse.data || 'An unknown API error occurred.');
+        if (!response.ok) {
+            const errorMessage = jsonResponse?.message || response.statusText || `Server error: ${response.status}`;
+            throw new Error(errorMessage);
         }
         
-        return jsonResponse.data;
+        return jsonResponse;
 
     } catch (networkError: any) {
-        if (networkError.message.startsWith('Server error:') || networkError.message.startsWith('Unexpected token')) {
-            throw networkError;
-        }
-
-        console.error("API Fetch Network Error:", networkError);
+        console.error(`API Fetch Network Error to ${endpoint}:`, networkError);
         let errorMessage = `Could not connect to the API server (${API_BASE_URL}).`;
         if (networkError instanceof TypeError && networkError.message.includes('fetch')) {
-            errorMessage += ' This might be a network issue or a CORS configuration problem on the server. Please check your connection and contact an administrator.';
+            errorMessage += ' This might be a network issue or a CORS configuration problem on the server.';
         } else {
              errorMessage += ` Details: ${networkError.message}.`;
         }
@@ -65,7 +49,6 @@ const apiFetch = async (action: string, token: string | null, data: Record<strin
 };
 
 export const googleSheetsService = {
-    apiFetch,
     // --- AI FEEDBACK ---
     getAIFeedback: async (prompt: string): Promise<string> => {
         if (!process.env.API_KEY) {
@@ -88,7 +71,7 @@ export const googleSheetsService = {
     // --- RESULTS HANDLING (CACHE-FIRST APPROACH) ---
     syncResults: async (user: User, token: string): Promise<void> => {
         try {
-            const serverResults: TestResult[] = await apiFetch('user_results', token) || [];
+            const serverResults: TestResult[] = await apiFetch('/user-results', 'GET', token) || [];
 
             const resultsObject: { [testId: string]: TestResult } = {};
             serverResults.forEach(result => {
@@ -139,7 +122,7 @@ export const googleSheetsService = {
     // --- DIRECT API CALLS (NOT CACHED LOCALLY) ---
     getCertificateData: async (token: string, testId: string): Promise<ApiCertificateData> => {
         try {
-            return await apiFetch('certificate_data', token, { testId });
+            return await apiFetch(`/certificate-data/${testId}`, 'GET', token);
         } catch (error) {
             console.error("Failed to get certificate data from server:", error);
             throw error;
@@ -147,17 +130,13 @@ export const googleSheetsService = {
     },
     
     getDebugDetails: async (token: string): Promise<DebugData> => {
-        try {
-            return await apiFetch('debug_details', token);
-        } catch (error) {
-            console.error("Failed to get debug details:", error);
-            throw error;
-        }
+        // This endpoint is not defined in the provided backend API file.
+        return Promise.reject(new Error("Debug feature is not available. The backend endpoint is not implemented."));
     },
 
     updateUserName: async (token: string, newName: string): Promise<any> => {
         try {
-            return await apiFetch('update_name', token, { fullName: newName });
+            return await apiFetch('/update-name', 'POST', token, { fullName: newName });
         } catch (error) {
             console.error("Failed to update user name:", error);
             throw error;
@@ -171,7 +150,7 @@ export const googleSheetsService = {
         }
 
         try {
-            const fetchedQuestions: Question[] = await apiFetch('questions_from_sheet', token, {
+            const fetchedQuestions: Question[] = await apiFetch('/questions-from-sheet', 'POST', token, {
                 sheetUrl: exam.questionSourceUrl,
                 count: exam.numberOfQuestions
             });
@@ -249,6 +228,7 @@ export const googleSheetsService = {
             review,
         };
 
+        // Save locally first for responsiveness
         try {
             const key = `exam_results_${user.id}`;
             const storedResults = localStorage.getItem(key);
@@ -260,10 +240,10 @@ export const googleSheetsService = {
             toast.error("Could not save your test result locally.");
         }
         
+        // Sync with server in the background
         (async () => {
             try {
-                // We need to stringify the complex object to send it via FormData
-                await apiFetch('submit_result', token, { result: JSON.stringify(newResult) });
+                await apiFetch('/submit-result', 'POST', token, newResult);
                 console.log('Result successfully synced with the server.');
             } catch (error) {
                 console.error("Failed to sync result with server:", error);
@@ -274,85 +254,45 @@ export const googleSheetsService = {
         return Promise.resolve(newResult);
     },
 
-    // --- NEW FEEDBACK & REVIEW SUBMISSIONS ---
+    // --- NEW FEEDBACK & REVIEW SUBMISSIONS (DISABLED) ---
     submitFeedback: async (token: string, category: string, message: string): Promise<void> => {
-        try {
-            await apiFetch('submit_feedback', token, { category, message });
-        } catch (error) {
-            console.error("Failed to submit feedback:", error);
-            throw error;
-        }
+        return Promise.reject(new Error("Feedback feature is not available. The backend endpoint is not implemented."));
     },
 
     submitReview: async (token: string, examId: string, rating: number, reviewText: string): Promise<void> => {
-        try {
-            await apiFetch('submit_review', token, { examId, rating, reviewText });
-        } catch (error) {
-            console.error("Failed to submit review:", error);
-            throw error;
-        }
+        return Promise.reject(new Error("Review feature is not available. The backend endpoint is not implemented."));
     },
 
-    // --- NEW WHEEL OF FORTUNE ---
+    // --- NEW WHEEL OF FORTUNE (DISABLED) ---
     spinWheel: async (token: string): Promise<SpinWheelResult> => {
-        try {
-            return await apiFetch('spin_wheel', token, {});
-        } catch (error) {
-            console.error("Failed to spin wheel:", error);
-            throw error;
-        }
+        return Promise.reject(new Error("Spin & Win feature is not available. The backend endpoint is not implemented."));
     },
 
-    // --- NEW ADMIN ACTIONS ---
+    // --- NEW ADMIN ACTIONS (DISABLED) ---
     addSpins: async (token: string, userId: string, spins: number): Promise<{ success: boolean; newTotal: number; }> => {
-        try {
-            return await apiFetch('admin_add_spins', token, { userId, spins });
-        } catch (error) {
-            console.error("Failed to add spins:", error);
-            throw error;
-        }
+        return Promise.reject(new Error("Admin feature is not available. The backend endpoint is not implemented."));
     },
 
     grantPrize: async (token: string, userId: string, prizeId: string): Promise<{ success: boolean; message: string; }> => {
-        try {
-            return await apiFetch('admin_grant_prize', token, { userId, prizeId });
-        } catch (error) {
-            console.error("Failed to grant prize:", error);
-            throw error;
-        }
+        return Promise.reject(new Error("Admin feature is not available. The backend endpoint is not implemented."));
     },
 
     searchUser: async (token: string, searchTerm: string): Promise<SearchedUser[]> => {
-        try {
-            return await apiFetch('admin_search_user', token, { searchTerm });
-        } catch (error) {
-            console.error("Failed to search user:", error);
-            throw error;
-        }
+        return Promise.reject(new Error("Admin feature is not available. The backend endpoint is not implemented."));
     },
 
     resetSpins: async (token: string, userId: string): Promise<{ success: boolean; message: string; }> => {
-        try {
-            return await apiFetch('admin_reset_spins', token, { userId });
-        } catch (error) {
-            console.error("Failed to reset spins:", error);
-            throw error;
-        }
+        return Promise.reject(new Error("Admin feature is not available. The backend endpoint is not implemented."));
     },
 
     removePrize: async (token: string, userId: string): Promise<{ success: boolean; message: string; }> => {
-        try {
-            return await apiFetch('admin_remove_prize', token, { userId });
-        } catch (error) {
-            console.error("Failed to remove prize:", error);
-            throw error;
-        }
+         return Promise.reject(new Error("Admin feature is not available. The backend endpoint is not implemented."));
     },
     
     // --- NEW EXAM STATS ---
     getExamStats: async (token: string): Promise<ExamStat[]> => {
         try {
-            return await apiFetch('exam_stats', token);
+            return await apiFetch('/exam-stats', 'GET', token);
         } catch (error) {
             console.error("Failed to get exam stats:", error);
             throw error;

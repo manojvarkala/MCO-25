@@ -96,36 +96,41 @@ const WheelOfFortune: FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
 
     const handleSpin = async () => {
         if (!token || isSpinning) return;
-        setIsSpinning(true);
-        setPrizeResult(null);
+
+        // Temporarily disable this feature as the backend endpoint is not implemented
+        toast.error("The 'Spin & Win' feature is currently unavailable.");
+        return;
+
+        // setIsSpinning(true);
+        // setPrizeResult(null);
         
-        const toastId = toast.loading('Spinning the wheel...');
+        // const toastId = toast.loading('Spinning the wheel...');
 
-        try {
-            const result = await googleSheetsService.spinWheel(token);
-            const { prizeId, prizeLabel, newToken } = result;
+        // try {
+        //     const result = await googleSheetsService.spinWheel(token);
+        //     const { prizeId, prizeLabel, newToken } = result;
 
-            if (newToken) {
-                await loginWithToken(newToken);
-            }
+        //     if (newToken) {
+        //         await loginWithToken(newToken);
+        //     }
             
-            const randomExtraSpins = Math.random() * 360;
-            const fullSpins = 6 * 360;
-            setRotation(rotation + fullSpins + randomExtraSpins);
+        //     const randomExtraSpins = Math.random() * 360;
+        //     const fullSpins = 6 * 360;
+        //     setRotation(rotation + fullSpins + randomExtraSpins);
             
-            setTimeout(() => {
-                toast.dismiss(toastId);
-                setPrizeResult({ prizeId, prizeLabel });
-            }, 7000);
+        //     setTimeout(() => {
+        //         toast.dismiss(toastId);
+        //         setPrizeResult({ prizeId, prizeLabel });
+        //     }, 7000);
 
-        } catch (error: any) {
-            toast.dismiss(toastId);
-            setIsSpinning(false);
-            toast.error(error.message || "An error occurred.");
-            if(user && !user.isAdmin) {
-               onClose();
-            }
-        }
+        // } catch (error: any) {
+        //     toast.dismiss(toastId);
+        //     setIsSpinning(false);
+        //     toast.error(error.message || "An error occurred.");
+        //     if(user && !user.isAdmin) {
+        //        onClose();
+        //     }
+        // }
     };
 
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
@@ -280,7 +285,7 @@ const WheelOfFortune: FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                             ref={sliderHandleRef}
                             onMouseDown={handleDragStart}
                             onTouchStart={handleDragStart}
-                            className={`w-12 h-12 rounded-full ring-4 ring-amber-300/50 flex items-center justify-center cursor-grab active:cursor-grabbing ${isSpinning || prizeResult || (spinsAvailable === 0 && !user?.isAdmin) ? 'bg-zinc-600' : 'bg-amber-500'}`}
+                            className={`w-12 h-12 rounded-full ring-4 ring-amber-300/50 flex items-center justify-center cursor-not-allowed bg-zinc-600`}
                             style={{ transform: `translateY(${dragY}px)` }}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>

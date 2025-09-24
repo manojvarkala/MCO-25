@@ -484,39 +484,9 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 
                 <div className="text-center mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
                     <h2 className="text-xl font-semibold text-slate-800 mb-4">Rate Your Experience</h2>
-                    {submittedReview ? (
-                        <div className="text-center text-green-700 bg-green-50 p-4 rounded-md">
-                            <p>Thank you for your review!</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <div className="flex justify-center">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                    <Star
-                                        key={star}
-                                        onClick={() => setRating(star)}
-                                        onMouseEnter={() => setHoverRating(star)}
-                                        onMouseLeave={() => setHoverRating(0)}
-                                        className={`w-8 h-8 cursor-pointer transition-colors ${ (hoverRating || rating) >= star ? 'text-yellow-400 fill-current' : 'text-slate-300' }`}
-                                    />
-                                ))}
-                            </div>
-                            <textarea 
-                                value={reviewText}
-                                onChange={(e) => setReviewText(e.target.value)}
-                                placeholder="Tell us more about your experience (optional)..."
-                                className="w-full p-2 border border-slate-300 rounded-md"
-                                rows={3}
-                            />
-                            <button 
-                                onClick={handleSubmitReview}
-                                disabled={isSubmittingReview}
-                                className="inline-flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition disabled:bg-slate-400"
-                            >
-                                {isSubmittingReview ? <Spinner /> : <span>Submit Review</span>}
-                            </button>
-                        </div>
-                    )}
+                    <div className="text-sm text-amber-700 bg-amber-50 p-3 rounded-md">
+                        <p><strong>Note:</strong> The review submission feature is temporarily unavailable while we upgrade our systems.</p>
+                    </div>
                 </div>
 
 

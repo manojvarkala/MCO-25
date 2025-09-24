@@ -293,88 +293,18 @@ const Admin: FC = () => {
                     <Users className="mr-3 text-cyan-500" />
                     User Prize Management
                 </h2>
-                <p className="text-slate-600 mb-6">
-                    Search for a user by name or email to manage their spins and prizes.
-                </p>
+                 <fieldset disabled className="opacity-50">
+                    <p className="text-slate-600 mb-6">
+                        Search for a user by name or email to manage their spins and prizes. (This feature is temporarily unavailable.)
+                    </p>
 
-                <form onSubmit={handleUserSearch} className="flex gap-2 mb-4">
-                    <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Enter user name or email..." className={inputClass} />
-                    <button type="submit" disabled={isSearching} className="flex items-center justify-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
-                        {isSearching ? <Spinner/> : <Search size={16} />}
-                    </button>
-                </form>
-
-                {searchResults.length > 0 && !selectedUser && (
-                    <div className="border-t pt-4">
-                        <h3 className="font-semibold text-slate-700 mb-2">Search Results</h3>
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                            {searchResults.map(user => (
-                                <button key={user.id} onClick={() => setSelectedUser(user)} className="w-full text-left p-2 rounded-md hover:bg-slate-100 transition">
-                                    <p className="font-medium">{user.name}</p>
-                                    <p className="text-sm text-slate-500">{user.email} (ID: {user.id})</p>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-                
-                {selectedUser && (
-                    <div className="border-t pt-4 mt-4">
-                        <div className="flex justify-between items-center bg-cyan-50 p-3 rounded-lg border border-cyan-200 mb-4">
-                            <div className="flex items-center gap-3">
-                                <UserCheck className="text-cyan-600" size={24}/>
-                                <div>
-                                    <h3 className="font-bold text-lg text-slate-800">{selectedUser.name}</h3>
-                                    <p className="text-sm text-slate-500">{selectedUser.email} (ID: {selectedUser.id})</p>
-                                </div>
-                            </div>
-                            <button onClick={() => {setSelectedUser(null); setSearchResults([])}} className="p-1 text-slate-500 hover:text-slate-800"><X size={16}/></button>
-                        </div>
-
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Add Spins */}
-                            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                                <h3 className="font-bold text-lg text-slate-800 mb-2 flex items-center gap-2"><PlusCircle size={16}/> Add Spins</h3>
-                                <div className="space-y-3">
-                                    <div>
-                                        <label htmlFor="spinsToAdd" className={labelClass}>Spins to Add</label>
-                                        <input type="number" id="spinsToAdd" value={spinsToAdd} onChange={(e) => setSpinsToAdd(e.target.value)} min="1" className={inputClass} />
-                                    </div>
-                                    <button onClick={handleAddSpins} disabled={isSubmitting} className="w-full flex items-center justify-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
-                                        {isSubmitting ? <Spinner/> : <span>Add Spins</span>}
-                                    </button>
-                                </div>
-                            </div>
-                            {/* Grant Prize */}
-                            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                                <h3 className="font-bold text-lg text-slate-800 mb-2 flex items-center gap-2"><Gift size={16}/> Grant Prize</h3>
-                                <div className="space-y-3">
-                                    <div>
-                                        <label htmlFor="prizeToGrant" className={labelClass}>Prize</label>
-                                        <select id="prizeToGrant" value={prizeToGrant} onChange={(e) => setPrizeToGrant(e.target.value)} className={inputClass}>
-                                            {prizeOptions.map(opt => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
-                                        </select>
-                                    </div>
-                                    <button onClick={handleGrantPrize} disabled={isSubmitting} className="w-full flex items-center justify-center space-x-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
-                                    {isSubmitting ? <Spinner/> : <span>Grant Prize</span>}
-                                    </button>
-                                </div>
-                            </div>
-                            {/* Danger Zone */}
-                             <div className="md:col-span-2 bg-red-50 p-4 rounded-lg border border-red-200 space-y-3">
-                                 <h3 className="font-bold text-lg text-red-800">Danger Zone</h3>
-                                 <div className="flex flex-col sm:flex-row gap-3">
-                                    <button onClick={handleResetSpins} disabled={isSubmitting} className="flex-1 flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
-                                        {isSubmitting ? <Spinner/> : <><RotateCcw size={16}/> <span>Reset Spins to 0</span></>}
-                                    </button>
-                                    <button onClick={handleRemovePrize} disabled={isSubmitting} className="flex-1 flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
-                                        {isSubmitting ? <Spinner/> : <><Trash2 size={16}/> <span>Remove Won Prize</span></>}
-                                    </button>
-                                 </div>
-                             </div>
-                        </div>
-                    </div>
-                )}
+                    <form onSubmit={(e) => e.preventDefault()} className="flex gap-2 mb-4">
+                        <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Enter user name or email..." className={inputClass} />
+                        <button type="submit" disabled={true} className="flex items-center justify-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
+                            <Search size={16} />
+                        </button>
+                    </form>
+                 </fieldset>
             </div>
 
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">

@@ -50,63 +50,54 @@ const Feedback: FC = () => {
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                    <label htmlFor="category" className="block text-sm font-medium text-slate-700">
-                        Feedback Category
-                    </label>
-                    <select
-                        id="category"
-                        name="category"
-                        value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm rounded-md"
-                    >
-                        <option>General Feedback</option>
-                        <option>Bug Report</option>
-                        <option>Feature Request</option>
-                        <option>Exam Content</option>
-                    </select>
-                </div>
+                 <fieldset disabled className="space-y-6">
+                    <div>
+                        <label htmlFor="category" className="block text-sm font-medium text-slate-700">
+                            Feedback Category
+                        </label>
+                        <select
+                            id="category"
+                            name="category"
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm rounded-md"
+                        >
+                            <option>General Feedback</option>
+                            <option>Bug Report</option>
+                            <option>Feature Request</option>
+                            <option>Exam Content</option>
+                        </select>
+                    </div>
 
-                <div>
-                    <label htmlFor="message" className="block text-sm font-medium text-slate-700">
-                        Your Message
-                    </label>
-                    <textarea
-                        id="message"
-                        name="message"
-                        rows={6}
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        className="mt-1 block w-full shadow-sm sm:text-sm border-slate-300 rounded-md focus:ring-cyan-500 focus:border-cyan-500"
-                        placeholder="Tell us what's on your mind..."
-                        required
-                    />
-                </div>
+                    <div>
+                        <label htmlFor="message" className="block text-sm font-medium text-slate-700">
+                            Your Message
+                        </label>
+                        <textarea
+                            id="message"
+                            name="message"
+                            rows={6}
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
+                            className="mt-1 block w-full shadow-sm sm:text-sm border-slate-300 rounded-md focus:ring-cyan-500 focus:border-cyan-500"
+                            placeholder="Tell us what's on your mind..."
+                            required
+                        />
+                    </div>
+                 </fieldset>
 
                 <div>
                     <button
                         type="submit"
-                        disabled={isSubmitting || !token}
+                        disabled={true}
                         className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:bg-slate-400 disabled:cursor-not-allowed"
                     >
-                        {isSubmitting ? (
-                            <>
-                                <Spinner />
-                                <span>Submitting...</span>
-                            </>
-                        ) : (
-                            <>
-                                <Send size={16} />
-                                <span>Submit Feedback</span>
-                            </>
-                        )}
+                        <Send size={16} />
+                        <span>Submit Feedback</span>
                     </button>
-                    {!token && (
-                         <p className="text-xs text-center text-red-600 mt-2">
-                            Please <a href={loginUrl} className="underline">log in</a> to submit feedback.
-                         </p>
-                    )}
+                    <p className="text-xs text-center text-amber-700 mt-2 bg-amber-50 p-2 rounded-md">
+                        <strong>Note:</strong> The feedback feature is temporarily unavailable while we upgrade our systems.
+                    </p>
                 </div>
             </form>
         </div>

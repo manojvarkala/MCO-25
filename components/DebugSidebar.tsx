@@ -15,6 +15,7 @@ const DebugSidebar: FC = () => {
     useEffect(() => {
         if (!isOpen || !token) {
             setDebugData(null);
+            setError(null);
             return;
         }
 
