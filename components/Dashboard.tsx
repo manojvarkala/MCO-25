@@ -44,7 +44,14 @@ const ExamCard: FC<ExamCardProps> = ({ exam, isPractice, results }) => {
         } else if (!paidExamIds.includes(exam.productSku) && !isSubscribed) {
             buttonDisabled = true;
             buttonText = 'Purchase to Start';
-            buttonAction = () => exam.productSlug ? navigate(`/checkout/${exam.productSlug}`) : toast.error("Checkout not available for this item.");
+            // FIX: The toast.error function returns a string, which is not a valid return type for an onClick handler. This was changed to a block that returns void to resolve the type error.
+            buttonAction = () => {
+                if (exam.productSlug) {
+                    navigate(`/checkout/${exam.productSlug}`);
+                } else {
+                    toast.error("Checkout not available for this item.");
+                }
+            };
             reason = 'Purchase required';
         }
     }

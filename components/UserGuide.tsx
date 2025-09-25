@@ -1,16 +1,23 @@
 import React, { FC } from 'react';
 import { LayoutDashboard, FileText, CheckCircle, Sparkles, Award, Star, MessageSquare, BookOpen, ShoppingBag, LogIn } from 'lucide-react';
+import { useAppContext } from '../context/AppContext.tsx';
 
 const UserGuide: FC = () => {
+    const { activeOrg } = useAppContext();
+
+    const orgName = activeOrg ? activeOrg.name : 'our';
+    const websiteUrl = activeOrg ? `https://www.${activeOrg.website}` : '#';
+    const websiteName = activeOrg ? activeOrg.website : 'our main site';
+
     return (
         <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
             <h1 className="text-3xl font-bold text-slate-800 mb-4">User Guide</h1>
             <div className="prose max-w-none text-slate-600">
-                <p>Welcome to the Medical Coding Online Examination Portal! This guide will help you understand all the features available to make your learning and certification journey smooth and successful.</p>
+                <p>Welcome to the {orgName} Examination Portal! This guide will help you understand all the features available to make your learning and certification journey smooth and successful.</p>
                 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2 flex items-center gap-2"><LogIn /> Getting Started: Login & Sync</h2>
                 <p>
-                    Your journey begins on our main website, <a href="https://www.coding-online.net" target="_blank" rel="noopener noreferrer" className="text-cyan-600">coding-online.net</a>. You must <strong>register</strong> and <strong>log in</strong> there first.
+                    Your journey begins on our main website, <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="text-cyan-600">{websiteName}</a>. You must <strong>register</strong> and <strong>log in</strong> there first.
                 </p>
                 <ul>
                     <li>After purchasing an exam or subscription, log in through the main site to be redirected here.</li>

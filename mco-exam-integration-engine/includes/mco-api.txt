@@ -49,6 +49,7 @@ if (!function_exists('mco_get_allowed_origins')) {
 if (!function_exists('mco_register_rest_routes')) {
     function mco_register_rest_routes() {
         $namespace = 'mco-app/v1';
+        register_rest_route($namespace, '/config', ['methods' => 'GET', 'callback' => 'mco_api_get_runtime_config', 'permission_callback' => '__return_true']);
         register_rest_route($namespace, '/user-results', ['methods' => 'GET', 'callback' => 'mco_api_get_user_results', 'permission_callback' => 'mco_api_permission_check']);
         register_rest_route($namespace, '/certificate-data/(?P<testId>[a-zA-Z0-9-]+)', ['methods' => 'GET', 'callback' => 'mco_api_get_certificate_data', 'permission_callback' => 'mco_api_permission_check', 'args' => ['testId' => ['required' => true]]]);
         register_rest_route($namespace, '/update-name', ['methods' => 'POST', 'callback' => 'mco_api_update_name', 'permission_callback' => 'mco_api_permission_check']);
@@ -128,7 +129,6 @@ if (!function_exists('mco_api_get_questions_from_sheet')) {
                 if (empty(trim($row))) continue;
                 $data = str_getcsv($row);
                 if (count($data) === 3 && !empty(trim($data[0])) && !empty(trim($data[1])) && is_numeric(trim($data[2]))) {
-                    // FIX: Using a simpler, more reliable explode/trim method to prevent parsing issues with the pipe separator.
                     $options = array_map('trim', explode('|', trim($data[1])));
                     if (count($options) >= 1 && intval(trim($data[2])) > 0 && intval(trim($data[2])) <= count($options)) {
                         $questions[] = ['id' => $i + 1, 'question' => trim($data[0]), 'options' => $options, 'correctAnswer' => intval(trim($data[2]))];
@@ -177,44 +177,59 @@ if (!function_exists('mco_api_get_debug_details')) {
 if (!function_exists('mco_api_feature_unavailable_rest')) {
     function mco_api_feature_unavailable_rest() { return new WP_Error('not_implemented', 'This feature is unavailable.', ['status' => 501]); }
 }
-if (!function_exists('mco_api_download_config')) {
-    function mco_api_download_config() {
+
+if (!function_exists('mco_get_full_config_object')) {
+    function mco_get_full_config_object() {
         $dynamic_data = mco_get_app_config_data();
-        $site_name = sanitize_title(get_bloginfo('name'));
+        $site_name = get_bloginfo('name');
         $site_url_parts = parse_url(home_url());
         $site_host = $site_url_parts['host'] ?? 'default-site.com';
+        $is_mco = (strpos($site_host, 'coding-online.net') !== false);
         
-        // This structure mirrors the static JSON files, acting as a template.
-        // It's hardcoded here to ensure the generated file is always complete,
-        // even if no dynamic content is created in WordPress yet.
-        $config_template = [
+        $templates = $is_mco ? mco_get_mco_certificate_templates() : mco_get_annapoorna_certificate_templates();
+        
+        return [
             "organizations" => [
                 [
-                    "id" => "org-" . $site_name,
-                    "name" => get_bloginfo('name'),
+                    "id" => "org-" . sanitize_title($site_name),
+                    "name" => $site_name,
                     "website" => str_replace('www.', '', $site_host),
-                    "logo" => "/logo.png",
-                    "exams" => [], // To be filled dynamically
-                    "examProductCategories" => [], // To be filled dynamically
-                    "certificateTemplates" => [ // Default templates
-                        [ "id" => "cert-practice-1", "title" => "Medical Coding Proficiency", "body" => "For successfully demonstrating proficiency in medical coding principles and practices...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "data:image/svg+xml;base64,...", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO", "signature2ImageBase64" => "data:image/svg+xml;base64,..." ],
-                        [ "id" => "cert-generic", "title" => "Certificate of Completion", "body" => "For successfully completing the exam with a final score of <strong>{finalScore}%</strong>.", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "data:image/svg+xml;base64,...", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO", "signature2ImageBase64" => "data:image/svg+xml;base64,..." ]
-                    ],
-                    "suggestedBooks" => [] // To be filled dynamically
+                    "logo" => get_site_icon_url(512) ?: '',
+                    "exams" => $dynamic_data['exams'],
+                    "examProductCategories" => $dynamic_data['examProductCategories'],
+                    "certificateTemplates" => $templates,
+                    "suggestedBooks" => $dynamic_data['suggestedBooks']
                 ]
-            ]
+            ],
+            "examPrices" => $dynamic_data['examPrices'] ?? null
         ];
-        
-        $config_template['organizations'][0]['exams'] = $dynamic_data['exams'];
-        $config_template['organizations'][0]['examProductCategories'] = $dynamic_data['examProductCategories'];
-        $config_template['organizations'][0]['suggestedBooks'] = $dynamic_data['suggestedBooks'];
-        
+    }
+}
+
+if (!function_exists('mco_api_get_runtime_config')) {
+    function mco_api_get_runtime_config() {
+        $config = mco_get_full_config_object();
+        wp_send_json($config, 200);
+    }
+}
+
+if (!function_exists('mco_api_download_config')) {
+    function mco_api_download_config() {
+        $config_object = mco_get_full_config_object();
+        $site_url_parts = parse_url(home_url());
+        $site_host = $site_url_parts['host'] ?? 'default-site.com';
         $filename = $site_host . '-config.json';
         header('Content-Type: application/json; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
-        
-        // Use wp_send_json to correctly set headers and exit.
-        wp_send_json($config_template, 200);
+        echo wp_json_encode($config_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        exit;
     }
 }
-?>
+
+if (!function_exists('mco_get_annapoorna_certificate_templates')) {
+    function mco_get_annapoorna_certificate_templates() {
+        return [
+            ["id" => "cert-practice-1", "title" => "Certificate of Proficiency", "body" => "For successfully demonstrating proficiency in the subject matter with a final score of <strong>{finalScore}%</strong>.", "signature1Name" => "Manoj Balakrishnan", "signature1Title" => "CEO, Annapoorna Infotech", "signature1ImageBase64" => "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMyNjUsNTAgMjg1LDgwIDI5MCw2MCIgc3Ryb2tlPSIjMWUyOTNiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "signature2Name" => "", "signature2Title" => ""],
+            ["id" => "cert-dm", "title" => "Certified Digital Marketing Professional", "body" => "For successfully demonstrating proficiency in Digital Marketing principles and practices with a final score of <strong>{finalScore}%</strong>.", "signature1Name" => "Manoj Balakrishnan", "signature1Title" => "CEO, Annapoorna Infotech", "signature1ImageBase64" => "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMyNjUsNTAgMjg1LDgwIDI5MCw2MCIgc3Ryb2tlPSIjMWUyOTNiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "signature2Name" => "", "signature2Title" => ""],
+            ["id" => "cert-pa", "title" => "Certified Platform Administrator", "body" => "For successfully demonstrating proficiency in managing the Annapoorna Examination App with a final score of <strong>{finalScore}%</strong>.", "signature1Name" => "Manoj Balakrishnan", "signature1Title" => "CEO, Annapoorna Infotech", "signature1ImageBase64" => "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMyNjUsNTAgMjg1LDgwIDI5MCw2MCIgc3Ryb2tlPSIjMWUyOTNiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "signature2Name" => "", "signature2Title" => ""],
+            ["id" => "cert-wp", "title" => "Certified WordPress Integration Specialist", "body" => "For successfully demonstrating proficiency in integrating applications with WordPress with a final score of <strong>{finalScore}%</strong>.", "signature1Name" => "Manoj Balakrishnan", "signature1Title" => "CEO, Annapoorna Infotech", "signature1ImageBase64" => "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMy

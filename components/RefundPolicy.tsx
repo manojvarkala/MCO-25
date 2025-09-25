@@ -1,13 +1,17 @@
 import React, { FC } from 'react';
+import { useAppContext } from '../context/AppContext.tsx';
 
 const RefundPolicy: FC = () => {
+    const { activeOrg } = useAppContext();
+    const orgName = activeOrg ? activeOrg.name : 'our company';
+
     return (
         <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
             <h1 className="text-3xl font-bold text-slate-800 mb-4">Refund & Cancellation Policy</h1>
             <div className="prose max-w-none text-slate-600">
                 <p><em>Last Updated: {new Date().toLocaleDateString()}</em></p>
                 <p>
-                    Thank you for purchasing our products at Medical Coding Online. We are committed to providing our customers with high-quality exam preparation materials.
+                    Thank you for purchasing our products at {orgName}. We are committed to providing our customers with high-quality exam preparation materials.
                 </p>
 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Digital Products</h2>

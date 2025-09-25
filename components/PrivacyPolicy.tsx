@@ -1,13 +1,17 @@
 import React, { FC } from 'react';
+import { useAppContext } from '../context/AppContext.tsx';
 
 const PrivacyPolicy: FC = () => {
+    const { activeOrg } = useAppContext();
+    const orgName = activeOrg ? activeOrg.name : 'Our Company';
+
     return (
         <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
             <h1 className="text-3xl font-bold text-slate-800 mb-4">Privacy Policy</h1>
             <div className="prose max-w-none text-slate-600">
                 <p><em>Last Updated: {new Date().toLocaleDateString()}</em></p>
                 <p>
-                    Medical Coding Online ("we", "us", or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our examination application (the "App").
+                    {orgName} ("we", "us", or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our examination application (the "App").
                 </p>
 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">1. Information We Collect</h2>

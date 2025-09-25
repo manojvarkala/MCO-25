@@ -3,31 +3,28 @@ declare const __DEV__: boolean;
 
 interface TenantConfig {
     apiBaseUrl: string;
-    configPath: string;
 }
 
 // Define separate configs for each tenant
 const medicalCodingConfig: TenantConfig = {
     apiBaseUrl: 'https://www.coding-online.net',
-    configPath: '/medical-coding-config.json',
 };
 
 const annapoornaConfig: TenantConfig = {
     apiBaseUrl: 'https://annapoornainfo.com',
-    configPath: '/annapoorna-config.json',
 };
 
 
 const tenantMap: { [key: string]: TenantConfig } = {
-    // Medical Coding Online Tenant
-    'coding-online.net': medicalCodingConfig,
-    'exam.coding-online.net': medicalCodingConfig, // Explicit subdomain
-    'mco-25.vercel.app': medicalCodingConfig, // Vercel preview default
-    'localhost': medicalCodingConfig, // Local development default
-
-    // Annapoorna Infotech Tenant
+    // Annapoorna Infotech Tenant (Primary)
     'annapoornainfo.com': annapoornaConfig,
-    'exam.annapoornainfo.com': annapoornaConfig, // Explicit subdomain
+    'exam.annapoornainfo.com': annapoornaConfig,
+    'localhost': annapoornaConfig, // Local development defaults to the master app
+
+    // Medical Coding Online Tenant (Secondary)
+    'coding-online.net': medicalCodingConfig,
+    'exam.coding-online.net': medicalCodingConfig,
+    'mco-25.vercel.app': medicalCodingConfig, 
 };
 
 const getTenantConfig = (): TenantConfig => {
@@ -43,7 +40,7 @@ const getTenantConfig = (): TenantConfig => {
     }
     
     // Fallback to the primary app config if no match is found
-    return medicalCodingConfig;
+    return annapoornaConfig;
 }
 
 
@@ -54,9 +51,4 @@ export const getApiBaseUrl = (): string => {
         return '/api';
     }
     return getTenantConfig().apiBaseUrl;
-};
-
-// Returns the path to the static configuration file based on the app's hostname.
-export const getAppConfigPath = (): string => {
-    return getTenantConfig().configPath;
 };

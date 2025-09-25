@@ -1,16 +1,8 @@
-
-
-
-
-
-
-
-
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
 import type { Organization, RecommendedBook, Exam, ExamProductCategory, InProgressExamInfo } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
-import { getAppConfigPath } from '../services/apiConfig.ts';
+import { getApiBaseUrl } from '../services/apiConfig.ts';
 
 interface AppContextType {
   organizations: Organization[];
@@ -99,14 +91,14 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [examPrices, setExamPrices] = useState<{ [key: string]: any } | null>(null);
   const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>([]);
 
-  // Effect 1: Load static config from bundled JSON file on startup.
+  // Effect 1: Load dynamic config from the WordPress backend on startup.
   useEffect(() => {
-    const loadStaticConfig = async () => {
+    const loadAppConfig = async () => {
         setIsInitializing(true);
         try {
-            const configPath = getAppConfigPath();
-            const response = await fetch(configPath);
-            if (!response.ok) throw new Error(`Could not fetch static config from ${configPath}.`);
+            const apiUrl = `${getApiBaseUrl()}/wp-json/mco-app/v1/config`;
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error(`Could not connect to the server at ${apiUrl}.`);
             const configData = await response.json();
             
             const processedData = processConfigData(configData);
@@ -115,18 +107,21 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 setExamPrices(processedData.allPrices);
                 setSuggestedBooks(processedData.allBooks);
                 
-                const currentOrgId = localStorage.getItem('activeOrgId') || processedData.processedOrgs[0]?.id;
-                const newActiveOrg = processedData.processedOrgs.find((o: Organization) => o.id === currentOrgId) || processedData.processedOrgs[0] || null;
+                // Since the API only returns one org, we always use that one.
+                const newActiveOrg = processedData.processedOrgs[0] || null;
                 setActiveOrg(newActiveOrg);
+                if (newActiveOrg) {
+                    localStorage.setItem('activeOrgId', newActiveOrg.id);
+                }
             }
 
         } catch (error: any) {
-            toast.error(error.message || "Could not load application configuration.");
+            toast.error(error.message || "Could not load application configuration.", { duration: 10000 });
         } finally {
             setIsInitializing(false);
         }
     };
-    loadStaticConfig();
+    loadAppConfig();
   }, []);
 
 
