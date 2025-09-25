@@ -1,4 +1,5 @@
 
+
 import React, { FC } from 'react';
 import { DownloadCloud, Info } from 'lucide-react';
 
@@ -8,7 +9,7 @@ const Integration: FC = () => {
             <h1 className="text-3xl font-extrabold text-slate-800">WordPress Integration Plugin</h1>
             
             <div className="bg-white p-6 rounded-lg shadow-lg border border-slate-200">
-                <h2 className="text-xl font-bold mb-2 text-slate-800">The Integration Engine (v27.4.0)</h2>
+                <h2 className="text-xl font-bold mb-2 text-slate-800">The Integration Engine (v28.2.0)</h2>
                 <p className="mb-4 text-slate-600">
                     This is the master plugin for integrating the exam app with your WordPress site. It handles Single Sign-On (SSO), data synchronization, CORS headers, and provides powerful shortcodes for displaying content.
                 </p>

@@ -1,1 +1,217 @@
-full contents of mco-exam-integration-engine/includes/mco-api.txt
+<?php
+if (!defined('ABSPATH')) exit;
+
+if (!function_exists('mco_register_api_hooks')) {
+    function mco_register_api_hooks() {
+        $api_endpoints = [
+            'get_user_results' => false,
+            'get_certificate_data' => false,
+            'update_name' => false,
+            'get_questions_from_sheet' => false,
+            'submit_result' => false,
+            'get_exam_stats' => true, // Admin only
+            // Disabled endpoints
+            'submit_feedback' => false,
+            'submit_review' => false,
+            'spin_wheel' => false,
+            'admin_add_spins' => true,
+            'admin_grant_prize' => true,
+            'admin_search_user' => true,
+            'admin_reset_spins' => true,
+            'admin_remove_prize' => true,
+        ];
+        foreach ($api_endpoints as $endpoint => $is_admin) {
+            add_action("wp_ajax_mco_{$endpoint}", "mco_api_{$endpoint}");
+        }
+    }
+}
+
+// --- API HELPER FUNCTIONS ---
+if (!function_exists('mco_api_verify_user_and_get_payload')) {
+    function mco_api_verify_user_and_get_payload($admin_only = false) {
+        $auth_header = isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : '';
+        if (empty($auth_header) || !preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
+            wp_send_json_error(['message' => 'Authorization header missing or invalid.'], 401);
+        }
+        $token = $matches[1];
+        $payload = mco_verify_exam_jwt($token);
+        if (!$payload || !isset($payload['user']['id'])) {
+            wp_send_json_error(['message' => 'Invalid or expired token.'], 403);
+        }
+        if ($admin_only && (!isset($payload['user']['isAdmin']) || !$payload['user']['isAdmin'])) {
+            wp_send_json_error(['message' => 'Administrator access required.'], 403);
+        }
+        return $payload;
+    }
+}
+
+if (!function_exists('mco_get_json_post_data')) {
+    function mco_get_json_post_data() {
+        $json_data = file_get_contents('php://input');
+        $data = json_decode($json_data, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            wp_send_json_error(['message' => 'Invalid JSON data provided.'], 400);
+        }
+        return $data;
+    }
+}
+
+// --- USER-FACING API ENDPOINTS ---
+if (!function_exists('mco_api_get_user_results')) {
+    function mco_api_get_user_results() {
+        $payload = mco_api_verify_user_and_get_payload();
+        $user_id = $payload['user']['id'];
+        $results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
+        wp_send_json_success(array_values($results));
+    }
+}
+
+if (!function_exists('mco_api_get_certificate_data')) {
+    function mco_api_get_certificate_data() {
+        $payload = mco_api_verify_user_and_get_payload();
+        $user_id = $payload['user']['id'];
+        $test_id = isset($_GET['testId']) ? sanitize_text_field(wp_unslash($_GET['testId'])) : null;
+        if (!$test_id) {
+            wp_send_json_error(['message' => 'Test ID is required.'], 400);
+        }
+        $results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
+        if (!isset($results[$test_id])) {
+            wp_send_json_error(['message' => 'Result not found.'], 404);
+        }
+        $result = $results[$test_id];
+        $data = [
+            'certificateNumber' => $result['testId'],
+            'candidateName' => $payload['user']['name'],
+            'finalScore' => $result['score'],
+            'date' => date('F j, Y', $result['timestamp'] / 1000),
+            'examId' => $result['examId']
+        ];
+        wp_send_json_success($data);
+    }
+}
+
+if (!function_exists('mco_api_update_name')) {
+    function mco_api_update_name() {
+        $payload = mco_api_verify_user_and_get_payload();
+        $user_id = $payload['user']['id'];
+        $data = mco_get_json_post_data();
+        $new_name = isset($data['fullName']) ? sanitize_text_field($data['fullName']) : '';
+        if (empty($new_name) || count(explode(' ', $new_name)) < 2) {
+            wp_send_json_error(['message' => 'Please provide a full name.'], 400);
+        }
+        wp_update_user(['ID' => $user_id, 'display_name' => $new_name]);
+        wp_send_json_success(['message' => 'Name updated successfully.']);
+    }
+}
+
+if (!function_exists('mco_api_submit_result')) {
+    function mco_api_submit_result() {
+        $payload = mco_api_verify_user_and_get_payload();
+        $user_id = $payload['user']['id'];
+        $result_data = mco_get_json_post_data();
+        if (empty($result_data['testId'])) {
+            wp_send_json_error(['message' => 'Invalid result data.'], 400);
+        }
+        $results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
+        $results[$result_data['testId']] = $result_data;
+        update_user_meta($user_id, 'mco_exam_results', $results);
+        wp_send_json_success(['message' => 'Result saved successfully.']);
+    }
+}
+
+if (!function_exists('mco_api_get_questions_from_sheet')) {
+    function mco_api_get_questions_from_sheet() {
+        mco_api_verify_user_and_get_payload(); // Just for auth
+        $data = mco_get_json_post_data();
+        $sheet_url = isset($data['sheetUrl']) ? esc_url_raw($data['sheetUrl']) : '';
+        $count = isset($data['count']) ? intval($data['count']) : 50;
+        if (empty($sheet_url) || !preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
+            wp_send_json_error(['message' => 'Invalid Google Sheet URL provided.'], 400);
+        }
+        $sheet_id = $matches[1];
+        $csv_url = "https://docs.google.com/spreadsheets/d/{$sheet_id}/export?format=csv";
+        $transient_key = 'mco_sheet_' . md5($sheet_id);
+        $questions = get_transient($transient_key);
+        if (false === $questions) {
+            $response = wp_remote_get($csv_url, ['timeout' => 20]);
+            if (is_wp_error($response) || wp_remote_retrieve_response_code($response) != 200) {
+                wp_send_json_error(['message' => 'Could not fetch questions from the Google Sheet. Please ensure it is public.'], 500);
+            }
+            $csv_data = wp_remote_retrieve_body($response);
+            $rows = str_getcsv($csv_data, "\n");
+            $header = str_getcsv(array_shift($rows));
+            $questions = [];
+            foreach ($rows as $i => $row) {
+                $row_data = str_getcsv($row);
+                if (count($row_data) >= 3) {
+                    $questions[] = [
+                        'id' => $i + 1,
+                        'question' => trim($row_data[0]),
+                        'options' => array_map('trim', array_slice($row_data, 1, -1)),
+                        'correctAnswer' => intval(trim(end($row_data)))
+                    ];
+                }
+            }
+            set_transient($transient_key, $questions, 15 * MINUTE_IN_SECONDS);
+        }
+        shuffle($questions);
+        $selected_questions = array_slice($questions, 0, $count);
+        wp_send_json_success($selected_questions);
+    }
+}
+
+// --- ADMIN-FACING API ENDPOINTS ---
+if (!function_exists('mco_api_get_exam_stats')) {
+    function mco_api_get_exam_stats() {
+        mco_api_verify_user_and_get_payload(true);
+        $all_results = [];
+        $users = get_users(['fields' => ['ID']]);
+        foreach ($users as $user) {
+            $user_results = get_user_meta($user->ID, 'mco_exam_results', true);
+            if (!empty($user_results)) {
+                $all_results = array_merge($all_results, array_values($user_results));
+            }
+        }
+        $config_data = mco_get_app_config_data();
+        $cert_exams = array_filter($config_data['exams'], function($exam) {
+            return !$exam['isPractice'];
+        });
+        $stats = [];
+        foreach ($cert_exams as $exam) {
+            $exam_id = $exam['id'];
+            $product_id = wc_get_product_id_by_sku($exam_id);
+            $product = $product_id ? wc_get_product($product_id) : null;
+            $attempts = array_filter($all_results, function($r) use ($exam_id) { return $r['examId'] === $exam_id; });
+            $passed = array_filter($attempts, function($r) use ($exam) { return $r['score'] >= $exam['passScore']; });
+            $total_score = array_reduce($attempts, function($sum, $r) { return $sum + $r['score']; }, 0);
+            
+            $stats[] = [
+                'examId' => $exam_id,
+                'examName' => $exam['name'],
+                'totalSales' => $product ? $product->get_total_sales() : 0,
+                'totalAttempts' => count($attempts),
+                'passed' => count($passed),
+                'failed' => count($attempts) - count($passed),
+                'passRate' => count($attempts) > 0 ? (count($passed) / count($attempts)) * 100 : 0,
+                'averageScore' => count($attempts) > 0 ? $total_score / count($attempts) : 0
+            ];
+        }
+        wp_send_json_success($stats);
+    }
+}
+
+// --- DISABLED/PLACEHOLDER ENDPOINTS ---
+if (!function_exists('mco_api_feature_unavailable')) {
+    function mco_api_feature_unavailable() {
+        wp_send_json_error(['message' => 'This feature is temporarily unavailable. The backend endpoint is not implemented.'], 501);
+    }
+}
+function mco_api_submit_feedback() { mco_api_feature_unavailable(); }
+function mco_api_submit_review() { mco_api_feature_unavailable(); }
+function mco_api_spin_wheel() { mco_api_feature_unavailable(); }
+function mco_api_admin_add_spins() { mco_api_feature_unavailable(); }
+function mco_api_admin_grant_prize() { mco_api_feature_unavailable(); }
+function mco_api_admin_search_user() { mco_api_feature_unavailable(); }
+function mco_api_admin_reset_spins() { mco_api_feature_unavailable(); }
+function mco_api_admin_remove_prize() { mco_api_feature_unavailable(); }
+?>
