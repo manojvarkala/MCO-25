@@ -49,7 +49,8 @@ if (!function_exists('mco_get_allowed_origins')) {
 if (!function_exists('mco_register_rest_routes')) {
     function mco_register_rest_routes() {
         $namespace = 'mco-app/v1';
-        register_rest_route($namespace, '/config', ['methods' => 'GET', 'callback' => 'mco_api_get_runtime_config', 'permission_callback' => '__return_true']);
+        register_rest_route($namespace, '/version', ['methods' => 'GET', 'callback' => 'mco_api_get_version', 'permission_callback' => '__return_true']);
+        register_rest_route($namespace, '/config', ['methods' => 'GET', 'callback' => 'mco_api_get_full_config', 'permission_callback' => '__return_true']);
         register_rest_route($namespace, '/user-results', ['methods' => 'GET', 'callback' => 'mco_api_get_user_results', 'permission_callback' => 'mco_api_permission_check']);
         register_rest_route($namespace, '/certificate-data/(?P<testId>[a-zA-Z0-9-]+)', ['methods' => 'GET', 'callback' => 'mco_api_get_certificate_data', 'permission_callback' => 'mco_api_permission_check', 'args' => ['testId' => ['required' => true]]]);
         register_rest_route($namespace, '/update-name', ['methods' => 'POST', 'callback' => 'mco_api_update_name', 'permission_callback' => 'mco_api_permission_check']);
@@ -79,6 +80,44 @@ if (!function_exists('mco_api_permission_check')) {
 if (!function_exists('mco_api_admin_permission_check')) {
     function mco_api_admin_permission_check(WP_REST_Request $request) { return is_user_logged_in() && current_user_can('manage_options'); }
 }
+
+if (!function_exists('mco_api_get_version')) {
+    function mco_api_get_version(WP_REST_Request $request) {
+        $version = get_option('mco_config_version', '1.0.0');
+        return new WP_REST_Response(['version' => $version], 200);
+    }
+}
+
+if (!function_exists('mco_api_get_full_config')) {
+    function mco_api_get_full_config(WP_REST_Request $request) {
+        $dynamic_data = mco_get_app_config_data();
+        $site_name = get_bloginfo('name');
+        $site_url_parts = parse_url(home_url());
+        $site_host = $site_url_parts['host'] ?? 'default-site.com';
+        $is_mco = (strpos($site_host, 'coding-online.net') !== false);
+        
+        $templates = $is_mco ? mco_get_mco_certificate_templates() : mco_get_annapoorna_certificate_templates();
+        
+        $config_object = [
+            "version" => get_option('mco_config_version', '1.0.0'),
+            "organizations" => [
+                [
+                    "id" => "org-" . sanitize_title($site_name),
+                    "name" => $site_name,
+                    "website" => str_replace('www.', '', $site_host),
+                    "logo" => get_site_icon_url(512) ?: '',
+                    "exams" => $dynamic_data['exams'],
+                    "examProductCategories" => $dynamic_data['examProductCategories'],
+                    "certificateTemplates" => $templates,
+                    "suggestedBooks" => $dynamic_data['suggestedBooks']
+                ]
+            ],
+            "examPrices" => $dynamic_data['examPrices'] ?? null
+        ];
+        return new WP_REST_Response($config_object, 200);
+    }
+}
+
 
 if (!function_exists('mco_api_get_user_results')) {
     function mco_api_get_user_results(WP_REST_Request $request) {
@@ -178,44 +217,9 @@ if (!function_exists('mco_api_feature_unavailable_rest')) {
     function mco_api_feature_unavailable_rest() { return new WP_Error('not_implemented', 'This feature is unavailable.', ['status' => 501]); }
 }
 
-if (!function_exists('mco_get_full_config_object')) {
-    function mco_get_full_config_object() {
-        $dynamic_data = mco_get_app_config_data();
-        $site_name = get_bloginfo('name');
-        $site_url_parts = parse_url(home_url());
-        $site_host = $site_url_parts['host'] ?? 'default-site.com';
-        $is_mco = (strpos($site_host, 'coding-online.net') !== false);
-        
-        $templates = $is_mco ? mco_get_mco_certificate_templates() : mco_get_annapoorna_certificate_templates();
-        
-        return [
-            "organizations" => [
-                [
-                    "id" => "org-" . sanitize_title($site_name),
-                    "name" => $site_name,
-                    "website" => str_replace('www.', '', $site_host),
-                    "logo" => get_site_icon_url(512) ?: '',
-                    "exams" => $dynamic_data['exams'],
-                    "examProductCategories" => $dynamic_data['examProductCategories'],
-                    "certificateTemplates" => $templates,
-                    "suggestedBooks" => $dynamic_data['suggestedBooks']
-                ]
-            ],
-            "examPrices" => $dynamic_data['examPrices'] ?? null
-        ];
-    }
-}
-
-if (!function_exists('mco_api_get_runtime_config')) {
-    function mco_api_get_runtime_config() {
-        $config = mco_get_full_config_object();
-        wp_send_json($config, 200);
-    }
-}
-
 if (!function_exists('mco_api_download_config')) {
     function mco_api_download_config() {
-        $config_object = mco_get_full_config_object();
+        $config_object = mco_api_get_full_config(new WP_REST_Request())->get_data();
         $site_url_parts = parse_url(home_url());
         $site_host = $site_url_parts['host'] ?? 'default-site.com';
         $filename = $site_host . '-config.json';
@@ -228,8 +232,21 @@ if (!function_exists('mco_api_download_config')) {
 
 if (!function_exists('mco_get_annapoorna_certificate_templates')) {
     function mco_get_annapoorna_certificate_templates() {
+        // This function remains as a fallback or for specific tenant logic
         return [
             ["id" => "cert-practice-1", "title" => "Certificate of Proficiency", "body" => "For successfully demonstrating proficiency in the subject matter with a final score of <strong>{finalScore}%</strong>.", "signature1Name" => "Manoj Balakrishnan", "signature1Title" => "CEO, Annapoorna Infotech", "signature1ImageBase64" => "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMyNjUsNTAgMjg1LDgwIDI5MCw2MCIgc3Ryb2tlPSIjMWUyOTNiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "signature2Name" => "", "signature2Title" => ""],
-            ["id" => "cert-dm", "title" => "Certified Digital Marketing Professional", "body" => "For successfully demonstrating proficiency in Digital Marketing principles and practices with a final score of <strong>{finalScore}%</strong>.", "signature1Name" => "Manoj Balakrishnan", "signature1Title" => "CEO, Annapoorna Infotech", "signature1ImageBase64" => "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMyNjUsNTAgMjg1LDgwIDI5MCw2MCIgc3Ryb2tlPSIjMWUyOTNiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "signature2Name" => "", "signature2Title" => ""],
-            ["id" => "cert-pa", "title" => "Certified Platform Administrator", "body" => "For successfully demonstrating proficiency in managing the Annapoorna Examination App with a final score of <strong>{finalScore}%</strong>.", "signature1Name" => "Manoj Balakrishnan", "signature1Title" => "CEO, Annapoorna Infotech", "signature1ImageBase64" => "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMyNjUsNTAgMjg1LDgwIDI5MCw2MCIgc3Ryb2tlPSIjMWUyOTNiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "signature2Name" => "", "signature2Title" => ""],
-            ["id" => "cert-wp", "title" => "Certified WordPress Integration Specialist", "body" => "For successfully demonstrating proficiency in integrating applications with WordPress with a final score of <strong>{finalScore}%</strong>.", "signature1Name" => "Manoj Balakrishnan", "signature1Title" => "CEO, Annapoorna Infotech", "signature1ImageBase64" => "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMy
+            ["id" => "cert-generic", "title" => "Certificate of Completion", "body" => "For successfully completing the examination with a final score of <strong>{finalScore}%</strong>.", "signature1Name" => "Manoj Balakrishnan", "signature1Title" => "CEO, Annapoorna Infotech", "signature1ImageBase64" => "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMyNjUsNTAgMjg1LDgwIDI5MCw2MCIgc3Ryb2tlPSIjMWUyOTNiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "signature2Name" => "", "signature2Title" => ""],
+        ];
+    }
+}
+
+if (!function_exists('mco_get_mco_certificate_templates')) {
+    function mco_get_mco_certificate_templates() {
+        // This function remains as a fallback or for specific tenant logic
+        return [
+            ["id" => "cert-practice-1", "title" => "Medical Coding Proficiency", "body" => "For successfully demonstrating proficiency in medical coding principles and practices with a final score of <strong>{finalScore}%</strong>.", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw1My4zMjYxQzE2Ljg2NDcsNDcuMjQzNyAyOC43MjQ3LDQwLjM0NDIgNDEuMzQzOCw0NS4xMTM4QzUzLjM2Niw0OS42Njc3IDU5Ljk0ODksNTguNDg4NyA3Mi4zNDM4LDYxLjUxMTRDODQuNzM4OCw2NC41MzQgOTkuNDUwNCw2MC4zODI0IDExMS4yNSw1NC43MkMxMjMuMDQ5Niw0OS4wNTc2IDEzNi44OTYsNDQuNjE4NCAxNDguOTIyLDQ1LjExMzhDMTYwLjk0Niw0NS42MDkzIDE2Ny44OTksNTEuMzMzNyAxNzkuNTgsNDkuNjY3N0MxOTEuMjYsNDggMTk4LjgzNCwzNi4xNzQzIDIxMC43NSwzNi4xNzQzQzIyMi42NjYsMzYuMTc0MyAyMjguODEzLDQ4LjA4NjYgMjM5LjUsNDkuNjY3N0MyNTAuMTg3LDUxLjI0ODkgMjU4LjU5OCw0NC4wMzIxIDI2OS41LDQ1LjExMzhDMjgwLjQwMSw0Ni4xOTU1IDI4Ni41LDUzLjA5NSAyOTEsNjEuNTExNCIgc3Ryb2tlPSIjMWUyOTJiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMyNjUsNTAgMjg1LDgwIDI5MCw2MCIgc3Ryb2tlPSIjMWUyOTNiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg=="],
+            ["id" => "cert-generic", "title" => "Certificate of Completion", "body" => "For successfully completing the examination with a final score of <strong>{finalScore}%</strong>.", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw1My4zMjYxQzE2Ljg2NDcsNDcuMjQzNyAyOC43MjQ3LDQwLjM0NDIgNDEuMzQzOCw0NS4xMTM4QzUzLjM2Niw0OS42Njc3IDU5Ljk0ODksNTguNDg4NyA3Mi4zNDM4LDYxLjUxMTRDODQuNzM4OCw2NC41MzQgOTkuNDUwNCw2MC4zODI0IDExMS4yNSw1NC43MkMxMjMuMDQ5Niw0OS4wNTc2IDEzNi44OTYsNDQuNjE4NCAxNDguOTIyLDQ1LjExMzhDMTYwLjk0Niw0NS42MDkzIDE2Ny44OTksNTEuMzMzNyAxNzkuNTgsNDkuNjY3N0MxOTEuMjYsNDggMTk4LjgzNCwzNi4xNzQzIDIxMC43NSwzNi4xNzQzQzIyMi42NjYsMzYuMTc0MyAyMjguODEzLDQ4LjA4NjYgMjM5LjUsNDkuNjY3N0MyNTAuMTg3LDUxLjI0ODkgMjU4LjU5OCw0NC4wMzIxIDI2OS41LDQ1LjExMzhDMjgwLjQwMSw0Ni4xOTU1IDI4Ni41LDUzLjA5NSAyOTEsNjEuNTExNCIgc3Ryb2tlPSIjMWUyOTJiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMyNjUsNTAgMjg1LDgwIDI5MCw2MCIgc3Ryb2tlPSIjMWUyOTNiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg=="],
+        ];
+    }
+}
+?>

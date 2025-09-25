@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, createContext, useCon
 import type { Organization, RecommendedBook, Exam, ExamProductCategory, InProgressExamInfo } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
-import { getApiBaseUrl } from '../services/apiConfig.ts';
+import { getTenantConfig } from '../services/apiConfig.ts';
 
 interface AppContextType {
   organizations: Organization[];
@@ -28,6 +28,8 @@ export const useAppContext = (): AppContextType => {
   return context;
 };
 
+// This function processes a raw config object (either static or from the API)
+// and prepares it for the application state.
 const processConfigData = (configData: any) => {
     if (!configData || !configData.organizations) return null;
     const processedOrgs: Organization[] = JSON.parse(JSON.stringify(configData.organizations));
@@ -75,7 +77,12 @@ const processConfigData = (configData: any) => {
         });
     });
 
-    return { processedOrgs, allPrices, allBooks };
+    return { 
+        version: configData.version || '1.0.0',
+        processedOrgs, 
+        allPrices, 
+        allBooks 
+    };
 };
 
 
@@ -91,29 +98,55 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [examPrices, setExamPrices] = useState<{ [key: string]: any } | null>(null);
   const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>([]);
 
-  // Effect 1: Load dynamic config from the WordPress backend on startup.
+  const setProcessedConfig = (processedData: any) => {
+    if (processedData) {
+      setOrganizations(processedData.processedOrgs);
+      setExamPrices(processedData.allPrices);
+      setSuggestedBooks(processedData.allBooks);
+      const newActiveOrg = processedData.processedOrgs[0] || null;
+      setActiveOrg(newActiveOrg);
+      if (newActiveOrg) {
+          localStorage.setItem('activeOrgId', newActiveOrg.id);
+      }
+    }
+  };
+
+  // Effect 1: Two-stage config load on startup.
   useEffect(() => {
     const loadAppConfig = async () => {
         setIsInitializing(true);
+        const tenantConfig = getTenantConfig();
+
         try {
-            const apiUrl = `${getApiBaseUrl()}/wp-json/mco-app/v1/config`;
-            const response = await fetch(apiUrl);
-            if (!response.ok) throw new Error(`Could not connect to the server at ${apiUrl}.`);
-            const configData = await response.json();
-            
-            const processedData = processConfigData(configData);
-            if (processedData) {
-                setOrganizations(processedData.processedOrgs);
-                setExamPrices(processedData.allPrices);
-                setSuggestedBooks(processedData.allBooks);
-                
-                // Since the API only returns one org, we always use that one.
-                const newActiveOrg = processedData.processedOrgs[0] || null;
-                setActiveOrg(newActiveOrg);
-                if (newActiveOrg) {
-                    localStorage.setItem('activeOrgId', newActiveOrg.id);
+            // STAGE 1: Immediate load from static file for fast startup
+            const staticResponse = await fetch(tenantConfig.configPath);
+            if (!staticResponse.ok) throw new Error(`Could not load the base configuration file at ${tenantConfig.configPath}.`);
+            const staticConfigData = await staticResponse.json();
+            const initialProcessedData = processConfigData(staticConfigData);
+            setProcessedConfig(initialProcessedData);
+
+            // STAGE 2: Background check for updates
+            (async () => {
+                try {
+                    const versionResponse = await fetch(`${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/version`);
+                    if (!versionResponse.ok) return; // Fail silently if version check fails
+                    const versionData = await versionResponse.json();
+                    
+                    if (versionData.version && versionData.version !== staticConfigData.version) {
+                        // Versions differ, fetch the full, live config
+                        const fullConfigResponse = await fetch(`${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config`);
+                        if (!fullConfigResponse.ok) return;
+                        const fullConfigData = await fullConfigResponse.json();
+                        
+                        // Update the app state with the new, live data
+                        const updatedProcessedData = processConfigData(fullConfigData);
+                        setProcessedConfig(updatedProcessedData);
+                        toast.success('Content updated successfully!', { duration: 2000 });
+                    }
+                } catch (updateError) {
+                    console.warn("Could not check for app content updates:", updateError);
                 }
-            }
+            })();
 
         } catch (error: any) {
             toast.error(error.message || "Could not load application configuration.", { duration: 10000 });

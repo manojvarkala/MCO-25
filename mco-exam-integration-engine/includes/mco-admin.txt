@@ -77,8 +77,10 @@ if (!function_exists('mco_register_settings_and_fields')) {
     function mco_register_settings_and_fields() {
         // Main Settings
         register_setting('mco_main_settings_group', 'mco_exam_app_url');
+        register_setting('mco_main_settings_group', 'mco_config_version');
         add_settings_section('mco_main_section', 'Core Configuration', null, 'mco_main_settings_page');
         add_settings_field('mco_exam_app_url_field', 'Exam Application URL', 'mco_render_app_url_field', 'mco_main_settings_page', 'mco_main_section');
+        add_settings_field('mco_config_version_field', 'Configuration Version', 'mco_render_config_version_field', 'mco_main_settings_page', 'mco_main_section');
 
         // Feature Management
         register_setting('mco_feature_management_group', 'mco_spin_wheel_enabled');
@@ -92,6 +94,14 @@ if (!function_exists('mco_render_app_url_field')) {
         $url = get_option('mco_exam_app_url');
         echo '<input type="url" name="mco_exam_app_url" value="' . esc_attr($url) . '" class="regular-text" placeholder="https://exams.yourdomain.com">';
         echo '<p class="description"><strong>Crucial:</strong> Enter the main, canonical URL of your standalone React examination app (e.g., `https://exams.yourdomain.com`). The plugin will automatically handle both `www` and non-`www` versions for security checks (CORS), but it\'s best to use the primary address. Ensure the protocol (`https://`) is correct. Do not include a path or a trailing slash.</p>';
+    }
+}
+
+if (!function_exists('mco_render_config_version_field')) {
+    function mco_render_config_version_field() {
+        $version = get_option('mco_config_version', '1.0.0');
+        echo '<input type="text" name="mco_config_version" value="' . esc_attr($version) . '" class="regular-text" placeholder="1.0.1">';
+        echo '<p class="description"><strong>Important:</strong> After updating exam programs or books, increment this version number (e.g., from "1.0.0" to "1.0.1") to force the app to fetch the latest content for all users.</p>';
     }
 }
 

@@ -1,17 +1,22 @@
+import type { Organization } from '../types.ts';
+
 // FIX: Declare a global constant for development mode, defined in vite.config.ts, to avoid issues with vite/client types.
 declare const __DEV__: boolean;
 
 interface TenantConfig {
     apiBaseUrl: string;
+    configPath: string;
 }
 
 // Define separate configs for each tenant
 const medicalCodingConfig: TenantConfig = {
     apiBaseUrl: 'https://www.coding-online.net',
+    configPath: '/medical-coding-config.json'
 };
 
 const annapoornaConfig: TenantConfig = {
     apiBaseUrl: 'https://annapoornainfo.com',
+    configPath: '/annapoorna-config.json'
 };
 
 
@@ -27,7 +32,14 @@ const tenantMap: { [key: string]: TenantConfig } = {
     'mco-25.vercel.app': medicalCodingConfig, 
 };
 
-const getTenantConfig = (): TenantConfig => {
+export const getTenantConfig = (): TenantConfig => {
+    if (__DEV__) {
+        return {
+            apiBaseUrl: '/api',
+            configPath: '/annapoorna-config.json'
+        };
+    }
+
     const hostname = window.location.hostname.replace(/^www\./, '');
     
     // Find the most specific match first (e.g., 'exam.annapoornainfo.com' before 'annapoornainfo.com')
@@ -43,12 +55,7 @@ const getTenantConfig = (): TenantConfig => {
     return annapoornaConfig;
 }
 
-
 // Returns the base URL for the WordPress backend (for user-specific API calls)
 export const getApiBaseUrl = (): string => {
-    if (__DEV__) {
-        // In dev mode, Vite proxy is used.
-        return '/api';
-    }
     return getTenantConfig().apiBaseUrl;
 };
