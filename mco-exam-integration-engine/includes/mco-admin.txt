@@ -184,19 +184,19 @@ if (!function_exists('mco_render_tools_tab')) {
     function mco_render_tools_tab() {
         ?>
         <h3>Maintenance Tools</h3>
-        <table class="form-table">
-            <tr valign="top">
-                <th scope="row">API Routes</th>
-                <td>
-                    <form method="post" action="?page=mco-exam-engine&tab=tools">
-                        <?php wp_nonce_field('mco_flush_rewrites_nonce'); ?>
-                        <input type="hidden" name="mco_flush_rewrites" value="1">
+        <form method="post" action="?page=mco-exam-engine&tab=tools">
+            <?php wp_nonce_field('mco_flush_rewrites_nonce'); ?>
+            <input type="hidden" name="mco_flush_rewrites" value="1">
+            <table class="form-table">
+                <tr valign="top">
+                    <th scope="row">API Routes</th>
+                    <td>
                         <p>If you see API errors, click this button to rebuild the API route list. This is often needed after plugin updates.</p>
                         <?php submit_button('Force Refresh API Routes', 'secondary', 'submit_flush', false); ?>
-                    </form>
-                </td>
-            </tr>
-        </table>
+                    </td>
+                </tr>
+            </table>
+        </form>
         <?php
     }
 }

@@ -1,3 +1,4 @@
+
 import React, { FC, useState, useEffect, useCallback } from 'react';
 import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu, Video, DownloadCloud } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -204,7 +205,8 @@ const Admin: FC = () => {
             const baseUrl = getApiBaseUrl();
             const response = await fetch(`${baseUrl}/wp-json/mco-app/v1/config`);
             if (!response.ok) {
-                throw new Error(`Failed to fetch config: ${response.statusText}`);
+                const errorData = await response.json().catch(() => ({ message: `Failed to fetch config: ${response.statusText}` }));
+                throw new Error(errorData.message || `Failed to fetch config: ${response.statusText}`);
             }
             const configData = await response.json();
             const jsonString = JSON.stringify(configData, null, 2);
@@ -212,7 +214,7 @@ const Admin: FC = () => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${configData.organizations[0]?.website.replace('.com', '') || 'config'}.json`;
+            a.download = `${configData.organizations[0]?.website.replace(/\..+$/, '') || 'config'}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
