@@ -1,11 +1,11 @@
 
-
 import React, { FC, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { DebugData } from '../types.ts';
 import { Bug, X, Server, User, ShoppingCart, FileText, CheckCircle, AlertTriangle } from 'lucide-react';
 import Spinner from './Spinner.tsx';
+import { getApiBaseUrl } from '../services/apiConfig.ts';
 
 const DebugSidebar: FC = () => {
     const { token } = useAuth();
@@ -60,6 +60,9 @@ const DebugSidebar: FC = () => {
             <div className="text-slate-300 text-sm">{children}</div>
         </div>
     );
+    
+    const currentAppUrl = window.location.origin;
+    const apiUrl = getApiBaseUrl();
 
     return (
         <>
@@ -92,10 +95,26 @@ const DebugSidebar: FC = () => {
                         )}
                         {error && (
                             <Section title="Backend API Status" icon={<AlertTriangle size={16} className="text-red-400" />}>
-                                <p className="text-red-400"><strong>Status:</strong> Connection Failed</p>
-                                <p><strong>Error Message:</strong> {error}</p>
-                                <div className="mt-2 p-2 bg-slate-700 rounded text-amber-300 text-xs">
-                                    <strong>Troubleshooting Tip:</strong> This error often indicates a CORS (Cross-Origin Resource Sharing) issue. Please go to your WordPress admin panel under "Exam App Engine" &rarr; "Main Settings" and ensure the "Exam Application URL" exactly matches the URL of this web app.
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                    <p className="font-bold text-red-400">Status: Connection Failed</p>
+                                </div>
+                                <p className="text-xs text-slate-400 mb-2">Could not connect to the API at: <code className="bg-slate-700 p-1 rounded">{`${apiUrl}/wp-json/mco-app/v1/debug-details`}</code></p>
+                                <p className="text-sm"><strong>Error:</strong> {error}</p>
+                                
+                                <div className="mt-4 p-3 bg-slate-700 rounded border border-amber-400/50 text-amber-200 text-xs">
+                                    <h4 className="font-bold text-amber-300 mb-2">Troubleshooting Guide (Most Common Fix)</h4>
+                                    <p>This error is almost always caused by a security setting on your WordPress server (CORS). To fix it:</p>
+                                    <ol className="list-decimal list-inside my-2 space-y-1">
+                                        <li>Log in to your WordPress admin for <strong className="text-white">{apiUrl.replace('https://','')}</strong>.</li>
+                                        <li>Go to <strong className="text-white">Exam App Engine &rarr; Main Settings</strong>.</li>
+                                        <li>Find the setting <strong className="text-white">"Exam Application URL"</strong>.</li>
+                                        <li>Copy the URL below and paste it exactly into that field.</li>
+                                    </ol>
+                                    <div className="bg-slate-900 p-2 rounded text-center my-2">
+                                        <code className="text-cyan-300">{currentAppUrl}</code>
+                                    </div>
+                                    <p>Save the settings in WordPress and the connection issue should be resolved.</p>
                                 </div>
                             </Section>
                         )}
