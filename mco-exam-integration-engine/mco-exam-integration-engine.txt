@@ -2,13 +2,13 @@
 /**
  * Plugin Name:       Exam App Integration Engine
  * Description:       A multi-tenant engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and API services via the REST API.
- * Version:           28.3.0 (REST API Refactor)
+ * Version:           28.4.0 (Robust CORS & API Fixes)
  * Author:            Annapoorna Infotech
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('MCO_PLUGIN_VERSION', '28.3.0');
+define('MCO_PLUGIN_VERSION', '28.4.0');
 define('MCO_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('MCO_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -74,58 +74,8 @@ if (!function_exists('mco_plugin_init')) {
         mco_register_custom_post_types();
         mco_register_admin_hooks();
         mco_register_admin_tabs();
-        // API hooks are now self-registering on the 'rest_api_init' action inside mco-api.php
         mco_register_shortcode_hooks();
     }
 }
 add_action('init', 'mco_plugin_init');
-
-// --- CORS SUPPORT FOR DYNAMIC FRONTEND (Required for REST API cross-domain) ---
-if (!function_exists('mco_add_cors_support_rest')) {
-    function mco_add_cors_support_rest($value) {
-        $request_origin = get_http_origin();
-        if (!$request_origin) {
-            return $value;
-        }
-
-        $app_url_setting = get_option('mco_exam_app_url');
-        if (empty($app_url_setting)) {
-            return $value;
-        }
-
-        $parsed_setting = parse_url(rtrim($app_url_setting, '/'));
-        if (!isset($parsed_setting['host'])) {
-            return $value;
-        }
-
-        $scheme = $parsed_setting['scheme'] ?? 'https';
-        $host = $parsed_setting['host'];
-        $port = isset($parsed_setting['port']) ? ':' . $parsed_setting['port'] : '';
-        
-        $allowed_origins = [];
-        $allowed_origins[] = "{$scheme}://{$host}{$port}";
-        if (strpos($host, 'www.') === 0) {
-            $non_www_host = substr($host, 4);
-            $allowed_origins[] = "{$scheme}://{$non_www_host}{$port}";
-        } else {
-            $www_host = 'www.' . $host;
-            $allowed_origins[] = "{$scheme}://{$www_host}{$port}";
-        }
-        
-        if (in_array($request_origin, $allowed_origins, true)) {
-            header('Access-Control-Allow-Origin: ' . esc_url($request_origin));
-            header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-            header('Access-Control-Allow-Credentials: true');
-            header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
-            header('Vary: Origin');
-
-            if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
-                status_header(200);
-                exit();
-            }
-        }
-        return $value;
-    }
-}
-add_filter('rest_pre_serve_request', 'mco_add_cors_support_rest', 10, 4);
 ?>
