@@ -1,14 +1,21 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-// --- HOOKS ---
-add_action('admin_menu', 'mco_exam_add_admin_menu');
-add_action('add_meta_boxes', 'mco_add_meta_boxes');
-add_action('save_post_product', 'mco_save_wc_product_meta_data');
-add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta');
-add_action('save_post_mco_recommended_book', 'mco_save_book_meta_data');
-add_action('admin_init', 'mco_register_settings_and_fields');
-add_action('save_post', 'mco_auto_update_config_version_on_save');
+// Note: Hook registration is now handled by mco_register_admin_hooks() to prevent timing issues.
+if (!function_exists('mco_register_admin_hooks')) {
+    function mco_register_admin_hooks() {
+        // --- HOOKS ---
+        add_action('admin_menu', 'mco_exam_add_admin_menu');
+        add_action('add_meta_boxes', 'mco_add_meta_boxes');
+        add_action('save_post_product', 'mco_save_wc_product_meta_data');
+        add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta');
+        add_action('save_post_mco_recommended_book', 'mco_save_book_meta_data');
+        add_action('admin_init', 'mco_register_settings_and_fields');
+        add_action('save_post', 'mco_auto_update_config_version_on_save');
+        add_action('update_option_mco_certificate_templates', 'mco_auto_update_config_version_on_settings_save', 10, 1);
+        add_action('admin_notices', 'mco_admin_notices');
+    }
+}
 
 // --- AUTO-VERSIONING ---
 if (!function_exists('mco_auto_update_config_version_on_save')) {
@@ -25,7 +32,6 @@ if (!function_exists('mco_auto_update_config_version_on_settings_save')) {
             update_option('mco_config_version', current_time('YmdHis'));
         }
     }
-    add_action('update_option_mco_certificate_templates', 'mco_auto_update_config_version_on_settings_save', 10, 1);
 }
 
 // --- ADMIN NOTICES ---
@@ -35,7 +41,6 @@ if (!function_exists('mco_admin_notices')) {
         if (empty(get_option('mco_exam_app_url'))) echo '<div class="notice notice-warning"><p><strong>Exam App Engine:</strong> The Exam App URL is not set. Please <a href="' . admin_url('admin.php?page=mco-exam-engine') . '">configure it</a>.</p></div>';
     }
 }
-add_action('admin_notices', 'mco_admin_notices');
 
 // --- ADMIN MENU & PAGES ---
 if (!function_exists('mco_exam_add_admin_menu')) {

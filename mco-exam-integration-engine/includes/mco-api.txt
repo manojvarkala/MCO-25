@@ -1,30 +1,35 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-add_action('rest_api_init', 'mco_register_rest_routes');
+// Note: Hook registration is now handled by mco_register_api_hooks() to prevent timing issues.
+if (!function_exists('mco_register_api_hooks')) {
+    function mco_register_api_hooks() {
+        add_action('rest_api_init', 'mco_register_rest_routes');
+        // Robust CORS handling
+        add_action('rest_api_init', function() {
+            remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
+            add_filter('rest_pre_serve_request', function($value) {
+                $request_origin = get_http_origin();
+                if ($request_origin) {
+                    $allowed_origins = mco_get_allowed_origins();
+                    if (in_array($request_origin, $allowed_origins, true)) {
+                        header('Access-Control-Allow-Origin: ' . esc_url($request_origin));
+                    }
+                }
+                header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+                header('Access-Control-Allow-Credentials: true');
+                header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
+                header('Vary: Origin', false);
+                if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
+                    status_header(200);
+                    exit();
+                }
+                return $value;
+            }, 15);
+        }, 15);
+    }
+}
 
-// Robust CORS handling
-add_action('rest_api_init', function() {
-    remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
-    add_filter('rest_pre_serve_request', function($value) {
-        $request_origin = get_http_origin();
-        if ($request_origin) {
-            $allowed_origins = mco_get_allowed_origins();
-            if (in_array($request_origin, $allowed_origins, true)) {
-                header('Access-Control-Allow-Origin: ' . esc_url($request_origin));
-            }
-        }
-        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-        header('Access-Control-Allow-Credentials: true');
-        header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
-        header('Vary: Origin', false);
-        if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
-            status_header(200);
-            exit();
-        }
-        return $value;
-    }, 15);
-}, 15);
 
 function mco_get_allowed_origins() {
     $app_url_setting = get_option('mco_exam_app_url');

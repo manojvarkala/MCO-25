@@ -2,13 +2,13 @@
 /**
  * Plugin Name:       Exam App Integration Engine
  * Description:       A multi-tenant engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and API services via the REST API.
- * Version:           28.5.0 (Robust Activation & Tools)
+ * Version:           28.6.0 (Robust Initialization)
  * Author:            Annapoorna Infotech
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('MCO_PLUGIN_VERSION', '28.5.0');
+define('MCO_PLUGIN_VERSION', '28.6.0');
 define('MCO_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('MCO_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -78,8 +78,11 @@ if (!function_exists('mco_plugin_init')) {
         require_once MCO_PLUGIN_DIR . 'includes/mco-api.php';
         require_once MCO_PLUGIN_DIR . 'includes/mco-shortcodes.php';
 
+        // Register all components now that files are loaded to prevent timing conflicts
         mco_register_custom_post_types();
         mco_register_shortcode_hooks();
+        mco_register_admin_hooks();
+        mco_register_api_hooks();
     }
 }
 add_action('init', 'mco_plugin_init');
