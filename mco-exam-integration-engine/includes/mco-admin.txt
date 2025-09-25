@@ -1,27 +1,39 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-// Hook registration
-if (!function_exists('mco_register_admin_hooks')) {
-    function mco_register_admin_hooks() {
-        add_action('admin_notices', 'mco_admin_notices');
-        add_action('admin_menu', 'mco_exam_add_admin_menu');
-        add_action('add_meta_boxes', 'mco_add_meta_boxes');
-        add_action('save_post_product', 'mco_save_wc_product_meta_data');
-        add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta');
-        add_action('save_post_mco_recommended_book', 'mco_save_book_meta_data');
+// --- HOOKS ---
+add_action('admin_notices', 'mco_admin_notices');
+add_action('admin_menu', 'mco_exam_add_admin_menu');
+add_action('add_meta_boxes', 'mco_add_meta_boxes');
+add_action('save_post_product', 'mco_save_wc_product_meta_data');
+add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta');
+add_action('save_post_mco_recommended_book', 'mco_save_book_meta_data');
+add_action('admin_init', 'mco_register_settings_and_fields');
+add_action('save_post', 'mco_auto_update_config_version_on_save');
+
+// --- AUTO-VERSIONING ---
+if (!function_exists('mco_auto_update_config_version_on_save')) {
+    function mco_auto_update_config_version_on_save($post_id) {
+        $post_type = get_post_type($post_id);
+        if ($post_type === 'mco_exam_program' || $post_type === 'mco_recommended_book') {
+            update_option('mco_config_version', current_time('YmdHis'));
+        }
     }
 }
-if (!function_exists('mco_register_admin_tabs')) {
-    function mco_register_admin_tabs() {
-        add_action('admin_init', 'mco_register_settings_and_fields');
+if (!function_exists('mco_auto_update_config_version_on_settings_save')) {
+    function mco_auto_update_config_version_on_settings_save($option_name) {
+        if ($option_name === 'mco_certificate_templates') {
+            update_option('mco_config_version', current_time('YmdHis'));
+        }
     }
+    add_action('update_option_mco_certificate_templates', 'mco_auto_update_config_version_on_settings_save', 10, 1);
 }
 
+// --- ADMIN NOTICES ---
 if (!function_exists('mco_admin_notices')) {
     function mco_admin_notices() {
-        if (!defined('MCO_JWT_SECRET') || strlen(MCO_JWT_SECRET) < 32) echo '<div class="notice notice-error"><p><strong>Exam App Engine:</strong> A secure <strong>MCO_JWT_SECRET</strong> (at least 32 characters long) is not defined in your wp-config.php file for security. SSO will not work.</p></div>';
-        if (empty(get_option('mco_exam_app_url'))) echo '<div class="notice notice-warning"><p><strong>Exam App Engine:</strong> The Exam Application URL is not set. Please <a href="' . admin_url('admin.php?page=mco-exam-engine') . '">go to the settings page</a> to configure it.</p></div>';
+        if (!defined('MCO_JWT_SECRET') || strlen(MCO_JWT_SECRET) < 32) echo '<div class="notice notice-error"><p><strong>Exam App Engine:</strong> A secure <strong>MCO_JWT_SECRET</strong> is not defined in wp-config.php. SSO will not work.</p></div>';
+        if (empty(get_option('mco_exam_app_url'))) echo '<div class="notice notice-warning"><p><strong>Exam App Engine:</strong> The Exam App URL is not set. Please <a href="' . admin_url('admin.php?page=mco-exam-engine') . '">configure it</a>.</p></div>';
     }
 }
 
@@ -42,32 +54,26 @@ if (!function_exists('mco_render_settings_page')) {
             <h1>Exam App Engine Settings</h1>
             <h2 class="nav-tab-wrapper">
                 <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
-                <a href="?page=mco-exam-engine&tab=feature_management" class="nav-tab <?php echo $active_tab == 'feature_management' ? 'nav-tab-active' : ''; ?>">Feature Management</a>
-                <a href="?page=mco-exam-engine&tab=app_management" class="nav-tab <?php echo $active_tab == 'app_management' ? 'nav-tab-active' : ''; ?>">App Management</a>
+                <a href="?page=mco-exam-engine&tab=certificate_templates" class="nav-tab <?php echo $active_tab == 'certificate_templates' ? 'nav-tab-active' : ''; ?>">Certificate Templates</a>
                 <a href="?page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
             </h2>
-            <?php
-            if ($active_tab == 'tools') {
-                mco_render_tools_tab();
-            } elseif ($active_tab == 'app_management') {
-                mco_render_app_management_tab();
-            } else {
-                ?>
-                <form method="post" action="options.php">
-                    <?php
-                    if ($active_tab == 'main_settings') {
-                        settings_fields('mco_main_settings_group');
-                        do_settings_sections('mco_main_settings_page');
-                    } elseif ($active_tab == 'feature_management') {
-                        settings_fields('mco_feature_management_group');
-                        do_settings_sections('mco_feature_management_page');
-                    }
-                    submit_button();
-                    ?>
-                </form>
+            <form method="post" action="options.php">
                 <?php
-            }
-            ?>
+                if ($active_tab == 'main_settings') {
+                    settings_fields('mco_main_settings_group');
+                    do_settings_sections('mco_main_settings_page');
+                } elseif ($active_tab == 'certificate_templates') {
+                    settings_fields('mco_certificate_templates_group');
+                    do_settings_sections('mco_certificate_templates_page');
+                }
+                
+                if ($active_tab !== 'tools') {
+                    submit_button();
+                } else {
+                    mco_render_tools_tab();
+                }
+                ?>
+            </form>
         </div>
         <?php
     }
@@ -75,70 +81,105 @@ if (!function_exists('mco_render_settings_page')) {
 
 if (!function_exists('mco_register_settings_and_fields')) {
     function mco_register_settings_and_fields() {
-        // Main Settings
         register_setting('mco_main_settings_group', 'mco_exam_app_url');
-        register_setting('mco_main_settings_group', 'mco_config_version');
         add_settings_section('mco_main_section', 'Core Configuration', null, 'mco_main_settings_page');
         add_settings_field('mco_exam_app_url_field', 'Exam Application URL', 'mco_render_app_url_field', 'mco_main_settings_page', 'mco_main_section');
-        add_settings_field('mco_config_version_field', 'Configuration Version', 'mco_render_config_version_field', 'mco_main_settings_page', 'mco_main_section');
-
-        // Feature Management
-        register_setting('mco_feature_management_group', 'mco_spin_wheel_enabled');
-        add_settings_section('mco_feature_section', 'Feature Toggles', null, 'mco_feature_management_page');
-        add_settings_field('mco_spin_wheel_enabled_field', 'Spin & Win Feature', 'mco_render_spin_wheel_field', 'mco_feature_management_page', 'mco_feature_section');
+        add_settings_field('mco_config_version_field', 'Live Config Version', 'mco_render_config_version_field', 'mco_main_settings_page', 'mco_main_section');
+        
+        register_setting('mco_certificate_templates_group', 'mco_certificate_templates', ['sanitize_callback' => 'mco_sanitize_certificate_templates']);
+        add_settings_section('mco_certificate_section', 'Manage Certificate Templates', null, 'mco_certificate_templates_page');
+        add_settings_field('mco_certificate_templates_field', '', 'mco_render_certificate_templates_field', 'mco_certificate_templates_page', 'mco_certificate_section');
     }
 }
 
+// --- RENDER FUNCTIONS FOR SETTINGS FIELDS ---
 if (!function_exists('mco_render_app_url_field')) {
     function mco_render_app_url_field() {
-        $url = get_option('mco_exam_app_url');
-        echo '<input type="url" name="mco_exam_app_url" value="' . esc_attr($url) . '" class="regular-text" placeholder="https://exams.yourdomain.com">';
-        echo '<p class="description"><strong>Crucial:</strong> Enter the main, canonical URL of your standalone React examination app (e.g., `https://exams.yourdomain.com`). The plugin will automatically handle both `www` and non-`www` versions for security checks (CORS), but it\'s best to use the primary address. Ensure the protocol (`https://`) is correct. Do not include a path or a trailing slash.</p>';
+        echo '<input type="url" name="mco_exam_app_url" value="' . esc_attr(get_option('mco_exam_app_url')) . '" class="regular-text" placeholder="https://exams.yourdomain.com">';
+        echo '<p class="description"><strong>Crucial:</strong> Enter the main URL of your standalone React app. Do not include a path or a trailing slash.</p>';
     }
 }
 
 if (!function_exists('mco_render_config_version_field')) {
     function mco_render_config_version_field() {
-        $version = get_option('mco_config_version', '1.0.0');
-        echo '<input type="text" name="mco_config_version" value="' . esc_attr($version) . '" class="regular-text" placeholder="1.0.1">';
-        echo '<p class="description"><strong>Important:</strong> After updating exam programs or books, increment this version number (e.g., from "1.0.0" to "1.0.1") to force the app to fetch the latest content for all users.</p>';
+        $version = get_option('mco_config_version', 'Not set');
+        echo '<input type="text" value="' . esc_attr($version) . '" class="regular-text" readonly disabled>';
+        echo '<p class="description">This version timestamp updates automatically when you save an exam, book, or certificate template. It signals the app to fetch new content.</p>';
     }
 }
 
-if (!function_exists('mco_render_spin_wheel_field')) {
-    function mco_render_spin_wheel_field() {
-        $enabled = get_option('mco_spin_wheel_enabled', 0);
-        echo '<label><input type="checkbox" name="mco_spin_wheel_enabled" value="1" ' . checked(1, $enabled, false) . '> Enable the "Spin & Win" feature for users.</label>';
-        echo '<p class="description">When enabled, eligible users will see a "Spin & Win" button and pop-up. When disabled, the feature is hidden from all users.</p>';
-    }
-}
-
-if (!function_exists('mco_render_app_management_tab')) {
-    function mco_render_app_management_tab() {
+if (!function_exists('mco_render_certificate_templates_field')) {
+    function mco_render_certificate_templates_field() {
+        $templates = get_option('mco_certificate_templates', []);
+        echo '<p class="description" style="margin-bottom: 1rem;">Edit the details for each certificate template below. The <strong>Template ID</strong> is crucial and should follow the format <code>cert-&lt;exam-sku-suffix&gt;</code> (e.g., <code>cert-cpc</code> for an exam with SKU <code>exam-cpc-cert</code>). The <code>cert-practice-1</code> template is used for all practice exams.</p>';
+        echo '<div id="mco-certificate-accordion">';
+        foreach ($templates as $id => $template) {
+            ?>
+            <div class="mco-cert-template-item">
+                <h4 class="mco-cert-template-title"><?php echo esc_html($template['title']); ?> (ID: <?php echo esc_html($id); ?>)</h4>
+                <div class="mco-cert-template-content">
+                    <input type="hidden" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][id]" value="<?php echo esc_attr($id); ?>">
+                    <p><label>Title:<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][title]" value="<?php echo esc_attr($template['title']); ?>" class="large-text"></label></p>
+                    <p><label>Body (use <code>{finalScore}</code> where the score should appear):<br><textarea name="mco_certificate_templates[<?php echo esc_attr($id); ?>][body]" rows="3" class="large-text"><?php echo esc_textarea($template['body']); ?></textarea></label></p>
+                    <p><label>Signature 1 Name:<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name']); ?>" class="regular-text"></label></p>
+                    <p><label>Signature 1 Title:<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1Title]" value="<?php echo esc_attr($template['signature1Title']); ?>" class="regular-text"></label></p>
+                    <p><label>Signature 1 Image (Base64 SVG):<br><textarea name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1ImageBase64]" rows="2" class="large-text"><?php echo esc_textarea($template['signature1ImageBase64']); ?></textarea></label></p>
+                    <hr style="margin: 1rem 0;">
+                    <p><label>Signature 2 Name (optional):<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature2Name]" value="<?php echo esc_attr($template['signature2Name']); ?>" class="regular-text"></label></p>
+                    <p><label>Signature 2 Title (optional):<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature2Title]" value="<?php echo esc_attr($template['signature2Title']); ?>" class="regular-text"></label></p>
+                    <p><label>Signature 2 Image (Base64 SVG):<br><textarea name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature2ImageBase64]" rows="2" class="large-text"><?php echo esc_textarea($template['signature2ImageBase64']); ?></textarea></label></p>
+                </div>
+            </div>
+            <?php
+        }
+        echo '</div>';
         ?>
-        <h3>App Content Publisher</h3>
-        <p>This tool allows you to generate a static configuration file containing all the latest exam programs, books, and product information from your WordPress site.</p>
-        <p><strong>Your New Workflow:</strong></p>
-        <ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 1rem;">
-            <li>First, make any desired changes to your "Exam Programs" or "Recommended Books" in WordPress.</li>
-            <li>Once you are ready to publish the changes, return to this tab.</li>
-            <li>Click the button below to generate and download the site-specific configuration file (e.g., <code>your-domain-com-config.json</code>).</li>
-            <li style="background-color: #fffbe6; padding: 5px; border-left: 3px solid #facc15;"><strong>Important:</strong> Provide this downloaded file to your app developer. They must rename it to match the file expected by the app (e.g., <code>medical-coding-config.json</code> or <code>annapoorna-config.json</code>) and place it in the app's <code>/public/</code> directory before deployment.</li>
-        </ol>
-        <a href="<?php echo esc_url(add_query_arg('_wpnonce', wp_create_nonce('wp_rest'), get_rest_url(null, 'mco-app/v1/download-config'))); ?>" class="button button-primary">Download App Configuration File</a>
+        <style>
+            .mco-cert-template-item { border: 1px solid #ddd; margin-bottom: 1rem; }
+            .mco-cert-template-title { font-size: 1.1em; padding: 0.8rem; margin: 0; background: #f9f9f9; cursor: pointer; }
+            .mco-cert-template-content { display: none; padding: 1rem; border-top: 1px solid #ddd; }
+            .mco-cert-template-item.active .mco-cert-template-content { display: block; }
+        </style>
+        <script>
+        jQuery(document).ready(function($){
+            $('#mco-certificate-accordion .mco-cert-template-title').click(function(){
+                $(this).parent().toggleClass('active').find('.mco-cert-template-content').slideToggle();
+            });
+        });
+        </script>
         <?php
+    }
+}
+
+if (!function_exists('mco_sanitize_certificate_templates')) {
+    function mco_sanitize_certificate_templates($input) {
+        $output = [];
+        foreach ($input as $id => $template) {
+            $sanitized_id = sanitize_key($id);
+            $output[$sanitized_id] = [
+                'id' => $sanitized_id,
+                'title' => sanitize_text_field($template['title']),
+                'body' => wp_kses_post($template['body']),
+                'signature1Name' => sanitize_text_field($template['signature1Name']),
+                'signature1Title' => sanitize_text_field($template['signature1Title']),
+                'signature1ImageBase64' => esc_url_raw($template['signature1ImageBase64']),
+                'signature2Name' => sanitize_text_field($template['signature2Name']),
+                'signature2Title' => sanitize_text_field($template['signature2Title']),
+                'signature2ImageBase64' => esc_url_raw($template['signature2ImageBase64']),
+            ];
+        }
+        return $output;
     }
 }
 
 if (!function_exists('mco_render_tools_tab')) {
     function mco_render_tools_tab() {
         if (isset($_POST['mco_flush_rewrites']) && check_admin_referer('mco_flush_rewrites_nonce')) {
-            flush_rewrite_rules(true); // Hard flush
+            flush_rewrite_rules(true);
             echo '<div class="notice notice-success is-dismissible"><p>API routes have been successfully refreshed.</p></div>';
         }
         ?>
         <h3>Maintenance Tools</h3>
-        <p>Use these tools to troubleshoot issues with the plugin.</p>
         <table class="form-table">
             <tr valign="top">
                 <th scope="row">API Routes</th>
@@ -146,7 +187,7 @@ if (!function_exists('mco_render_tools_tab')) {
                     <form method="post" action="">
                         <?php wp_nonce_field('mco_flush_rewrites_nonce'); ?>
                         <input type="hidden" name="mco_flush_rewrites" value="1">
-                        <p><strong>If you are seeing "No route was found" or other API errors in the exam app, your API routes might be stale or incorrect.</strong> Clicking this button will force WordPress to rebuild its internal API route list. This is often necessary after plugin activation or updates. If this doesn't work, try re-saving your permalinks under Settings &rarr; Permalinks.</p>
+                        <p>If you see API errors, click this button to rebuild the API route list. This is often needed after plugin updates.</p>
                         <?php submit_button('Force Refresh API Routes', 'secondary', 'submit_flush', false); ?>
                     </form>
                 </td>
@@ -170,8 +211,8 @@ if (!function_exists('mco_render_exam_program_meta_box')) {
         wp_nonce_field('mco_save_exam_meta', 'mco_exam_nonce');
         $source_url = get_post_meta($post->ID, '_mco_question_source_url', true);
         $cert_sku = get_post_meta($post->ID, '_mco_certification_exam_sku', true);
-        echo '<p><label for="mco_question_source_url">Question Source Google Sheet URL:</label><br><input type="url" id="mco_question_source_url" name="mco_question_source_url" value="' . esc_attr($source_url) . '" style="width:100%;"></p>';
-        echo '<p><label for="mco_certification_exam_sku">Certification Exam Product SKU:</label><br><input type="text" id="mco_certification_exam_sku" name="mco_certification_exam_sku" value="' . esc_attr($cert_sku) . '" style="width:100%;"></p>';
+        echo '<p><label>Question Source Google Sheet URL:</label><br><input type="url" name="mco_question_source_url" value="' . esc_attr($source_url) . '" style="width:100%;"></p>';
+        echo '<p><label>Certification Exam Product SKU:</label><br><input type="text" name="mco_certification_exam_sku" value="' . esc_attr($cert_sku) . '" style="width:100%;"></p>';
     }
 }
 
@@ -187,9 +228,9 @@ if (!function_exists('mco_render_book_links_meta_box')) {
     function mco_render_book_links_meta_box($post) {
         wp_nonce_field('mco_save_book_meta', 'mco_book_nonce');
         $link_com = get_post_meta($post->ID, '_mco_link_com', true); $link_in = get_post_meta($post->ID, '_mco_link_in', true); $link_ae = get_post_meta($post->ID, '_mco_link_ae', true);
-        echo '<p><label for="mco_link_com">Amazon.com URL:</label><br><input type="url" id="mco_link_com" name="mco_link_com" value="' . esc_attr($link_com) . '" style="width:100%;"></p>';
-        echo '<p><label for="mco_link_in">Amazon.in URL:</label><br><input type="url" id="mco_link_in" name="mco_link_in" value="' . esc_attr($link_in) . '" style="width:100%;"></p>';
-        echo '<p><label for="mco_link_ae">Amazon.ae URL:</label><br><input type="url" id="mco_link_ae" name="mco_link_ae" value="' . esc_attr($link_ae) . '" style="width:100%;"></p>';
+        echo '<p><label>Amazon.com URL:</label><br><input type="url" name="mco_link_com" value="' . esc_attr($link_com) . '" style="width:100%;"></p>';
+        echo '<p><label>Amazon.in URL:</label><br><input type="url" name="mco_link_in" value="' . esc_attr($link_in) . '" style="width:100%;"></p>';
+        echo '<p><label>Amazon.ae URL:</label><br><input type="url" name="mco_link_ae" value="' . esc_attr($link_ae) . '" style="width:100%;"></p>';
     }
 }
 

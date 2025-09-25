@@ -66,8 +66,11 @@ if (!function_exists('mco_get_app_config_data')) {
                 $question_source = get_post_meta($prog_id, '_mco_question_source_url', true);
                 $description = html_entity_decode(strip_tags(get_the_content()));
 
+                // Convention-based certificate template ID
+                $cert_template_id = 'cert-' . str_replace(['exam-', '-cert'], '', $cert_sku);
+
                 $dynamic_exams[] = [ 'id' => $practice_id, 'name' => html_entity_decode(get_the_title()) . ' Practice', 'description' => $description, 'price' => 0, 'productSku' => $practice_id, 'numberOfQuestions' => !empty($practice_q_terms) ? (int)$practice_q_terms[0] : 25, 'passScore' => $pass_score, 'certificateTemplateId' => 'cert-practice-1', 'isPractice' => true, 'durationMinutes' => !empty($practice_d_terms) ? (int)$practice_d_terms[0] : 60, 'questionSourceUrl' => $question_source ];
-                $dynamic_exams[] = [ 'id' => $cert_sku, 'name' => html_entity_decode(get_the_title()), 'description' => $description, 'price' => (float)$product->get_price(), 'regularPrice' => (float)$product->get_regular_price(), 'productSku' => $cert_sku, 'productSlug' => $product->get_slug(), 'numberOfQuestions' => !empty($cert_q_terms) ? (int)$cert_q_terms[0] : 100, 'passScore' => $pass_score, 'certificateTemplateId' => 'cert-generic', 'isPractice' => false, 'durationMinutes' => !empty($cert_d_terms) ? (int)$cert_d_terms[0] : 240, 'questionSourceUrl' => $question_source ];
+                $dynamic_exams[] = [ 'id' => $cert_sku, 'name' => html_entity_decode(get_the_title()), 'description' => $description, 'price' => (float)$product->get_price(), 'regularPrice' => (float)$product->get_regular_price(), 'productSku' => $cert_sku, 'productSlug' => $product->get_slug(), 'numberOfQuestions' => !empty($cert_q_terms) ? (int)$cert_q_terms[0] : 100, 'passScore' => $pass_score, 'certificateTemplateId' => $cert_template_id, 'isPractice' => false, 'durationMinutes' => !empty($cert_d_terms) ? (int)$cert_d_terms[0] : 240, 'questionSourceUrl' => $question_source ];
                 $dynamic_categories[] = [ 'id' => 'prod-' . $prog_id, 'name' => html_entity_decode(get_the_title()), 'description' => $description, 'practiceExamId' => $practice_id, 'certificationExamId' => $cert_sku, 'questionSourceUrl' => $question_source ];
                 
                 $exam_prices[$cert_sku] = [

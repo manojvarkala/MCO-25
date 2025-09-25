@@ -5,18 +5,15 @@ declare const __DEV__: boolean;
 
 interface TenantConfig {
     apiBaseUrl: string;
-    configPath: string;
 }
 
 // Define separate configs for each tenant
 const medicalCodingConfig: TenantConfig = {
     apiBaseUrl: 'https://www.coding-online.net',
-    configPath: '/medical-coding-config.json'
 };
 
 const annapoornaConfig: TenantConfig = {
     apiBaseUrl: 'https://annapoornainfo.com',
-    configPath: '/annapoorna-config.json'
 };
 
 
@@ -36,7 +33,6 @@ export const getTenantConfig = (): TenantConfig => {
     if (__DEV__) {
         return {
             apiBaseUrl: '/api',
-            configPath: '/annapoorna-config.json'
         };
     }
 

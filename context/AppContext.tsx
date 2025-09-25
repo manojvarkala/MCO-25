@@ -111,45 +111,49 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   };
 
-  // Effect 1: Two-stage config load on startup.
   useEffect(() => {
     const loadAppConfig = async () => {
         setIsInitializing(true);
         const tenantConfig = getTenantConfig();
+        let activeConfig = null;
 
+        // Stage 1: Attempt to load from cache for an instant UI update.
         try {
-            // STAGE 1: Immediate load from static file for fast startup
-            const staticResponse = await fetch(tenantConfig.configPath);
-            if (!staticResponse.ok) throw new Error(`Could not load the base configuration file at ${tenantConfig.configPath}.`);
-            const staticConfigData = await staticResponse.json();
-            const initialProcessedData = processConfigData(staticConfigData);
-            setProcessedConfig(initialProcessedData);
+            const cachedConfigJSON = localStorage.getItem('appConfigCache');
+            if (cachedConfigJSON) {
+                const cachedConfig = JSON.parse(cachedConfigJSON);
+                activeConfig = cachedConfig;
+                const processedData = processConfigData(cachedConfig);
+                setProcessedConfig(processedData);
+            }
+        } catch (e) {
+            console.warn("Could not load cached config:", e);
+            localStorage.removeItem('appConfigCache'); // Clear corrupted cache
+        }
 
-            // STAGE 2: Background check for updates
-            (async () => {
-                try {
-                    const versionResponse = await fetch(`${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/version`);
-                    if (!versionResponse.ok) return; // Fail silently if version check fails
-                    const versionData = await versionResponse.json();
-                    
-                    if (versionData.version && versionData.version !== staticConfigData.version) {
-                        // Versions differ, fetch the full, live config
-                        const fullConfigResponse = await fetch(`${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config`);
-                        if (!fullConfigResponse.ok) return;
-                        const fullConfigData = await fullConfigResponse.json();
-                        
-                        // Update the app state with the new, live data
-                        const updatedProcessedData = processConfigData(fullConfigData);
-                        setProcessedConfig(updatedProcessedData);
-                        toast.success('Content updated successfully!', { duration: 2000 });
-                    }
-                } catch (updateError) {
-                    console.warn("Could not check for app content updates:", updateError);
+        // Stage 2: Always fetch the latest config from the API in the background.
+        try {
+            const response = await fetch(`${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config`);
+            if (!response.ok) {
+                throw new Error(`Server returned status ${response.status}`);
+            }
+            const liveConfig = await response.json();
+
+            // Update state and cache only if the version is new or cache was empty.
+            if (!activeConfig || activeConfig.version !== liveConfig.version) {
+                localStorage.setItem('appConfigCache', JSON.stringify(liveConfig));
+                const processedData = processConfigData(liveConfig);
+                setProcessedConfig(processedData);
+
+                if (activeConfig) { // Only toast on an update, not initial load
+                    toast.success('Content and features have been updated!', { duration: 3000 });
                 }
-            })();
-
-        } catch (error: any) {
-            toast.error(error.message || "Could not load application configuration.", { duration: 10000 });
+            }
+        } catch (error) {
+            console.error("Failed to fetch live config:", error);
+            if (!activeConfig) { // Show error only if there's no cached data to run on
+                toast.error("Could not load application configuration. Please check your connection.", { duration: 10000 });
+            }
         } finally {
             setIsInitializing(false);
         }
