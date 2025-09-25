@@ -51,8 +51,8 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/update-name', ['methods' => 'POST', 'callback' => 'mco_api_update_name', 'permission_callback' => 'mco_api_permission_check']);
     register_rest_route($namespace, '/questions-from-sheet', ['methods' => 'POST', 'callback' => 'mco_api_get_questions_from_sheet', 'permission_callback' => 'mco_api_permission_check']);
     register_rest_route($namespace, '/submit-result', ['methods' => 'POST', 'callback' => 'mco_api_submit_result', 'permission_callback' => 'mco_api_permission_check']);
-    register_rest_route($namespace, '/exam-stats', ['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats', 'permission_callback' => 'mco_api_admin_permission_check']);
-    register_rest_route($namespace, '/debug-details', ['methods' => 'GET', 'callback' => 'mco_api_get_debug_details', 'permission_callback' => 'mco_api_admin_permission_check']);
+    register_rest_route($namespace, '/exam-stats', ['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/debug-details', ['methods' => 'GET', 'callback' => 'mco_api_get_debug_details', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/download-config', ['methods' => 'GET', 'callback' => 'mco_api_download_config', 'permission_callback' => 'mco_api_admin_permission_check']);
 }
 
@@ -67,6 +67,20 @@ function mco_api_permission_check(WP_REST_Request $request, $admin_only = false)
 }
 
 function mco_api_admin_permission_check(WP_REST_Request $request) { return is_user_logged_in() && current_user_can('manage_options'); }
+
+function mco_api_jwt_admin_permission_check(WP_REST_Request $request) {
+    // First, validate the JWT token itself.
+    $is_valid_token = mco_api_permission_check($request);
+    if (is_wp_error($is_valid_token)) {
+        return $is_valid_token;
+    }
+    // Now, check for admin privileges within the validated token payload.
+    $payload = $request->get_param('jwt_payload');
+    if (empty($payload['user']['isAdmin'])) {
+        return new WP_Error('jwt_auth_admin_required', 'Administrator access required.', ['status' => 403]);
+    }
+    return true;
+}
 
 function mco_api_get_full_config(WP_REST_Request $request) {
     $dynamic_data = mco_get_app_config_data();

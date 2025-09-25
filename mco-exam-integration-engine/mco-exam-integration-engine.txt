@@ -72,8 +72,6 @@ if (!function_exists('mco_plugin_init')) {
         require_once MCO_PLUGIN_DIR . 'includes/mco-shortcodes.php';
 
         mco_register_custom_post_types();
-        mco_register_admin_hooks();
-        mco_register_admin_tabs();
         mco_register_shortcode_hooks();
     }
 }

@@ -22,36 +22,35 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         headers,
     };
     
-    let urlToFetch = fullUrl;
-
     if (method === 'POST') {
         config.body = JSON.stringify(data);
     }
 
     try {
-        const response = await fetch(urlToFetch, config);
-        // The backend now returns a consistent JSON object for both success and error
+        const response = await fetch(fullUrl, config);
         const jsonResponse = await response.json();
 
         if (!response.ok) {
-            // Use the 'message' field from the structured JSON error response
             const errorMessage = jsonResponse?.message || response.statusText || `Server error: ${response.status}`;
             throw new Error(errorMessage);
         }
         
         return jsonResponse;
 
-    } catch (networkError: any) {
-        console.error(`API Fetch Network Error to ${endpoint}:`, networkError);
-        let errorMessage = `Could not connect to the API server (${API_BASE_URL}).`;
-        if (networkError instanceof TypeError && networkError.message.includes('fetch')) {
-            errorMessage += ' This might be a network issue or a CORS configuration problem on the server.';
-        } else if (networkError instanceof SyntaxError) {
-             errorMessage = `The server returned an invalid response. This may be a temporary issue on the server.`;
-        } else {
-             errorMessage += ` Details: ${networkError.message}.`;
+    } catch (error: any) {
+        console.error(`API Fetch Error to ${endpoint}:`, error);
+
+        // Handle specific network/parsing errors with user-friendly messages
+        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+            throw new Error(`Could not connect to the API server at ${API_BASE_URL}. Please check your internet connection.`);
         }
-        throw new Error(errorMessage);
+        if (error instanceof SyntaxError) {
+            throw new Error('The server returned an invalid response. This may be a temporary issue.');
+        }
+
+        // For all other errors (including our own application errors thrown from !response.ok),
+        // re-throw them without modification to avoid confusing concatenated messages.
+        throw error;
     }
 };
 
