@@ -5,13 +5,8 @@ if (!defined('ABSPATH')) exit;
 add_action('rest_api_init', 'mco_register_rest_routes');
 
 // --- NEW, ROBUST CORS (Cross-Origin Resource Sharing) CONTROL ---
-// This single, comprehensive filter correctly handles CORS for both pre-flight OPTIONS requests
-// and actual GET/POST requests, preventing intermittent connection errors from the app.
 add_action('rest_api_init', function() {
-    // Remove the default WordPress CORS headers to prevent conflicts.
     remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
-
-    // Add our custom, more reliable CORS handling filter.
     add_filter('rest_pre_serve_request', function($value) {
         $request_origin = get_http_origin();
         if ($request_origin) {
@@ -20,37 +15,27 @@ add_action('rest_api_init', function() {
                 header('Access-Control-Allow-Origin: ' . esc_url($request_origin));
             }
         }
-        
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Credentials: true');
         header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
-        // Add Vary: Origin header to instruct browsers to cache responses based on the Origin header.
-        // The 'false' parameter prevents this from replacing an existing Vary header if present.
         header('Vary: Origin', false);
-
-        // If this is a pre-flight OPTIONS request, send a 200 OK response and exit immediately.
         if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
             status_header(200);
             exit();
         }
-
         return $value;
     }, 15);
 }, 15);
-
 
 if (!function_exists('mco_get_allowed_origins')) {
     function mco_get_allowed_origins() {
         $app_url_setting = get_option('mco_exam_app_url');
         if (!$app_url_setting) return [];
-        
         $parsed_setting = parse_url(rtrim($app_url_setting, '/'));
         if (!isset($parsed_setting['host'])) return [];
-        
         $scheme = $parsed_setting['scheme'] ?? 'https';
         $host = $parsed_setting['host'];
         $port = isset($parsed_setting['port']) ? ':' . $parsed_setting['port'] : '';
-        
         $allowed_origins = ["{$scheme}://{$host}{$port}"];
         if (strpos($host, 'www.') === 0) {
             $allowed_origins[] = "{$scheme}://".substr($host, 4)."{$port}";
@@ -71,6 +56,7 @@ if (!function_exists('mco_register_rest_routes')) {
         register_rest_route($namespace, '/submit-result', ['methods' => 'POST', 'callback' => 'mco_api_submit_result', 'permission_callback' => 'mco_api_permission_check']);
         register_rest_route($namespace, '/exam-stats', ['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats', 'permission_callback' => 'mco_api_admin_permission_check']);
         register_rest_route($namespace, '/debug-details', ['methods' => 'GET', 'callback' => 'mco_api_get_debug_details', 'permission_callback' => 'mco_api_admin_permission_check']);
+        register_rest_route($namespace, '/download-config', ['methods' => 'GET', 'callback' => 'mco_api_download_config', 'permission_callback' => 'mco_api_admin_permission_check']);
         $disabled_endpoints = ['/submit-feedback', '/submit-review', '/spin-wheel', '/add-spins', '/grant-prize', '/search-user', '/reset-spins', '/remove-prize'];
         foreach ($disabled_endpoints as $endpoint) {
             register_rest_route($namespace, $endpoint, ['methods' => WP_REST_Server::ALLMETHODS, 'callback' => 'mco_api_feature_unavailable_rest', 'permission_callback' => '__return_true']);
@@ -78,7 +64,6 @@ if (!function_exists('mco_register_rest_routes')) {
     }
 }
 
-// --- PERMISSION CALLBACKS ---
 if (!function_exists('mco_api_permission_check')) {
     function mco_api_permission_check(WP_REST_Request $request, $admin_only = false) {
         $auth_header = $request->get_header('authorization');
@@ -91,10 +76,9 @@ if (!function_exists('mco_api_permission_check')) {
     }
 }
 if (!function_exists('mco_api_admin_permission_check')) {
-    function mco_api_admin_permission_check(WP_REST_Request $request) { return mco_api_permission_check($request, true); }
+    function mco_api_admin_permission_check(WP_REST_Request $request) { return is_user_logged_in() && current_user_can('manage_options'); }
 }
 
-// --- API HANDLERS ---
 if (!function_exists('mco_api_get_user_results')) {
     function mco_api_get_user_results(WP_REST_Request $request) {
         $user_id = $request->get_param('jwt_payload')['user']['id'];
@@ -144,9 +128,8 @@ if (!function_exists('mco_api_get_questions_from_sheet')) {
                 if (empty(trim($row))) continue;
                 $data = str_getcsv($row);
                 if (count($data) === 3 && !empty(trim($data[0])) && !empty(trim($data[1])) && is_numeric(trim($data[2]))) {
-                    // FIX: Replaced explode with a more robust preg_split to correctly handle pipes with variable whitespace.
-                    $options = preg_split('/\s*\|\s*/', trim($data[1]), -1, PREG_SPLIT_NO_EMPTY);
-                    // FIX: Changed condition to >= 1 to allow single-option questions.
+                    // FIX: Using a simpler, more reliable explode/trim method to prevent parsing issues with the pipe separator.
+                    $options = array_map('trim', explode('|', trim($data[1])));
                     if (count($options) >= 1 && intval(trim($data[2])) > 0 && intval(trim($data[2])) <= count($options)) {
                         $questions[] = ['id' => $i + 1, 'question' => trim($data[0]), 'options' => $options, 'correctAnswer' => intval(trim($data[2]))];
                     }
@@ -193,5 +176,45 @@ if (!function_exists('mco_api_get_debug_details')) {
 }
 if (!function_exists('mco_api_feature_unavailable_rest')) {
     function mco_api_feature_unavailable_rest() { return new WP_Error('not_implemented', 'This feature is unavailable.', ['status' => 501]); }
+}
+if (!function_exists('mco_api_download_config')) {
+    function mco_api_download_config() {
+        $dynamic_data = mco_get_app_config_data();
+        $site_name = sanitize_title(get_bloginfo('name'));
+        $site_url_parts = parse_url(home_url());
+        $site_host = $site_url_parts['host'] ?? 'default-site.com';
+        
+        // This structure mirrors the static JSON files, acting as a template.
+        // It's hardcoded here to ensure the generated file is always complete,
+        // even if no dynamic content is created in WordPress yet.
+        $config_template = [
+            "organizations" => [
+                [
+                    "id" => "org-" . $site_name,
+                    "name" => get_bloginfo('name'),
+                    "website" => str_replace('www.', '', $site_host),
+                    "logo" => "/logo.png",
+                    "exams" => [], // To be filled dynamically
+                    "examProductCategories" => [], // To be filled dynamically
+                    "certificateTemplates" => [ // Default templates
+                        [ "id" => "cert-practice-1", "title" => "Medical Coding Proficiency", "body" => "For successfully demonstrating proficiency in medical coding principles and practices...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "data:image/svg+xml;base64,...", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO", "signature2ImageBase64" => "data:image/svg+xml;base64,..." ],
+                        [ "id" => "cert-generic", "title" => "Certificate of Completion", "body" => "For successfully completing the exam with a final score of <strong>{finalScore}%</strong>.", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "data:image/svg+xml;base64,...", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO", "signature2ImageBase64" => "data:image/svg+xml;base64,..." ]
+                    ],
+                    "suggestedBooks" => [] // To be filled dynamically
+                ]
+            ]
+        ];
+        
+        $config_template['organizations'][0]['exams'] = $dynamic_data['exams'];
+        $config_template['organizations'][0]['examProductCategories'] = $dynamic_data['examProductCategories'];
+        $config_template['organizations'][0]['suggestedBooks'] = $dynamic_data['suggestedBooks'];
+        
+        $filename = $site_host . '-config.json';
+        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        
+        // Use wp_send_json to correctly set headers and exit.
+        wp_send_json($config_template, 200);
+    }
 }
 ?>

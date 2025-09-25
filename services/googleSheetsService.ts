@@ -77,6 +77,9 @@ export const googleSheetsService = {
     
     // --- RESULTS HANDLING (CACHE-FIRST APPROACH) ---
     syncResults: async (user: User, token: string): Promise<void> => {
+        // This lock prevents a race condition where multiple sync requests (e.g., from a button
+        // click and a component mount) could be fired simultaneously. The second request will be
+        // safely ignored, preventing a spurious error notification from a cancelled network request.
         if (isSyncing) {
             console.warn("Synchronization already in progress. Skipping this request.");
             return;

@@ -115,11 +115,7 @@ if (!function_exists('mco_render_app_management_tab')) {
             <li>Click the button below to generate and download the site-specific configuration file (e.g., <code>your-domain-com-config.json</code>).</li>
             <li style="background-color: #fffbe6; padding: 5px; border-left: 3px solid #facc15;"><strong>Important:</strong> Provide this downloaded file to your app developer. They must rename it to match the file expected by the app (e.g., <code>medical-coding-config.json</code> or <code>annapoorna-config.json</code>) and place it in the app's <code>/public/</code> directory before deployment.</li>
         </ol>
-        <form method="post" action="<?php echo esc_url(admin_url('admin-ajax.php')); ?>">
-            <input type="hidden" name="action" value="mco_download_config">
-            <?php wp_nonce_field('mco_download_config_nonce', 'mco_download_nonce'); ?>
-            <?php submit_button('Download App Configuration File', 'primary', 'submit_download_config', false); ?>
-        </form>
+        <a href="<?php echo esc_url(add_query_arg('_wpnonce', wp_create_nonce('wp_rest'), get_rest_url(null, 'mco-app/v1/download-config'))); ?>" class="button button-primary">Download App Configuration File</a>
         <?php
     }
 }
