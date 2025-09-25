@@ -123,7 +123,27 @@ function mco_api_get_certificate_data(WP_REST_Request $request) {
     $results = get_user_meta($payload['user']['id'], 'mco_exam_results', true) ?: [];
     if (!isset($results[$request['testId']])) return new WP_Error('not_found', 'Result not found.', ['status' => 404]);
     $result = $results[$request['testId']];
-    return new WP_REST_Response(['certificateNumber' => $result['testId'], 'candidateName' => $payload['user']['name'], 'finalScore' => $result['score'], 'date' => date('F j, Y', $result['timestamp'] / 1000), 'examId' => $result['examId']], 200);
+    
+    // Find the exam name from the full config data
+    $exam_name = 'Examination'; // Default value
+    $all_exams_data = mco_get_app_config_data();
+    if (isset($all_exams_data['exams'])) {
+        foreach ($all_exams_data['exams'] as $exam) {
+            if ($exam['id'] === $result['examId']) {
+                $exam_name = $exam['name'];
+                break;
+            }
+        }
+    }
+
+    return new WP_REST_Response([
+        'certificateNumber' => $result['testId'], 
+        'candidateName' => $payload['user']['name'], 
+        'finalScore' => $result['score'], 
+        'date' => date('F j, Y', $result['timestamp'] / 1000), 
+        'examId' => $result['examId'],
+        'examName' => $exam_name
+    ], 200);
 }
 
 function mco_api_update_name(WP_REST_Request $request) {

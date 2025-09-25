@@ -131,6 +131,7 @@ export interface ApiCertificateData {
     finalScore: number;
     date: string;
     examId: string;
+    examName: string;
 }
 
 export interface CertificateData {
@@ -139,6 +140,7 @@ export interface CertificateData {
     finalScore: number;
     date: string;
     totalQuestions: number;
+    examName: string;
     // Dynamic fields from template
     organization: Organization;
     template: CertificateTemplate;

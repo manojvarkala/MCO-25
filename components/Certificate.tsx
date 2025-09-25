@@ -58,6 +58,7 @@ const Certificate: FC = () => {
                 totalQuestions: 100,
                 organization: activeOrg,
                 template: sampleTemplate,
+                examName: 'Sample Proficiency Exam',
             };
             setCertData(sampleCertData);
             setIsLoading(false);
@@ -142,8 +143,13 @@ const Certificate: FC = () => {
         return <div className="text-center p-8"><p>No certificate data available.</p></div>;
     }
 
-    const { organization, template } = certData;
-    const bodyText = template.body.replace('{finalScore}', `<strong>${certData.finalScore}%</strong>`);
+    const { organization, template, examName } = certData;
+    
+    const titleText = template.title.replace('{examName}', examName);
+    const bodyText = template.body
+        .replace('{finalScore}', `<strong>${certData.finalScore}%</strong>`)
+        .replace('{examName}', `<strong>${examName}</strong>`);
+
     const hasTwoSignatures = !!(template.signature2Name && template.signature2ImageUrl);
 
     return (
@@ -174,14 +180,12 @@ const Certificate: FC = () => {
                         {organization.logo && <img src={organization.logo} alt={`${organization.name} Logo`} className="h-24 object-contain" />}
                     </div>
 
-                    <p className="text-2xl text-gray-500 tracking-widest uppercase">Certificate of Completion</p>
+                    <p className="text-2xl text-gray-500 tracking-widest uppercase">{titleText}</p>
                     <p className="text-lg text-gray-600 mt-4">This certificate is proudly presented to</p>
                     
                     <h2 className="text-5xl font-bold text-gray-800 my-8 border-b-2 border-gray-300 pb-4">{certData.candidateName}</h2>
 
-                    <div className="text-lg text-gray-600 flex-grow">
-                         <p>For successfully completing the <strong>{template.title}</strong></p>
-                         <p className="mt-2" dangerouslySetInnerHTML={{ __html: bodyText.replace(/\n/g, '<br />') }} />
+                    <div className="text-lg text-gray-600 flex-grow" dangerouslySetInnerHTML={{ __html: bodyText.replace(/\n/g, '<br />') }}>
                     </div>
                     
                     <div className="mt-auto flex justify-between items-end pt-8">
