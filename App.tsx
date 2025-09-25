@@ -1,6 +1,7 @@
 
 
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import statement for react-router-dom to resolve module export errors.
 import { HashRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
@@ -56,11 +57,27 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }
 
 const AppContent: FC = () => {
     const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed } = useAuth();
-    const { isWheelModalOpen, setWheelModalOpen } = useAppContext();
+    const { isWheelModalOpen, setWheelModalOpen, activeOrg } = useAppContext();
     const location = useLocation();
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
     
     const isTestPage = location.pathname.startsWith('/test/');
+
+    useEffect(() => {
+        if (activeOrg) {
+            document.title = `${activeOrg.name} | Examination Portal`;
+    
+            let metaDescription = document.querySelector('meta[name="description"]');
+            if (!metaDescription) {
+                metaDescription = document.createElement('meta');
+                metaDescription.setAttribute('name', 'description');
+                document.head.appendChild(metaDescription);
+            }
+            
+            const description = `The official examination portal for ${activeOrg.name}. Access practice tests, certification exams, and AI-powered study guides.`;
+            metaDescription.setAttribute('content', description);
+        }
+    }, [activeOrg]);
 
     useEffect(() => {
         // Show the wheel modal only for eligible users who haven't already dismissed it this session.
