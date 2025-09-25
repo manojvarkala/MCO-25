@@ -155,10 +155,12 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
         foreach ($rows as $i => $row) {
             if (empty(trim($row))) continue;
             $data = str_getcsv($row);
-            if (count($data) === 3 && !empty(trim($data[0])) && !empty(trim($data[1])) && is_numeric(trim($data[2]))) {
+            if (count($data) === 3 && !empty(trim($data[0])) && !empty(trim($data[1])) && !empty(trim($data[2]))) {
                 $options = array_map('trim', explode('|', trim($data[1])));
-                if (count($options) >= 1 && intval(trim($data[2])) > 0 && intval(trim($data[2])) <= count($options)) {
-                    $questions[] = ['id' => $i + 1, 'question' => trim($data[0]), 'options' => $options, 'correctAnswer' => intval(trim($data[2]))];
+                $correct_answer_text = trim($data[2]);
+                $correct_answer_index = array_search($correct_answer_text, $options);
+                if ($correct_answer_index !== false) {
+                    $questions[] = ['id' => $i + 1, 'question' => trim($data[0]), 'options' => $options, 'correctAnswer' => $correct_answer_index + 1];
                 }
             }
         }

@@ -49,20 +49,6 @@ const processConfigData = (configData: any) => {
             }
         });
 
-        // Resolve signature references
-        if (org.signatureAssets) {
-            org.certificateTemplates = (org.certificateTemplates || []).map(template => {
-                const newTemplate = { ...template };
-                if (template.signature1ImageBase64Ref && org.signatureAssets?.[template.signature1ImageBase64Ref]) {
-                    newTemplate.signature1ImageBase64 = org.signatureAssets[template.signature1ImageBase64Ref];
-                }
-                if (template.signature2ImageBase64Ref && org.signatureAssets?.[template.signature2ImageBase64Ref]) {
-                    newTemplate.signature2ImageBase64 = org.signatureAssets[template.signature2ImageBase64Ref];
-                }
-                return newTemplate;
-            });
-        }
-
         org.exams = (org.exams || []).map((exam: Exam): Exam => {
             if (exam.productSku) {
                 allPrices[exam.productSku] = {

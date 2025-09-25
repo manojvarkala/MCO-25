@@ -95,8 +95,10 @@ if (!function_exists('mco_render_settings_page')) {
 if (!function_exists('mco_register_settings_and_fields')) {
     function mco_register_settings_and_fields() {
         register_setting('mco_main_settings_group', 'mco_exam_app_url');
+        register_setting('mco_main_settings_group', 'mco_logo_url');
         add_settings_section('mco_main_section', 'Core Configuration', null, 'mco_main_settings_page');
         add_settings_field('mco_exam_app_url_field', 'Exam Application URL', 'mco_render_app_url_field', 'mco_main_settings_page', 'mco_main_section');
+        add_settings_field('mco_logo_url_field', 'Organization Logo URL', 'mco_render_logo_url_field', 'mco_main_settings_page', 'mco_main_section');
         add_settings_field('mco_config_version_field', 'Live Config Version', 'mco_render_config_version_field', 'mco_main_settings_page', 'mco_main_section');
         
         register_setting('mco_certificate_templates_group', 'mco_certificate_templates', ['sanitize_callback' => 'mco_sanitize_certificate_templates']);
@@ -110,6 +112,14 @@ if (!function_exists('mco_render_app_url_field')) {
     function mco_render_app_url_field() {
         echo '<input type="url" name="mco_exam_app_url" value="' . esc_attr(get_option('mco_exam_app_url')) . '" class="regular-text" placeholder="https://exams.yourdomain.com">';
         echo '<p class="description"><strong>Crucial:</strong> Enter the main URL of your standalone React app. Do not include a path or a trailing slash.</p>';
+    }
+}
+
+if (!function_exists('mco_render_logo_url_field')) {
+    function mco_render_logo_url_field() {
+        $logo_url = get_option('mco_logo_url', '');
+        echo '<input type="url" name="mco_logo_url" value="' . esc_attr($logo_url) . '" class="regular-text" placeholder="https://yourdomain.com/logo.png">';
+        echo '<p class="description">Optional. Provide a direct URL to your organization\'s logo. If left blank, the plugin will attempt to use the "Site Icon" from your WordPress settings (Appearance &rarr; Customize &rarr; Site Identity).</p>';
     }
 }
 
@@ -136,11 +146,11 @@ if (!function_exists('mco_render_certificate_templates_field')) {
                     <p><label>Body (use <code>{finalScore}</code> where the score should appear):<br><textarea name="mco_certificate_templates[<?php echo esc_attr($id); ?>][body]" rows="3" class="large-text"><?php echo esc_textarea($template['body']); ?></textarea></label></p>
                     <p><label>Signature 1 Name:<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name']); ?>" class="regular-text"></label></p>
                     <p><label>Signature 1 Title:<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1Title]" value="<?php echo esc_attr($template['signature1Title']); ?>" class="regular-text"></label></p>
-                    <p><label>Signature 1 Image (Base64 SVG):<br><textarea name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1ImageBase64]" rows="2" class="large-text"><?php echo esc_textarea($template['signature1ImageBase64']); ?></textarea></label></p>
+                    <p><label>Signature 1 Image URL (e.g., JPG, PNG):<br><input type="url" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1ImageUrl]" value="<?php echo esc_attr($template['signature1ImageUrl']); ?>" class="large-text"></label></p>
                     <hr style="margin: 1rem 0;">
                     <p><label>Signature 2 Name (optional):<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature2Name]" value="<?php echo esc_attr($template['signature2Name']); ?>" class="regular-text"></label></p>
                     <p><label>Signature 2 Title (optional):<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature2Title]" value="<?php echo esc_attr($template['signature2Title']); ?>" class="regular-text"></label></p>
-                    <p><label>Signature 2 Image (Base64 SVG):<br><textarea name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature2ImageBase64]" rows="2" class="large-text"><?php echo esc_textarea($template['signature2ImageBase64']); ?></textarea></label></p>
+                    <p><label>Signature 2 Image URL (e.g., JPG, PNG):<br><input type="url" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature2ImageUrl]" value="<?php echo esc_attr($template['signature2ImageUrl']); ?>" class="large-text"></label></p>
                 </div>
             </div>
             <?php
@@ -175,10 +185,10 @@ if (!function_exists('mco_sanitize_certificate_templates')) {
                 'body' => wp_kses_post($template['body']),
                 'signature1Name' => sanitize_text_field($template['signature1Name']),
                 'signature1Title' => sanitize_text_field($template['signature1Title']),
-                'signature1ImageBase64' => esc_url_raw($template['signature1ImageBase64']),
+                'signature1ImageUrl' => esc_url_raw($template['signature1ImageUrl']),
                 'signature2Name' => sanitize_text_field($template['signature2Name']),
                 'signature2Title' => sanitize_text_field($template['signature2Title']),
-                'signature2ImageBase64' => esc_url_raw($template['signature2ImageBase64']),
+                'signature2ImageUrl' => esc_url_raw($template['signature2ImageUrl']),
             ];
         }
         return $output;
@@ -220,8 +230,22 @@ if (!function_exists('mco_render_exam_program_meta_box')) {
         wp_nonce_field('mco_save_exam_meta', 'mco_exam_nonce');
         $source_url = get_post_meta($post->ID, '_mco_question_source_url', true);
         $cert_sku = get_post_meta($post->ID, '_mco_certification_exam_sku', true);
-        echo '<p><label>Question Source Google Sheet URL:</label><br><input type="url" name="mco_question_source_url" value="' . esc_attr($source_url) . '" style="width:100%;"></p>';
-        echo '<p><label>Certification Exam Product SKU:</label><br><input type="text" name="mco_certification_exam_sku" value="' . esc_attr($cert_sku) . '" style="width:100%;"></p>';
+        
+        echo '<p><label for="mco_question_source_url"><strong>Question Source Google Sheet URL:</strong></label><br>';
+        echo '<input type="url" id="mco_question_source_url" name="mco_question_source_url" value="' . esc_attr($source_url) . '" style="width:100%; margin-bottom: 0.5rem;">';
+        
+        echo '<p class="description" style="background-color: #f0f6fa; padding: 10px; border-radius: 4px; border-left: 3px solid #72aee6;">';
+        echo '<strong>Important:</strong> Ensure your Google Sheet is public ("Anyone with the link can view"). The sheet must be in CSV format with a header row and three columns with the exact headers: <code>question</code>, <code>options</code>, and <code>correctAnswer</code>.<br>';
+        echo '<ul style="list-style: disc; margin-left: 20px; margin-top: 5px;">';
+        echo '<li><strong>question:</strong> The full text of the question.</li>';
+        echo '<li><strong>options:</strong> All possible answers, separated by a pipe (<code>|</code>) character. Ex: <code>Option A|Option B|Option C</code></li>';
+        echo '<li><strong>correctAnswer:</strong> The full text of the correct answer, exactly as it appears in the options list. Ex: <code>Option C</code></li>';
+        echo '</ul></p></p>';
+
+        echo '<p style="margin-top: 1rem;"><label for="mco_certification_exam_sku"><strong>Certification Exam Product SKU:</strong></label><br>';
+        echo '<input type="text" id="mco_certification_exam_sku" name="mco_certification_exam_sku" value="' . esc_attr($cert_sku) . '" style="width:100%;">';
+        echo '<p class="description">Enter the WooCommerce product SKU for the main certification exam associated with this program.</p>';
+        echo '</p>';
     }
 }
 
@@ -276,10 +300,10 @@ if (!function_exists('mco_get_default_certificate_templates')) {
                 'body' => 'For successfully demonstrating proficiency in the subject matter with a final score of <strong>{finalScore}%</strong>.',
                 'signature1Name' => 'Program Director',
                 'signature1Title' => 'Certification Authority',
-                'signature1ImageBase64' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw1My4zMjYxQzE2Ljg2NDcsNDcuMjQzNyAyOC43MjQ3LDQwLjM0NDIgNDEuMzQzOCw0NS4xMTM4QzUzLjM2Niw0OS42Njc3IDU5Ljk0ODksNTguNDg4NyA3Mi4zNDM4LDYxLjUxMTRDODQuNzM4OCw2NC41MzQgOTkuNDUwNCw2MC4zODI0IDExMS4yNSw1NC43MkMxMjMuMDQ5Niw0OS4wNTc2IDEzNi44OTYsNDQuNjE4NCAxNDguOTIyLDQ1LjExMzhDMTYwLjk0Niw0NS42MDkzIDE2Ny44OTksNTEuMzMzNyAxNzkuNTgsNDkuNjY3N0MxOTEuMjYsNDggMTk4LjgzNCwzNi4xNzQzIDIxMC43NSwzNi4xNzQzQzIyMi42NjYsMzYuMTc0MyAyMjguODEzLDQ4LjA4NjYgMjM5LjUsNDkuNjY3N0MyNTAuMTg3LDUxLjI0ODkgMjU4LjU5OCw0NC4wMzIxIDI2OS41LDQ1LjExMzhDMjgwLjQwMSw0Ni4xOTU1IDI4Ni41LDUzLjA5NSAyOTEsNjEuNTExNCIgc3Ryb2tlPSIjMWUyOTJiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==',
+                'signature1ImageUrl' => '',
                 'signature2Name' => 'Lead Instructor',
                 'signature2Title' => 'Training Department',
-                'signature2ImageBase64' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMyNjUsNTAgMjg1LDgwIDI5MCw2MCIgc3Ryb2tlPSIjMWUyOTNiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg=='
+                'signature2ImageUrl' => ''
             ],
             'cert-generic' => [
                 'id' => 'cert-generic',
@@ -287,10 +311,10 @@ if (!function_exists('mco_get_default_certificate_templates')) {
                 'body' => 'For successfully completing the comprehensive examination with a final score of <strong>{finalScore}%</strong>.',
                 'signature1Name' => 'Program Director',
                 'signature1Title' => 'Certification Authority',
-                'signature1ImageBase64' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMCw1NSBDMTUsMzAgMzUsMjUgNDUsNDAgQzU1LDU1IDcwLDY1IDgwLDUwIEM5MCwzNSAxMDUsMzAgMTE1LDQ1IEMxMjUsNjAgMTQwLDY1IDE1MCw1MCBDMTYwLDM1IDE3NSwzNSAxODUsNTAgQzE5NSw2NSAyMTAsNzAgMjIwLDU1IEMyMzAsNDAgMjQ1LDMwIDI1NSw0NSBDMjY1LDYwIDI4MCw2NSAyOTAsNTAiIHN0cm9rZT0iIzFlMjkyYiIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=',
+                'signature1ImageUrl' => '',
                 'signature2Name' => 'Lead Instructor',
                 'signature2Title' => 'Training Department',
-                'signature2ImageBase64' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMyNjUsNTAgMjg1LDgwIDI5MCw2MCIgc3Ryb2tlPSIjMWUyOTNiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg=='
+                'signature2ImageUrl' => ''
             ]
         ];
     }

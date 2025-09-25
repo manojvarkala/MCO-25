@@ -1,6 +1,6 @@
 import React, { FC, useState, useEffect, useRef } from 'react';
-// FIX: Corrected import statement for react-router-dom to resolve module export errors.
-import { useParams, useNavigate } from "react-router-dom";
+// FIX: Corrected import for react-router-dom to resolve module export errors.
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -144,7 +144,7 @@ const Certificate: FC = () => {
 
     const { organization, template } = certData;
     const bodyText = template.body.replace('{finalScore}', `<strong>${certData.finalScore}%</strong>`);
-    const hasTwoSignatures = !!(template.signature2Name && template.signature2ImageBase64);
+    const hasTwoSignatures = !!(template.signature2Name && template.signature2ImageUrl);
 
     return (
         <>
@@ -186,7 +186,7 @@ const Certificate: FC = () => {
                     
                     <div className="mt-auto flex justify-between items-end pt-8">
                          <div className="text-center w-2/5">
-                            {template.signature1ImageBase64 && <img src={template.signature1ImageBase64} alt={template.signature1Name} className="h-12 mx-auto" />}
+                            {template.signature1ImageUrl && <img src={template.signature1ImageUrl} alt={template.signature1Name} className="h-12 mx-auto" />}
                             <p className="border-t-2 border-gray-400 mt-2 pt-2 font-semibold">{template.signature1Name}</p>
                             <p className="text-sm text-gray-500">{template.signature1Title}</p>
                         </div>
@@ -198,7 +198,7 @@ const Certificate: FC = () => {
                         
                         {hasTwoSignatures && (
                             <div className="text-center w-2/5">
-                                {template.signature2ImageBase64 && <img src={template.signature2ImageBase64} alt={template.signature2Name} className="h-12 mx-auto" />}
+                                {template.signature2ImageUrl && <img src={template.signature2ImageUrl} alt={template.signature2Name} className="h-12 mx-auto" />}
                                 <p className="border-t-2 border-gray-400 mt-2 pt-2 font-semibold">{template.signature2Name}</p>
                                 <p className="text-sm text-gray-500">{template.signature2Title}</p>
                             </div>
