@@ -23,6 +23,8 @@ if (!function_exists('mco_register_api_hooks')) {
         foreach ($api_endpoints as $endpoint => $is_admin) {
             add_action("wp_ajax_mco_{$endpoint}", "mco_api_{$endpoint}");
         }
+        // Add hook for config download
+        add_action("wp_ajax_mco_download_config", "mco_api_download_config");
     }
 }
 
@@ -70,6 +72,7 @@ if (!function_exists('mco_api_get_certificate_data')) {
     function mco_api_get_certificate_data() {
         $payload = mco_api_verify_user_and_get_payload();
         $user_id = $payload['user']['id'];
+        // The testId is passed as a GET parameter in the URL for this endpoint
         $test_id = isset($_GET['testId']) ? sanitize_text_field(wp_unslash($_GET['testId'])) : null;
         if (!$test_id) {
             wp_send_json_error(['message' => 'Test ID is required.'], 400);
@@ -199,6 +202,57 @@ if (!function_exists('mco_api_get_exam_stats')) {
         wp_send_json_success($stats);
     }
 }
+
+if (!function_exists('mco_api_download_config')) {
+    function mco_api_download_config() {
+        if (!isset($_POST['mco_download_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['mco_download_nonce'])), 'mco_download_config_nonce')) {
+            wp_die('Security check failed', 'Error', ['response' => 403]);
+        }
+        if (!current_user_can('manage_options')) {
+            wp_die('You do not have sufficient permissions to perform this action.', 'Error', ['response' => 403]);
+        }
+        $app_data = mco_get_app_config_data();
+        $site_url = get_site_url();
+        $parsed_url = parse_url($site_url);
+        $domain = isset($parsed_url['host']) ? str_replace('www.', '', $parsed_url['host']) : 'your-domain.com';
+        
+        $certificateTemplates = [
+            ["id" => "cert-practice-1", "title" => "Medical Coding Proficiency", "body" => "For successfully demonstrating proficiency in medical coding principles and practices...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-cpc", "title" => "Certified Professional Coder", "body" => "For successfully passing the comprehensive examination for Certified Professional Coders...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-cca", "title" => "Certified Coding Associate", "body" => "For successfully passing the comprehensive examination for Certified Coding Associates...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-billing", "title" => "Certified Medical Biller", "body" => "For successfully passing the comprehensive examination for Certified Medical Billers...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-ccs", "title" => "Certified Coding Specialist", "body" => "For successfully passing the comprehensive examination for Certified Coding Specialists...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-risk", "title" => "Certified Risk Adjustment Coder", "body" => "For successfully passing the comprehensive examination for Certified Risk Adjustment Coders...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-icd", "title" => "ICD-10-CM Proficiency", "body" => "For successfully passing the comprehensive examination for ICD-10-CM Proficiency...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-cpb", "title" => "Certified Professional Biller", "body" => "For successfully passing the comprehensive examination for Certified Professional Billers...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-crc", "title" => "Certified Risk Adjustment Coder", "body" => "For successfully passing the comprehensive examination for Certified Risk Adjustment Coders...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-cpma", "title" => "Certified Professional Medical Auditor", "body" => "For successfully passing the comprehensive examination for Certified Professional Medical Auditors...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-coc", "title" => "Certified Outpatient Coder", "body" => "For successfully passing the comprehensive examination for Certified Outpatient Coders...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-cic", "title" => "Certified Inpatient Coder", "body" => "For successfully passing the comprehensive examination for Certified Inpatient Coders...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-mta", "title" => "Medical Terminology & Anatomy Proficiency", "body" => "For successfully passing the comprehensive examination for Medical Terminology & Anatomy...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-ap", "title" => "Anatomy & Physiology Proficiency", "body" => "For successfully passing the comprehensive examination for Anatomy & Physiology Proficiency...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-em", "title" => "Evaluation & Management Proficiency", "body" => "For successfully passing the comprehensive examination for E/M Proficiency...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-rcm", "title" => "Revenue Cycle Management Proficiency", "body" => "For successfully passing the comprehensive examination for RCM Proficiency...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-hi", "title" => "Health Informatics Proficiency", "body" => "For successfully passing the comprehensive examination for Health Informatics Proficiency...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+            ["id" => "cert-mcf", "title" => "Medical Coding Fundamentals Proficiency", "body" => "For successfully passing the comprehensive examination for Medical Coding Fundamentals...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+        ];
+
+        $organization = [
+            'id' => 'org-' . sanitize_title(get_bloginfo('name')), 'name' => get_bloginfo('name'), 'website' => $domain,
+            'logo' => '/logo.png', 'exams' => $app_data['exams'], 'examProductCategories' => $app_data['examProductCategories'],
+            'suggestedBooks' => $app_data['suggestedBooks'], 'certificateTemplates' => $certificateTemplates
+        ];
+        $final_config = ['organizations' => [$organization]];
+        $json_data = json_encode($final_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $filename = sanitize_title($domain) . '-config.json';
+        header('Content-Type: application/json');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        echo $json_data;
+        exit;
+    }
+}
+
 
 // --- DISABLED/PLACEHOLDER ENDPOINTS ---
 if (!function_exists('mco_api_feature_unavailable')) {
