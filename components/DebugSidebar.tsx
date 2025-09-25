@@ -103,18 +103,22 @@ const DebugSidebar: FC = () => {
                                 <p className="text-sm"><strong>Error:</strong> {error}</p>
                                 
                                 <div className="mt-4 p-3 bg-slate-700 rounded border border-amber-400/50 text-amber-200 text-xs">
-                                    <h4 className="font-bold text-amber-300 mb-2">Troubleshooting Guide (Most Common Fix)</h4>
-                                    <p>This error is almost always caused by a security setting on your WordPress server (CORS). To fix it:</p>
-                                    <ol className="list-decimal list-inside my-2 space-y-1">
-                                        <li>Log in to your WordPress admin for <strong className="text-white">{apiUrl.replace('https://','')}</strong>.</li>
-                                        <li>Go to <strong className="text-white">Exam App Engine &rarr; Main Settings</strong>.</li>
-                                        <li>Find the setting <strong className="text-white">"Exam Application URL"</strong>.</li>
-                                        <li>Copy the URL below and paste it exactly into that field.</li>
+                                    <h4 className="font-bold text-amber-300 mb-2">Troubleshooting Guide</h4>
+                                     <ol className="list-decimal list-inside my-2 space-y-2">
+                                        <li>
+                                            <strong>CORS Setting (Most Common):</strong> In your WordPress admin, go to <strong className="text-white">Exam App Engine &rarr; Main Settings</strong> and ensure the "Exam Application URL" is set exactly to:
+                                            <div className="bg-slate-900 p-2 rounded text-center my-2 text-cyan-300"><code>{currentAppUrl}</code></div>
+                                        </li>
+                                        <li>
+                                            <strong>Plugin Conflict:</strong> A security plugin (like Wordfence) or a caching plugin on your WordPress site might be blocking API requests. Try temporarily disabling them to identify the conflict.
+                                        </li>
+                                        <li>
+                                            <strong>Server Firewall:</strong> Your web host's firewall may be blocking requests. Contact your hosting provider for assistance.
+                                        </li>
+                                        <li>
+                                            <strong>Full Diagnosis:</strong> For more detailed diagnostics, go to the <strong className="text-white">Admin Panel</strong> and use the "System Health Check" tool.
+                                        </li>
                                     </ol>
-                                    <div className="bg-slate-900 p-2 rounded text-center my-2">
-                                        <code className="text-cyan-300">{currentAppUrl}</code>
-                                    </div>
-                                    <p>Save the settings in WordPress and the connection issue should be resolved.</p>
                                 </div>
                             </Section>
                         )}
