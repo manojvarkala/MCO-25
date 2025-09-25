@@ -3,9 +3,42 @@ if (!defined('ABSPATH')) exit;
 
 // --- PRIMARY HOOKS ---
 add_action('rest_api_init', 'mco_register_rest_routes');
-add_action('rest_api_init', 'mco_add_custom_cors_headers', 15);
 
 // --- NEW, ROBUST CORS (Cross-Origin Resource Sharing) CONTROL ---
+// This single, comprehensive filter correctly handles CORS for both pre-flight OPTIONS requests
+// and actual GET/POST requests, preventing intermittent connection errors from the app.
+add_action('rest_api_init', function() {
+    // Remove the default WordPress CORS headers to prevent conflicts.
+    remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
+
+    // Add our custom, more reliable CORS handling filter.
+    add_filter('rest_pre_serve_request', function($value) {
+        $request_origin = get_http_origin();
+        if ($request_origin) {
+            $allowed_origins = mco_get_allowed_origins();
+            if (in_array($request_origin, $allowed_origins, true)) {
+                header('Access-Control-Allow-Origin: ' . esc_url($request_origin));
+            }
+        }
+        
+        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+        header('Access-Control-Allow-Credentials: true');
+        header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
+        // Add Vary: Origin header to instruct browsers to cache responses based on the Origin header.
+        // The 'false' parameter prevents this from replacing an existing Vary header if present.
+        header('Vary: Origin', false);
+
+        // If this is a pre-flight OPTIONS request, send a 200 OK response and exit immediately.
+        if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
+            status_header(200);
+            exit();
+        }
+
+        return $value;
+    }, 15);
+}, 15);
+
+
 if (!function_exists('mco_get_allowed_origins')) {
     function mco_get_allowed_origins() {
         $app_url_setting = get_option('mco_exam_app_url');
@@ -25,26 +58,6 @@ if (!function_exists('mco_get_allowed_origins')) {
             $allowed_origins[] = "{$scheme}://www.{$host}{$port}";
         }
         return $allowed_origins;
-    }
-}
-
-if (!function_exists('mco_add_custom_cors_headers')) {
-    function mco_add_custom_cors_headers() {
-        remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
-        add_filter('rest_pre_serve_request', function($value) {
-            $request_origin = get_http_origin();
-            if ($request_origin) {
-                $allowed_origins = mco_get_allowed_origins();
-                if (in_array($request_origin, $allowed_origins, true)) {
-                    header('Access-Control-Allow-Origin: ' . esc_url($request_origin));
-                }
-            }
-            header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-            header('Access-Control-Allow-Credentials: true');
-            header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
-            header('Vary: Origin');
-            return $value;
-        });
     }
 }
 
@@ -131,7 +144,11 @@ if (!function_exists('mco_api_get_questions_from_sheet')) {
                 if (empty(trim($row))) continue;
                 $data = str_getcsv($row);
                 if (count($data) === 3 && !empty(trim($data[0])) && !empty(trim($data[1])) && is_numeric(trim($data[2]))) {
-                    $options = preg_split('/\s*\|\s*/', trim($data[1]), -1, PREG_SPLIT_NO_EMPTY);
+                    // FIX: Replaced preg_split with a simpler and more robust explode/trim/filter combination
+                    // to correctly handle pipe-delimited options under all conditions.
+                    $options_raw = explode('|', trim($data[1]));
+                    $options = array_values(array_filter(array_map('trim', $options_raw)));
+
                     if (count($options) > 1 && intval(trim($data[2])) > 0 && intval(trim($data[2])) <= count($options)) {
                         $questions[] = ['id' => $i + 1, 'question' => trim($data[0]), 'options' => $options, 'correctAnswer' => intval(trim($data[2]))];
                     }
