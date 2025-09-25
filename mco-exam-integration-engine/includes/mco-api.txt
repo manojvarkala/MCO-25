@@ -1,184 +1,161 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-if (!function_exists('mco_register_api_hooks')) {
-    function mco_register_api_hooks() {
-        $api_endpoints = [
-            'get_user_results' => false,
-            'get_certificate_data' => false,
-            'update_name' => false,
-            'get_questions_from_sheet' => false,
-            'submit_result' => false,
-            'get_exam_stats' => true, // Admin only
-            // Disabled endpoints
-            'submit_feedback' => false,
-            'submit_review' => false,
-            'spin_wheel' => false,
-            'admin_add_spins' => true,
-            'admin_grant_prize' => true,
-            'admin_search_user' => true,
-            'admin_reset_spins' => true,
-            'admin_remove_prize' => true,
-        ];
-        foreach ($api_endpoints as $endpoint => $is_admin) {
-            add_action("wp_ajax_mco_{$endpoint}", "mco_api_{$endpoint}");
+add_action('rest_api_init', 'mco_register_rest_routes');
+
+if (!function_exists('mco_register_rest_routes')) {
+    function mco_register_rest_routes() {
+        $namespace = 'mco-app/v1';
+
+        // User-facing routes
+        register_rest_route($namespace, '/user-results', ['methods' => 'GET', 'callback' => 'mco_api_get_user_results', 'permission_callback' => 'mco_api_permission_check']);
+        register_rest_route($namespace, '/certificate-data/(?P<testId>[a-zA-Z0-9-]+)', ['methods' => 'GET', 'callback' => 'mco_api_get_certificate_data', 'permission_callback' => 'mco_api_permission_check', 'args' => ['testId' => ['required' => true]]]);
+        register_rest_route($namespace, '/update-name', ['methods' => 'POST', 'callback' => 'mco_api_update_name', 'permission_callback' => 'mco_api_permission_check']);
+        register_rest_route($namespace, '/questions-from-sheet', ['methods' => 'POST', 'callback' => 'mco_api_get_questions_from_sheet', 'permission_callback' => 'mco_api_permission_check']);
+        register_rest_route($namespace, '/submit-result', ['methods' => 'POST', 'callback' => 'mco_api_submit_result', 'permission_callback' => 'mco_api_permission_check']);
+
+        // Admin-facing routes
+        register_rest_route($namespace, '/exam-stats', ['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats', 'permission_callback' => 'mco_api_admin_permission_check']);
+        register_rest_route($namespace, '/debug-details', ['methods' => 'GET', 'callback' => 'mco_api_get_debug_details', 'permission_callback' => 'mco_api_admin_permission_check']);
+
+        // Disabled endpoints (return 501 Not Implemented)
+        $disabled_endpoints = ['/submit-feedback', '/submit-review', '/spin-wheel', '/add-spins', '/grant-prize', '/search-user', '/reset-spins', '/remove-prize'];
+        foreach ($disabled_endpoints as $endpoint) {
+            register_rest_route($namespace, $endpoint, ['methods' => WP_REST_Server::ALLMETHODS, 'callback' => 'mco_api_feature_unavailable_rest', 'permission_callback' => '__return_true']);
         }
-        // Add hook for config download
-        add_action("wp_ajax_mco_download_config", "mco_api_download_config");
     }
 }
 
-// --- API HELPER FUNCTIONS ---
-if (!function_exists('mco_api_verify_user_and_get_payload')) {
-    function mco_api_verify_user_and_get_payload($admin_only = false) {
-        $auth_header = isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : '';
+// --- PERMISSION CALLBACKS ---
+if (!function_exists('mco_api_permission_check')) {
+    function mco_api_permission_check(WP_REST_Request $request, $admin_only = false) {
+        $auth_header = $request->get_header('authorization');
         if (empty($auth_header) || !preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
-            wp_send_json_error(['message' => 'Authorization header missing or invalid.'], 401);
+            return new WP_Error('jwt_auth_missing_token', 'Authorization header missing or invalid.', ['status' => 401]);
         }
         $token = $matches[1];
         $payload = mco_verify_exam_jwt($token);
         if (!$payload || !isset($payload['user']['id'])) {
-            wp_send_json_error(['message' => 'Invalid or expired token.'], 403);
+            return new WP_Error('jwt_auth_invalid_token', 'Invalid or expired token.', ['status' => 403]);
         }
         if ($admin_only && (!isset($payload['user']['isAdmin']) || !$payload['user']['isAdmin'])) {
-            wp_send_json_error(['message' => 'Administrator access required.'], 403);
+            return new WP_Error('jwt_auth_admin_required', 'Administrator access required.', ['status' => 403]);
         }
-        return $payload;
+        $request->set_param('jwt_payload', $payload);
+        return true;
+    }
+}
+if (!function_exists('mco_api_admin_permission_check')) {
+    function mco_api_admin_permission_check(WP_REST_Request $request) {
+        return mco_api_permission_check($request, true);
     }
 }
 
-if (!function_exists('mco_get_json_post_data')) {
-    function mco_get_json_post_data() {
-        $json_data = file_get_contents('php://input');
-        $data = json_decode($json_data, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            wp_send_json_error(['message' => 'Invalid JSON data provided.'], 400);
-        }
-        return $data;
-    }
-}
 
-// --- USER-FACING API ENDPOINTS ---
+// --- API HANDLERS ---
 if (!function_exists('mco_api_get_user_results')) {
-    function mco_api_get_user_results() {
-        $payload = mco_api_verify_user_and_get_payload();
+    function mco_api_get_user_results(WP_REST_Request $request) {
+        $payload = $request->get_param('jwt_payload');
         $user_id = $payload['user']['id'];
         $results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
-        wp_send_json_success(array_values($results));
+        return new WP_REST_Response(array_values($results), 200);
     }
 }
-
 if (!function_exists('mco_api_get_certificate_data')) {
-    function mco_api_get_certificate_data() {
-        $payload = mco_api_verify_user_and_get_payload();
+    function mco_api_get_certificate_data(WP_REST_Request $request) {
+        $payload = $request->get_param('jwt_payload');
         $user_id = $payload['user']['id'];
-        // The testId is passed as a GET parameter in the URL for this endpoint
-        $test_id = isset($_GET['testId']) ? sanitize_text_field(wp_unslash($_GET['testId'])) : null;
-        if (!$test_id) {
-            wp_send_json_error(['message' => 'Test ID is required.'], 400);
-        }
+        $test_id = $request->get_param('testId');
         $results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
         if (!isset($results[$test_id])) {
-            wp_send_json_error(['message' => 'Result not found.'], 404);
+            return new WP_Error('not_found', 'Result not found.', ['status' => 404]);
         }
         $result = $results[$test_id];
-        $data = [
-            'certificateNumber' => $result['testId'],
-            'candidateName' => $payload['user']['name'],
-            'finalScore' => $result['score'],
-            'date' => date('F j, Y', $result['timestamp'] / 1000),
-            'examId' => $result['examId']
-        ];
-        wp_send_json_success($data);
+        $data = ['certificateNumber' => $result['testId'], 'candidateName' => $payload['user']['name'], 'finalScore' => $result['score'], 'date' => date('F j, Y', $result['timestamp'] / 1000), 'examId' => $result['examId']];
+        return new WP_REST_Response($data, 200);
     }
 }
-
 if (!function_exists('mco_api_update_name')) {
-    function mco_api_update_name() {
-        $payload = mco_api_verify_user_and_get_payload();
+    function mco_api_update_name(WP_REST_Request $request) {
+        $payload = $request->get_param('jwt_payload');
         $user_id = $payload['user']['id'];
-        $data = mco_get_json_post_data();
-        $new_name = isset($data['fullName']) ? sanitize_text_field($data['fullName']) : '';
+        $new_name = $request->get_param('fullName') ? sanitize_text_field($request->get_param('fullName')) : '';
         if (empty($new_name) || count(explode(' ', $new_name)) < 2) {
-            wp_send_json_error(['message' => 'Please provide a full name.'], 400);
+            return new WP_Error('bad_request', 'Please provide a full name.', ['status' => 400]);
         }
         wp_update_user(['ID' => $user_id, 'display_name' => $new_name]);
-        wp_send_json_success(['message' => 'Name updated successfully.']);
+        return new WP_REST_Response(['message' => 'Name updated successfully.'], 200);
     }
 }
-
 if (!function_exists('mco_api_submit_result')) {
-    function mco_api_submit_result() {
-        $payload = mco_api_verify_user_and_get_payload();
+    function mco_api_submit_result(WP_REST_Request $request) {
+        $payload = $request->get_param('jwt_payload');
         $user_id = $payload['user']['id'];
-        $result_data = mco_get_json_post_data();
+        $result_data = $request->get_json_params();
         if (empty($result_data['testId'])) {
-            wp_send_json_error(['message' => 'Invalid result data.'], 400);
+            return new WP_Error('bad_request', 'Invalid result data.', ['status' => 400]);
         }
         $results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
         $results[$result_data['testId']] = $result_data;
         update_user_meta($user_id, 'mco_exam_results', $results);
-        wp_send_json_success(['message' => 'Result saved successfully.']);
+        return new WP_REST_Response(['message' => 'Result saved successfully.'], 200);
     }
 }
-
 if (!function_exists('mco_api_get_questions_from_sheet')) {
-    function mco_api_get_questions_from_sheet() {
-        mco_api_verify_user_and_get_payload(); // Just for auth
-        $data = mco_get_json_post_data();
-        $sheet_url = isset($data['sheetUrl']) ? esc_url_raw($data['sheetUrl']) : '';
-        $count = isset($data['count']) ? intval($data['count']) : 50;
+    function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
+        $sheet_url = $request->get_param('sheetUrl') ? esc_url_raw($request->get_param('sheetUrl')) : '';
+        $count = $request->get_param('count') ? intval($request->get_param('count')) : 50;
+
         if (empty($sheet_url) || !preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
-            wp_send_json_error(['message' => 'Invalid Google Sheet URL provided.'], 400);
+            return new WP_Error('bad_request', 'Invalid Google Sheet URL provided.', ['status' => 400]);
         }
         $sheet_id = $matches[1];
         $csv_url = "https://docs.google.com/spreadsheets/d/{$sheet_id}/export?format=csv";
         $transient_key = 'mco_sheet_' . md5($sheet_id);
         $questions = get_transient($transient_key);
+
         if (false === $questions) {
             $response = wp_remote_get($csv_url, ['timeout' => 20]);
             if (is_wp_error($response) || wp_remote_retrieve_response_code($response) != 200) {
-                wp_send_json_error(['message' => 'Could not fetch questions from the Google Sheet. Please ensure it is public.'], 500);
+                return new WP_Error('fetch_error', 'Could not fetch questions. Please ensure the Google Sheet is public.', ['status' => 500]);
             }
             $csv_data = wp_remote_retrieve_body($response);
-            $rows = str_getcsv($csv_data, "\n");
+            $rows = preg_split('/\r\n|\r|\n/', $csv_data); // Robust line splitting
             $header = str_getcsv(array_shift($rows));
             $questions = [];
             foreach ($rows as $i => $row) {
+                if (empty(trim($row))) continue;
                 $row_data = str_getcsv($row);
                 if (count($row_data) >= 3) {
-                    $questions[] = [
-                        'id' => $i + 1,
-                        'question' => trim($row_data[0]),
-                        'options' => array_map('trim', array_slice($row_data, 1, -1)),
-                        'correctAnswer' => intval(trim(end($row_data)))
-                    ];
+                    $options = array_slice($row_data, 1, -1);
+                    $correct_answer = intval(trim(end($row_data)));
+                    if (!empty($row_data[0]) && !empty($options) && $correct_answer > 0 && $correct_answer <= count($options)) {
+                        $questions[] = ['id' => $i + 1, 'question' => trim($row_data[0]), 'options' => array_map('trim', $options), 'correctAnswer' => $correct_answer];
+                    }
                 }
             }
             set_transient($transient_key, $questions, 15 * MINUTE_IN_SECONDS);
         }
+        if (empty($questions)) {
+            return new WP_Error('no_questions', 'No valid questions found in the sheet.', ['status' => 500]);
+        }
         shuffle($questions);
         $selected_questions = array_slice($questions, 0, $count);
-        wp_send_json_success($selected_questions);
+        return new WP_REST_Response($selected_questions, 200);
     }
 }
 
-// --- ADMIN-FACING API ENDPOINTS ---
+// --- ADMIN-FACING API HANDLERS ---
 if (!function_exists('mco_api_get_exam_stats')) {
-    function mco_api_get_exam_stats() {
-        mco_api_verify_user_and_get_payload(true);
+    function mco_api_get_exam_stats(WP_REST_Request $request) {
         $all_results = [];
         $users = get_users(['fields' => ['ID']]);
         foreach ($users as $user) {
             $user_results = get_user_meta($user->ID, 'mco_exam_results', true);
-            if (!empty($user_results)) {
-                $all_results = array_merge($all_results, array_values($user_results));
-            }
+            if (!empty($user_results)) $all_results = array_merge($all_results, array_values($user_results));
         }
         $config_data = mco_get_app_config_data();
-        $cert_exams = array_filter($config_data['exams'], function($exam) {
-            return !$exam['isPractice'];
-        });
+        $cert_exams = array_filter($config_data['exams'], function($exam) { return !$exam['isPractice']; });
         $stats = [];
         foreach ($cert_exams as $exam) {
             $exam_id = $exam['id'];
@@ -188,84 +165,49 @@ if (!function_exists('mco_api_get_exam_stats')) {
             $passed = array_filter($attempts, function($r) use ($exam) { return $r['score'] >= $exam['passScore']; });
             $total_score = array_reduce($attempts, function($sum, $r) { return $sum + $r['score']; }, 0);
             
-            $stats[] = [
-                'examId' => $exam_id,
-                'examName' => $exam['name'],
-                'totalSales' => $product ? $product->get_total_sales() : 0,
-                'totalAttempts' => count($attempts),
-                'passed' => count($passed),
-                'failed' => count($attempts) - count($passed),
-                'passRate' => count($attempts) > 0 ? (count($passed) / count($attempts)) * 100 : 0,
-                'averageScore' => count($attempts) > 0 ? $total_score / count($attempts) : 0
-            ];
+            $stats[] = ['examId' => $exam_id, 'examName' => $exam['name'], 'totalSales' => $product ? $product->get_total_sales() : 0, 'totalAttempts' => count($attempts), 'passed' => count($passed), 'failed' => count($attempts) - count($passed), 'passRate' => count($attempts) > 0 ? (count($passed) / count($attempts)) * 100 : 0, 'averageScore' => count($attempts) > 0 ? $total_score / count($attempts) : 0];
         }
-        wp_send_json_success($stats);
+        return new WP_REST_Response($stats, 200);
     }
 }
+if (!function_exists('mco_api_get_debug_details')) {
+    function mco_api_get_debug_details(WP_REST_Request $request) {
+        $payload = $request->get_param('jwt_payload');
+        $user_id = $payload['user']['id'];
 
-if (!function_exists('mco_api_download_config')) {
-    function mco_api_download_config() {
-        if (!isset($_POST['mco_download_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['mco_download_nonce'])), 'mco_download_config_nonce')) {
-            wp_die('Security check failed', 'Error', ['response' => 403]);
+        // Sheet Test
+        $sheet_test = ['success' => false, 'message' => 'No exams with a Google Sheet URL found to test.'];
+        $config_data = mco_get_app_config_data();
+        $test_url = '';
+        if(!empty($config_data['exams'])) {
+            foreach($config_data['exams'] as $exam) { if(!empty($exam['questionSourceUrl'])) { $test_url = $exam['questionSourceUrl']; break; } }
         }
-        if (!current_user_can('manage_options')) {
-            wp_die('You do not have sufficient permissions to perform this action.', 'Error', ['response' => 403]);
+        if (!empty($test_url) && preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $test_url, $matches)) {
+            $sheet_id = $matches[1];
+            $csv_url = "https://docs.google.com/spreadsheets/d/{$sheet_id}/export?format=csv&gid=0";
+            $response = wp_remote_get($csv_url, ['timeout' => 15]);
+            if (is_wp_error($response)) {
+                $sheet_test = ['success' => false, 'message' => 'WP_Error: ' . $response->get_error_message()];
+            } elseif (wp_remote_retrieve_response_code($response) != 200) {
+                $sheet_test = ['success' => false, 'message' => 'HTTP Status ' . wp_remote_retrieve_response_code($response) . '. Ensure the sheet is public.'];
+            } else {
+                $body = wp_remote_retrieve_body($response);
+                $sheet_test = ['success' => true, 'message' => 'Successfully fetched ' . strlen($body) . ' bytes from the sheet.'];
+            }
         }
-        $app_data = mco_get_app_config_data();
-        $site_url = get_site_url();
-        $parsed_url = parse_url($site_url);
-        $domain = isset($parsed_url['host']) ? str_replace('www.', '', $parsed_url['host']) : 'your-domain.com';
-        
-        $certificateTemplates = [
-            ["id" => "cert-practice-1", "title" => "Medical Coding Proficiency", "body" => "For successfully demonstrating proficiency in medical coding principles and practices...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-cpc", "title" => "Certified Professional Coder", "body" => "For successfully passing the comprehensive examination for Certified Professional Coders...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-cca", "title" => "Certified Coding Associate", "body" => "For successfully passing the comprehensive examination for Certified Coding Associates...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-billing", "title" => "Certified Medical Biller", "body" => "For successfully passing the comprehensive examination for Certified Medical Billers...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-ccs", "title" => "Certified Coding Specialist", "body" => "For successfully passing the comprehensive examination for Certified Coding Specialists...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-risk", "title" => "Certified Risk Adjustment Coder", "body" => "For successfully passing the comprehensive examination for Certified Risk Adjustment Coders...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-icd", "title" => "ICD-10-CM Proficiency", "body" => "For successfully passing the comprehensive examination for ICD-10-CM Proficiency...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-cpb", "title" => "Certified Professional Biller", "body" => "For successfully passing the comprehensive examination for Certified Professional Billers...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-crc", "title" => "Certified Risk Adjustment Coder", "body" => "For successfully passing the comprehensive examination for Certified Risk Adjustment Coders...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-cpma", "title" => "Certified Professional Medical Auditor", "body" => "For successfully passing the comprehensive examination for Certified Professional Medical Auditors...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-coc", "title" => "Certified Outpatient Coder", "body" => "For successfully passing the comprehensive examination for Certified Outpatient Coders...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-cic", "title" => "Certified Inpatient Coder", "body" => "For successfully passing the comprehensive examination for Certified Inpatient Coders...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-mta", "title" => "Medical Terminology & Anatomy Proficiency", "body" => "For successfully passing the comprehensive examination for Medical Terminology & Anatomy...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-ap", "title" => "Anatomy & Physiology Proficiency", "body" => "For successfully passing the comprehensive examination for Anatomy & Physiology Proficiency...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-em", "title" => "Evaluation & Management Proficiency", "body" => "For successfully passing the comprehensive examination for E/M Proficiency...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-rcm", "title" => "Revenue Cycle Management Proficiency", "body" => "For successfully passing the comprehensive examination for RCM Proficiency...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-hi", "title" => "Health Informatics Proficiency", "body" => "For successfully passing the comprehensive examination for Health Informatics Proficiency...", "signature1Name" => "Dr. Amelia Reed", "signature1Title" => "Program Director", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
-            ["id" => "cert-mcf", "title" => "Medical Coding Fundamentals Proficiency", "body" => "For successfully passing the comprehensive examination for Medical Coding Fundamentals...", "signature1Name" => "Dr. John Carter", "signature1Title" => "Chief Medical Officer", "signature1ImageBase64" => "", "signature2Name" => "Manoj Balakrishnan", "signature2Title" => "CEO, Medical Coding Online", "signature2ImageBase64" => ""],
+
+        $debug_data = [
+            'user' => $payload['user'],
+            'purchases' => $payload['paidExamIds'],
+            'results' => array_values(get_user_meta($user_id, 'mco_exam_results', true) ?: []),
+            'sheetTest' => $sheet_test
         ];
-
-        $organization = [
-            'id' => 'org-' . sanitize_title(get_bloginfo('name')), 'name' => get_bloginfo('name'), 'website' => $domain,
-            'logo' => '/logo.png', 'exams' => $app_data['exams'], 'examProductCategories' => $app_data['examProductCategories'],
-            'suggestedBooks' => $app_data['suggestedBooks'], 'certificateTemplates' => $certificateTemplates
-        ];
-        $final_config = ['organizations' => [$organization]];
-        $json_data = json_encode($final_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        $filename = sanitize_title($domain) . '-config.json';
-        header('Content-Type: application/json');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Pragma: no-cache');
-        echo $json_data;
-        exit;
+        return new WP_REST_Response($debug_data, 200);
     }
 }
-
-
-// --- DISABLED/PLACEHOLDER ENDPOINTS ---
-if (!function_exists('mco_api_feature_unavailable')) {
-    function mco_api_feature_unavailable() {
-        wp_send_json_error(['message' => 'This feature is temporarily unavailable. The backend endpoint is not implemented.'], 501);
+if (!function_exists('mco_api_feature_unavailable_rest')) {
+    function mco_api_feature_unavailable_rest() {
+        return new WP_Error('not_implemented', 'This feature is temporarily unavailable.', ['status' => 501]);
     }
 }
-function mco_api_submit_feedback() { mco_api_feature_unavailable(); }
-function mco_api_submit_review() { mco_api_feature_unavailable(); }
-function mco_api_spin_wheel() { mco_api_feature_unavailable(); }
-function mco_api_admin_add_spins() { mco_api_feature_unavailable(); }
-function mco_api_admin_grant_prize() { mco_api_feature_unavailable(); }
-function mco_api_admin_search_user() { mco_api_feature_unavailable(); }
-function mco_api_admin_reset_spins() { mco_api_feature_unavailable(); }
-function mco_api_admin_remove_prize() { mco_api_feature_unavailable(); }
 ?>

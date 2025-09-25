@@ -27,9 +27,11 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
 
     try {
         const response = await fetch(urlToFetch, config);
+        // The backend now returns a consistent JSON object for both success and error
         const jsonResponse = await response.json();
 
         if (!response.ok) {
+            // Use the 'message' field from the structured JSON error response
             const errorMessage = jsonResponse?.message || response.statusText || `Server error: ${response.status}`;
             throw new Error(errorMessage);
         }
@@ -130,8 +132,12 @@ export const googleSheetsService = {
     },
     
     getDebugDetails: async (token: string): Promise<DebugData> => {
-        // This endpoint is not defined in the provided backend API file.
-        return Promise.reject(new Error("Debug feature is not available. The backend endpoint is not implemented."));
+        try {
+            return await apiFetch(`/debug-details`, 'GET', token);
+        } catch (error) {
+            console.error("Failed to get debug details from server:", error);
+            throw error;
+        }
     },
 
     updateUserName: async (token: string, newName: string): Promise<any> => {
