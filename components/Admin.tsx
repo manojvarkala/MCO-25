@@ -242,7 +242,7 @@ const Admin: FC = () => {
                     WordPress Integration & Data
                 </h2>
                 <p className="text-slate-600 mb-6">
-                    Manage the connection to your WordPress backend. Use the links below to get the integration plugin or download the live configuration file for debugging.
+                    Manage the connection to your WordPress backend. The "Download Live Config" button below fetches the complete, dynamically-generated JSON configuration from your WordPress API. This file represents the exact data the app is using and is essential for debugging content issues or setting up new tenants.
                 </p>
                 <div className="flex flex-wrap gap-4">
                     <a

@@ -1,3 +1,4 @@
+
 import React, { FC, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -88,9 +89,25 @@ const DebugSidebar: FC = () => {
                                 <Spinner />
                             </div>
                         )}
-                        {error && <p className="text-red-400">Error: {error}</p>}
+                        {error && (
+                            <Section title="Backend API Status" icon={<AlertTriangle size={16} className="text-red-400" />}>
+                                <p className="text-red-400"><strong>Status:</strong> Connection Failed</p>
+                                <p><strong>Error Message:</strong> {error}</p>
+                                <div className="mt-2 p-2 bg-slate-700 rounded text-amber-300 text-xs">
+                                    <strong>Troubleshooting Tip:</strong> This error often indicates a CORS (Cross-Origin Resource Sharing) issue. Please go to your WordPress admin panel under "Exam App Engine" &rarr; "Main Settings" and ensure the "Exam Application URL" exactly matches the URL of this web app.
+                                </div>
+                            </Section>
+                        )}
                         {debugData && (
                             <div>
+                                <Section title="Backend API & Data Status" icon={<CheckCircle size={16} className="text-green-400" />}>
+                                    <p className="text-green-400"><strong>API Connection:</strong> Success</p>
+                                    <p className={debugData?.sheetTest?.success ? 'text-green-400' : 'text-red-400'}>
+                                        <strong>Question Sheet:</strong> {debugData?.sheetTest?.success ? 'Accessible' : 'Failure'}
+                                    </p>
+                                    <p><strong>Sheet Message:</strong> {debugData?.sheetTest?.message ?? 'N/A'}</p>
+                                </Section>
+
                                 <Section title="User Details" icon={<User size={16} />}>
                                     <p><strong>ID:</strong> {debugData?.user?.id ?? 'N/A'}</p>
                                     <p><strong>Name:</strong> {debugData?.user?.name ?? 'N/A'}</p>
@@ -120,17 +137,13 @@ const DebugSidebar: FC = () => {
                                     ) : <p>No results synced.</p>}
                                 </Section>
 
-                                <Section title="Google Sheet Connectivity" icon={debugData?.sheetTest?.success ? <CheckCircle size={16} className="text-green-400" /> : <AlertTriangle size={16} className="text-red-400" />}>
-                                    <p className={debugData?.sheetTest?.success ? 'text-green-400' : 'text-red-400'}>
-                                        <strong>Status:</strong> {debugData?.sheetTest?.success ? 'Success' : 'Failure'}
-                                    </p>
-                                    <p><strong>Message:</strong> {debugData?.sheetTest?.message ?? 'N/A'}</p>
-                                    {debugData?.sheetTest?.data && (
+                                 {debugData?.sheetTest?.data && (
+                                     <Section title="Raw Sheet Test Data" icon={<FileText size={16} />}>
                                         <pre className="text-xs bg-slate-800 p-2 rounded mt-1 whitespace-pre-wrap break-all">
                                             {JSON.stringify(debugData.sheetTest.data, null, 2)}
                                         </pre>
-                                    )}
-                                </Section>
+                                    </Section>
+                                )}
                             </div>
                         )}
                     </div>
