@@ -42,6 +42,13 @@ if (!function_exists('mco_plugin_activate')) {
         require_once MCO_PLUGIN_DIR . 'includes/mco-cpts.php';
         mco_register_custom_post_types();
         flush_rewrite_rules();
+        
+        // Seed default certificate templates on first activation
+        if (get_option('mco_certificate_templates') === false) {
+            require_once MCO_PLUGIN_DIR . 'includes/mco-admin.php';
+            update_option('mco_certificate_templates', mco_get_default_certificate_templates());
+        }
+
         update_option('mco_plugin_version', MCO_PLUGIN_VERSION);
     }
 }

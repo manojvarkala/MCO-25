@@ -1,11 +1,12 @@
 import React, { FC, useState, useEffect, useCallback } from 'react';
-import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu, Video } from 'lucide-react';
+import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu, Video, DownloadCloud } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, SearchedUser, ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import Spinner from './Spinner.tsx';
+import { getApiBaseUrl } from '../services/apiConfig.ts';
 
 const prizeOptions = [
     { id: 'SUB_YEARLY', label: 'Annual Subscription' },
@@ -37,6 +38,9 @@ const Admin: FC = () => {
     const [stats, setStats] = useState<ExamStat[] | null>(null);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
     const [statsError, setStatsError] = useState<string | null>(null);
+    
+    // State for config download
+    const [isDownloadingConfig, setIsDownloadingConfig] = useState(false);
 
 
     const fetchStats = useCallback(async () => {
@@ -192,6 +196,35 @@ const Admin: FC = () => {
             handleCancel();
         }
     };
+    
+    const handleDownloadConfig = async () => {
+        setIsDownloadingConfig(true);
+        const toastId = toast.loading('Downloading configuration...');
+        try {
+            const baseUrl = getApiBaseUrl();
+            const response = await fetch(`${baseUrl}/wp-json/mco-app/v1/config`);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch config: ${response.statusText}`);
+            }
+            const configData = await response.json();
+            const jsonString = JSON.stringify(configData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${configData.organizations[0]?.website.replace('.com', '') || 'config'}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toast.success('Configuration downloaded!', { id: toastId });
+        } catch (error: any) {
+            console.error('Download failed:', error);
+            toast.error(`Download failed: ${error.message}`, { id: toastId });
+        } finally {
+            setIsDownloadingConfig(false);
+        }
+    };
 
 
     const inputClass = "w-full p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition";
@@ -204,18 +237,28 @@ const Admin: FC = () => {
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                 <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
                     <Code className="mr-3 text-cyan-500" />
-                    WordPress Integration
+                    WordPress Integration & Data
                 </h2>
                 <p className="text-slate-600 mb-6">
-                    This is the master plugin for integrating the exam app with WordPress. It handles SSO, data sync, and WooCommerce styling. The "Platform Blueprint" guide is now included within the plugin's admin page on your WordPress site.
+                    Manage the connection to your WordPress backend. Use the links below to get the integration plugin or download the live configuration file for debugging.
                 </p>
-                <a
-                    href="/#/integration"
-                    className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
-                >
-                    <ExternalLink size={20} className="mr-2" />
-                    Get Unified Plugin Code
-                </a>
+                <div className="flex flex-wrap gap-4">
+                    <a
+                        href="/#/integration"
+                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
+                    >
+                        <ExternalLink size={20} className="mr-2" />
+                        Get Unified Plugin Code
+                    </a>
+                    <button
+                        onClick={handleDownloadConfig}
+                        disabled={isDownloadingConfig}
+                        className="inline-flex items-center justify-center px-6 py-3 border border-slate-300 text-base font-medium rounded-md shadow-sm text-slate-700 bg-white hover:bg-slate-50 transition-transform transform hover:scale-105 disabled:opacity-50"
+                    >
+                        {isDownloadingConfig ? <Spinner/> : <DownloadCloud size={20} className="mr-2" />}
+                        {isDownloadingConfig ? 'Downloading...' : 'Download Live Config (.json)'}
+                    </button>
+                </div>
             </div>
             
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">

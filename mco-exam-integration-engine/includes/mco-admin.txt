@@ -2,7 +2,6 @@
 if (!defined('ABSPATH')) exit;
 
 // --- HOOKS ---
-add_action('admin_notices', 'mco_admin_notices');
 add_action('admin_menu', 'mco_exam_add_admin_menu');
 add_action('add_meta_boxes', 'mco_add_meta_boxes');
 add_action('save_post_product', 'mco_save_wc_product_meta_data');
@@ -36,6 +35,7 @@ if (!function_exists('mco_admin_notices')) {
         if (empty(get_option('mco_exam_app_url'))) echo '<div class="notice notice-warning"><p><strong>Exam App Engine:</strong> The Exam App URL is not set. Please <a href="' . admin_url('admin.php?page=mco-exam-engine') . '">configure it</a>.</p></div>';
     }
 }
+add_action('admin_notices', 'mco_admin_notices');
 
 // --- ADMIN MENU & PAGES ---
 if (!function_exists('mco_exam_add_admin_menu')) {
@@ -49,31 +49,39 @@ if (!function_exists('mco_exam_add_admin_menu')) {
 if (!function_exists('mco_render_settings_page')) {
     function mco_render_settings_page() {
         $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'main_settings';
+
+        if (isset($_POST['mco_flush_rewrites']) && check_admin_referer('mco_flush_rewrites_nonce')) {
+            flush_rewrite_rules(true);
+            add_action('admin_notices', function() {
+                echo '<div class="notice notice-success is-dismissible"><p>API routes have been successfully refreshed.</p></div>';
+            });
+        }
         ?>
         <div class="wrap">
             <h1>Exam App Engine Settings</h1>
+            <?php settings_errors(); do_action('admin_notices'); ?>
             <h2 class="nav-tab-wrapper">
                 <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
                 <a href="?page=mco-exam-engine&tab=certificate_templates" class="nav-tab <?php echo $active_tab == 'certificate_templates' ? 'nav-tab-active' : ''; ?>">Certificate Templates</a>
                 <a href="?page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
             </h2>
-            <form method="post" action="options.php">
-                <?php
-                if ($active_tab == 'main_settings') {
-                    settings_fields('mco_main_settings_group');
-                    do_settings_sections('mco_main_settings_page');
-                } elseif ($active_tab == 'certificate_templates') {
-                    settings_fields('mco_certificate_templates_group');
-                    do_settings_sections('mco_certificate_templates_page');
-                }
-                
-                if ($active_tab !== 'tools') {
+
+            <?php if ($active_tab !== 'tools'): ?>
+                <form method="post" action="options.php">
+                    <?php
+                    if ($active_tab == 'main_settings') {
+                        settings_fields('mco_main_settings_group');
+                        do_settings_sections('mco_main_settings_page');
+                    } elseif ($active_tab == 'certificate_templates') {
+                        settings_fields('mco_certificate_templates_group');
+                        do_settings_sections('mco_certificate_templates_page');
+                    }
                     submit_button();
-                } else {
-                    mco_render_tools_tab();
-                }
-                ?>
-            </form>
+                    ?>
+                </form>
+            <?php else: ?>
+                <?php mco_render_tools_tab(); ?>
+            <?php endif; ?>
         </div>
         <?php
     }
@@ -174,17 +182,13 @@ if (!function_exists('mco_sanitize_certificate_templates')) {
 
 if (!function_exists('mco_render_tools_tab')) {
     function mco_render_tools_tab() {
-        if (isset($_POST['mco_flush_rewrites']) && check_admin_referer('mco_flush_rewrites_nonce')) {
-            flush_rewrite_rules(true);
-            echo '<div class="notice notice-success is-dismissible"><p>API routes have been successfully refreshed.</p></div>';
-        }
         ?>
         <h3>Maintenance Tools</h3>
         <table class="form-table">
             <tr valign="top">
                 <th scope="row">API Routes</th>
                 <td>
-                    <form method="post" action="">
+                    <form method="post" action="?page=mco-exam-engine&tab=tools">
                         <?php wp_nonce_field('mco_flush_rewrites_nonce'); ?>
                         <input type="hidden" name="mco_flush_rewrites" value="1">
                         <p>If you see API errors, click this button to rebuild the API route list. This is often needed after plugin updates.</p>
@@ -255,6 +259,35 @@ if (!function_exists('mco_save_wc_product_meta_data')) {
     function mco_save_wc_product_meta_data($post_id) {
         if (!isset($_POST['mco_wc_nonce']) || !wp_verify_nonce($_POST['mco_wc_nonce'], 'mco_save_wc_meta') || (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)) return;
         if (isset($_POST['mco_product_type'])) update_post_meta($post_id, '_mco_product_type', sanitize_text_field($_POST['mco_product_type']));
+    }
+}
+
+if (!function_exists('mco_get_default_certificate_templates')) {
+    function mco_get_default_certificate_templates() {
+        return [
+            'cert-practice-1' => [
+                'id' => 'cert-practice-1',
+                'title' => 'Certificate of Proficiency',
+                'body' => 'For successfully demonstrating proficiency in the subject matter with a final score of <strong>{finalScore}%</strong>.',
+                'signature1Name' => 'Program Director',
+                'signature1Title' => 'Certification Authority',
+                'signature1ImageBase64' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw1My4zMjYxQzE2Ljg2NDcsNDcuMjQzNyAyOC43MjQ3LDQwLjM0NDIgNDEuMzQzOCw0NS4xMTM4QzUzLjM2Niw0OS42Njc3IDU5Ljk0ODksNTguNDg4NyA3Mi4zNDM4LDYxLjUxMTRDODQuNzM4OCw2NC41MzQgOTkuNDUwNCw2MC4zODI0IDExMS4yNSw1NC43MkMxMjMuMDQ5Niw0OS4wNTc2IDEzNi44OTYsNDQuNjE4NCAxNDguOTIyLDQ1LjExMzhDMTYwLjk0Niw0NS42MDkzIDE2Ny44OTksNTEuMzMzNyAxNzkuNTgsNDkuNjY3N0MxOTEuMjYsNDggMTk4LjgzNCwzNi4xNzQzIDIxMC43NSwzNi4xNzQzQzIyMi42NjYsMzYuMTc0MyAyMjguODEzLDQ4LjA4NjYgMjM5LjUsNDkuNjY3N0MyNTAuMTg3LDUxLjI0ODkgMjU4LjU5OCw0NC4wMzIxIDI2OS41LDQ1LjExMzhDMjgwLjQwMSw0Ni4xOTU1IDI4Ni41LDUzLjA5NSAyOTEsNjEuNTExNCIgc3Ryb2tlPSIjMWUyOTJiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==',
+                'signature2Name' => 'Lead Instructor',
+                'signature2Title' => 'Training Department',
+                'signature2ImageBase64' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMyNjUsNTAgMjg1LDgwIDI5MCw2MCIgc3Ryb2tlPSIjMWUyOTNiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg=='
+            ],
+            'cert-generic' => [
+                'id' => 'cert-generic',
+                'title' => 'Certificate of Completion',
+                'body' => 'For successfully completing the comprehensive examination with a final score of <strong>{finalScore}%</strong>.',
+                'signature1Name' => 'Program Director',
+                'signature1Title' => 'Certification Authority',
+                'signature1ImageBase64' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMCw1NSBDMTUsMzAgMzUsMjUgNDUsNDAgQzU1LDU1IDcwLDY1IDgwLDUwIEM5MCwzNSAxMDUsMzAgMTE1LDQ1IEMxMjUsNjAgMTQwLDY1IDE1MCw1MCBDMTYwLDM1IDE3NSwzNSAxODUsNTAgQzE5NSw2NSAyMTAsNzAgMjIwLDU1IEMyMzAsNDAgMjQ1LDMwIDI1NSw0NSBDMjY1LDYwIDI4MCw2NSAyOTAsNTAiIHN0cm9rZT0iIzFlMjkyYiIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=',
+                'signature2Name' => 'Lead Instructor',
+                'signature2Title' => 'Training Department',
+                'signature2ImageBase64' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xNSw1NSBDMjAsNDAgMzUsMzAgNDUsNDUgQzU1LDYwIDcwLDY1IDgwLDU1IEM5MCw0NSAxMDAsMzAgMTEwLDQ1IEMxMjAsNjAgMTM1LDY1IDE0NSw1NSBMMTYwLDQwIEwxNzUsNjAgTTE4NSw2MCBDMTk1LDQwIDIxMCw0NSAyMjAsNjAgQzIzMCw3NSAyNDUsNzAgMjU1LDYwIEMyNjUsNTAgMjg1LDgwIDI5MCw2MCIgc3Ryb2tlPSIjMWUyOTNiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg=='
+            ]
+        ];
     }
 }
 ?>
