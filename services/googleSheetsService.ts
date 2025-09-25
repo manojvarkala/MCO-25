@@ -3,6 +3,9 @@ import toast from 'react-hot-toast';
 import { GoogleGenAI, Type } from "@google/genai";
 import { getApiBaseUrl } from './apiConfig.ts';
 
+// A simple module-level lock to prevent concurrent sync operations.
+let isSyncing = false;
+
 const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string | null, data: Record<string, any> = {}) => {
     const API_BASE_URL = getApiBaseUrl();
     const fullUrl = `${API_BASE_URL}/wp-json/mco-app/v1${endpoint}`;
@@ -43,6 +46,8 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         let errorMessage = `Could not connect to the API server (${API_BASE_URL}).`;
         if (networkError instanceof TypeError && networkError.message.includes('fetch')) {
             errorMessage += ' This might be a network issue or a CORS configuration problem on the server.';
+        } else if (networkError instanceof SyntaxError) {
+             errorMessage = `The server returned an invalid response. This may be a temporary issue on the server.`;
         } else {
              errorMessage += ` Details: ${networkError.message}.`;
         }
@@ -72,6 +77,12 @@ export const googleSheetsService = {
     
     // --- RESULTS HANDLING (CACHE-FIRST APPROACH) ---
     syncResults: async (user: User, token: string): Promise<void> => {
+        if (isSyncing) {
+            console.warn("Synchronization already in progress. Skipping this request.");
+            return;
+        }
+        isSyncing = true;
+
         try {
             const serverResults: TestResult[] = await apiFetch('/user-results', 'GET', token) || [];
 
@@ -91,6 +102,8 @@ export const googleSheetsService = {
         } catch (error) {
             console.error("Failed to sync results with server:", error);
             throw error;
+        } finally {
+            isSyncing = false;
         }
     },
 

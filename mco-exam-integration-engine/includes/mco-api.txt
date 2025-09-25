@@ -144,12 +144,10 @@ if (!function_exists('mco_api_get_questions_from_sheet')) {
                 if (empty(trim($row))) continue;
                 $data = str_getcsv($row);
                 if (count($data) === 3 && !empty(trim($data[0])) && !empty(trim($data[1])) && is_numeric(trim($data[2]))) {
-                    // FIX: Replaced preg_split with a simpler and more robust explode/trim/filter combination
-                    // to correctly handle pipe-delimited options under all conditions.
-                    $options_raw = explode('|', trim($data[1]));
-                    $options = array_values(array_filter(array_map('trim', $options_raw)));
-
-                    if (count($options) > 1 && intval(trim($data[2])) > 0 && intval(trim($data[2])) <= count($options)) {
+                    // FIX: Replaced explode with a more robust preg_split to correctly handle pipes with variable whitespace.
+                    $options = preg_split('/\s*\|\s*/', trim($data[1]), -1, PREG_SPLIT_NO_EMPTY);
+                    // FIX: Changed condition to >= 1 to allow single-option questions.
+                    if (count($options) >= 1 && intval(trim($data[2])) > 0 && intval(trim($data[2])) <= count($options)) {
                         $questions[] = ['id' => $i + 1, 'question' => trim($data[0]), 'options' => $options, 'correctAnswer' => intval(trim($data[2]))];
                     }
                 }
