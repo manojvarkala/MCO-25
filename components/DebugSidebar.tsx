@@ -1,5 +1,3 @@
-
-
 import React, { FC, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -107,8 +105,8 @@ const DebugSidebar: FC = () => {
                                 <div className="mt-4 p-3 bg-slate-700 rounded border border-amber-400/50 text-amber-200 text-xs">
                                     {isAuthError ? (
                                         <>
-                                            <h4 className="font-bold text-amber-300 mb-2 text-base">Primary Solution</h4>
-                                            <p className="mb-2">This error almost always means your server is stripping the "Authorization" header from API requests.</p>
+                                            <h4 className="font-bold text-amber-300 mb-2 text-base">Primary Solution (Apache Servers)</h4>
+                                            <p className="mb-2">This error almost always means your Apache server is stripping the "Authorization" header from API requests.</p>
                                             <ol className="list-decimal list-inside my-2 space-y-3">
                                                 <li>
                                                     <strong className="text-white">Update .htaccess file</strong><br/>
@@ -124,12 +122,34 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
                                                     </div>
                                                     After adding this, clear any server or plugin caches.
                                                 </li>
+                                            </ol>
+                                            
+                                            <h4 className="font-bold text-amber-300 mt-6 mb-2 text-base border-t border-amber-400/30 pt-4">If the Primary Solution Fails...</h4>
+                                            <p className="mb-2">If the <code>.htaccess</code> fix didn't work, one of these is likely the cause:</p>
+                                            <ol className="list-decimal list-inside my-2 space-y-4">
                                                 <li>
-                                                    <strong>Check CORS Setting:</strong> In WordPress, ensure "Exam Application URL" is set to:
-                                                    <div className="bg-slate-900 p-2 rounded text-center my-2 text-cyan-300"><code>{currentAppUrl}</code></div>
+                                                    <strong className="text-white">Are you using an Nginx server?</strong><br/>
+                                                    The <code>.htaccess</code> file is for Apache servers only. If your host uses Nginx, you must add the following to your site's Nginx configuration file (you may need to ask your host for help):
+                                                    <div className="bg-slate-900 p-2 rounded my-2 text-cyan-300">
+                                                        <pre className="whitespace-pre-wrap"><code>
+{`location ~ \\.php$ {
+    # ... your existing rules ...
+    fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
+    fastcgi_param HTTP_AUTHORIZATION $http_authorization; # Add this line
+    fastcgi_read_timeout 300;
+}`}
+                                                        </code></pre>
+                                                    </div>
+                                                    The key is the <code>fastcgi_param HTTP_AUTHORIZATION $http_authorization;</code> line inside your PHP location block.
                                                 </li>
-                                                 <li>
-                                                    <strong>Plugin Conflicts:</strong> A security plugin (like Wordfence) could be interfering. Check its logs.
+                                                <li>
+                                                    <strong className="text-white">Contact Your Hosting Provider</strong><br/>
+                                                    Some hosting environments have security rules you cannot override. Contact their support and specifically ask them to: <strong className="text-amber-200">"Please ensure that the HTTP Authorization header is being passed through to WordPress PHP scripts for the REST API."</strong>
+                                                </li>
+                                                <li>
+                                                    <strong>Final Checks:</strong> Ensure the "Exam Application URL" in your WordPress settings is exactly:
+                                                    <div className="bg-slate-900 p-2 rounded text-center my-2 text-cyan-300"><code>{currentAppUrl}</code></div>
+                                                    Also, temporarily disable any security plugins (like Wordfence) to check for conflicts.
                                                 </li>
                                             </ol>
                                         </>

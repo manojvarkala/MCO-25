@@ -31,6 +31,10 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         const jsonResponse = await response.json();
 
         if (!response.ok) {
+            // Check for the specific JWT error code from the backend plugin
+            if (jsonResponse?.code === 'jwt_auth_missing_token') {
+                throw new Error("Authorization header missing. This is a server configuration issue. Please check the Admin Debug Sidebar for the solution.");
+            }
             const errorMessage = jsonResponse?.message || response.statusText || `Server error: ${response.status}`;
             throw new Error(errorMessage);
         }
