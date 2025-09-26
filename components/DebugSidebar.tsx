@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -104,16 +105,26 @@ const DebugSidebar: FC = () => {
                                 
                                 <div className="mt-4 p-3 bg-slate-700 rounded border border-amber-400/50 text-amber-200 text-xs">
                                     <h4 className="font-bold text-amber-300 mb-2">Troubleshooting Guide</h4>
-                                     <ol className="list-decimal list-inside my-2 space-y-2">
+                                     <ol className="list-decimal list-inside my-2 space-y-3">
                                         <li>
-                                            <strong>CORS Setting (Most Common):</strong> In your WordPress admin, go to <strong className="text-white">Exam App Engine &rarr; Main Settings</strong> and ensure the "Exam Application URL" is set exactly to:
+                                            <strong>CORS Setting:</strong> In your WordPress admin, go to <strong className="text-white">Exam App Engine &rarr; Main Settings</strong> and ensure the "Exam Application URL" is set exactly to:
                                             <div className="bg-slate-900 p-2 rounded text-center my-2 text-cyan-300"><code>{currentAppUrl}</code></div>
                                         </li>
                                         <li>
-                                            <strong>Plugin Conflict:</strong> A security plugin (like Wordfence) or a caching plugin on your WordPress site might be blocking API requests. Try temporarily disabling them to identify the conflict.
+                                            <strong>Server Configuration (.htaccess):</strong> If your server uses Apache, it may be stripping the required 'Authorization' header. Add the following lines to the very top of your <strong>.htaccess</strong> file in your WordPress root directory (before the `# BEGIN WordPress` block):
+                                            <div className="bg-slate-900 p-2 rounded my-2 text-cyan-300">
+                                                <pre className="whitespace-pre-wrap"><code>
+{`# Fix for Missing Authorization Header
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>`}
+                                                </code></pre>
+                                            </div>
                                         </li>
                                         <li>
-                                            <strong>Server Firewall:</strong> Your web host's firewall may be blocking requests. Contact your hosting provider for assistance.
+                                            <strong>Plugin Conflict:</strong> A security plugin (like Wordfence) or a caching plugin on your WordPress site might be blocking API requests. Try temporarily disabling them to identify the conflict.
                                         </li>
                                         <li>
                                             <strong>Full Diagnosis:</strong> For more detailed diagnostics, go to the <strong className="text-white">Admin Panel</strong> and use the "System Health Check" tool.

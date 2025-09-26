@@ -179,20 +179,20 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
             if (empty(trim($row))) continue;
             $data = str_getcsv($row);
             if (count($data) >= 3 && !empty(trim($data[0])) && !empty(trim($data[1])) && !empty(trim($data[2]))) {
-                // More robust trimming for each option
                 $options_raw = explode('|', $data[1]);
                 $options = [];
                 foreach ($options_raw as $opt) {
                     $options[] = preg_replace('/^[\pZ\pC]+|[\pZ\pC]+$/u', '', $opt);
                 }
-
-                // More robust trimming for the correct answer
+                
                 $correct_answer_text = preg_replace('/^[\pZ\pC]+|[\pZ\pC]+$/u', '', $data[2]);
                 
-                // Case-insensitive search for the correct answer index
                 $correct_answer_index = false;
+                $trimmed_correct_answer = function_exists('mb_strtolower') ? mb_strtolower(trim($correct_answer_text), 'UTF-8') : strtolower(trim($correct_answer_text));
+
                 foreach ($options as $index => $option_text) {
-                    if (strcasecmp($option_text, $correct_answer_text) === 0) {
+                    $trimmed_option_text = function_exists('mb_strtolower') ? mb_strtolower(trim($option_text), 'UTF-8') : strtolower(trim($option_text));
+                    if ($trimmed_option_text === $trimmed_correct_answer) {
                         $correct_answer_index = $index;
                         break;
                     }
