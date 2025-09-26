@@ -4,16 +4,20 @@ if (!defined('ABSPATH')) exit;
 // --- DYNAMIC DATA HELPERS ---
 if (!function_exists('mco_get_exam_app_url')) {
     function mco_get_exam_app_url() {
-        $url = get_option('mco_exam_app_url', '');
-        if (empty($url)) {
-            return '';
+        $app_urls_string = get_option('mco_exam_app_url', '');
+        if (empty($app_urls_string)) return '';
+
+        $urls = preg_split('/\r\n|\r|\n/', $app_urls_string);
+        
+        // Find the first non-empty URL and return it as the primary one for redirects.
+        foreach ($urls as $url) {
+            $trimmed_url = trim($url);
+            if (!empty($trimmed_url)) {
+                return $trimmed_url;
+            }
         }
-        $url_parts = parse_url($url);
-        $scheme   = isset($url_parts['scheme']) ? $url_parts['scheme'] . '://' : '';
-        $host     = isset($url_parts['host']) ? $url_parts['host'] : '';
-        $port     = isset($url_parts['port']) ? ':' . $url_parts['port'] : '';
-        $path     = isset($url_parts['path']) ? rtrim($url_parts['path'], '/') : '';
-        return $scheme . $host . $port . $path;
+
+        return ''; // Fallback
     }
 }
 

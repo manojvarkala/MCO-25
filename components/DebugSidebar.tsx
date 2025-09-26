@@ -128,6 +128,10 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
                                             <p className="mb-2">If the <code>.htaccess</code> fix didn't work, one of these is likely the cause:</p>
                                             <ol className="list-decimal list-inside my-2 space-y-4">
                                                 <li>
+                                                    <strong className="text-white">Multi-Domain Setup: Is your app on Vercel or another temporary URL?</strong><br/>
+                                                    If you access the app from multiple URLs (e.g., <code>exam.coding-online.net</code> AND <code>mco-25.vercel.app</code>), you must add <strong>ALL</strong> of them to the plugin settings. In WordPress, go to <strong className="text-white">Exam App Engine &rarr; Main Settings</strong> and add each URL to the "Exam Application URL(s)" box, each on a new line.
+                                                </li>
+                                                <li>
                                                     <strong className="text-white">Are you using an Nginx server?</strong><br/>
                                                     The <code>.htaccess</code> file is for Apache servers only. If your host uses Nginx, you must add the following to your site's Nginx configuration file (you may need to ask your host for help):
                                                     <div className="bg-slate-900 p-2 rounded my-2 text-cyan-300">
@@ -146,11 +150,6 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
                                                     <strong className="text-white">Contact Your Hosting Provider</strong><br/>
                                                     Some hosting environments have security rules you cannot override. Contact their support and specifically ask them to: <strong className="text-amber-200">"Please ensure that the HTTP Authorization header is being passed through to WordPress PHP scripts for the REST API."</strong>
                                                 </li>
-                                                <li>
-                                                    <strong>Final Checks:</strong> Ensure the "Exam Application URL" in your WordPress settings is exactly:
-                                                    <div className="bg-slate-900 p-2 rounded text-center my-2 text-cyan-300"><code>{currentAppUrl}</code></div>
-                                                    Also, temporarily disable any security plugins (like Wordfence) to check for conflicts.
-                                                </li>
                                             </ol>
                                         </>
                                     ) : (
@@ -158,7 +157,7 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
                                             <h4 className="font-bold text-amber-300 mb-2">Troubleshooting Guide</h4>
                                             <ol className="list-decimal list-inside my-2 space-y-3">
                                                 <li>
-                                                    <strong>CORS Setting:</strong> In your WordPress admin, go to <strong className="text-white">Exam App Engine &rarr; Main Settings</strong> and ensure the "Exam Application URL" is set exactly to:
+                                                    <strong>CORS Setting:</strong> In your WordPress admin, go to <strong className="text-white">Exam App Engine &rarr; Main Settings</strong> and ensure the "Exam Application URL(s)" field contains your app's URL, exactly:
                                                     <div className="bg-slate-900 p-2 rounded text-center my-2 text-cyan-300"><code>{currentAppUrl}</code></div>
                                                 </li>
                                                 <li>

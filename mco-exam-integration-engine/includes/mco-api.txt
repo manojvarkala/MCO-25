@@ -32,18 +32,27 @@ if (!function_exists('mco_register_api_hooks')) {
 
 
 function mco_get_allowed_origins() {
-    $app_url_setting = get_option('mco_exam_app_url');
-    if (!$app_url_setting) return [];
-    $parsed_setting = parse_url(rtrim($app_url_setting, '/'));
-    if (!isset($parsed_setting['host'])) return [];
-    $scheme = $parsed_setting['scheme'] ?? 'https';
-    $host = $parsed_setting['host'];
-    $port = isset($parsed_setting['port']) ? ':' . $parsed_setting['port'] : '';
-    $allowed_origins = ["{$scheme}://{$host}{$port}"];
-    if (strpos($host, 'www.') === 0) {
-        $allowed_origins[] = "{$scheme}://".substr($host, 4)."{$port}";
-    } else {
-        $allowed_origins[] = "{$scheme}://www.{$host}{$port}";
+    $app_urls_string = get_option('mco_exam_app_url');
+    if (empty($app_urls_string)) return [];
+
+    $urls = preg_split('/\r\n|\r|\n/', $app_urls_string);
+    $allowed_origins = [];
+
+    foreach ($urls as $url) {
+        $trimmed_url = trim($url);
+        if (empty($trimmed_url)) continue;
+
+        $parsed_url = parse_url($trimmed_url);
+        if (!isset($parsed_url['host'])) continue;
+        
+        $scheme = $parsed_url['scheme'] ?? 'https';
+        $host = $parsed_url['host'];
+        $port = isset($parsed_url['port']) ? ':' . $parsed_url['port'] : '';
+        
+        $origin = "{$scheme}://{$host}{$port}";
+        if (!in_array($origin, $allowed_origins, true)) {
+            $allowed_origins[] = $origin;
+        }
     }
     return $allowed_origins;
 }
