@@ -64,6 +64,7 @@ const DebugSidebar: FC = () => {
     
     const currentAppUrl = window.location.origin;
     const apiUrl = getApiBaseUrl();
+    const isAuthError = error && (error.toLowerCase().includes('jwt_auth_missing_token') || error.toLowerCase().includes('authorization header missing'));
 
     return (
         <>
@@ -104,32 +105,51 @@ const DebugSidebar: FC = () => {
                                 <p className="text-sm"><strong>Error:</strong> {error}</p>
                                 
                                 <div className="mt-4 p-3 bg-slate-700 rounded border border-amber-400/50 text-amber-200 text-xs">
-                                    <h4 className="font-bold text-amber-300 mb-2">Troubleshooting Guide</h4>
-                                     <ol className="list-decimal list-inside my-2 space-y-3">
-                                        <li>
-                                            <strong>CORS Setting:</strong> In your WordPress admin, go to <strong className="text-white">Exam App Engine &rarr; Main Settings</strong> and ensure the "Exam Application URL" is set exactly to:
-                                            <div className="bg-slate-900 p-2 rounded text-center my-2 text-cyan-300"><code>{currentAppUrl}</code></div>
-                                        </li>
-                                        <li>
-                                            <strong>Server Configuration (.htaccess):</strong> If your server uses Apache, it may be stripping the required 'Authorization' header. Add the following lines to the very top of your <strong>.htaccess</strong> file in your WordPress root directory (before the `# BEGIN WordPress` block):
-                                            <div className="bg-slate-900 p-2 rounded my-2 text-cyan-300">
-                                                <pre className="whitespace-pre-wrap"><code>
-{`# Fix for Missing Authorization Header
-<IfModule mod_rewrite.c>
+                                    {isAuthError ? (
+                                        <>
+                                            <h4 className="font-bold text-amber-300 mb-2 text-base">Primary Solution</h4>
+                                            <p className="mb-2">This error almost always means your server is stripping the "Authorization" header from API requests.</p>
+                                            <ol className="list-decimal list-inside my-2 space-y-3">
+                                                <li>
+                                                    <strong className="text-white">Update .htaccess file</strong><br/>
+                                                    Add the following code to the <strong>very top</strong> of your <code>.htaccess</code> file in the WordPress root directory (before the <code># BEGIN WordPress</code> block):
+                                                    <div className="bg-slate-900 p-2 rounded my-2 text-cyan-300">
+                                                        <pre className="whitespace-pre-wrap"><code>
+{`<IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteCond %{HTTP:Authorization} .
 RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 </IfModule>`}
-                                                </code></pre>
-                                            </div>
-                                        </li>
-                                        <li>
-                                            <strong>Plugin Conflict:</strong> A security plugin (like Wordfence) or a caching plugin on your WordPress site might be blocking API requests. Try temporarily disabling them to identify the conflict.
-                                        </li>
-                                        <li>
-                                            <strong>Full Diagnosis:</strong> For more detailed diagnostics, go to the <strong className="text-white">Admin Panel</strong> and use the "System Health Check" tool.
-                                        </li>
-                                    </ol>
+                                                        </code></pre>
+                                                    </div>
+                                                    After adding this, clear any server or plugin caches.
+                                                </li>
+                                                <li>
+                                                    <strong>Check CORS Setting:</strong> In WordPress, ensure "Exam Application URL" is set to:
+                                                    <div className="bg-slate-900 p-2 rounded text-center my-2 text-cyan-300"><code>{currentAppUrl}</code></div>
+                                                </li>
+                                                 <li>
+                                                    <strong>Plugin Conflicts:</strong> A security plugin (like Wordfence) could be interfering. Check its logs.
+                                                </li>
+                                            </ol>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <h4 className="font-bold text-amber-300 mb-2">Troubleshooting Guide</h4>
+                                            <ol className="list-decimal list-inside my-2 space-y-3">
+                                                <li>
+                                                    <strong>CORS Setting:</strong> In your WordPress admin, go to <strong className="text-white">Exam App Engine &rarr; Main Settings</strong> and ensure the "Exam Application URL" is set exactly to:
+                                                    <div className="bg-slate-900 p-2 rounded text-center my-2 text-cyan-300"><code>{currentAppUrl}</code></div>
+                                                </li>
+                                                <li>
+                                                    <strong>Plugin Conflict:</strong> A security plugin (like Wordfence) or a caching plugin might be blocking API requests. Try temporarily disabling them.
+                                                </li>
+                                                <li>
+                                                    <strong>Full Diagnosis:</strong> For more detailed diagnostics, go to the <strong className="text-white">Admin Panel</strong> and use the "System Health Check" tool.
+                                                </li>
+                                            </ol>
+                                        </>
+                                    )}
                                 </div>
                             </Section>
                         )}
