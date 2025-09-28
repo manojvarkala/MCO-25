@@ -28,32 +28,46 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
 
     try {
         const response = await fetch(fullUrl, config);
-        const jsonResponse = await response.json();
+        // Get response as text to handle potential non-JSON responses gracefully.
+        const responseText = await response.text();
 
         if (!response.ok) {
-            // Check for the specific JWT error code from the backend plugin
-            if (jsonResponse?.code === 'jwt_auth_missing_token') {
+            let errorData;
+            try {
+                // An error response from the WP REST API should be JSON.
+                errorData = JSON.parse(responseText);
+            } catch (e) {
+                // If it's not JSON, it's likely an HTML error page from the server.
+                // Throw the raw text as it might contain useful debug info.
+                throw new Error(responseText || response.statusText || `Server error: ${response.status}`);
+            }
+            
+            if (errorData?.code === 'jwt_auth_missing_token') {
                 throw new Error("Authorization header missing. This is a server configuration issue. Please check the Admin Debug Sidebar for the solution.");
             }
-            const errorMessage = jsonResponse?.message || response.statusText || `Server error: ${response.status}`;
+            const errorMessage = errorData?.message || response.statusText || `Server error: ${response.status}`;
             throw new Error(errorMessage);
         }
         
-        return jsonResponse;
+        // If the response was successful (2xx status), try to parse the body as JSON.
+        try {
+            // Handle empty successful responses (e.g. 204 No Content) which would have an empty body.
+            return responseText ? JSON.parse(responseText) : {};
+        } catch (error) {
+            // This catches cases where the server returns a 200 OK but the body is not valid JSON (e.g., PHP notices).
+            console.error(`API Call to ${endpoint} returned OK but with invalid JSON:`, responseText);
+            throw new Error('The server returned an invalid response. This may be a temporary issue.');
+        }
 
     } catch (error: any) {
         console.error(`API Fetch Error to ${endpoint}:`, error);
 
-        // Handle specific network/parsing errors with user-friendly messages
+        // Handle network errors specifically.
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
             throw new Error(`Could not connect to the API server at ${API_BASE_URL}. Please check your internet connection.`);
         }
-        if (error instanceof SyntaxError) {
-            throw new Error('The server returned an invalid response. This may be a temporary issue.');
-        }
-
-        // For all other errors (including our own application errors thrown from !response.ok),
-        // re-throw them without modification to avoid confusing concatenated messages.
+        
+        // Re-throw any other errors, which will be our custom, more informative errors from the blocks above.
         throw error;
     }
 };
