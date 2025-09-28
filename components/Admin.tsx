@@ -504,7 +504,7 @@ const Admin: FC = () => {
                     <Users className="mr-3 text-cyan-500" />
                     User Prize Management
                 </h2>
-                 <fieldset disabled={isSubmitting}>
+                 <fieldset disabled={isSubmitting} className="space-y-6">
                     <p className="text-slate-600 mb-6">
                         Search for a user by name or email to manage their spins and prizes.
                     </p>

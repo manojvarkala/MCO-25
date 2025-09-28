@@ -50,7 +50,7 @@ const Feedback: FC = () => {
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-6">
-                 <fieldset disabled={isSubmitting} className="space-y-6">
+                 <fieldset className="space-y-6">
                     <div>
                         <label htmlFor="category" className="block text-sm font-medium text-slate-700">
                             Feedback Category
