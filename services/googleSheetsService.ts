@@ -56,7 +56,7 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         } catch (error) {
             // This catches cases where the server returns a 200 OK but the body is not valid JSON (e.g., PHP notices).
             console.error(`API Call to ${endpoint} returned OK but with invalid JSON:`, responseText);
-            throw new Error('The server returned an invalid response. This may be a temporary issue.');
+            throw new Error('The server returned an invalid response. This is often caused by a PHP error from your theme or another plugin. Check your browser\'s developer console for the full server output.');
         }
 
     } catch (error: any) {
