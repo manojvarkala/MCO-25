@@ -194,7 +194,11 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
 
     if (false === $questions) {
         $csv_url = "https://docs.google.com/spreadsheets/d/{$sheet_id}/export?format=csv&gid=0";
-        $response = wp_remote_get($csv_url, ['timeout' => 20]);
+        $args = [
+            'timeout' => 20,
+            'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        ];
+        $response = wp_remote_get($csv_url, $args);
 
         if (is_wp_error($response)) {
             return new WP_Error('fetch_error', 'Could not connect to Google Sheets: ' . $response->get_error_message(), ['status' => 500]);
