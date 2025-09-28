@@ -15,7 +15,7 @@ const annapoornaConfig: TenantConfig = {
 };
 
 const medicalCodingConfig: TenantConfig = {
-    apiBaseUrl: 'https://exams.coding-online.net',
+    apiBaseUrl: 'https://www.coding-online.net',
     staticConfigPath: '/medical-coding-config.json'
 };
 
