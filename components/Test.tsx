@@ -1,6 +1,6 @@
 import React, { FC, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
-import { useParams, useNavigate } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 // Fix: Added ExamProgress to type imports for saving progress.
@@ -22,8 +22,8 @@ const FOCUS_VIOLATION_TOAST_ID = 'focus-violation-toast';
 
 
 const Test: FC = () => {
-  const { examId } = useParams<{ examId: string }>();
-  const navigate = useNavigate();
+  const { examId } = ReactRouterDOM.useParams<{ examId: string }>();
+  const navigate = ReactRouterDOM.useNavigate();
   const { user, isSubscribed, token } = useAuth();
   const { activeOrg, isInitializing } = useAppContext();
 

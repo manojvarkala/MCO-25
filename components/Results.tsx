@@ -1,12 +1,7 @@
 
-
-
-
-
-
 import React, { FC, useState, useEffect } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
-import { useParams, useNavigate } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook } from '../types.ts';
@@ -19,9 +14,9 @@ import BookCover from '../assets/BookCover.tsx';
 import jsPDF from 'jspdf';
 
 const Results: FC = () => {
-    const { testId } = useParams<{ testId: string }>();
+    const { testId } = ReactRouterDOM.useParams<{ testId: string }>();
     // Fix: Use useNavigate for navigation in v6
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
     const { user, token, paidExamIds, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     

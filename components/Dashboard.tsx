@@ -1,6 +1,6 @@
 import React, { FC, useMemo, useState, useEffect } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
-import { useNavigate, useLocation } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -16,7 +16,7 @@ interface ExamCardProps {
 }
 
 const ExamCard: FC<ExamCardProps> = ({ exam, isPractice, results }) => {
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
     const { paidExamIds, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
 
@@ -95,8 +95,8 @@ const ExamCard: FC<ExamCardProps> = ({ exam, isPractice, results }) => {
 
 
 const Dashboard: FC = () => {
-    const navigate = useNavigate();
-    const location = useLocation();
+    const navigate = ReactRouterDOM.useNavigate();
+    const location = ReactRouterDOM.useLocation();
     const { user, token, isSubscribed, loginWithToken } = useAuth();
     const { activeOrg, inProgressExam } = useAppContext();
     const [results, setResults] = useState<TestResult[]>([]);

@@ -1,12 +1,7 @@
 
-
-
-
-
-
 import React, { FC, useEffect } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
-import { useNavigate } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LogIn, UserPlus, CheckCircle, Sparkles, Award } from 'lucide-react';
@@ -14,7 +9,7 @@ import LogoSpinner from './LogoSpinner.tsx';
 
 const LandingPage: FC = () => {
     // Fix: Use useNavigate for v6 compatibility.
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
     const { user } = useAuth();
     const { activeOrg, isInitializing } = useAppContext();
     

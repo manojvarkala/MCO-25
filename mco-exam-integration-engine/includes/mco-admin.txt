@@ -135,7 +135,8 @@ if (!function_exists('mco_render_config_version_field')) {
 if (!function_exists('mco_render_certificate_templates_field')) {
     function mco_render_certificate_templates_field() {
         $templates = get_option('mco_certificate_templates', []);
-        echo '<p class="description" style="margin-bottom: 1rem;">Edit the details for each certificate template below. The <strong>Template ID</strong> is crucial and should follow the format <code>cert-&lt;exam-sku-suffix&gt;</code> (e.g., <code>cert-cpc</code> for an exam with SKU <code>exam-cpc-cert</code>). The <code>cert-practice-1</code> template is used for all practice exams. Use <code>{finalScore}</code> and <code>{examName}</code> where needed.</p>';
+        $variables_helper = '<p class="description" style="margin-top: 4px;">Available variables: <code>{examName}</code>, <code>{finalScore}</code>, <code>{candidateName}</code>, <code>{date}</code></p>';
+        echo '<p class="description" style="margin-bottom: 1rem;">Edit the details for each certificate type below. The <strong>Proficiency Certificate</strong> is awarded for passing any practice exam. The <strong>Completion Certificate</strong> is for passing any paid certification exam.</p>';
         echo '<div id="mco-certificate-accordion">';
         foreach ($templates as $id => $template) {
             ?>
@@ -143,8 +144,8 @@ if (!function_exists('mco_render_certificate_templates_field')) {
                 <h4 class="mco-cert-template-title"><?php echo esc_html($template['title']); ?> (ID: <?php echo esc_html($id); ?>)</h4>
                 <div class="mco-cert-template-content">
                     <input type="hidden" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][id]" value="<?php echo esc_attr($id); ?>">
-                    <p><label>Title (use <code>{examName}</code> if needed):<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][title]" value="<?php echo esc_attr($template['title']); ?>" class="large-text"></label></p>
-                    <p><label>Body (use <code>{finalScore}</code> and <code>{examName}</code> where needed):<br><textarea name="mco_certificate_templates[<?php echo esc_attr($id); ?>][body]" rows="3" class="large-text"><?php echo esc_textarea($template['body']); ?></textarea></label></p>
+                    <p><label>Title:<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][title]" value="<?php echo esc_attr($template['title']); ?>" class="large-text"></label><?php echo $variables_helper; ?></p>
+                    <p><label>Body:<br><textarea name="mco_certificate_templates[<?php echo esc_attr($id); ?>][body]" rows="3" class="large-text"><?php echo esc_textarea($template['body']); ?></textarea></label><?php echo $variables_helper; ?></p>
                     <p><label>Signature 1 Name:<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name']); ?>" class="regular-text"></label></p>
                     <p><label>Signature 1 Title:<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1Title]" value="<?php echo esc_attr($template['signature1Title']); ?>" class="regular-text"></label></p>
                     <p><label>Signature 1 Image URL (e.g., JPG, PNG):<br><input type="url" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1ImageUrl]" value="<?php echo esc_attr($template['signature1ImageUrl']); ?>" class="large-text"></label></p>
@@ -295,10 +296,10 @@ if (!function_exists('mco_save_wc_product_meta_data')) {
 if (!function_exists('mco_get_default_certificate_templates')) {
     function mco_get_default_certificate_templates() {
         return [
-            'cert-practice-1' => [
-                'id' => 'cert-practice-1',
+            'cert-practice' => [
+                'id' => 'cert-practice',
                 'title' => 'Certificate of Proficiency',
-                'body' => 'For successfully demonstrating proficiency in the {examName} with a final score of <strong>{finalScore}%</strong>.',
+                'body' => 'This certificate is proudly presented to {candidateName} for demonstrating proficiency in the {examName} with a final score of {finalScore} on {date}.',
                 'signature1Name' => 'Program Director',
                 'signature1Title' => 'Certification Authority',
                 'signature1ImageUrl' => '',
@@ -306,10 +307,10 @@ if (!function_exists('mco_get_default_certificate_templates')) {
                 'signature2Title' => 'Training Department',
                 'signature2ImageUrl' => ''
             ],
-            'cert-generic' => [
-                'id' => 'cert-generic',
+            'cert-completion' => [
+                'id' => 'cert-completion',
                 'title' => 'Certificate of Completion',
-                'body' => 'For successfully completing the {examName} with a final score of <strong>{finalScore}%</strong>.',
+                'body' => 'This certificate is proudly presented to {candidateName} for successfully completing the {examName} with a final score of {finalScore} on {date}.',
                 'signature1Name' => 'Program Director',
                 'signature1Title' => 'Certification Authority',
                 'signature1ImageUrl' => '',

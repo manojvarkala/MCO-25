@@ -1,13 +1,13 @@
 import * as React from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
-import { useLocation, useNavigate } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import toast from 'react-hot-toast';
 
 const Login: React.FC = () => {
-    const location = useLocation();
-    const navigate = useNavigate();
+    const location = ReactRouterDOM.useLocation();
+    const navigate = ReactRouterDOM.useNavigate();
     const { user, loginWithToken } = useAuth();
     const hasProcessed = React.useRef(false);
 
