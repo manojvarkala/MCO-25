@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, createContext, useCon
 import type { Organization, RecommendedBook, Exam, ExamProductCategory, InProgressExamInfo } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
-import { getTenantConfig } from '../services/apiConfig.ts';
+import { getTenantConfig, TenantConfig } from '../services/apiConfig.ts';
 
 interface AppContextType {
   organizations: Organization[];
@@ -100,8 +100,9 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   useEffect(() => {
     const loadAppConfig = async () => {
         setIsInitializing(true);
-        const tenantConfig = getTenantConfig();
+        const tenantConfig: TenantConfig = getTenantConfig();
         let activeConfig = null;
+        let loadedFromCache = false;
 
         // Stage 1: Attempt to load from cache for an instant UI update.
         try {
@@ -111,35 +112,48 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 activeConfig = cachedConfig;
                 const processedData = processConfigData(cachedConfig);
                 setProcessedConfig(processedData);
+                loadedFromCache = true;
             }
         } catch (e) {
             console.warn("Could not load cached config:", e);
-            localStorage.removeItem('appConfigCache'); // Clear corrupted cache
+            localStorage.removeItem('appConfigCache');
         }
 
-        // Stage 2: Always fetch the latest config from the API in the background.
+        // Stage 2: Always try fetching the latest config from the API.
         try {
             const response = await fetch(`${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config`);
-            if (!response.ok) {
-                throw new Error(`Server returned status ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`Server returned status ${response.status}`);
+            
             const liveConfig = await response.json();
-
-            // Update state and cache only if the version is new or cache was empty.
+            
             if (!activeConfig || activeConfig.version !== liveConfig.version) {
                 localStorage.setItem('appConfigCache', JSON.stringify(liveConfig));
                 const processedData = processConfigData(liveConfig);
                 setProcessedConfig(processedData);
+                if (activeConfig) toast.success('Content and features have been updated!', { duration: 3000 });
+            }
+            setIsInitializing(false); // Success, we're done.
+            return;
+        } catch (apiError) {
+            console.error("Failed to fetch live config:", apiError);
+            if (loadedFromCache) {
+                setIsInitializing(false); // We have cached data, so we can stop initializing.
+                return;
+            }
+        }
 
-                if (activeConfig) { // Only toast on an update, not initial load
-                    toast.success('Content and features have been updated!', { duration: 3000 });
-                }
-            }
-        } catch (error) {
-            console.error("Failed to fetch live config:", error);
-            if (!activeConfig) { // Show error only if there's no cached data to run on
-                toast.error("Could not load application configuration. Please check your connection.", { duration: 10000 });
-            }
+        // Stage 3: API failed and no cache. Try loading static fallback file.
+        try {
+            // FIX: Replaced toast.warn with toast.error as 'warn' is not a valid method in react-hot-toast.
+            toast.error("Could not connect to the server. Displaying default content which may be outdated.", { duration: 6000 });
+            const response = await fetch(tenantConfig.staticConfigPath);
+            if (!response.ok) throw new Error(`Static config file not found: ${response.status}`);
+            const staticConfig = await response.json();
+            const processedData = processConfigData(staticConfig);
+            setProcessedConfig(processedData);
+        } catch (staticError) {
+            console.error("Failed to fetch static config:", staticError);
+            toast.error("Could not load application configuration. Please check your connection and try again.", { duration: 10000 });
         } finally {
             setIsInitializing(false);
         }

@@ -3,17 +3,20 @@ import type { Organization } from '../types.ts';
 // FIX: Declare a global constant for development mode, defined in vite.config.ts, to avoid issues with vite/client types.
 declare const __DEV__: boolean;
 
-interface TenantConfig {
+export interface TenantConfig {
     apiBaseUrl: string;
+    staticConfigPath: string; // Path to static fallback config
 }
 
 // Define separate configs for each tenant
-const medicalCodingConfig: TenantConfig = {
-    apiBaseUrl: 'https://www.coding-online.net',
-};
-
 const annapoornaConfig: TenantConfig = {
     apiBaseUrl: 'https://annapoornainfo.com',
+    staticConfigPath: '/annapoorna-config.json'
+};
+
+const medicalCodingConfig: TenantConfig = {
+    apiBaseUrl: 'https://www.coding-online.net',
+    staticConfigPath: '/medical-coding-config.json'
 };
 
 
@@ -25,14 +28,17 @@ const tenantMap: { [key: string]: TenantConfig } = {
 
     // Medical Coding Online Tenant (Secondary)
     'coding-online.net': medicalCodingConfig,
-    'exam.coding-online.net': medicalCodingConfig,
+    'exams.coding-online.net': medicalCodingConfig, // Corrected domain as per user's troubleshooting guide
+    'exam.coding-online.net': medicalCodingConfig, // Keep old one for compatibility
     'mco-25.vercel.app': medicalCodingConfig, 
 };
 
 export const getTenantConfig = (): TenantConfig => {
     if (__DEV__) {
+        // In dev, we point to the primary app's config but use the proxy for API calls.
         return {
             apiBaseUrl: '/api',
+            staticConfigPath: '/annapoorna-config.json',
         };
     }
 
