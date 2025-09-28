@@ -17,6 +17,20 @@ if (!function_exists('mco_register_admin_hooks')) {
     }
 }
 
+// --- NEW: Custom sanitizer for signature fields ---
+if (!function_exists('mco_sanitize_signature_field')) {
+    function mco_sanitize_signature_field($value) {
+        // Check if the value is a base64 data URI for an image.
+        if (is_string($value) && strpos($value, 'data:image') === 0 && strpos($value, ';base64,') !== false) {
+            // It's a data URI. Return it as is, since it's safe for an `src` attribute.
+            return $value;
+        }
+        // Otherwise, assume it's a regular URL and sanitize it.
+        return esc_url_raw($value);
+    }
+}
+
+
 // --- AUTO-VERSIONING ---
 if (!function_exists('mco_auto_update_config_version_on_save')) {
     function mco_auto_update_config_version_on_save($post_id) {
@@ -148,11 +162,11 @@ if (!function_exists('mco_render_certificate_templates_field')) {
                     <p><label>Body:<br><textarea name="mco_certificate_templates[<?php echo esc_attr($id); ?>][body]" rows="3" class="large-text"><?php echo esc_textarea($template['body']); ?></textarea></label><?php echo $variables_helper; ?></p>
                     <p><label>Signature 1 Name:<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name']); ?>" class="regular-text"></label></p>
                     <p><label>Signature 1 Title:<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1Title]" value="<?php echo esc_attr($template['signature1Title']); ?>" class="regular-text"></label></p>
-                    <p><label>Signature 1 Image URL (e.g., JPG, PNG):<br><input type="url" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1ImageUrl]" value="<?php echo esc_attr($template['signature1ImageUrl']); ?>" class="large-text"></label></p>
+                    <p><label>Signature 1 Image URL or Base64 Data:<br><textarea name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1ImageUrl]" rows="4" class="large-text code"><?php echo esc_textarea($template['signature1ImageUrl']); ?></textarea></label></p>
                     <hr style="margin: 1rem 0;">
                     <p><label>Signature 2 Name (optional):<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature2Name]" value="<?php echo esc_attr($template['signature2Name']); ?>" class="regular-text"></label></p>
                     <p><label>Signature 2 Title (optional):<br><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature2Title]" value="<?php echo esc_attr($template['signature2Title']); ?>" class="regular-text"></label></p>
-                    <p><label>Signature 2 Image URL (e.g., JPG, PNG):<br><input type="url" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature2ImageUrl]" value="<?php echo esc_attr($template['signature2ImageUrl']); ?>" class="large-text"></label></p>
+                    <p><label>Signature 2 Image URL or Base64 Data:<br><textarea name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature2ImageUrl]" rows="4" class="large-text code"><?php echo esc_textarea($template['signature2ImageUrl']); ?></textarea></label></p>
                 </div>
             </div>
             <?php
@@ -187,10 +201,10 @@ if (!function_exists('mco_sanitize_certificate_templates')) {
                 'body' => wp_kses_post($template['body']),
                 'signature1Name' => sanitize_text_field($template['signature1Name']),
                 'signature1Title' => sanitize_text_field($template['signature1Title']),
-                'signature1ImageUrl' => esc_url_raw($template['signature1ImageUrl']),
+                'signature1ImageUrl' => mco_sanitize_signature_field($template['signature1ImageUrl']),
                 'signature2Name' => sanitize_text_field($template['signature2Name']),
                 'signature2Title' => sanitize_text_field($template['signature2Title']),
-                'signature2ImageUrl' => esc_url_raw($template['signature2ImageUrl']),
+                'signature2ImageUrl' => mco_sanitize_signature_field($template['signature2ImageUrl']),
             ];
         }
         return $output;
