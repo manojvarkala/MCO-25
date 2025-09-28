@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -136,12 +137,16 @@ const AppContent: FC = () => {
                             <SidebarLayout><Results /></SidebarLayout>
                           </ProtectedRoute>
                         } />
+                        <ReactRouterDOM.Route path="/dashboard" element={
+                            <ProtectedRoute>
+                                <SidebarLayout><Dashboard /></SidebarLayout>
+                            </ProtectedRoute>
+                        } />
 
                         {/* Routes with their own layout or no sidebar */}
                         <ReactRouterDOM.Route path="/" element={<LandingPage />} />
                         <ReactRouterDOM.Route path="/auth" element={<Login />} />
                         <ReactRouterDOM.Route path="/checkout/:productSlug" element={<Checkout />} />
-                        <ReactRouterDOM.Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <ReactRouterDOM.Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />

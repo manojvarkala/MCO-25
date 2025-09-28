@@ -9,8 +9,7 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
     let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
     let preferredDomain = 'Amazon.com';
 
-    // Determine preferred locale
-    const gccTimezones = ['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat'];
+    const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
     if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
         preferredKey = 'in';
         preferredDomain = 'Amazon.in';
@@ -19,18 +18,23 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
         preferredDomain = 'Amazon.ae';
     }
     
-    // Check if the preferred URL exists and is valid
     const preferredUrl = book.affiliateLinks[preferredKey];
     if (preferredUrl && preferredUrl.trim() !== '') {
         return { url: preferredUrl, domainName: preferredDomain };
     }
-
-    // Fallback to .com if preferred is not available or is an empty string
+    
     if (book.affiliateLinks.com && book.affiliateLinks.com.trim() !== '') {
         return { url: book.affiliateLinks.com, domainName: 'Amazon.com' };
     }
+
+    const fallbackOrder: (keyof RecommendedBook['affiliateLinks'])[] = ['in', 'ae'];
+    for (const key of fallbackOrder) {
+         if (book.affiliateLinks[key] && book.affiliateLinks[key].trim() !== '') {
+            const domain = key === 'in' ? 'Amazon.in' : 'Amazon.ae';
+            return { url: book.affiliateLinks[key], domainName: domain };
+         }
+    }
     
-    // If both preferred and .com are invalid, return the original .com link (which is likely empty)
     return { url: book.affiliateLinks.com || '', domainName: 'Amazon.com' };
 };
 
