@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) exit;
  * =================================================================================================
  * If the exam application cannot connect to the API (CORS errors, fetch errors, or "Authorization
  * header missing" messages), it's almost always a server configuration issue. Many shared hosting
- * environments (like Apache) strip the necessary 'Authorization' header from requests by default.
+ * environments (like Apache/LiteSpeed) strip the necessary 'Authorization' header from requests by default.
  * 
  * THE FIX:
  * Add the following code to the VERY TOP of your WordPress root .htaccess file, before the
@@ -19,62 +19,58 @@ if (!defined('ABSPATH')) exit;
  *   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
  * </IfModule>
  * 
- * This code tells the server to correctly pass the authorization information to WordPress so the
- * API can validate the user's token. After adding this, clear any server or plugin caches.
+ * After adding this, you MUST clear all server and plugin caches (e.g., LiteSpeed Cache).
+ * Caching plugins can interfere with API routes and CORS headers.
  * =================================================================================================
  */
 
-
-// Hook registration is now handled by mco_register_api_hooks()
 if (!function_exists('mco_register_api_hooks')) {
     function mco_register_api_hooks() {
         add_action('rest_api_init', 'mco_register_rest_routes');
-        // More aggressive CORS handling on the 'init' hook to run early.
-        add_action('init', 'mco_handle_cors_preflight');
+        add_action('rest_api_init', 'mco_set_api_nocache_constants');
+        add_filter('rest_pre_serve_request', 'mco_add_cors_and_nocache_headers', 10, 4);
     }
 }
 
-/**
- * Handles CORS preflight requests (OPTIONS) and adds headers for all API requests.
- * This runs on 'init' to execute before the main REST API server handles the request,
- * which can bypass issues with other plugins or server configurations.
- */
-function mco_handle_cors_preflight() {
-    // Only act on REST API requests for our specific namespace.
-    if (strpos($_SERVER['REQUEST_URI'], '/wp-json/mco-app/v1/') === false) {
-        return;
+// Ensure caching plugins do not cache our API endpoints.
+function mco_set_api_nocache_constants(WP_REST_Server $server) {
+    if (strpos($_SERVER['REQUEST_URI'], '/wp-json/mco-app/v1/') !== false) {
+        if (!defined('DONOTCACHE')) define('DONOTCACHEPAGE', true);
+        if (!defined('DONOTCACHEDB')) define('DONOTCACHEDB', true);
+        if (!defined('DONOTCACHEOBJECT')) define('DONOTCACHEOBJECT', true);
     }
+}
 
-    $request_origin = get_http_origin();
-    if ($request_origin) {
+// Forcefully add CORS and no-cache headers to every response from our namespace.
+function mco_add_cors_and_nocache_headers($served, $result, $request, $server) {
+    if (strpos($request->get_route(), '/mco-app/v1/') !== false) {
+        $request_origin = get_http_origin();
         $allowed_origins = mco_get_allowed_origins();
 
-        if (in_array($request_origin, $allowed_origins, true)) {
-            header('Access-Control-Allow-Origin: ' . esc_url($request_origin));
-            header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
-            header('Access-Control-Allow-Credentials: true');
-            header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
-            header('Vary: Origin', false);
+        if ($request_origin && in_array($request_origin, $allowed_origins, true)) {
+            $server->send_header('Access-Control-Allow-Origin', $request_origin);
+            $server->send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+            $server->send_header('Access-Control-Allow-Credentials', 'true');
+            $server->send_header('Vary', 'Origin');
+        }
+        
+        // Send no-cache headers for all our API endpoints to prevent stale data issues.
+        $server->send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        $server->send_header('Pragma', 'no-cache');
+        $server->send_header('Expires', 'Mon, 26 Jul 1997 05:00:00 GMT');
 
-            // If it's an OPTIONS preflight request, send a 200 OK and die.
-            if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-                status_header(200);
-                exit();
-            }
+        if ($request->get_method() === 'OPTIONS') {
+            status_header(200);
+            exit();
         }
     }
+    return $served;
 }
 
-
-/**
- * Parses the saved application URLs into a list of valid origins.
- * Now handles URLs entered without a scheme (http/https).
- */
 function mco_get_allowed_origins() {
     $app_urls_string = get_option('mco_exam_app_url', '');
     if (empty($app_urls_string)) return [];
 
-    // Split the textarea value by new lines
     $urls = preg_split('/\r\n|\r|\n/', $app_urls_string);
     $allowed_origins = [];
 
@@ -82,7 +78,6 @@ function mco_get_allowed_origins() {
         $trimmed_url = trim($url);
         if (empty($trimmed_url)) continue;
 
-        // Automatically add https:// if no scheme is provided, making it more user-friendly.
         if (!preg_match('#^https?://#', $trimmed_url)) {
             $trimmed_url = 'https://' . $trimmed_url;
         }
@@ -95,7 +90,6 @@ function mco_get_allowed_origins() {
             $origin .= ':' . $parsed_url['port'];
         }
         
-        // Add to our list if not already present
         if (!in_array($origin, $allowed_origins, true)) {
             $allowed_origins[] = $origin;
         }

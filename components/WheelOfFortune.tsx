@@ -288,7 +288,7 @@ const WheelOfFortune: FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                             className={`w-12 h-12 rounded-full ring-4 ring-amber-300/50 flex items-center justify-center transition-colors ${canSpin ? 'cursor-grab bg-amber-500 hover:bg-amber-600' : 'cursor-not-allowed bg-zinc-600'}`}
                             style={{ transform: `translateY(${dragY}px)` }}
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>
                         </div>
                         <div className="absolute top-4 text-xs text-zinc-400 pointer-events-none transform -rotate-90 origin-center tracking-widest">
                             SPIN
