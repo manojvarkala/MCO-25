@@ -323,23 +323,23 @@ if (!function_exists('mco_get_default_certificate_templates')) {
             'cert-practice' => [
                 'id' => 'cert-practice',
                 'title' => 'Certificate of Proficiency',
-                'body' => 'This certificate is proudly presented to {candidateName} for demonstrating proficiency in the {examName} with a final score of {finalScore} on {date}.',
-                'signature1Name' => 'Program Director',
-                'signature1Title' => 'Certification Authority',
-                'signature1ImageUrl' => '',
-                'signature2Name' => 'Lead Instructor',
-                'signature2Title' => 'Training Department',
+                'body' => 'For successfully demonstrating proficiency in the  <strong> {examName}</strong> with a final score of <strong>{finalScore}%</strong>.',
+                'signature1Name' => 'Dr.Amelia Reed',
+                'signature1Title' => 'Program Director',
+                'signature1ImageUrl' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw1My4zMjYxQzE2Ljg2NDcsNDcuMjQzNyAyOC43MjQ3LDQwLjM0NDIgNDEuMzQzOCw0NS4xMTM4QzUzLjM2Niw0OS42Njc3IDU5Ljk0ODksNTguNDg4NyA3Mi4zNDM4LDYxLjUxMTRDODQuNzM4OCw2NC41MzQgOTkuNDUwNCw2MC4zODI0IDExMS4yNSw1NC43MkMxMjMuMDQ5Niw0OS4wNTc2IDEzNi44OTYsNDQuNjE4NCAxNDguOTIyLDQ1LjExMzhDMTYwLjk0Niw0NS42MDkzIDE2Ny44OTksNTEuMzMzNyAxNzkuNTgsNDkuNjY3N0MxOTEuMjYsNDggMTk4LjgzNCwzNi4xNzQzIDIxMC43NSwzNi4xNzQzQzIyMi42NjYsMzYuMTc0MyAyMjguODEzLDQ4LjA4NjYgMjM5LjUsNDkuNjY3N0MyNTAuMTg3LDUxLjI0ODkgMjU4LjU5OCw0NC4wMzIxIDI2OS41LDQ1LjExMzhDMjgwLjQwMSw0Ni4xOTU1IDI4Ni41LDUzLjA5NSAyOTEsNjEuNTExNCIgc3Ryb2tlPSIjMWUyOTJiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==',
+                'signature2Name' => '',
+                'signature2Title' => '',
                 'signature2ImageUrl' => ''
             ],
             'cert-completion' => [
                 'id' => 'cert-completion',
                 'title' => 'Certificate of Completion',
-                'body' => 'This certificate is proudly presented to {candidateName} for successfully completing the {examName} with a final score of {finalScore} on {date}.',
-                'signature1Name' => 'Program Director',
-                'signature1Title' => 'Certification Authority',
+                'body' => 'For successfully completing the comprehensive examination on <strong> {examName}</strong> with a final score of <strong>{finalScore}%</strong>.',
+                'signature1Name' => 'Dr.Amelia Reed',
+                'signature1Title' => 'Program Director',
                 'signature1ImageUrl' => '',
-                'signature2Name' => 'Lead Instructor',
-                'signature2Title' => 'Training Department',
+                'signature2Name' => '',
+                'signature2Title' => '',
                 'signature2ImageUrl' => ''
             ]
         ];

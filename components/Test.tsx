@@ -35,6 +35,7 @@ const Test: FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [examStarted, setExamStarted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Browser-based proctoring state
   const [focusViolationCount, setFocusViolationCount] = useState(0);
@@ -131,8 +132,9 @@ const Test: FC = () => {
                 setExamStarted(false); 
             }
         } catch (error: any) {
-            toast.error(error.message || 'Failed to load test.', { duration: 4000 });
-            navigate('/dashboard');
+            const errorMessage = error.message || 'Failed to load test.';
+            toast.error(errorMessage, { duration: 8000 });
+            setError(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -257,6 +259,37 @@ const Test: FC = () => {
     
     if (isLoading || isInitializing) {
         return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4 text-slate-600">Loading Exam...</p></div>;
+    }
+    
+    if (error) {
+        return (
+            <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-lg text-center">
+                <AlertTriangle className="mx-auto h-12 w-12 text-red-500" />
+                <h1 className="text-2xl font-bold text-slate-800 mt-4">Error Loading Exam</h1>
+                <p className="text-slate-600 mt-2 bg-red-50 p-4 rounded-md">{error}</p>
+                
+                {error.includes("Google Sheet") && (
+                    <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-left text-sm text-amber-800">
+                        <h3 className="font-bold mb-2">How to Fix This:</h3>
+                        <p className="mb-2">This error usually means the Google Sheet containing the questions is not accessible. To fix this:</p>
+                        <ol className="list-decimal list-inside space-y-1">
+                            <li>Open the Google Sheet linked to this exam.</li>
+                            <li>Click the <strong>Share</strong> button in the top-right corner.</li>
+                            <li>Under "General access," change the setting from "Restricted" to <strong>"Anyone with the link"</strong>.</li>
+                            <li>Ensure the role is set to <strong>"Viewer"</strong>.</li>
+                            <li>Click "Done" and try starting the exam again.</li>
+                        </ol>
+                    </div>
+                )}
+
+                <button 
+                    onClick={() => navigate('/dashboard')} 
+                    className="mt-6 w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg transition"
+                >
+                    Back to Dashboard
+                </button>
+            </div>
+        );
     }
     
     if (!examConfig) {

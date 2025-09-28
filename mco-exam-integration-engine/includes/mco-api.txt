@@ -1,40 +1,80 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-// Note: Hook registration is now handled by mco_register_api_hooks() to prevent timing issues.
+/*
+ * =================================================================================================
+ * TROUBLESHOOTING: API CONNECTION FAILED or AUTHORIZATION HEADER MISSING
+ * =================================================================================================
+ * If the exam application cannot connect to the API (CORS errors, fetch errors, or "Authorization
+ * header missing" messages), it's almost always a server configuration issue. Many shared hosting
+ * environments (like Apache) strip the necessary 'Authorization' header from requests by default.
+ * 
+ * THE FIX:
+ * Add the following code to the VERY TOP of your WordPress root .htaccess file, before the
+ * # BEGIN WordPress block.
+ *
+ * <IfModule mod_rewrite.c>
+ *   RewriteEngine On
+ *   RewriteCond %{HTTP:Authorization} .
+ *   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+ * </IfModule>
+ * 
+ * This code tells the server to correctly pass the authorization information to WordPress so the
+ * API can validate the user's token. After adding this, clear any server or plugin caches.
+ * =================================================================================================
+ */
+
+
+// Hook registration is now handled by mco_register_api_hooks()
 if (!function_exists('mco_register_api_hooks')) {
     function mco_register_api_hooks() {
         add_action('rest_api_init', 'mco_register_rest_routes');
-        // Robust CORS handling
-        add_action('rest_api_init', function() {
-            remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
-            add_filter('rest_pre_serve_request', function($value) {
-                $request_origin = get_http_origin();
-                if ($request_origin) {
-                    $allowed_origins = mco_get_allowed_origins();
-                    if (in_array($request_origin, $allowed_origins, true)) {
-                        header('Access-Control-Allow-Origin: ' . esc_url($request_origin));
-                    }
-                }
-                header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-                header('Access-Control-Allow-Credentials: true');
-                header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
-                header('Vary: Origin', false);
-                if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
-                    status_header(200);
-                    exit();
-                }
-                return $value;
-            }, 15);
-        }, 15);
+        // More aggressive CORS handling on the 'init' hook to run early.
+        add_action('init', 'mco_handle_cors_preflight');
+    }
+}
+
+/**
+ * Handles CORS preflight requests (OPTIONS) and adds headers for all API requests.
+ * This runs on 'init' to execute before the main REST API server handles the request,
+ * which can bypass issues with other plugins or server configurations.
+ */
+function mco_handle_cors_preflight() {
+    // Only act on REST API requests for our specific namespace.
+    if (strpos($_SERVER['REQUEST_URI'], '/wp-json/mco-app/v1/') === false) {
+        return;
+    }
+
+    $request_origin = get_http_origin();
+    if ($request_origin) {
+        $allowed_origins = mco_get_allowed_origins();
+
+        if (in_array($request_origin, $allowed_origins, true)) {
+            header('Access-Control-Allow-Origin: ' . esc_url($request_origin));
+            header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
+            header('Access-Control-Allow-Credentials: true');
+            header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
+            header('Vary: Origin', false);
+
+            // If it's an OPTIONS preflight request, send a 200 OK and die.
+            if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+                status_header(200);
+                exit();
+            }
+        }
     }
 }
 
 
+/**
+ * Parses the saved application URLs into a list of valid origins.
+ * Now handles URLs entered without a scheme (http/https).
+ */
 function mco_get_allowed_origins() {
-    $app_urls_string = get_option('mco_exam_app_url');
+    $app_urls_string = get_option('mco_exam_app_url', '');
     if (empty($app_urls_string)) return [];
 
+    // Split the textarea value by new lines
     $urls = preg_split('/\r\n|\r|\n/', $app_urls_string);
     $allowed_origins = [];
 
@@ -42,14 +82,20 @@ function mco_get_allowed_origins() {
         $trimmed_url = trim($url);
         if (empty($trimmed_url)) continue;
 
+        // Automatically add https:// if no scheme is provided, making it more user-friendly.
+        if (!preg_match('#^https?://#', $trimmed_url)) {
+            $trimmed_url = 'https://' . $trimmed_url;
+        }
+        
         $parsed_url = parse_url($trimmed_url);
-        if (!isset($parsed_url['host'])) continue;
+        if (empty($parsed_url['scheme']) || empty($parsed_url['host'])) continue;
         
-        $scheme = $parsed_url['scheme'] ?? 'https';
-        $host = $parsed_url['host'];
-        $port = isset($parsed_url['port']) ? ':' . $parsed_url['port'] : '';
+        $origin = $parsed_url['scheme'] . '://' . $parsed_url['host'];
+        if (!empty($parsed_url['port'])) {
+            $origin .= ':' . $parsed_url['port'];
+        }
         
-        $origin = "{$scheme}://{$host}{$port}";
+        // Add to our list if not already present
         if (!in_array($origin, $allowed_origins, true)) {
             $allowed_origins[] = $origin;
         }
@@ -68,14 +114,27 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/exam-stats', ['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/debug-details', ['methods' => 'GET', 'callback' => 'mco_api_get_debug_details', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/download-config', ['methods' => 'GET', 'callback' => 'mco_api_download_config', 'permission_callback' => 'mco_api_admin_permission_check']);
+    
+    // NEW API ENDPOINTS
+    register_rest_route($namespace, '/submit-feedback', ['methods' => 'POST', 'callback' => 'mco_api_submit_feedback', 'permission_callback' => 'mco_api_permission_check']);
+    register_rest_route($namespace, '/submit-review', ['methods' => 'POST', 'callback' => 'mco_api_submit_review', 'permission_callback' => 'mco_api_permission_check']);
+    register_rest_route($namespace, '/spin-wheel', ['methods' => 'POST', 'callback' => 'mco_api_spin_wheel', 'permission_callback' => 'mco_api_permission_check']);
+
+    // ADMIN-ONLY ENDPOINTS
+    register_rest_route($namespace, '/admin/add-spins', ['methods' => 'POST', 'callback' => 'mco_api_admin_add_spins', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/grant-prize', ['methods' => 'POST', 'callback' => 'mco_api_admin_grant_prize', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/search-users', ['methods' => 'POST', 'callback' => 'mco_api_admin_search_users', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/reset-spins', ['methods' => 'POST', 'callback' => 'mco_api_admin_reset_spins', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/remove-prize', ['methods' => 'POST', 'callback' => 'mco_api_admin_remove_prize', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+
 }
 
-function mco_api_permission_check(WP_REST_Request $request, $admin_only = false) {
+function mco_api_permission_check(WP_REST_Request $request) {
     $auth_header = $request->get_header('authorization');
-    if (empty($auth_header) || !preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) return new WP_Error('jwt_auth_missing_token', 'Authorization header missing.', ['status' => 401]);
+    if (empty($auth_header) || !preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) return new WP_Error('jwt_auth_missing_token', 'Authorization header missing. Check server configuration (e.g., .htaccess).', ['status' => 401]);
     $payload = mco_verify_exam_jwt($matches[1]);
     if (!$payload || !isset($payload['user']['id'])) return new WP_Error('jwt_auth_invalid_token', 'Invalid or expired token.', ['status' => 403]);
-    if ($admin_only && empty($payload['user']['isAdmin'])) return new WP_Error('jwt_auth_admin_required', 'Administrator access required.', ['status' => 403]);
+    
     $request->set_param('jwt_payload', $payload);
     return true;
 }
@@ -196,7 +255,8 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
         $csv_url = "https://docs.google.com/spreadsheets/d/{$sheet_id}/export?format=csv&gid=0";
         $args = [
             'timeout' => 20,
-            'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+            'sslverify' => false // Added to bypass potential server SSL verification issues.
         ];
         $response = wp_remote_get($csv_url, $args);
 
@@ -206,7 +266,9 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
         
         $response_code = wp_remote_retrieve_response_code($response);
         if ($response_code != 200) {
-            return new WP_Error('fetch_error', 'Could not fetch questions (HTTP Status: ' . $response_code . '). Please ensure your Google Sheet is public ("Anyone with the link can view").', ['status' => 500]);
+            $response_body = wp_remote_retrieve_body($response);
+            $error_details = !empty($response_body) ? ' Server response: ' . substr(strip_tags($response_body), 0, 200) : '';
+            return new WP_Error('fetch_error', 'Could not fetch questions (HTTP Status: ' . $response_code . '). Please ensure your Google Sheet is public ("Anyone with the link can view").' . $error_details, ['status' => 500]);
         }
 
         $body = wp_remote_retrieve_body($response);
@@ -350,4 +412,168 @@ function mco_api_download_config() {
     echo wp_json_encode($config_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     exit;
 }
+
+// NEW ENDPOINTS
+function mco_api_submit_feedback(WP_REST_Request $request) {
+    // This is a placeholder. In a real app, you would save this to the DB, email it, etc.
+    $payload = $request->get_param('jwt_payload');
+    $user_email = $payload['user']['email'];
+    $category = sanitize_text_field($request->get_param('category'));
+    $message = sanitize_textarea_field($request->get_param('message'));
+
+    // For now, we'll just log it to the PHP error log for demonstration.
+    error_log("Feedback from {$user_email} (Category: {$category}): {$message}");
+    
+    return new WP_REST_Response(['success' => true, 'message' => 'Feedback received.'], 200);
+}
+
+function mco_api_submit_review(WP_REST_Request $request) {
+    $payload = $request->get_param('jwt_payload');
+    $user_id = (int)$payload['user']['id'];
+    $user_name = $payload['user']['name'];
+    $user_email = $payload['user']['email'];
+
+    $exam_id = sanitize_text_field($request->get_param('examId'));
+    $rating = (int)$request->get_param('rating');
+    $review_text = sanitize_textarea_field($request->get_param('reviewText'));
+
+    if ($rating < 1 || $rating > 5) {
+        return new WP_Error('bad_request', 'Invalid rating.', ['status' => 400]);
+    }
+    
+    $all_exams_data = mco_get_app_config_data();
+    $product_id = null;
+    if (isset($all_exams_data['examPrices'][$exam_id])) {
+        $product_id = $all_exams_data['examPrices'][$exam_id]['productId'];
+    }
+
+    if (!$product_id) {
+         return new WP_Error('not_found', 'Could not find a product linked to this exam ID.', ['status' => 404]);
+    }
+
+    $commentdata = [
+        'comment_post_ID'      => $product_id,
+        'comment_author'       => $user_name,
+        'comment_author_email' => $user_email,
+        'comment_content'      => $review_text,
+        'user_id'              => $user_id,
+        'comment_type'         => 'review',
+        'comment_approved'     => 1, // Auto-approve
+    ];
+
+    $comment_id = wp_insert_comment($commentdata);
+    if ($comment_id) {
+        update_comment_meta($comment_id, 'rating', $rating);
+        return new WP_REST_Response(['success' => true, 'message' => 'Review submitted.'], 200);
+    } else {
+        return new WP_Error('submission_failed', 'Could not save the review.', ['status' => 500]);
+    }
+}
+
+function mco_api_spin_wheel(WP_REST_Request $request) {
+    $payload = $request->get_param('jwt_payload');
+    $user_id = (int)$payload['user']['id'];
+    
+    $spins = (int)get_user_meta($user_id, 'mco_spins_available', true);
+    
+    if ($spins <= 0 && !user_can($user_id, 'manage_options')) {
+        return new WP_Error('no_spins', 'You have no spins left.', ['status' => 403]);
+    }
+
+    // Define prizes and their weights
+    $prizes = [
+        'SUB_YEARLY' => ['label' => 'Annual Subscription', 'weight' => 1],
+        'SUB_MONTHLY' => ['label' => 'Monthly Subscription', 'weight' => 5],
+        'SUB_WEEKLY' => ['label' => 'Weekly Subscription', 'weight' => 10],
+        'EXAM_CPC' => ['label' => 'Free CPC Exam', 'weight' => 15],
+        'EXAM_CCA' => ['label' => 'Free CCA Exam', 'weight' => 15],
+        'NEXT_TIME' => ['label' => 'Better Luck Next Time', 'weight' => 54],
+    ];
+
+    $weighted_list = [];
+    foreach ($prizes as $id => $prize) {
+        for ($i = 0; $i < $prize['weight']; $i++) {
+            $weighted_list[] = $id;
+        }
+    }
+    
+    $won_prize_id = $weighted_list[array_rand($weighted_list)];
+    $won_prize_label = $prizes[$won_prize_id]['label'];
+
+    // Decrement spins unless admin
+    if (!user_can($user_id, 'manage_options')) {
+        update_user_meta($user_id, 'mco_spins_available', $spins - 1);
+    }
+    
+    // Grant prize
+    if ($won_prize_id !== 'NEXT_TIME') {
+        update_user_meta($user_id, 'mco_won_prize', ['prizeId' => $won_prize_id, 'prizeLabel' => $won_prize_label]);
+        // Placeholder for actually granting the product/subscription
+    }
+    
+    // Generate a new token with updated user data
+    $new_token = mco_generate_exam_jwt($user_id);
+
+    return new WP_REST_Response([
+        'prizeId' => $won_prize_id,
+        'prizeLabel' => $won_prize_label,
+        'newToken' => $new_token
+    ], 200);
+}
+
+// ADMIN ENDPOINTS
+function mco_api_admin_search_users(WP_REST_Request $request) {
+    $search_term = sanitize_text_field($request->get_param('searchTerm'));
+    if (empty($search_term)) {
+        return new WP_Error('bad_request', 'Search term cannot be empty.', ['status' => 400]);
+    }
+    
+    $user_query = new WP_User_Query([
+        'search' => '*' . esc_attr($search_term) . '*',
+        'search_columns' => ['user_login', 'user_email', 'display_name'],
+        'number' => 10
+    ]);
+    
+    $users_found = [];
+    foreach ($user_query->get_results() as $user) {
+        $users_found[] = ['id' => strval($user->ID), 'name' => $user->display_name, 'email' => $user->user_email];
+    }
+    
+    return new WP_REST_Response($users_found, 200);
+}
+
+function mco_api_admin_add_spins(WP_REST_Request $request) {
+    $user_id = (int) $request->get_param('userId');
+    $spins_to_add = (int) $request->get_param('spins');
+    if ($spins_to_add <= 0) return new WP_Error('bad_request', 'Spins must be a positive number.', ['status' => 400]);
+
+    $current_spins = (int) get_user_meta($user_id, 'mco_spins_available', true);
+    $new_total = $current_spins + $spins_to_add;
+    update_user_meta($user_id, 'mco_spins_available', $new_total);
+    
+    return new WP_REST_Response(['success' => true, 'newTotal' => $new_total], 200);
+}
+
+function mco_api_admin_grant_prize(WP_REST_Request $request) {
+    $user_id = (int) $request->get_param('userId');
+    $prize_id = sanitize_text_field($request->get_param('prizeId'));
+
+    // In a real app, this would add a product or subscription. Here we just set the meta.
+    update_user_meta($user_id, 'mco_won_prize', ['prizeId' => $prize_id, 'prizeLabel' => "Prize Granted by Admin"]);
+    
+    return new WP_REST_Response(['success' => true, 'message' => 'Prize granted.'], 200);
+}
+
+function mco_api_admin_reset_spins(WP_REST_Request $request) {
+    $user_id = (int) $request->get_param('userId');
+    update_user_meta($user_id, 'mco_spins_available', 0);
+    return new WP_REST_Response(['success' => true, 'message' => 'Spins reset to 0.'], 200);
+}
+
+function mco_api_admin_remove_prize(WP_REST_Request $request) {
+    $user_id = (int) $request->get_param('userId');
+    delete_user_meta($user_id, 'mco_won_prize');
+    return new WP_REST_Response(['success' => true, 'message' => 'Won prize data removed.'], 200);
+}
+
 ?>
