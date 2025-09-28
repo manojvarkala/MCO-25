@@ -126,8 +126,15 @@ function mco_api_get_full_config(WP_REST_Request $request) {
 }
 
 function mco_api_get_user_results(WP_REST_Request $request) {
-    $user_id = $request->get_param('jwt_payload')['user']['id'];
-    return new WP_REST_Response(array_values(get_user_meta($user_id, 'mco_exam_results', true) ?: []), 200);
+    $payload = $request->get_param('jwt_payload');
+    $user_id = $payload['user']['id'];
+    $results = get_user_meta($user_id, 'mco_exam_results', true);
+
+    if (!is_array($results)) {
+        $results = [];
+    }
+    
+    return new WP_REST_Response(array_values($results), 200);
 }
 
 function mco_api_get_certificate_data(WP_REST_Request $request) {
@@ -176,52 +183,100 @@ function mco_api_submit_result(WP_REST_Request $request) {
 
 function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
     $sheet_url = esc_url_raw($request->get_param('sheetUrl'));
-    if (empty($sheet_url) || !preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) return new WP_Error('bad_request', 'Invalid Google Sheet URL.', ['status' => 400]);
-    $transient_key = 'mco_sheet_' . md5($matches[1]);
-    if (false === ($questions = get_transient($transient_key))) {
-        $response = wp_remote_get("https://docs.google.com/spreadsheets/d/{$matches[1]}/export?format=csv", ['timeout' => 20]);
-        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) != 200) return new WP_Error('fetch_error', 'Could not fetch questions. Ensure sheet is public.', ['status' => 500]);
-        $rows = preg_split('/\r\n|\r|\n/', wp_remote_retrieve_body($response));
-        array_shift($rows);
+    if (empty($sheet_url) || !preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
+        return new WP_Error('bad_request', 'Invalid Google Sheet URL format.', ['status' => 400]);
+    }
+
+    $sheet_id = $matches[1];
+    $transient_key = 'mco_sheet_' . md5($sheet_id);
+    
+    $questions = get_transient($transient_key);
+
+    if (false === $questions) {
+        $csv_url = "https://docs.google.com/spreadsheets/d/{$sheet_id}/export?format=csv&gid=0";
+        $response = wp_remote_get($csv_url, ['timeout' => 20]);
+
+        if (is_wp_error($response)) {
+            return new WP_Error('fetch_error', 'Could not connect to Google Sheets: ' . $response->get_error_message(), ['status' => 500]);
+        }
+        
+        $response_code = wp_remote_retrieve_response_code($response);
+        if ($response_code != 200) {
+            return new WP_Error('fetch_error', 'Could not fetch questions (HTTP Status: ' . $response_code . '). Please ensure your Google Sheet is public ("Anyone with the link can view").', ['status' => 500]);
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        if (function_exists('mb_convert_encoding')) {
+            $body = mb_convert_encoding($body, 'UTF-8', mb_detect_encoding($body, 'UTF-8, ISO-8859-1', true));
+        }
+
+        $rows = preg_split('/\r\n|\r|\n/', $body);
+        array_shift($rows); // remove header
         $questions = [];
+        $parsing_errors = [];
+
         foreach ($rows as $i => $row) {
+            $row_num = $i + 2;
             if (empty(trim($row))) continue;
+            
             $data = str_getcsv($row);
-            if (count($data) >= 3 && !empty(trim($data[0])) && !empty(trim($data[1])) && !empty(trim($data[2]))) {
-                $options_raw = explode('|', $data[1]);
-                $options = [];
-                foreach ($options_raw as $opt) {
-                    $options[] = preg_replace('/^[\pZ\pC]+|[\pZ\pC]+$/u', '', $opt);
-                }
-                
-                $correct_answer_text = preg_replace('/^[\pZ\pC]+|[\pZ\pC]+$/u', '', $data[2]);
-                
-                $correct_answer_index = false;
-                $trimmed_correct_answer = function_exists('mb_strtolower') ? mb_strtolower(trim($correct_answer_text), 'UTF-8') : strtolower(trim($correct_answer_text));
+            
+            if (count($data) < 3 || empty(trim($data[0])) || empty(trim($data[1])) || empty(trim($data[2]))) {
+                $parsing_errors[] = "Row {$row_num}: Invalid format or missing data in one of the three required columns.";
+                continue;
+            }
 
-                foreach ($options as $index => $option_text) {
-                    $trimmed_option_text = function_exists('mb_strtolower') ? mb_strtolower(trim($option_text), 'UTF-8') : strtolower(trim($option_text));
-                    if ($trimmed_option_text === $trimmed_correct_answer) {
-                        $correct_answer_index = $index;
-                        break;
-                    }
-                }
+            $options_raw = explode('|', $data[1]);
+            $options = array_map(function($opt) {
+                return preg_replace('/^[\pZ\pC]+|[\pZ\pC]+$/u', '', $opt);
+            }, $options_raw);
+            
+            $correct_answer_text = preg_replace('/^[\pZ\pC]+|[\pZ\pC]+$/u', '', $data[2]);
+            
+            $correct_answer_index = false;
+            $lc_clean_correct_answer = function_exists('mb_strtolower') ? mb_strtolower(trim($correct_answer_text), 'UTF-8') : strtolower(trim($correct_answer_text));
 
-                if ($correct_answer_index !== false) {
-                    $questions[] = [
-                        'id' => $i + 1, 
-                        'question' => preg_replace('/^[\pZ\pC]+|[\pZ\pC]+$/u', '', $data[0]), 
-                        'options' => $options, 
-                        'correctAnswer' => $correct_answer_index + 1
-                    ];
+            foreach ($options as $index => $option_text) {
+                $lc_clean_option = function_exists('mb_strtolower') ? mb_strtolower(trim($option_text), 'UTF-8') : strtolower(trim($option_text));
+                if ($lc_clean_option === $lc_clean_correct_answer) {
+                    $correct_answer_index = $index;
+                    break;
                 }
             }
+            
+            if ($correct_answer_index !== false) {
+                $questions[] = [
+                    'id' => $row_num, 
+                    'question' => preg_replace('/^[\pZ\pC]+|[\pZ\pC]+$/u', '', $data[0]), 
+                    'options' => $options, 
+                    'correctAnswer' => $correct_answer_index + 1
+                ];
+            } else {
+                 $parsing_errors[] = "Row {$row_num}: Correct answer text '{$correct_answer_text}' was not found in the list of options provided.";
+            }
         }
-        set_transient($transient_key, $questions, 15 * MINUTE_IN_SECONDS);
+
+        if (!empty($questions)) {
+            set_transient($transient_key, $questions, 15 * MINUTE_IN_SECONDS);
+        }
     }
-    if (empty($questions)) return new WP_Error('no_questions', 'No valid questions found.', ['status' => 500]);
+
+    if (empty($questions)) {
+        delete_transient($transient_key); // Clear potentially bad cache
+        $error_message = 'No valid questions could be parsed from the source.';
+        if (!empty($parsing_errors) && $request->get_param('jwt_payload')['user']['isAdmin']) {
+            $error_message .= ' Admin Debug: ' . implode(' ', array_slice($parsing_errors, 0, 3));
+        }
+        return new WP_Error('no_questions', $error_message, ['status' => 500, 'data' => ['debug_errors' => $parsing_errors]]);
+    }
+
     shuffle($questions);
-    return new WP_REST_Response(array_slice($questions, 0, intval($request->get_param('count'))), 200);
+    $count = intval($request->get_param('count'));
+    if ($count > 0) {
+        return new WP_REST_Response(array_slice($questions, 0, $count), 200);
+    }
+    
+    return new WP_REST_Response($questions, 200);
 }
 
 function mco_api_get_exam_stats(WP_REST_Request $request) {
@@ -241,17 +296,44 @@ function mco_api_get_exam_stats(WP_REST_Request $request) {
 
 function mco_api_get_debug_details(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
+    
+    $user_results = get_user_meta($payload['user']['id'], 'mco_exam_results', true);
+    if (!is_array($user_results)) {
+        $user_results = [];
+    }
+
     $sheet_test = ['success' => false, 'message' => 'No exams with Sheet URL found to test.'];
     $config = mco_get_app_config_data();
     $test_url = '';
-    foreach($config['exams'] as $exam) { if(!empty($exam['questionSourceUrl'])) { $test_url = $exam['questionSourceUrl']; break; } }
+    
+    if (!empty($config['exams']) && is_array($config['exams'])) {
+        foreach($config['exams'] as $exam) {
+            if(!empty($exam['questionSourceUrl'])) {
+                $test_url = $exam['questionSourceUrl'];
+                break;
+            }
+        }
+    }
+    
     if ($test_url && preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $test_url, $matches)) {
         $response = wp_remote_get("https://docs.google.com/spreadsheets/d/{$matches[1]}/export?format=csv", ['timeout' => 15]);
-        if (is_wp_error($response)) $sheet_test = ['success' => false, 'message' => 'WP_Error: ' . $response->get_error_message()];
-        elseif (wp_remote_retrieve_response_code($response) != 200) $sheet_test = ['success' => false, 'message' => 'HTTP Status ' . wp_remote_retrieve_response_code($response) . '. Check sheet sharing settings.'];
-        else $sheet_test = ['success' => true, 'message' => 'Successfully fetched ' . strlen(wp_remote_retrieve_body($response)) . ' bytes.'];
+        if (is_wp_error($response)) {
+            $sheet_test = ['success' => false, 'message' => 'WP_Error: ' . $response->get_error_message()];
+        } elseif (wp_remote_retrieve_response_code($response) != 200) {
+            $sheet_test = ['success' => false, 'message' => 'HTTP Status ' . wp_remote_retrieve_response_code($response) . '. Check sheet sharing settings.'];
+        } else {
+            $sheet_test = ['success' => true, 'message' => 'Successfully fetched ' . strlen(wp_remote_retrieve_body($response)) . ' bytes.'];
+        }
     }
-    return new WP_REST_Response(['user' => $payload['user'], 'purchases' => $payload['paidExamIds'], 'results' => array_values(get_user_meta($payload['user']['id'], 'mco_exam_results', true) ?: []), 'sheetTest' => $sheet_test], 200);
+    
+    $purchases = isset($payload['paidExamIds']) && is_array($payload['paidExamIds']) ? $payload['paidExamIds'] : [];
+
+    return new WP_REST_Response([
+        'user' => $payload['user'], 
+        'purchases' => $purchases, 
+        'results' => array_values($user_results), 
+        'sheetTest' => $sheet_test
+    ], 200);
 }
 
 function mco_api_download_config() {
