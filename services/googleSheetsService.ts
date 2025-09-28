@@ -293,42 +293,82 @@ export const googleSheetsService = {
         return Promise.resolve(newResult);
     },
 
-    // --- NEW FEEDBACK & REVIEW SUBMISSIONS (DISABLED) ---
+    // --- FEEDBACK & REVIEW SUBMISSIONS ---
     submitFeedback: async (token: string, category: string, message: string): Promise<void> => {
-        return Promise.reject(new Error("Feedback feature is not available. The backend endpoint is not implemented."));
+        try {
+            await apiFetch('/submit-feedback', 'POST', token, { category, message });
+        } catch (error) {
+            console.error("Failed to submit feedback:", error);
+            throw error;
+        }
     },
 
     submitReview: async (token: string, examId: string, rating: number, reviewText: string): Promise<void> => {
-        return Promise.reject(new Error("Review feature is not available. The backend endpoint is not implemented."));
+        try {
+            await apiFetch('/submit-review', 'POST', token, { examId, rating, reviewText });
+        } catch (error) {
+            console.error("Failed to submit review:", error);
+            throw error;
+        }
     },
 
-    // --- NEW WHEEL OF FORTUNE (DISABLED) ---
+    // --- WHEEL OF FORTUNE ---
     spinWheel: async (token: string): Promise<SpinWheelResult> => {
-        return Promise.reject(new Error("Spin & Win feature is not available. The backend endpoint is not implemented."));
+        try {
+            return await apiFetch('/spin-wheel', 'POST', token);
+        } catch (error) {
+            console.error("Failed to spin the wheel:", error);
+            throw error;
+        }
     },
 
-    // --- NEW ADMIN ACTIONS (DISABLED) ---
+    // --- ADMIN ACTIONS ---
     addSpins: async (token: string, userId: string, spins: number): Promise<{ success: boolean; newTotal: number; }> => {
-        return Promise.reject(new Error("Admin feature is not available. The backend endpoint is not implemented."));
+        try {
+            return await apiFetch('/admin/add-spins', 'POST', token, { userId, spins });
+        } catch (error) {
+            console.error("Failed to add spins:", error);
+            throw error;
+        }
     },
 
     grantPrize: async (token: string, userId: string, prizeId: string): Promise<{ success: boolean; message: string; }> => {
-        return Promise.reject(new Error("Admin feature is not available. The backend endpoint is not implemented."));
+         try {
+            return await apiFetch('/admin/grant-prize', 'POST', token, { userId, prizeId });
+        } catch (error) {
+            console.error("Failed to grant prize:", error);
+            throw error;
+        }
     },
 
     searchUser: async (token: string, searchTerm: string): Promise<SearchedUser[]> => {
-        return Promise.reject(new Error("Admin feature is not available. The backend endpoint is not implemented."));
+        try {
+            return await apiFetch('/admin/search-users', 'POST', token, { searchTerm });
+        } catch (error) {
+            console.error("Failed to search for users:", error);
+            throw error;
+        }
     },
 
     resetSpins: async (token: string, userId: string): Promise<{ success: boolean; message: string; }> => {
-        return Promise.reject(new Error("Admin feature is not available. The backend endpoint is not implemented."));
+        try {
+            return await apiFetch('/admin/reset-spins', 'POST', token, { userId });
+        } catch (error) {
+            console.error("Failed to reset spins:", error);
+            throw error;
+        }
     },
 
     removePrize: async (token: string, userId: string): Promise<{ success: boolean; message: string; }> => {
-         return Promise.reject(new Error("Admin feature is not available. The backend endpoint is not implemented."));
+         try {
+            return await apiFetch('/admin/remove-prize', 'POST', token, { userId });
+        } catch (error) {
+            console.error("Failed to remove prize:", error);
+            throw error;
+        }
     },
     
-    // --- NEW EXAM STATS ---
+    // --- EXAM STATS ---
     getExamStats: async (token: string): Promise<ExamStat[]> => {
         try {
             return await apiFetch('/exam-stats', 'GET', token);

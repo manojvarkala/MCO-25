@@ -504,15 +504,15 @@ const Admin: FC = () => {
                     <Users className="mr-3 text-cyan-500" />
                     User Prize Management
                 </h2>
-                 <fieldset disabled className="opacity-50">
+                 <fieldset disabled={isSubmitting}>
                     <p className="text-slate-600 mb-6">
-                        Search for a user by name or email to manage their spins and prizes. (This feature is temporarily unavailable.)
+                        Search for a user by name or email to manage their spins and prizes.
                     </p>
 
-                    <form onSubmit={(e) => e.preventDefault()} className="flex gap-2 mb-4">
+                    <form onSubmit={handleUserSearch} className="flex gap-2 mb-4">
                         <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Enter user name or email..." className={inputClass} />
-                        <button type="submit" disabled={true} className="flex items-center justify-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
-                            <Search size={16} />
+                        <button type="submit" disabled={isSearching || !searchTerm.trim()} className="flex items-center justify-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
+                            {isSearching ? <Spinner/> : <Search size={16} />}
                         </button>
                     </form>
                  </fieldset>

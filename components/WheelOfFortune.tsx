@@ -87,50 +87,52 @@ const WheelOfFortune: FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                 toast.error("Better luck next time!");
             }
 
-            const canSpinAgain = user?.isAdmin || spinsAvailable > 0;
+            const canSpinAgain = user?.isAdmin || spinsAvailable > 1; // Check if more than 1 spin remains AFTER the current one
             if (!canSpinAgain) {
                 setTimeout(onClose, 3000);
             }
         }
-    }, [prizeResult, spinsAvailable, user?.isAdmin, onClose]);
+    }, [prizeResult, onClose]);
 
     const handleSpin = async () => {
         if (!token || isSpinning) return;
 
-        // Temporarily disable this feature as the backend endpoint is not implemented
-        toast.error("The 'Spin & Win' feature is currently unavailable.");
-        return;
-
-        // setIsSpinning(true);
-        // setPrizeResult(null);
+        setIsSpinning(true);
+        setPrizeResult(null);
         
-        // const toastId = toast.loading('Spinning the wheel...');
+        const toastId = toast.loading('Spinning the wheel...');
 
-        // try {
-        //     const result = await googleSheetsService.spinWheel(token);
-        //     const { prizeId, prizeLabel, newToken } = result;
+        try {
+            const result = await googleSheetsService.spinWheel(token);
+            const { prizeId, prizeLabel, newToken } = result;
 
-        //     if (newToken) {
-        //         await loginWithToken(newToken);
-        //     }
+            if (newToken) {
+                // False flag refreshes the entire auth context, including the new spin count
+                await loginWithToken(newToken, false);
+            }
             
-        //     const randomExtraSpins = Math.random() * 360;
-        //     const fullSpins = 6 * 360;
-        //     setRotation(rotation + fullSpins + randomExtraSpins);
-            
-        //     setTimeout(() => {
-        //         toast.dismiss(toastId);
-        //         setPrizeResult({ prizeId, prizeLabel });
-        //     }, 7000);
+            const prizeIndex = displaySegments.findIndex(segment => segment.prizeId === prizeId);
+            const segmentAngle = 360 / displaySegments.length;
+            const targetAngle = 360 - (prizeIndex * segmentAngle) - (segmentAngle / 2);
 
-        // } catch (error: any) {
-        //     toast.dismiss(toastId);
-        //     setIsSpinning(false);
-        //     toast.error(error.message || "An error occurred.");
-        //     if(user && !user.isAdmin) {
-        //        onClose();
-        //     }
-        // }
+            const randomExtraSpins = Math.floor(Math.random() * 2) * 360;
+            const fullSpins = 6 * 360;
+            setRotation(rotation + fullSpins + randomExtraSpins + targetAngle);
+            
+            setTimeout(() => {
+                toast.dismiss(toastId);
+                setPrizeResult({ prizeId, prizeLabel });
+                setIsSpinning(false);
+            }, 7000); // Match CSS transition duration
+
+        } catch (error: any) {
+            toast.dismiss(toastId);
+            setIsSpinning(false);
+            toast.error(error.message || "An error occurred.");
+            if(user && !user.isAdmin) {
+               onClose();
+            }
+        }
     };
 
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
@@ -187,12 +189,8 @@ const WheelOfFortune: FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
     const PrizeResultDisplay = () => {
         if (!prizeResult) return null;
 
-        const canSpinAgain = user?.isAdmin || spinsAvailable > 0;
         const isWin = prizeResult.prizeId !== 'NEXT_TIME';
-        const buttonText = canSpinAgain ? (isWin ? 'Awesome!' : 'Spin Again') : 'Close';
-        const buttonClass = isWin 
-            ? "bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-lg transition"
-            : "bg-slate-600 hover:bg-slate-700 text-white font-bold py-3 px-8 rounded-lg transition";
+        const buttonText = (spinsAvailable > 0 || !!user?.isAdmin) ? 'Spin Again' : 'Close';
 
         return (
             <div className="absolute inset-0 bg-black/80 rounded-2xl flex flex-col items-center justify-center animate-fade-in z-30 p-4">
@@ -201,20 +199,22 @@ const WheelOfFortune: FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                 <p className="text-4xl font-extrabold text-white mb-8 text-center">{prizeResult.prizeLabel}</p>
                 <button 
                     onClick={() => {
-                        if (canSpinAgain) {
+                        if (spinsAvailable > 0 || !!user?.isAdmin) {
                             setPrizeResult(null);
                             setIsSpinning(false);
                         } else {
                             onClose();
                         }
                     }} 
-                    className={buttonClass}
+                    className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-lg transition"
                 >
                     {buttonText}
                 </button>
             </div>
         );
     };
+
+    const canSpin = !isSpinning && !prizeResult && (spinsAvailable > 0 || !!user?.isAdmin);
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4" role="dialog" aria-modal="true">
@@ -285,7 +285,7 @@ const WheelOfFortune: FC<WheelOfFortuneProps> = ({ isOpen, onClose }) => {
                             ref={sliderHandleRef}
                             onMouseDown={handleDragStart}
                             onTouchStart={handleDragStart}
-                            className={`w-12 h-12 rounded-full ring-4 ring-amber-300/50 flex items-center justify-center cursor-not-allowed bg-zinc-600`}
+                            className={`w-12 h-12 rounded-full ring-4 ring-amber-300/50 flex items-center justify-center transition-colors ${canSpin ? 'cursor-grab bg-amber-500 hover:bg-amber-600' : 'cursor-not-allowed bg-zinc-600'}`}
                             style={{ transform: `translateY(${dragY}px)` }}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>

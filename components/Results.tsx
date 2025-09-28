@@ -1,8 +1,9 @@
 
 
+
 import React, { FC, useState, useEffect } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
-import * as ReactRouterDOM from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook } from '../types.ts';
@@ -15,9 +16,9 @@ import BookCover from '../assets/BookCover.tsx';
 import jsPDF from 'jspdf';
 
 const Results: FC = () => {
-    const { testId } = ReactRouterDOM.useParams<{ testId: string }>();
+    const { testId } = useParams<{ testId: string }>();
     // Fix: Use useNavigate for navigation in v6
-    const navigate = ReactRouterDOM.useNavigate();
+    const navigate = useNavigate();
     const { user, token, paidExamIds, isSubscribed } = useAuth();
     const { activeOrg } = useAppContext();
     
@@ -484,9 +485,42 @@ Please provide a summary of the key areas I need to focus on based on these erro
                 
                 <div className="text-center mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
                     <h2 className="text-xl font-semibold text-slate-800 mb-4">Rate Your Experience</h2>
-                    <div className="text-sm text-amber-700 bg-amber-50 p-3 rounded-md">
-                        <p><strong>Note:</strong> The review submission feature is temporarily unavailable while we upgrade our systems.</p>
-                    </div>
+                    {submittedReview ? (
+                        <div className="text-green-700 bg-green-50 p-4 rounded-md">
+                            <h3 className="font-bold">Thank you for your review!</h3>
+                            <div className="flex justify-center items-center gap-1 mt-2">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <Star key={i} size={20} className={`transition-colors ${i < submittedReview.rating ? 'text-yellow-400 fill-current' : 'text-slate-300'}`} />
+                                ))}
+                            </div>
+                            {submittedReview.reviewText && <p className="mt-2 text-sm italic">"{submittedReview.reviewText}"</p>}
+                        </div>
+                    ) : (
+                        <>
+                            <div className="flex justify-center items-center mb-4">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <button key={i} onMouseEnter={() => setHoverRating(i + 1)} onMouseLeave={() => setHoverRating(0)} onClick={() => setRating(i + 1)} aria-label={`Rate ${i + 1} stars`}>
+                                        <Star size={32} className={`cursor-pointer transition-colors ${(hoverRating || rating) > i ? 'text-yellow-400 fill-current' : 'text-slate-300'}`} />
+                                    </button>
+                                ))}
+                            </div>
+                            <textarea
+                                value={reviewText}
+                                onChange={(e) => setReviewText(e.target.value)}
+                                rows={3}
+                                className="w-full max-w-lg mx-auto p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition mb-4"
+                                placeholder="Tell us more about your experience (optional)..."
+                            />
+                            <button
+                                onClick={handleSubmitReview}
+                                disabled={isSubmittingReview || rating === 0}
+                                className="inline-flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-6 rounded-lg transition disabled:bg-slate-400"
+                            >
+                                {isSubmittingReview ? <Spinner/> : <MessageSquare size={16}/>}
+                                <span>{isSubmittingReview ? 'Submitting...' : 'Submit Review'}</span>
+                            </button>
+                        </>
+                    )}
                 </div>
 
 

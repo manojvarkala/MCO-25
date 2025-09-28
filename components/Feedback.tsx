@@ -50,7 +50,7 @@ const Feedback: FC = () => {
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-6">
-                 <fieldset disabled className="space-y-6">
+                 <fieldset disabled={isSubmitting} className="space-y-6">
                     <div>
                         <label htmlFor="category" className="block text-sm font-medium text-slate-700">
                             Feedback Category
@@ -89,15 +89,12 @@ const Feedback: FC = () => {
                 <div>
                     <button
                         type="submit"
-                        disabled={true}
+                        disabled={isSubmitting || !message.trim()}
                         className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:bg-slate-400 disabled:cursor-not-allowed"
                     >
-                        <Send size={16} />
-                        <span>Submit Feedback</span>
+                        {isSubmitting ? <Spinner /> : <Send size={16} />}
+                        <span>{isSubmitting ? 'Submitting...' : 'Submit Feedback'}</span>
                     </button>
-                    <p className="text-xs text-center text-amber-700 mt-2 bg-amber-50 p-2 rounded-md">
-                        <strong>Note:</strong> The feedback feature is temporarily unavailable while we upgrade our systems.
-                    </p>
                 </div>
             </form>
         </div>

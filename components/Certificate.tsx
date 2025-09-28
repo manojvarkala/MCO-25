@@ -1,6 +1,6 @@
 import React, { FC, useState, useEffect, useRef } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
-import * as ReactRouterDOM from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -25,9 +25,9 @@ const Watermark: FC<{ text: string }> = ({ text }) => (
 );
 
 const Certificate: FC = () => {
-    const { testId = 'sample' } = ReactRouterDOM.useParams<{ testId?: string }>();
+    const { testId = 'sample' } = useParams<{ testId?: string }>();
     // Fix: Use useNavigate for navigation in v6
-    const navigate = ReactRouterDOM.useNavigate();
+    const navigate = useNavigate();
     const { user, token } = useAuth();
     const { activeOrg } = useAppContext();
     const [certData, setCertData] = useState<CertificateData | null>(null);
