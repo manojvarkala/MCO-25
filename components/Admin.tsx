@@ -1,5 +1,3 @@
-
-
 import React, { FC, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu, Video, DownloadCloud, Loader, CheckCircle, XCircle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -70,10 +68,6 @@ const Admin: FC = () => {
     const { activeOrg, updateActiveOrg } = useAppContext();
     const { token } = useAuth();
 
-    // State for exam customization
-    const [editingExamId, setEditingExamId] = useState<string | null>(null);
-    const [editedExamData, setEditedExamData] = useState<Partial<Exam>>({});
-    
     // State for user prize management
     const [searchTerm, setSearchTerm] = useState('');
     const [isSearching, setIsSearching] = useState(false);
@@ -170,73 +164,6 @@ const Admin: FC = () => {
         }
     };
 
-
-    const handleEditClick = (exam: Exam) => {
-        setEditingExamId(exam.id);
-        setEditedExamData({
-            name: exam.name,
-            description: exam.description,
-            numberOfQuestions: exam.numberOfQuestions,
-            passScore: exam.passScore,
-            durationMinutes: exam.durationMinutes,
-            questionSourceUrl: exam.questionSourceUrl,
-            isPractice: exam.isPractice,
-            isProctored: exam.isProctored,
-            certificateTemplateId: exam.certificateTemplateId,
-            recommendedBookId: exam.recommendedBookId || '',
-        });
-    };
-
-    const handleCancel = () => {
-        setEditingExamId(null);
-        setEditedExamData({});
-    };
-
-    const handleSave = () => {
-        if (!activeOrg || !editingExamId) return;
-
-        if (!editedExamData.name?.trim() || !editedExamData.description?.trim()) {
-            toast.error("Name and description cannot be empty.");
-            return;
-        }
-        if (isNaN(Number(editedExamData.numberOfQuestions)) || Number(editedExamData.numberOfQuestions) <= 0) {
-            toast.error("Number of questions must be a positive number.");
-            return;
-        }
-        if (isNaN(Number(editedExamData.passScore)) || Number(editedExamData.passScore) < 0 || Number(editedExamData.passScore) > 100) {
-            toast.error("Pass score must be between 0 and 100.");
-            return;
-        }
-        if (isNaN(Number(editedExamData.durationMinutes)) || Number(editedExamData.durationMinutes) <= 0) {
-            toast.error("Duration must be a positive number of minutes.");
-            return;
-        }
-        if (!editedExamData.questionSourceUrl?.trim() || !editedExamData.questionSourceUrl.startsWith('https://docs.google.com/spreadsheets/d/')) {
-            toast.error("A valid Google Sheets URL for questions is required.");
-            return;
-        }
-
-        const updatedExams = activeOrg.exams.map(exam =>
-            exam.id === editingExamId ? { ...exam, ...editedExamData } : exam
-        );
-
-        const updatedOrg = { ...activeOrg, exams: updatedExams };
-        updateActiveOrg(updatedOrg);
-        toast.success("Exam updated successfully!");
-        handleCancel();
-    };
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        const numValue = (name === 'numberOfQuestions' || name === 'passScore' || name === 'durationMinutes') ? parseInt(value) : value;
-        setEditedExamData(prev => ({ ...prev, [name]: numValue }));
-    };
-
-    const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, checked } = e.target;
-        setEditedExamData(prev => ({ ...prev, [name]: checked }));
-    };
-
     const handleUserSearch = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!token || !searchTerm.trim()) return;
@@ -293,18 +220,6 @@ const Admin: FC = () => {
             toast.success(`Prize removed for ${selectedUser.name}.`);
         } catch (error: any) { toast.error(error.message || "Failed to remove prize."); } finally { setIsSubmitting(false); }
     }
-
-    const handleSelectExam = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const examId = e.target.value;
-        if (examId) {
-            const examToEdit = activeOrg?.exams.find(e => e.id === examId);
-            if (examToEdit) {
-                handleEditClick(examToEdit);
-            }
-        } else {
-            handleCancel();
-        }
-    };
     
     const handleDownloadConfig = async () => {
         setIsDownloadingConfig(true);
@@ -338,7 +253,6 @@ const Admin: FC = () => {
 
 
     const inputClass = "w-full p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition";
-    const labelClass = "block text-sm font-medium text-slate-600 mb-1 flex items-center gap-1";
 
     return (
         <div className="max-w-4xl mx-auto space-y-8">
@@ -516,104 +430,6 @@ const Admin: FC = () => {
                         </button>
                     </form>
                  </fieldset>
-            </div>
-
-            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
-                    <Book className="mr-3 text-cyan-500" />
-                    Exam Customization (Session Only)
-                </h2>
-                <p className="text-slate-600 mb-6">
-                    Select an exam from the dropdown to edit its details. Changes are saved for the current browser session and will reset on a full page reload.
-                </p>
-
-                <div className="mb-4">
-                    <label htmlFor="exam-select" className={labelClass}>Select Exam to Edit</label>
-                    <select
-                        id="exam-select"
-                        value={editingExamId || ''}
-                        onChange={handleSelectExam}
-                        className={inputClass}
-                    >
-                        <option value="">-- Select an Exam --</option>
-                        {activeOrg?.exams.map(exam => (
-                            <option key={exam.id} value={exam.id}>{exam.name}</option>
-                        ))}
-                    </select>
-                </div>
-
-                {editingExamId && (
-                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 transition-all duration-300">
-                        <div className="space-y-4">
-                            <h3 className="font-bold text-lg text-slate-800 mb-2 border-b pb-2">Editing: {editedExamData.name}</h3>
-                            <div>
-                                <label htmlFor="name" className={labelClass}><Type size={14}/> Exam Name</label>
-                                <input type="text" name="name" id="name" value={editedExamData.name} onChange={handleInputChange} className={inputClass} />
-                            </div>
-                            <div>
-                                <label htmlFor="description" className={labelClass}><Type size={14}/> Description</label>
-                                <textarea name="description" id="description" value={editedExamData.description} onChange={handleInputChange} className={inputClass} rows={3}></textarea>
-                            </div>
-                            <div>
-                                <label htmlFor="questionSourceUrl" className={labelClass}><FileSpreadsheet size={14}/> Question Source URL</label>
-                                <input type="url" name="questionSourceUrl" id="questionSourceUrl" value={editedExamData.questionSourceUrl} onChange={handleInputChange} className={inputClass} placeholder="https://docs.google.com/spreadsheets/d/..."/>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label htmlFor="numberOfQuestions" className={labelClass}>Questions</label>
-                                    <input type="number" name="numberOfQuestions" id="numberOfQuestions" value={editedExamData.numberOfQuestions} onChange={handleInputChange} className={inputClass} />
-                                </div>
-                                <div>
-                                    <label htmlFor="passScore" className={labelClass}>Pass Score (%)</label>
-                                    <input type="number" name="passScore" id="passScore" value={editedExamData.passScore} onChange={handleInputChange} className={inputClass} />
-                                </div>
-                                <div>
-                                    <label htmlFor="durationMinutes" className={labelClass}>Duration (Mins)</label>
-                                    <input type="number" name="durationMinutes" id="durationMinutes" value={editedExamData.durationMinutes} onChange={handleInputChange} className={inputClass} />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label htmlFor="certificateTemplateId" className={labelClass}><Award size={14}/> Certificate Template</label>
-                                    <select name="certificateTemplateId" id="certificateTemplateId" value={editedExamData.certificateTemplateId} onChange={handleInputChange} className={inputClass}>
-                                        {activeOrg?.certificateTemplates.map(template => (
-                                            <option key={template.id} value={template.id}>{template.title}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label htmlFor="recommendedBookId" className={labelClass}><Book size={14}/> Recommended Book</label>
-                                    <select name="recommendedBookId" id="recommendedBookId" value={editedExamData.recommendedBookId} onChange={handleInputChange} className={inputClass}>
-                                        <option value="">None</option>
-                                        {activeOrg?.suggestedBooks.map(book => (
-                                            <option key={book.id} value={book.id}>{book.title}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="flex items-center justify-between flex-wrap gap-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center">
-                                        <input type="checkbox" name="isPractice" id="isPractice" checked={!!editedExamData.isPractice} onChange={handleCheckboxChange} className="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500" />
-                                        <label htmlFor="isPractice" className="ml-2 block text-sm text-slate-900">Is Practice Exam?</label>
-                                    </div>
-                                     <div className="flex items-center">
-                                        <input type="checkbox" name="isProctored" id="isProctored" checked={!!editedExamData.isProctored} onChange={handleCheckboxChange} className="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500" />
-                                        <label htmlFor="isProctored" className="ml-2 block text-sm text-slate-900 flex items-center gap-1"><Cpu size={14} /> Enable Browser Proctoring?</label>
-                                    </div>
-                                </div>
-                                <div className="flex justify-end space-x-2 pt-2">
-                                    <button onClick={handleCancel} className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition">
-                                        <X size={16} /><span>Cancel</span>
-                                    </button>
-                                    <button onClick={handleSave} className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition">
-                                        <Save size={16} /><span>Save Changes</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
             
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">

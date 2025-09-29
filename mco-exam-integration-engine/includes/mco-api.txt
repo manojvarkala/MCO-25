@@ -236,21 +236,31 @@ function mco_api_submit_result(WP_REST_Request $request) {
 
 function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
     $sheet_url = esc_url_raw($request->get_param('sheetUrl'));
-    if (empty($sheet_url) || !preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
-        return new WP_Error('bad_request', 'Invalid Google Sheet URL format.', ['status' => 400]);
+    $csv_url = '';
+    $error_message = 'Could not fetch questions from Google Sheets. Please ensure the sheet is public ("Anyone with the link can view"). If the issue persists, try the more reliable "Publish to the web" option (as a CSV) inside Google Sheets and use that link instead.';
+
+    // Check for "Publish to the web" format first - it's more reliable for programmatic access.
+    if (strpos($sheet_url, '/pub?gid=') !== false && strpos($sheet_url, 'output=csv') !== false) {
+        $csv_url = $sheet_url;
+    } 
+    // Fallback to constructing the export URL from a standard sharing link.
+    elseif (preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
+        $sheet_id = $matches[1];
+        $csv_url = "https://docs.google.com/spreadsheets/d/{$sheet_id}/export?format=csv&gid=0";
     }
 
-    $sheet_id = $matches[1];
-    $transient_key = 'mco_sheet_' . md5($sheet_id);
-    
+    if (empty($csv_url)) {
+        return new WP_Error('bad_request', 'Invalid Google Sheet URL format. Please use the standard sharing link or a "Publish to the web" CSV link.', ['status' => 400]);
+    }
+
+    $transient_key = 'mco_sheet_' . md5($sheet_url); // Key based on the original URL to bust cache if URL changes.
     $questions = get_transient($transient_key);
 
     if (false === $questions) {
-        $csv_url = "https://docs.google.com/spreadsheets/d/{$sheet_id}/export?format=csv&gid=0";
         $args = [
             'timeout' => 20,
             'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-            'sslverify' => false // Added to bypass potential server SSL verification issues.
+            'sslverify' => false
         ];
         $response = wp_remote_get($csv_url, $args);
 
@@ -262,7 +272,7 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
         if ($response_code != 200) {
             $response_body = wp_remote_retrieve_body($response);
             $error_details = !empty($response_body) ? ' Server response: ' . substr(strip_tags($response_body), 0, 200) : '';
-            return new WP_Error('fetch_error', 'Could not fetch questions (HTTP Status: ' . $response_code . '). Please ensure your Google Sheet is public ("Anyone with the link can view").' . $error_details, ['status' => 500]);
+            return new WP_Error('fetch_error', $error_message . ' (HTTP Status: ' . $response_code . ').' . $error_details, ['status' => 500]);
         }
 
         $body = wp_remote_retrieve_body($response);
@@ -293,24 +303,20 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
             
             $correct_answer_input = preg_replace('/^[\pZ\pC]+|[\pZ\pC]+$/u', '', trim($data[2]));
             $correct_answer_index = false;
-
-            // Attempt to parse as a 1-based numeric index first.
-            if (is_numeric($correct_answer_input)) {
-                $potential_index = intval($correct_answer_input) - 1; // Convert to 0-based for array access.
-                if ($potential_index >= 0 && isset($options[$potential_index])) {
-                    $correct_answer_index = $potential_index;
+            
+            $lc_clean_correct_answer = function_exists('mb_strtolower') ? mb_strtolower($correct_answer_input, 'UTF-8') : strtolower($correct_answer_input);
+            foreach ($options as $index => $option_text) {
+                $lc_clean_option = function_exists('mb_strtolower') ? mb_strtolower(trim($option_text), 'UTF-8') : strtolower(trim($option_text));
+                if ($lc_clean_option === $lc_clean_correct_answer) {
+                    $correct_answer_index = $index;
+                    break;
                 }
             }
 
-            // If it wasn't a valid numeric index, fall back to treating it as text.
-            if ($correct_answer_index === false) {
-                $lc_clean_correct_answer = function_exists('mb_strtolower') ? mb_strtolower($correct_answer_input, 'UTF-8') : strtolower($correct_answer_input);
-                foreach ($options as $index => $option_text) {
-                    $lc_clean_option = function_exists('mb_strtolower') ? mb_strtolower(trim($option_text), 'UTF-8') : strtolower(trim($option_text));
-                    if ($lc_clean_option === $lc_clean_correct_answer) {
-                        $correct_answer_index = $index;
-                        break;
-                    }
+            if ($correct_answer_index === false && is_numeric($correct_answer_input)) {
+                $potential_index = intval($correct_answer_input) - 1;
+                if ($potential_index >= 0 && isset($options[$potential_index])) {
+                    $correct_answer_index = $potential_index;
                 }
             }
             

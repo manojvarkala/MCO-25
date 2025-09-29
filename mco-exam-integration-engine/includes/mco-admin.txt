@@ -246,7 +246,7 @@ if (!function_exists('mco_render_tools_tab')) {
 if (!function_exists('mco_add_meta_boxes')) {
     function mco_add_meta_boxes() {
         add_meta_box('mco_wc_product_meta', 'Exam App Configuration', 'mco_render_wc_product_meta_box', 'product', 'side', 'high');
-        add_meta_box('mco_exam_program_meta', 'Exam Program Details', 'mco_render_exam_program_meta_box', 'mco_exam_program', 'normal', 'high');
+        add_meta_box('mco_exam_program_meta', 'Exam Program Configuration', 'mco_render_exam_program_meta_box', 'mco_exam_program', 'normal', 'high');
         add_meta_box('mco_book_links_meta', 'Affiliate Links', 'mco_render_book_links_meta_box', 'mco_recommended_book', 'normal', 'high');
     }
 }
@@ -254,32 +254,83 @@ if (!function_exists('mco_add_meta_boxes')) {
 if (!function_exists('mco_render_exam_program_meta_box')) {
     function mco_render_exam_program_meta_box($post) {
         wp_nonce_field('mco_save_exam_meta', 'mco_exam_nonce');
+
+        // Fetch saved data
         $source_url = get_post_meta($post->ID, '_mco_question_source_url', true);
         $cert_sku = get_post_meta($post->ID, '_mco_certification_exam_sku', true);
+        $is_proctored = get_post_meta($post->ID, '_mco_is_proctored', true);
+        $recommended_book_id = get_post_meta($post->ID, '_mco_recommended_book_id', true);
         
-        echo '<p><label for="mco_question_source_url"><strong>Question Source Google Sheet URL:</strong></label><br>';
-        echo '<input type="url" id="mco_question_source_url" name="mco_question_source_url" value="' . esc_attr($source_url) . '" style="width:100%; margin-bottom: 0.5rem;">';
-        
-        echo '<p class="description" style="background-color: #f0f6fa; padding: 10px; border-radius: 4px; border-left: 3px solid #72aee6;">';
-        echo '<strong>Important:</strong> Ensure your Google Sheet is public ("Anyone with the link can view"). The sheet must be in CSV format with a header row and three columns with the exact headers: <code>question</code>, <code>options</code>, and <code>correctAnswer</code>.<br>';
-        echo '<ul style="list-style: disc; margin-left: 20px; margin-top: 5px;">';
-        echo '<li><strong>question:</strong> The full text of the question.</li>';
-        echo '<li><strong>options:</strong> All possible answers, separated by a pipe (<code>|</code>) character. Ex: <code>Option A|Option B|Option C</code></li>';
-        echo '<li><strong>correctAnswer:</strong> The full text of the correct answer, exactly as it appears in the options list. Ex: <code>Option C</code></li>';
-        echo '</ul></p></p>';
+        $practice_q_terms = wp_get_post_terms($post->ID, 'exam_practice_questions', ['fields' => 'names']); $practice_q = !empty($practice_q_terms) ? (int)$practice_q_terms[0] : 25;
+        $practice_d_terms = wp_get_post_terms($post->ID, 'exam_practice_duration', ['fields' => 'names']); $practice_d = !empty($practice_d_terms) ? (int)$practice_d_terms[0] : 60;
+        $cert_q_terms = wp_get_post_terms($post->ID, 'exam_cert_questions', ['fields' => 'names']); $cert_q = !empty($cert_q_terms) ? (int)$cert_q_terms[0] : 100;
+        $cert_d_terms = wp_get_post_terms($post->ID, 'exam_cert_duration', ['fields' => 'names']); $cert_d = !empty($cert_d_terms) ? (int)$cert_d_terms[0] : 240;
+        $pass_score_terms = wp_get_post_terms($post->ID, 'exam_pass_score', ['fields' => 'names']); $pass_score = !empty($pass_score_terms) ? (int)$pass_score_terms[0] : 70;
 
-        echo '<p style="margin-top: 1rem;"><label for="mco_certification_exam_sku"><strong>Certification Exam Product SKU:</strong></label><br>';
-        echo '<input type="text" id="mco_certification_exam_sku" name="mco_certification_exam_sku" value="' . esc_attr($cert_sku) . '" style="width:100%;">';
-        echo '<p class="description">Enter the WooCommerce product SKU for the main certification exam associated with this program.</p>';
-        echo '</p>';
+        $books_query = new WP_Query(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC']);
+        ?>
+        <style>
+            .mco-meta-box { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+            .mco-meta-section { background: #f9f9f9; padding: 1.5rem; border: 1px solid #ddd; border-left-width: 4px; }
+            .mco-meta-section h4 { margin-top: 0; font-size: 1.2em; }
+            .mco-meta-section p { margin-top: 0.5rem; }
+            .mco-meta-section label { font-weight: bold; display: block; margin-bottom: 0.5rem; }
+            .mco-meta-section input[type="text"], .mco-meta-section input[type="url"], .mco-meta-section input[type="number"], .mco-meta-section select { width: 100%; }
+        </style>
+        <div class="mco-meta-box">
+            <div class="mco-meta-section" style="grid-column: 1 / -1; border-color: #72aee6;">
+                <h4>General Settings</h4>
+                <p><label for="mco_question_source_url">Question Source Google Sheet URL</label>
+                <input type="url" id="mco_question_source_url" name="mco_question_source_url" value="<?php echo esc_attr($source_url); ?>">
+                <em class="description">Sheet must have <code>question</code>, <code>options</code>, <code>correctAnswer</code> columns and be public.</em></p>
+                <p><label for="mco_certification_exam_sku">Certification Exam Product SKU</label>
+                <input type="text" id="mco_certification_exam_sku" name="mco_certification_exam_sku" value="<?php echo esc_attr($cert_sku); ?>"></p>
+                <p><label for="mco_recommended_book_id">Recommended Book</label>
+                <select id="mco_recommended_book_id" name="mco_recommended_book_id">
+                    <option value="">None</option>
+                    <?php if ($books_query->have_posts()): while ($books_query->have_posts()): $books_query->the_post(); ?>
+                        <option value="<?php echo get_the_ID(); ?>" <?php selected($recommended_book_id, get_the_ID()); ?>><?php the_title(); ?></option>
+                    <?php endwhile; wp_reset_postdata(); endif; ?>
+                </select></p>
+            </div>
+            <div class="mco-meta-section" style="border-color: #8ce28c;">
+                <h4>Practice Exam</h4>
+                <p><label for="mco_practice_questions">Number of Questions</label>
+                <input type="number" id="mco_practice_questions" name="mco_practice_questions" value="<?php echo esc_attr($practice_q); ?>"></p>
+                <p><label for="mco_practice_duration">Duration (Minutes)</label>
+                <input type="number" id="mco_practice_duration" name="mco_practice_duration" value="<?php echo esc_attr($practice_d); ?>"></p>
+            </div>
+            <div class="mco-meta-section" style="border-color: #ffb900;">
+                <h4>Certification Exam</h4>
+                <p><label for="mco_cert_questions">Number of Questions</label>
+                <input type="number" id="mco_cert_questions" name="mco_cert_questions" value="<?php echo esc_attr($cert_q); ?>"></p>
+                <p><label for="mco_cert_duration">Duration (Minutes)</label>
+                <input type="number" id="mco_cert_duration" name="mco_cert_duration" value="<?php echo esc_attr($cert_d); ?>"></p>
+                <p><label for="mco_pass_score">Pass Score (%)</label>
+                <input type="number" id="mco_pass_score" name="mco_pass_score" value="<?php echo esc_attr($pass_score); ?>" min="0" max="100"></p>
+                 <p><label><input type="checkbox" name="mco_is_proctored" value="1" <?php checked($is_proctored, 1); ?>> Enable Browser Proctoring?</label></p>
+            </div>
+        </div>
+        <?php
     }
 }
 
 if (!function_exists('mco_save_exam_program_meta')) {
     function mco_save_exam_program_meta($post_id) {
         if (!isset($_POST['mco_exam_nonce']) || !wp_verify_nonce($_POST['mco_exam_nonce'], 'mco_save_exam_meta') || (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)) return;
+        
+        // Save meta fields
         if (isset($_POST['mco_question_source_url'])) update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($_POST['mco_question_source_url']));
         if (isset($_POST['mco_certification_exam_sku'])) update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($_POST['mco_certification_exam_sku']));
+        update_post_meta($post_id, '_mco_is_proctored', isset($_POST['mco_is_proctored']) ? 1 : 0);
+        if (isset($_POST['mco_recommended_book_id'])) update_post_meta($post_id, '_mco_recommended_book_id', absint($_POST['mco_recommended_book_id']));
+
+        // Save taxonomy terms
+        if (isset($_POST['mco_practice_questions'])) wp_set_post_terms($post_id, strval(absint($_POST['mco_practice_questions'])), 'exam_practice_questions', false);
+        if (isset($_POST['mco_practice_duration'])) wp_set_post_terms($post_id, strval(absint($_POST['mco_practice_duration'])), 'exam_practice_duration', false);
+        if (isset($_POST['mco_cert_questions'])) wp_set_post_terms($post_id, strval(absint($_POST['mco_cert_questions'])), 'exam_cert_questions', false);
+        if (isset($_POST['mco_cert_duration'])) wp_set_post_terms($post_id, strval(absint($_POST['mco_cert_duration'])), 'exam_cert_duration', false);
+        if (isset($_POST['mco_pass_score'])) wp_set_post_terms($post_id, strval(absint($_POST['mco_pass_score'])), 'exam_pass_score', false);
     }
 }
 

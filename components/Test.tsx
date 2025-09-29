@@ -271,14 +271,25 @@ const Test: React.FC = () => {
                 {error.includes("Google Sheet") && (
                     <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-left text-sm text-amber-800">
                         <h3 className="font-bold mb-2">How to Fix This:</h3>
-                        <p className="mb-2">This error usually means the Google Sheet containing the questions is not accessible. To fix this:</p>
+                        <p className="mb-2">This error means the Google Sheet with the questions is not accessible from our server. Try the following solutions in order:</p>
+                        <h4 className="font-semibold mt-3 mb-1">Method 1: Share Link (Recommended)</h4>
                         <ol className="list-decimal list-inside space-y-1">
-                            <li>Open the Google Sheet linked to this exam.</li>
-                            <li>Click the <strong>Share</strong> button in the top-right corner.</li>
-                            <li>Under "General access," change the setting from "Restricted" to <strong>"Anyone with the link"</strong>.</li>
+                            <li>Open your Google Sheet.</li>
+                            <li>Click the <strong>Share</strong> button (top-right).</li>
+                            <li>Under "General access," change from "Restricted" to <strong>"Anyone with the link"</strong>.</li>
                             <li>Ensure the role is set to <strong>"Viewer"</strong>.</li>
-                            <li>Click "Done" and try starting the exam again.</li>
+                            <li>Copy the URL from your browser's address bar and paste it into the "Question Source" field in WordPress.</li>
                         </ol>
+                        <h4 className="font-semibold mt-4 mb-1">Method 2: Publish to the Web (More Reliable)</h4>
+                        <p className="mb-2">If sharing doesn't work, publishing is a more stable option.</p>
+                        <ol className="list-decimal list-inside space-y-1">
+                             <li>In your Google Sheet, go to <strong>File &rarr; Share &rarr; Publish to the web</strong>.</li>
+                             <li>In the dialog, select the correct sheet (e.g., "Sheet1").</li>
+                             <li>Choose <strong>"Comma-separated values (.csv)"</strong> from the dropdown.</li>
+                             <li>Click <strong>Publish</strong> and confirm.</li>
+                             <li>Copy the generated link and paste it into the "Question Source" field in WordPress.</li>
+                        </ol>
+                        <p className="mt-3 text-xs">Note: After changing settings, it may take up to 15 minutes for the server to fetch the updated content due to caching.</p>
                     </div>
                 )}
 
