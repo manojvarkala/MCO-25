@@ -1,6 +1,6 @@
 
 {
-  "version": "20250925154055",
+  "version": "20250926000000",
   "organizations": [
     {
       "id": "org-medical-coding-online",
@@ -243,7 +243,7 @@
           "certificateTemplateId": "cert-practice",
           "isPractice": true,
           "durationMinutes": 60,
-          "questionSourceUrl": "https://docs.google.com/spreadsheets/d/1dpXSZlD7Kl8OgAv6ECPbQvygozwE7J3ChpjlZfndjSA/edit?usp=sharing"
+          "questionSourceUrl": "https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing"
         },
         {
           "id": "exam-cpma-cert",
@@ -258,7 +258,7 @@
           "certificateTemplateId": "cert-completion",
           "isPractice": false,
           "durationMinutes": 240,
-          "questionSourceUrl": "https://docs.google.com/spreadsheets/d/1dpXSZlD7Kl8OgAv6ECPbQvygozwE7J3ChpjlZfndjSA/edit?usp=sharing"
+          "questionSourceUrl": "https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing"
         },
         {
           "id": "exam-crc-practice-practice",
@@ -556,7 +556,7 @@
           "description": "Demonstrate your skills in medical auditing and compliance. This exam covers documentation guidelines, coding standards, and risk analysis for the AAPC CPMA credential.",
           "practiceExamId": "exam-cpma-practice-practice",
           "certificationExamId": "exam-cpma-cert",
-          "questionSourceUrl": "https://docs.google.com/spreadsheets/d/1dpXSZlD7Kl8OgAv6ECPbQvygozwE7J3ChpjlZfndjSA/edit?usp=sharing"
+          "questionSourceUrl": "https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing"
         },
         {
           "id": "prod-1241603",
@@ -649,354 +649,354 @@
       ],
       "suggestedBooks": [
         {
-          "id": "book-1241594",
-          "title": "The Medical Coder’s Career Guide",
-          "description": "The Medical Coder's Career Guide is an inspiring roadmap for building a successful career in medical coding. Covering certification paths, job search strategies, and professional development tips, this book is perfect for aspiring and experienced coders alike. With insights into industry trends and networking advice, it empowers readers to thrive in the fast-evolving healthcare field. #MedicalCoding #CareerGuide #HealthcareCareers #Certification #ProfessionalDevelopment",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241593",
-          "title": "Health Informatics: A Practical Approach",
-          "description": "Health Informatics: A Practical Approach introduces the dynamic field of health informatics, blending technology, data, and healthcare delivery. This book covers electronic health records, data analytics, and coding integration, making it ideal for coders, IT professionals, and healthcare administrators. With real-world applications and case studies, it’s a valuable resource for navigating the digital transformation of healthcare. #HealthInformatics #HealthcareIT #MedicalCoding #DataAnalytics #EHR",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241592",
-          "title": "Dental Coding with Confidence",
-          "description": "Dental Coding with Confidence is the definitive guide to mastering Current Dental Terminology (CDT) codes for accurate dental billing. This book offers step-by-step instructions, coding scenarios, and compliance tips tailored to dental practices. Perfect for dental coders, billers, and office managers, it ensures precise code assignment to maximize reimbursement and minimize claim denials. #DentalCoding #CDT #MedicalBilling #DentalPractice #Compliance",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241591",
-          "title": "Pharmaceutical and Medical Device Coding",
-          "description": "Pharmaceutical and Medical Device Coding is a specialized guide for accurately coding medications, biologics, and medical devices. Covering HCPCS Level II codes and regulatory requirements, this book provides clear guidance for coders and billers working in pharmacies, hospitals, or specialty practices. With practical examples, it’s an essential tool for navigating this niche area of medical coding. #PharmaceuticalCoding #MedicalDevice #HCPCS #MedicalCoding #SpecialtyCoding",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241590",
-          "title": "The Revenue Cycle Handbook",
-          "description": "The Revenue Cycle Handbook is a comprehensive guide to mastering the entire revenue cycle management process, from patient registration to claims submission and payment collection. This book offers practical strategies for optimizing billing, coding, and reimbursement while ensuring compliance. Ideal for healthcare administrators, billers, and coders, it’s a must-have for streamlining financial operations in medical practices. #RevenueCycle #MedicalBilling #MedicalCoding #HealthcareManagement #Compliance",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241589",
-          "title": "Principles of Physician-Based Coding",
-          "description": "Principles of Physician-Based Coding is a specialized guide to professional fee coding for physician services. This book covers CPT, ICD-10-CM, and HCPCS codes, with a focus on accurate code selection for physician practices. With real-world examples and compliance insights, it’s perfect for coders and billers seeking to master E/M, surgical, and diagnostic coding in outpatient settings. #PhysicianCoding #MedicalCoding #CPT #ICD10 #Compliance",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241588",
-          "title": "Outpatient CDI and Coding",
-          "description": "Outpatient CDI and Coding focuses on the unique challenges of clinical documentation improvement (CDI) in outpatient settings. This guide provides strategies for enhancing documentation accuracy, ensuring proper code assignment, and optimizing reimbursement. With case studies and practical tips, it’s an essential resource for CDI specialists, coders, and healthcare providers aiming to improve outpatient coding quality. #OutpatientCoding #CDI #MedicalCoding #Documentation #Reimbursement",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241587",
-          "title": "Evaluation and Management (E/M) Coding",
-          "description": "Evaluation and Management (E/M) Coding demystifies the complexities of E/M code assignment, a critical component of physician reimbursement. This guide offers clear explanations of E/M guidelines, documentation requirements, and coding scenarios, with practical examples to ensure accuracy. Ideal for coders, billers, and providers, it helps maximize reimbursement while maintaining compliance with CMS and AMA standards. #EMCoding #MedicalCoding #PhysicianCoding #Reimbursement #Compliance",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241586",
-          "title": "Healthcare Compliance Professional’s Manual",
-          "description": "The Healthcare Compliance Professional's Manual is an authoritative guide to navigating the complex landscape of healthcare regulations. Covering topics like HIPAA, fraud prevention, and coding compliance, this manual provides practical strategies for ensuring adherence to federal and payer guidelines. Perfect for compliance officers, coders, and administrators, it’s a critical resource for maintaining ethical and legal standards in healthcare operations. #HealthcareCompliance #HIPAA #MedicalCoding #Regulations #ComplianceOfficer",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241585",
-          "title": "The Medical Auditing Handbook",
-          "description": "The Medical Auditing Handbook is a comprehensive guide to mastering the art and science of medical coding audits. Covering auditing principles, compliance regulations, and error detection techniques, this book equips coders and auditors with the tools to ensure accuracy and mitigate risks. With practical examples and step-by-step processes, it’s ideal for professionals seeking to uphold coding integrity and optimize reimbursement. #MedicalAuditing #Compliance #MedicalCoding #AuditPrinciples #Healthcare",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241584",
-          "title": "Risk Adjustment Documentation & Coding",
-          "description": "Risk Adjustment Documentation & Coding offers an in-depth exploration of Hierarchical Condition Category (HCC) coding and risk adjustment models. This book provides practical guidance on accurate documentation and coding to support risk-based reimbursement systems. With case studies, compliance tips, and strategies for optimizing RAF scores, it’s a vital resource for coders, auditors, and healthcare administrators in value-based care settings. #RiskAdjustment #HCC #MedicalCoding #Compliance #ValueBasedCare",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241583",
-          "title": "ICD-10-PCS: An Applied Approach",
-          "description": "ICD-10-PCS: An Applied Approach is the go-to resource for mastering inpatient procedural coding. This guide provides a clear, step-by-step framework for understanding ICD-10-PCS codes, with practical examples and exercises tailored to hospital-based coding. Updated with the latest code sets, it’s an essential tool for coders, clinical documentation specialists, and healthcare professionals aiming for precision in inpatient reimbursement. #ICD10PCS #InpatientCoding #MedicalCoding #HospitalCoding #CDI",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241582",
-          "title": "Medical Terminology For Dummies",
-          "description": "Medical Terminology For Dummies is an engaging and accessible guide to mastering the language of healthcare. Perfect for beginners and professionals alike, this book simplifies complex medical terms through clear explanations, examples, and memory aids. Covering prefixes, suffixes, and root words, it equips coders, billers, and healthcare workers with the vocabulary needed for accurate documentation and communication. #MedicalTerminology #Healthcare #Beginner #CoderEducation #ForDummies",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241581",
-          "title": "Anatomy & Physiology for Coders",
-          "description": "Anatomy & Physiology for Coders is a targeted guide designed to strengthen the foundational knowledge critical for accurate medical coding. This book breaks down complex anatomical and physiological concepts into coder-friendly explanations, with clear diagrams and practical applications. Ideal for coding students and professionals, it bridges the gap between medical science and coding accuracy, enhancing proficiency in ICD-10 and CPT coding. #Anatomy #Physiology #MedicalCoding #CoderEducation #Healthcare",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241580",
-          "title": "Step-by-Step Medical Coding, 2025 Edition",
-          "description": "Step-by-Step Medical Coding, 2025 Edition, offers a structured, beginner-friendly approach to mastering medical coding. This comprehensive guide covers ICD-10-CM, CPT, and HCPCS coding systems, with practical exercises and real-world case studies to reinforce learning. Updated with the latest coding guidelines, it’s perfect for students, new coders, and professionals seeking to stay current in this dynamic field. #MedicalCoding #Beginner #ICD10 #CPT #HCPCS",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241579",
-          "title": "Medical Billing & Coding For Dummies",
-          "description": "Medical Billing & Coding For Dummies is the perfect entry point for beginners looking to break into the healthcare industry. This easy-to-read guide demystifies the essentials of medical billing and coding, covering CPT, ICD-10, and HCPCS codes, as well as reimbursement processes. With practical examples, step-by-step instructions, and real-world scenarios, it’s an ideal resource for students, career changers, or anyone seeking a clear introduction to the field. #MedicalBilling #MedicalCoding #Beginner #HealthcareCareers #ForDummies",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241578",
-          "title": "HCPCS Level II Professional",
-          "description": "The HCPCS Level II Professional guide is an indispensable resource for coding supplies, equipment, and non-physician services. This comprehensive manual offers clear explanations of HCPCS Level II codes, including durable medical equipment, drugs, and ambulance services. With updated codes, modifiers, and regulatory guidance, it’s designed for coders and billers aiming to navigate the complexities of Medicare and other payer requirements with confidence. #HCPCS #MedicalCoding #Billing #Medicare #SuppliesCoding",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241577",
-          "title": "AMA CPT® Professional",
-          "description": "The AMA CPT® Professional codebook is the definitive resource for mastering Current Procedural Terminology (CPT) coding. Published by the American Medical Association, it provides the most up-to-date CPT codes, detailed descriptions, and guidelines for accurate procedure coding. With clinical examples, coding tips, and modifiers, this spiral-bound edition is perfect for coders, billers, and healthcare providers seeking to ensure compliance and optimize revenue cycle management. #CPT #ProcedureCoding #MedicalCoding #AMA #RevenueCycle",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241576",
-          "title": "Buck’s ICD-10-CM for Physicians",
-          "description": "Buck's ICD-10-CM for Physicians is a trusted, physician-focused codebook designed to streamline diagnostic coding in clinical settings. Updated with the latest ICD-10-CM codes, this manual includes detailed descriptions, coding tips, and clinical examples tailored to physician practices. Its user-friendly layout, color-coded tables, and anatomical illustrations make it an essential tool for accurate coding, compliance, and reimbursement in outpatient and inpatient settings. #ICD10 #DiagnosticCoding #PhysicianCoding #MedicalCoding #Compliance",
-          "thumbnailUrl": false,
-          "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
-          }
-        },
-        {
-          "id": "book-1241575",
+          "id": "book-official-cpc-certification-study-guide",
           "title": "Official CPC® Certification Study Guide",
           "description": "AAPC's Official CPC® Certification Study Guide is the ultimate resource for aspiring Certified Professional Coders. This comprehensive guide covers all critical topics tested in the CPC exam, including medical terminology, anatomy, coding guidelines, and compliance. Packed with practice scenarios, coding exercises, and expert tips, it simplifies complex concepts to build confidence and ensure exam success. Ideal for both self-study and classroom use, this guide is a must-have for anyone pursuing a career in medical coding. #CPC #Certification #MedicalCoding #ExamPrep #AAPC",
           "thumbnailUrl": false,
           "affiliateLinks": {
-            "com": "",
-            "in": "",
-            "ae": ""
+            "com": "https://www.amazon.com/s?k=Official+CPC+Certification+Study+Guide&tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=Official+CPC+Certification+Study+Guide&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=Official+CPC+Certification+Study+Guide&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-bucks-icd-10-cm-for-physicians",
+          "title": "Buck’s ICD-10-CM for Physicians",
+          "description": "Buck's ICD-10-CM for Physicians is a trusted, physician-focused codebook designed to streamline diagnostic coding in clinical settings. Updated with the latest ICD-10-CM codes, this manual includes detailed descriptions, coding tips, and clinical examples tailored to physician practices. Its user-friendly layout, color-coded tables, and anatomical illustrations make it an essential tool for accurate coding, compliance, and reimbursement in outpatient and inpatient settings. #ICD10 #DiagnosticCoding #PhysicianCoding #MedicalCoding #Compliance",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/s?k=Buck%27s+ICD-10-CM+for+Physicians&tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=Buck%27s+ICD-10-CM+for+Physicians&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=Buck%27s+ICD-10-CM+for+Physicians&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-ama-cpt-professional",
+          "title": "AMA CPT® Professional",
+          "description": "The AMA CPT® Professional codebook is the definitive resource for mastering Current Procedural Terminology (CPT) coding. Published by the American Medical Association, it provides the most up-to-date CPT codes, detailed descriptions, and guidelines for accurate procedure coding. With clinical examples, coding tips, and modifiers, this spiral-bound edition is perfect for coders, billers, and healthcare providers seeking to ensure compliance and optimize revenue cycle management. #CPT #ProcedureCoding #MedicalCoding #AMA #RevenueCycle",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/s?k=AMA+CPT+Professional&tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=AMA+CPT+Professional&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=AMA+CPT+Professional&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-hcpcs-level-ii-professional",
+          "title": "HCPCS Level II Professional",
+          "description": "The HCPCS Level II Professional guide is an indispensable resource for coding supplies, equipment, and non-physician services. This comprehensive manual offers clear explanations of HCPCS Level II codes, including durable medical equipment, drugs, and ambulance services. With updated codes, modifiers, and regulatory guidance, it’s designed for coders and billers aiming to navigate the complexities of Medicare and other payer requirements with confidence. #HCPCS #MedicalCoding #Billing #Medicare #SuppliesCoding",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/s?k=HCPCS+Level+II+Professional&tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=HCPCS+Level+II+Professional&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=HCPCS+Level+II+Professional&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-medical-billing-coding-for-dummies",
+          "title": "Medical Billing & Coding For Dummies",
+          "description": "Medical Billing & Coding For Dummies is the perfect entry point for beginners looking to break into the healthcare industry. This easy-to-read guide demystifies the essentials of medical billing and coding, covering CPT, ICD-10, and HCPCS codes, as well as reimbursement processes. With practical examples, step-by-step instructions, and real-world scenarios, it’s an ideal resource for students, career changers, or anyone seeking a clear introduction to the field. #MedicalBilling #MedicalCoding #Beginner #HealthcareCareers #ForDummies",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/dp/1119625440?tag=mykada-20",
+            "in": "https://www.amazon.in/dp/1119625440?tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/dp/1119625440?tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-step-by-step-medical-coding-2025-edition",
+          "title": "Step-by-Step Medical Coding, 2025 Edition",
+          "description": "Step-by-Step Medical Coding, 2025 Edition, offers a structured, beginner-friendly approach to mastering medical coding. This comprehensive guide covers ICD-10-CM, CPT, and HCPCS coding systems, with practical exercises and real-world case studies to reinforce learning. Updated with the latest coding guidelines, it’s perfect for students, new coders, and professionals seeking to stay current in this dynamic field. #MedicalCoding #Beginner #ICD10 #CPT #HCPCS",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/dp/0443248788?tag=mykada-20",
+            "in": "https://www.amazon.in/dp/0443248788?tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/dp/0443248788?tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-anatomy-physiology-for-coders",
+          "title": "Anatomy & Physiology for Coders",
+          "description": "Anatomy & Physiology for Coders is a targeted guide designed to strengthen the foundational knowledge critical for accurate medical coding. This book breaks down complex anatomical and physiological concepts into coder-friendly explanations, with clear diagrams and practical applications. Ideal for coding students and professionals, it bridges the gap between medical science and coding accuracy, enhancing proficiency in ICD-10 and CPT coding. #Anatomy #Physiology #MedicalCoding #CoderEducation #Healthcare",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/dp/0133015254?tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=Anatomy+Physiology+for+Coders&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=Anatomy+Physiology+for+Coders&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-medical-terminology-for-dummies",
+          "title": "Medical Terminology For Dummies",
+          "description": "Medical Terminology For Dummies is an engaging and accessible guide to mastering the language of healthcare. Perfect for beginners and professionals alike, this book simplifies complex medical terms through clear explanations, examples, and memory aids. Covering prefixes, suffixes, and root words, it equips coders, billers, and healthcare workers with the vocabulary needed for accurate documentation and communication. #MedicalTerminology #Healthcare #Beginner #CoderEducation #ForDummies",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/dp/1119625475?tag=mykada-20",
+            "in": "https://www.amazon.in/dp/1119625475?tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/dp/1119625475?tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-icd-10-pcs-an-applied-approach",
+          "title": "ICD-10-PCS: An Applied Approach",
+          "description": "ICD-10-PCS: An Applied Approach is the go-to resource for mastering inpatient procedural coding. This guide provides a clear, step-by-step framework for understanding ICD-10-PCS codes, with practical examples and exercises tailored to hospital-based coding. Updated with the latest code sets, it’s an essential tool for coders, clinical documentation specialists, and healthcare professionals aiming for precision in inpatient reimbursement. #ICD10PCS #InpatientCoding #MedicalCoding #HospitalCoding #CDI",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/dp/1584268247?tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=ICD-10-PCS+An+Applied+Approach&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=ICD-10-PCS+An+Applied+Approach&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-risk-adjustment-documentation-coding",
+          "title": "Risk Adjustment Documentation & Coding",
+          "description": "Risk Adjustment Documentation & Coding offers an in-depth exploration of Hierarchical Condition Category (HCC) coding and risk adjustment models. This book provides practical guidance on accurate documentation and coding to support risk-based reimbursement systems. With case studies, compliance tips, and strategies for optimizing RAF scores, it’s a vital resource for coders, auditors, and healthcare administrators in value-based care settings. #RiskAdjustment #HCC #MedicalCoding #Compliance #ValueBasedCare",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/dp/1640161635?tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=Risk+Adjustment+Documentation+Coding&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=Risk+Adjustment+Documentation+Coding&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-the-medical-auditing-handbook",
+          "title": "The Medical Auditing Handbook",
+          "description": "The Medical Auditing Handbook is a comprehensive guide to mastering the art and science of medical coding audits. Covering auditing principles, compliance regulations, and error detection techniques, this book equips coders and auditors with the tools to ensure accuracy and mitigate risks. With practical examples and step-by-step processes, it’s ideal for professionals seeking to uphold coding integrity and optimize reimbursement. #MedicalAuditing #Compliance #MedicalCoding #AuditPrinciples #Healthcare",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/s?k=Medical+Auditing+Handbook&tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=Medical+Auditing+Handbook&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=Medical+Auditing+Handbook&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-healthcare-compliance-professionals-manual",
+          "title": "Healthcare Compliance Professional's Manual",
+          "description": "The Healthcare Compliance Professional's Manual is an authoritative guide to navigating the complex landscape of healthcare regulations. Covering topics like HIPAA, fraud prevention, and coding compliance, this manual provides practical strategies for ensuring adherence to federal and payer guidelines. Perfect for compliance officers, coders, and administrators, it’s a critical resource for maintaining ethical and legal standards in healthcare operations. #HealthcareCompliance #HIPAA #MedicalCoding #Regulations #ComplianceOfficer",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/dp/1543816657?tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=Healthcare+Compliance+Professional+Manual&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=Healthcare+Compliance+Professional+Manual&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-evaluation-and-management-em-coding",
+          "title": "Evaluation and Management (E/M) Coding",
+          "description": "Evaluation and Management (E/M) Coding demystifies the complexities of E/M code assignment, a critical component of physician reimbursement. This guide offers clear explanations of E/M guidelines, documentation requirements, and coding scenarios, with practical examples to ensure accuracy. Ideal for coders, billers, and providers, it helps maximize reimbursement while maintaining compliance with CMS and AMA standards. #EMCoding #MedicalCoding #PhysicianCoding #Reimbursement #Compliance",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/s?k=Evaluation+and+Management+Coding&tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=Evaluation+and+Management+Coding&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=Evaluation+and+Management+Coding&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-outpatient-cdi-and-coding",
+          "title": "Outpatient CDI and Coding",
+          "description": "Outpatient CDI and Coding focuses on the unique challenges of clinical documentation improvement (CDI) in outpatient settings. This guide provides strategies for enhancing documentation accuracy, ensuring proper code assignment, and optimizing reimbursement. With case studies and practical tips, it’s an essential resource for CDI specialists, coders, and healthcare providers aiming to improve outpatient coding quality. #OutpatientCoding #CDI #MedicalCoding #Documentation #Reimbursement",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/s?k=clinical+documentation+improvemen&tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=clinical+documentation+improvemen&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=clinical+documentation+improvemen&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-principles-of-physician-based-coding",
+          "title": "Principles of Physician-Based Coding",
+          "description": "Principles of Physician-Based Coding is a specialized guide to professional fee coding for physician services. This book covers CPT, ICD-10-CM, and HCPCS codes, with a focus on accurate code selection for physician practices. With real-world examples and compliance insights, it’s perfect for coders and billers seeking to master E/M, surgical, and diagnostic coding in outpatient settings. #PhysicianCoding #MedicalCoding #CPT #ICD10 #Compliance",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/dp/1584263458?tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=Principles+of+Physician-Based+Coding&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=Principles+of+Physician-Based+Coding&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-the-revenue-cycle-handbook",
+          "title": "The Revenue Cycle Handbook",
+          "description": "The Revenue Cycle Handbook is a comprehensive guide to mastering the entire revenue cycle management process, from patient registration to claims submission and payment collection. This book offers practical strategies for optimizing billing, coding, and reimbursement while ensuring compliance. Ideal for healthcare administrators, billers, and coders, it’s a must-have for streamlining financial operations in medical practices. #RevenueCycle #MedicalBilling #MedicalCoding #HealthcareManagement #Compliance",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/s?k=Revenue+Cycle+Handbook&tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=Revenue+Cycle+Handbook&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=Revenue+Cycle+Handbook&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-pharmaceutical-and-medical-device-coding",
+          "title": "Pharmaceutical and Medical Device Coding",
+          "description": "Pharmaceutical and Medical Device Coding is a specialized guide for accurately coding medications, biologics, and medical devices. Covering HCPCS Level II codes and regulatory requirements, this book provides clear guidance for coders and billers working in pharmacies, hospitals, or specialty practices. With practical examples, it’s an essential tool for navigating this niche area of medical coding. #PharmaceuticalCoding #MedicalDevice #HCPCS #MedicalCoding #SpecialtyCoding",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/s?k=Pharmaceutical+and+Medical+Device+Coding&tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=Pharmaceutical+and+Medical+Device+Coding&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=Pharmaceutical+and+Medical+Device+Coding&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-dental-coding-with-confidence",
+          "title": "Dental Coding with Confidence",
+          "description": "Dental Coding with Confidence is the definitive guide to mastering Current Dental Terminology (CDT) codes for accurate dental billing. This book offers step-by-step instructions, coding scenarios, and compliance tips tailored to dental practices. Perfect for dental coders, billers, and office managers, it ensures precise code assignment to maximize reimbursement and minimize claim denials. #DentalCoding #CDT #MedicalBilling #DentalPractice #Compliance",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/dp/1737394715?tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=Dental+Coding+with+Confidence&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=Dental+Coding+with+Confidence&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-health-informatics-a-practical-approach",
+          "title": "Health Informatics: A Practical Approach",
+          "description": "Health Informatics: A Practical Approach introduces the dynamic field of health informatics, blending technology, data, and healthcare delivery. This book covers electronic health records, data analytics, and coding integration, making it ideal for coders, IT professionals, and healthcare administrators. With real-world applications and case studies, it’s a valuable resource for navigating the digital transformation of healthcare. #HealthInformatics #HealthcareIT #MedicalCoding #DataAnalytics #EHR",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/s?k=Health+Informatics+A+Practical+Approach&tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=Health+Informatics+A+Practical+Approach&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=Health+Informatics+A+Practical+Approach&tag=medical0f1-21"
+          }
+        },
+        {
+          "id": "book-the-medical-coders-career-guide",
+          "title": "The Medical Coder's Career Guide",
+          "description": "The Medical Coder's Career Guide is an inspiring roadmap for building a successful career in medical coding. Covering certification paths, job search strategies, and professional development tips, this book is perfect for aspiring and experienced coders alike. With insights into industry trends and networking advice, it empowers readers to thrive in the fast-evolving healthcare field. #MedicalCoding #CareerGuide #HealthcareCareers #Certification #ProfessionalDevelopment",
+          "thumbnailUrl": false,
+          "affiliateLinks": {
+            "com": "https://www.amazon.com/s?k=Medical+Coders+Career+Guide&tag=mykada-20",
+            "in": "https://www.amazon.in/s?k=Medical+Coders+Career+Guide&tag=httpcodingonl-21",
+            "ae": "https://www.amazon.ae/s?k=Medical+Coders+Career+Guide&tag=medical0f1-21"
           }
         }
-      ]
+      ],
+      "examPrices": {
+        "exam-mcf-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1241379,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-hi-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1241378,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-rcm-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1241377,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-em-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1241376,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-ap-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1241375,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-mta-cert": {
+          "price": 1,
+          "regularPrice": 80,
+          "productId": 1240733,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-cic-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1240732,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-coc-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1240731,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-cpma-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1240730,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-crc-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1240729,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-cpb-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1240728,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-icd-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1240723,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-risk-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1240722,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-ccs-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1240720,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-billing-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1240721,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-cca-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1240718,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-cpc-cert": {
+          "price": 1,
+          "regularPrice": 49.99,
+          "productId": 1240706,
+          "avgRating": 0,
+          "reviewCount": 0
+        },
+        "exam-cpc-cert-1": {
+          "price": 10,
+          "regularPrice": 59.99,
+          "productId": 1241444,
+          "avgRating": 0,
+          "reviewCount": 0
+        }
+      }
     }
-  ],
-  "examPrices": {
-    "exam-mcf-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1241379,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-hi-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1241378,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-rcm-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1241377,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-em-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1241376,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-ap-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1241375,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-mta-cert": {
-      "price": 1,
-      "regularPrice": 80,
-      "productId": 1240733,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-cic-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1240732,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-coc-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1240731,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-cpma-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1240730,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-crc-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1240729,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-cpb-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1240728,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-icd-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1240723,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-risk-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1240722,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-ccs-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1240720,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-billing-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1240721,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-cca-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1240718,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-cpc-cert": {
-      "price": 1,
-      "regularPrice": 49.99,
-      "productId": 1240706,
-      "avgRating": 0,
-      "reviewCount": 0
-    },
-    "exam-cpc-cert-1": {
-      "price": 10,
-      "regularPrice": 59.99,
-      "productId": 1241444,
-      "avgRating": 0,
-      "reviewCount": 0
-    }
-  }
+  ]
 }
