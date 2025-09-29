@@ -150,7 +150,7 @@ const Certificate: React.FC = () => {
         .replace('{finalScore}', `<strong>${certData.finalScore}%</strong>`)
         .replace('{examName}', `<strong>${examName}</strong>`);
 
-    const hasTwoSignatures = !!(template.signature2Name && template.signature2ImageUrl);
+    const hasTwoSignatures = !!(template.signature2Name && template.signature2Title);
 
     return (
         <>
@@ -173,43 +173,57 @@ const Certificate: React.FC = () => {
                 </button>
             </div>
             
-            <div ref={certificatePrintRef} className="bg-white border-8 border-gray-300 p-8 relative aspect-[1.414/1] w-full shadow-2xl font-serif">
-                <Watermark text={organization.name} />
-                <div className="relative z-10 flex flex-col h-full text-center">
-                    <div className="flex justify-center items-center mb-8">
-                        {organization.logo && <img src={organization.logo} alt={`${organization.name} Logo`} className="h-24 object-contain" />}
-                    </div>
-
-                    <p className="text-2xl text-gray-500 tracking-widest uppercase">{titleText}</p>
-                    <p className="text-lg text-gray-600 mt-4">This certificate is proudly presented to</p>
-                    
-                    <h2 className="text-5xl font-bold text-gray-800 my-8 border-b-2 border-gray-300 pb-4">{certData.candidateName}</h2>
-
-                    <div className="text-lg text-gray-600 flex-grow" dangerouslySetInnerHTML={{ __html: bodyText.replace(/\n/g, '<br />') }}>
-                    </div>
-                    
-                    <div className="mt-auto flex justify-between items-end pt-8">
-                         <div className="text-center w-2/5">
-                            {template.signature1ImageUrl && <img src={template.signature1ImageUrl} alt={template.signature1Name} className="h-12 mx-auto" />}
-                            <p className="border-t-2 border-gray-400 mt-2 pt-2 font-semibold">{template.signature1Name}</p>
-                            <p className="text-sm text-gray-500">{template.signature1Title}</p>
-                        </div>
-
-                        <div className="text-center w-1/5">
-                             <p className="text-sm text-gray-500">Issued On</p>
-                             <p className="font-semibold border-t-2 border-gray-400 mt-2 pt-2">{certData.date}</p>
-                        </div>
-                        
-                        {hasTwoSignatures && (
-                            <div className="text-center w-2/5">
-                                {template.signature2ImageUrl && <img src={template.signature2ImageUrl} alt={template.signature2Name} className="h-12 mx-auto" />}
-                                <p className="border-t-2 border-gray-400 mt-2 pt-2 font-semibold">{template.signature2Name}</p>
-                                <p className="text-sm text-gray-500">{template.signature2Title}</p>
+             <div ref={certificatePrintRef} className="bg-white p-2 relative aspect-[1.414/1] w-full shadow-2xl font-serif">
+                {/* Outer decorative border */}
+                <div className="w-full h-full border-4 border-cyan-100 p-1">
+                    {/* Inner decorative border */}
+                    <div className="w-full h-full border-2 border-cyan-200 p-6 relative">
+                        <Watermark text={organization.name} />
+                        <div className="relative z-10 flex flex-col h-full text-center">
+                            
+                            <div className="flex flex-col items-center mb-6">
+                                {organization.logo && <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="h-20 object-contain mb-2" />}
+                                <h1 className="text-4xl font-bold text-gray-900 font-serif-display">{organization.name}</h1>
+                                <p className="text-md text-gray-500 mt-1">{organization.website}</p>
                             </div>
-                        )}
-                    </div>
 
-                    <p className="text-xs text-gray-400 mt-4">Certificate ID: {certData.certificateNumber}</p>
+                            <p className="text-2xl text-gray-500 tracking-widest uppercase">{titleText}</p>
+                            <p className="text-lg text-gray-600 mt-4">This certificate is proudly presented to</p>
+                            
+                            <h2 className="text-5xl font-bold text-gray-800 my-8 border-b-2 border-gray-300 pb-4">{certData.candidateName}</h2>
+
+                            <div className="text-lg text-gray-600 flex-grow" dangerouslySetInnerHTML={{ __html: bodyText.replace(/\n/g, '<br />') }}>
+                            </div>
+                            
+                            <div className="mt-auto pt-8">
+                                <div className="flex justify-between items-end">
+                                    <div className="text-center w-2/5">
+                                        {template.signature1ImageUrl && <img src={template.signature1ImageUrl} crossOrigin="anonymous" alt={template.signature1Name} className="h-12 mx-auto" />}
+                                        <p className="border-t-2 border-gray-400 mt-2 pt-2 font-semibold">{template.signature1Name}</p>
+                                        <p className="text-sm text-gray-500">{template.signature1Title}</p>
+                                    </div>
+
+                                    <div className="text-center w-1/5">
+                                        <p className="text-sm text-gray-500">Issued On</p>
+                                        <p className="font-semibold border-t-2 border-gray-400 mt-2 pt-2">{certData.date}</p>
+                                    </div>
+                                    
+                                    {hasTwoSignatures && (
+                                        <div className="text-center w-2/5">
+                                            {template.signature2ImageUrl && <img src={template.signature2ImageUrl} crossOrigin="anonymous" alt={template.signature2Name} className="h-12 mx-auto" />}
+                                            <p className="border-t-2 border-gray-400 mt-2 pt-2 font-semibold">{template.signature2Name}</p>
+                                            <p className="text-sm text-gray-500">{template.signature2Title}</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                
+
+                                <p className="text-sm text-gray-500 mt-6">https://www.{organization.website}</p>
+                                <p className="text-xs text-gray-400 mt-1">Certificate ID: {certData.certificateNumber}</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
