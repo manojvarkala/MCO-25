@@ -291,16 +291,26 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
                 return preg_replace('/^[\pZ\pC]+|[\pZ\pC]+$/u', '', $opt);
             }, $options_raw);
             
-            $correct_answer_text = preg_replace('/^[\pZ\pC]+|[\pZ\pC]+$/u', '', $data[2]);
-            
+            $correct_answer_input = preg_replace('/^[\pZ\pC]+|[\pZ\pC]+$/u', '', trim($data[2]));
             $correct_answer_index = false;
-            $lc_clean_correct_answer = function_exists('mb_strtolower') ? mb_strtolower(trim($correct_answer_text), 'UTF-8') : strtolower(trim($correct_answer_text));
 
-            foreach ($options as $index => $option_text) {
-                $lc_clean_option = function_exists('mb_strtolower') ? mb_strtolower(trim($option_text), 'UTF-8') : strtolower(trim($option_text));
-                if ($lc_clean_option === $lc_clean_correct_answer) {
-                    $correct_answer_index = $index;
-                    break;
+            // Attempt to parse as a 1-based numeric index first.
+            if (is_numeric($correct_answer_input)) {
+                $potential_index = intval($correct_answer_input) - 1; // Convert to 0-based for array access.
+                if ($potential_index >= 0 && isset($options[$potential_index])) {
+                    $correct_answer_index = $potential_index;
+                }
+            }
+
+            // If it wasn't a valid numeric index, fall back to treating it as text.
+            if ($correct_answer_index === false) {
+                $lc_clean_correct_answer = function_exists('mb_strtolower') ? mb_strtolower($correct_answer_input, 'UTF-8') : strtolower($correct_answer_input);
+                foreach ($options as $index => $option_text) {
+                    $lc_clean_option = function_exists('mb_strtolower') ? mb_strtolower(trim($option_text), 'UTF-8') : strtolower(trim($option_text));
+                    if ($lc_clean_option === $lc_clean_correct_answer) {
+                        $correct_answer_index = $index;
+                        break;
+                    }
                 }
             }
             
@@ -312,7 +322,7 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
                     'correctAnswer' => $correct_answer_index + 1
                 ];
             } else {
-                 $parsing_errors[] = "Row {$row_num}: Correct answer text '{$correct_answer_text}' was not found in the list of options provided.";
+                 $parsing_errors[] = "Row {$row_num}: Could not determine correct answer. Input '{$correct_answer_input}' is neither a valid option number nor matching text in the options list.";
             }
         }
 

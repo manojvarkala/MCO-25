@@ -1,4 +1,4 @@
-import React, { FC, useState, useEffect, useRef } from 'react';
+import * as React from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -12,7 +12,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppContext } from '../context/AppContext.tsx';
 
-const Watermark: FC<{ text: string }> = ({ text }) => (
+const Watermark: React.FC<{ text: string }> = ({ text }) => (
     <div className="absolute inset-0 grid grid-cols-3 grid-rows-4 gap-8 pointer-events-none overflow-hidden p-4">
         {Array.from({ length: 12 }).map((_, i) => (
             <div key={i} className="flex items-center justify-center -rotate-45">
@@ -24,18 +24,18 @@ const Watermark: FC<{ text: string }> = ({ text }) => (
     </div>
 );
 
-const Certificate: FC = () => {
+const Certificate: React.FC = () => {
     const { testId = 'sample' } = useParams<{ testId?: string }>();
     // Fix: Use useNavigate for navigation in v6
     const navigate = useNavigate();
     const { user, token } = useAuth();
     const { activeOrg } = useAppContext();
-    const [certData, setCertData] = useState<CertificateData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isDownloading, setIsDownloading] = useState(false);
-    const certificatePrintRef = useRef<HTMLDivElement>(null);
+    const [certData, setCertData] = React.useState<CertificateData | null>(null);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [isDownloading, setIsDownloading] = React.useState(false);
+    const certificatePrintRef = React.useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
+    React.useEffect(() => {
         // Handling the sample certificate locally without an API call.
         if (testId === 'sample') {
             if (!user || !activeOrg) {
