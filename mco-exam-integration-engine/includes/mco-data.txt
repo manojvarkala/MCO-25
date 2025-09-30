@@ -29,11 +29,16 @@ if (!function_exists('mco_get_app_config_data')) {
             while ($books_query->have_posts()) {
                 $books_query->the_post();
                 $post_id = get_the_ID();
+
+                $thumbnail_featured = get_the_post_thumbnail_url($post_id, 'medium');
+                $thumbnail_meta = get_post_meta($post_id, '_mco_thumbnail_url', true);
+                $thumbnail = $thumbnail_featured ? $thumbnail_featured : ($thumbnail_meta ? esc_url_raw($thumbnail_meta) : false);
+
                 $suggested_books[] = [
                     'id' => 'book-' . $post_id, 
                     'title' => html_entity_decode(get_the_title()), 
                     'description' => html_entity_decode(strip_tags(get_the_content())),
-                    'thumbnailUrl' => get_the_post_thumbnail_url($post_id, 'medium'),
+                    'thumbnailUrl' => $thumbnail,
                     'affiliateLinks' => [ 
                         'com' => get_post_meta($post_id, '_mco_link_com', true) ?: '', 
                         'in' => get_post_meta($post_id, '_mco_link_in', true) ?: '', 

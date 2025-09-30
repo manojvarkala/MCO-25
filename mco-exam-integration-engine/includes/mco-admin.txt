@@ -81,6 +81,17 @@ if (!function_exists('mco_render_settings_page')) {
                 echo '<div class="notice notice-success is-dismissible"><p>API routes have been successfully refreshed.</p></div>';
             });
         }
+        
+        // Handle Exam Program CSV upload
+        if (isset($_POST['mco_csv_upload_nonce']) && check_admin_referer('mco_csv_upload_action', 'mco_csv_upload_nonce')) {
+            mco_handle_csv_upload();
+        }
+        
+        // Handle Recommended Book CSV upload
+        if (isset($_POST['mco_book_csv_upload_nonce']) && check_admin_referer('mco_book_csv_upload_action', 'mco_book_csv_upload_nonce')) {
+            mco_handle_book_csv_upload();
+        }
+        
         ?>
         <div class="wrap">
             <h1>Exam App Engine Settings</h1>
@@ -88,10 +99,15 @@ if (!function_exists('mco_render_settings_page')) {
             <h2 class="nav-tab-wrapper">
                 <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
                 <a href="?page=mco-exam-engine&tab=certificate_templates" class="nav-tab <?php echo $active_tab == 'certificate_templates' ? 'nav-tab-active' : ''; ?>">Certificate Templates</a>
+                <a href="?page=mco-exam-engine&tab=bulk_import" class="nav-tab <?php echo $active_tab == 'bulk_import' ? 'nav-tab-active' : ''; ?>">Bulk Import</a>
                 <a href="?page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
             </h2>
 
-            <?php if ($active_tab !== 'tools'): ?>
+            <?php if ($active_tab === 'tools'): ?>
+                <?php mco_render_tools_tab(); ?>
+            <?php elseif ($active_tab === 'bulk_import'): ?>
+                <?php mco_render_bulk_import_tab(); ?>
+            <?php else: ?>
                 <form method="post" action="options.php">
                     <?php
                     if ($active_tab == 'main_settings') {
@@ -104,8 +120,6 @@ if (!function_exists('mco_render_settings_page')) {
                     submit_button();
                     ?>
                 </form>
-            <?php else: ?>
-                <?php mco_render_tools_tab(); ?>
             <?php endif; ?>
         </div>
         <?php
@@ -261,12 +275,230 @@ if (!function_exists('mco_render_tools_tab')) {
     }
 }
 
+if (!function_exists('mco_render_bulk_import_tab')) {
+    function mco_render_bulk_import_tab() {
+        // Template for Exam Programs
+        $exam_csv_header = "program_title,program_description,question_source_url,certification_exam_sku,is_proctored,recommended_book_id,practice_questions,practice_duration,cert_questions,cert_duration,pass_score,status";
+        $exam_csv_row = '"Sample Exam Title","A description for the sample exam.","https://docs.google.com/spreadsheets/d/your-sheet-id/edit","sample-cert-sku",1,,20,30,50,60,75,publish';
+        $exam_csv_data_uri = 'data:text/csv;charset=utf-8,' . rawurlencode($exam_csv_header . "\n" . $exam_csv_row);
+        
+        // Template for Recommended Books
+        $book_csv_header = "book_title,book_description,thumbnail_url,affiliate_link_com,affiliate_link_in,affiliate_link_ae,status";
+        $book_csv_row = '"Sample Book Title","A great book for beginners.","https://example.com/book-cover.jpg","https://amazon.com/dp/ASIN?tag=mytag-20","https://amazon.in/dp/ASIN?tag=mytag-21","https://amazon.ae/dp/ASIN?tag=mytag-21",publish';
+        $book_csv_data_uri = 'data:text/csv;charset=utf-8,' . rawurlencode($book_csv_header . "\n" . $book_csv_row);
+        ?>
+        <h3>Bulk Import Content</h3>
+        <p>Upload a CSV file to create multiple items at once. The importer will skip any items where the title already exists.</p>
+
+        <hr>
+
+        <h4>Import Exam Programs</h4>
+        <form method="post" enctype="multipart/form-data">
+            <?php wp_nonce_field('mco_csv_upload_action', 'mco_csv_upload_nonce'); ?>
+            <table class="form-table">
+                <tr valign="top">
+                    <th scope="row"><label for="exam_program_csv">Exam Programs CSV File</label></th>
+                    <td>
+                        <input type="file" id="exam_program_csv" name="exam_program_csv" accept=".csv" required>
+                        <p class="description">
+                            The CSV file must have a header row with the following columns:
+                            <br><code><?php echo esc_html($exam_csv_header); ?></code>
+                            <br><a href="<?php echo esc_url($exam_csv_data_uri); ?>" download="exam_program_template.csv">Download Exam Program Template</a>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button('Upload and Import Exams'); ?>
+        </form>
+
+        <hr style="margin-top: 2rem;">
+
+        <h4>Import Recommended Books</h4>
+        <form method="post" enctype="multipart/form-data">
+            <?php wp_nonce_field('mco_book_csv_upload_action', 'mco_book_csv_upload_nonce'); ?>
+            <table class="form-table">
+                <tr valign="top">
+                    <th scope="row"><label for="book_csv">Recommended Books CSV File</label></th>
+                    <td>
+                        <input type="file" id="book_csv" name="book_csv" accept=".csv" required>
+                        <p class="description">
+                            The CSV file must have a header row with the following columns:
+                            <br><code><?php echo esc_html($book_csv_header); ?></code>
+                            <br><a href="<?php echo esc_url($book_csv_data_uri); ?>" download="recommended_book_template.csv">Download Recommended Book Template</a>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button('Upload and Import Books'); ?>
+        </form>
+        <?php
+    }
+}
+
+// --- BULK IMPORT HANDLERS ---
+if (!function_exists('mco_handle_csv_upload')) {
+    function mco_handle_csv_upload() {
+        if (!current_user_can('manage_options') || empty($_FILES['exam_program_csv']['tmp_name'])) {
+            return;
+        }
+
+        $file = $_FILES['exam_program_csv']['tmp_name'];
+        $handle = fopen($file, "r");
+
+        $header = fgetcsv($handle);
+        $header = array_map('trim', $header); // Clean up header names
+
+        $imported = 0;
+        $skipped = 0;
+        $errors = [];
+        $row_num = 1;
+
+        while (($row = fgetcsv($handle)) !== FALSE) {
+            $row_num++;
+            $data = array_combine($header, $row);
+
+            $title = sanitize_text_field($data['program_title']);
+            if (empty($title)) {
+                $errors[] = "Row {$row_num}: Skipped due to empty title.";
+                continue;
+            }
+
+            if (post_exists($title)) {
+                $skipped++;
+                continue;
+            }
+            
+            $post_data = [
+                'post_title'   => $title,
+                'post_content' => wp_kses_post($data['program_description']),
+                'post_type'    => 'mco_exam_program',
+                'post_status'  => isset($data['status']) && in_array($data['status'], ['publish', 'draft', 'private']) ? $data['status'] : 'publish',
+            ];
+
+            $post_id = wp_insert_post($post_data, true);
+
+            if (is_wp_error($post_id)) {
+                $errors[] = "Row {$row_num}: Failed to create post for '{$title}'. Error: " . $post_id->get_error_message();
+                continue;
+            }
+            
+            // Save meta fields
+            update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($data['question_source_url']));
+            update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($data['certification_exam_sku']));
+            update_post_meta($post_id, '_mco_is_proctored', absint($data['is_proctored']));
+            if (!empty($data['recommended_book_id'])) {
+                update_post_meta($post_id, '_mco_recommended_book_id', absint($data['recommended_book_id']));
+            }
+            
+            // Save taxonomy terms
+            wp_set_post_terms($post_id, strval(absint($data['practice_questions'])), 'exam_practice_questions');
+            wp_set_post_terms($post_id, strval(absint($data['practice_duration'])), 'exam_practice_duration');
+            wp_set_post_terms($post_id, strval(absint($data['cert_questions'])), 'exam_cert_questions');
+            wp_set_post_terms($post_id, strval(absint($data['cert_duration'])), 'exam_cert_duration');
+            wp_set_post_terms($post_id, strval(absint($data['pass_score'])), 'exam_pass_score');
+            
+            $imported++;
+        }
+
+        fclose($handle);
+        mco_update_config_version(); // Update version after import
+
+        add_action('admin_notices', function() use ($imported, $skipped, $errors) {
+            echo '<div class="notice notice-success is-dismissible"><p><strong>Exam Program Import Complete!</strong> ';
+            echo "Successfully imported {$imported} exam programs. Skipped {$skipped} duplicates.</p></div>";
+            if (!empty($errors)) {
+                echo '<div class="notice notice-error"><p><strong>Import Errors:</strong></p><ul style="list-style-type:disc; padding-left:20px;">';
+                foreach ($errors as $error) {
+                    echo '<li>' . esc_html($error) . '</li>';
+                }
+                echo '</ul></div>';
+            }
+        });
+    }
+}
+
+if (!function_exists('mco_handle_book_csv_upload')) {
+    function mco_handle_book_csv_upload() {
+        if (!current_user_can('manage_options') || empty($_FILES['book_csv']['tmp_name'])) {
+            return;
+        }
+
+        $file = $_FILES['book_csv']['tmp_name'];
+        $handle = fopen($file, "r");
+
+        $header = fgetcsv($handle);
+        $header = array_map('trim', $header);
+
+        $imported = 0;
+        $skipped = 0;
+        $errors = [];
+        $row_num = 1;
+
+        while (($row = fgetcsv($handle)) !== FALSE) {
+            $row_num++;
+            $data = array_combine($header, $row);
+
+            $title = sanitize_text_field($data['book_title']);
+            if (empty($title)) {
+                $errors[] = "Row {$row_num}: Skipped due to empty title.";
+                continue;
+            }
+
+            // Check if book with this title already exists
+            $existing_book = get_page_by_title($title, OBJECT, 'mco_recommended_book');
+            if ($existing_book) {
+                $skipped++;
+                continue;
+            }
+
+            $post_data = [
+                'post_title'   => $title,
+                'post_content' => wp_kses_post($data['book_description']),
+                'post_type'    => 'mco_recommended_book',
+                'post_status'  => isset($data['status']) && in_array($data['status'], ['publish', 'draft', 'private']) ? $data['status'] : 'publish',
+            ];
+
+            $post_id = wp_insert_post($post_data, true);
+
+            if (is_wp_error($post_id)) {
+                $errors[] = "Row {$row_num}: Failed to create post for '{$title}'. Error: " . $post_id->get_error_message();
+                continue;
+            }
+
+            // Save meta fields for affiliate links and thumbnail
+            if (isset($data['thumbnail_url'])) update_post_meta($post_id, '_mco_thumbnail_url', esc_url_raw($data['thumbnail_url']));
+            if (isset($data['affiliate_link_com'])) update_post_meta($post_id, '_mco_link_com', esc_url_raw($data['affiliate_link_com']));
+            if (isset($data['affiliate_link_in'])) update_post_meta($post_id, '_mco_link_in', esc_url_raw($data['affiliate_link_in']));
+            if (isset($data['affiliate_link_ae'])) update_post_meta($post_id, '_mco_link_ae', esc_url_raw($data['affiliate_link_ae']));
+            
+            $imported++;
+        }
+
+        fclose($handle);
+        mco_update_config_version();
+
+        add_action('admin_notices', function() use ($imported, $skipped, $errors) {
+            echo '<div class="notice notice-success is-dismissible"><p><strong>Book Import Complete!</strong> ';
+            echo "Successfully imported {$imported} books. Skipped {$skipped} duplicates.</p></div>";
+            if (!empty($errors)) {
+                echo '<div class="notice notice-error"><p><strong>Import Errors:</strong></p><ul style="list-style-type:disc; padding-left:20px;">';
+                foreach ($errors as $error) {
+                    echo '<li>' . esc_html($error) . '</li>';
+                }
+                echo '</ul></div>';
+            }
+        });
+    }
+}
+
+
 // --- META BOXES & SAVE FUNCTIONS ---
 if (!function_exists('mco_add_meta_boxes')) {
     function mco_add_meta_boxes() {
         add_meta_box('mco_wc_product_meta', 'Exam App Configuration', 'mco_render_wc_product_meta_box', 'product', 'side', 'high');
         add_meta_box('mco_exam_program_meta', 'Exam Program Configuration', 'mco_render_exam_program_meta_box', 'mco_exam_program', 'normal', 'high');
         add_meta_box('mco_book_links_meta', 'Affiliate Links', 'mco_render_book_links_meta_box', 'mco_recommended_book', 'normal', 'high');
+        add_meta_box('mco_book_thumbnail_meta', 'External Thumbnail URL', 'mco_render_book_thumbnail_meta_box', 'mco_recommended_book', 'side', 'low');
     }
 }
 
@@ -363,12 +595,22 @@ if (!function_exists('mco_render_book_links_meta_box')) {
     }
 }
 
+if (!function_exists('mco_render_book_thumbnail_meta_box')) {
+    function mco_render_book_thumbnail_meta_box($post) {
+        wp_nonce_field('mco_save_book_meta', 'mco_book_nonce');
+        $thumbnail_url = get_post_meta($post->ID, '_mco_thumbnail_url', true);
+        echo '<p><label for="mco_thumbnail_url">Thumbnail URL:</label><br><input type="url" id="mco_thumbnail_url" name="mco_thumbnail_url" value="' . esc_attr($thumbnail_url) . '" style="width:100%;"></p>';
+        echo '<p class="description">Optional. Overrides the featured image if both are set. Useful for bulk imports or external images.</p>';
+    }
+}
+
 if (!function_exists('mco_save_book_meta_data')) {
     function mco_save_book_meta_data($post_id) {
         if (!isset($_POST['mco_book_nonce']) || !wp_verify_nonce($_POST['mco_book_nonce'], 'mco_save_book_meta') || (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)) return;
         if (isset($_POST['mco_link_com'])) update_post_meta($post_id, '_mco_link_com', esc_url_raw($_POST['mco_link_com']));
         if (isset($_POST['mco_link_in'])) update_post_meta($post_id, '_mco_link_in', esc_url_raw($_POST['mco_link_in']));
         if (isset($_POST['mco_link_ae'])) update_post_meta($post_id, '_mco_link_ae', esc_url_raw($_POST['mco_link_ae']));
+        if (isset($_POST['mco_thumbnail_url'])) update_post_meta($post_id, '_mco_thumbnail_url', esc_url_raw($_POST['mco_thumbnail_url']));
     }
 }
 
