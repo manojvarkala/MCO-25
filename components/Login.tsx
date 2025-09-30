@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';

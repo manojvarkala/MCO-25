@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -212,10 +212,10 @@ const Certificate: React.FC = () => {
 
                             <div className="text-center w-1/5">
                                 <div className="h-16 flex items-end justify-center">
-                                    <p className="text-xs text-slate-500">Issued On</p>
+                                    {/* This space intentionally left blank to align with signature areas */}
                                 </div>
-                                <p className="font-semibold border-t-2 border-slate-400 mt-2 pt-2 text-sm">{certData.date}</p>
-                                <p className="text-xs text-slate-500 min-h-[1rem]">&nbsp;</p>
+                                <p className="border-t-2 border-slate-400 mt-2 pt-2 font-semibold text-sm">{certData.date}</p>
+                                <p className="text-xs text-slate-500 min-h-[1rem]">Issued On</p>
                             </div>
                             
                             {hasTwoSignatures ? (

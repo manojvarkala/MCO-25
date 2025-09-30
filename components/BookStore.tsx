@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import type { RecommendedBook } from '../types.ts';
