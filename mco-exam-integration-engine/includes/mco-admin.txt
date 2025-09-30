@@ -12,7 +12,13 @@ if (!function_exists('mco_register_admin_hooks')) {
         add_action('save_post_mco_recommended_book', 'mco_save_book_meta_data');
         add_action('admin_init', 'mco_register_settings_and_fields');
         add_action('save_post', 'mco_auto_update_config_version_on_save');
-        add_action('update_option_mco_certificate_templates', 'mco_auto_update_config_version_on_settings_save', 10, 1);
+        
+        // Hooks to update config version whenever a relevant setting is changed.
+        add_action('update_option_mco_certificate_templates', 'mco_update_config_version');
+        add_action('update_option_mco_exam_app_url', 'mco_update_config_version');
+        add_action('update_option_mco_logo_url', 'mco_update_config_version');
+        add_action('update_option_mco_spin_wheel_enabled', 'mco_update_config_version');
+        
         add_action('admin_notices', 'mco_admin_notices');
     }
 }
@@ -40,11 +46,11 @@ if (!function_exists('mco_auto_update_config_version_on_save')) {
         }
     }
 }
-if (!function_exists('mco_auto_update_config_version_on_settings_save')) {
-    function mco_auto_update_config_version_on_settings_save($option_name) {
-        if ($option_name === 'mco_certificate_templates') {
-            update_option('mco_config_version', current_time('YmdHis'));
-        }
+
+// Generic function to update the config version timestamp.
+if (!function_exists('mco_update_config_version')) {
+    function mco_update_config_version() {
+        update_option('mco_config_version', current_time('YmdHis'));
     }
 }
 
