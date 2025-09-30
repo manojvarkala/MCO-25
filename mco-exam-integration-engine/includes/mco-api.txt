@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) exit;
  * If the exam application cannot connect to the API (CORS errors, fetch errors, or "Authorization
  * header missing" messages), it's almost always a server configuration issue. Many shared hosting
  * environments (like Apache/LiteSpeed) strip the necessary 'Authorization' header from requests by default.
- * 
+ * 30 sept 5.23
  * THE FIX:
  * Add the following code to the VERY TOP of your WordPress root .htaccess file, before the
  * # BEGIN WordPress block.
@@ -196,20 +196,42 @@ function mco_api_get_certificate_data(WP_REST_Request $request) {
     if (!isset($results[$request['testId']])) return new WP_Error('not_found', 'Result not found.', ['status' => 404]);
     $result = $results[$request['testId']];
     
-    // Find the exam name from the full config data
+    // Find the exam name and post ID from the full config data
     $exam_name = 'Examination'; // Default value
-    $all_exams_data = mco_get_app_config_data();
-    if (isset($all_exams_data['exams'])) {
-        foreach ($all_exams_data['exams'] as $exam) {
-            if ($exam['id'] === $result['examId']) {
-                $exam_name = $exam['name'];
-                break;
+    $exam_post_id = 'NA';
+    $exam_sku = $result['examId'];
+
+    $args = [
+        'post_type' => 'mco_exam_program',
+        'meta_key' => '_mco_certification_exam_sku',
+        'meta_value' => $exam_sku,
+        'posts_per_page' => 1,
+        'fields' => 'ids'
+    ];
+    $query = new WP_Query($args);
+    if (!empty($query->posts)) {
+        $exam_post_id = $query->posts[0];
+        $exam_name = get_the_title($exam_post_id);
+    } else {
+        // Fallback to searching the full config if direct query fails
+        $all_exams_data = mco_get_app_config_data();
+        if (isset($all_exams_data['exams'])) {
+            foreach ($all_exams_data['exams'] as $exam) {
+                if ($exam['id'] === $exam_sku) {
+                    $exam_name = $exam['name'];
+                    break;
+                }
             }
         }
     }
+    
+    // Generate a professional, unique certificate number
+    $user_id = $payload['user']['id'];
+    $timestamp_sec = floor($result['timestamp'] / 1000);
+    $cert_number = sprintf('MCO-%s-%s-%s', $user_id, $exam_post_id, $timestamp_sec);
 
     return new WP_REST_Response([
-        'certificateNumber' => $result['testId'], 
+        'certificateNumber' => $cert_number, 
         'candidateName' => $payload['user']['name'], 
         'finalScore' => $result['score'], 
         'date' => date('F j, Y', $result['timestamp'] / 1000), 

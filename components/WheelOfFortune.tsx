@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
