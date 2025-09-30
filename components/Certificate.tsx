@@ -11,7 +11,6 @@ import { Download, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppContext } from '../context/AppContext.tsx';
-import Seal from '../assets/Seal.tsx';
 
 const Certificate: React.FC = () => {
     const { testId = 'sample' } = useParams<{ testId?: string }>();
@@ -174,15 +173,15 @@ const Certificate: React.FC = () => {
 
                 <div className="relative z-10 flex flex-col h-full p-4 md:p-8">
                     {/* Header */}
-                    <header className="flex justify-between items-start text-center mb-4">
-                        <div className="w-1/4 text-left">
+                    <header className="flex justify-between items-start gap-4 mb-4">
+                        <div className="flex items-center gap-4">
                             {organization.logo && <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="h-16 w-16 object-contain" />}
+                             <div>
+                                <h1 className="text-2xl md:text-3xl font-bold text-slate-900 font-serif-display text-left">{organization.name}</h1>
+                                <p className="text-sm text-slate-500 text-left">www.{organization.website}</p>
+                            </div>
                         </div>
-                        <div className="w-1/2">
-                            <p className="text-sm tracking-[0.2em] uppercase text-slate-500">{titleText}</p>
-                            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 font-serif-display">{organization.name}</h1>
-                        </div>
-                        <div className="w-1/4 text-right">
+                        <div className="text-right flex-shrink-0">
                              <p className="text-xs text-slate-500">Certificate ID</p>
                              <p className="text-sm font-semibold text-slate-700 whitespace-nowrap">{certData.certificateNumber}</p>
                         </div>
@@ -190,18 +189,23 @@ const Certificate: React.FC = () => {
 
                     {/* Main Content */}
                     <main className="flex-grow flex flex-col items-center justify-center text-center my-4">
-                        <p className="text-lg text-slate-600">This certificate is awarded to</p>
-                        <h2 className="text-5xl md:text-6xl font-script text-slate-800 my-4 py-2 border-b-2 border-amber-400">{certData.candidateName}</h2>
+                        <p className="text-sm tracking-[0.2em] uppercase text-slate-500 mb-4">{titleText}</p>
+                        <p className="text-lg text-slate-600">This certificate is proudly presented to</p>
+                        <h2 className="text-5xl md:text-6xl font-script text-slate-800 my-4 py-2">{certData.candidateName}</h2>
                         <div className="text-md text-slate-600 max-w-2xl mx-auto" dangerouslySetInnerHTML={{ __html: bodyText.replace(/\n/g, '<br />') }}></div>
                     </main>
-                    
-                    <Seal className="absolute bottom-20 right-20 w-24 h-24 opacity-90"/>
 
                     {/* Footer */}
                     <footer className="mt-auto pt-8">
                         <div className="flex justify-between items-end">
                             <div className="text-center w-2/5">
-                                {template.signature1ImageUrl && <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="h-12 mx-auto" />}
+                                <div className="h-16 flex items-center justify-center">
+                                    {template.signature1ImageUrl ? (
+                                        <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="h-12 mx-auto" />
+                                    ) : (
+                                        <p className="font-script text-3xl text-slate-700">{template.signature1Name}</p>
+                                    )}
+                                </div>
                                 <p className="border-t-2 border-slate-400 mt-2 pt-2 font-semibold text-sm">{template.signature1Name}</p>
                                 <p className="text-xs text-slate-500">{template.signature1Title}</p>
                             </div>
@@ -213,7 +217,13 @@ const Certificate: React.FC = () => {
                             
                             {hasTwoSignatures ? (
                                 <div className="text-center w-2/5">
-                                    {template.signature2ImageUrl && <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} className="h-12 mx-auto" />}
+                                    <div className="h-16 flex items-center justify-center">
+                                        {template.signature2ImageUrl ? (
+                                            <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} className="h-12 mx-auto" />
+                                        ) : (
+                                            <p className="font-script text-3xl text-slate-700">{template.signature2Name}</p>
+                                        )}
+                                    </div>
                                     <p className="border-t-2 border-slate-400 mt-2 pt-2 font-semibold text-sm">{template.signature2Name}</p>
                                     <p className="text-xs text-slate-500">{template.signature2Title}</p>
                                 </div>
