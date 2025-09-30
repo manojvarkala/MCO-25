@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { Navigate, useLocation, Routes, Route, HashRouter } from 'react-router-dom';
@@ -54,7 +55,7 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }
 };
 
 const AppContent: FC = () => {
-    const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed, isEffectivelyAdmin, isMasquerading } = useAuth();
+    const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed, isMasquerading } = useAuth();
     const { isWheelModalOpen, setWheelModalOpen, activeOrg } = useAppContext();
     const location = useLocation();
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
@@ -157,7 +158,7 @@ const AppContent: FC = () => {
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </main>
-                {user && isEffectivelyAdmin && !isTestPage && <DebugSidebar />}
+                {user && user.isAdmin && !isTestPage && <DebugSidebar />}
             </div>
             {!isTestPage && <Footer />}
             {!isTestPage && <LivePurchaseNotification />}
