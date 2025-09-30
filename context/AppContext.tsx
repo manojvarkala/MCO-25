@@ -126,6 +126,25 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             
             const liveConfig = await response.json();
             
+            // If the live config is missing books, try to fill them in from the static file as a fallback.
+            const hasLiveBooks = liveConfig.organizations?.[0]?.suggestedBooks?.length > 0;
+            if (!hasLiveBooks) {
+                try {
+                    const staticResponse = await fetch(tenantConfig.staticConfigPath);
+                    if (staticResponse.ok) {
+                        const staticConfig = await staticResponse.json();
+                        const staticBooks = staticConfig.organizations?.[0]?.suggestedBooks;
+                        if (staticBooks && staticBooks.length > 0) {
+                            if (liveConfig.organizations?.[0]) {
+                                liveConfig.organizations[0].suggestedBooks = staticBooks;
+                            }
+                        }
+                    }
+                } catch (staticFetchError) {
+                    console.warn('Could not fetch static config for book fallback:', staticFetchError);
+                }
+            }
+
             if (!activeConfig || activeConfig.version !== liveConfig.version) {
                 localStorage.setItem('appConfigCache', JSON.stringify(liveConfig));
                 const processedData = processConfigData(liveConfig);

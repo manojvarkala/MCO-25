@@ -1,13 +1,14 @@
+
 import React, { FC, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { DebugData } from '../types.ts';
-import { Bug, X, Server, User, ShoppingCart, FileText, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Bug, X, Server, User, ShoppingCart, FileText, CheckCircle, AlertTriangle, Eye } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
 
 const DebugSidebar: FC = () => {
-    const { token } = useAuth();
+    const { token, toggleMasquerade } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -87,6 +88,15 @@ const DebugSidebar: FC = () => {
                             <X size={24} />
                         </button>
                     </div>
+
+                    <button
+                        onClick={toggleMasquerade}
+                        className="w-full mb-4 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg transition"
+                    >
+                        <Eye size={16} />
+                        View as User
+                    </button>
+
                     <div className="flex-grow bg-slate-900 rounded-lg p-4 overflow-auto font-mono text-sm">
                         {isLoading && (
                             <div className="flex items-center justify-center h-full">

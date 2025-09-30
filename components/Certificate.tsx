@@ -157,11 +157,11 @@ const Certificate: React.FC = () => {
         <div className="max-w-5xl mx-auto bg-slate-100 p-4 sm:p-6 rounded-lg">
             <div className="flex justify-between items-center mb-6">
                  <button
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => navigate(-1)}
                     className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition"
                 >
                     <ArrowLeft size={16} />
-                    <span>Back to Dashboard</span>
+                    <span>Back</span>
                 </button>
                 <button
                     onClick={handleDownload}
@@ -177,25 +177,36 @@ const Certificate: React.FC = () => {
                 {/* Outer decorative border */}
                 <div className="w-full h-full border-4 border-cyan-100 p-1">
                     {/* Inner decorative border */}
-                    <div className="w-full h-full border-2 border-cyan-200 p-6 relative">
+                    <div className="w-full h-full border-2 border-cyan-200 p-8 relative flex flex-col">
                         <Watermark text={organization.name} />
-                        <div className="relative z-10 flex flex-col h-full text-center">
+                        <div className="relative z-10 flex flex-col h-full">
                             
-                            <div className="flex flex-col items-center mb-6">
-                                {organization.logo && <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="h-20 object-contain mb-2" />}
-                                <h1 className="text-4xl font-bold text-gray-900 font-serif-display">{organization.name}</h1>
-                                <p className="text-md text-gray-500 mt-1">{organization.website}</p>
-                            </div>
-
-                            <p className="text-2xl text-gray-500 tracking-widest uppercase">{titleText}</p>
-                            <p className="text-lg text-gray-600 mt-4">This certificate is proudly presented to</p>
+                            {/* Header Section */}
+                            <header className="flex justify-between items-start mb-8">
+                                <div className="flex items-center space-x-4">
+                                    {organization.logo && <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="h-16 w-16 object-contain" />}
+                                    <div>
+                                        <h1 className="text-3xl font-bold text-gray-900 font-serif-display text-left">{organization.name}</h1>
+                                        <p className="text-md text-gray-500 mt-1 text-left">{organization.website}</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm text-gray-500">Certificate ID</p>
+                                    <p className="font-semibold text-gray-700 whitespace-nowrap">{certData.certificateNumber}</p>
+                                </div>
+                            </header>
                             
-                            <h2 className="text-5xl font-bold text-gray-800 my-8 border-b-2 border-gray-300 pb-4">{certData.candidateName}</h2>
-
-                            <div className="text-lg text-gray-600 flex-grow" dangerouslySetInnerHTML={{ __html: bodyText.replace(/\n/g, '<br />') }}>
-                            </div>
+                            {/* Main Content */}
+                            <main className="flex-grow flex flex-col items-center justify-center text-center">
+                                <p className="text-2xl text-gray-500 tracking-widest uppercase">{titleText}</p>
+                                <p className="text-lg text-gray-600 mt-4">This certificate is proudly presented to</p>
+                                <h2 className="text-5xl font-bold text-gray-800 my-6 border-b-2 border-gray-300 pb-4">{certData.candidateName}</h2>
+                                <div className="text-lg text-gray-600" dangerouslySetInnerHTML={{ __html: bodyText.replace(/\n/g, '<br />') }}>
+                                </div>
+                            </main>
                             
-                            <div className="mt-auto pt-8">
+                            {/* Footer Section */}
+                            <footer className="mt-auto pt-8">
                                 <div className="flex justify-between items-end">
                                     <div className="text-center w-2/5">
                                         {template.signature1ImageUrl && <img src={template.signature1ImageUrl} crossOrigin="anonymous" alt={template.signature1Name} className="h-12 mx-auto" />}
@@ -216,12 +227,8 @@ const Certificate: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
-
-                                
-
-                                <p className="text-sm text-gray-500 mt-6">https://www.{organization.website}</p>
-                                <p className="text-xs text-gray-400 mt-1">Certificate ID: {certData.certificateNumber}</p>
-                            </div>
+                                <p className="text-sm text-gray-500 mt-6 text-center">https://www.{organization.website}</p>
+                            </footer>
                         </div>
                     </div>
                 </div>

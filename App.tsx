@@ -1,6 +1,4 @@
 
-
-
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { Navigate, useLocation, Routes, Route, HashRouter } from 'react-router-dom';
@@ -35,6 +33,7 @@ import LivePurchaseNotification from './components/LivePurchaseNotification.tsx'
 import SidebarLayout from './components/SidebarLayout.tsx';
 import Integration from './components/Integration.tsx';
 import UpdateNameModal from './components/UpdateNameModal.tsx';
+import MasqueradeBanner from './components/MasqueradeBanner.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -42,12 +41,12 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }) => {
-  const { user } = useAuth();
+  const { user, isEffectivelyAdmin } = useAuth();
   if (!user) {
     // Fix: Use <Navigate> for react-router-dom v6
     return <Navigate to="/" replace />;
   }
-  if (adminOnly && !user.isAdmin) {
+  if (adminOnly && !isEffectivelyAdmin) {
     // Fix: Use <Navigate> for react-router-dom v6
     return <Navigate to="/dashboard" replace />;
   }
@@ -55,7 +54,7 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }
 };
 
 const AppContent: FC = () => {
-    const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed } = useAuth();
+    const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed, isEffectivelyAdmin, isMasquerading } = useAuth();
     const { isWheelModalOpen, setWheelModalOpen, activeOrg } = useAppContext();
     const location = useLocation();
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
@@ -102,7 +101,8 @@ const AppContent: FC = () => {
         : "container mx-auto px-4 py-8";
 
     return (
-        <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800">
+        <div className={`flex flex-col min-h-screen bg-slate-50 text-slate-800 ${user?.isAdmin && isMasquerading ? 'pt-10' : ''}`}>
+            {user && user.isAdmin && <MasqueradeBanner />}
             {user && <UpdateNameModal isOpen={isNameModalOpen} onClose={() => setIsNameModalOpen(false)} />}
             {canSpinWheel && isWheelModalOpen && (
               <WheelOfFortune 
@@ -157,7 +157,7 @@ const AppContent: FC = () => {
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </main>
-                {user && user.isAdmin && !isTestPage && <DebugSidebar />}
+                {user && isEffectivelyAdmin && !isTestPage && <DebugSidebar />}
             </div>
             {!isTestPage && <Footer />}
             {!isTestPage && <LivePurchaseNotification />}

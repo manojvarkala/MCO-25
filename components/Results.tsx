@@ -1,6 +1,4 @@
 
-
-
 import React, { FC, useState, useEffect } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useParams, useNavigate } from 'react-router-dom';
@@ -19,7 +17,7 @@ const Results: FC = () => {
     const { testId } = useParams<{ testId: string }>();
     // Fix: Use useNavigate for navigation in v6
     const navigate = useNavigate();
-    const { user, token, paidExamIds, isSubscribed } = useAuth();
+    const { user, token, paidExamIds, isSubscribed, isEffectivelyAdmin } = useAuth();
     const { activeOrg } = useAppContext();
     
     const [result, setResult] = useState<TestResult | null>(null);
@@ -455,9 +453,41 @@ Please provide a summary of the key areas I need to focus on based on these erro
     
     const isPass = result.score >= exam.passScore;
     const isPaidCertExam = !exam.isPractice;
-    const canUseAiFeedback = isSubscribed || (isPurchased && !hasPassedCert && !attemptsExceeded);
+    const isAdmin = isEffectivelyAdmin;
+    const canUseAiFeedback = isSubscribed || (isPurchased && !hasPassedCert && !attemptsExceeded) || isAdmin;
     const scoreColor = isPass ? 'text-green-600' : 'text-red-600';
-    const isAdmin = !!user?.isAdmin;
+
+    let AILockMessage: React.ReactNode = <span>Available to subscribers or with an exam purchase.</span>;
+    if (!isSubscribed) {
+        if (hasPassedCert) {
+            AILockMessage = <span>AI feedback disabled: certification already passed.</span>;
+        } else if (attemptsExceeded) {
+            AILockMessage = <span>AI feedback disabled: all attempts for this certification have been used.</span>;
+        } else if (!isPurchased) {
+            let certExamForPurchase: Exam | undefined;
+            if (exam.isPractice) {
+                const category = activeOrg?.examProductCategories.find(c => c.practiceExamId === exam.id);
+                certExamForPurchase = category ? activeOrg?.exams.find(e => e.id === category.certificationExamId) : undefined;
+            } else {
+                certExamForPurchase = exam;
+            }
+    
+            if (certExamForPurchase) {
+                const priceText = certExamForPurchase.price > 0 ? ` for $${certExamForPurchase.price.toFixed(2)}` : '';
+                if (certExamForPurchase.productSlug) {
+                    AILockMessage = (
+                        <span>
+                            <a href={`/#/checkout/${certExamForPurchase.productSlug}`} className="font-bold underline hover:text-white">Purchase exam{priceText}</a>
+                            {' or '}
+                            <a href="/#/pricing" className="font-bold underline hover:text-white">subscribe</a>
+                            {' to unlock.'}
+                        </span>
+                    );
+                }
+            }
+        }
+    }
+
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -583,9 +613,9 @@ Please provide a summary of the key areas I need to focus on based on these erro
                                 </button>
                              </div>
                         ) : (
-                            <div className="flex items-center gap-2 bg-white/10 p-2 rounded-md text-sm">
+                            <div className="flex items-center gap-2 bg-white/10 p-2 rounded-md text-sm text-purple-200">
                                 <Lock size={16} />
-                                <span>{isSubscribed ? 'AI enabled for subscribers' : 'Available for subscribers or on purchased exams'}</span>
+                                {AILockMessage}
                             </div>
                         )}
                      </div>

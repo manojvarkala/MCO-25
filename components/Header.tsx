@@ -1,10 +1,11 @@
+
 import React, { FC, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, Users, Gift, Star, List } from 'lucide-react';
 
 const Header: FC = () => {
-  const { user, logout, canSpinWheel, isSubscribed } = useAuth();
+  const { user, logout, canSpinWheel, isSubscribed, isEffectivelyAdmin } = useAuth();
   const { activeOrg, setWheelModalOpen } = useAppContext();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isCategoriesMenuOpen, setIsCategoriesMenuOpen] = useState(false);
@@ -150,7 +151,7 @@ const Header: FC = () => {
                         <a href={myAccountUrl} target="_blank" rel="noopener noreferrer" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
                            <UserCircle size={14}/> My Account (Main Site)
                         </a>
-                        {user.isAdmin && (
+                        {isEffectivelyAdmin && (
                             <a href="/#/admin" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
                                <Shield size={14}/> Admin Panel
                             </a>

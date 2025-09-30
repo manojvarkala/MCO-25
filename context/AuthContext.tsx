@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useContext, createContext, FC, ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import type { User, TokenPayload } from '../types.ts';
@@ -13,10 +14,13 @@ interface AuthContextType {
   wheelModalDismissed: boolean;
   canSpinWheel: boolean;
   isSpinWheelEnabled: boolean;
+  isEffectivelyAdmin: boolean;
+  isMasquerading: boolean;
   loginWithToken: (token: string, isSyncOnly?: boolean) => Promise<void>;
   logout: () => void;
   updateUserName: (name: string) => void;
   setWheelModalDismissed: (dismissed: boolean) => void;
+  toggleMasquerade: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -83,13 +87,18 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
           return false;
       }
   });
+  const [isMasquerading, setIsMasquerading] = useState<boolean>(false);
 
+  const isEffectivelyAdmin = useMemo(() => {
+    if (!user) return false;
+    return user.isAdmin && !isMasquerading;
+  }, [user, isMasquerading]);
   
   const canSpinWheel = useMemo(() => {
     if (!user || !isSpinWheelEnabled) return false;
-    if (user.isAdmin) return true; // Admins can always spin for testing
+    if (isEffectivelyAdmin) return true; // Admins can always spin for testing
     return spinsAvailable > 0;
-  }, [user, spinsAvailable, isSpinWheelEnabled]);
+  }, [user, spinsAvailable, isSpinWheelEnabled, isEffectivelyAdmin]);
 
 
   const logout = useCallback(() => {
@@ -100,6 +109,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setSpinsAvailable(0);
     setWonPrize(null);
     setIsSpinWheelEnabled(false);
+    setIsMasquerading(false); // Reset on logout
     localStorage.removeItem('examUser');
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
@@ -166,6 +176,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setUser(payload.user);
             setPaidExamIds(payload.paidExamIds);
             setToken(jwtToken);
+            setIsMasquerading(false); // Reset on new login/sync
             localStorage.setItem('examUser', JSON.stringify(payload.user));
             localStorage.setItem('paidExamIds', JSON.stringify(payload.paidExamIds));
             localStorage.setItem('authToken', jwtToken);
@@ -218,6 +229,17 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         throw new Error("Invalid authentication token.");
     }
   }, [logout]);
+  
+  const toggleMasquerade = useCallback(() => {
+    setIsMasquerading(prev => {
+        if (!prev) {
+            toast('Masquerade mode enabled. Viewing as a regular user.', { icon: '🎭' });
+        } else {
+            toast.success('Returned to Admin view.');
+        }
+        return !prev;
+    });
+  }, []);
 
   const updateUserName = useCallback((name: string) => {
     if (user) {
@@ -247,15 +269,18 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     wheelModalDismissed,
     canSpinWheel,
     isSpinWheelEnabled,
+    isEffectivelyAdmin,
+    isMasquerading,
     loginWithToken,
     logout,
     updateUserName,
-    setWheelModalDismissed: updateWheelModalDismissed
+    setWheelModalDismissed: updateWheelModalDismissed,
+    toggleMasquerade
   }), [
     user, token, paidExamIds, isSubscribed,
     spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel,
-    isSpinWheelEnabled, loginWithToken,
-    logout, updateUserName, updateWheelModalDismissed
+    isSpinWheelEnabled, isEffectivelyAdmin, isMasquerading, loginWithToken,
+    logout, updateUserName, updateWheelModalDismissed, toggleMasquerade
   ]);
 
   return (
