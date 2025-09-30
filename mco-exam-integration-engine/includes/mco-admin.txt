@@ -106,14 +106,27 @@ if (!function_exists('mco_render_settings_page')) {
     }
 }
 
+// --- Custom sanitizer for logo field (accepts URL or base64) ---
+if (!function_exists('mco_sanitize_logo_field')) {
+    function mco_sanitize_logo_field($value) {
+        // Check if the value is a base64 data URI for an image.
+        if (is_string($value) && strpos($value, 'data:image') === 0 && strpos($value, ';base64,') !== false) {
+            // It's a data URI. Return it as is, since it's safe for an 'src' attribute in this context.
+            return $value;
+        }
+        // Otherwise, assume it's a regular URL and sanitize it.
+        return esc_url_raw($value);
+    }
+}
+
 if (!function_exists('mco_register_settings_and_fields')) {
     function mco_register_settings_and_fields() {
         register_setting('mco_main_settings_group', 'mco_exam_app_url');
-        register_setting('mco_main_settings_group', 'mco_logo_url');
+        register_setting('mco_main_settings_group', 'mco_logo_url', ['sanitize_callback' => 'mco_sanitize_logo_field']);
         register_setting('mco_main_settings_group', 'mco_spin_wheel_enabled', ['type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean']);
         add_settings_section('mco_main_section', 'Core Configuration', null, 'mco_main_settings_page');
         add_settings_field('mco_exam_app_url_field', 'Exam Application URL(s)', 'mco_render_app_url_field', 'mco_main_settings_page', 'mco_main_section');
-        add_settings_field('mco_logo_url_field', 'Organization Logo URL', 'mco_render_logo_url_field', 'mco_main_settings_page', 'mco_main_section');
+        add_settings_field('mco_logo_url_field', 'Organization Logo', 'mco_render_logo_url_field', 'mco_main_settings_page', 'mco_main_section');
         add_settings_field('mco_spin_wheel_enabled_field', 'Enable Spin & Win', 'mco_render_spin_wheel_field', 'mco_main_settings_page', 'mco_main_section');
         add_settings_field('mco_config_version_field', 'Live Config Version', 'mco_render_config_version_field', 'mco_main_settings_page', 'mco_main_section');
         
@@ -134,9 +147,9 @@ if (!function_exists('mco_render_app_url_field')) {
 
 if (!function_exists('mco_render_logo_url_field')) {
     function mco_render_logo_url_field() {
-        $logo_url = get_option('mco_logo_url', '');
-        echo '<input type="url" name="mco_logo_url" value="' . esc_attr($logo_url) . '" class="regular-text" placeholder="https://yourdomain.com/logo.png">';
-        echo '<p class="description">Optional. Provide a direct URL to your organization\'s logo. If left blank, the plugin will attempt to use the "Site Icon" from your WordPress settings (Appearance &rarr; Customize &rarr; Site Identity).</p>';
+        $logo_data = get_option('mco_logo_url', '');
+        echo '<textarea name="mco_logo_url" rows="4" class="large-text code" placeholder="https://yourdomain.com/logo.png OR data:image/png;base64,...">' . esc_textarea($logo_data) . '</textarea>';
+        echo '<p class="description">Optional. Provide a direct URL to your logo <strong>OR</strong> a base64 data URI. Using a base64 URI is recommended to prevent issues with the logo not appearing on downloaded PDF certificates. You can use an online tool to convert your logo image to a base64 string.</p>';
     }
 }
 
