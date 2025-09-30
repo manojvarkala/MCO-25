@@ -20,8 +20,24 @@ if (!function_exists('mco_register_admin_hooks')) {
         add_action('update_option_mco_spin_wheel_enabled', 'mco_update_config_version');
         
         add_action('admin_notices', 'mco_admin_notices');
+        
+        // New hook for handling form submissions early.
+        add_action('admin_init', 'mco_handle_csv_uploads_on_init');
     }
 }
+
+// --- NEW: Handle CSV uploads on admin_init to avoid header issues ---
+if (!function_exists('mco_handle_csv_uploads_on_init')) {
+    function mco_handle_csv_uploads_on_init() {
+        if (isset($_POST['mco_csv_upload_nonce']) && check_admin_referer('mco_csv_upload_action', 'mco_csv_upload_nonce')) {
+            mco_handle_csv_upload();
+        }
+        if (isset($_POST['mco_book_csv_upload_nonce']) && check_admin_referer('mco_book_csv_upload_action', 'mco_book_csv_upload_nonce')) {
+            mco_handle_book_csv_upload();
+        }
+    }
+}
+
 
 // --- NEW: Custom sanitizer for signature fields ---
 if (!function_exists('mco_sanitize_signature_field')) {
@@ -80,16 +96,6 @@ if (!function_exists('mco_render_settings_page')) {
             add_action('admin_notices', function() {
                 echo '<div class="notice notice-success is-dismissible"><p>API routes have been successfully refreshed.</p></div>';
             });
-        }
-        
-        // Handle Exam Program CSV upload
-        if (isset($_POST['mco_csv_upload_nonce']) && check_admin_referer('mco_csv_upload_action', 'mco_csv_upload_nonce')) {
-            mco_handle_csv_upload();
-        }
-        
-        // Handle Recommended Book CSV upload
-        if (isset($_POST['mco_book_csv_upload_nonce']) && check_admin_referer('mco_book_csv_upload_action', 'mco_book_csv_upload_nonce')) {
-            mco_handle_book_csv_upload();
         }
         
         ?>
@@ -346,7 +352,11 @@ if (!function_exists('mco_handle_csv_upload')) {
         $handle = fopen($file, "r");
 
         $header = fgetcsv($handle);
-        $header = array_map('trim', $header); // Clean up header names
+        if (!$header) {
+            add_action('admin_notices', function() { echo '<div class="notice notice-error is-dismissible"><p><strong>Import Error:</strong> Could not read CSV file or file is empty.</p></div>'; });
+            return;
+        }
+        $header = array_map('trim', $header);
 
         $imported = 0;
         $skipped = 0;
@@ -355,6 +365,11 @@ if (!function_exists('mco_handle_csv_upload')) {
 
         while (($row = fgetcsv($handle)) !== FALSE) {
             $row_num++;
+            
+            if (count($header) !== count($row)) {
+                $errors[] = "Row {$row_num}: Column count mismatch. Expected " . count($header) . " but found " . count($row) . ". Skipping.";
+                continue;
+            }
             $data = array_combine($header, $row);
 
             $title = sanitize_text_field($data['program_title']);
@@ -362,8 +377,16 @@ if (!function_exists('mco_handle_csv_upload')) {
                 $errors[] = "Row {$row_num}: Skipped due to empty title.";
                 continue;
             }
+            
+            $existing_posts = get_posts([
+                'post_type' => 'mco_exam_program',
+                'title' => $title,
+                'post_status' => 'any',
+                'posts_per_page' => 1,
+                'fields' => 'ids'
+            ]);
 
-            if (post_exists($title)) {
+            if (!empty($existing_posts)) {
                 $skipped++;
                 continue;
             }
@@ -427,6 +450,10 @@ if (!function_exists('mco_handle_book_csv_upload')) {
         $handle = fopen($file, "r");
 
         $header = fgetcsv($handle);
+        if (!$header) {
+            add_action('admin_notices', function() { echo '<div class="notice notice-error is-dismissible"><p><strong>Import Error:</strong> Could not read CSV file or file is empty.</p></div>'; });
+            return;
+        }
         $header = array_map('trim', $header);
 
         $imported = 0;
@@ -436,6 +463,11 @@ if (!function_exists('mco_handle_book_csv_upload')) {
 
         while (($row = fgetcsv($handle)) !== FALSE) {
             $row_num++;
+
+            if (count($header) !== count($row)) {
+                $errors[] = "Row {$row_num}: Column count mismatch. Skipping.";
+                continue;
+            }
             $data = array_combine($header, $row);
 
             $title = sanitize_text_field($data['book_title']);
@@ -443,10 +475,16 @@ if (!function_exists('mco_handle_book_csv_upload')) {
                 $errors[] = "Row {$row_num}: Skipped due to empty title.";
                 continue;
             }
+            
+            $existing_posts = get_posts([
+                'post_type' => 'mco_recommended_book',
+                'title' => $title,
+                'post_status' => 'any',
+                'posts_per_page' => 1,
+                'fields' => 'ids'
+            ]);
 
-            // Check if book with this title already exists
-            $existing_book = get_page_by_title($title, OBJECT, 'mco_recommended_book');
-            if ($existing_book) {
+            if (!empty($existing_posts)) {
                 $skipped++;
                 continue;
             }
