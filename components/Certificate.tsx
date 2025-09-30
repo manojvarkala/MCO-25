@@ -199,7 +199,7 @@ const Certificate: React.FC = () => {
                     <footer className="mt-auto pt-8">
                         <div className="flex justify-between items-end">
                             <div className="text-center w-2/5">
-                                <div className="h-16 flex items-center justify-center">
+                                <div className="h-16 flex items-end justify-center">
                                     {template.signature1ImageUrl ? (
                                         <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="h-12 mx-auto" />
                                     ) : (
@@ -207,17 +207,20 @@ const Certificate: React.FC = () => {
                                     )}
                                 </div>
                                 <p className="border-t-2 border-slate-400 mt-2 pt-2 font-semibold text-sm">{template.signature1Name}</p>
-                                <p className="text-xs text-slate-500">{template.signature1Title}</p>
+                                <p className="text-xs text-slate-500 min-h-[1rem]">{template.signature1Title || <>&nbsp;</>}</p>
                             </div>
 
                             <div className="text-center w-1/5">
-                                <p className="text-xs text-slate-500">Issued On</p>
+                                <div className="h-16 flex items-end justify-center">
+                                    <p className="text-xs text-slate-500">Issued On</p>
+                                </div>
                                 <p className="font-semibold border-t-2 border-slate-400 mt-2 pt-2 text-sm">{certData.date}</p>
+                                <p className="text-xs text-slate-500 min-h-[1rem]">&nbsp;</p>
                             </div>
                             
                             {hasTwoSignatures ? (
                                 <div className="text-center w-2/5">
-                                    <div className="h-16 flex items-center justify-center">
+                                    <div className="h-16 flex items-end justify-center">
                                         {template.signature2ImageUrl ? (
                                             <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} className="h-12 mx-auto" />
                                         ) : (
@@ -225,7 +228,7 @@ const Certificate: React.FC = () => {
                                         )}
                                     </div>
                                     <p className="border-t-2 border-slate-400 mt-2 pt-2 font-semibold text-sm">{template.signature2Name}</p>
-                                    <p className="text-xs text-slate-500">{template.signature2Title}</p>
+                                    <p className="text-xs text-slate-500 min-h-[1rem]">{template.signature2Title || <>&nbsp;</>}</p>
                                 </div>
                             ) : <div className="w-2/5"></div>}
                         </div>
