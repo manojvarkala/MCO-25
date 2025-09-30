@@ -38,3 +38,4 @@ if (!function_exists('mco_register_custom_post_types')) {
         ]);
     }
 }
+?>

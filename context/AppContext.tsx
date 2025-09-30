@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
-import type { Organization, RecommendedBook, Exam, ExamProductCategory, InProgressExamInfo } from '../types.ts';
+import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
 import { getTenantConfig, TenantConfig } from '../services/apiConfig.ts';
@@ -11,11 +11,11 @@ interface AppContextType {
   isInitializing: boolean;
   setActiveOrgById: (orgId: string) => void;
   updateActiveOrg: (updatedOrg: Organization) => void;
-  suggestedBooks: RecommendedBook[];
   isWheelModalOpen: boolean;
   setWheelModalOpen: (isOpen: boolean) => void;
   inProgressExam: InProgressExamInfo | null;
   examPrices: { [key: string]: any } | null;
+  suggestedBooks: RecommendedBook[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -34,13 +34,9 @@ const processConfigData = (configData: any) => {
     if (!configData || !configData.organizations) return null;
     const processedOrgs: Organization[] = JSON.parse(JSON.stringify(configData.organizations));
     const allPrices: { [key: string]: any } = {};
-    let allBooks: RecommendedBook[] = [];
+    let allSuggestedBooks: RecommendedBook[] = [];
 
     processedOrgs.forEach((org: Organization) => {
-        const bookMap = new Map<string, RecommendedBook>();
-        (org.suggestedBooks || []).forEach(book => bookMap.set(book.id, book));
-        if (org.suggestedBooks) allBooks.push(...org.suggestedBooks);
-        
         const categoryUrlMap = new Map<string, string>();
         (org.examProductCategories || []).forEach((cat: ExamProductCategory) => {
             if (cat.questionSourceUrl) {
@@ -56,18 +52,21 @@ const processConfigData = (configData: any) => {
                     regularPrice: exam.regularPrice,
                 };
             }
-            const recommendedBook = exam.recommendedBookId ? bookMap.get(exam.recommendedBookId) : undefined;
             const questionSourceUrl = categoryUrlMap.get(exam.id) || exam.questionSourceUrl;
 
-            return { ...exam, questionSourceUrl, recommendedBook };
+            return { ...exam, questionSourceUrl };
         });
+
+        if (org.suggestedBooks) {
+            allSuggestedBooks = [...allSuggestedBooks, ...org.suggestedBooks];
+        }
     });
 
     return { 
         version: configData.version || '1.0.0',
         processedOrgs, 
-        allPrices, 
-        allBooks 
+        allPrices,
+        allSuggestedBooks
     };
 };
 
@@ -76,19 +75,19 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>([]);
   
   const { user } = useAuth();
   const [isWheelModalOpen, setWheelModalOpen] = useState(false);
   const [inProgressExam, setInProgressExam] = useState<InProgressExamInfo | null>(null);
   // FIX: Corrected syntax for useState generic type and initial value.
   const [examPrices, setExamPrices] = useState<{ [key: string]: any } | null>(null);
-  const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>([]);
 
   const setProcessedConfig = (processedData: any) => {
     if (processedData) {
       setOrganizations(processedData.processedOrgs);
       setExamPrices(processedData.allPrices);
-      setSuggestedBooks(processedData.allBooks);
+      setSuggestedBooks(processedData.allSuggestedBooks);
       const newActiveOrg = processedData.processedOrgs[0] || null;
       setActiveOrg(newActiveOrg);
       if (newActiveOrg) {
@@ -126,25 +125,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             
             const liveConfig = await response.json();
             
-            // If the live config is missing books, try to fill them in from the static file as a fallback.
-            const hasLiveBooks = liveConfig.organizations?.[0]?.suggestedBooks?.length > 0;
-            if (!hasLiveBooks) {
-                try {
-                    const staticResponse = await fetch(tenantConfig.staticConfigPath);
-                    if (staticResponse.ok) {
-                        const staticConfig = await staticResponse.json();
-                        const staticBooks = staticConfig.organizations?.[0]?.suggestedBooks;
-                        if (staticBooks && staticBooks.length > 0) {
-                            if (liveConfig.organizations?.[0]) {
-                                liveConfig.organizations[0].suggestedBooks = staticBooks;
-                            }
-                        }
-                    }
-                } catch (staticFetchError) {
-                    console.warn('Could not fetch static config for book fallback:', staticFetchError);
-                }
-            }
-
             if (!activeConfig || activeConfig.version !== liveConfig.version) {
                 localStorage.setItem('appConfigCache', JSON.stringify(liveConfig));
                 const processedData = processConfigData(liveConfig);
@@ -230,14 +210,14 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     isInitializing,
     setActiveOrgById,
     updateActiveOrg,
-    suggestedBooks,
     isWheelModalOpen,
     setWheelModalOpen,
     inProgressExam,
-    examPrices
+    examPrices,
+    suggestedBooks
   }), [
     organizations, activeOrg, isInitializing, setActiveOrgById,
-    updateActiveOrg, suggestedBooks, isWheelModalOpen, setWheelModalOpen, inProgressExam, examPrices
+    updateActiveOrg, isWheelModalOpen, setWheelModalOpen, inProgressExam, examPrices, suggestedBooks
   ]);
 
   return (

@@ -1,8 +1,10 @@
 
+
+
 import React, { FC, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
-import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, BookMarked, Tag, Users, Gift, Star, List } from 'lucide-react';
+import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, Tag, Users, Gift, Star, List, BookOpen } from 'lucide-react';
 
 const Header: FC = () => {
   const { user, logout, canSpinWheel, isSubscribed, isEffectivelyAdmin } = useAuth();
@@ -94,14 +96,6 @@ const Header: FC = () => {
                 <Tag size={20} />
                 <span className="hidden sm:inline font-semibold">Pricing</span>
             </a>
-           <a 
-                href="/#/bookstore"
-                className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}
-                title="Recommended Books"
-            >
-                <BookMarked size={20} />
-                <span className="hidden sm:inline font-semibold">Book Store</span>
-            </a>
             {examCategories.length > 0 && (
                 <div className="relative" onMouseEnter={() => setIsCategoriesMenuOpen(true)} onMouseLeave={() => setIsCategoriesMenuOpen(false)}>
                     <a href="/#/dashboard" className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`} title="View Exam Programs">
@@ -126,6 +120,14 @@ const Header: FC = () => {
                     )}
                 </div>
             )}
+            <a
+                href="/#/bookstore"
+                className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}
+                title="Recommended Books"
+            >
+                <BookOpen size={20} />
+                <span className="hidden sm:inline font-semibold">Book Store</span>
+            </a>
             <a 
                 href="/#/about-us"
                 className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}

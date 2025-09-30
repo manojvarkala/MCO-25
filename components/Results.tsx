@@ -1,4 +1,7 @@
 
+
+
+
 import React, { FC, useState, useEffect } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useParams, useNavigate } from 'react-router-dom';
@@ -9,16 +12,52 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { Check, X, FileDown, BookUp, ShieldCheck, Sparkles, Download, Star, MessageSquare, Lock, BarChart } from 'lucide-react';
-import BookCover from '../assets/BookCover.tsx';
+// FIX: Imported the 'Send' icon to be used in the submit review button.
+import { Check, X, FileDown, ShieldCheck, Sparkles, Download, Star, MessageSquare, Lock, BarChart, BookUp, Send } from 'lucide-react';
 import jsPDF from 'jspdf';
+import BookCover from '../assets/BookCover.tsx';
+
+const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } => {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
+    let preferredDomain = 'Amazon.com';
+
+    const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
+    if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
+        preferredKey = 'in';
+        preferredDomain = 'Amazon.in';
+    } else if (gccTimezones.some(tz => timeZone === tz)) {
+        preferredKey = 'ae';
+        preferredDomain = 'Amazon.ae';
+    }
+    
+    const preferredUrl = book.affiliateLinks[preferredKey];
+    if (preferredUrl && preferredUrl.trim() !== '') {
+        return { url: preferredUrl, domainName: preferredDomain };
+    }
+    
+    if (book.affiliateLinks.com && book.affiliateLinks.com.trim() !== '') {
+        return { url: book.affiliateLinks.com, domainName: 'Amazon.com' };
+    }
+
+    const fallbackOrder: (keyof RecommendedBook['affiliateLinks'])[] = ['in', 'ae'];
+    for (const key of fallbackOrder) {
+         if (book.affiliateLinks[key] && book.affiliateLinks[key].trim() !== '') {
+            const domain = key === 'in' ? 'Amazon.in' : 'Amazon.ae';
+            return { url: book.affiliateLinks[key], domainName: domain };
+         }
+    }
+    
+    return { url: book.affiliateLinks.com || '', domainName: 'Amazon.com' };
+};
+
 
 const Results: FC = () => {
     const { testId } = useParams<{ testId: string }>();
     // Fix: Use useNavigate for navigation in v6
     const navigate = useNavigate();
     const { user, token, paidExamIds, isSubscribed, isEffectivelyAdmin } = useAuth();
-    const { activeOrg } = useAppContext();
+    const { activeOrg, suggestedBooks } = useAppContext();
     
     const [result, setResult] = useState<TestResult | null>(null);
     const [exam, setExam] = useState<Exam | null>(null);
@@ -219,462 +258,346 @@ Please provide a summary of the key areas I need to focus on based on these erro
             let pageNum = 1;
             let yPos = margin;
     
-            const addWatermarkAndFooter = (pageNumber: number) => {
-                // Watermark
-                pdf.setFontSize(52);
-                pdf.setTextColor(230, 230, 230);
-                pdf.setFont('helvetica', 'bold');
-                pdf.text(activeOrg.name, pageWidth / 2, pageHeight / 2, { angle: -45, align: 'center' });
-                
-                // Footer
-                pdf.setFontSize(8);
-                pdf.setTextColor(150, 150, 150);
-                pdf.setFont('helvetica', 'normal');
-                const footerText = `Page ${pageNumber} | © ${new Date().getFullYear()} ${activeOrg.name}`;
-                pdf.text(footerText, pageWidth / 2, pageHeight - 10, { align: 'center' });
+            const addWatermark = (pdfInstance: jsPDF) => {
+                pdfInstance.setFontSize(8);
+                pdfInstance.setTextColor(200, 200, 200);
+                pdfInstance.text(
+                    `${activeOrg.name} - Confidential Study Material`,
+                    pageWidth / 2,
+                    pageHeight - 5,
+                    { align: 'center' }
+                );
             };
     
-            // --- Page 1: Cover Page ---
-            pdf.setFillColor(240, 248, 255);
-            pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-            if (activeOrg && activeOrg.logo) pdf.addImage(activeOrg.logo, 'PNG', margin, margin, 20, 20);
-            
-            pdf.setFontSize(26);
-            pdf.setTextColor(15, 23, 42);
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('AI-Powered Study Guide', pageWidth / 2, 60, { align: 'center' });
+            const addHeader = (pdfInstance: jsPDF, title: string) => {
+                yPos = margin;
+                pdfInstance.setFontSize(18);
+                pdfInstance.setTextColor(30, 41, 59); // slate-800
+                pdfInstance.setFont('helvetica', 'bold');
+                pdfInstance.text(title, margin, yPos);
+                yPos += 10;
+                pdfInstance.setDrawColor(226, 232, 240); // slate-200
+                pdfInstance.setLineWidth(0.5);
+                pdfInstance.line(margin, yPos, pageWidth - margin, yPos);
+                yPos += 10;
+            };
     
-            pdf.setFontSize(18);
-            pdf.setTextColor(51, 65, 85);
+            const addFooter = (pdfInstance: jsPDF, pageNumber: number) => {
+                pdfInstance.setFontSize(8);
+                pdfInstance.setTextColor(100, 116, 139); // slate-500
+                pdfInstance.text(`Page ${pageNumber}`, pageWidth - margin, pageHeight - 5, { align: 'right' });
+            };
+    
+            // First page
+            addWatermark(pdf);
+            addHeader(pdf, `AI Study Guide: ${exam.name}`);
+    
             pdf.setFont('helvetica', 'normal');
-            pdf.text(exam.name, pageWidth / 2, 80, { align: 'center' });
-            
-            pdf.setDrawColor(200, 200, 200);
-            pdf.line(margin, 100, pageWidth - margin, 100);
+            pdf.setFontSize(10);
+            pdf.setTextColor(71, 85, 105); // slate-600
     
+            let textLines = pdf.splitTextToSize(
+                `Generated for: ${user.name}\nExam Date: ${new Date(result.timestamp).toLocaleDateString()}\nScore: ${result.score}%\n\nThis guide focuses on the questions you answered incorrectly. Use it to target your study efforts.`,
+                pageWidth - margin * 2
+            );
+            pdf.text(textLines, margin, yPos);
+            yPos += (textLines.length * 5) + 10;
+    
+            pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(14);
-            pdf.text('Candidate:', margin, 120);
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(user.name, margin + 30, 120);
-            
+            pdf.text('Personalized Feedback:', margin, yPos);
+            yPos += 8;
+    
             pdf.setFont('helvetica', 'normal');
-            pdf.text('Date:', margin, 130);
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(new Date().toLocaleDateString(), margin + 30, 130);
-    
-            // --- Content Pages ---
-            pdf.addPage();
-            pageNum++;
-            addWatermarkAndFooter(pageNum);
-            yPos = margin;
+            pdf.setFontSize(10);
             
-            const contentWidth = pageWidth - margin * 2;
-            const lines = aiFeedback.split('\n');
+            const feedbackLines = pdf.splitTextToSize(aiFeedback, pageWidth - margin * 2);
     
-            lines.forEach(line => {
-                let fontSize = 11;
-                let style = 'normal';
-                let leftMargin = margin;
-                let isList = false;
-    
-                if (line.startsWith('## ')) {
-                    line = line.substring(3);
-                    fontSize = 16;
-                    style = 'bold';
-                    if (yPos > margin + 5) yPos += 5; 
-                } else if (line.startsWith('* ') || line.startsWith('- ')) {
-                    line = '• ' + line.substring(2);
-                    leftMargin = margin + 5;
-                    isList = true;
-                } else if (line.trim() === '---') {
-                    if(yPos > margin + 5) yPos += 2;
-                    pdf.setDrawColor(220,220,220);
-                    pdf.line(margin, yPos, pageWidth - margin, yPos);
-                    yPos += 4;
-                    return;
-                } else if (line.trim() === '') {
-                    yPos += 5;
-                    return;
-                }
-    
-                pdf.setFontSize(fontSize);
-                pdf.setFont('helvetica', style);
-                pdf.setTextColor(30, 41, 59);
-                
-                const effectiveWidth = contentWidth - (isList ? 5 : 0);
-                const splitLines = pdf.splitTextToSize(line, effectiveWidth);
-                
-                if (yPos + (splitLines.length * fontSize * 0.35) > pageHeight - margin - 10) {
+            feedbackLines.forEach((line: string) => {
+                if (yPos > pageHeight - margin) {
+                    addFooter(pdf, pageNum);
                     pdf.addPage();
                     pageNum++;
-                    addWatermarkAndFooter(pageNum);
-                    yPos = margin;
-                    if (style === 'bold') yPos += 5;
+                    addWatermark(pdf);
+                    addHeader(pdf, `AI Study Guide: ${exam.name} (cont.)`);
                 }
-    
-                pdf.text(splitLines, leftMargin, yPos);
-                yPos += (splitLines.length * fontSize * 0.35) + (isList ? 1.5 : 3);
+                pdf.text(line, margin, yPos);
+                yPos += 5;
             });
     
-            // --- Back Cover Page ---
-            pdf.addPage();
-            pageNum++;
-            addWatermarkAndFooter(pageNum);
-            yPos = margin;
-            
-            if (exam.recommendedBook) {
-                const { url, domainName } = getGeoAffiliateLink(exam.recommendedBook);
-                pdf.setFontSize(16);
-                pdf.setFont('helvetica', 'bold');
-                pdf.setTextColor(15, 23, 42); // slate-900
-                pdf.text('Recommended Study Material', margin, yPos);
-                yPos += 15;
-                
-                pdf.setFontSize(12);
-                pdf.setFont('helvetica', 'bold');
-                pdf.text(exam.recommendedBook.title, margin, yPos);
-                yPos += 8;
+            addFooter(pdf, pageNum);
     
-                pdf.setFontSize(11);
-                pdf.setFont('helvetica', 'normal');
-                pdf.setTextColor(51, 65, 85); // slate-700
-                const descLines = pdf.splitTextToSize(exam.recommendedBook.description, contentWidth);
-                pdf.text(descLines, margin, yPos);
-                yPos += (descLines.length * 11 * 0.35) + 10;
-                
-                const linkText = `Click here to buy on ${domainName}`;
-                const fontSize = 11;
-                pdf.setFontSize(fontSize);
-                pdf.setFont('helvetica', 'normal');
-                pdf.setTextColor(0, 102, 204); // A standard blue link color
-
-                // 1. Calculate dimensions in current document units (mm)
-                const fontSizeInUnits = fontSize / pdf.internal.scaleFactor;
-                const textWidth = pdf.getStringUnitWidth(linkText) * fontSizeInUnits;
-                
-                // 2. Render the text
-                pdf.text(linkText, margin, yPos);
-
-                // 3. Draw an underline
-                pdf.setDrawColor(0, 102, 204); // blue underline
-                pdf.setLineWidth(0.2); // Set a thin line width
-                pdf.line(margin, yPos + 0.5, margin + textWidth, yPos + 0.5); // Draw line just below the text baseline
-
-                // 4. Create the clickable link area
-                pdf.link(margin, yPos - fontSizeInUnits, textWidth, fontSizeInUnits, { url: url });
-            }
-            
-            pdf.setFontSize(8);
-            pdf.setTextColor(100, 116, 139);
-            pdf.setFont('helvetica', 'normal');
-            const copyrightText = `Copyright © ${new Date().getFullYear()} ${activeOrg.name}. All Rights Reserved.\nThis document is intended for the personal use of ${user.name} and may not be reproduced or distributed.`;
-            const copyrightLines = pdf.splitTextToSize(copyrightText, contentWidth);
-            pdf.text(copyrightLines, pageWidth / 2, pageHeight - 30, { align: 'center' });
-    
-            // --- Save ---
             pdf.save(`AI-Study-Guide-${exam.name.replace(/\s+/g, '_')}.pdf`);
-            toast.dismiss(toastId);
-            toast.success("Study Guide downloaded!");
-        } catch(error) {
-            toast.dismiss(toastId);
-            toast.error("Could not download PDF. Please try again.");
+            toast.success('PDF downloaded!', { id: toastId });
+        } catch (error) {
             console.error(error);
+            toast.error('Failed to generate PDF.', { id: toastId });
         } finally {
             setIsDownloading(false);
         }
     };
-
+    
     const handleSubmitReview = async () => {
         if (rating === 0) {
             toast.error("Please select a star rating.");
             return;
         }
-        if (!token || !testId || !exam) {
-            toast.error("Cannot submit review: missing required info.");
-            return;
-        }
+        if (!token || !exam) return;
 
         setIsSubmittingReview(true);
+        const toastId = toast.loading("Submitting your review...");
+
         try {
-            await googleSheetsService.submitReview(token, exam.id, rating, reviewText);
+            await googleSheetsService.submitReview(token, exam.productSku, rating, reviewText);
             const reviewData = { rating, reviewText };
-            localStorage.setItem(`review_${testId}`, JSON.stringify(reviewData));
             setSubmittedReview(reviewData);
-            toast.success("Thank you for your review!");
+            if (testId) {
+                localStorage.setItem(`review_${testId}`, JSON.stringify(reviewData));
+            }
+            toast.success("Thank you for your review!", { id: toastId });
         } catch (error: any) {
-            toast.error(error.message || "Failed to submit review.");
+            toast.error(error.message || "Failed to submit review.", { id: toastId });
         } finally {
             setIsSubmittingReview(false);
         }
     };
+
     
-    const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } => {
-        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
-        let preferredDomain = 'Amazon.com';
-    
-        const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
-        if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
-            preferredKey = 'in';
-            preferredDomain = 'Amazon.in';
-        } else if (gccTimezones.some(tz => timeZone === tz)) {
-            preferredKey = 'ae';
-            preferredDomain = 'Amazon.ae';
-        }
-        
-        const preferredUrl = book.affiliateLinks[preferredKey];
-        if (preferredUrl && preferredUrl.trim() !== '') {
-            return { url: preferredUrl, domainName: preferredDomain };
-        }
-        
-        if (book.affiliateLinks.com && book.affiliateLinks.com.trim() !== '') {
-            return { url: book.affiliateLinks.com, domainName: 'Amazon.com' };
-        }
-    
-        const fallbackOrder: (keyof RecommendedBook['affiliateLinks'])[] = ['in', 'ae'];
-        for (const key of fallbackOrder) {
-             if (book.affiliateLinks[key] && book.affiliateLinks[key].trim() !== '') {
-                const domain = key === 'in' ? 'Amazon.in' : 'Amazon.ae';
-                return { url: book.affiliateLinks[key], domainName: domain };
-             }
-        }
-        
-        return { url: book.affiliateLinks.com || '', domainName: 'Amazon.com' };
-    };
+    const recommendedBook = exam?.recommendedBookId ? suggestedBooks.find(b => b.id === exam.recommendedBookId) : null;
 
 
     if (isLoading) {
-        return <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow-md"><LogoSpinner /><p className="mt-4 text-slate-600">Calculating your results...</p></div>;
+        return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4 text-slate-600">Loading your results...</p></div>;
     }
-    
-    if (!result || !exam || !user) {
-        return <div className="text-center p-8 bg-white rounded-lg shadow-md"><p>Could not load results.</p></div>
-    }
-    
-    const isPass = result.score >= exam.passScore;
-    const isPaidCertExam = !exam.isPractice;
-    const isAdmin = isEffectivelyAdmin;
-    const canUseAiFeedback = isSubscribed || (isPurchased && !hasPassedCert && !attemptsExceeded) || isAdmin;
-    const scoreColor = isPass ? 'text-green-600' : 'text-red-600';
 
-    let AILockMessage: React.ReactNode = <span>Available to subscribers or with an exam purchase.</span>;
-    if (!isSubscribed) {
-        if (hasPassedCert) {
-            AILockMessage = <span>AI feedback disabled: certification already passed.</span>;
-        } else if (attemptsExceeded) {
-            AILockMessage = <span>AI feedback disabled: all attempts for this certification have been used.</span>;
-        } else if (!isPurchased) {
-            let certExamForPurchase: Exam | undefined;
-            if (exam.isPractice) {
-                const category = activeOrg?.examProductCategories.find(c => c.practiceExamId === exam.id);
-                certExamForPurchase = category ? activeOrg?.exams.find(e => e.id === category.certificationExamId) : undefined;
-            } else {
-                certExamForPurchase = exam;
-            }
+    if (!result || !exam) {
+        return <div className="text-center p-8"><p>Could not load results.</p></div>;
+    }
+
+    const isPass = result.score >= exam.passScore;
+    const canGetCertificate = !exam.isPractice && isPass;
+    const canRetryPractice = exam.isPractice && (!isSubscribed ? result.totalQuestions > 0 : true);
     
-            if (certExamForPurchase) {
-                const priceText = certExamForPurchase.price > 0 ? ` for $${certExamForPurchase.price.toFixed(2)}` : '';
-                if (certExamForPurchase.productSlug) {
-                    AILockMessage = (
-                        <span>
-                            <a href={`/#/checkout/${certExamForPurchase.productSlug}`} className="font-bold underline hover:text-white">Purchase exam{priceText}</a>
-                            {' or '}
-                            <a href="/#/pricing" className="font-bold underline hover:text-white">subscribe</a>
-                            {' to unlock.'}
-                        </span>
-                    );
-                }
-            }
+    let canRetryCert = false;
+    if (!exam.isPractice) {
+        if (isSubscribed) {
+            canRetryCert = !hasPassedCert; // Subscribers can retry until they pass
+        } else {
+            canRetryCert = isPurchased && !hasPassedCert && !attemptsExceeded;
         }
     }
-
+    
+    const aiFeedbackUnlocked = isSubscribed || isPurchased || isEffectivelyAdmin;
 
     return (
-        <div className="max-w-4xl mx-auto">
-            <div className="bg-white p-8 rounded-xl shadow-lg">
-                <h1 className="text-3xl font-bold text-slate-800 mb-4">Results for {exam.name}</h1>
-                
-                <div className={`text-center border-2 ${isPass ? 'border-green-200' : 'border-red-200'} bg-slate-50 rounded-lg p-6 mb-8`}>
-                    <p className="text-lg text-slate-600">Your Score</p>
-                    <p className={`text-7xl font-bold ${scoreColor}`}>{result.score}%</p>
-                    <p className="text-slate-500 mt-2">({result.correctCount} out of {result.totalQuestions} correct)</p>
-                    <p className={`mt-4 text-xl font-semibold ${scoreColor}`}>{isPass ? 'Congratulations, you passed!' : 'Unfortunately, you did not pass.'}</p>
-                </div>
+        <div className="max-w-4xl mx-auto space-y-8">
+            {/* Header */}
+            <div className={`p-8 rounded-xl text-white text-center shadow-lg ${isPass ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-red-500 to-rose-600'}`}>
+                {isPass ? <ShieldCheck className="mx-auto h-16 w-16" /> : <BarChart className="mx-auto h-16 w-16" />}
+                <h1 className="text-4xl font-extrabold mt-4">{isPass ? 'Congratulations! You Passed!' : 'Review Your Performance'}</h1>
+                <p className="text-lg opacity-90 mt-2">{exam.name}</p>
+            </div>
 
-                {((isPaidCertExam && isPass) || isAdmin) && (
-                    <div className="text-center mb-8">
-                        <button
-                            onClick={() => navigate(`/certificate/${result.testId}`)}
-                            className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105"
-                        >
-                            <FileDown size={20} />
-                            <span>{isAdmin && !isPass ? "View Certificate (Admin Override)" : "Download Your Certificate"}</span>
-                        </button>
-                    </div>
-                )}
-                
-                <div className="text-center mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
-                    <h2 className="text-xl font-semibold text-slate-800 mb-4">Rate Your Experience</h2>
-                    {submittedReview ? (
-                        <div className="text-green-700 bg-green-50 p-4 rounded-md">
-                            <h3 className="font-bold">Thank you for your review!</h3>
-                            <div className="flex justify-center items-center gap-1 mt-2">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                    <Star key={i} size={20} className={`transition-colors ${i < submittedReview.rating ? 'text-yellow-400 fill-current' : 'text-slate-300'}`} />
-                                ))}
-                            </div>
-                            {submittedReview.reviewText && <p className="mt-2 text-sm italic">"{submittedReview.reviewText}"</p>}
-                        </div>
+            {/* Score & Certificate */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-1 bg-white p-6 rounded-xl shadow-lg flex flex-col items-center justify-center border-t-4 border-cyan-500">
+                    <p className="text-slate-500 font-semibold">Your Score</p>
+                    <p className={`text-7xl font-bold my-2 ${isPass ? 'text-green-600' : 'text-red-600'}`}>{result.score.toFixed(0)}<span className="text-4xl text-slate-400">%</span></p>
+                    <p className="text-slate-500">Passing Score: {exam.passScore}%</p>
+                    <p className="text-sm text-slate-400 mt-2">({result.correctCount} of {result.totalQuestions} correct)</p>
+                </div>
+                <div className="md:col-span-2 bg-white p-6 rounded-xl shadow-lg flex flex-col justify-center">
+                    {canGetCertificate ? (
+                        <>
+                            <h2 className="text-xl font-bold text-slate-800">Your Certificate is Ready!</h2>
+                            <p className="text-slate-600 mt-2 mb-4">You've earned an official certificate for passing this exam. Download it to share your achievement.</p>
+                            <button onClick={() => navigate(`/certificate/${testId}`)} className="w-full sm:w-auto self-start flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg transition">
+                                <FileDown size={16} /> Download Certificate
+                            </button>
+                        </>
                     ) : (
                         <>
-                            <div className="flex justify-center items-center mb-4">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                    <button key={i} onMouseEnter={() => setHoverRating(i + 1)} onMouseLeave={() => setHoverRating(0)} onClick={() => setRating(i + 1)} aria-label={`Rate ${i + 1} stars`}>
-                                        <Star size={32} className={`cursor-pointer transition-colors ${(hoverRating || rating) > i ? 'text-yellow-400 fill-current' : 'text-slate-300'}`} />
-                                    </button>
-                                ))}
-                            </div>
-                            <textarea
-                                value={reviewText}
-                                onChange={(e) => setReviewText(e.target.value)}
-                                rows={3}
-                                className="w-full max-w-lg mx-auto p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition mb-4"
-                                placeholder="Tell us more about your experience (optional)..."
-                            />
-                            <button
-                                onClick={handleSubmitReview}
-                                disabled={isSubmittingReview || rating === 0}
-                                className="inline-flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-6 rounded-lg transition disabled:bg-slate-400"
-                            >
-                                {isSubmittingReview ? <Spinner/> : <MessageSquare size={16}/>}
-                                <span>{isSubmittingReview ? 'Submitting...' : 'Submit Review'}</span>
-                            </button>
+                            <h2 className="text-xl font-bold text-slate-800">Next Steps</h2>
+                             <p className="text-slate-600 mt-2 mb-4">
+                                {isPass && exam.isPractice ? "Great job passing the practice! You're ready for the certification exam." : 
+                                !isPass && (canRetryPractice || canRetryCert) ? "Don't worry, you can try again. Use the feedback below to prepare." :
+                                "Review your results and continue your learning journey."}
+                            </p>
+                            {(canRetryPractice || canRetryCert) && (
+                                <button onClick={() => navigate(`/test/${exam.id}`)} className="w-full sm:w-auto self-start bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition">
+                                    Retry Exam
+                                </button>
+                            )}
                         </>
                     )}
                 </div>
-
-
-                {exam.recommendedBook && (() => {
-                    const { url, domainName } = getGeoAffiliateLink(exam.recommendedBook);
-                    if (!url) return null; // Don't render if no valid URL was found
-                    return (
-                         <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
-                            <h2 className="text-xl font-semibold text-slate-800 mb-4">Recommended Study Material</h2>
-                            <div className="flex flex-col sm:flex-row items-center gap-6">
-                                <div className="flex-shrink-0 w-32 h-40">
-                                    <BookCover book={exam.recommendedBook} className="w-full h-full rounded-md shadow-lg" />
-                                </div>
-                                <div className="flex-grow">
-                                    <h3 className="text-lg font-bold text-slate-800">{exam.recommendedBook.title}</h3>
-                                    <p className="text-sm text-slate-600 mt-2 mb-4">{exam.recommendedBook.description}</p>
-                                    <a 
-                                        href={url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center space-x-2 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg transition"
-                                    >
-                                        <BookUp size={16}/> 
-                                        <span>Buy on {domainName}</span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })()}
             </div>
-
-            <div className="mt-8 bg-white p-8 rounded-xl shadow-lg">
-                 <div className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-6 rounded-lg mb-8">
-                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <Sparkles className="h-10 w-10 text-yellow-300" />
-                            <div>
-                                <h2 className="text-2xl font-bold">AI-Powered Feedback</h2>
-                                <p className="text-purple-200">Unlock your personalized study guide.</p>
-                            </div>
+            
+            {/* Recommended Book */}
+            {recommendedBook && (
+                <div className="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                    <h2 className="text-xl font-bold text-slate-800 mb-4">Recommended Study Material</h2>
+                    <div className="flex flex-col sm:flex-row gap-6">
+                        <div className="flex-shrink-0 w-full sm:w-40">
+                             <BookCover book={recommendedBook} className="h-56 w-full" />
                         </div>
-                        {canUseAiFeedback ? (
-                             <div className="flex gap-2">
-                                <button 
-                                    onClick={handleGenerateSummary}
-                                    disabled={isGeneratingSummary || !!aiSummary}
-                                    className="inline-flex items-center space-x-2 bg-white/20 hover:bg-white/30 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
-                                >
-                                    {isGeneratingSummary ? <Spinner /> : <BarChart size={16}/>}
-                                    <span>{aiSummary ? 'Summary Generated' : 'Performance Summary'}</span>
-                                </button>
-                                <button 
-                                    onClick={handleGenerateFeedback}
-                                    disabled={isGeneratingFeedback || !!aiFeedback}
-                                    className="inline-flex items-center space-x-2 bg-white/20 hover:bg-white/30 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
-                                >
-                                    {isGeneratingFeedback ? <Spinner /> : <ShieldCheck size={16}/>}
-                                    <span>{aiFeedback ? 'Feedback Generated' : 'Detailed Feedback'}</span>
-                                </button>
-                             </div>
-                        ) : (
-                            <div className="flex items-center gap-2 bg-white/10 p-2 rounded-md text-sm text-purple-200">
-                                <Lock size={16} />
-                                {AILockMessage}
+                        <div className="flex-grow">
+                            <h3 className="text-lg font-semibold text-slate-800">{recommendedBook.title}</h3>
+                            <p className="text-sm text-slate-600 mt-2 mb-4">{recommendedBook.description}</p>
+                            <a 
+                                href={getGeoAffiliateLink(recommendedBook).url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 text-sm text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-4 py-2 transition-colors"
+                            >
+                                <BookUp size={16} /> Buy on {getGeoAffiliateLink(recommendedBook).domainName}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
+            {/* AI Feedback Section */}
+             <div className="bg-white p-6 rounded-xl shadow-lg">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <Sparkles className="text-amber-500"/> AI-Powered Feedback
+                    </h2>
+                     {!aiFeedbackUnlocked && (
+                         <span className="text-sm text-amber-600 bg-amber-100 font-semibold px-3 py-1 rounded-full flex items-center gap-2">
+                             <Lock size={14}/> Premium Feature
+                         </span>
+                     )}
+                </div>
+                
+                {aiFeedbackUnlocked ? (
+                    <>
+                         <p className="text-slate-600 my-4">
+                            Get a detailed breakdown of your incorrect answers, explanations for the correct ones, and a personalized study plan generated by AI.
+                        </p>
+                        {aiSummary && (
+                             <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4">
+                                <h3 className="font-semibold text-slate-700 mb-2">Performance Summary</h3>
+                                <pre className="text-sm text-slate-600 whitespace-pre-wrap font-sans">{aiSummary}</pre>
                             </div>
                         )}
-                     </div>
-                </div>
-
-                {aiSummary && (
-                    <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
-                        <h3 className="text-xl font-semibold text-slate-800 mb-4">AI Performance Summary</h3>
-                        <div className="prose prose-slate max-w-none whitespace-pre-wrap">{aiSummary}</div>
-                    </div>
-                )}
-                
-                {aiFeedback && (
-                    <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-semibold text-slate-800">AI Detailed Feedback</h3>
-                            <button 
-                                onClick={handleDownloadFeedback}
-                                disabled={isDownloading}
-                                className="inline-flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition disabled:bg-green-300"
-                            >
-                                {isDownloading ? <Spinner/> : <Download size={16}/>}
-                                <span>Download as PDF</span>
-                            </button>
+                        {aiFeedback && (
+                            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4">
+                                <h3 className="font-semibold text-slate-700 mb-2">Detailed Question Review</h3>
+                                <pre className="text-sm text-slate-600 whitespace-pre-wrap font-sans max-h-96 overflow-y-auto">{aiFeedback}</pre>
+                            </div>
+                        )}
+                        <div className="flex flex-wrap gap-4">
+                             {!aiSummary && (
+                                <button onClick={handleGenerateSummary} disabled={isGeneratingSummary} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
+                                    {isGeneratingSummary ? <Spinner/> : <Sparkles size={16}/>}
+                                    {isGeneratingSummary ? 'Analyzing...' : 'Generate Summary'}
+                                </button>
+                            )}
+                             {!aiFeedback && result.correctCount < result.totalQuestions && (
+                                <button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
+                                    {isGeneratingFeedback ? <Spinner/> : <Sparkles size={16}/>}
+                                    {isGeneratingFeedback ? 'Generating...' : 'Generate Full Feedback'}
+                                </button>
+                            )}
+                            {aiFeedback && (
+                                <button onClick={handleDownloadFeedback} disabled={isDownloading} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
+                                    {isDownloading ? <Spinner/> : <Download size={16}/>}
+                                    {isDownloading ? 'Downloading...' : 'Download Study Guide (PDF)'}
+                                </button>
+                            )}
                         </div>
-                        <div className="prose prose-slate max-w-none whitespace-pre-wrap">{aiFeedback}</div>
+                    </>
+                ) : (
+                    <div className="bg-slate-50 border-l-4 border-amber-400 p-4 mt-4">
+                        <p className="text-slate-700">
+                            AI Feedback is a premium feature. <a href="/#/pricing" className="text-cyan-600 font-semibold hover:underline">Upgrade to a subscription</a> or purchase an exam bundle to unlock this feature and get personalized study guides.
+                        </p>
                     </div>
                 )}
+            </div>
 
-                {exam.isPractice && (
-                    <div>
-                        <h2 className="text-2xl font-bold text-slate-800 mb-4">Answer Review</h2>
-                        <div className="space-y-6">
-                            {result.review.map((item) => (
-                                <div key={item.questionId} className={`p-4 rounded-lg border-2 ${item.userAnswer === item.correctAnswer ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-                                    <p className="font-semibold text-slate-800 mb-3">{item.question}</p>
-                                    <div className="space-y-2 text-sm">
-                                        {item.options.map((option, index) => {
-                                            const isCorrect = index === item.correctAnswer;
-                                            const isUserAnswer = index === item.userAnswer;
-                                            let indicator = <span className="w-5 h-5"></span>; // Placeholder
-                                            if (isCorrect) indicator = <Check className="w-5 h-5 text-green-600" />;
-                                            if (isUserAnswer && !isCorrect) indicator = <X className="w-5 h-5 text-red-600" />;
-
-                                            return (
-                                                <div key={index} className={`flex items-start p-2 rounded ${isCorrect ? 'bg-green-100' : ''} ${isUserAnswer && !isCorrect ? 'bg-red-100' : ''}`}>
-                                                    <div className="flex-shrink-0 mr-2">{indicator}</div>
-                                                    <p className="flex-grow">{option}</p>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    {item.userAnswer === -1 && <p className="text-sm text-slate-500 mt-2">You did not answer this question.</p>}
+            {/* Answer Review Section */}
+            {exam.isPractice && (
+                <div className="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 className="text-xl font-bold text-slate-800 mb-4">Answer Review</h2>
+                    <div className="space-y-6">
+                        {result.review.map((item, index) => (
+                            <div key={item.questionId} className="border-b border-slate-200 pb-4">
+                                <p className="font-semibold text-slate-800">{index + 1}. {item.question}</p>
+                                <div className="mt-2 space-y-1">
+                                    {item.options.map((option, i) => {
+                                        const isUserAnswer = i === item.userAnswer;
+                                        const isCorrectAnswer = i === item.correctAnswer;
+                                        let classes = "flex items-start p-2 rounded text-sm ";
+                                        if (isCorrectAnswer) classes += "bg-green-50 text-green-800 font-semibold";
+                                        else if (isUserAnswer) classes += "bg-red-50 text-red-800";
+                                        else classes += "text-slate-600";
+                                        
+                                        return (
+                                            <div key={i} className={classes}>
+                                                {isCorrectAnswer ? <Check size={16} className="mr-2 mt-0.5 flex-shrink-0"/> : isUserAnswer ? <X size={16} className="mr-2 mt-0.5 flex-shrink-0"/> : <div className="w-5 mr-2 flex-shrink-0"></div>}
+                                                <span>{option}</span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+            
+            {/* Rating and Review Section */}
+            <div className="bg-white p-6 rounded-xl shadow-lg">
+                 <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <MessageSquare className="text-cyan-500"/> Rate Your Experience
+                 </h2>
+
+                {submittedReview ? (
+                    <div className="bg-green-50 text-green-800 p-4 rounded-lg text-center">
+                        <p className="font-semibold">Thank you for your feedback!</p>
+                        <div className="flex justify-center mt-2">
+                            {[1, 2, 3, 4, 5].map(star => (
+                                <Star key={star} className={`w-6 h-6 ${star <= submittedReview.rating ? 'text-yellow-400 fill-current' : 'text-slate-300'}`} />
                             ))}
                         </div>
                     </div>
+                ) : (
+                    <div className="space-y-4">
+                        <div>
+                            <p className="text-slate-600 mb-2">How would you rate this exam program?</p>
+                            <div className="flex" onMouseLeave={() => setHoverRating(0)}>
+                                {[1, 2, 3, 4, 5].map(star => (
+                                    <Star 
+                                        key={star} 
+                                        className={`w-8 h-8 cursor-pointer transition-colors ${star <= (hoverRating || rating) ? 'text-yellow-400 fill-current' : 'text-slate-300'}`}
+                                        onClick={() => setRating(star)}
+                                        onMouseEnter={() => setHoverRating(star)}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        <textarea
+                            value={reviewText}
+                            onChange={(e) => setReviewText(e.target.value)}
+                            rows={3}
+                            placeholder="Tell us more about your experience (optional)..."
+                            className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-cyan-500"
+                        />
+                        <button
+                            onClick={handleSubmitReview}
+                            disabled={isSubmittingReview || rating === 0}
+                            className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400"
+                        >
+                            {isSubmittingReview ? <Spinner /> : <Send size={16}/>}
+                            {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
+                        </button>
+                    </div>
                 )}
             </div>
+
         </div>
     );
 };

@@ -1,5 +1,6 @@
 
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { Navigate, useLocation, Routes, Route, HashRouter } from 'react-router-dom';
@@ -18,7 +19,6 @@ import Footer from './components/Footer.tsx';
 import LandingPage from './components/LandingPage.tsx';
 import Instructions from './components/Instructions.tsx';
 import Admin from './components/Admin.tsx';
-import BookStore from './components/BookStore.tsx';
 import Profile from './components/Profile.tsx';
 import Checkout from './components/Checkout.tsx';
 import DebugSidebar from './components/DebugSidebar.tsx';
@@ -35,6 +35,7 @@ import SidebarLayout from './components/SidebarLayout.tsx';
 import Integration from './components/Integration.tsx';
 import UpdateNameModal from './components/UpdateNameModal.tsx';
 import MasqueradeBanner from './components/MasqueradeBanner.tsx';
+import BookStore from './components/BookStore.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -121,7 +122,6 @@ const AppContent: FC = () => {
                     <Routes>
                         {/* Routes with generic sidebar */}
                         <Route path="/instructions" element={<SidebarLayout><Instructions /></SidebarLayout>} />
-                        <Route path="/bookstore" element={<SidebarLayout><BookStore /></SidebarLayout>} />
                         <Route path="/pricing" element={<SidebarLayout><Pricing /></SidebarLayout>} />
                         <Route path="/feedback" element={<SidebarLayout><Feedback /></SidebarLayout>} />
                         <Route path="/user-guide" element={<SidebarLayout><UserGuide /></SidebarLayout>} />
@@ -129,6 +129,7 @@ const AppContent: FC = () => {
                         <Route path="/privacy-policy" element={<SidebarLayout><PrivacyPolicy /></SidebarLayout>} />
                         <Route path="/refund-policy" element={<SidebarLayout><RefundPolicy /></SidebarLayout>} />
                         <Route path="/terms-of-service" element={<SidebarLayout><TermsOfService /></SidebarLayout>} />
+                        <Route path="/bookstore" element={<SidebarLayout><BookStore /></SidebarLayout>} />
                         <Route path="/profile" element={
                           <ProtectedRoute>
                             <SidebarLayout><Profile /></SidebarLayout>

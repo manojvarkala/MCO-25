@@ -77,11 +77,11 @@ export interface RecommendedBook {
     id: string;
     title: string;
     description: string;
-    thumbnailUrl?: string;
-    affiliateLinks: { // These should be the full, final affiliate URLs
-        com: string;
-        in: string;
-        ae: string;
+    thumbnailUrl: string | false;
+    affiliateLinks: {
+        com?: string;
+        in?: string;
+        ae?: string;
     };
 }
 
@@ -95,13 +95,12 @@ export interface Exam {
     numberOfQuestions: number;
     passScore: number;
     certificateTemplateId: string;
-    recommendedBook?: RecommendedBook;
-    recommendedBookId?: string;
     isPractice: boolean;
     isProctored?: boolean;
     durationMinutes: number;
     productSku: string;
     productSlug?: string;
+    recommendedBookId?: string | null;
 }
 
 export interface ExamProductCategory {
