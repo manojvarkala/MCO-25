@@ -1,7 +1,7 @@
 
 
 import React, { FC } from 'react';
-import { DownloadCloud, Info } from 'lucide-react';
+import { DownloadCloud, Info, AlertTriangle } from 'lucide-react';
 
 const Integration: FC = () => {
     return (
@@ -9,7 +9,7 @@ const Integration: FC = () => {
             <h1 className="text-3xl font-extrabold text-slate-800">WordPress Integration Plugin</h1>
             
             <div className="bg-white p-6 rounded-lg shadow-lg border border-slate-200">
-                <h2 className="text-xl font-bold mb-2 text-slate-800">The Integration Engine (v28.2.0)</h2>
+                <h2 className="text-xl font-bold mb-2 text-slate-800">The Integration Engine (v30.1.0)</h2>
                 <p className="mb-4 text-slate-600">
                     This is the master plugin for integrating the exam app with your WordPress site. It handles Single Sign-On (SSO), data synchronization, CORS headers, and provides powerful shortcodes for displaying content.
                 </p>
@@ -57,14 +57,31 @@ const Integration: FC = () => {
                     </li>
                 </ol>
 
-                 <div className="mt-6 text-center">
+                <h3 className="text-lg font-semibold text-slate-700 mt-8">Updating the Plugin:</h3>
+                <div className="bg-red-50 p-4 rounded-md border border-red-200 text-red-800">
+                    <div className="flex items-start gap-3">
+                        <AlertTriangle className="h-6 w-6 text-red-500 flex-shrink-0" />
+                        <div>
+                            <strong className="font-bold">IMPORTANT UPDATE PROCEDURE</strong>
+                            <p className="text-sm mt-1">To prevent "Cannot redeclare function" errors, you must deactivate and delete the old plugin before uploading the new version. Your settings will be preserved.</p>
+                            <ol className="list-decimal pl-5 mt-2 text-sm space-y-1">
+                                <li>In WordPress, go to <strong>Plugins</strong>.</li>
+                                <li><strong>Deactivate</strong> the "Exam App Integration Engine" plugin.</li>
+                                <li><strong>Delete</strong> the plugin.</li>
+                                <li>Follow the installation steps above to upload the new <code>.zip</code> file and activate it.</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                 <div className="mt-8 text-center">
                     <a 
                         href="/mco-exam-integration-engine.zip" 
                         download
                         className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
                     >
                         <DownloadCloud size={20} className="mr-2" />
-                        Download Plugin (.zip)
+                        Download Plugin (.zip) v30.1.0
                     </a>
                 </div>
             </div>

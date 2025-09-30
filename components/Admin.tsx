@@ -67,7 +67,6 @@ const HealthCheckItem: FC<HealthCheckItemProps> = ({ status, title, message, tro
 const Admin: FC = () => {
     const { activeOrg, updateActiveOrg } = useAppContext();
     const { token } = useAuth();
-    const baseUrl = getApiBaseUrl();
 
     // State for user prize management
     const [searchTerm, setSearchTerm] = useState('');
@@ -116,20 +115,23 @@ const Admin: FC = () => {
 
     const handleRunHealthCheck = async () => {
         setIsCheckingHealth(true);
+        const baseUrl = getApiBaseUrl();
         const initialStatus: HealthCheckState = {
-            connectivity: { status: 'loading', message: 'Pinging server REST API...' },
+            connectivity: { status: 'loading', message: 'Pinging server...' },
             apiEndpoint: { status: 'idle', message: '' },
             authentication: { status: 'idle', message: '' },
         };
+        // FIX: Remove 'as any' and use strongly typed state to resolve assignment errors.
         setHealthCheckStatus(initialStatus);
     
-        // Check 1: Basic Connectivity to REST API
+        // Check 1: Basic Connectivity
         try {
             const response = await fetch(`${baseUrl}/wp-json/`);
             if (!response.ok) throw new Error(`Server responded with HTTP status ${response.status}`);
-            setHealthCheckStatus(prev => ({ ...prev, connectivity: { status: 'success', message: <>Server REST API is reachable at <code className="bg-slate-200 px-1 rounded">{baseUrl}</code></> } }));
+            setHealthCheckStatus(prev => ({ ...prev, connectivity: { status: 'success', message: <>Server is reachable at <code className="bg-slate-200 px-1 rounded">{baseUrl}</code></> } }));
     
             // Check 2: API Endpoint
+            // FIX: This update is now type-safe due to the strongly typed state.
             setHealthCheckStatus(prev => ({ ...prev, apiEndpoint: { status: 'loading', message: 'Checking for plugin API...' } }));
             try {
                 const apiResponse = await fetch(`${baseUrl}/wp-json/mco-app/v1/config`);
@@ -137,6 +139,7 @@ const Admin: FC = () => {
                 setHealthCheckStatus(prev => ({ ...prev, apiEndpoint: { status: 'success', message: 'Plugin API endpoint is active.' } }));
     
                 // Check 3: Authentication
+                // FIX: This update is now type-safe due to the strongly typed state.
                 setHealthCheckStatus(prev => ({ ...prev, authentication: { status: 'loading', message: 'Testing authentication...' } }));
                 try {
                     if (!token) throw new Error('No admin token available in the app.');
@@ -305,7 +308,7 @@ const Admin: FC = () => {
                             title="1. Server Connectivity" 
                             message={healthCheckStatus.connectivity.message}
                             troubleshooting={
-                                <p>The app cannot reach your WordPress REST API. This could be due to server downtime, a firewall blocking API access, or the REST API being disabled by a security plugin. Please check that you can access <a href={`${baseUrl}/wp-json/`} target="_blank" rel="noopener noreferrer" className="underline font-semibold text-amber-900">{`${baseUrl}/wp-json/`}</a> in your browser.</p>
+                                <p>The app cannot reach your WordPress server. This could be due to a DNS issue, server downtime, or a firewall blocking all traffic. Please check if your website is online and contact your hosting provider.</p>
                             }
                         />
                          {healthCheckStatus.connectivity.status === 'success' && (
