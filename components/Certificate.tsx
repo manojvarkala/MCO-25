@@ -11,18 +11,7 @@ import { Download, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppContext } from '../context/AppContext.tsx';
-
-const Watermark: React.FC<{ text: string }> = ({ text }) => (
-    <div className="absolute inset-0 grid grid-cols-3 grid-rows-4 gap-8 pointer-events-none overflow-hidden p-4">
-        {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="flex items-center justify-center -rotate-45">
-                <p className="text-gray-400 font-bold text-2xl md:text-3xl tracking-wider opacity-10 select-none text-center leading-tight">
-                    {text}
-                </p>
-            </div>
-        ))}
-    </div>
-);
+import Seal from '../assets/Seal.tsx';
 
 const Certificate: React.FC = () => {
     const { testId = 'sample' } = useParams<{ testId?: string }>();
@@ -152,6 +141,10 @@ const Certificate: React.FC = () => {
 
     const hasTwoSignatures = !!(template.signature2Name && template.signature2Title);
 
+    const isSig1Base64 = template.signature1ImageUrl && template.signature1ImageUrl.startsWith('data:image');
+    const isSig2Base64 = template.signature2ImageUrl && template.signature2ImageUrl.startsWith('data:image');
+
+
     return (
         <>
         <div className="max-w-5xl mx-auto bg-slate-100 p-4 sm:p-6 rounded-lg">
@@ -173,64 +166,61 @@ const Certificate: React.FC = () => {
                 </button>
             </div>
             
-             <div ref={certificatePrintRef} className="bg-white p-2 relative aspect-[1.414/1] w-full shadow-2xl font-serif">
-                {/* Outer decorative border */}
-                <div className="w-full h-full border-4 border-cyan-100 p-1">
-                    {/* Inner decorative border */}
-                    <div className="w-full h-full border-2 border-cyan-200 p-8 relative flex flex-col">
-                        <Watermark text={organization.name} />
-                        <div className="relative z-10 flex flex-col h-full">
-                            
-                            {/* Header Section */}
-                            <header className="flex justify-between items-start mb-8">
-                                <div className="flex items-center space-x-4">
-                                    {organization.logo && <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="h-16 w-16 object-contain" />}
-                                    <div>
-                                        <h1 className="text-3xl font-bold text-gray-900 font-serif-display text-left">{organization.name}</h1>
-                                        <p className="text-md text-gray-500 mt-1 text-left">{organization.website}</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm text-gray-500">Certificate ID</p>
-                                    <p className="font-semibold text-gray-700 whitespace-nowrap">{certData.certificateNumber}</p>
-                                </div>
-                            </header>
-                            
-                            {/* Main Content */}
-                            <main className="flex-grow flex flex-col items-center justify-center text-center">
-                                <p className="text-2xl text-gray-500 tracking-widest uppercase">{titleText}</p>
-                                <p className="text-lg text-gray-600 mt-4">This certificate is proudly presented to</p>
-                                <h2 className="text-5xl font-bold text-gray-800 my-6 border-b-2 border-gray-300 pb-4">{certData.candidateName}</h2>
-                                <div className="text-lg text-gray-600" dangerouslySetInnerHTML={{ __html: bodyText.replace(/\n/g, '<br />') }}>
-                                </div>
-                            </main>
-                            
-                            {/* Footer Section */}
-                            <footer className="mt-auto pt-8">
-                                <div className="flex justify-between items-end">
-                                    <div className="text-center w-2/5">
-                                        {template.signature1ImageUrl && <img src={template.signature1ImageUrl} crossOrigin="anonymous" alt={template.signature1Name} className="h-12 mx-auto" />}
-                                        <p className="border-t-2 border-gray-400 mt-2 pt-2 font-semibold">{template.signature1Name}</p>
-                                        <p className="text-sm text-gray-500">{template.signature1Title}</p>
-                                    </div>
+            <div ref={certificatePrintRef} className="bg-slate-50 p-2 relative aspect-[1.414/1] w-full shadow-2xl font-serif text-slate-800">
+                {/* Ornate Borders & Background */}
+                <div className="absolute inset-2 border-2 border-amber-500"></div>
+                <div className="absolute inset-3 border border-amber-300"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-transparent to-white/80"></div>
 
-                                    <div className="text-center w-1/5">
-                                        <p className="text-sm text-gray-500">Issued On</p>
-                                        <p className="font-semibold border-t-2 border-gray-400 mt-2 pt-2">{certData.date}</p>
-                                    </div>
-                                    
-                                    {hasTwoSignatures && (
-                                        <div className="text-center w-2/5">
-                                            {template.signature2ImageUrl && <img src={template.signature2ImageUrl} crossOrigin="anonymous" alt={template.signature2Name} className="h-12 mx-auto" />}
-                                            <p className="border-t-2 border-gray-400 mt-2 pt-2 font-semibold">{template.signature2Name}</p>
-                                            <p className="text-sm text-gray-500">{template.signature2Title}</p>
-                                        </div>
-                                    )}
-                                </div>
-                                <p className="text-sm text-gray-500 mt-6 text-center">https://www.{organization.website}</p>
-                            </footer>
+                <div className="relative z-10 flex flex-col h-full p-4 md:p-8">
+                    {/* Header */}
+                    <header className="flex justify-between items-start text-center mb-4">
+                        <div className="w-1/4 text-left">
+                            {organization.logo && <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="h-16 w-16 object-contain" />}
                         </div>
-                    </div>
+                        <div className="w-1/2">
+                            <p className="text-sm tracking-[0.2em] uppercase text-slate-500">{titleText}</p>
+                            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 font-serif-display">{organization.name}</h1>
+                        </div>
+                        <div className="w-1/4 text-right">
+                             <p className="text-xs text-slate-500">Certificate ID</p>
+                             <p className="text-sm font-semibold text-slate-700 whitespace-nowrap">{certData.certificateNumber}</p>
+                        </div>
+                    </header>
+
+                    {/* Main Content */}
+                    <main className="flex-grow flex flex-col items-center justify-center text-center my-4">
+                        <p className="text-lg text-slate-600">This certificate is awarded to</p>
+                        <h2 className="text-5xl md:text-6xl font-script text-slate-800 my-4 py-2 border-b-2 border-amber-400">{certData.candidateName}</h2>
+                        <div className="text-md text-slate-600 max-w-2xl mx-auto" dangerouslySetInnerHTML={{ __html: bodyText.replace(/\n/g, '<br />') }}></div>
+                    </main>
+                    
+                    <Seal className="absolute bottom-20 right-20 w-24 h-24 opacity-90"/>
+
+                    {/* Footer */}
+                    <footer className="mt-auto pt-8">
+                        <div className="flex justify-between items-end">
+                            <div className="text-center w-2/5">
+                                {template.signature1ImageUrl && <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="h-12 mx-auto" />}
+                                <p className="border-t-2 border-slate-400 mt-2 pt-2 font-semibold text-sm">{template.signature1Name}</p>
+                                <p className="text-xs text-slate-500">{template.signature1Title}</p>
+                            </div>
+
+                            <div className="text-center w-1/5">
+                                <p className="text-xs text-slate-500">Issued On</p>
+                                <p className="font-semibold border-t-2 border-slate-400 mt-2 pt-2 text-sm">{certData.date}</p>
+                            </div>
+                            
+                            {hasTwoSignatures ? (
+                                <div className="text-center w-2/5">
+                                    {template.signature2ImageUrl && <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} className="h-12 mx-auto" />}
+                                    <p className="border-t-2 border-slate-400 mt-2 pt-2 font-semibold text-sm">{template.signature2Name}</p>
+                                    <p className="text-xs text-slate-500">{template.signature2Title}</p>
+                                </div>
+                            ) : <div className="w-2/5"></div>}
+                        </div>
+                        <p className="text-xs text-slate-400 mt-6 text-center">Verify at: https://www.{organization.website}</p>
+                    </footer>
                 </div>
             </div>
         </div>
