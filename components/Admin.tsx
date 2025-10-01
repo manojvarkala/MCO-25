@@ -32,6 +32,17 @@ interface HealthCheckState {
     authentication: { status: HealthStatus; message: ReactNode };
 }
 
+const decodeHtmlEntities = (text: string | undefined): string => {
+    if (!text || typeof text !== 'string') return text || '';
+    try {
+        const doc = new DOMParser().parseFromString(text, 'text/html');
+        return doc.documentElement.textContent || text;
+    } catch (e) {
+        console.error("Could not decode HTML entities", e);
+        return text;
+    }
+};
+
 const HealthCheckItem: FC<HealthCheckItemProps> = ({ status, title, message, troubleshooting }) => {
     const StatusIcon = {
         idle: <div className="w-5 h-5 bg-slate-300 rounded-full flex-shrink-0" />,
@@ -103,6 +114,11 @@ const Admin: FC = () => {
         setStatsError(null);
         try {
             const data = await googleSheetsService.getExamStats(token);
+            if (data && Array.isArray(data)) {
+                data.forEach(stat => {
+                    stat.examName = decodeHtmlEntities(stat.examName);
+                });
+            }
             setStats(data);
         } catch (error: any) {
             setStatsError(error.message || 'Failed to load statistics.');
@@ -173,6 +189,11 @@ const Admin: FC = () => {
         setSelectedUser(null);
         try {
             const results = await googleSheetsService.searchUser(token, searchTerm.trim());
+            if (results && Array.isArray(results)) {
+                results.forEach(user => {
+                    user.name = decodeHtmlEntities(user.name);
+                });
+            }
             setSearchResults(results);
             if(results.length === 0) toast.error('No users found matching that term.');
         } catch (error: any) {

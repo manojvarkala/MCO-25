@@ -25,6 +25,17 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const decodeHtmlEntities = (text: string | undefined): string => {
+    if (!text || typeof text !== 'string') return text || '';
+    try {
+        const doc = new DOMParser().parseFromString(text, 'text/html');
+        return doc.documentElement.textContent || text;
+    } catch (e) {
+        console.error("Could not decode HTML entities", e);
+        return text;
+    }
+};
+
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
     try {
@@ -172,6 +183,10 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const decodedPayload = decodeURIComponent(atob(payloadBase64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
         const payload: TokenPayload = JSON.parse(decodedPayload);
         
+        if (payload.user && payload.user.name) {
+            payload.user.name = decodeHtmlEntities(payload.user.name);
+        }
+
         if (payload.user && payload.paidExamIds) {
             setUser(payload.user);
             setPaidExamIds(payload.paidExamIds);

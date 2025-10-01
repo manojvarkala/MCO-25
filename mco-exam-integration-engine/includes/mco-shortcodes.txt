@@ -174,6 +174,52 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
     }
 }
 
+// --- NEW HELPER FOR BOOK THUMBNAILS ---
+if (!function_exists('mco_get_book_thumbnail_html')) {
+    function mco_get_book_thumbnail_html($post_id, $size = 'thumbnail') {
+        $custom_thumbnail_url = get_post_meta($post_id, '_mco_thumbnail_url', true);
+        
+        if (!empty($custom_thumbnail_url)) {
+            return '<img src="' . esc_url($custom_thumbnail_url) . '" alt="' . esc_attr(get_the_title($post_id)) . '" class="mco-book-thumbnail-img" />';
+        }
+        
+        if (has_post_thumbnail($post_id)) {
+            return get_the_post_thumbnail($post_id, $size, ['class' => 'mco-book-thumbnail-img']);
+        }
+
+        // Fallback to procedural generation
+        $post = get_post($post_id);
+        if (!$post) return '';
+
+        $title = $post->post_title;
+        $hash = abs(crc32($title));
+        
+        $color_schemes = 9;
+        $color_index = $hash % $color_schemes;
+
+        $title_words = explode(' ', $title);
+        $main_title = implode(' ', array_slice($title_words, 0, 4));
+        $sub_title = count($title_words) > 4 ? implode(' ', array_slice($title_words, 4)) : '';
+
+        ob_start();
+        ?>
+        <div class="mco-procedural-book-cover mco-book-cover-bg-<?php echo $color_index; ?>">
+            <div class="deco-circle-1 mco-book-cover-accent-<?php echo $color_index; ?>"></div>
+            <div class="deco-circle-2 mco-book-cover-accent-<?php echo $color_index; ?>"></div>
+            <div class="procedural-content">
+                <h4 class="mco-book-cover-text-<?php echo $color_index; ?>"><?php echo esc_html($main_title); ?></h4>
+                <?php if ($sub_title): ?>
+                    <p class="mco-book-cover-text-<?php echo $color_index; ?>"><?php echo esc_html($sub_title); ?></p>
+                <?php endif; ?>
+            </div>
+            <div class="accent-bar mco-book-cover-accent-<?php echo $color_index; ?>"></div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+}
+
+
 // --- NEW SIDEBAR FOR EXAM PROGRAM CPT ---
 if (!function_exists('mco_add_sidebar_to_exam_programs')) {
     function mco_add_sidebar_to_exam_programs($content) {
@@ -191,9 +237,7 @@ if (!function_exists('mco_add_sidebar_to_exam_programs')) {
                 if (empty($link_com)) continue; // Only show books with a primary link
 
                 $sidebar_html .= '<div class="mco-sidebar-book-card">';
-                if (has_post_thumbnail($book_id)) {
-                    $sidebar_html .= '<div class="mco-sidebar-book-thumbnail">' . get_the_post_thumbnail($book_id, 'thumbnail') . '</div>';
-                }
+                $sidebar_html .= '<div class="mco-sidebar-book-thumbnail">' . mco_get_book_thumbnail_html($book_id, 'thumbnail') . '</div>';
                 $sidebar_html .= '<div class="mco-sidebar-book-content">';
                 $sidebar_html .= '<h4>' . esc_html($book_post->post_title) . '</h4>';
                 $sidebar_html .= '<a href="' . esc_url($link_com) . '" target="_blank" rel="noopener noreferrer" class="mco-sidebar-book-button">Buy on Amazon</a>';

@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { FC, useState, useEffect, useRef } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -13,18 +13,29 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppContext } from '../context/AppContext.tsx';
 
-const Certificate: React.FC = () => {
+const decodeHtmlEntities = (text: string | undefined): string => {
+    if (!text || typeof text !== 'string') return text || '';
+    try {
+        const doc = new DOMParser().parseFromString(text, 'text/html');
+        return doc.documentElement.textContent || text;
+    } catch (e) {
+        console.error("Could not decode HTML entities", e);
+        return text;
+    }
+};
+
+const Certificate: FC = () => {
     const { testId = 'sample' } = useParams<{ testId?: string }>();
     // Fix: Use useNavigate for navigation in v6
     const navigate = useNavigate();
     const { user, token } = useAuth();
     const { activeOrg } = useAppContext();
-    const [certData, setCertData] = React.useState<CertificateData | null>(null);
-    const [isLoading, setIsLoading] = React.useState(true);
-    const [isDownloading, setIsDownloading] = React.useState(false);
-    const certificatePrintRef = React.useRef<HTMLDivElement>(null);
+    const [certData, setCertData] = useState<CertificateData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isDownloading, setIsDownloading] = useState(false);
+    const certificatePrintRef = useRef<HTMLDivElement>(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         // Handling the sample certificate locally without an API call.
         if (testId === 'sample') {
             if (!user || !activeOrg) {
@@ -67,6 +78,12 @@ const Certificate: React.FC = () => {
             try {
                 // The user object is no longer needed here; it's derived from the token on the backend.
                 const partialData = await googleSheetsService.getCertificateData(token, testId);
+
+                if (partialData) {
+                    partialData.candidateName = decodeHtmlEntities(partialData.candidateName);
+                    partialData.examName = decodeHtmlEntities(partialData.examName);
+                }
+
                 if (partialData && partialData.examId) {
                     const exam = activeOrg.exams.find(e => e.id === partialData.examId);
                     const template = activeOrg.certificateTemplates.find(t => t.id === exam?.certificateTemplateId);

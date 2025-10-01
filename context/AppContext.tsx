@@ -28,6 +28,18 @@ export const useAppContext = (): AppContextType => {
   return context;
 };
 
+const decodeHtmlEntities = (text: string | undefined): string => {
+    if (!text || typeof text !== 'string') return text || '';
+    try {
+        const doc = new DOMParser().parseFromString(text, 'text/html');
+        return doc.documentElement.textContent || text;
+    } catch (e) {
+        console.error("Could not decode HTML entities", e);
+        return text;
+    }
+};
+
+
 // This function processes a raw config object (either static or from the API)
 // and prepares it for the application state.
 const processConfigData = (configData: any) => {
@@ -37,8 +49,12 @@ const processConfigData = (configData: any) => {
     let allSuggestedBooks: RecommendedBook[] = [];
 
     processedOrgs.forEach((org: Organization) => {
+        org.name = decodeHtmlEntities(org.name);
+        
         const categoryUrlMap = new Map<string, string>();
         (org.examProductCategories || []).forEach((cat: ExamProductCategory) => {
+            cat.name = decodeHtmlEntities(cat.name);
+            cat.description = decodeHtmlEntities(cat.description);
             if (cat.questionSourceUrl) {
                 if (cat.practiceExamId) categoryUrlMap.set(cat.practiceExamId, cat.questionSourceUrl);
                 if (cat.certificationExamId) categoryUrlMap.set(cat.certificationExamId, cat.questionSourceUrl);
@@ -46,6 +62,8 @@ const processConfigData = (configData: any) => {
         });
 
         org.exams = (org.exams || []).map((exam: Exam): Exam => {
+            exam.name = decodeHtmlEntities(exam.name);
+            exam.description = decodeHtmlEntities(exam.description);
             if (exam.productSku) {
                 allPrices[exam.productSku] = {
                     price: exam.price,
@@ -58,8 +76,22 @@ const processConfigData = (configData: any) => {
         });
 
         if (org.suggestedBooks) {
+            org.suggestedBooks.forEach(book => {
+                book.title = decodeHtmlEntities(book.title);
+                book.description = decodeHtmlEntities(book.description);
+            });
             allSuggestedBooks = [...allSuggestedBooks, ...org.suggestedBooks];
         }
+
+        (org.certificateTemplates || []).forEach(template => {
+            template.name = decodeHtmlEntities(template.name);
+            template.title = decodeHtmlEntities(template.title);
+            template.body = decodeHtmlEntities(template.body);
+            template.signature1Name = decodeHtmlEntities(template.signature1Name);
+            template.signature1Title = decodeHtmlEntities(template.signature1Title);
+            template.signature2Name = decodeHtmlEntities(template.signature2Name);
+            template.signature2Title = decodeHtmlEntities(template.signature2Title);
+        });
     });
 
     return { 

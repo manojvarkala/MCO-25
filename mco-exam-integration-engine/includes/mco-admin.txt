@@ -9,6 +9,10 @@ if (!function_exists('mco_register_admin_hooks')) {
         add_filter('manage_mco_exam_program_posts_columns', 'mco_add_exam_program_columns');
         add_action('manage_mco_exam_program_posts_custom_column', 'mco_display_exam_program_columns', 10, 2);
         add_action('admin_notices', 'mco_display_admin_notices');
+
+        // Hooks for individual Exam Program editor
+        add_action('add_meta_boxes_mco_exam_program', 'mco_add_exam_program_meta_boxes');
+        add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta_data');
     }
 }
 
@@ -68,7 +72,7 @@ function mco_bulk_import_tab_html() {
     $book_template_url = admin_url('admin.php?page=mco-exam-engine&tab=bulk_import&download_template=recommended_book');
     ?>
     <h3>Bulk Import Exam Programs</h3>
-    <p>Upload a CSV file to create or update multiple Exam Programs at once. The importer matches programs by title.</p>
+    <p>Upload a CSV file to create or update multiple Exam Programs at once. The importer matches programs by exact title.</p>
     <form method="post" enctype="multipart/form-data">
         <?php wp_nonce_field('mco_exam_csv_upload_nonce', 'mco_exam_csv_upload_nonce'); ?>
         <input type="hidden" name="mco_action" value="handle_exam_program_csv_upload" />
@@ -91,7 +95,7 @@ function mco_bulk_import_tab_html() {
     </form>
     <hr>
     <h3>Bulk Import Recommended Books</h3>
-    <p>Upload a CSV file to create or update Recommended Books. The importer matches books by title.</p>
+    <p>Upload a CSV file to create or update Recommended Books. The importer matches books by their unique <strong>book_id</strong>.</p>
     <form method="post" enctype="multipart/form-data">
         <?php wp_nonce_field('mco_book_csv_upload_nonce', 'mco_book_csv_upload_nonce'); ?>
         <input type="hidden" name="mco_action" value="handle_book_csv_upload" />
@@ -102,7 +106,7 @@ function mco_bulk_import_tab_html() {
                     <input type="file" id="recommended_book_csv" name="recommended_book_csv" accept=".csv" required>
                     <p class="description">
                         Required columns: <code>book_id, book_title, book_description, thumbnail_url, link_com, link_in, link_ae</code><br>
-                        - <strong>book_id:</strong> A unique text identifier you create (e.g., 'cpc-study-guide'). This ID is used to link books to exams.<br>
+                        - <strong>book_id:</strong> A unique text identifier you create (e.g., 'cpc-study-guide'). This ID is used to link books to exams and to update existing books.<br>
                         <a href="<?php echo esc_url($book_template_url); ?>">Download Recommended Book CSV Template</a>
                     </p>
                 </td>
@@ -270,14 +274,13 @@ function mco_certificate_templates_editor_html() {
             }
         });
         
-        // Convert name to a slug-like ID for new templates
         $('#certificate-templates-container').on('blur', '.template-id-input', function() {
             let slug = $(this).val().toString().toLowerCase()
-                .replace(/\s+/g, '-')           // Replace spaces with -
-                .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
-                .replace(/\-\-+/g, '-')         // Replace multiple - with single -
-                .replace(/^-+/, '')             // Trim - from start of text
-                .replace(/-+$/, '');            // Trim - from end of text
+                .replace(/\s+/g, '-')
+                .replace(/[^\w\-]+/g, '')
+                .replace(/\-\-+/g, '-')
+                .replace(/^-+/, '')
+                .replace(/-+$/, '');
             $(this).val(slug);
         });
     });
@@ -289,7 +292,6 @@ function mco_certificate_templates_editor_html() {
     </style>
     <?php
 }
-
 
 if (!function_exists('mco_handle_admin_page_actions')) {
     function mco_handle_admin_page_actions() {
@@ -315,42 +317,12 @@ if (!function_exists('mco_handle_admin_page_actions')) {
 
 if (!function_exists('mco_display_admin_notices')) {
     function mco_display_admin_notices() {
-        $screen = get_current_screen();
-        if (!$screen || $screen->id !== 'toplevel_page_mco-exam-engine' || !isset($_GET['mco_notice'])) {
-            return;
-        }
-
-        $notice_code = sanitize_key($_GET['mco_notice']);
-        $message = '';
-        $type = 'info';
-
-        switch ($notice_code) {
-            case 'cache_cleared':
-                $type = 'success';
-                $message = 'Application configuration cache has been cleared.';
-                break;
-            case 'import_success':
-                $type = 'success';
-                $created = isset($_GET['created']) ? intval($_GET['created']) : 0;
-                $updated = isset($_GET['updated']) ? intval($_GET['updated']) : 0;
-                $failed = isset($_GET['failed']) ? intval($_GET['failed']) : 0;
-                $message = "Import complete. Created: {$created}, Updated: {$updated}, Failed/Skipped: {$failed}.";
-                break;
-            case 'import_error':
-            case 'no_file':
-            case 'bad_file':
-                $type = 'error';
-                $error_messages = [
-                    'import_error' => 'There was an error during the import process. Please check your file and try again.',
-                    'no_file' => 'No file was uploaded for import.',
-                    'bad_file' => 'Could not open the uploaded file. Please ensure it is a valid CSV.'
-                ];
-                $message = $error_messages[$notice_code];
-                break;
-        }
-
-        if ($message) {
-            printf('<div class="notice notice-%s is-dismissible"><p>%s</p></div>', esc_attr($type), esc_html($message));
+        if ( $notice = get_transient( 'mco_admin_notice_' . get_current_user_id() ) ) {
+            printf( '<div class="notice notice-%s is-dismissible"><p>%s</p></div>',
+                esc_attr( $notice['type'] ),
+                wp_kses_post( $notice['message'] )
+            );
+            delete_transient( 'mco_admin_notice_' . get_current_user_id() );
         }
     }
 }
@@ -370,36 +342,35 @@ if (!function_exists('mco_register_plugin_settings')) {
     }
 }
 
+function mco_set_admin_notice($type, $message) {
+    set_transient('mco_admin_notice_' . get_current_user_id(), ['type' => $type, 'message' => $message], 45);
+}
+
 function mco_sanitize_textarea($value) {
     update_option('mco_config_version', current_time('YmdHis'));
+    delete_transient('mco_app_config_data');
     return implode("\n", array_map('sanitize_text_field', explode("\n", $value)));
 }
 
 function mco_sanitize_logo_url($input) {
     update_option('mco_config_version', current_time('YmdHis'));
+    delete_transient('mco_app_config_data');
     $input = trim($input);
-    if (empty($input)) {
-        return '';
-    }
-    // Allow standard URLs
-    if (wp_http_validate_url($input)) {
-        return esc_url_raw($input);
-    }
-    // Allow Base64 data URIs
-    if (preg_match('/^data:image\/(jpeg|png|gif|svg\+xml);base64,/', $input)) {
-        return $input;
-    }
-    // Disallow anything else
+    if (empty($input)) return '';
+    if (wp_http_validate_url($input)) return esc_url_raw($input);
+    if (preg_match('/^data:image\/(jpeg|png|gif|svg\+xml);base64,/', $input)) return $input;
     return '';
 }
 
 function mco_sanitize_spin_wheel_option($input) {
     update_option('mco_config_version', current_time('YmdHis'));
+    delete_transient('mco_app_config_data');
     return $input ? '1' : '0';
 }
 
 function mco_sanitize_certificate_templates($templates) {
     update_option('mco_config_version', current_time('YmdHis'));
+    delete_transient('mco_app_config_data');
     $sanitized = [];
     if (is_array($templates)) {
         foreach ($templates as $template) {
@@ -422,15 +393,17 @@ function mco_sanitize_certificate_templates($templates) {
 }
 
 function mco_handle_exam_program_csv_upload() {
+    $redirect_url = add_query_arg(['page' => 'mco-exam-engine', 'tab' => 'bulk_import'], admin_url('admin.php'));
+
     if (empty($_FILES['exam_program_csv']['tmp_name'])) {
-        wp_safe_redirect(add_query_arg(['page' => 'mco-exam-engine', 'tab' => 'bulk_import', 'mco_notice' => 'no_file'], admin_url('admin.php')));
-        exit;
+        mco_set_admin_notice('error', 'No file was uploaded for import.');
+        wp_safe_redirect($redirect_url); exit;
     }
     $csv_file = $_FILES['exam_program_csv']['tmp_name'];
     $file_handle = @fopen($csv_file, 'r');
     if (!$file_handle) {
-        wp_safe_redirect(add_query_arg(['page' => 'mco-exam-engine', 'tab' => 'bulk_import', 'mco_notice' => 'bad_file'], admin_url('admin.php')));
-        exit;
+        mco_set_admin_notice('error', 'Could not open the uploaded file. Please ensure it is a valid CSV.');
+        wp_safe_redirect($redirect_url); exit;
     }
 
     $header = fgetcsv($file_handle);
@@ -448,8 +421,18 @@ function mco_handle_exam_program_csv_upload() {
             'post_type'    => 'mco_exam_program',
         ];
 
-        $existing_post = get_page_by_title($post_title, OBJECT, 'mco_exam_program');
-        $post_id = $existing_post ? $existing_post->ID : 0;
+        $post_query = new WP_Query([
+            'post_type' => 'mco_exam_program',
+            'title' => $post_title,
+            'post_status' => 'any',
+            'posts_per_page' => 1,
+            'fields' => 'ids'
+        ]);
+
+        $post_id = 0;
+        if ($post_query->have_posts()) {
+            $post_id = $post_query->posts[0];
+        }
 
         if ($post_id) {
             $post_args['ID'] = $post_id;
@@ -482,25 +465,25 @@ function mco_handle_exam_program_csv_upload() {
     }
     fclose($file_handle);
     update_option('mco_config_version', current_time('YmdHis'));
+    delete_transient('mco_app_config_data');
 
-    $redirect_url = add_query_arg([
-        'page' => 'mco-exam-engine', 'tab' => 'bulk_import', 'mco_notice' => 'import_success',
-        'created' => $created_count, 'updated' => $updated_count, 'failed' => $failed_count
-    ], admin_url('admin.php'));
+    $message = "Import complete. Created: <strong>{$created_count}</strong>, Updated: <strong>{$updated_count}</strong>, Failed/Skipped: <strong>{$failed_count}</strong>.";
+    mco_set_admin_notice('success', $message);
     wp_safe_redirect($redirect_url);
     exit;
 }
 
 function mco_handle_book_csv_upload() {
+    $redirect_url = add_query_arg(['page' => 'mco-exam-engine', 'tab' => 'bulk_import'], admin_url('admin.php'));
     if (empty($_FILES['recommended_book_csv']['tmp_name'])) {
-        wp_safe_redirect(add_query_arg(['page' => 'mco-exam-engine', 'tab' => 'bulk_import', 'mco_notice' => 'no_file'], admin_url('admin.php')));
-        exit;
+        mco_set_admin_notice('error', 'No file was uploaded for import.');
+        wp_safe_redirect($redirect_url); exit;
     }
     $csv_file = $_FILES['recommended_book_csv']['tmp_name'];
     $file_handle = @fopen($csv_file, 'r');
     if (!$file_handle) {
-        wp_safe_redirect(add_query_arg(['page' => 'mco-exam-engine', 'tab' => 'bulk_import', 'mco_notice' => 'bad_file'], admin_url('admin.php')));
-        exit;
+        mco_set_admin_notice('error', 'Could not open the uploaded file. Please ensure it is a valid CSV.');
+        wp_safe_redirect($redirect_url); exit;
     }
     
     $header = fgetcsv($file_handle);
@@ -512,9 +495,21 @@ function mco_handle_book_csv_upload() {
         $book_id_slug = sanitize_key($data['book_id']);
         if (empty($post_title) || empty($book_id_slug)) { $failed_count++; continue; }
 
+        $post_query = new WP_Query([
+            'post_type' => 'mco_recommended_book',
+            'meta_key' => '_mco_book_id',
+            'meta_value' => $book_id_slug,
+            'post_status' => 'any',
+            'posts_per_page' => 1,
+            'fields' => 'ids'
+        ]);
+
+        $post_id = 0;
+        if ($post_query->have_posts()) {
+            $post_id = $post_query->posts[0];
+        }
+
         $post_args = ['post_title' => $post_title, 'post_content' => wp_kses_post($data['book_description']), 'post_status'  => 'publish', 'post_type' => 'mco_recommended_book'];
-        $existing_post = get_page_by_title($post_title, OBJECT, 'mco_recommended_book');
-        $post_id = $existing_post ? $existing_post->ID : 0;
 
         if ($post_id) {
             $post_args['ID'] = $post_id;
@@ -534,18 +529,19 @@ function mco_handle_book_csv_upload() {
     }
     fclose($file_handle);
     update_option('mco_config_version', current_time('YmdHis'));
+    delete_transient('mco_app_config_data');
 
-    $redirect_url = add_query_arg([
-        'page' => 'mco-exam-engine', 'tab' => 'bulk_import', 'mco_notice' => 'import_success',
-        'created' => $created_count, 'updated' => $updated_count, 'failed' => $failed_count
-    ], admin_url('admin.php'));
+    $message = "Import complete. Created: <strong>{$created_count}</strong>, Updated: <strong>{$updated_count}</strong>, Failed/Skipped: <strong>{$failed_count}</strong>.";
+    mco_set_admin_notice('success', $message);
     wp_safe_redirect($redirect_url);
     exit;
 }
 
 function mco_handle_clear_app_cache() {
     update_option('mco_config_version', current_time('YmdHis'));
-    $redirect_url = add_query_arg(['page' => 'mco-exam-engine', 'tab' => 'tools', 'mco_notice' => 'cache_cleared'], admin_url('admin.php'));
+    delete_transient('mco_app_config_data');
+    mco_set_admin_notice('success', 'Application configuration cache has been cleared.');
+    $redirect_url = add_query_arg(['page' => 'mco-exam-engine', 'tab' => 'tools'], admin_url('admin.php'));
     wp_safe_redirect($redirect_url);
     exit;
 }
@@ -605,5 +601,118 @@ function mco_display_exam_program_columns($column, $post_id) {
     if ($column === 'cert_sku') {
         echo esc_html(get_post_meta($post_id, '_mco_certification_exam_sku', true));
     }
+}
+
+// --- META BOXES FOR EXAM PROGRAM EDITOR ---
+
+function mco_add_exam_program_meta_boxes() {
+    add_meta_box(
+        'mco_exam_program_details',
+        'Exam Program Details',
+        'mco_exam_program_details_meta_box_html',
+        'mco_exam_program',
+        'normal',
+        'high'
+    );
+}
+
+function mco_exam_program_details_meta_box_html($post) {
+    wp_nonce_field('mco_exam_program_details_nonce', 'mco_exam_program_details_nonce');
+
+    $sku = get_post_meta($post->ID, '_mco_certification_exam_sku', true);
+    $question_source = get_post_meta($post->ID, '_mco_question_source_url', true);
+    $is_proctored = get_post_meta($post->ID, '_mco_is_proctored', true);
+    $book_post_ids = get_post_meta($post->ID, '_mco_recommended_book_ids', true);
+    
+    $custom_book_ids = [];
+    if (is_array($book_post_ids)) {
+        foreach ($book_post_ids as $book_post_id) {
+            $custom_id = get_post_meta($book_post_id, '_mco_book_id', true);
+            if ($custom_id) {
+                $custom_book_ids[] = $custom_id;
+            }
+        }
+    }
+    $book_ids_str = implode(', ', $custom_book_ids);
+    ?>
+    <table class="form-table">
+        <tr valign="top">
+            <th scope="row"><label for="mco_certification_exam_sku">Certification Exam SKU</label></th>
+            <td>
+                <input type="text" id="mco_certification_exam_sku" name="mco_certification_exam_sku" value="<?php echo esc_attr($sku); ?>" class="regular-text" />
+                <p class="description">Enter the WooCommerce product SKU for the main certification exam.</p>
+            </td>
+        </tr>
+        <tr valign="top">
+            <th scope="row"><label for="mco_question_source_url">Question Source URL</label></th>
+            <td>
+                <input type="text" id="mco_question_source_url" name="mco_question_source_url" value="<?php echo esc_attr($question_source); ?>" class="large-text" />
+                <p class="description">Enter the public URL to the Google Sheet (or published CSV) containing the questions for this exam program.</p>
+            </td>
+        </tr>
+        <tr valign="top">
+            <th scope="row"><label for="mco_recommended_book_id">Recommended Book ID(s)</label></th>
+            <td>
+                <input type="text" id="mco_recommended_book_id" name="mco_recommended_book_id" value="<?php echo esc_attr($book_ids_str); ?>" class="large-text" />
+                <p class="description">Enter the custom <code>book_id</code>(s) from your Recommended Books. For multiple books, separate the IDs with a comma (e.g., book-1, book-2).</p>
+            </td>
+        </tr>
+        <tr valign="top">
+            <th scope="row"><label for="mco_is_proctored">Enable Proctoring</label></th>
+            <td>
+                <input type="checkbox" id="mco_is_proctored" name="mco_is_proctored" value="1" <?php checked($is_proctored, '1'); ?> />
+                <p class="description">If checked, the certification exam will require fullscreen and monitor for tab switching.</p>
+            </td>
+        </tr>
+    </table>
+    <?php
+}
+
+function mco_save_exam_program_meta_data($post_id) {
+    if (!isset($_POST['mco_exam_program_details_nonce']) || !wp_verify_nonce($_POST['mco_exam_program_details_nonce'], 'mco_exam_program_details_nonce')) {
+        return;
+    }
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+
+    // Save SKU
+    if (isset($_POST['mco_certification_exam_sku'])) {
+        update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($_POST['mco_certification_exam_sku']));
+    }
+    // Save Question URL
+    if (isset($_POST['mco_question_source_url'])) {
+        update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($_POST['mco_question_source_url']));
+    }
+    // Save Proctoring setting
+    $is_proctored = isset($_POST['mco_is_proctored']) ? '1' : '0';
+    update_post_meta($post_id, '_mco_is_proctored', $is_proctored);
+
+    // Save Recommended Book IDs
+    if (isset($_POST['mco_recommended_book_id'])) {
+        $book_slugs = array_map('trim', explode(',', sanitize_text_field($_POST['mco_recommended_book_id'])));
+        $wp_book_post_ids = [];
+        foreach ($book_slugs as $slug) {
+            if (empty($slug)) continue;
+            $book_query = new WP_Query([
+                'post_type' => 'mco_recommended_book',
+                'meta_key' => '_mco_book_id',
+                'meta_value' => $slug,
+                'posts_per_page' => 1,
+                'fields' => 'ids'
+            ]);
+            if ($book_query->have_posts()) {
+                $wp_book_post_ids[] = $book_query->posts[0];
+            }
+        }
+        update_post_meta($post_id, '_mco_recommended_book_ids', $wp_book_post_ids);
+    }
+    
+    // Invalidate the cache whenever a program is saved.
+    delete_transient('mco_app_config_data');
+    update_option('mco_config_version', current_time('YmdHis'));
 }
 ?>

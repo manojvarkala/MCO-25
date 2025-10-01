@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -21,31 +21,31 @@ const MAX_FOCUS_VIOLATIONS = 3;
 const FOCUS_VIOLATION_TOAST_ID = 'focus-violation-toast';
 
 
-const Test: React.FC = () => {
+const Test: FC = () => {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
   const { user, isSubscribed, token } = useAuth();
   const { activeOrg, isInitializing } = useAppContext();
 
-  const [examConfig, setExamConfig] = React.useState<Exam | null>(null);
-  const [questions, setQuestions] = React.useState<Question[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
-  const [answers, setAnswers] = React.useState<Map<number, number>>(new Map());
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [timeLeft, setTimeLeft] = React.useState<number | null>(null);
-  const [examStarted, setExamStarted] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [examConfig, setExamConfig] = useState<Exam | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<Map<number, number>>(new Map());
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [examStarted, setExamStarted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Browser-based proctoring state
-  const [focusViolationCount, setFocusViolationCount] = React.useState(0);
+  const [focusViolationCount, setFocusViolationCount] = useState(0);
   
-  const timerIntervalRef = React.useRef<number | null>(null);
-  const hasSubmittedRef = React.useRef(false);
-  const progressKey = React.useMemo(() => `exam_progress_${examId}_${user?.id}`, [examId, user?.id]);
+  const timerIntervalRef = useRef<number | null>(null);
+  const hasSubmittedRef = useRef(false);
+  const progressKey = useMemo(() => `exam_progress_${examId}_${user?.id}`, [examId, user?.id]);
 
 
-  const handleSubmit = React.useCallback(async (isAutoSubmit = false, reason = "") => {
+  const handleSubmit = useCallback(async (isAutoSubmit = false, reason = "") => {
     if (hasSubmittedRef.current) return;
     hasSubmittedRef.current = true;
     
@@ -91,7 +91,7 @@ const Test: React.FC = () => {
   }, [examId, navigate, token, user, isSubmitting, questions, answers, progressKey]);
   
   // Effect 1: Load questions and saved progress.
-  React.useEffect(() => {
+  useEffect(() => {
     if (isInitializing || !examId || !activeOrg || !user || !token) return;
 
     const config = activeOrg.exams.find(e => e.id === examId);
@@ -143,7 +143,7 @@ const Test: React.FC = () => {
   }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, progressKey]);
 
   // Effect 2: Manage the timer.
-  React.useEffect(() => {
+  useEffect(() => {
     if (!examStarted || isLoading || !examConfig || !user || !examId) return;
 
     const timerKey = `exam_timer_${examId}_${user.id}`;
@@ -167,7 +167,7 @@ const Test: React.FC = () => {
   }, [examStarted, isLoading, examConfig, user, examId, handleSubmit]);
 
     // Effect 3: Save progress.
-    React.useEffect(() => {
+    useEffect(() => {
         if (!examStarted || questions.length === 0) return;
         try {
             const progress: ExamProgress = { questions, answers: Array.from(answers.entries()).map(([questionId, answer]) => ({ questionId, answer })), currentQuestionIndex };
@@ -176,7 +176,7 @@ const Test: React.FC = () => {
     }, [answers, currentQuestionIndex, questions, progressKey, examStarted]);
 
     // Effect 4: Handle focus and fullscreen for proctored exams.
-    React.useEffect(() => {
+    useEffect(() => {
         if (!examStarted || !examConfig?.isProctored) return;
         const handleVisibilityChange = () => { if (document.hidden) setFocusViolationCount(prev => prev + 1); };
         const handleFullscreenChange = () => { if (!document.fullscreenElement) setFocusViolationCount(prev => prev + 1); };
@@ -189,7 +189,7 @@ const Test: React.FC = () => {
     }, [examStarted, examConfig?.isProctored]);
 
     // Effect 5: Handle focus violation side-effects.
-    React.useEffect(() => {
+    useEffect(() => {
         if (focusViolationCount > 0 && focusViolationCount <= MAX_FOCUS_VIOLATIONS) {
             toast.error(`Focus Violation (${focusViolationCount}/${MAX_FOCUS_VIOLATIONS}): You must stay in fullscreen and on this tab.`, { id: FOCUS_VIOLATION_TOAST_ID, duration: 6000 });
         }
@@ -236,14 +236,14 @@ const Test: React.FC = () => {
         }
     };
     
-    const timePercentage = React.useMemo(() => {
+    const timePercentage = useMemo(() => {
         if (timeLeft === null || !examConfig) return 100;
         const totalDuration = examConfig.durationMinutes * 60;
         if (totalDuration <= 0) return 100;
         return (timeLeft / totalDuration) * 100;
     }, [timeLeft, examConfig]);
 
-    const { timerColorClass, progressBarColorClass } = React.useMemo(() => {
+    const { timerColorClass, progressBarColorClass } = useMemo(() => {
         if (timePercentage < 20) {
             return { timerColorClass: 'text-red-400', progressBarColorClass: 'bg-red-600' };
         }

@@ -306,9 +306,15 @@ body.single-mco_exam_program .mco-sidebar-book-card {
     box-shadow: 0 1px 3px rgba(0,0,0,.05);
     margin-bottom: 1rem;
 }
-body.single-mco_exam_program .mco-sidebar-book-thumbnail img {
+body.single-mco_exam_program .mco-sidebar-book-thumbnail {
     width: 60px;
-    height: auto;
+    flex-shrink: 0;
+}
+body.single-mco_exam_program .mco-sidebar-book-thumbnail .mco-book-thumbnail-img,
+body.single-mco_exam_program .mco-sidebar-book-thumbnail .mco-procedural-book-cover {
+    width: 60px;
+    height: 80px; /* Aspect ratio for book cover */
+    object-fit: cover;
     border-radius: 0.25rem;
 }
 body.single-mco_exam_program .mco-sidebar-book-content h4 {
@@ -332,3 +338,68 @@ body.single-mco_exam_program .mco-sidebar-book-button {
 body.single-mco_exam_program .mco-sidebar-book-button:hover {
     background-color: #d97706;
 }
+
+/* Procedural Book Cover Styles */
+.mco-procedural-book-cover {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    text-align: center;
+    font-family: sans-serif;
+    overflow: hidden;
+    height: 100%;
+}
+.mco-procedural-book-cover .deco-circle-1,
+.mco-procedural-book-cover .deco-circle-2 {
+    position: absolute;
+    border-radius: 9999px;
+    opacity: 0.5;
+}
+.mco-procedural-book-cover .deco-circle-1 { bottom: -2.5rem; right: -2.5rem; width: 8rem; height: 8rem; }
+.mco-procedural-book-cover .deco-circle-2 { top: -3rem; left: -2rem; width: 6rem; height: 6rem; }
+.mco-procedural-book-cover .procedural-content { z-index: 10; }
+.mco-procedural-book-cover h4 { font-weight: bold; font-size: 1rem; line-height: 1.2; margin:0 !important; padding:0 !important; }
+.mco-procedural-book-cover p { font-size: 0.75rem; opacity: 0.8; margin: 0.25rem 0 0 !important; padding:0 !important;}
+.mco-procedural-book-cover .accent-bar { width: 33.33%; height: 4px; border-radius: 9999px; z-index: 10; }
+body.single-mco_exam_program .mco-procedural-book-cover h4 { font-size: 0.7rem !important; } /* Adjust for small size in sidebar */
+body.single-mco_exam_program .mco-procedural-book-cover p { font-size: 0.6rem !important; }
+
+/* Color Schemes (0-8) */
+.mco-book-cover-bg-0 { background-image: linear-gradient(to bottom right, #fef2f2, #fee2e2); }
+.mco-book-cover-text-0 { color: #7f1d1d; }
+.mco-book-cover-accent-0 { background-color: #fca5a5; }
+
+.mco-book-cover-bg-1 { background-image: linear-gradient(to bottom right, #fefce8, #fef9c3); }
+.mco-book-cover-text-1 { color: #713f12; }
+.mco-book-cover-accent-1 { background-color: #fde047; }
+
+.mco-book-cover-bg-2 { background-image: linear-gradient(to bottom right, #f0fdf4, #dcfce7); }
+.mco-book-cover-text-2 { color: #14532d; }
+.mco-book-cover-accent-2 { background-color: #86efac; }
+
+.mco-book-cover-bg-3 { background-image: linear-gradient(to bottom right, #eff6ff, #dbeafe); }
+.mco-book-cover-text-3 { color: #1e3a8a; }
+.mco-book-cover-accent-3 { background-color: #93c5fd; }
+
+.mco-book-cover-bg-4 { background-image: linear-gradient(to bottom right, #eef2ff, #e0e7ff); }
+.mco-book-cover-text-4 { color: #312e81; }
+.mco-book-cover-accent-4 { background-color: #a5b4fc; }
+
+.mco-book-cover-bg-5 { background-image: linear-gradient(to bottom right, #f5f3ff, #ede9fe); }
+.mco-book-cover-text-5 { color: #4c1d95; }
+.mco-book-cover-accent-5 { background-color: #c4b5fd; }
+
+.mco-book-cover-bg-6 { background-image: linear-gradient(to bottom right, #fdf2f8, #fce7f3); }
+.mco-book-cover-text-6 { color: #831843; }
+.mco-book-cover-accent-6 { background-color: #f9a8d4; }
+
+.mco-book-cover-bg-7 { background-image: linear-gradient(to bottom right, #f0fdfa, #ccfbf1); }
+.mco-book-cover-text-7 { color: #0f766e; }
+.mco-book-cover-accent-7 { background-color: #5eead4; }
+
+.mco-book-cover-bg-8 { background-image: linear-gradient(to bottom right, #fff7ed, #ffedd5); }
+.mco-book-cover-text-8 { color: #7c2d12; }
+.mco-book-cover-accent-8 { background-color: #fdba74; }

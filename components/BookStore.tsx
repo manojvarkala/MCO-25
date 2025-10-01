@@ -1,11 +1,11 @@
-import * as React from 'react';
+import React, { FC, useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import type { RecommendedBook } from '../types.ts';
 import { ShoppingCart, BookOpenCheck } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 
-const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
+const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
     const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
         const links = book.affiliateLinks;
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -50,11 +50,11 @@ const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
         ? allStores.filter(store => store.key !== primaryLink.key && store.url && store.url.trim() !== '')
         : [];
 
-    const [isExpanded, setIsExpanded] = React.useState(false);
-    const [canExpand, setCanExpand] = React.useState(false);
-    const descriptionRef = React.useRef<HTMLParagraphElement>(null);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [canExpand, setCanExpand] = useState(false);
+    const descriptionRef = useRef<HTMLParagraphElement>(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (descriptionRef.current && descriptionRef.current.scrollHeight > descriptionRef.current.clientHeight) {
             setCanExpand(true);
         }
@@ -118,7 +118,7 @@ const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
     );
 };
 
-const BookStore: React.FC = () => {
+const BookStore: FC = () => {
     const { suggestedBooks, isInitializing } = useAppContext();
 
     if (isInitializing) {
