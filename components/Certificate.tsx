@@ -8,7 +8,8 @@ import type { CertificateData } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import { Download, ArrowLeft } from 'lucide-react';
-import jsPDF from 'jspdf';
+// FIX: Use named import for jsPDF for consistency and to avoid module resolution issues.
+import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppContext } from '../context/AppContext.tsx';
 

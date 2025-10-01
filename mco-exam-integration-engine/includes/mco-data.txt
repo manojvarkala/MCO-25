@@ -1,6 +1,39 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+if (!function_exists('mco_get_random_recommended_books')) {
+    function mco_get_random_recommended_books($count = 3) {
+        $args = [
+            'post_type' => 'mco_recommended_book',
+            'posts_per_page' => -1,
+            'post_status' => 'publish',
+            'fields' => 'ids',
+        ];
+        $query = new WP_Query($args);
+        $all_book_ids = $query->posts;
+
+        if (empty($all_book_ids)) {
+            return [];
+        }
+        
+        shuffle($all_book_ids);
+        $random_ids = array_slice($all_book_ids, 0, $count);
+        
+        if (empty($random_ids)) {
+            return [];
+        }
+        
+        $book_posts_query = new WP_Query([
+            'post_type' => 'mco_recommended_book',
+            'post__in' => $random_ids,
+            'posts_per_page' => $count,
+            'orderby' => 'post__in'
+        ]);
+        
+        return $book_posts_query->posts;
+    }
+}
+
 if (!function_exists('mco_get_app_config_data')) {
     function mco_get_app_config_data() {
         // Use a transient to cache the processed data for performance.

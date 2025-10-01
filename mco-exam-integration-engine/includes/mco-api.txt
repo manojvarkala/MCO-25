@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) exit;
  * If the exam application cannot connect to the API (CORS errors, fetch errors, or "Authorization
  * header missing" messages), it's almost always a server configuration issue. Many shared hosting
  * environments (like Apache/LiteSpeed) strip the necessary 'Authorization' header from requests by default.
- * 30 sept 5.23
+ *01 Oct 8.53
  * THE FIX:
  * Add the following code to the VERY TOP of your WordPress root .htaccess file, before the
  * # BEGIN WordPress block.
@@ -23,6 +23,104 @@ if (!defined('ABSPATH')) exit;
  * Caching plugins can interfere with API routes and CORS headers.
  * =================================================================================================
  */
+
+// --- JWT & HELPER FUNCTIONS ---
+
+if (!function_exists('mco_base64url_encode')) {
+    function mco_base64url_encode($data) {
+        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+    }
+}
+
+if (!function_exists('mco_base64url_decode')) {
+    function mco_base64url_decode($data) {
+        return base64_decode(strtr($data, '-_', '+/'));
+    }
+}
+
+if (!function_exists('mco_generate_exam_jwt')) {
+    function mco_generate_exam_jwt($user_id) {
+        if (!defined('MCO_JWT_SECRET')) {
+            error_log('MCO_JWT_SECRET is not defined in wp-config.php. Cannot generate token.');
+            return false;
+        }
+        $user = get_userdata($user_id);
+        if (!$user) return false;
+
+        $paid_exam_ids = [];
+        if (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription')) {
+            if (wcs_user_has_subscription($user_id, '', 'active')) {
+                $paid_exam_ids[] = 'subscription_active';
+            }
+        }
+        $customer_orders = wc_get_orders(['customer_id' => $user_id, 'status' => ['wc-completed', 'wc-processing']]);
+        foreach ($customer_orders as $order) {
+            foreach ($order->get_items() as $item) {
+                $product = $item->get_product();
+                if ($product && $product->get_sku()) {
+                    $paid_exam_ids[] = $product->get_sku();
+                }
+            }
+        }
+
+        $payload = [
+            'iss' => get_home_url(),
+            'iat' => time(),
+            'exp' => time() + (24 * 60 * 60), // 24-hour expiration
+            'user' => [
+                'id' => strval($user->ID),
+                'email' => $user->user_email,
+                'name' => $user->display_name,
+                'isAdmin' => user_can($user, 'manage_options'),
+            ],
+            'paidExamIds' => array_unique($paid_exam_ids),
+            'isSubscribed' => (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($user_id, '', 'active')),
+            'spinsAvailable' => (int) get_user_meta($user_id, 'mco_spins_available', true),
+            'wonPrize' => get_user_meta($user_id, 'mco_won_prize', true) ?: null,
+            'isSpinWheelEnabled' => true,
+        ];
+
+        $header = mco_base64url_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
+        $payload_encoded = mco_base64url_encode(json_encode($payload));
+        $signature = hash_hmac('sha256', "$header.$payload_encoded", MCO_JWT_SECRET, true);
+        $signature_encoded = mco_base64url_encode($signature);
+
+        return "$header.$payload_encoded.$signature_encoded";
+    }
+}
+
+if (!function_exists('mco_verify_exam_jwt')) {
+    function mco_verify_exam_jwt($token) {
+        if (!defined('MCO_JWT_SECRET')) return false;
+        
+        $parts = explode('.', $token);
+        if (count($parts) !== 3) return false;
+
+        list($header_encoded, $payload_encoded, $signature_encoded) = $parts;
+
+        $signature_to_verify = mco_base64url_decode($signature_encoded);
+        $expected_signature = hash_hmac('sha256', "$header_encoded.$payload_encoded", MCO_JWT_SECRET, true);
+
+        if (!hash_equals($expected_signature, $signature_to_verify)) return false;
+
+        $payload = json_decode(mco_base64url_decode($payload_encoded), true);
+        if (!$payload || (isset($payload['exp']) && $payload['exp'] < time())) return false;
+        
+        return $payload;
+    }
+}
+
+if (!function_exists('mco_get_exam_app_url')) {
+    function mco_get_exam_app_url() {
+        $app_urls_string = get_option('mco_exam_app_url', '');
+        if (empty($app_urls_string)) return false;
+        $urls = preg_split('/\r\n|\r|\n/', $app_urls_string);
+        return trim($urls[0]);
+    }
+}
+
+
+// --- API REGISTRATION & HOOKS ---
 
 if (!function_exists('mco_register_api_hooks')) {
     function mco_register_api_hooks() {

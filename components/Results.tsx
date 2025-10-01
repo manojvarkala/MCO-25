@@ -8,7 +8,8 @@ import type { TestResult, Exam, RecommendedBook } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, Sparkles, Star, XCircle, BookOpen } from 'lucide-react';
-import jsPDF from 'jspdf';
+// FIX: Use named import for jsPDF to resolve module augmentation issues.
+import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import BookCover from '../assets/BookCover.tsx';
 
