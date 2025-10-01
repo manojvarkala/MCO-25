@@ -4,12 +4,14 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { TestResult, Exam } from '../types.ts';
+import type { TestResult, Exam, RecommendedBook } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, Sparkles, Star, XCircle } from 'lucide-react';
+import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, Sparkles, Star, XCircle, BookOpen } from 'lucide-react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import BookCover from '../assets/BookCover.tsx';
+
 
 // Extend jsPDF with autoTable for module augmentation
 declare module 'jspdf' {
@@ -18,11 +20,46 @@ declare module 'jspdf' {
   }
 }
 
+const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } => {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
+    let preferredDomain = 'Amazon.com';
+
+    const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
+    if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
+        preferredKey = 'in';
+        preferredDomain = 'Amazon.in';
+    } else if (gccTimezones.some(tz => timeZone === tz)) {
+        preferredKey = 'ae';
+        preferredDomain = 'Amazon.ae';
+    }
+    
+    const preferredUrl = book.affiliateLinks[preferredKey];
+    if (preferredUrl && preferredUrl.trim() !== '') {
+        return { url: preferredUrl, domainName: preferredDomain };
+    }
+    
+    if (book.affiliateLinks.com && book.affiliateLinks.com.trim() !== '') {
+        return { url: book.affiliateLinks.com, domainName: 'Amazon.com' };
+    }
+
+    const fallbackOrder: (keyof RecommendedBook['affiliateLinks'])[] = ['in', 'ae'];
+    for (const key of fallbackOrder) {
+         if (book.affiliateLinks[key] && book.affiliateLinks[key].trim() !== '') {
+            const domain = key === 'in' ? 'Amazon.in' : 'Amazon.ae';
+            return { url: book.affiliateLinks[key], domainName: domain };
+         }
+    }
+    
+    return { url: book.affiliateLinks.com || '', domainName: 'Amazon.com' };
+};
+
+
 const Results: FC = () => {
     const { testId } = useParams<{ testId: string }>();
     const navigate = useNavigate();
     const { user, token, isSubscribed, paidExamIds } = useAuth();
-    const { activeOrg } = useAppContext();
+    const { activeOrg, suggestedBooks } = useAppContext();
 
     const [result, setResult] = useState<TestResult | null>(null);
     const [exam, setExam] = useState<Exam | null>(null);
@@ -66,6 +103,11 @@ const Results: FC = () => {
         // For non-subscribers, allow if they purchased the exam and haven't passed it yet.
         return paidExamIds.includes(exam.productSku);
     }, [exam, result, isPassed, isSubscribed, paidExamIds]);
+
+    const recommendedBooksForExam = useMemo(() => {
+        if (!exam || !exam.recommendedBookIds || !suggestedBooks) return [];
+        return suggestedBooks.filter(book => exam.recommendedBookIds.includes(book.id));
+    }, [exam, suggestedBooks]);
 
 
     const generateAIFeedback = async () => {
@@ -226,7 +268,7 @@ const Results: FC = () => {
                     )}
                 </div>
                 
-                {/* Right Column: Feedback & Review */}
+                {/* Right Column: Feedback, Review, & Books */}
                 <div className="lg:col-span-2 space-y-8">
                     {canGetAIFeedback && (
                         <div className="bg-white p-6 rounded-xl shadow-md">
@@ -269,6 +311,29 @@ const Results: FC = () => {
                                         )}
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {recommendedBooksForExam.length > 0 && (
+                        <div className="bg-white p-6 rounded-xl shadow-md">
+                            <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h3>
+                            <div className="flex flex-wrap gap-4">
+                                {recommendedBooksForExam.map(book => {
+                                    const { url, domainName } = getGeoAffiliateLink(book);
+                                    if (!url) return null;
+                                    return (
+                                        <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full sm:w-56 flex-shrink-0">
+                                            <BookCover book={book} className="w-full h-32"/>
+                                            <div className="p-3">
+                                                <h4 className="font-bold text-slate-800 text-xs mb-2 leading-tight">{book.title}</h4>
+                                                <a href={url} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-center text-xs text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-2 py-1.5 transition-colors">
+                                                    Buy on {domainName}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
                             </div>
                         </div>
                     )}

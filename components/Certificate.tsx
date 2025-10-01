@@ -47,6 +47,8 @@ const Certificate: React.FC = () => {
                 organization: activeOrg,
                 template: sampleTemplate,
                 examName: 'Sample Proficiency Exam',
+                // FIX: Added missing examId property to satisfy the CertificateData type.
+                examId: 'sample-exam',
             };
             setCertData(sampleCertData);
             setIsLoading(false);

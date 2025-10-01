@@ -58,17 +58,18 @@ export interface Exam {
   passScore: number;
   isPractice: boolean;
   productSku: string;
-  productSlug: string;
-  price: number;
-  regularPrice: number;
-  questionSourceUrl: string;
+  productSlug?: string;
+  price?: number;
+  regularPrice?: number;
+  questionSourceUrl?: string;
   certificateTemplateId: string;
   isProctored: boolean;
+  recommendedBookIds: string[];
 }
 
 export interface CertificateTemplate {
   id: string;
-  name: string;
+  name?: string; // name is optional now
   title: string;
   body: string;
   signature1Name: string;
