@@ -94,6 +94,8 @@ const Admin: FC = () => {
     });
     const [isCheckingHealth, setIsCheckingHealth] = useState(false);
 
+    const certificateTemplates = activeOrg?.certificateTemplates || [];
+
 
     const fetchStats = useCallback(async () => {
         if (!token) return;
@@ -282,6 +284,34 @@ const Admin: FC = () => {
                         {isDownloadingConfig ? <Spinner/> : <DownloadCloud size={20} className="mr-2" />}
                         {isDownloadingConfig ? 'Downloading...' : 'Download Live Config (.json)'}
                     </button>
+                </div>
+            </div>
+
+            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
+                    <Award className="mr-3 text-cyan-500" />
+                    Certificate Templates Overview
+                </h2>
+                <p className="text-slate-600 mb-6">
+                    This is a read-only overview of the certificate templates configured in your WordPress backend. To edit these, go to <strong>Exam App Engine &rarr; Certificate Templates</strong> in your WP admin dashboard.
+                </p>
+                <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                    {certificateTemplates.length > 0 ? (
+                        certificateTemplates.map(template => (
+                            <div key={template.id} className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <h3 className="font-bold text-slate-800">{template.name || template.title}</h3>
+                                <p className="text-xs text-slate-500 font-mono">ID: {template.id}</p>
+                                <div className="mt-2 text-sm text-slate-600 border-t border-slate-200 pt-2">
+                                    <p><strong>Title:</strong> {template.title}</p>
+                                    <p><strong>Body:</strong> <span dangerouslySetInnerHTML={{ __html: template.body.replace(/{(\w+)}/g, '<strong>[$1]</strong>') }} /></p>
+                                    <p className="mt-2"><strong>Signature 1:</strong> {template.signature1Name} ({template.signature1Title})</p>
+                                    {template.signature2Name && <p><strong>Signature 2:</strong> {template.signature2Name} ({template.signature2Title})</p>}
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-slate-500 text-center py-4">No certificate templates found in the current configuration.</p>
+                    )}
                 </div>
             </div>
 

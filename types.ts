@@ -84,7 +84,7 @@ export interface RecommendedBook {
     id: string;
     title: string;
     description: string;
-    thumbnailUrl: string;
+    thumbnailUrl: string | boolean;
     affiliateLinks: {
         com: string;
         in: string;

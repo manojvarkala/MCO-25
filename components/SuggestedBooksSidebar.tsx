@@ -4,38 +4,38 @@ import type { RecommendedBook } from '../types.ts';
 import { BookUp, BookOpen } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 
-const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } => {
+const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } | null => {
+    const links = book.affiliateLinks;
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
     let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
-    let preferredDomain = 'Amazon.com';
-
     const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
     if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
         preferredKey = 'in';
-        preferredDomain = 'Amazon.in';
     } else if (gccTimezones.some(tz => timeZone === tz)) {
         preferredKey = 'ae';
-        preferredDomain = 'Amazon.ae';
-    }
-    
-    const preferredUrl = book.affiliateLinks[preferredKey];
-    if (preferredUrl && preferredUrl.trim() !== '') {
-        return { url: preferredUrl, domainName: preferredDomain };
-    }
-    
-    if (book.affiliateLinks.com && book.affiliateLinks.com.trim() !== '') {
-        return { url: book.affiliateLinks.com, domainName: 'Amazon.com' };
     }
 
-    const fallbackOrder: (keyof RecommendedBook['affiliateLinks'])[] = ['in', 'ae'];
-    for (const key of fallbackOrder) {
-         if (book.affiliateLinks[key] && book.affiliateLinks[key].trim() !== '') {
-            const domain = key === 'in' ? 'Amazon.in' : 'Amazon.ae';
-            return { url: book.affiliateLinks[key], domainName: domain };
-         }
+    const preferredUrl = links[preferredKey];
+    if (preferredUrl && preferredUrl.trim() !== '') {
+        let domainName = 'Amazon.com';
+        if (preferredKey === 'in') domainName = 'Amazon.in';
+        if (preferredKey === 'ae') domainName = 'Amazon.ae';
+        return { url: preferredUrl, domainName };
     }
-    
-    return { url: book.affiliateLinks.com || '', domainName: 'Amazon.com' };
+
+    const fallbackPriority: (keyof RecommendedBook['affiliateLinks'])[] = ['com', 'in', 'ae'];
+    for (const key of fallbackPriority) {
+        if (key === preferredKey) continue;
+        const url = links[key];
+        if (url && url.trim() !== '') {
+            let domainName = 'Amazon.com';
+            if (key === 'in') domainName = 'Amazon.in';
+            if (key === 'ae') domainName = 'Amazon.ae';
+            return { url, domainName };
+        }
+    }
+    return null;
 };
 
 
@@ -63,8 +63,9 @@ const SuggestedBooksSidebar: FC = () => {
             </h3>
             <div className="space-y-6">
                 {randomBooks.map(book => {
-                    const { url, domainName } = getGeoAffiliateLink(book);
-                    if (!url) return null; // Don't render if no valid URL
+                    const linkData = getGeoAffiliateLink(book);
+                    if (!linkData) return null; // Don't render if no valid URL
+                    const { url, domainName } = linkData;
                     return (
                         <div key={book.id} className="bg-white rounded-lg shadow-md overflow-hidden border border-slate-200 transform hover:-translate-y-1 transition-transform duration-200">
                             <BookCover book={book} className="w-full h-32" />

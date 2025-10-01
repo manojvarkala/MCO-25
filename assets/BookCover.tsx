@@ -7,8 +7,9 @@ interface BookCoverProps {
 }
 
 const BookCover: FC<BookCoverProps> = ({ book, className }) => {
+  // FIX: Explicitly check if thumbnailUrl is a string before using it in an img src to resolve a type error.
   // If a custom thumbnail URL is provided, use it.
-  if (book.thumbnailUrl) {
+  if (typeof book.thumbnailUrl === 'string' && book.thumbnailUrl) {
     return (
       <div className={`relative ${className} bg-slate-100`}>
         <img src={book.thumbnailUrl} alt={book.title} className="w-full h-full object-cover" />

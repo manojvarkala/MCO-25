@@ -6,42 +6,38 @@ import { ShoppingCart, BookOpenCheck } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 
 const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
-    const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } => {
+    const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
+        const links = book.affiliateLinks;
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        
         let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
-        let preferredDomain = 'Amazon.com';
-
-        // Determine preferred locale
         const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
         if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
             preferredKey = 'in';
-            preferredDomain = 'Amazon.in';
         } else if (gccTimezones.some(tz => timeZone === tz)) {
             preferredKey = 'ae';
-            preferredDomain = 'Amazon.ae';
-        }
-        
-        // Check if the preferred URL exists and is valid
-        const preferredUrl = book.affiliateLinks[preferredKey];
-        if (preferredUrl && preferredUrl.trim() !== '') {
-            return { url: preferredUrl, domainName: preferredDomain, key: preferredKey };
-        }
-        
-        // Fallback to .com if preferred is not available or is an empty string
-        if (book.affiliateLinks.com && book.affiliateLinks.com.trim() !== '') {
-            return { url: book.affiliateLinks.com, domainName: 'Amazon.com', key: 'com' };
         }
 
-        // If both fail, find the first available link to set as primary
-        const fallbackOrder: (keyof RecommendedBook['affiliateLinks'])[] = ['in', 'ae'];
-        for (const key of fallbackOrder) {
-             if (book.affiliateLinks[key] && book.affiliateLinks[key].trim() !== '') {
-                const domain = key === 'in' ? 'Amazon.in' : 'Amazon.ae';
-                return { url: book.affiliateLinks[key], domainName: domain, key };
-             }
+        const preferredUrl = links[preferredKey];
+        if (preferredUrl && preferredUrl.trim() !== '') {
+            let domainName = 'Amazon.com';
+            if (preferredKey === 'in') domainName = 'Amazon.in';
+            if (preferredKey === 'ae') domainName = 'Amazon.ae';
+            return { url: preferredUrl, domainName, key: preferredKey };
         }
-        
-        return { url: book.affiliateLinks.com || '', domainName: 'Amazon.com', key: 'com' };
+
+        const fallbackPriority: (keyof RecommendedBook['affiliateLinks'])[] = ['com', 'in', 'ae'];
+        for (const key of fallbackPriority) {
+            if (key === preferredKey) continue;
+            const url = links[key];
+            if (url && url.trim() !== '') {
+                let domainName = 'Amazon.com';
+                if (key === 'in') domainName = 'Amazon.in';
+                if (key === 'ae') domainName = 'Amazon.ae';
+                return { url, domainName, key };
+            }
+        }
+        return null;
     };
 
     const primaryLink = getGeoAffiliateLink(book);
@@ -50,7 +46,9 @@ const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
         { key: 'in' as const, name: 'Amazon.in', url: book.affiliateLinks.in },
         { key: 'ae' as const, name: 'Amazon.ae', url: book.affiliateLinks.ae }
     ];
-    const secondaryStores = allStores.filter(store => store.key !== primaryLink.key && store.url && store.url.trim() !== '');
+    const secondaryStores = primaryLink 
+        ? allStores.filter(store => store.key !== primaryLink.key && store.url && store.url.trim() !== '')
+        : [];
 
     const [isExpanded, setIsExpanded] = React.useState(false);
     const [canExpand, setCanExpand] = React.useState(false);
@@ -89,27 +87,31 @@ const BookCard: React.FC<{ book: RecommendedBook }> = ({ book }) => {
                 )}
 
                 <div className="mt-auto pt-4 border-t border-slate-200 space-y-2">
-                    {primaryLink.url && (
-                        <a 
-                            href={primaryLink.url}
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="w-full text-center bg-yellow-400 hover:bg-yellow-500 text-slate-800 font-bold py-3 px-4 rounded-lg text-base flex items-center justify-center gap-2 transition-all transform hover:scale-105"
-                        >
-                            <ShoppingCart size={18} /> Buy on {primaryLink.domainName}
-                        </a>
+                    {primaryLink ? (
+                        <>
+                            <a 
+                                href={primaryLink.url}
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="w-full text-center bg-yellow-400 hover:bg-yellow-500 text-slate-800 font-bold py-3 px-4 rounded-lg text-base flex items-center justify-center gap-2 transition-all transform hover:scale-105"
+                            >
+                                <ShoppingCart size={18} /> Buy on {primaryLink.domainName}
+                            </a>
+                            {secondaryStores.map((store) => (
+                                <a 
+                                    key={store.key}
+                                    href={store.url}
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-all"
+                                >
+                                Buy on {store.name}
+                                </a>
+                            ))}
+                        </>
+                    ) : (
+                        <p className="text-sm text-center text-slate-500">Purchase links currently unavailable.</p>
                     )}
-                    {secondaryStores.map((store) => (
-                         <a 
-                            key={store.key}
-                            href={store.url}
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-all"
-                        >
-                           Buy on {store.name}
-                        </a>
-                    ))}
                 </div>
             </div>
         </div>
