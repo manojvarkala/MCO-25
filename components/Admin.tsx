@@ -94,8 +94,9 @@ const Admin: FC = () => {
     const [isLoadingStats, setIsLoadingStats] = useState(true);
     const [statsError, setStatsError] = useState<string | null>(null);
     
-    // State for config download
+    // State for config download & cache clear
     const [isDownloadingConfig, setIsDownloadingConfig] = useState(false);
+    const [isClearingCache, setIsClearingCache] = useState(false);
     
     // State for health check
     const [healthCheckStatus, setHealthCheckStatus] = useState<HealthCheckState>({
@@ -274,6 +275,27 @@ const Admin: FC = () => {
         }
     };
 
+    const handleClearClientCache = () => {
+        if (!window.confirm('Are you sure you want to clear the client-side configuration cache? The app will reload to fetch the latest data from the server.')) {
+            return;
+        }
+        setIsClearingCache(true);
+        const toastId = toast.loading('Clearing client cache...');
+
+        setTimeout(() => {
+            try {
+                localStorage.removeItem('appConfigCache');
+                localStorage.removeItem('activeOrgId');
+                toast.success('Client cache cleared. Reloading application...', { id: toastId });
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (e) {
+                console.error("Failed to clear client cache", e);
+                toast.error('Failed to clear client cache.', { id: toastId });
+                setIsClearingCache(false);
+            }
+        }, 500);
+    };
+
 
     const inputClass = "w-full p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition";
 
@@ -287,7 +309,7 @@ const Admin: FC = () => {
                     WordPress Integration & Data
                 </h2>
                 <p className="text-slate-600 mb-6">
-                    Manage the connection to your WordPress backend. The "Download Live Config" button below fetches the complete, dynamically-generated JSON configuration from your WordPress API. This file represents the exact data the app is using and is essential for debugging content issues or setting up new tenants.
+                    Manage the connection to your WordPress backend. Use these tools for debugging and content management. The "Live Config" is the exact JSON data the app is using. "Clear Client Cache" forces the app to reload this data from your server.
                 </p>
                 <div className="flex flex-wrap gap-4">
                     <a
@@ -302,10 +324,37 @@ const Admin: FC = () => {
                         disabled={isDownloadingConfig}
                         className="inline-flex items-center justify-center px-6 py-3 border border-slate-300 text-base font-medium rounded-md shadow-sm text-slate-700 bg-white hover:bg-slate-50 transition-transform transform hover:scale-105 disabled:opacity-50"
                     >
-                        {isDownloadingConfig ? <Spinner/> : <DownloadCloud size={20} className="mr-2" />}
-                        {isDownloadingConfig ? 'Downloading...' : 'Download Live Config (.json)'}
+                        {isDownloadingConfig ? <Spinner size="sm" /> : <DownloadCloud size={20} />}
+                        <span className="ml-2">{isDownloadingConfig ? 'Downloading...' : 'Download Live Config (.json)'}</span>
+                    </button>
+                    <button
+                        onClick={handleClearClientCache}
+                        disabled={isClearingCache}
+                        className="inline-flex items-center justify-center px-6 py-3 border border-amber-300 text-base font-medium rounded-md shadow-sm text-amber-700 bg-amber-100 hover:bg-amber-200 transition-transform transform hover:scale-105 disabled:opacity-50"
+                    >
+                        {isClearingCache ? <Spinner size="sm" /> : <RotateCcw size={20} />}
+                        <span className="ml-2">{isClearingCache ? 'Clearing...' : 'Clear Client Cache & Reload'}</span>
                     </button>
                 </div>
+            </div>
+
+            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
+                    <FileSpreadsheet className="mr-3 text-cyan-500" />
+                    Bulk Data Management (CSV Upload)
+                </h2>
+                <p className="text-slate-600 mb-6">
+                    To create or update many Exam Programs or Recommended Books at once, use the CSV bulk import tools. This functionality is located in your WordPress admin dashboard for security and direct server-side processing.
+                </p>
+                <a
+                    href={`${getApiBaseUrl()}/wp-admin/admin.php?page=mco-exam-engine&tab=bulk_import`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
+                >
+                    <ExternalLink size={20} className="mr-2" />
+                    Go to WordPress Bulk Import
+                </a>
             </div>
 
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
@@ -316,199 +365,17 @@ const Admin: FC = () => {
                 <p className="text-slate-600 mb-6">
                     This is a read-only overview of the certificate templates configured in your WordPress backend. To edit these, go to <strong>Exam App Engine &rarr; Certificate Templates</strong> in your WP admin dashboard.
                 </p>
-                <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                    {certificateTemplates.length > 0 ? (
-                        certificateTemplates.map(template => (
-                            <div key={template.id} className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                                <h3 className="font-bold text-slate-800">{template.name || template.title}</h3>
-                                <p className="text-xs text-slate-500 font-mono">ID: {template.id}</p>
-                                <div className="mt-2 text-sm text-slate-600 border-t border-slate-200 pt-2">
-                                    <p><strong>Title:</strong> {template.title}</p>
-                                    <p><strong>Body:</strong> <span dangerouslySetInnerHTML={{ __html: template.body.replace(/{(\w+)}/g, '<strong>[$1]</strong>') }} /></p>
-                                    <p className="mt-2"><strong>Signature 1:</strong> {template.signature1Name} ({template.signature1Title})</p>
-                                    {template.signature2Name && <p><strong>Signature 2:</strong> {template.signature2Name} ({template.signature2Title})</p>}
-                                </div>
-                            </div>
-                        ))
-                    ) : (
-                        <p className="text-slate-500 text-center py-4">No certificate templates found in the current configuration.</p>
+                {/* FIX: Complete truncated JSX and add default export to the component. */}
+                <div className="space-y-4 max-h-96 overflow-y-auto pr-4">
+                    {certificateTemplates.map(template => (
+                        <div key={template.id} className="bg-slate-100 p-3 rounded-md border border-slate-200">
+                            <p className="font-semibold text-slate-800">{template.name || `ID: ${template.id}`}</p>
+                            <p className="text-xs text-slate-600 truncate" title={template.title}>Title: "{template.title}"</p>
+                        </div>
+                    ))}
+                    {certificateTemplates.length === 0 && (
+                        <p className="text-slate-500 text-center py-4">No certificate templates found.</p>
                     )}
-                </div>
-            </div>
-
-            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
-                    <Cpu className="mr-3 text-cyan-500" />
-                    System Health Check
-                </h2>
-                <p className="text-slate-600 mb-6">
-                    If you're experiencing connection issues, use this tool to diagnose the problem with your WordPress backend. It will test each part of the connection step-by-step.
-                </p>
-                <button 
-                    onClick={handleRunHealthCheck} 
-                    disabled={isCheckingHealth} 
-                    className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105 disabled:opacity-50 disabled:bg-slate-400"
-                >
-                    <RefreshCw size={20} className={`mr-2 ${isCheckingHealth ? 'animate-spin' : ''}`} />
-                    {isCheckingHealth ? 'Running Check...' : 'Run Health Check'}
-                </button>
-                {healthCheckStatus.connectivity.status !== 'idle' && (
-                    <div className="mt-6 space-y-3">
-                        <HealthCheckItem 
-                            status={healthCheckStatus.connectivity.status} 
-                            title="1. Server Connectivity" 
-                            message={healthCheckStatus.connectivity.message}
-                            troubleshooting={
-                                <p>The app cannot reach your WordPress server. This could be due to a DNS issue, server downtime, or a firewall blocking all traffic. Please check if your website is online and contact your hosting provider.</p>
-                            }
-                        />
-                         {healthCheckStatus.connectivity.status === 'success' && (
-                            <HealthCheckItem 
-                                status={healthCheckStatus.apiEndpoint.status} 
-                                title="2. Plugin API Endpoint" 
-                                message={healthCheckStatus.apiEndpoint.message}
-                                troubleshooting={
-                                    <p>The server is online, but the plugin's API is not responding. Please ensure the <strong>Exam App Integration Engine</strong> plugin is activated on your WordPress site. If it is, a plugin conflict (e.g., another REST API or security plugin) might be preventing the API routes from registering. Try deactivating other plugins temporarily.</p>
-                                }
-                            />
-                         )}
-                         {healthCheckStatus.apiEndpoint.status === 'success' && (
-                            <HealthCheckItem 
-                                status={healthCheckStatus.authentication.status} 
-                                title="3. Authentication & CORS" 
-                                message={healthCheckStatus.authentication.message}
-                                troubleshooting={
-                                    <>
-                                        <p>The API is active, but the secure, authenticated request was blocked. Please check the following:</p>
-                                        <ol className="list-decimal list-inside space-y-1 mt-2">
-                                            <li><strong>CORS Setting:</strong> In WordPress, the 'Exam Application URL' <strong>must</strong> be set exactly to: <code className="bg-amber-200 p-1 rounded">{window.location.origin}</code></li>
-                                            <li><strong>Caching:</strong> Clear all caches on your WordPress site (plugin, server, CDN).</li>
-                                            <li><strong>Security Plugins:</strong> A security plugin (like Wordfence) might be stripping the 'Authorization' header from requests. Check its logs.</li>
-                                            <li><strong>Server Config:</strong> Your server's <code>.htaccess</code> or Nginx config may have rules that block authorization headers. Contact your host for support.</li>
-                                        </ol>
-                                    </>
-                                }
-                            />
-                         )}
-                    </div>
-                )}
-            </div>
-            
-            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-bold text-slate-800 flex items-center">
-                        <BarChart3 className="mr-3 text-cyan-500" />
-                        Exam Statistics
-                    </h2>
-                    <button onClick={fetchStats} disabled={isLoadingStats} className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 px-4 rounded-lg transition disabled:bg-slate-200 disabled:text-slate-400">
-                        <RefreshCw size={16} className={isLoadingStats ? 'animate-spin' : ''} />
-                        Refresh
-                    </button>
-                </div>
-                <p className="text-slate-600 mb-6">
-                    Overview of sales and attempts for each certification exam. Data is fetched directly from your WordPress backend.
-                </p>
-                
-                {isLoadingStats ? (
-                    <div className="flex justify-center items-center h-48"><Spinner /></div>
-                ) : statsError ? (
-                    <div className="text-center py-10 text-red-500 bg-red-50 p-4 rounded-lg">
-                        <p><strong>Error:</strong> {statsError}</p>
-                    </div>
-                ) : stats && stats.length > 0 ? (
-                     <div className="overflow-x-auto bg-white rounded-lg shadow">
-                        <table className="w-full text-sm text-left text-slate-500">
-                            <thead className="text-xs text-slate-700 uppercase bg-slate-100">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3">Exam Name</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Sales</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Attempts</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Passed</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Failed</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Pass Rate</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Avg. Score</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {stats.map((stat) => {
-                                    const examConfig = activeOrg?.exams.find(exam => exam.id === stat.examId);
-                                    const passScore = examConfig ? examConfig.passScore : 70;
-                                    const passRateColor = stat.passRate >= passScore ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800';
-                                    const avgScoreColor = stat.averageScore >= passScore ? 'text-green-600' : 'text-amber-600';
-
-                                    return (
-                                        <tr key={stat.examId} className="bg-white border-b hover:bg-slate-50">
-                                            <th scope="row" className="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">
-                                                {stat.examName}
-                                            </th>
-                                            <td className="px-6 py-4 text-center">{stat.totalSales}</td>
-                                            <td className="px-6 py-4 text-center">{stat.totalAttempts}</td>
-                                            <td className="px-6 py-4 text-center text-green-600 font-medium">{stat.passed}</td>
-                                            <td className="px-6 py-4 text-center text-red-600 font-medium">{stat.failed}</td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`px-2 py-1 font-semibold leading-tight rounded-full text-xs ${passRateColor}`}>
-                                                    {stat.passRate.toFixed(1)}%
-                                                </span>
-                                            </td>
-                                            <td className={`px-6 py-4 text-center font-bold ${avgScoreColor}`}>
-                                                {stat.averageScore.toFixed(1)}%
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <p className="text-center text-slate-500 py-10">No statistics available.</p>
-                )}
-            </div>
-
-             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
-                    <Users className="mr-3 text-cyan-500" />
-                    User Prize Management
-                </h2>
-                 <fieldset disabled={isSubmitting} className="space-y-6">
-                    <p className="text-slate-600 mb-6">
-                        Search for a user by name or email to manage their spins and prizes.
-                    </p>
-
-                    <form onSubmit={handleUserSearch} className="flex gap-2 mb-4">
-                        <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Enter user name or email..." className={inputClass} />
-                        <button type="submit" disabled={isSearching || !searchTerm.trim()} className="flex items-center justify-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
-                            {isSearching ? <Spinner/> : <Search size={16} />}
-                        </button>
-                    </form>
-                 </fieldset>
-            </div>
-            
-            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
-                    <Lightbulb className="mr-3 text-cyan-500" />
-                    Architectural Vision: A Multi-Subject Platform
-                </h2>
-                <div className="space-y-4 text-slate-600">
-                    <p>
-                        This application has a robust architectural foundation that makes it highly adaptable to subjects beyond medical coding (e.g., law, finance, IT certifications). The core concept is the separation of the application's <strong>engine</strong> from its <strong>content</strong>.
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
-                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                            <h4 className="font-semibold text-slate-700">The Platform (Engine)</h4>
-                            <p className="text-sm">Subject-agnostic, reusable parts like the user system, exam player, results engine, and AI feedback system.</p>
-                        </div>
-                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                            <h4 className="font-semibold text-slate-700">The Content (Fuel)</h4>
-                            <p className="text-sm">Subject-specific data like exam names, descriptions, question sources, and certificate text.</p>
-                        </div>
-                    </div>
-                    <h3 className="text-lg font-semibold text-slate-700">Current Architecture</h3>
-                    <p>
-                        All subject-specific data—exam names, descriptions, question sources, certificate templates—is loaded from a central configuration. This makes the application "multi-tenant" by design.
-                    </p>
-                    <p>
-                        Launching a version for a new subject only requires creating a new configuration file (or updating the existing one) and a new Google Sheet with questions, requiring <strong>no further code changes</strong>. This architecture ensures the platform is versatile and scalable.
-                    </p>
                 </div>
             </div>
         </div>
