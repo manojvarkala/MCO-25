@@ -13,13 +13,14 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import BookCover from '../assets/BookCover.tsx';
 
-
 // Extend jsPDF with autoTable for module augmentation
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
   }
 }
+
+type CertVisibility = 'NONE' | 'USER_EARNED' | 'ADMIN_OVERRIDE';
 
 const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } => {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -59,7 +60,7 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
 const Results: FC = () => {
     const { testId } = useParams<{ testId: string }>();
     const navigate = useNavigate();
-    const { user, token, isSubscribed, paidExamIds } = useAuth();
+    const { user, token, isSubscribed, paidExamIds, isEffectivelyAdmin } = useAuth();
     const { activeOrg, suggestedBooks } = useAppContext();
 
     const [result, setResult] = useState<TestResult | null>(null);
@@ -92,12 +93,18 @@ const Results: FC = () => {
         if (!result || !exam) return false;
         return result.score >= exam.passScore;
     }, [result, exam]);
-    
-    const canGetCertificate = useMemo(() => {
-        if (!exam || !isPassed) return false;
-        return !exam.isPractice;
-    }, [exam, isPassed]);
 
+    const certificateVisibility = useMemo((): CertVisibility => {
+        if (!exam) return 'NONE';
+        const normallyVisible = isPassed && !exam.isPractice;
+
+        if (isEffectivelyAdmin) {
+            return normallyVisible ? 'USER_EARNED' : 'ADMIN_OVERRIDE';
+        }
+
+        return normallyVisible ? 'USER_EARNED' : 'NONE';
+    }, [exam, isPassed, isEffectivelyAdmin]);
+    
     const canGetAIFeedback = useMemo(() => {
         if (!exam || !result || isPassed) return false;
         if (isSubscribed) return true;
@@ -237,9 +244,13 @@ const Results: FC = () => {
                         </div>
                     </div>
                     
-                    {canGetCertificate && (
-                        <button onClick={() => navigate(`/certificate/${result.testId}`)} className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                            <Award size={20} /> Download Your Certificate
+                    {certificateVisibility !== 'NONE' && (
+                        <button 
+                            onClick={() => navigate(`/certificate/${result.testId}`)} 
+                            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
+                        >
+                            <Award size={20} /> 
+                            {certificateVisibility === 'ADMIN_OVERRIDE' ? 'View Certificate (Admin)' : 'Download Your Certificate'}
                         </button>
                     )}
 

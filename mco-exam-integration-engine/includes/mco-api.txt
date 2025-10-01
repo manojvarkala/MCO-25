@@ -77,7 +77,7 @@ if (!function_exists('mco_generate_exam_jwt')) {
             'isSubscribed' => (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($user_id, '', 'active')),
             'spinsAvailable' => (int) get_user_meta($user_id, 'mco_spins_available', true),
             'wonPrize' => get_user_meta($user_id, 'mco_won_prize', true) ?: null,
-            'isSpinWheelEnabled' => true,
+            'isSpinWheelEnabled' => (bool) get_option('mco_is_spin_wheel_enabled', false),
         ];
 
         $header = mco_base64url_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));

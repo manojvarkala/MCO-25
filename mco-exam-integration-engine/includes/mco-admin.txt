@@ -1,6 +1,9 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+// --- GLOBAL FOR CUSTOM NOTICES ---
+$mco_admin_notices = [];
+
 // --- HOOKS ---
 if (!function_exists('mco_register_admin_hooks')) {
     function mco_register_admin_hooks() {
@@ -8,6 +11,7 @@ if (!function_exists('mco_register_admin_hooks')) {
         add_action('admin_init', 'mco_register_plugin_settings');
         add_filter('manage_mco_exam_program_posts_columns', 'mco_add_exam_program_columns');
         add_action('manage_mco_exam_program_posts_custom_column', 'mco_display_exam_program_columns', 10, 2);
+        add_action('admin_notices', 'mco_display_custom_admin_notices'); // Hook for displaying our custom notices
     }
 }
 
@@ -30,7 +34,7 @@ if (!function_exists('mco_admin_page_html')) {
         ?>
         <div class="wrap">
             <h1>Exam App Engine Settings</h1>
-            <?php settings_errors(); ?>
+            <?php settings_errors(); // This is for the forms that post to options.php ?>
 
             <h2 class="nav-tab-wrapper">
                 <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
@@ -164,15 +168,41 @@ if (!function_exists('mco_handle_admin_page_actions')) {
     }
 }
 
+// --- CUSTOM NOTICE DISPLAY ---
+if (!function_exists('mco_display_custom_admin_notices')) {
+    function mco_display_custom_admin_notices() {
+        global $mco_admin_notices;
+
+        $screen = get_current_screen();
+        if (!$screen || $screen->id !== 'toplevel_page_mco-exam-engine') {
+            return;
+        }
+
+        if (!empty($mco_admin_notices)) {
+            foreach ($mco_admin_notices as $notice) {
+                printf(
+                    '<div class="notice notice-%s is-dismissible"><p>%s</p></div>',
+                    esc_attr($notice['type']),
+                    esc_html($notice['message'])
+                );
+            }
+        }
+    }
+}
+
+
 // --- SETTINGS REGISTRATION ---
 if (!function_exists('mco_register_plugin_settings')) {
     function mco_register_plugin_settings() {
         // Main Settings
         register_setting('mco_main_settings_group', 'mco_exam_app_url', ['type' => 'string', 'sanitize_callback' => 'mco_sanitize_textarea']);
         register_setting('mco_main_settings_group', 'mco_logo_url', ['type' => 'string', 'sanitize_callback' => 'esc_url_raw']);
+        register_setting('mco_main_settings_group', 'mco_is_spin_wheel_enabled', ['sanitize_callback' => 'mco_sanitize_spin_wheel_option']);
+        
         add_settings_section('mco_main_section', 'Main Application Settings', null, 'mco-exam-engine-main');
         add_settings_field('mco_exam_app_url', 'Exam Application URL(s)', 'mco_exam_app_url_callback', 'mco-exam-engine-main', 'mco_main_section');
         add_settings_field('mco_logo_url', 'Organization Logo', 'mco_logo_url_callback', 'mco-exam-engine-main', 'mco_main_section');
+        add_settings_field('mco_is_spin_wheel_enabled', 'Enable Spin & Win Feature', 'mco_is_spin_wheel_enabled_callback', 'mco-exam-engine-main', 'mco_main_section');
 
         // Certificate Templates
         register_setting('mco_certificate_templates_group', 'mco_certificate_templates', ['type' => 'array', 'sanitize_callback' => 'mco_sanitize_certificate_templates']);
@@ -183,6 +213,11 @@ if (!function_exists('mco_register_plugin_settings')) {
 function mco_sanitize_textarea($value) {
     update_option('mco_config_version', current_time('YmdHis')); // Force refresh
     return implode("\n", array_map('sanitize_text_field', explode("\n", $value)));
+}
+
+function mco_sanitize_spin_wheel_option($input) {
+    update_option('mco_config_version', current_time('YmdHis')); // Bust cache on any change
+    return $input ? '1' : '0';
 }
 
 function mco_sanitize_certificate_templates($templates) {
@@ -203,15 +238,16 @@ function mco_sanitize_certificate_templates($templates) {
 
 // --- CSV IMPORT LOGIC (UPDATE-OR-CREATE) ---
 function mco_handle_exam_program_csv_upload() {
+    global $mco_admin_notices;
     if (empty($_FILES['exam_program_csv']['tmp_name'])) {
-        add_settings_error('mco_importer', 'csv_error', 'No file uploaded.', 'error');
+        $mco_admin_notices[] = ['type' => 'error', 'message' => 'No file uploaded.'];
         return;
     }
 
     $csv_file = $_FILES['exam_program_csv']['tmp_name'];
     $file_handle = fopen($csv_file, 'r');
     if (!$file_handle) {
-        add_settings_error('mco_importer', 'csv_error', 'Could not open the uploaded file.', 'error');
+        $mco_admin_notices[] = ['type' => 'error', 'message' => 'Could not open the uploaded file.'];
         return;
     }
 
@@ -290,20 +326,21 @@ function mco_handle_exam_program_csv_upload() {
     }
     fclose($file_handle);
     update_option('mco_config_version', current_time('YmdHis'));
-    add_settings_error('mco_importer', 'csv_success', "Import complete. Created: {$created_count}, Updated: {$updated_count}, Failed/Skipped: {$failed_count}.", 'success');
+    $mco_admin_notices[] = ['type' => 'success', 'message' => "Import complete. Created: {$created_count}, Updated: {$updated_count}, Failed/Skipped: {$failed_count}."];
 }
 
 
 function mco_handle_book_csv_upload() {
+    global $mco_admin_notices;
     if (empty($_FILES['recommended_book_csv']['tmp_name'])) {
-        add_settings_error('mco_importer', 'csv_error', 'No file uploaded.', 'error');
+        $mco_admin_notices[] = ['type' => 'error', 'message' => 'No file uploaded.'];
         return;
     }
 
     $csv_file = $_FILES['recommended_book_csv']['tmp_name'];
     $file_handle = fopen($csv_file, 'r');
     if (!$file_handle) {
-        add_settings_error('mco_importer', 'csv_error', 'Could not open the uploaded file.', 'error');
+        $mco_admin_notices[] = ['type' => 'error', 'message' => 'Could not open the uploaded file.'];
         return;
     }
 
@@ -354,14 +391,15 @@ function mco_handle_book_csv_upload() {
     }
     fclose($file_handle);
     update_option('mco_config_version', current_time('YmdHis'));
-    add_settings_error('mco_importer', 'csv_success', "Import complete. Created: {$created_count}, Updated: {$updated_count}, Failed/Skipped: {$failed_count}.", 'success');
+    $mco_admin_notices[] = ['type' => 'success', 'message' => "Import complete. Created: {$created_count}, Updated: {$updated_count}, Failed/Skipped: {$failed_count}."];
 }
 
 
 // --- TOOLS HANDLERS ---
 function mco_handle_clear_app_cache() {
+    global $mco_admin_notices;
     update_option('mco_config_version', current_time('YmdHis'));
-    add_settings_error('mco_tools', 'cache_cleared', 'Application configuration cache has been cleared.', 'success');
+    $mco_admin_notices[] = ['type' => 'success', 'message' => 'Application configuration cache has been cleared.'];
 }
 
 
@@ -395,6 +433,11 @@ function mco_logo_url_callback() {
     $value = get_option('mco_logo_url', '');
     echo '<input type="text" name="mco_logo_url" value="' . esc_attr($value) . '" class="large-text code" placeholder="Enter URL or Base64 data URI">';
     echo '<p class="description">Optional. Overrides the site icon. Paste a direct image URL or Base64 data. For best results with certificates, use Base64.</p>';
+}
+function mco_is_spin_wheel_enabled_callback() {
+    $value = get_option('mco_is_spin_wheel_enabled', false);
+    echo '<input type="checkbox" name="mco_is_spin_wheel_enabled" value="1" ' . checked(1, $value, false) . ' />';
+    echo '<p class="description">When enabled, eligible users will see the "Spin & Win" feature in the app.</p>';
 }
 function mco_certificate_section_callback() {
     echo '<p>Customize the content of the certificates generated by the app. Use the placeholders like <code>{examName}</code> to dynamically insert data.</p>';
