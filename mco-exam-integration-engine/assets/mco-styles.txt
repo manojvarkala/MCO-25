@@ -602,3 +602,106 @@ body.single-mco_exam_program .mco-procedural-book-cover p { font-size: 0.6rem !i
 .mco-slider-next {
     right: 0;
 }
+
+/* NEW: Showcase Page Hero Section Styles */
+/* These styles are activated by adding the 'mco-hero-section' class to a WP Cover block. */
+
+.mco-showcase-content-section {
+    padding: 4rem 1rem;
+}
+.mco-showcase-content-section h2 {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: #1e293b; /* slate-800 */
+    margin: 0 0 2.5rem;
+    text-align: center;
+    scroll-margin-top: 80px; /* Offset for anchor links */
+}
+@media (min-width: 768px) {
+    .mco-showcase-content-section { padding: 5rem 1rem; }
+}
+
+/* --- MCO (Student) Hero Theme --- */
+.mco-hero-section {
+    position: relative;
+    padding: 6rem 1rem;
+    border-radius: 1rem;
+    overflow: hidden;
+    text-align: center;
+    color: white;
+    background-size: cover;
+    background-position: center;
+}
+.mco-hero-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(45deg, rgba(8, 145, 178, 0.8), rgba(100, 116, 139, 0.7)); /* cyan-600 to slate-500 */
+}
+.mco-hero-section .wp-block-cover__inner-container h1 {
+    font-size: clamp(2.5rem, 5vw, 3.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    margin: 0 0 1rem;
+    color: white !important;
+}
+.mco-hero-section .wp-block-cover__inner-container p {
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+    max-width: 600px;
+    margin: 0 auto 2rem;
+    opacity: 0.9;
+    color: white !important;
+}
+.mco-hero-section .wp-block-button__link {
+    padding: 0.875rem 2rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+.mco-hero-section .wp-block-button__link.is-style-fill { /* WP Primary Button */
+    background-color: #f59e0b !important; /* amber-500 */
+    color: white !important;
+}
+.mco-hero-section .wp-block-button__link.is-style-fill:hover {
+    background-color: #d97706 !important; /* amber-600 */
+}
+.mco-hero-section .wp-block-button__link.is-style-outline { /* WP Outline Button */
+    background-color: transparent !important;
+    color: white !important;
+    border-color: white !important;
+}
+.mco-hero-section .wp-block-button__link.is-style-outline:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+}
+@media (min-width: 768px) {
+    .mco-hero-section { padding: 8rem 2rem; }
+}
+
+/* --- Annapoorna (Corporate) Hero Theme --- */
+/* To use, add class 'ai-hero-theme' to your Cover block's "Additional CSS class(es)" field */
+.ai-hero-theme {
+    background-color: #0f172a !important;
+}
+.ai-hero-theme::before {
+    background: linear-gradient(45deg, rgba(15, 23, 42, 0.9), rgba(8, 145, 178, 0.7)) !important;
+}
+.ai-hero-theme .wp-block-cover__inner-container p {
+    color: #cbd5e1 !important;
+}
+.ai-hero-theme .wp-block-button__link.is-style-fill {
+    background-color: #0891b2 !important;
+}
+.ai-hero-theme .wp-block-button__link.is-style-fill:hover {
+    background-color: #0e7490 !important;
+}
+.ai-hero-theme .wp-block-button__link.is-style-outline {
+    background-color: #334155 !important;
+    border-color: #334155 !important;
+}
+.ai-hero-theme .wp-block-button__link.is-style-outline:hover {
+    background-color: #475569 !important;
+    border-color: #475569 !important;
+}

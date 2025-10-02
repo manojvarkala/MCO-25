@@ -359,8 +359,8 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
     $csv_url = '';
     $error_message = 'Could not fetch questions from Google Sheets. Please ensure the sheet is public ("Anyone with the link can view"). If the issue persists, try the more reliable "Publish to the web" option (as a CSV) inside Google Sheets and use that link instead.';
 
-    // Check for "Publish to the web" format first - it's more reliable for programmatic access.
-    if (strpos($sheet_url, '/pub?gid=') !== false && strpos($sheet_url, 'output=csv') !== false) {
+    // Check for "Publish to the web" format first (handles modern /pub?output=csv and older /pub?gid= formats).
+    if (strpos($sheet_url, '/pub?output=csv') !== false) {
         $csv_url = $sheet_url;
     } 
     // Fallback to constructing the export URL from a standard sharing link.
