@@ -220,7 +220,86 @@ body.woocommerce-cart, body.woocommerce-checkout {
     color: #6b7280; /* gray-500 */
 }
 
-/* NEW: Styles for Single WooCommerce Product Page */
+/* Book Showcase Shortcode Styles */
+.mco-book-showcase-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.mco-book-card {
+    background: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05);
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.mco-book-card-thumbnail {
+    width: 100%;
+    height: 200px;
+    background-color: #f1f5f9;
+}
+.mco-book-card-thumbnail .mco-book-thumbnail-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.mco-book-card-thumbnail .mco-procedural-book-cover {
+    height: 100%;
+}
+.mco-book-card-content {
+    padding: 1.5rem;
+    flex-grow: 1;
+}
+.mco-book-card-content h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 0.5rem;
+}
+.mco-book-card-content p {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.5;
+    margin: 0;
+}
+.mco-book-card-footer {
+    padding: 0 1.5rem 1.5rem;
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.mco-book-button, .mco-book-button-secondary {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    text-decoration: none !important;
+    font-weight: 600;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+.mco-book-button {
+    background-color: #f59e0b;
+    color: #fff !important;
+}
+.mco-book-button:hover {
+    background-color: #d97706;
+}
+.mco-book-button-secondary {
+    background-color: #f1f5f9;
+    color: #334155 !important;
+}
+.mco-book-button-secondary:hover {
+    background-color: #e2e8f0;
+}
+
+
+/* Styles for Single WooCommerce Product Page */
 .woocommerce div.product div.images img {
     max-width: 50%;
     height: auto;
@@ -403,3 +482,123 @@ body.single-mco_exam_program .mco-procedural-book-cover p { font-size: 0.6rem !i
 .mco-book-cover-bg-8 { background-image: linear-gradient(to bottom right, #fff7ed, #ffedd5); }
 .mco-book-cover-text-8 { color: #7c2d12; }
 .mco-book-cover-accent-8 { background-color: #fdba74; }
+
+/* NEW: News Slider Styles */
+.mco-news-slider-section {
+    position: relative;
+    padding: 0 40px; /* Space for nav buttons */
+}
+.mco-news-slider-wrapper {
+    overflow: hidden;
+}
+.mco-news-slider-container {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 1.5rem;
+    padding-bottom: 1.5rem; /* For scrollbar spacing */
+    scrollbar-width: none; /* Firefox */
+}
+.mco-news-slider-container::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+}
+.mco-news-card {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    background: #fff;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+}
+@media (min-width: 640px) {
+    .mco-news-card { flex-basis: calc(50% - 0.75rem); }
+}
+@media (min-width: 1024px) {
+    .mco-news-card { flex-basis: calc(33.333% - 1rem); }
+}
+.mco-news-card-image-link {
+    display: block;
+    height: 180px;
+    background-color: #f1f5f9;
+}
+.mco-news-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+.mco-news-card:hover .mco-news-card-image {
+    transform: scale(1.05);
+}
+.mco-news-card-image-placeholder {
+    width: 100%;
+    height: 100%;
+    background-color: #e2e8f0;
+}
+.mco-news-card-content {
+    padding: 1.25rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+.mco-news-card-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    line-height: 1.4;
+}
+.mco-news-card-title a {
+    color: #1e293b;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+.mco-news-card-title a:hover {
+    color: #0891b2;
+}
+.mco-news-card-excerpt {
+    font-size: 0.9rem;
+    color: #475569;
+    margin: 0;
+    line-height: 1.6;
+    flex-grow: 1;
+}
+.mco-news-card-readmore {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #0891b2;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+.mco-news-card-readmore:hover {
+    color: #0e7490;
+}
+.mco-slider-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid #e2e8f0;
+    border-radius: 9999px;
+    width: 40px;
+    height: 40px;
+    font-size: 24px;
+    line-height: 38px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #334155;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.mco-slider-nav:hover {
+    background-color: #fff;
+    color: #0891b2;
+}
+.mco-slider-prev {
+    left: 0;
+}
+.mco-slider-next {
+    right: 0;
+}
