@@ -1,1 +1,161 @@
-full contents of mco-exam-integration-engine/includes/mco-data.txt
+<?php
+if (!defined('ABSPATH')) exit;
+
+// This function is the single source of truth for all dynamic data passed to the React app.
+// It uses a transient for caching to improve performance on high-traffic sites.
+function mco_get_app_config_data() {
+    $cached_data = get_transient('mco_app_config_data');
+    if ($cached_data !== false) {
+        return $cached_data;
+    }
+
+    $all_exams = [];
+    $all_prices = [];
+    $all_suggested_books = [];
+    $exam_product_categories = [];
+
+    $exam_program_posts = get_posts([
+        'post_type' => 'mco_exam_program',
+        'posts_per_page' => -1,
+        'post_status' => 'publish'
+    ]);
+
+    foreach ($exam_program_posts as $post) {
+        $practice_questions = mco_get_single_term($post->ID, 'exam_practice_questions', 'name');
+        $practice_duration = mco_get_single_term($post->ID, 'exam_practice_duration', 'name');
+        $cert_questions = mco_get_single_term($post->ID, 'exam_cert_questions', 'name');
+        $cert_duration = mco_get_single_term($post->ID, 'exam_cert_duration', 'name');
+        $pass_score = mco_get_single_term($post->ID, 'exam_pass_score', 'name');
+        
+        $cert_sku = get_post_meta($post->ID, '_mco_certification_exam_sku', true);
+        $question_source = get_post_meta($post->ID, '_mco_question_source_url', true);
+        $is_proctored = (bool) get_post_meta($post->ID, '_mco_is_proctored', true);
+        $book_post_ids = get_post_meta($post->ID, '_mco_recommended_book_ids', true) ?: [];
+        $recommended_book_ids = [];
+        if (is_array($book_post_ids)) {
+            foreach ($book_post_ids as $book_post_id) {
+                $custom_id = get_post_meta($book_post_id, '_mco_book_id', true);
+                if ($custom_id) {
+                    $recommended_book_ids[] = $custom_id;
+                }
+            }
+        }
+
+        $program_id_for_app = 'prod-' . $post->ID;
+        $practice_exam_id_for_app = 'exam-' . $program_id_for_app . '-practice';
+        
+        // --- FIX: Fetch WooCommerce image URL ---
+        $image_url = '';
+        if ($cert_sku) {
+            $product_id = wc_get_product_id_by_sku($cert_sku);
+            if ($product_id) {
+                $image_url = get_the_post_thumbnail_url($product_id, 'medium_large') ?: '';
+            }
+        }
+        
+        $exam_product_categories[] = [
+            'id' => $program_id_for_app,
+            'name' => get_the_title($post),
+            'description' => has_excerpt($post->ID) ? get_the_excerpt($post->ID) : wp_trim_words($post->post_content, 30),
+            'practiceExamId' => $practice_exam_id_for_app,
+            'certificationExamId' => $cert_sku,
+            'questionSourceUrl' => $question_source,
+        ];
+
+        // Practice Exam
+        $all_exams[] = [
+            'id' => $practice_exam_id_for_app,
+            'name' => get_the_title($post) . ' Practice',
+            'description' => 'A practice test to assess your knowledge for the ' . get_the_title($post) . '.',
+            'price' => 0,
+            'productSku' => 'practice-' . $cert_sku,
+            'numberOfQuestions' => (int)$practice_questions,
+            'passScore' => (int)$pass_score,
+            'certificateTemplateId' => 'cert-practice',
+            'isPractice' => true,
+            'isProctored' => false,
+            'durationMinutes' => (int)$practice_duration,
+            'questionSourceUrl' => $question_source,
+            'recommendedBookIds' => $recommended_book_ids,
+            'imageUrl' => $image_url,
+        ];
+        
+        // Certification Exam
+        if ($cert_sku) {
+            $product = wc_get_product_id_by_sku($cert_sku) ? wc_get_product(wc_get_product_id_by_sku($cert_sku)) : null;
+            if ($product) {
+                 $all_exams[] = [
+                    'id' => $cert_sku,
+                    'name' => get_the_title($post),
+                    'description' => has_excerpt($post->ID) ? get_the_excerpt($post->ID) : wp_trim_words($post->post_content, 30),
+                    'price' => (float)$product->get_price(),
+                    'regularPrice' => (float)$product->get_regular_price(),
+                    'productSku' => $cert_sku,
+                    'productSlug' => $product->get_slug(),
+                    'numberOfQuestions' => (int)$cert_questions,
+                    'passScore' => (int)$pass_score,
+                    'certificateTemplateId' => 'cert-completion',
+                    'isPractice' => false,
+                    'isProctored' => $is_proctored,
+                    'durationMinutes' => (int)$cert_duration,
+                    'questionSourceUrl' => $question_source,
+                    'recommendedBookIds' => $recommended_book_ids,
+                    'imageUrl' => $image_url,
+                ];
+
+                $all_prices[$cert_sku] = [
+                    'price' => (float)$product->get_price(),
+                    'regularPrice' => (float)$product->get_regular_price(),
+                    'productId' => $product->get_id(),
+                    'avgRating' => (float)$product->get_average_rating(),
+                    'reviewCount' => (int)$product->get_review_count()
+                ];
+            }
+        }
+    }
+
+    $book_posts = get_posts([
+        'post_type' => 'mco_recommended_book',
+        'posts_per_page' => -1,
+        'post_status' => 'publish'
+    ]);
+
+    foreach($book_posts as $book) {
+        $all_suggested_books[] = [
+            'id' => get_post_meta($book->ID, '_mco_book_id', true),
+            'title' => get_the_title($book),
+            'description' => has_excerpt($book->ID) ? get_the_excerpt($book->ID) : wp_trim_words($book->post_content, 30),
+            'thumbnailUrl' => get_post_meta($book->ID, '_mco_thumbnail_url', true),
+            'affiliateLinks' => [
+                'com' => get_post_meta($book->ID, '_mco_link_com', true),
+                'in' => get_post_meta($book->ID, '_mco_link_in', true),
+                'ae' => get_post_meta($book->ID, '_mco_link_ae', true),
+            ]
+        ];
+    }
+    
+    // Add subscription products to prices list for the pricing page
+    $sub_monthly_prod = wc_get_product_id_by_sku('sub-monthly') ? wc_get_product(wc_get_product_id_by_sku('sub-monthly')) : null;
+    $sub_yearly_prod = wc_get_product_id_by_sku('sub-yearly') ? wc_get_product(wc_get_product_id_by_sku('sub-yearly')) : null;
+    if($sub_monthly_prod) $all_prices['sub-monthly'] = ['price' => (float)$sub_monthly_prod->get_price(), 'regularPrice' => (float)$sub_monthly_prod->get_regular_price()];
+    if($sub_yearly_prod) $all_prices['sub-yearly'] = ['price' => (float)$sub_yearly_prod->get_price(), 'regularPrice' => (float)$sub_yearly_prod->get_regular_price()];
+
+    $data = [
+        'exams' => $all_exams,
+        'examProductCategories' => $exam_product_categories,
+        'suggestedBooks' => $all_suggested_books,
+        'examPrices' => $all_prices,
+    ];
+
+    set_transient('mco_app_config_data', $data, HOUR_IN_SECONDS);
+    return $data;
+}
+
+function mco_get_single_term($post_id, $taxonomy, $field = 'name') {
+    $terms = get_the_terms($post_id, $taxonomy);
+    if (!empty($terms) && !is_wp_error($terms)) {
+        return $terms[0]->$field;
+    }
+    return '';
+}
+?>

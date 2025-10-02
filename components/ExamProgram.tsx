@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, RecommendedBook, ExamProductCategory } from '../types.ts';
-import { AlertTriangle, BookOpen, CheckCircle, Clock, HelpCircle, PlayCircle, ShoppingCart } from 'lucide-react';
+import { AlertTriangle, BookOpen, CheckCircle, Clock, HelpCircle, PlayCircle, ShoppingCart, Award } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 import Spinner from './Spinner.tsx';
 
@@ -65,7 +65,6 @@ const ExamProgram: FC = () => {
         return suggestedBooks.filter(book => programData.certExam.recommendedBookIds.includes(book.id));
     }, [programData, suggestedBooks]);
 
-
     if (isInitializing) {
         return <div className="text-center py-10"><Spinner size="lg" /></div>;
     }
@@ -84,6 +83,7 @@ const ExamProgram: FC = () => {
     }
 
     const { category, practiceExam, certExam } = programData;
+    const imageUrl = certExam?.imageUrl || practiceExam?.imageUrl;
 
     const handleButtonClick = (exam: Exam, canTake: boolean) => {
         if (canTake) {
@@ -100,8 +100,17 @@ const ExamProgram: FC = () => {
 
     return (
         <div className="space-y-8">
-             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                <h1 className="text-3xl font-extrabold text-slate-900">{category.name}</h1>
+             {imageUrl && (
+                <div className="rounded-xl shadow-lg overflow-hidden relative">
+                    <img src={imageUrl} alt={category.name} className="w-full h-48 md:h-64 object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    <div className="absolute bottom-0 left-0 p-8">
+                        <h1 className="text-3xl font-extrabold text-white shadow-md">{category.name}</h1>
+                    </div>
+                </div>
+            )}
+            <div className={`bg-white p-8 rounded-xl shadow-lg border border-slate-200 ${imageUrl ? '-mt-8 relative z-10' : ''}`}>
+                {!imageUrl && <h1 className="text-3xl font-extrabold text-slate-900">{category.name}</h1>}
                 <p className="mt-2 text-lg text-slate-600">{category.description}</p>
             </div>
 
@@ -110,7 +119,7 @@ const ExamProgram: FC = () => {
                     {/* Practice Exam */}
                     {practiceExam && (
                         <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-cyan-500">
-                             <h3 className="font-bold text-xl text-slate-800">{practiceExam.name}</h3>
+                            <h3 className="font-bold text-xl text-slate-800 flex items-center gap-3"><BookOpen />{practiceExam.name}</h3>
                              <p className="text-sm text-slate-500 mt-1 mb-4">{practiceExam.description}</p>
                              <div className="flex justify-between text-sm text-slate-600 mb-4 p-3 bg-slate-50 rounded-md">
                                 <span><HelpCircle size={14} className="inline mr-1" />{practiceExam.numberOfQuestions} Questions</span>
@@ -130,7 +139,7 @@ const ExamProgram: FC = () => {
                      {/* Certification Exam */}
                     {certExam && (
                         <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-amber-500">
-                            <h3 className="font-bold text-xl text-slate-800">{certExam.name}</h3>
+                            <h3 className="font-bold text-xl text-slate-800 flex items-center gap-3"><Award />{certExam.name}</h3>
                             <p className="text-sm text-slate-500 mt-1 mb-4">{certExam.description}</p>
                             <div className="flex justify-between text-sm text-slate-600 mb-4 p-3 bg-slate-50 rounded-md">
                                <span><HelpCircle size={14} className="inline mr-1" />{certExam.numberOfQuestions} Questions</span>

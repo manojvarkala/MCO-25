@@ -120,7 +120,13 @@ const BookCard: FC<{ book: RecommendedBook, gradientClass: string }> = ({ book, 
 
 const BookStore: FC = () => {
     const { suggestedBooks, isInitializing } = useAppContext();
-    const gradients = ['bg-gradient-to-br from-orange-500 to-amber-500', 'bg-gradient-to-br from-lime-600 to-emerald-500', 'bg-gradient-to-br from-rose-500 to-pink-500', 'bg-gradient-to-br from-slate-600 to-gray-700'];
+    const gradients = [
+        'bg-gradient-to-br from-stone-800 to-zinc-900',      // Dark Slate/Black
+        'bg-gradient-to-br from-amber-900 to-stone-900',     // Dark Brown
+        'bg-gradient-to-br from-emerald-800 to-gray-900',    // Dark Green
+        'bg-gradient-to-br from-rose-900 to-slate-900',      // Dark Red/Maroon
+        'bg-gradient-to-br from-indigo-900 to-slate-900',    // Dark Purple
+    ];
 
     if (isInitializing) {
         return (

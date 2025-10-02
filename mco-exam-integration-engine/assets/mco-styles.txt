@@ -1,1 +1,337 @@
-full contents of mco-exam-integration-engine/assets/mco-styles.txt
+/* MCO Exam App Integration Engine Styles (v30.2.0) */
+
+/* --- GENERAL & UTILITIES --- */
+.mco-hero-section {
+    margin-top: 0 !important; /* Fix for theme conflicts adding space */
+}
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* --- [mco_exam_login] SHORTCODE --- */
+.mco-login-box {
+    background-color: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 2rem;
+    text-align: center;
+    max-width: 480px;
+    margin: 2rem auto;
+}
+.mco-login-box p {
+    color: #475569;
+    margin-bottom: 1.5rem;
+}
+.mco-login-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+.mco-login-button {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+.mco-login-button {
+    background-color: #0891b2;
+    color: white;
+}
+.mco-login-button:hover {
+    background-color: #0e7490;
+}
+.mco-login-button-secondary {
+    background-color: #e2e8f0;
+    color: #1e293b;
+}
+.mco-login-button-secondary:hover {
+    background-color: #cbd5e1;
+}
+
+/* --- CARD GRID & CARD STYLES ([mco_exam_showcase] & [mco_book_showcase]) --- */
+.mco-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2rem;
+}
+.mco-card {
+    border-radius: 1rem;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+    color: white;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.mco-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+}
+.mco-card__icon {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+.mco-card__icon svg {
+    width: 20px;
+    height: 20px;
+}
+.mco-card__title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0 0 0.5rem;
+}
+.mco-card__description {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.8);
+    flex-grow: 1;
+    margin: 0 0 1.5rem;
+}
+.mco-card__footer {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.2);
+}
+.mco-card__button {
+    display: block;
+    width: 100%;
+    text-align: center;
+    padding: 0.6rem 0.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-size: 0.8rem;
+}
+.mco-card__button--primary {
+    background-color: #ffffff;
+    color: #1e293b;
+}
+.mco-card__button--primary:hover {
+    background-color: rgba(255, 255, 255, 0.9);
+}
+.mco-card__button--secondary {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+.mco-card__button--secondary:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Card Gradients */
+.mco-card--gradient-1 { background-image: linear-gradient(to top right, #4f46e5, #7c3aed); } /* Indigo -> Purple */
+.mco-card--gradient-2 { background-image: linear-gradient(to top right, #059669, #10b981); } /* Emerald -> Green */
+.mco-card--gradient-3 { background-image: linear-gradient(to top right, #db2777, #e11d48); } /* Pink -> Rose */
+.mco-card--gradient-4 { background-image: linear-gradient(to top right, #0f172a, #334155); } /* Slate */
+.mco-card--gradient-5 { background-image: linear-gradient(to top right, #0891b2, #22d3ee); } /* Cyan -> Sky */
+.mco-card--gradient-6 { background-image: linear-gradient(to top right, #f97316, #fb923c); } /* Orange -> Amber */
+.mco-card--gradient-7 { background-image: linear-gradient(to top right, #be185d, #ec4899); } /* Fuchsia -> Pink */
+.mco-card--gradient-8 { background-image: linear-gradient(to top right, #4338ca, #6366f1); } /* Indigo */
+
+
+/* --- [mco_news_slider] SHORTCODE --- */
+.mco-news-slider-section {
+    position: relative;
+    padding: 0;
+    margin: 2rem 0;
+}
+.mco-news-slider-wrapper {
+    overflow: hidden;
+}
+.mco-news-slider {
+    display: flex;
+    gap: 1rem; /* 16px */
+    transition: transform 0.5s ease-in-out;
+}
+.mco-news-card {
+    flex: 0 0 100%;
+    max-width: 100%;
+    scroll-snap-align: start;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background-color: #ffffff;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05);
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+}
+@media (min-width: 640px) {
+    .mco-news-card {
+        flex: 0 0 calc(50% - 0.5rem);
+        max-width: calc(50% - 0.5rem);
+    }
+}
+@media (min-width: 1024px) {
+    .mco-news-card {
+        flex: 0 0 calc(33.333% - 0.666rem);
+        max-width: calc(33.333% - 0.666rem);
+    }
+}
+.mco-news-card__image-link {
+    display: block;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+}
+.mco-news-card__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+.mco-news-card:hover .mco-news-card__image {
+    transform: scale(1.05);
+}
+.mco-news-card__content {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+.mco-news-card__title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+}
+.mco-news-card__title a {
+    text-decoration: none;
+    color: #1e293b;
+}
+.mco-news-card__title a:hover {
+    color: #0891b2;
+}
+.mco-news-card__excerpt {
+    font-size: 0.875rem;
+    color: #475569;
+    flex-grow: 1;
+    margin: 0;
+}
+/* Bookshelf Fallback Styles */
+.mco-news-card--bookshelf {
+    flex-direction: row;
+    align-items: stretch;
+}
+.mco-news-card__spine {
+    flex: 0 0 24px;
+    background-image: linear-gradient(to bottom, #7c3aed, #4f46e5);
+}
+.mco-news-card__content--bookshelf {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+.mco-news-card__title--bookshelf a {
+    color: #334155;
+}
+.mco-news-card__excerpt--bookshelf {
+    color: #64748b;
+    font-size: 0.875rem;
+    flex-grow: 1;
+}
+.mco-news-card__author {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-top: 1rem;
+    font-style: italic;
+}
+
+.mco-news-slider__nav {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+.mco-news-slider__nav button {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #cbd5e1;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: background-color 0.2s ease;
+}
+.mco-news-slider__nav button.active {
+    background-color: #0891b2;
+}
+
+
+/* --- [mco_exam_program_details] SHORTCODE --- */
+.mco-program-details-wrapper {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05);
+    border: 1px solid #e2e8f0;
+    max-width: 800px;
+    margin: 2rem auto;
+}
+.mco-program-details__image {
+    width: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    border-radius: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+.mco-program-header-content {
+    margin-bottom: 1.5rem;
+}
+.mco-program-details__title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+}
+.mco-program-details__description {
+    color: #475569;
+    margin-bottom: 2rem;
+}
+.mco-program-details__cta-box {
+    background-color: #f0f9ff;
+    border: 1px solid #bae6fd;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    text-align: center;
+}
+.mco-program-details__cta-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0c4a6e;
+    margin-bottom: 0.5rem;
+}
+.mco-program-details__cta-text {
+    color: #075985;
+    margin-bottom: 1.5rem;
+}
+.mco-program-details__cta-button {
+    display: inline-block;
+    background-color: #0891b2;
+    color: #fff;
+    padding: 0.75rem 2rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+.mco-program-details__cta-button:hover {
+    background-color: #0e7490;
+}

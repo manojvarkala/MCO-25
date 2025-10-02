@@ -1,1 +1,284 @@
-full contents of mco-exam-integration-engine/includes/mco-shortcodes.txt
+<?php
+if (!defined('ABSPATH')) exit;
+
+// --- HOOKS ---
+if (!function_exists('mco_register_shortcode_hooks')) {
+    function mco_register_shortcode_hooks() {
+        add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
+        add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
+        add_shortcode('exam_program', 'mco_exam_showcase_shortcode'); // Alias for user convenience
+        add_shortcode('mco_book_showcase', 'mco_book_showcase_shortcode');
+        add_shortcode('mco_news_slider', 'mco_news_slider_shortcode');
+        add_shortcode('mco_exam_program_details', 'mco_exam_program_details_shortcode');
+    }
+}
+
+// --- SHORTCODE IMPLEMENTATIONS ---
+
+function mco_exam_login_shortcode() {
+    ob_start();
+    if (is_user_logged_in()) {
+        $user_id = get_current_user_id();
+        $token = mco_generate_exam_jwt($user_id);
+        
+        if ($token) {
+            $app_base_url = mco_get_exam_app_url();
+            $redirect_param = isset($_GET['redirect_to']) ? $_GET['redirect_to'] : '/#/dashboard';
+            $final_url = $app_base_url . '/#/auth?token=' . $token . '&redirect_to=' . urlencode($redirect_param);
+            ?>
+            <div class="mco-login-box">
+                <p>You are logged in. Please wait while we securely redirect you to the application...</p>
+                <noscript>
+                    <a href="<?php echo esc_url($final_url); ?>" class="mco-login-button">Proceed to Dashboard</a>
+                </noscript>
+                <script type="text/javascript">
+                    window.location.href = "<?php echo esc_url_raw($final_url); ?>";
+                </script>
+            </div>
+            <?php
+        } else {
+            echo '<div class="mco-login-box"><p>Could not generate a secure login token. Please try again or contact support.</p></div>';
+        }
+    } else {
+        $redirect_url = home_url($_SERVER['REQUEST_URI']);
+        ?>
+        <div class="mco-login-box">
+            <p>You must be logged in to access the examination portal.</p>
+            <div class="mco-login-buttons">
+                <a href="<?php echo esc_url(wp_login_url($redirect_url)); ?>" class="mco-login-button">Login</a>
+                <a href="<?php echo esc_url(wp_registration_url()); ?>" class="mco-login-button mco-login-button-secondary">Register</a>
+            </div>
+        </div>
+        <?php
+    }
+    return ob_get_clean();
+}
+
+function mco_exam_showcase_shortcode() {
+    $exam_programs = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish']);
+    if (empty($exam_programs)) return '<p>No exam programs found.</p>';
+
+    $app_login_url = home_url('/exam-login/');
+    $gradient_classes = ['mco-card--gradient-1', 'mco-card--gradient-2', 'mco-card--gradient-3', 'mco-card--gradient-4'];
+
+    ob_start();
+    echo '<div class="mco-card-grid">';
+    foreach ($exam_programs as $index => $program) {
+        $program_id_for_app = 'prod-' . $program->ID;
+        $cert_sku = get_post_meta($program->ID, '_mco_certification_exam_sku', true);
+        $practice_exam_id_for_app = 'exam-'.$program_id_for_app.'-practice';
+        
+        $title = get_the_title($program);
+        $description = has_excerpt($program->ID) ? get_the_excerpt($program->ID) : wp_trim_words($program->post_content, 20, '...');
+
+        // All buttons now deep-link into the app via the SSO login page
+        $practice_url = add_query_arg('redirect_to', urlencode('/#/test/' . $practice_exam_id_for_app), $app_login_url);
+        $details_url = add_query_arg('redirect_to', urlencode('/#/program/' . $program_id_for_app), $app_login_url);
+        
+        $gradient_class = $gradient_classes[$index % count($gradient_classes)];
+        ?>
+        <div class="mco-card <?php echo $gradient_class; ?>">
+            <div class="mco-card__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            <h3 class="mco-card__title"><?php echo esc_html($title); ?></h3>
+            <p class="mco-card__description"><?php echo esc_html($description); ?></p>
+            <div class="mco-card__footer">
+                <a href="<?php echo esc_url($practice_url); ?>" class="mco-card__button mco-card__button--secondary">Start Practice</a>
+                <a href="<?php echo esc_url(get_permalink($program->ID)); ?>" class="mco-card__button mco-card__button--secondary">View Details</a>
+                <a href="<?php echo esc_url($details_url); ?>" class="mco-card__button mco-card__button--primary">Purchase Exam</a>
+            </div>
+        </div>
+        <?php
+    }
+    echo '</div>';
+    return ob_get_clean();
+}
+
+function mco_book_showcase_shortcode() {
+    $books = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
+    if (empty($books)) return '<p>No recommended books found.</p>';
+
+    $gradient_classes = ['mco-card--gradient-5', 'mco-card--gradient-6', 'mco-card--gradient-7', 'mco-card--gradient-8'];
+    
+    ob_start();
+    echo '<div class="mco-card-grid">';
+    foreach ($books as $index => $book) {
+        $title = get_the_title($book);
+        $description = has_excerpt($book->ID) ? get_the_excerpt($book->ID) : wp_trim_words($book->post_content, 15, '...');
+        $link_com = get_post_meta($book->ID, '_mco_link_com', true);
+        $link_in = get_post_meta($book->ID, '_mco_link_in', true);
+        $link_ae = get_post_meta($book->ID, '_mco_link_ae', true);
+        $gradient_class = $gradient_classes[$index % count($gradient_classes)];
+        ?>
+        <div class="mco-card <?php echo $gradient_class; ?>">
+             <div class="mco-card__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+            </div>
+            <h3 class="mco-card__title"><?php echo esc_html($title); ?></h3>
+            <p class="mco-card__description"><?php echo esc_html($description); ?></p>
+            <div class="mco-card__footer">
+                <?php if ($link_com) : ?><a href="<?php echo esc_url($link_com); ?>" target="_blank" rel="noopener" class="mco-card__button mco-card__button--primary">Amazon.com</a><?php endif; ?>
+                <?php if ($link_in) : ?><a href="<?php echo esc_url($link_in); ?>" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary">Amazon.in</a><?php endif; ?>
+                <?php if ($link_ae) : ?><a href="<?php echo esc_url($link_ae); ?>" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary">Amazon.ae</a><?php endif; ?>
+            </div>
+        </div>
+        <?php
+    }
+    echo '</div>';
+    return ob_get_clean();
+}
+
+function mco_news_slider_shortcode() {
+    $recent_posts = new WP_Query(['posts_per_page' => 5, 'post_status' => 'publish', 'ignore_sticky_posts' => 1]);
+    if (!$recent_posts->have_posts()) return '<p>No recent news found.</p>';
+    
+    $slider_id = 'mco-news-slider-' . uniqid();
+    ob_start();
+    ?>
+    <section class="mco-news-slider-section" aria-labelledby="news-slider-heading">
+        <h2 id="news-slider-heading" class="sr-only">Latest News</h2>
+        <div class="mco-news-slider-wrapper">
+            <div class="mco-news-slider" id="<?php echo $slider_id; ?>">
+                <?php while ($recent_posts->have_posts()) : $recent_posts->the_post(); 
+                    $thumbnail_url = get_the_post_thumbnail_url(get_the_ID(), 'medium_large');
+                    $excerpt = get_the_excerpt();
+                ?>
+                    <div class="mco-news-card">
+                        <?php if ($thumbnail_url): ?>
+                            <a href="<?php the_permalink(); ?>" class="mco-news-card__image-link" aria-label="<?php the_title_attribute(); ?>">
+                                <img src="<?php echo esc_url($thumbnail_url); ?>" alt="" class="mco-news-card__image">
+                            </a>
+                            <div class="mco-news-card__content">
+                                <h3 class="mco-news-card__title"><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
+                                <p class="mco-news-card__excerpt"><?php echo esc_html($excerpt); ?></p>
+                            </div>
+                        <?php else: ?>
+                            <div class="mco-news-card mco-news-card--bookshelf">
+                                <div class="mco-news-card__spine"></div>
+                                <div class="mco-news-card__content--bookshelf">
+                                    <h3 class="mco-news-card__title--bookshelf"><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
+                                    <p class="mco-news-card__excerpt--bookshelf"><?php echo esc_html($excerpt); ?></p>
+                                    <span class="mco-news-card__author"><?php echo get_the_author(); ?></span>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endwhile; wp_reset_postdata(); ?>
+            </div>
+        </div>
+        <div class="mco-news-slider__nav"></div>
+    </section>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const sliderContainer = document.getElementById('<?php echo $slider_id; ?>');
+        if (!sliderContainer) return;
+
+        const slides = sliderContainer.children;
+        const navContainer = sliderContainer.closest('.mco-news-slider-section').querySelector('.mco-news-slider__nav');
+        let currentIndex = 0;
+        let slideInterval;
+
+        function updateSlider() {
+            const offset = -currentIndex * (slides[0].offsetWidth + 16); // 16px for gap
+            sliderContainer.style.transform = `translateX(${offset}px)`;
+            updateNav();
+        }
+
+        function updateNav() {
+            Array.from(navContainer.children).forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentIndex);
+            });
+        }
+
+        function createNav() {
+            for (let i = 0; i < slides.length; i++) {
+                const dot = document.createElement('button');
+                dot.setAttribute('aria-label', `Go to slide ${i + 1}`);
+                dot.addEventListener('click', () => {
+                    currentIndex = i;
+                    updateSlider();
+                    resetInterval();
+                });
+                navContainer.appendChild(dot);
+            }
+        }
+
+        function resetInterval() {
+            clearInterval(slideInterval);
+            slideInterval = setInterval(() => {
+                currentIndex = (currentIndex + 1) % slides.length;
+                updateSlider();
+            }, 5000); // 5 seconds
+        }
+
+        createNav();
+        updateSlider();
+        resetInterval();
+        
+        sliderContainer.closest('.mco-news-slider-wrapper').addEventListener('mouseenter', () => clearInterval(slideInterval));
+        sliderContainer.closest('.mco-news-slider-wrapper').addEventListener('mouseleave', resetInterval);
+
+        window.addEventListener('resize', updateSlider);
+    });
+    </script>
+    <?php
+    return ob_get_clean();
+}
+
+function mco_exam_program_details_shortcode($atts) {
+    $atts = shortcode_atts(['sku' => ''], $atts);
+    $sku = sanitize_text_field($atts['sku']);
+    $post_id = 0;
+
+    if (is_singular('mco_exam_program')) {
+        $post_id = get_the_ID();
+    } elseif (!empty($sku)) {
+        $query = new WP_Query(['post_type' => 'mco_exam_program', 'meta_key' => '_mco_certification_exam_sku', 'meta_value' => $sku, 'posts_per_page' => 1, 'fields' => 'ids']);
+        if ($query->have_posts()) $post_id = $query->posts[0];
+    }
+    
+    if (!$post_id) return '<p>Exam program not found.</p>';
+
+    $program_id_for_app = 'prod-' . $post_id;
+    $app_login_url = home_url('/exam-login/');
+    $view_in_app_url = add_query_arg('redirect_to', urlencode('/#/program/' . $program_id_for_app), $app_login_url);
+
+    ob_start();
+    ?>
+    <div class="mco-program-details-wrapper">
+        <h2 class="mco-program-details__title"><?php echo get_the_title($post_id); ?></h2>
+        
+        <?php 
+        $header_content = get_post_meta($post_id, '_mco_header_content', true);
+        if (!empty($header_content)) {
+            echo '<div class="mco-program-header-content">' . do_shortcode($header_content) . '</div>';
+        } else {
+            $product_sku = get_post_meta($post_id, '_mco_certification_exam_sku', true);
+            $product_id = $product_sku ? wc_get_product_id_by_sku($product_sku) : 0;
+            $image_url = $product_id ? get_the_post_thumbnail_url($product_id, 'large') : get_the_post_thumbnail_url($post_id, 'large');
+            if ($image_url) {
+                echo '<img src="' . esc_url($image_url) . '" alt="' . esc_attr(get_the_title($post_id)) . '" class="mco-program-details__image"/>';
+            }
+        }
+        ?>
+
+        <div class="mco-program-details__description">
+            <?php echo wp_kses_post(apply_filters('the_content', get_post_field('post_content', $post_id))); ?>
+        </div>
+        
+        <div class="mco-program-details__cta-box">
+            <h3 class="mco-program-details__cta-title">Ready to get started?</h3>
+            <p class="mco-program-details__cta-text">
+                Access your personalized dashboard to start this program, track your progress, and view your entire exam history.
+            </p>
+            <a href="<?php echo esc_url($view_in_app_url); ?>" class="mco-program-details__cta-button">
+                View Program in App
+            </a>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+?>

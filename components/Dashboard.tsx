@@ -1,11 +1,11 @@
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { TestResult, Exam, ExamProductCategory } from '../types.ts';
-import { User, Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, ShoppingCart, RefreshCw, PlayCircle, Star } from 'lucide-react';
+import type { TestResult, Exam } from '../types.ts';
+import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, ShoppingCart, RefreshCw, PlayCircle, Star, BookOpen } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 const StatCard: FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
@@ -18,7 +18,15 @@ const StatCard: FC<{ title: string; value: string | number; icon: React.ReactNod
     </div>
 );
 
-const ExamCard: FC<{ exam: Exam; isPractice: boolean; isPurchased: boolean }> = ({ exam, isPractice, isPurchased }) => {
+interface ExamCardProps {
+    exam: Exam;
+    programId: string;
+    isPractice: boolean;
+    isPurchased: boolean;
+    gradientClass: string;
+}
+
+const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, gradientClass }) => {
     const navigate = useNavigate();
     const { isSubscribed } = useAuth();
     const canTake = isPractice || isPurchased || isSubscribed;
@@ -34,26 +42,46 @@ const ExamCard: FC<{ exam: Exam; isPractice: boolean; isPurchased: boolean }> = 
         }
     };
 
+    const Icon = isPractice ? BookOpen : Award;
+
     return (
-        <div className={`bg-white p-6 rounded-xl shadow-md border-l-4 ${isPractice ? 'border-cyan-500' : 'border-amber-500'}`}>
-            <h3 className="font-bold text-lg text-slate-800">{exam.name}</h3>
-            <p className="text-sm text-slate-500 mt-1 mb-4 h-10 overflow-hidden">{exam.description}</p>
-            <div className="flex justify-between text-sm text-slate-600 mb-4">
-                <span><HelpCircle size={14} className="inline mr-1" />{exam.numberOfQuestions} Questions</span>
-                <span><Clock size={14} className="inline mr-1" />{exam.durationMinutes} Mins</span>
-                <span><CheckCircle size={14} className="inline mr-1" />{exam.passScore}% to Pass</span>
+        <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col text-white ${gradientClass}`}>
+            <div className="p-6 flex flex-col flex-grow">
+                <div className="flex items-center gap-3 mb-3">
+                    <div className="bg-white/10 p-2 rounded-full">
+                        <Icon size={20} />
+                    </div>
+                    <span className="font-bold text-sm uppercase tracking-wider">{isPractice ? "Practice Exam" : "Certification Exam"}</span>
+                </div>
+                
+                <h3 className="text-lg font-bold mb-2 leading-tight flex-grow">{exam.name}</h3>
+
+                <div className="flex justify-between text-sm text-white/80 my-4 p-3 bg-black/10 rounded-md">
+                    <span><HelpCircle size={14} className="inline mr-1" />{exam.numberOfQuestions} Qs</span>
+                    <span><Clock size={14} className="inline mr-1" />{exam.durationMinutes} Mins</span>
+                    <span><CheckCircle size={14} className="inline mr-1" />{exam.passScore}% Pass</span>
+                </div>
+                
+                <div className="mt-auto space-y-2">
+                    <button
+                        onClick={handleButtonClick}
+                        className={`w-full flex items-center justify-center gap-2 font-bold py-3 px-4 rounded-lg transition-all transform hover:scale-105 ${
+                            canTake
+                                ? 'bg-white text-slate-800 hover:bg-slate-200'
+                                : 'bg-yellow-400 hover:bg-yellow-500 text-slate-800'
+                        }`}
+                    >
+                        {isPractice ? <PlayCircle size={18} /> : (canTake ? <PlayCircle size={18} /> : <ShoppingCart size={18} />)}
+                        {buttonText}
+                    </button>
+                    <Link
+                        to={`/program/${programId}`}
+                        className="block w-full text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all"
+                    >
+                        View Program Details
+                    </Link>
+                </div>
             </div>
-            <button
-                onClick={handleButtonClick}
-                className={`w-full flex items-center justify-center gap-2 font-semibold py-2 px-4 rounded-lg transition ${
-                    canTake
-                        ? 'bg-cyan-600 hover:bg-cyan-700 text-white'
-                        : 'bg-amber-500 hover:bg-amber-600 text-white'
-                }`}
-            >
-                {canTake ? <PlayCircle size={16} /> : <ShoppingCart size={16} />}
-                {buttonText}
-            </button>
         </div>
     );
 };
@@ -61,18 +89,20 @@ const ExamCard: FC<{ exam: Exam; isPractice: boolean; isPurchased: boolean }> = 
 
 const Dashboard: FC = () => {
     const { user, token, paidExamIds, isSubscribed, loginWithToken } = useAuth();
-    const { activeOrg, isInitializing, inProgressExam, examPrices } = useAppContext();
+    const { activeOrg, isInitializing, inProgressExam } = useAppContext();
     const navigate = useNavigate();
 
     const [results, setResults] = useState<TestResult[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
     
+    const practiceGradients = ['bg-gradient-to-br from-sky-500 to-cyan-500', 'bg-gradient-to-br from-emerald-500 to-green-500'];
+    const certGradients = ['bg-gradient-to-br from-indigo-500 to-purple-600', 'bg-gradient-to-br from-rose-500 to-pink-600'];
+
     const handleSync = useCallback(async () => {
         if (!token) return;
         setIsSyncing(true);
         try {
-            // Using loginWithToken to sync also updates the auth context (paid exams, etc.)
             await loginWithToken(token, true);
         } catch(e: any) {
             toast.error(e.message || "Sync failed.");
@@ -89,7 +119,7 @@ const Dashboard: FC = () => {
             setResults(userResults);
             setIsLoading(false);
         }
-    }, [user]);
+    }, [user, token]); // Re-run if token changes (after sync)
 
     const stats = useMemo(() => {
         if (results.length === 0) {
@@ -125,7 +155,6 @@ const Dashboard: FC = () => {
 
     return (
         <div className="space-y-8">
-            {/* Header */}
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-800">Welcome back, {user.name}!</h1>
@@ -163,7 +192,6 @@ const Dashboard: FC = () => {
                  </div>
             )}
 
-            {/* My Stats */}
             <div className="bg-white p-6 rounded-xl shadow-md">
                 <h2 className="text-xl font-bold text-slate-800 mb-4">My Stats</h2>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -174,24 +202,24 @@ const Dashboard: FC = () => {
                 </div>
             </div>
 
-            {/* Exam Programs */}
             <div>
                  <h2 className="text-2xl font-bold text-slate-800 mb-4">My Exam Programs</h2>
                  <div className="space-y-6">
-                     {examCategories.map(category => (
-                        <div key={category.id} id={category.id} className="bg-slate-100 p-6 rounded-xl border border-slate-200">
-                             <h3 className="text-xl font-bold text-slate-800 mb-1">{category.name}</h3>
-                             <p className="text-slate-500 mb-4">{category.description}</p>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                 {category.practiceExam && <ExamCard exam={category.practiceExam} isPractice={true} isPurchased={false} />}
-                                 {category.certExam && <ExamCard exam={category.certExam} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} />}
-                             </div>
-                         </div>
+                     {examCategories.map((category, index) => (
+                        <div key={category.id} id={category.id} className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                            <Link to={`/program/${category.id}`} className="group">
+                                <h3 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-cyan-600 transition">{category.name}</h3>
+                            </Link>
+                            <p className="text-slate-500 mb-4">{category.description}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} gradientClass={practiceGradients[index % practiceGradients.length]} />}
+                                {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} gradientClass={certGradients[index % certGradients.length]}/>}
+                            </div>
+                        </div>
                      ))}
                  </div>
             </div>
 
-            {/* Exam History */}
              <div className="bg-white p-6 rounded-xl shadow-md">
                 <h2 className="text-xl font-bold text-slate-800 mb-4">My Exam History</h2>
                 <div className="space-y-3">
@@ -217,9 +245,9 @@ const Dashboard: FC = () => {
                     }) : <p className="text-center text-slate-500 py-4">You haven't completed any exams yet.</p>}
                      {results.length > 5 && (
                         <div className="text-center mt-4">
-                            <button onClick={() => navigate('/profile')} className="font-semibold text-cyan-600 hover:underline">
+                            <Link to='/profile' className="font-semibold text-cyan-600 hover:underline">
                                 View All History
-                            </button>
+                            </Link>
                         </div>
                     )}
                 </div>
