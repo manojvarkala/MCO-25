@@ -5,7 +5,7 @@ import type { RecommendedBook } from '../types.ts';
 import { ShoppingCart, BookOpenCheck } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 
-const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
+const BookCard: FC<{ book: RecommendedBook, gradientClass: string }> = ({ book, gradientClass }) => {
     const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
         const links = book.affiliateLinks;
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -61,15 +61,15 @@ const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
     }, [book.description]);
 
     return (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-1 transition-transform duration-300 border border-slate-100">
+        <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-1 transition-transform duration-300 text-white ${gradientClass}`}>
             <BookCover book={book} className="w-full h-48" />
             <div className="p-6 flex flex-col flex-grow">
-                <h3 className="text-lg font-bold text-slate-800 mb-2 leading-tight">{book.title}</h3>
+                <h3 className="text-lg font-bold mb-2 leading-tight">{book.title}</h3>
                 
                 <div className="flex-grow">
                     <p
                         ref={descriptionRef}
-                        className={`text-slate-600 text-sm mb-4 transition-[max-height] duration-500 ease-in-out overflow-hidden ${isExpanded ? 'max-h-96' : 'max-h-20'}`}
+                        className={`text-white/80 text-sm mb-4 transition-[max-height] duration-500 ease-in-out overflow-hidden ${isExpanded ? 'max-h-96' : 'max-h-20'}`}
                     >
                         {book.description}
                     </p>
@@ -78,7 +78,7 @@ const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
                 {canExpand && (
                     <button
                         onClick={() => setIsExpanded(!isExpanded)}
-                        className="text-sm text-cyan-600 hover:text-cyan-800 font-semibold self-start mb-4 flex items-center gap-1 -mt-4"
+                        className="text-sm text-cyan-300 hover:text-white font-semibold self-start mb-4 flex items-center gap-1 -mt-4"
                         aria-expanded={isExpanded}
                     >
                         {isExpanded ? 'Read Less' : 'Read More'}
@@ -86,7 +86,7 @@ const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
                     </button>
                 )}
 
-                <div className="mt-auto pt-4 border-t border-slate-200 space-y-2">
+                <div className="mt-auto pt-4 border-t border-white/20 space-y-2">
                     {primaryLink ? (
                         <>
                             <a 
@@ -103,14 +103,14 @@ const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
                                     href={store.url}
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-all"
+                                    className="w-full text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-all"
                                 >
                                 Buy on {store.name}
                                 </a>
                             ))}
                         </>
                     ) : (
-                        <p className="text-sm text-center text-slate-500">Purchase links currently unavailable.</p>
+                        <p className="text-sm text-center text-white/70">Purchase links currently unavailable.</p>
                     )}
                 </div>
             </div>
@@ -120,6 +120,7 @@ const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
 
 const BookStore: FC = () => {
     const { suggestedBooks, isInitializing } = useAppContext();
+    const gradients = ['bg-gradient-to-br from-orange-500 to-amber-500', 'bg-gradient-to-br from-lime-600 to-emerald-500', 'bg-gradient-to-br from-rose-500 to-pink-500', 'bg-gradient-to-br from-slate-600 to-gray-700'];
 
     if (isInitializing) {
         return (
@@ -145,8 +146,8 @@ const BookStore: FC = () => {
 
             {suggestedBooks.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {suggestedBooks.map(book => (
-                        <BookCard key={book.id} book={book} />
+                    {suggestedBooks.map((book, index) => (
+                        <BookCard key={book.id} book={book} gradientClass={gradients[index % gradients.length]} />
                     ))}
                 </div>
             ) : (

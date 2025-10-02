@@ -13,12 +13,12 @@ interface ExamCardProps {
     exam: Exam;
     isPractice: boolean;
     results: TestResult[];
+    gradientClass: string;
 }
 
-const ExamCard: FC<ExamCardProps> = ({ exam, isPractice, results }) => {
+const ExamCard: FC<ExamCardProps> = ({ exam, isPractice, results, gradientClass }) => {
     const navigate = useNavigate();
     const { paidExamIds, isSubscribed } = useAuth();
-    const { activeOrg } = useAppContext();
 
     const attempts = useMemo(() => results.filter(r => r.examId === exam.id), [results, exam.id]);
     const hasPassed = useMemo(() => attempts.some(r => r.score >= exam.passScore), [attempts, exam.passScore]);
@@ -27,6 +27,9 @@ const ExamCard: FC<ExamCardProps> = ({ exam, isPractice, results }) => {
     let buttonDisabled = false;
     let buttonAction = () => navigate(`/test/${exam.id}`);
     let reason = '';
+
+    const Icon = isPractice ? BookOpen : Award;
+    const buttonTextColor = isPractice ? 'text-cyan-800' : 'text-purple-800';
 
     if (isPractice) {
         buttonText = 'Start Practice';
@@ -44,7 +47,6 @@ const ExamCard: FC<ExamCardProps> = ({ exam, isPractice, results }) => {
         } else if (!paidExamIds.includes(exam.productSku) && !isSubscribed) {
             buttonDisabled = true;
             buttonText = 'Purchase to Start';
-            // FIX: The toast.error function returns a string, which is not a valid return type for an onClick handler. This was changed to a block that returns void to resolve the type error.
             buttonAction = () => {
                 if (exam.productSlug) {
                     navigate(`/checkout/${exam.productSlug}`);
@@ -60,33 +62,31 @@ const ExamCard: FC<ExamCardProps> = ({ exam, isPractice, results }) => {
     const regularPrice = exam.regularPrice;
     
     return (
-        <div className={`flex flex-col rounded-lg p-6 border-2 ${isPractice ? 'bg-slate-50 border-slate-200' : 'bg-cyan-50 border-cyan-200'}`}>
+        <div className={`flex flex-col rounded-xl p-6 text-white shadow-lg transform hover:-translate-y-1 transition-transform ${gradientClass}`}>
             <div className="flex items-center gap-3 mb-3">
-                {isPractice ? <BookOpen className="text-slate-500" /> : <Award className="text-cyan-600" />}
-                <h4 className="text-xl font-bold text-slate-800">{exam.name}</h4>
+                <Icon className="opacity-80" />
+                <h4 className="text-xl font-bold">{exam.name}</h4>
             </div>
-            <p className="text-slate-600 text-sm flex-grow mb-4">{exam.description}</p>
-            <div className="text-xs text-slate-500 mb-4">
+            <p className="text-white/80 text-sm flex-grow mb-4">{exam.description}</p>
+            <div className="text-xs text-white/70 mb-4 font-mono">
                 {exam.numberOfQuestions} Questions | {exam.durationMinutes} Mins | Pass: {exam.passScore}%
             </div>
 
-            <button onClick={buttonAction} disabled={buttonDisabled && reason !== 'Purchase required'} className={`w-full mt-auto flex items-center justify-center gap-2 font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105 ${
-                buttonDisabled && reason !== 'Purchase required'
-                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                    : isPractice 
-                    ? 'bg-slate-600 hover:bg-slate-700 text-white'
-                    : 'bg-cyan-600 hover:bg-cyan-700 text-white'
+            <button onClick={buttonAction} disabled={buttonDisabled} className={`w-full mt-auto flex items-center justify-center gap-2 font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105 ${
+                buttonDisabled
+                    ? 'bg-slate-500/50 cursor-not-allowed'
+                    : `bg-white hover:bg-slate-100 ${buttonTextColor}`
             }`}>
                 {buttonDisabled && reason !== 'Purchase required' ? <Lock size={16} /> : <Zap size={16} />}
                 <span>{buttonText}</span>
             </button>
             {buttonDisabled && reason && reason !== 'Purchase required' && (
-                <p className="text-xs text-center text-red-600 mt-2">{reason}</p>
+                <p className="text-xs text-center text-red-200 mt-2">{reason}</p>
             )}
-            {!isPractice && !paidExamIds.includes(exam.productSku) && !isSubscribed && price && (
-                <div className="text-center mt-2">
-                    <span className="text-lg font-bold text-slate-800">${price.toFixed(2)}</span>
-                    {regularPrice && regularPrice > price && <span className="text-sm line-through text-slate-500 ml-1">${regularPrice.toFixed(2)}</span>}
+            {!isPractice && !paidExamIds.includes(exam.productSku) && !isSubscribed && price != null && (
+                <div className="text-center mt-3">
+                    <span className="text-xl font-bold">${price.toFixed(2)}</span>
+                    {regularPrice && regularPrice > price && <span className="text-sm line-through text-white/70 ml-1.5">${regularPrice.toFixed(2)}</span>}
                 </div>
             )}
         </div>
@@ -101,6 +101,9 @@ const Dashboard: FC = () => {
     const { activeOrg, inProgressExam } = useAppContext();
     const [results, setResults] = useState<TestResult[]>([]);
     const [isSyncing, setIsSyncing] = useState(false);
+
+    const practiceGradients = ['bg-gradient-to-br from-cyan-500 to-sky-600', 'bg-gradient-to-br from-teal-500 to-cyan-600', 'bg-gradient-to-br from-sky-500 to-indigo-500'];
+    const certGradients = ['bg-gradient-to-br from-purple-600 to-indigo-700', 'bg-gradient-to-br from-violet-600 to-purple-700', 'bg-gradient-to-br from-fuchsia-600 to-purple-700'];
 
     useEffect(() => {
         if (user) {
@@ -221,7 +224,7 @@ const Dashboard: FC = () => {
             <div>
                 <h2 className="text-3xl font-bold text-slate-800 mb-6" id="exam-programs">My Exam Programs</h2>
                 <div className="space-y-12">
-                    {activeOrg.examProductCategories.map((category: ExamProductCategory) => {
+                    {activeOrg.examProductCategories.map((category: ExamProductCategory, index: number) => {
                         const practiceExam = activeOrg?.exams.find(e => e.id === category.practiceExamId);
                         const certExam = activeOrg?.exams.find(e => e.id === category.certificationExamId);
                         
@@ -230,8 +233,8 @@ const Dashboard: FC = () => {
                                 <h3 className="text-2xl font-bold text-slate-800 mb-1">{category.name}</h3>
                                 <p className="text-slate-500 mb-6">{category.description}</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {practiceExam && <ExamCard exam={practiceExam} isPractice={true} results={results} />}
-                                    {certExam && <ExamCard exam={certExam} isPractice={false} results={results} />}
+                                    {practiceExam && <ExamCard exam={practiceExam} isPractice={true} results={results} gradientClass={practiceGradients[index % practiceGradients.length]} />}
+                                    {certExam && <ExamCard exam={certExam} isPractice={false} results={results} gradientClass={certGradients[index % certGradients.length]} />}
                                 </div>
                             </div>
                         )

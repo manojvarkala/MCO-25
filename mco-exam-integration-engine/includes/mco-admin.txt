@@ -17,6 +17,8 @@ if (!function_exists('mco_register_admin_hooks')) {
         // AJAX hooks for bulk import
         add_action('wp_ajax_mco_import_exams_csv', 'mco_ajax_handle_exam_program_csv_upload');
         add_action('wp_ajax_mco_import_books_csv', 'mco_ajax_handle_book_csv_upload');
+        // AJAX hook for clearing cache
+        add_action('wp_ajax_mco_clear_cache_ajax', 'mco_ajax_clear_cache');
     }
 }
 
@@ -199,32 +201,54 @@ function mco_tools_tab_html() {
     ?>
     <h3>Tools</h3>
     <p>Use these tools to manage application data.</p>
-    <form method="post" id="mco-tools-form">
-        <?php wp_nonce_field('mco_tools_action_nonce', 'mco_tools_action_nonce'); ?>
-        <table class="form-table">
-            <tr valign="top">
-                <th scope="row">Clear App Cache</th>
-                <td>
-                    <p class="description">This will force the application to re-fetch its configuration from WordPress on the next load. Use this after making significant changes to settings or content.</p>
-                    <p>
-                        <button type="submit" id="mco-clear-cache-button" name="mco_action" value="clear_app_cache" class="button">Clear App Configuration Cache</button>
-                        <span id="mco-clear-cache-spinner" class="spinner" style="display: none; float: none; vertical-align: middle; margin-left: 10px;"></span>
-                    </p>
-                </td>
-            </tr>
-        </table>
-    </form>
+    <div id="mco-tools-results"></div>
+    <table class="form-table">
+        <tr valign="top">
+            <th scope="row">Clear App Cache</th>
+            <td>
+                <p class="description">This will force the application to re-fetch its configuration from WordPress on the next load. Use this after making significant changes to settings or content.</p>
+                <p>
+                    <button type="button" id="mco-clear-cache-button" class="button">Clear App Configuration Cache</button>
+                    <span id="mco-clear-cache-spinner" class="spinner" style="display: none; float: none; vertical-align: middle; margin-left: 10px;"></span>
+                </p>
+            </td>
+        </tr>
+    </table>
+
      <script type="text/javascript">
     jQuery(document).ready(function($) {
-        $('#mco-clear-cache-button').on('click', function() {
+        $('#mco-clear-cache-button').on('click', function(e) {
+            e.preventDefault();
             var button = $(this);
             var spinner = $('#mco-clear-cache-spinner');
+            var resultsDiv = $('#mco-tools-results');
 
             button.prop('disabled', true);
             spinner.addClass('is-active').show();
+            resultsDiv.empty().removeClass('notice-success notice-error notice').hide();
 
-            // The form will submit normally after this click handler completes,
-            // causing a page reload which resets the button state.
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'mco_clear_cache_ajax',
+                    _ajax_nonce: '<?php echo wp_create_nonce("mco_clear_cache_nonce"); ?>'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        resultsDiv.addClass('notice notice-success').html('<p>' + response.data.message + '</p>').show();
+                    } else {
+                        resultsDiv.addClass('notice notice-error').html('<p>' + (response.data.message || 'An error occurred.') + '</p>').show();
+                    }
+                },
+                error: function() {
+                    resultsDiv.addClass('notice notice-error').html('<p>A server error occurred.</p>').show();
+                },
+                complete: function() {
+                    button.prop('disabled', false);
+                    spinner.removeClass('is-active').hide();
+                }
+            });
         });
     });
     </script>
@@ -390,6 +414,7 @@ function mco_certificate_templates_editor_html() {
 
 if (!function_exists('mco_handle_admin_page_actions')) {
     function mco_handle_admin_page_actions() {
+        // Handle non-AJAX form submissions if necessary
         if (!empty($_POST['mco_action']) && isset($_POST['_wpnonce'])) {
             $action = sanitize_key($_POST['mco_action']);
             
@@ -397,11 +422,10 @@ if (!function_exists('mco_handle_admin_page_actions')) {
                 mco_handle_exam_program_csv_upload();
             } elseif ($action === 'handle_book_csv_upload' && check_admin_referer('mco_book_csv_upload_nonce', 'mco_book_csv_upload_nonce')) {
                 mco_handle_book_csv_upload();
-            } elseif ($action === 'clear_app_cache' && check_admin_referer('mco_tools_action_nonce', 'mco_tools_action_nonce')) {
-                mco_handle_clear_app_cache();
             }
         }
         
+        // Handle template download link
         if (isset($_GET['download_template']) && current_user_can('manage_options')) {
             $template_type = sanitize_key($_GET['download_template']);
             if ($template_type === 'exam_program') { mco_download_csv_template('exam_program'); } 
@@ -525,6 +549,16 @@ function mco_ajax_handle_book_csv_upload() {
     } else {
         wp_send_json_success(['message' => $result['message'], 'type' => $result['type']]);
     }
+}
+
+function mco_ajax_clear_cache() {
+    check_ajax_referer('mco_clear_cache_nonce');
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(['message' => 'Permission denied.']);
+    }
+    update_option('mco_config_version', current_time('YmdHis'));
+    delete_transient('mco_app_config_data');
+    wp_send_json_success(['message' => 'Application configuration cache has been cleared!']);
 }
 
 // Centralized, robust CSV processing logic
@@ -666,15 +700,6 @@ function mco_process_csv_import($file_key, $post_type) {
     }
     
     return ['type' => $failed_count > 0 ? 'warning' : 'success', 'message' => $message];
-}
-
-function mco_handle_clear_app_cache() {
-    update_option('mco_config_version', current_time('YmdHis'));
-    delete_transient('mco_app_config_data');
-    mco_set_admin_notice('success', 'Application configuration cache has been cleared.');
-    $redirect_url = add_query_arg(['page' => 'mco-exam-engine', 'tab' => 'tools'], admin_url('admin.php'));
-    wp_safe_redirect($redirect_url);
-    exit;
 }
 
 function mco_download_csv_template($type) {

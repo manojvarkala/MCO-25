@@ -9,7 +9,7 @@ const Integration: FC = () => {
             <h1 className="text-3xl font-extrabold text-slate-800">WordPress Integration Plugin</h1>
             
             <div className="bg-white p-6 rounded-lg shadow-lg border border-slate-200">
-                <h2 className="text-xl font-bold mb-2 text-slate-800">The Integration Engine (v30.1.0)</h2>
+                <h2 className="text-xl font-bold mb-2 text-slate-800">The Integration Engine (v30.2.0)</h2>
                 <p className="mb-4 text-slate-600">
                     This is the master plugin for integrating the exam app with your WordPress site. It handles Single Sign-On (SSO), data synchronization, CORS headers, and provides powerful shortcodes for displaying content.
                 </p>
@@ -81,7 +81,7 @@ const Integration: FC = () => {
                         className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
                     >
                         <DownloadCloud size={20} className="mr-2" />
-                        Download Plugin (.zip) v30.1.0
+                        Download Plugin (.zip) v30.2.0
                     </a>
                 </div>
             </div>
