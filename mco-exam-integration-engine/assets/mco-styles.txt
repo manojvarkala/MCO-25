@@ -184,7 +184,6 @@ body .entry-content > .alignfull.mco-hero-section:first-child {
     box-shadow: 0 10px 15px -3px rgba(0,0,0,.07), 0 4px 6px -4px rgba(0,0,0,.07);
 }
 
-/* Card with Image */
 .mco-news-card--has-image { 
     background-color: #fff; 
     box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05);
@@ -222,8 +221,6 @@ body .entry-content > .alignfull.mco-hero-section:first-child {
     text-decoration: none;
     margin-top: auto;
 }
-
-/* "Bookshelf" Card without Image */
 .mco-news-card--no-image {
     position: relative;
     color: white;
@@ -244,7 +241,6 @@ body .entry-content > .alignfull.mco-hero-section:first-child {
 .mco-news-card--no-image .mco-news-card__title { color: white; -webkit-line-clamp: 4; }
 .mco-news-card--no-image .mco-news-card__excerpt { color: rgba(255,255,255,0.8); }
 .mco-news-card--no-image .mco-news-card__link { color: rgba(255,255,255,0.9); }
-
 .mco-news-slider-pagination {
     margin-top: 1.5rem;
     display: flex;
@@ -264,4 +260,161 @@ body .entry-content > .alignfull.mco-hero-section:first-child {
 .mco-news-slider-dot.active {
     background-color: #0891b2; /* cyan-600 */
     width: 2.5rem; /* 40px */
+}
+
+/* --- EXAM PROGRAM DETAILS SHORTCODE --- */
+.mco-program-details-wrapper {
+    max-width: 900px;
+    margin: 2rem auto;
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 0.75rem;
+}
+.mco-program-header {
+    text-align: center;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 2rem;
+    margin-bottom: 2rem;
+}
+.mco-program-featured-image {
+    margin: 0 auto 1.5rem;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    max-width: 700px;
+}
+.mco-program-featured-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+/* New styles for custom header content */
+.mco-program-header-content {
+    margin: 0 auto 1.5rem;
+    max-width: 700px;
+}
+.mco-program-header-content iframe, .mco-program-header-content img {
+    width: 100%;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.mco-program-header h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0 0 1rem;
+}
+.mco-program-description {
+    font-size: 1.1rem;
+    color: #475569;
+    max-width: 700px;
+    margin: 0 auto;
+}
+.mco-program-options-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+@media (min-width: 768px) {
+    .mco-program-options-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+.mco-program-option-card {
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.05);
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+}
+.mco-program-option-card--practice { border-left: 5px solid #0891b2; }
+.mco-program-option-card--cert { border-left: 5px solid #6d28d9; }
+.mco-program-option-card__header h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+.mco-program-option-card__body {
+    flex-grow: 1;
+    margin: 1.5rem 0;
+}
+.mco-program-option-card__stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    text-align: center;
+}
+.mco-program-option-card__stats strong {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #334155;
+    display: block;
+}
+.mco-program-option-card__stats span {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+.mco-program-option-card__price {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+.mco-program-option-card__price .price { color: #1e293b; }
+.mco-program-option-card__price del { color: #94a3b8; font-size: 1rem; margin-right: 0.5rem; }
+.mco-program-option-card__footer { margin-top: auto; }
+.mco-program-option-card__btn {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    text-decoration: none;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+.mco-program-option-card--practice .mco-program-option-card__btn {
+    background-color: #0891b2; color: white;
+}
+.mco-program-option-card--practice .mco-program-option-card__btn:hover {
+    background-color: #0e7490;
+}
+.mco-program-option-card--cert .mco-program-option-card__btn {
+    background-color: #6d28d9; color: white;
+}
+.mco-program-option-card--cert .mco-program-option-card__btn:hover {
+    background-color: #5b21b6;
+}
+.mco-program-option-card__btn--disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
+}
+.mco-program-view-in-app {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+.mco-program-view-in-app a {
+    color: #0891b2;
+    font-weight: 600;
+    text-decoration: none;
+}
+.mco-program-view-in-app a:hover {
+    text-decoration: underline;
+}
+.mco-program-recommended-books {
+    margin-top: 2.5rem;
+    padding-top: 2.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+.mco-program-recommended-books h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    text-align: center;
+    color: #1e293b;
+    margin-bottom: 2rem;
 }

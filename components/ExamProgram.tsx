@@ -211,6 +211,11 @@ const ExamProgram: FC = () => {
 
     return (
         <div className="max-w-6xl mx-auto space-y-12">
+            {certExam.imageUrl && (
+                <div className="w-full h-64 bg-slate-200 rounded-xl overflow-hidden shadow-lg">
+                    <img src={certExam.imageUrl} alt={programCategory.name} className="w-full h-full object-cover" />
+                </div>
+            )}
             <div className="text-center">
                 <h1 className="text-4xl font-extrabold text-slate-900">{programCategory.name}</h1>
                 <p className="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">{programCategory.description}</p>

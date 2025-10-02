@@ -770,6 +770,20 @@ function mco_add_exam_program_meta_boxes() {
         'normal',
         'high'
     );
+    add_meta_box(
+        'mco_exam_program_header_content',
+        'Program Header Content (Optional)',
+        'mco_exam_program_header_content_meta_box_html',
+        'mco_exam_program',
+        'normal',
+        'default'
+    );
+}
+
+function mco_exam_program_header_content_meta_box_html($post) {
+    $content = get_post_meta($post->ID, '_mco_header_content', true);
+    echo '<p class="description">This content will appear at the top of the program detail page, overriding the default featured image. You can use this for special announcements, videos, or shortcodes.</p>';
+    wp_editor($content, 'mco_header_content', ['textarea_name' => 'mco_header_content']);
 }
 
 function mco_exam_program_details_meta_box_html($post) {
@@ -833,6 +847,11 @@ function mco_save_exam_program_meta_data($post_id) {
     }
     if (!current_user_can('edit_post', $post_id)) {
         return;
+    }
+
+    // Save Header Content
+    if (isset($_POST['mco_header_content'])) {
+        update_post_meta($post_id, '_mco_header_content', wp_kses_post($_POST['mco_header_content']));
     }
 
     // Save SKU

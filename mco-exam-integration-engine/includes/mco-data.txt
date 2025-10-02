@@ -70,6 +70,12 @@ if (!function_exists('mco_get_app_config_data')) {
                 $cert_d_terms = wp_get_post_terms($post_id, 'exam_cert_duration', ['fields' => 'names']);
                 $pass_score_terms = wp_get_post_terms($post_id, 'exam_pass_score', ['fields' => 'names']);
 
+                // Fetch WooCommerce product details for the certification exam
+                $product_id = wc_get_product_id_by_sku($cert_sku);
+                $product = $product_id ? wc_get_product($product_id) : null;
+                $product_image_url = $product_id ? get_the_post_thumbnail_url($product_id, 'large') : '';
+
+
                 $practice_exam = [
                     'id' => $cert_sku . '-practice',
                     'name' => get_the_title() . ' Practice',
@@ -81,6 +87,7 @@ if (!function_exists('mco_get_app_config_data')) {
                     'passScore' => !empty($pass_score_terms) ? (int)$pass_score_terms[0] : 70,
                     'isPractice' => true,
                     'certificateTemplateId' => 'cert-practice',
+                    'imageUrl' => $product_image_url,
                 ];
                 
                 $cert_exam = [
@@ -94,6 +101,7 @@ if (!function_exists('mco_get_app_config_data')) {
                     'isPractice' => false,
                     'isProctored' => (bool)get_post_meta($post_id, '_mco_is_proctored', true),
                     'certificateTemplateId' => 'cert-completion',
+                    'imageUrl' => $product_image_url,
                 ];
                 
                 // Link book IDs (now an array)
@@ -109,11 +117,6 @@ if (!function_exists('mco_get_app_config_data')) {
                 }
                 $practice_exam['recommendedBookIds'] = $custom_book_ids;
                 $cert_exam['recommendedBookIds'] = $custom_book_ids;
-
-
-                // Fetch WooCommerce product details for the certification exam
-                $product_id = wc_get_product_id_by_sku($cert_sku);
-                $product = $product_id ? wc_get_product($product_id) : null;
 
                 if ($product) {
                     $cert_exam['price'] = (float)$product->get_price();

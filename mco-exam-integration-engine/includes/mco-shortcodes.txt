@@ -8,6 +8,7 @@ if (!function_exists('mco_register_shortcode_hooks')) {
         add_shortcode('mco_exam_showcase', 'mco_shortcode_exam_showcase');
         add_shortcode('mco_book_showcase', 'mco_shortcode_book_showcase');
         add_shortcode('mco_news_slider', 'mco_shortcode_news_slider');
+        add_shortcode('mco_exam_program_details', 'mco_shortcode_exam_program_details');
         add_action('wp_enqueue_scripts', 'mco_enqueue_styles');
     }
 }
@@ -15,7 +16,7 @@ if (!function_exists('mco_register_shortcode_hooks')) {
 // --- STYLESHEET ENQUEUE ---
 if (!function_exists('mco_enqueue_styles')) {
     function mco_enqueue_styles() {
-        if (is_a(get_post(), 'WP_Post') && (has_shortcode(get_post()->post_content, 'mco_exam_login') || has_shortcode(get_post()->post_content, 'mco_exam_showcase') || has_shortcode(get_post()->post_content, 'mco_book_showcase') || has_shortcode(get_post()->post_content, 'mco_news_slider'))) {
+        if (is_a(get_post(), 'WP_Post') && (has_shortcode(get_post()->post_content, 'mco_exam_login') || has_shortcode(get_post()->post_content, 'mco_exam_showcase') || has_shortcode(get_post()->post_content, 'mco_book_showcase') || has_shortcode(get_post()->post_content, 'mco_news_slider') || has_shortcode(get_post()->post_content, 'mco_exam_program_details') )) {
             wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
         }
     }
@@ -35,8 +36,14 @@ if (!function_exists('mco_shortcode_exam_login')) {
                 $redirect_url = rtrim($app_url, '/') . '/#/auth?token=' . $token;
                 ?>
                 <div class="mco-login-wrapper">
-                    <p class="mco-login-message">You are logged in. Click the button below to access your exam dashboard.</p>
-                    <a href="<?php echo esc_url($redirect_url); ?>" class="mco-login-button">Proceed to Dashboard</a>
+                    <p class="mco-login-message">You are logged in. Redirecting you to the dashboard...</p>
+                    <script type="text/javascript">
+                        window.location.href = "<?php echo esc_url_raw($redirect_url); ?>";
+                    </script>
+                    <noscript>
+                        <p>JavaScript is disabled. Please click the button below to continue.</p>
+                        <a href="<?php echo esc_url($redirect_url); ?>" class="mco-login-button">Proceed to Dashboard</a>
+                    </noscript>
                 </div>
                 <?php
             } else {
@@ -113,7 +120,7 @@ if (!function_exists('mco_shortcode_news_slider')) {
             const paginationContainer = sliderWrapper.querySelector('.mco-news-slider-pagination');
             
             if (slides.length <= 1) {
-                paginationContainer.style.display = 'none';
+                if(paginationContainer) paginationContainer.style.display = 'none';
                 return;
             }
 
@@ -130,9 +137,7 @@ if (!function_exists('mco_shortcode_news_slider')) {
 
                 totalPages = Math.ceil(slides.length / slidesPerView);
                 
-                // Set track width for paging
                 track.style.width = `${totalPages * 100}%`;
-                // Set individual slide width
                 slides.forEach(slide => {
                     slide.style.width = `${100 / (totalPages * slidesPerView)}%`;
                 });
@@ -292,6 +297,165 @@ if (!function_exists('mco_shortcode_book_showcase')) {
                 </div>
             </div>
             <?php endwhile; wp_reset_postdata(); ?>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+}
+
+// --- EXAM PROGRAM DETAILS SHORTCODE ---
+if (!function_exists('mco_shortcode_exam_program_details')) {
+    function mco_shortcode_exam_program_details($atts) {
+        $atts = shortcode_atts(['sku' => ''], $atts);
+        $post_id = 0;
+
+        if (!empty($atts['sku'])) {
+            $query = new WP_Query([
+                'post_type' => 'mco_exam_program',
+                'meta_key' => '_mco_certification_exam_sku',
+                'meta_value' => sanitize_text_field($atts['sku']),
+                'posts_per_page' => 1,
+                'fields' => 'ids'
+            ]);
+            if ($query->have_posts()) $post_id = $query->posts[0];
+        } elseif (is_singular('mco_exam_program')) {
+            $post_id = get_the_ID();
+        }
+
+        if (!$post_id) return '<p>Exam program not found. Please specify a valid SKU.</p>';
+        
+        // --- DATA FETCHING ---
+        $program_post = get_post($post_id);
+        $cert_sku = get_post_meta($post_id, '_mco_certification_exam_sku', true);
+        $product = ($pid = wc_get_product_id_by_sku($cert_sku)) ? wc_get_product($pid) : null;
+        $header_content = get_post_meta($post_id, '_mco_header_content', true);
+
+        $product_image_url = '';
+        if ($product) {
+            $product_image_url = get_the_post_thumbnail_url($product->get_id(), 'large');
+        }
+        if (empty($product_image_url) && has_post_thumbnail($post_id)) {
+            $product_image_url = get_the_post_thumbnail_url($post_id, 'large');
+        }
+
+
+        $practice_q = wp_get_post_terms($post_id, 'exam_practice_questions', ['fields' => 'names']);
+        $practice_d = wp_get_post_terms($post_id, 'exam_practice_duration', ['fields' => 'names']);
+        $cert_q = wp_get_post_terms($post_id, 'exam_cert_questions', ['fields' => 'names']);
+        $cert_d = wp_get_post_terms($post_id, 'exam_cert_duration', ['fields' => 'names']);
+        $pass_score = wp_get_post_terms($post_id, 'exam_pass_score', ['fields' => 'names']);
+
+        $practice_exam_id = $cert_sku . '-practice';
+        $program_id_for_app = 'prod-' . $post_id;
+        
+        ob_start();
+        ?>
+        <div class="mco-program-details-wrapper">
+            <div class="mco-program-header">
+                <?php if (!empty($header_content)): ?>
+                    <div class="mco-program-header-content">
+                        <?php echo apply_filters('the_content', $header_content); ?>
+                    </div>
+                <?php elseif (!empty($product_image_url)): ?>
+                    <div class="mco-program-featured-image">
+                        <img src="<?php echo esc_url($product_image_url); ?>" alt="<?php echo esc_attr($program_post->post_title); ?>" />
+                    </div>
+                <?php endif; ?>
+                <h1><?php echo esc_html($program_post->post_title); ?></h1>
+                <div class="mco-program-description"><?php echo wp_kses_post(apply_filters('the_content', $program_post->post_content)); ?></div>
+            </div>
+
+            <div class="mco-program-options-grid">
+                <!-- Practice Exam Card -->
+                <div class="mco-program-option-card mco-program-option-card--practice">
+                    <div class="mco-program-option-card__header">
+                        <h3><?php echo esc_html($program_post->post_title); ?> Practice</h3>
+                    </div>
+                    <div class="mco-program-option-card__body">
+                        <div class="mco-program-option-card__stats">
+                            <div><strong><?php echo esc_html($practice_q[0] ?? '25'); ?></strong><span>Questions</span></div>
+                            <div><strong><?php echo esc_html($practice_d[0] ?? '60'); ?></strong><span>Minutes</span></div>
+                            <div><strong><?php echo esc_html($pass_score[0] ?? '70'); ?>%</strong><span>Pass Mark</span></div>
+                        </div>
+                    </div>
+                    <div class="mco-program-option-card__footer">
+                        <a href="/exam-app/#/test/<?php echo esc_attr($practice_exam_id); ?>" class="mco-program-option-card__btn">Start Practice</a>
+                    </div>
+                </div>
+
+                <!-- Certification Exam Card -->
+                <div class="mco-program-option-card mco-program-option-card--cert">
+                     <div class="mco-program-option-card__header">
+                        <h3><?php echo esc_html($program_post->post_title); ?> Certification</h3>
+                    </div>
+                    <div class="mco-program-option-card__body">
+                        <div class="mco-program-option-card__stats">
+                            <div><strong><?php echo esc_html($cert_q[0] ?? '100'); ?></strong><span>Questions</span></div>
+                            <div><strong><?php echo esc_html($cert_d[0] ?? '120'); ?></strong><span>Minutes</span></div>
+                            <div><strong><?php echo esc_html($pass_score[0] ?? '70'); ?>%</strong><span>Pass Mark</span></div>
+                        </div>
+                        <?php if ($product) : ?>
+                            <div class="mco-program-option-card__price">
+                                <?php echo $product->get_price_html(); ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="mco-program-option-card__footer">
+                        <?php if ($product): ?>
+                            <a href="/exam-app/#/checkout/<?php echo esc_attr($product->get_slug()); ?>" class="mco-program-option-card__btn">Purchase Exam</a>
+                        <?php else: ?>
+                             <a href="#" class="mco-program-option-card__btn mco-program-option-card__btn--disabled">Unavailable</a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            
+            <?php if (is_user_logged_in()): ?>
+            <div class="mco-program-view-in-app">
+                <a href="/exam-app/#/program/<?php echo esc_attr($program_id_for_app); ?>">View Full Details & Attempt History in the App &rarr;</a>
+            </div>
+            <?php endif; ?>
+
+            <?php
+            // Recommended Books Section
+            $book_post_ids = get_post_meta($post_id, '_mco_recommended_book_ids', true);
+            if (!empty($book_post_ids) && is_array($book_post_ids)) {
+                $book_query = new WP_Query(['post_type' => 'mco_recommended_book', 'post__in' => $book_post_ids, 'posts_per_page' => -1, 'orderby' => 'title']);
+                if ($book_query->have_posts()) {
+                    ?>
+                    <div class="mco-program-recommended-books">
+                        <h2>Recommended Study Materials</h2>
+                        <div class="mco-showcase-grid">
+                        <?php 
+                        $gradients = ['mco-card--gradient-4', 'mco-card--gradient-1', 'mco-card--gradient-3']; $i = 0;
+                        while($book_query->have_posts()): $book_query->the_post(); 
+                            $book_post_id = get_the_ID();
+                            $link_com = get_post_meta($book_post_id, '_mco_link_com', true);
+                            $link_in = get_post_meta($book_post_id, '_mco_link_in', true);
+                            $link_ae = get_post_meta($book_post_id, '_mco_link_ae', true);
+                            $gradient_class = $gradients[$i % count($gradients)]; $i++;
+                        ?>
+                            <div class="mco-card <?php echo esc_attr($gradient_class); ?>">
+                                <div class="mco-card__header">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                                </div>
+                                <div class="mco-card__body">
+                                    <h3 class="mco-card__title"><?php the_title(); ?></h3>
+                                    <p class="mco-card__description"><?php echo wp_strip_all_tags(get_the_content()); ?></p>
+                                </div>
+                                <div class="mco-card__footer">
+                                    <?php if (!empty($link_com)): ?><a href="<?php echo esc_url($link_com); ?>" target="_blank" rel="noopener noreferrer" class="mco-card__btn mco-card__btn--primary">Amazon.com</a><?php endif; ?>
+                                    <?php if (!empty($link_in)): ?><a href="<?php echo esc_url($link_in); ?>" target="_blank" rel="noopener noreferrer" class="mco-card__btn mco-card__btn--secondary">Amazon.in</a><?php endif; ?>
+                                    <?php if (!empty($link_ae)): ?><a href="<?php echo esc_url($link_ae); ?>" target="_blank" rel="noopener noreferrer" class="mco-card__btn mco-card__btn--secondary">Amazon.ae</a><?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endwhile; wp_reset_postdata(); ?>
+                        </div>
+                    </div>
+                    <?php
+                }
+            }
+            ?>
         </div>
         <?php
         return ob_get_clean();

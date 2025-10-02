@@ -65,6 +65,7 @@ export interface Exam {
   certificateTemplateId: string;
   isProctored: boolean;
   recommendedBookIds: string[];
+  imageUrl?: string;
 }
 
 export interface CertificateTemplate {
