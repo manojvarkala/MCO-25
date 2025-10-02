@@ -1,449 +1,217 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-// Hook registration
+// --- SHORTCODE REGISTRATION ---
 if (!function_exists('mco_register_shortcode_hooks')) {
     function mco_register_shortcode_hooks() {
-        add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
-        add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
-        add_shortcode('mco_book_showcase', 'mco_book_showcase_shortcode');
-        add_shortcode('mco_news_slider', 'mco_news_slider_shortcode'); // New shortcode registration
-        add_action('woocommerce_payment_complete', 'mco_auto_complete_virtual_order');
-        add_action('wp_enqueue_scripts', 'mco_enqueue_plugin_styles');
-        add_action('wp_footer', 'mco_add_purchase_notifier_to_footer');
-        add_filter('the_content', 'mco_add_sidebar_to_exam_programs');
-        add_action('wp', 'mco_inject_ad_blocker_css'); // Hook for ad blocker
+        add_shortcode('mco_exam_showcase', 'mco_shortcode_exam_showcase');
+        add_shortcode('mco_book_showcase', 'mco_shortcode_book_showcase');
+        add_shortcode('mco_news_slider', 'mco_shortcode_news_slider');
+        add_action('wp_enqueue_scripts', 'mco_enqueue_styles');
     }
 }
 
-// --- CSS INJECTION & STYLESHEET ENQUEUE ---
-if (!function_exists('mco_enqueue_plugin_styles')) {
-    function mco_enqueue_plugin_styles() {
-        global $post;
-        if (
-            (function_exists('is_woocommerce') && (is_cart() || is_checkout() || is_product())) ||
-            (is_a($post, 'WP_Post') && (has_shortcode($post->post_content, 'mco_exam_showcase') || has_shortcode($post->post_content, 'mco_book_showcase') || has_shortcode($post->post_content, 'mco_news_slider'))) ||
-            (is_singular('mco_exam_program'))
-        ) {
-            wp_enqueue_style(
-                'mco-styles', 
-                MCO_PLUGIN_URL . 'assets/mco-styles.css', 
-                [], 
-                MCO_PLUGIN_VERSION
-            );
+// --- STYLESHEET ENQUEUE ---
+if (!function_exists('mco_enqueue_styles')) {
+    function mco_enqueue_styles() {
+        if (is_a(get_post(), 'WP_Post') && (has_shortcode(get_post()->post_content, 'mco_exam_showcase') || has_shortcode(get_post()->post_content, 'mco_book_showcase') || has_shortcode(get_post()->post_content, 'mco_news_slider'))) {
+            wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
         }
     }
 }
 
-if (!function_exists('mco_inject_ad_blocker_css')) {
-    function mco_inject_ad_blocker_css() {
-        global $post;
-        if (
-            (function_exists('is_woocommerce') && (is_cart() || is_checkout())) ||
-            (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_showcase'))
-        ) {
-            add_action('wp_head', function() {
-                echo '<style>
-                    /* Common Ad Selectors */
-                    .adsbygoogle, ins.adsbygoogle, div[id*="ad-"], div[class*="ad-"],
-                    #ad-container, .ad-wrapper, .ad-banner, .google-ad {
-                        display: none !important;
-                        visibility: hidden !important;
-                        height: 0 !important;
-                        width: 0 !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                    }
-                </style>';
-            });
-        }
-    }
-}
+// --- NEWS SLIDER SHORTCODE ---
+if (!function_exists('mco_shortcode_news_slider')) {
+    function mco_shortcode_news_slider($atts) {
+        $atts = shortcode_atts(['posts_per_page' => 10], $atts);
+        $query = new WP_Query(['post_type' => 'post', 'posts_per_page' => $atts['posts_per_page'], 'post_status' => 'publish']);
+        if (!$query->have_posts()) return '<p>No recent news found.</p>';
+        
+        $slider_id = 'mco-news-slider-' . uniqid();
 
-// --- SHORTCODES & FRONTEND LOGIC ---
-if (!function_exists('mco_exam_login_shortcode')) {
-    function mco_exam_login_shortcode() {
-        if (is_user_logged_in()) {
-            $user_id = get_current_user_id();
-            $token = mco_generate_exam_jwt($user_id);
-            $app_url = mco_get_exam_app_url();
-            if ($token && $app_url) {
-                $final_url = $app_url . '/#/auth?token=' . $token;
-                return "<div style='text-align:center;'><p>Redirecting to your dashboard...</p><script>window.location.href='" . esc_url_raw($final_url) . "';</script></div>";
-            }
-        }
         ob_start();
-        if (function_exists('wc_get_template')) { wc_get_template('myaccount/form-login.php'); }
+        ?>
+        <div id="<?php echo esc_attr($slider_id); ?>" class="mco-news-slider-wrapper">
+            <div class="mco-news-slider-container">
+                <div class="mco-news-slider-track">
+                    <?php while ($query->have_posts()) : $query->the_post(); ?>
+                        <div class="mco-news-slide">
+                            <a href="<?php the_permalink(); ?>" class="mco-news-card">
+                                <?php if (has_post_thumbnail()) : ?>
+                                    <div class="mco-news-card-image">
+                                        <?php the_post_thumbnail('medium_large'); ?>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="mco-news-card-content">
+                                    <h3 class="mco-news-card-title"><?php the_title(); ?></h3>
+                                    <div class="mco-news-card-excerpt">
+                                        <?php the_excerpt(); ?>
+                                    </div>
+                                    <span class="mco-news-card-link">Read More &rarr;</span>
+                                </div>
+                            </a>
+                        </div>
+                    <?php endwhile; wp_reset_postdata(); ?>
+                </div>
+            </div>
+            <div class="mco-news-slider-pagination"></div>
+        </div>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sliderWrapper = document.getElementById('<?php echo esc_js($slider_id); ?>');
+            if (!sliderWrapper) return;
+
+            const track = sliderWrapper.querySelector('.mco-news-slider-track');
+            const slides = sliderWrapper.querySelectorAll('.mco-news-slide');
+            const paginationContainer = sliderWrapper.querySelector('.mco-news-slider-pagination');
+            
+            if (slides.length <= 1) return;
+
+            let currentIndex = 0;
+            let intervalId;
+
+            slides.forEach((_, index) => {
+                const dot = document.createElement('button');
+                dot.classList.add('mco-news-slider-dot');
+                if (index === 0) dot.classList.add('active');
+                dot.addEventListener('click', () => {
+                    currentIndex = index;
+                    scrollToSlide();
+                    resetInterval();
+                });
+                paginationContainer.appendChild(dot);
+            });
+
+            const dots = paginationContainer.querySelectorAll('.mco-news-slider-dot');
+
+            const updateDots = () => {
+                dots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index === currentIndex);
+                });
+            };
+
+            const scrollToSlide = () => {
+                const slideWidth = slides[0].offsetWidth;
+                track.style.transform = `translateX(-${currentIndex * slideWidth}px)`;
+                updateDots();
+            };
+
+            const nextSlide = () => {
+                currentIndex = (currentIndex + 1) % slides.length;
+                scrollToSlide();
+            };
+
+            const startInterval = () => {
+                intervalId = setInterval(nextSlide, 5000);
+            };
+
+            const resetInterval = () => {
+                clearInterval(intervalId);
+                startInterval();
+            };
+            
+            sliderWrapper.addEventListener('mouseenter', () => clearInterval(intervalId));
+            sliderWrapper.addEventListener('mouseleave', startInterval);
+
+            startInterval();
+            
+            // Adjust on resize
+            window.addEventListener('resize', scrollToSlide);
+        });
+        </script>
+        <?php
         return ob_get_clean();
     }
 }
 
-if (!function_exists('mco_render_star_rating')) {
-    function mco_render_star_rating($rating, $review_count) {
-        if ($review_count == 0) return '';
+
+// --- EXAM SHOWCASE SHORTCODE ---
+if (!function_exists('mco_shortcode_exam_showcase')) {
+    function mco_shortcode_exam_showcase() {
+        $query = new WP_Query(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC']);
+        if (!$query->have_posts()) return '<p>No exam programs are available at this time.</p>';
+
         ob_start();
+        $gradients = ['card-gradient-1', 'card-gradient-2', 'card-gradient-3', 'card-gradient-4'];
+        $i = 0;
         ?>
-        <div class="mco-star-rating">
-            <div class="mco-stars">
-                <?php for ($i = 0; $i < 5; $i++): ?>
-                    <svg class="<?php echo ($i < floor($rating)) ? 'filled' : 'empty'; ?>" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                <?php endfor; ?>
+        <div class="mco-showcase-grid">
+            <?php while ($query->have_posts()) : $query->the_post();
+                $post_id = get_the_ID();
+                $cert_sku = get_post_meta($post_id, '_mco_certification_exam_sku', true);
+                if (empty($cert_sku)) continue;
+
+                $product_id = wc_get_product_id_by_sku($cert_sku);
+                $product = $product_id ? wc_get_product($product_id) : null;
+                $practice_exam_id = $cert_sku . '-practice';
+                
+                $gradient_class = $gradients[$i % count($gradients)];
+                $i++;
+            ?>
+            <div class="mco-card <?php echo esc_attr($gradient_class); ?>">
+                <div class="mco-card-body">
+                    <h3 class="mco-card-title"><?php the_title(); ?></h3>
+                    <p class="mco-card-description"><?php echo wp_strip_all_tags(get_the_content()); ?></p>
+                </div>
+                <div class="mco-card-footer">
+                    <a href="/exam-app/#/test/<?php echo esc_attr($practice_exam_id); ?>" class="mco-card-btn btn-secondary">Start Practice</a>
+                    <?php if ($product): ?>
+                        <a href="<?php echo esc_url(get_permalink($product_id)); ?>" class="mco-card-btn btn-secondary">View Details</a>
+                        <a href="/exam-app/#/checkout/<?php echo esc_attr($product->get_slug()); ?>" class="mco-card-btn btn-primary">Purchase Exam</a>
+                    <?php else: ?>
+                         <a href="#" class="mco-card-btn btn-secondary disabled">Details N/A</a>
+                         <a href="#" class="mco-card-btn btn-primary disabled">Unavailable</a>
+                    <?php endif; ?>
+                </div>
             </div>
-            <span>(<?php echo esc_html($review_count); ?>)</span>
+            <?php endwhile; wp_reset_postdata(); ?>
         </div>
         <?php
         return ob_get_clean();
     }
 }
 
-if (!function_exists('mco_exam_showcase_shortcode')) {
-    function mco_exam_showcase_shortcode() {
+// --- BOOKSTORE SHOWCASE SHORTCODE ---
+if (!function_exists('mco_shortcode_book_showcase')) {
+    function mco_shortcode_book_showcase() {
+        $query = new WP_Query(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC']);
+        if (!$query->have_posts()) return '<p>No recommended books are available.</p>';
+        
         ob_start();
-        $query = new WP_Query(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish']);
-        if ($query->have_posts()) {
-            echo '<div class="mco-showcase-container">';
-            while ($query->have_posts()) {
-                $query->the_post();
-                $prog_id = get_the_ID();
-                $cert_sku = get_post_meta($prog_id, '_mco_certification_exam_sku', true);
-                if (empty($cert_sku)) continue;
-
-                $cert_product = wc_get_product(wc_get_product_id_by_sku($cert_sku));
-                if (!$cert_product) continue;
-                
-                $rating = (float)$cert_product->get_average_rating();
-                $review_count = (int)$cert_product->get_review_count();
-                if ($review_count < 5) {
-                    $seed = crc32(get_the_title());
-                    srand($seed);
-                    $rating = 4.2 + (rand(0, 7) / 10);
-                    $review_count = rand(15, 150);
-                    srand();
-                }
-
-                $practice_q = wp_get_post_terms($prog_id, 'exam_practice_questions', ['fields' => 'names']);
-                $practice_d = wp_get_post_terms($prog_id, 'exam_practice_duration', ['fields' => 'names']);
-                $cert_q = wp_get_post_terms($prog_id, 'exam_cert_questions', ['fields' => 'names']);
-                $cert_d = wp_get_post_terms($prog_id, 'exam_cert_duration', ['fields' => 'names']);
-                ?>
-                <div class="mco-program-card">
-                    <div class="mco-card-header">
-                        <h3><?php the_title(); ?></h3>
-                        <?php echo mco_render_star_rating($rating, $review_count); ?>
-                        <div class="mco-card-description"><?php echo wp_strip_all_tags(get_the_content()); ?></div>
-                    </div>
-                    <div class="mco-options-grid">
-                        <div class="mco-option-column">
-                            <h4>Practice Exam</h4>
-                            <div class="mco-price">Free</div>
-                            <ul class="mco-features-list">
-                                <li><span class="mco-feature-icon">&#10003;</span> <?php echo !empty($practice_q) ? esc_html($practice_q[0]) : 'N/A'; ?> Questions</li>
-                                <li><span class="mco-feature-icon">&#10003;</span> <?php echo !empty($practice_d) ? esc_html($practice_d[0]) : 'N/A'; ?> Minutes</li>
-                                <li><span class="mco-feature-icon">&#10003;</span> Answer Review</li>
-                                <li><span class="mco-feature-icon mco-feature-icon-disabled">&ndash;</span> AI Feedback (Subscribers)</li>
-                            </ul>
-                            <a href="<?php echo esc_url(home_url('/exam-login/')); ?>" class="mco-button mco-button-secondary">Start Practice</a>
-                        </div>
-                        <div class="mco-option-column">
-                            <h4>Certification Exam</h4>
-                            <div class="mco-price"><?php echo $cert_product->get_price_html(); ?></div>
-                            <ul class="mco-features-list">
-                                <li><span class="mco-feature-icon">&#10003;</span> <?php echo !empty($cert_q) ? esc_html($cert_q[0]) : 'N/A'; ?> Questions</li>
-                                <li><span class="mco-feature-icon">&#10003;</span> <?php echo !empty($cert_d) ? esc_html($cert_d[0]) : 'N/A'; ?> Minutes</li>
-                                <li><span class="mco-feature-icon">&#10003;</span> 3 Attempts Included</li>
-                                <li><span class="mco-feature-icon">&#10003;</span> Official Certificate</li>
-                            </ul>
-                            <a href="<?php echo esc_url($cert_product->add_to_cart_url()); ?>" class="mco-button mco-button-primary">Buy Exam</a>
-                        </div>
-                        <div class="mco-option-column mco-best-value">
-                            <div class="mco-best-value-banner">&#9733; Best Value Bundle</div>
-                            <h4>Exam & Study Tools</h4>
-                            <div class="mco-bundle-unavailable">
-                                <p>Get this exam plus unlimited practice and AI feedback with a subscription!</p>
-                                <a href="<?php echo esc_url(home_url('/pricing/')); ?>" class="mco-button mco-button-primary" style="margin-top:1rem;">View Plans</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <?php
-            }
-            echo '</div>';
-        } else {
-            echo '<p>No exam programs available.</p>';
-        }
-        wp_reset_postdata();
-        return ob_get_clean();
-    }
-}
-
-// --- BOOKSTORE SHORTCODE ---
-if (!function_exists('mco_book_showcase_shortcode')) {
-    function mco_book_showcase_shortcode() {
-        ob_start();
-        $query = new WP_Query([
-            'post_type' => 'mco_recommended_book',
-            'posts_per_page' => -1,
-            'post_status' => 'publish'
-        ]);
-
-        if ($query->have_posts()) {
-            echo '<div class="mco-book-showcase-container">';
-            while ($query->have_posts()) {
-                $query->the_post();
+        $gradients = ['card-gradient-4', 'card-gradient-3', 'card-gradient-2', 'card-gradient-1']; // Reverse order for variety
+        $i = 0;
+        ?>
+        <div class="mco-showcase-grid">
+            <?php while ($query->have_posts()) : $query->the_post();
                 $post_id = get_the_ID();
                 $link_com = get_post_meta($post_id, '_mco_link_com', true);
                 $link_in = get_post_meta($post_id, '_mco_link_in', true);
                 $link_ae = get_post_meta($post_id, '_mco_link_ae', true);
-                ?>
-                <div class="mco-book-card">
-                    <div class="mco-book-card-thumbnail">
-                        <?php echo mco_get_book_thumbnail_html($post_id, 'medium'); ?>
-                    </div>
-                    <div class="mco-book-card-content">
-                        <h3><?php the_title(); ?></h3>
-                        <p><?php echo wp_strip_all_tags(get_the_content()); ?></p>
-                    </div>
-                    <div class="mco-book-card-footer">
-                        <?php if (!empty($link_com)): ?>
-                            <a href="<?php echo esc_url($link_com); ?>" target="_blank" rel="noopener noreferrer" class="mco-book-button">Buy on Amazon.com</a>
-                        <?php endif; ?>
-                        <?php if (!empty($link_in)): ?>
-                             <a href="<?php echo esc_url($link_in); ?>" target="_blank" rel="noopener noreferrer" class="mco-book-button-secondary">Buy on Amazon.in</a>
-                        <?php endif; ?>
-                        <?php if (!empty($link_ae)): ?>
-                             <a href="<?php echo esc_url($link_ae); ?>" target="_blank" rel="noopener noreferrer" class="mco-book-button-secondary">Buy on Amazon.ae</a>
-                        <?php endif; ?>
-                    </div>
-                </div>
-                <?php
-            }
-            echo '</div>';
-        } else {
-            echo '<p>No recommended books available.</p>';
-        }
-        wp_reset_postdata();
-        return ob_get_clean();
-    }
-}
 
-// --- NEW: NEWS SLIDER SHORTCODE ---
-if (!function_exists('mco_news_slider_shortcode')) {
-    function mco_news_slider_shortcode($atts) {
-        $atts = shortcode_atts(['posts_per_page' => 7], $atts, 'mco_news_slider');
-        ob_start();
-        
-        $query = new WP_Query([
-            'post_type' => 'post',
-            'posts_per_page' => intval($atts['posts_per_page']),
-            'post_status' => 'publish',
-            'ignore_sticky_posts' => 1
-        ]);
-        
-        if ($query->have_posts()) {
-            $slider_id = 'mco-news-slider-' . uniqid();
+                $gradient_class = $gradients[$i % count($gradients)];
+                $i++;
             ?>
-            <div class="mco-news-slider-section">
-                <div class="mco-news-slider-wrapper">
-                    <div id="<?php echo $slider_id; ?>" class="mco-news-slider-container">
-                        <?php while ($query->have_posts()) : $query->the_post(); ?>
-                            <div class="mco-news-card">
-                                <a href="<?php the_permalink(); ?>" class="mco-news-card-image-link">
-                                    <?php if (has_post_thumbnail()) : ?>
-                                        <?php the_post_thumbnail('medium', ['class' => 'mco-news-card-image']); ?>
-                                    <?php else : ?>
-                                        <div class="mco-news-card-image-placeholder"></div>
-                                    <?php endif; ?>
-                                </a>
-                                <div class="mco-news-card-content">
-                                    <h3 class="mco-news-card-title"><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
-                                    <p class="mco-news-card-excerpt"><?php echo wp_trim_words(get_the_excerpt(), 15, '...'); ?></p>
-                                    <a href="<?php the_permalink(); ?>" class="mco-news-card-readmore">Read More &rarr;</a>
-                                </div>
-                            </div>
-                        <?php endwhile; ?>
-                    </div>
+            <div class="mco-card <?php echo esc_attr($gradient_class); ?>">
+                <div class="mco-card-body">
+                    <h3 class="mco-card-title"><?php the_title(); ?></h3>
+                    <p class="mco-card-description"><?php echo wp_strip_all_tags(get_the_content()); ?></p>
                 </div>
-                <button class="mco-slider-nav mco-slider-prev" aria-label="Previous Post">&#8249;</button>
-                <button class="mco-slider-nav mco-slider-next" aria-label="Next Post">&#8250;</button>
+                <div class="mco-card-footer">
+                    <?php if (!empty($link_com)): ?>
+                        <a href="<?php echo esc_url($link_com); ?>" target="_blank" rel="noopener noreferrer" class="mco-card-btn btn-primary">Buy on Amazon.com</a>
+                    <?php endif; ?>
+                    <?php if (!empty($link_in)): ?>
+                        <a href="<?php echo esc_url($link_in); ?>" target="_blank" rel="noopener noreferrer" class="mco-card-btn btn-secondary">Buy on Amazon.in</a>
+                    <?php endif; ?>
+                    <?php if (!empty($link_ae)): ?>
+                        <a href="<?php echo esc_url($link_ae); ?>" target="_blank" rel="noopener noreferrer" class="mco-card-btn btn-secondary">Buy on Amazon.ae</a>
+                    <?php endif; ?>
+                </div>
             </div>
-            
-            <script type="text/javascript">
-                document.addEventListener('DOMContentLoaded', function() {
-                    const slider = document.getElementById('<?php echo $slider_id; ?>');
-                    if (!slider) return;
-                    const wrapper = slider.closest('.mco-news-slider-section');
-                    const nextButton = wrapper.querySelector('.mco-slider-next');
-                    const prevButton = wrapper.querySelector('.mco-slider-prev');
-                    
-                    const scrollSlider = (direction) => {
-                        const card = slider.querySelector('.mco-news-card');
-                        if (!card) return;
-                        const cardWidth = card.offsetWidth + parseInt(getComputedStyle(slider).gap);
-                        slider.scrollBy({ left: cardWidth * direction, behavior: 'smooth' });
-                    };
-                    
-                    nextButton.addEventListener('click', () => scrollSlider(1));
-                    prevButton.addEventListener('click', () => scrollSlider(-1));
-                });
-            </script>
-            <?php
-        } else {
-            echo '<p>No news or updates found.</p>';
-        }
-        wp_reset_postdata();
-        return ob_get_clean();
-    }
-}
-
-
-// --- HELPER FOR BOOK THUMBNAILS ---
-if (!function_exists('mco_get_book_thumbnail_html')) {
-    function mco_get_book_thumbnail_html($post_id, $size = 'thumbnail') {
-        $custom_thumbnail_url = get_post_meta($post_id, '_mco_thumbnail_url', true);
-        
-        if (!empty($custom_thumbnail_url)) {
-            return '<img src="' . esc_url($custom_thumbnail_url) . '" alt="' . esc_attr(get_the_title($post_id)) . '" class="mco-book-thumbnail-img" />';
-        }
-        
-        if (has_post_thumbnail($post_id)) {
-            return get_the_post_thumbnail($post_id, $size, ['class' => 'mco-book-thumbnail-img']);
-        }
-
-        // Fallback to procedural generation
-        $post = get_post($post_id);
-        if (!$post) return '';
-
-        $title = $post->post_title;
-        $hash = abs(crc32($title));
-        
-        $color_schemes = 9;
-        $color_index = $hash % $color_schemes;
-
-        $title_words = explode(' ', $title);
-        $main_title = implode(' ', array_slice($title_words, 0, 4));
-        $sub_title = count($title_words) > 4 ? implode(' ', array_slice($title_words, 4)) : '';
-
-        ob_start();
-        ?>
-        <div class="mco-procedural-book-cover mco-book-cover-bg-<?php echo $color_index; ?>">
-            <div class="deco-circle-1 mco-book-cover-accent-<?php echo $color_index; ?>"></div>
-            <div class="deco-circle-2 mco-book-cover-accent-<?php echo $color_index; ?>"></div>
-            <div class="procedural-content">
-                <h4 class="mco-book-cover-text-<?php echo $color_index; ?>"><?php echo esc_html($main_title); ?></h4>
-                <?php if ($sub_title): ?>
-                    <p class="mco-book-cover-text-<?php echo $color_index; ?>"><?php echo esc_html($sub_title); ?></p>
-                <?php endif; ?>
-            </div>
-            <div class="accent-bar mco-book-cover-accent-<?php echo $color_index; ?>"></div>
+            <?php endwhile; wp_reset_postdata(); ?>
         </div>
         <?php
         return ob_get_clean();
-    }
-}
-
-
-// --- SIDEBAR FOR EXAM PROGRAM CPT ---
-if (!function_exists('mco_add_sidebar_to_exam_programs')) {
-    function mco_add_sidebar_to_exam_programs($content) {
-        if (is_singular('mco_exam_program') && in_the_loop() && is_main_query()) {
-            $books = mco_get_random_recommended_books(3);
-            if (empty($books)) {
-                return $content;
-            }
-            
-            $sidebar_html = '<aside class="mco-study-hall-sidebar">';
-            $sidebar_html .= '<h3>Study Hall</h3>';
-            foreach ($books as $book_post) {
-                $book_id = $book_post->ID;
-                $link_com = get_post_meta($book_id, '_mco_link_com', true);
-                if (empty($link_com)) continue; // Only show books with a primary link
-
-                $sidebar_html .= '<div class="mco-sidebar-book-card">';
-                $sidebar_html .= '<div class="mco-sidebar-book-thumbnail">' . mco_get_book_thumbnail_html($book_id, 'thumbnail') . '</div>';
-                $sidebar_html .= '<div class="mco-sidebar-book-content">';
-                $sidebar_html .= '<h4>' . esc_html($book_post->post_title) . '</h4>';
-                $sidebar_html .= '<a href="' . esc_url($link_com) . '" target="_blank" rel="noopener noreferrer" class="mco-sidebar-book-button">Buy on Amazon</a>';
-                $sidebar_html .= '</div></div>';
-            }
-            $sidebar_html .= '</aside>';
-
-            return '<div class="mco-single-exam-layout"><main class="mco-exam-main-content">' . $content . '</main>' . $sidebar_html . '</div>';
-        }
-        return $content;
-    }
-}
-
-
-if (!function_exists('mco_add_purchase_notifier_to_footer')) {
-    function mco_add_purchase_notifier_to_footer() {
-        if (is_admin()) return;
-
-        $all_exams_data = mco_get_app_config_data();
-        $cert_exams = [];
-        if (isset($all_exams_data['exams'])) {
-            foreach ($all_exams_data['exams'] as $exam) {
-                if (!$exam['isPractice'] && $exam['price'] > 0) {
-                    $cert_exams[] = $exam['name'];
-                }
-            }
-        }
-        if (empty($cert_exams)) $cert_exams[] = 'Certification Exam';
-        ?>
-        <div id="mco-purchase-notifier" style="display: none; position: fixed; bottom: 1.5rem; left: 1.5rem; z-index: 9999; background-color: white; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); border: 1px solid #e5e7eb; width: 100%; max-width: 320px; font-family: sans-serif; opacity: 0; transform: translateY(20px); transition: transform 0.5s ease-out, opacity 0.5s ease-out;">
-            <div style="display: flex; align-items: flex-start;">
-                <div style="background-color: #dcfce7; padding: 0.5rem; border-radius: 9999px; margin-right: 1rem;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-                </div>
-                <div>
-                    <p id="mco-notifier-text" style="font-weight: bold; color: #1f2937; margin: 0;"></p>
-                    <p id="mco-notifier-subtext" style="font-size: 0.875rem; color: #4b5563; margin: 0;"></p>
-                    <p id="mco-notifier-time" style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;"></p>
-                </div>
-            </div>
-        </div>
-        <script type="text/javascript">
-        document.addEventListener('DOMContentLoaded', function() {
-            const notifierElement = document.getElementById('mco-purchase-notifier');
-            if (!notifierElement) return;
-            const notificationData = {
-                names: ['John', 'Maria', 'David', 'Sarah', 'Michael', 'Jessica', 'Chris', 'Emily', 'Daniel', 'Laura', 'Ahmed', 'Sophie', 'Liam', 'Olivia'],
-                locations: ['New York, NY', 'London, UK', 'Sydney, AU', 'Toronto, CA', 'Mumbai, IN', 'Los Angeles, CA', 'Chicago, IL', 'Dubai, AE'],
-                exams: <?php echo json_encode($cert_exams); ?>
-            };
-            function getRandomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-            function showNotification() {
-                document.getElementById('mco-notifier-text').innerText = getRandomItem(notificationData.names) + ' from ' + getRandomItem(notificationData.locations);
-                document.getElementById('mco-notifier-subtext').innerText = 'Just purchased the "' + getRandomItem(notificationData.exams) + '"';
-                document.getElementById('mco-notifier-time').innerText = (Math.floor(Math.random() * 20) + 2) + " minutes ago";
-                notifierElement.style.display = 'block';
-                setTimeout(() => { notifierElement.style.opacity = '1'; notifierElement.style.transform = 'translateY(0)'; }, 10);
-                setTimeout(() => { notifierElement.style.opacity = '0'; notifierElement.style.transform = 'translateY(20px)'; }, 6000);
-                setTimeout(() => { if (notifierElement.style.opacity === '0') notifierElement.style.display = 'none'; }, 6500);
-            }
-            function startNotifier() {
-                const randomDelay = Math.random() * 25000 + 20000; // 20 to 45 seconds
-                setTimeout(() => { showNotification(); startNotifier(); }, randomDelay);
-            }
-            setTimeout(startNotifier, 12000);
-        });
-        </script>
-        <?php
-    }
-}
-
-// --- WOOCOMMERCE HELPERS ---
-if (!function_exists('mco_auto_complete_virtual_order')) {
-    function mco_auto_complete_virtual_order($order_id) {
-        if (!$order_id) return;
-        $order = wc_get_order($order_id);
-        if (!$order || $order->has_status(['completed', 'failed', 'cancelled', 'refunded'])) return;
-        $is_virtual_order = true;
-        if (count($order->get_items()) > 0) {
-            foreach ($order->get_items() as $item) {
-                if (!$item->get_product()->is_virtual()) { $is_virtual_order = false; break; }
-            }
-        } else { $is_virtual_order = false; }
-        if ($is_virtual_order) { $order->update_status('completed'); }
     }
 }
 ?>
