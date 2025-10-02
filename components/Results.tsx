@@ -10,15 +10,9 @@ import LogoSpinner from './LogoSpinner.tsx';
 import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, Sparkles, Star, XCircle, BookOpen } from 'lucide-react';
 // FIX: Use named import for jsPDF to resolve module augmentation issues.
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+// FIX: Switched to functional usage of jspdf-autotable to resolve module augmentation error.
+import autoTable from 'jspdf-autotable';
 import BookCover from '../assets/BookCover.tsx';
-
-// Extend jsPDF with autoTable for module augmentation
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
 
 type CertVisibility = 'NONE' | 'USER_EARNED' | 'ADMIN_OVERRIDE';
 
@@ -173,7 +167,7 @@ const Results: FC = () => {
             doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 36);
 
             const splitText = doc.splitTextToSize(aiFeedback, 180);
-            doc.autoTable({
+            autoTable(doc, {
                 startY: 45,
                 head: [['Personalized Feedback']],
                 body: splitText.map((line: string) => [line]),

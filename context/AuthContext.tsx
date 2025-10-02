@@ -28,8 +28,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const decodeHtmlEntities = (text: string | undefined): string => {
     if (!text || typeof text !== 'string') return text || '';
     try {
-        const doc = new DOMParser().parseFromString(text, 'text/html');
-        return doc.documentElement.textContent || text;
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = text;
+        return textarea.value;
     } catch (e) {
         console.error("Could not decode HTML entities", e);
         return text;
