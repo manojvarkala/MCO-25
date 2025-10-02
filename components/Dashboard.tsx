@@ -1,308 +1,227 @@
-import React, { FC, useMemo, useState, useEffect } from 'react';
-// FIX: Corrected import for react-router-dom to resolve module export errors.
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { Exam, TestResult, ExamProductCategory } from '../types.ts';
-import { Award, BarChart2, BookOpen, ChevronRight, Clock, Star, Zap, RefreshCw, AlertTriangle, CheckCircle, XCircle, Lock } from 'lucide-react';
-import toast from 'react-hot-toast';
+import type { TestResult, Exam, ExamProductCategory } from '../types.ts';
+import { User, Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, ShoppingCart, RefreshCw, PlayCircle, Star } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
-interface ExamCardProps {
-    exam: Exam;
-    isPractice: boolean;
-    results: TestResult[];
-    gradientClass: string;
-}
+const StatCard: FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
+    <div className="bg-slate-50 p-4 rounded-lg flex items-center">
+        <div className="bg-cyan-100 p-3 rounded-full mr-4">{icon}</div>
+        <div>
+            <p className="text-sm text-slate-500">{title}</p>
+            <p className="text-2xl font-bold text-slate-800">{value}</p>
+        </div>
+    </div>
+);
 
-const ExamCard: FC<ExamCardProps> = ({ exam, isPractice, results, gradientClass }) => {
+const ExamCard: FC<{ exam: Exam; isPractice: boolean; isPurchased: boolean }> = ({ exam, isPractice, isPurchased }) => {
     const navigate = useNavigate();
-    const { paidExamIds, isSubscribed } = useAuth();
-    const { activeOrg } = useAppContext();
+    const { isSubscribed } = useAuth();
+    const canTake = isPractice || isPurchased || isSubscribed;
+    const buttonText = isPractice ? 'Start Practice' : canTake ? 'Start Exam' : 'Purchase Exam';
 
-    const attempts = useMemo(() => results.filter(r => r.examId === exam.id), [results, exam.id]);
-    const hasPassed = useMemo(() => attempts.some(r => r.score >= exam.passScore), [attempts, exam.passScore]);
-    const category = useMemo(() => activeOrg?.examProductCategories.find(cat => cat.practiceExamId === exam.id || cat.certificationExamId === exam.id), [activeOrg, exam.id]);
-
-
-    let buttonText = 'Start Exam';
-    let buttonDisabled = false;
-    let buttonAction = () => navigate(`/test/${exam.id}`);
-    let reason = '';
-
-    const Icon = isPractice ? BookOpen : Award;
-    const buttonTextColor = isPractice ? 'text-cyan-800' : 'text-purple-800';
-
-    if (isPractice) {
-        buttonText = 'Start Practice';
-        if (!isSubscribed && attempts.length >= 10) {
-            buttonDisabled = true;
-            reason = '10 free attempts used.';
+    const handleButtonClick = () => {
+        if (canTake) {
+            navigate(`/test/${exam.id}`);
+        } else if (exam.productSlug) {
+            navigate(`/checkout/${exam.productSlug}`);
+        } else {
+            toast.error("This exam is not available for purchase at the moment.");
         }
-    } else { // Certification exam
-        if (hasPassed) {
-            buttonDisabled = true;
-            reason = 'Already Passed';
-        } else if (attempts.length >= 3) {
-            buttonDisabled = true;
-            reason = '3 attempts used.';
-        } else if (!paidExamIds.includes(exam.productSku) && !isSubscribed) {
-            buttonDisabled = true;
-            buttonText = 'Purchase to Start';
-            buttonAction = () => {
-                if (exam.productSlug) {
-                    navigate(`/checkout/${exam.productSlug}`);
-                } else {
-                    toast.error("Checkout not available for this item.");
-                }
-            };
-            reason = 'Purchase required';
-        }
-    }
+    };
 
-    const price = exam.price;
-    const regularPrice = exam.regularPrice;
-    
     return (
-        <div className={`flex flex-col rounded-xl p-6 text-white shadow-lg transform hover:-translate-y-1 transition-transform ${gradientClass}`}>
-            <div className="flex items-center gap-3 mb-3">
-                <Icon className="opacity-80" />
-                <h4 className="text-xl font-bold">{exam.name}</h4>
+        <div className={`bg-white p-6 rounded-xl shadow-md border-l-4 ${isPractice ? 'border-cyan-500' : 'border-amber-500'}`}>
+            <h3 className="font-bold text-lg text-slate-800">{exam.name}</h3>
+            <p className="text-sm text-slate-500 mt-1 mb-4 h-10 overflow-hidden">{exam.description}</p>
+            <div className="flex justify-between text-sm text-slate-600 mb-4">
+                <span><HelpCircle size={14} className="inline mr-1" />{exam.numberOfQuestions} Questions</span>
+                <span><Clock size={14} className="inline mr-1" />{exam.durationMinutes} Mins</span>
+                <span><CheckCircle size={14} className="inline mr-1" />{exam.passScore}% to Pass</span>
             </div>
-            <p className="text-white/80 text-sm flex-grow mb-4">{exam.description}</p>
-            <div className="text-xs text-white/70 mb-4 font-mono">
-                {exam.numberOfQuestions} Questions | {exam.durationMinutes} Mins | Pass: {exam.passScore}%
-            </div>
-
-            <button onClick={buttonAction} disabled={buttonDisabled} className={`w-full mt-auto flex items-center justify-center gap-2 font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105 ${
-                buttonDisabled
-                    ? 'bg-slate-500/50 cursor-not-allowed'
-                    : `bg-white hover:bg-slate-100 ${buttonTextColor}`
-            }`}>
-                {buttonDisabled && reason !== 'Purchase required' ? <Lock size={16} /> : <Zap size={16} />}
-                <span>{buttonText}</span>
+            <button
+                onClick={handleButtonClick}
+                className={`w-full flex items-center justify-center gap-2 font-semibold py-2 px-4 rounded-lg transition ${
+                    canTake
+                        ? 'bg-cyan-600 hover:bg-cyan-700 text-white'
+                        : 'bg-amber-500 hover:bg-amber-600 text-white'
+                }`}
+            >
+                {canTake ? <PlayCircle size={16} /> : <ShoppingCart size={16} />}
+                {buttonText}
             </button>
-            {buttonDisabled && reason && reason !== 'Purchase required' && (
-                <p className="text-xs text-center text-red-200 mt-2">{reason}</p>
-            )}
-            {!isPractice && !paidExamIds.includes(exam.productSku) && !isSubscribed && price != null && (
-                <div className="text-center mt-3">
-                    <span className="text-xl font-bold">${price.toFixed(2)}</span>
-                    {regularPrice && regularPrice > price && <span className="text-sm line-through text-white/70 ml-1.5">${regularPrice.toFixed(2)}</span>}
-                </div>
-            )}
-            {category && (
-                <a href={`/#/program/${category.id}`} className="text-xs text-center text-white/70 mt-3 hover:text-white hover:underline">
-                    View Program Details
-                </a>
-            )}
         </div>
     );
-}
+};
 
 
 const Dashboard: FC = () => {
+    const { user, token, paidExamIds, isSubscribed, loginWithToken } = useAuth();
+    const { activeOrg, isInitializing, inProgressExam, examPrices } = useAppContext();
     const navigate = useNavigate();
-    const location = useLocation();
-    const { user, token, isSubscribed, loginWithToken } = useAuth();
-    const { activeOrg, inProgressExam } = useAppContext();
+
     const [results, setResults] = useState<TestResult[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
-
-    const practiceGradients = ['bg-gradient-to-br from-cyan-500 to-sky-600', 'bg-gradient-to-br from-teal-500 to-cyan-600', 'bg-gradient-to-br from-sky-500 to-indigo-500'];
-    const certGradients = ['bg-gradient-to-br from-purple-600 to-indigo-700', 'bg-gradient-to-br from-violet-600 to-purple-700', 'bg-gradient-to-br from-fuchsia-600 to-purple-700'];
-
-    useEffect(() => {
-        if (user) {
-            const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
-            userResults.sort((a, b) => b.timestamp - a.timestamp);
-            setResults(userResults);
-        }
-    }, [user]);
-
-    useEffect(() => {
-        if (location.hash) {
-            const id = location.hash.replace('#', '');
-            const element = document.getElementById(id);
-            if (element) {
-                // Timeout ensures the element is painted before we try to scroll.
-                const timer = setTimeout(() => {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 100);
-                return () => clearTimeout(timer);
-            }
-        }
-    }, [location, activeOrg]); // Rerun if location or content changes
-
-
-    const handleSync = async () => {
-        if (!token) {
-            toast.error("You must be logged in to sync.");
-            return;
-        }
+    
+    const handleSync = useCallback(async () => {
+        if (!token) return;
         setIsSyncing(true);
         try {
-            await loginWithToken(token, true); // isSyncOnly = true
-            if (user) {
-                const updatedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
-                updatedResults.sort((a, b) => b.timestamp - a.timestamp);
-                setResults(updatedResults);
-            }
-        } catch (error: any) {
-            toast.error(error.message || "Failed to sync exams.");
+            // Using loginWithToken to sync also updates the auth context (paid exams, etc.)
+            await loginWithToken(token, true);
+        } catch(e: any) {
+            toast.error(e.message || "Sync failed.");
         } finally {
             setIsSyncing(false);
         }
-    };
-    
+    }, [token, loginWithToken]);
+
+    useEffect(() => {
+        if (user) {
+            setIsLoading(true);
+            const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
+            userResults.sort((a, b) => b.timestamp - a.timestamp);
+            setResults(userResults);
+            setIsLoading(false);
+        }
+    }, [user]);
+
     const stats = useMemo(() => {
         if (results.length === 0) {
-            return { attempts: 0, avgScore: 0, bestScore: 0, certs: 0 };
+            return { totalAttempts: 0, averageScore: 'N/A', bestScore: 'N/A', examsPassed: 0 };
         }
         const totalScore = results.reduce((acc, r) => acc + r.score, 0);
-        const bestScore = Math.max(...results.map(r => r.score));
-        const certs = results.filter(r => {
+        const averageScore = (totalScore / results.length).toFixed(1) + '%';
+        const bestScore = Math.max(...results.map(r => r.score)).toFixed(1) + '%';
+        const examsPassed = results.filter(r => {
             const exam = activeOrg?.exams.find(e => e.id === r.examId);
-            return exam && !exam.isPractice && r.score >= exam.passScore;
+            return exam && r.score >= exam.passScore;
         }).length;
-        
-        return {
-            attempts: results.length,
-            avgScore: Math.round(totalScore / results.length),
-            bestScore: Math.round(bestScore),
-            certs
-        };
+
+        return { totalAttempts: results.length, averageScore, bestScore, examsPassed };
     }, [results, activeOrg]);
 
-    if (!user || !activeOrg) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-                <p className="mt-4 text-slate-500">Loading Dashboard...</p>
-            </div>
-        );
+    const examCategories = useMemo(() => {
+        if (!activeOrg) return [];
+        return activeOrg.examProductCategories.map(category => {
+            const practiceExam = activeOrg.exams.find(e => e.id === category.practiceExamId);
+            const certExam = activeOrg.exams.find(e => e.id === category.certificationExamId);
+            return { ...category, practiceExam, certExam };
+        });
+    }, [activeOrg]);
+
+    if (isInitializing || isLoading) {
+        return <div className="text-center py-10"><Spinner size="lg" /></div>;
     }
-    
+
+    if (!user || !activeOrg) {
+        return <p>Could not load dashboard data.</p>;
+    }
+
     return (
-        <div className="max-w-7xl mx-auto space-y-8">
+        <div className="space-y-8">
+            {/* Header */}
             <div className="flex flex-wrap justify-between items-center gap-4">
-                <h1 className="text-4xl font-extrabold text-slate-900">
-                    Welcome, <span className="text-cyan-600">{user.name.split(' ')[0]}</span>!
-                </h1>
-                <button 
-                    onClick={handleSync} 
-                    disabled={isSyncing} 
-                    className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:bg-slate-200 disabled:text-slate-400"
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-800">Welcome back, {user.name}!</h1>
+                    <p className="text-slate-500">Ready to ace your next exam?</p>
+                </div>
+                <button
+                    onClick={handleSync}
+                    disabled={isSyncing}
+                    className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
                 >
-                    {isSyncing ? <Spinner /> : <RefreshCw size={16} />}
-                    <span>{isSyncing ? 'Syncing...' : 'Sync My Exams'}</span>
+                    <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+                    {isSyncing ? 'Syncing...' : 'Sync My Exams'}
                 </button>
             </div>
 
             {inProgressExam && (
-                <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-md flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <AlertTriangle className="h-6 w-6 text-yellow-600" />
-                        <div>
-                            <h3 className="font-bold text-yellow-800">Exam in Progress</h3>
-                            <p className="text-sm text-yellow-700">You have an unfinished exam: <strong>{inProgressExam.examName}</strong>.</p>
-                        </div>
+                <div className="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-400 flex justify-between items-center">
+                    <div>
+                        <h3 className="font-bold text-amber-800">You have an exam in progress!</h3>
+                        <p className="text-sm text-amber-700">"{inProgressExam.examName}"</p>
                     </div>
-                    <button onClick={() => navigate(`/test/${inProgressExam.examId}`)} className="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-1">
-                        Resume Now <ChevronRight size={16} />
+                    <button onClick={() => navigate(`/test/${inProgressExam.examId}`)} className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg">
+                        Resume Exam
                     </button>
                 </div>
             )}
-
-            {!isSubscribed && (
-                 <div className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-6 rounded-xl shadow-lg flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div className="flex items-center gap-4">
-                        <Star className="h-10 w-10 text-yellow-300" />
-                        <div>
-                            <h2 className="text-2xl font-bold">Go Premium!</h2>
-                            <p className="text-blue-200">Unlock unlimited practice exams and AI-powered feedback.</p>
-                        </div>
+            
+             {!isSubscribed && (
+                 <div className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-6 rounded-xl shadow-lg flex flex-wrap justify-between items-center gap-4">
+                    <div>
+                        <h2 className="text-2xl font-bold flex items-center gap-2"><Star /> Go Premium!</h2>
+                        <p className="text-blue-100">Unlock unlimited practice exams and AI-powered study guides.</p>
                     </div>
-                    <button onClick={() => navigate('/pricing')} className="bg-white text-cyan-600 font-bold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 flex-shrink-0">
-                        View Plans
-                    </button>
-                </div>
+                    <button onClick={() => navigate('/pricing')} className="bg-white text-cyan-600 font-bold py-2 px-6 rounded-lg transition hover:bg-cyan-50">View Plans</button>
+                 </div>
             )}
 
-            <div>
-                <h2 className="text-3xl font-bold text-slate-800 mb-6" id="exam-programs">My Exam Programs</h2>
-                <div className="space-y-12">
-                    {activeOrg.examProductCategories.map((category: ExamProductCategory, index: number) => {
-                        const practiceExam = activeOrg?.exams.find(e => e.id === category.practiceExamId);
-                        const certExam = activeOrg?.exams.find(e => e.id === category.certificationExamId);
-                        
-                        return (
-                            <div key={category.id} id={category.id} className="bg-white p-6 rounded-xl shadow-md border border-slate-200 scroll-mt-20">
-                                <h3 className="text-2xl font-bold text-slate-800 mb-1">{category.name}</h3>
-                                <p className="text-slate-500 mb-6">{category.description}</p>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {practiceExam && <ExamCard exam={practiceExam} isPractice={true} results={results} gradientClass={practiceGradients[index % practiceGradients.length]} />}
-                                    {certExam && <ExamCard exam={certExam} isPractice={false} results={results} gradientClass={certGradients[index % certGradients.length]} />}
-                                </div>
-                            </div>
-                        )
-                    })}
+            {/* My Stats */}
+            <div className="bg-white p-6 rounded-xl shadow-md">
+                <h2 className="text-xl font-bold text-slate-800 mb-4">My Stats</h2>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatCard title="Total Attempts" value={stats.totalAttempts} icon={<FileText className="text-cyan-600" />} />
+                    <StatCard title="Average Score" value={stats.averageScore} icon={<Activity className="text-cyan-600" />} />
+                    <StatCard title="Best Score" value={stats.bestScore} icon={<BarChart2 className="text-cyan-600" />} />
+                    <StatCard title="Exams Passed" value={stats.examsPassed} icon={<Award className="text-cyan-600" />} />
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-md">
-                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
-                        <BarChart2 className="mr-3 text-cyan-500" /> My Stats
-                    </h3>
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-baseline bg-slate-50 p-3 rounded-lg">
-                            <span className="text-slate-600">Total Attempts</span>
-                            <span className="text-2xl font-bold text-slate-800">{stats.attempts}</span>
-                        </div>
-                        <div className="flex justify-between items-baseline bg-slate-50 p-3 rounded-lg">
-                            <span className="text-slate-600">Average Score</span>
-                            <span className="text-2xl font-bold text-slate-800">{stats.avgScore}%</span>
-                        </div>
-                        <div className="flex justify-between items-baseline bg-slate-50 p-3 rounded-lg">
-                            <span className="text-slate-600">Best Score</span>
-                            <span className="text-2xl font-bold text-green-600">{stats.bestScore}%</span>
-                        </div>
-                        <div className="flex justify-between items-baseline bg-slate-50 p-3 rounded-lg">
-                            <span className="text-slate-600">Certificates</span>
-                            <span className="text-2xl font-bold text-cyan-600">{stats.certs}</span>
-                        </div>
-                    </div>
-                </div>
+            {/* Exam Programs */}
+            <div>
+                 <h2 className="text-2xl font-bold text-slate-800 mb-4">My Exam Programs</h2>
+                 <div className="space-y-6">
+                     {examCategories.map(category => (
+                        <div key={category.id} id={category.id} className="bg-slate-100 p-6 rounded-xl border border-slate-200">
+                             <h3 className="text-xl font-bold text-slate-800 mb-1">{category.name}</h3>
+                             <p className="text-slate-500 mb-4">{category.description}</p>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                 {category.practiceExam && <ExamCard exam={category.practiceExam} isPractice={true} isPurchased={false} />}
+                                 {category.certExam && <ExamCard exam={category.certExam} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} />}
+                             </div>
+                         </div>
+                     ))}
+                 </div>
+            </div>
 
-                <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
-                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
-                        <Clock className="mr-3 text-cyan-500" /> My Exam History
-                    </h3>
-                    {results.length > 0 ? (
-                        <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
-                            {results.map(result => {
-                                const exam = activeOrg.exams.find(e => e.id === result.examId);
-                                if (!exam) return null;
-                                const isPass = result.score >= exam.passScore;
-                                return (
-                                    <div key={result.testId} className="bg-slate-50 p-3 rounded-lg flex justify-between items-center gap-2">
-                                        <div>
-                                            <p className="font-semibold text-slate-800">{exam.name}</p>
-                                            <p className="text-xs text-slate-500">{new Date(result.timestamp).toLocaleString()}</p>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            {isPass ? <CheckCircle className="text-green-500" /> : <XCircle className="text-red-500" />}
-                                            <span className={`font-bold text-lg ${isPass ? 'text-green-600' : 'text-red-600'}`}>{result.score}%</span>
-                                            <button onClick={() => navigate(`/results/${result.testId}`)} className="text-sm font-semibold text-cyan-600 hover:underline">
-                                                Details
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+            {/* Exam History */}
+             <div className="bg-white p-6 rounded-xl shadow-md">
+                <h2 className="text-xl font-bold text-slate-800 mb-4">My Exam History</h2>
+                <div className="space-y-3">
+                    {results.length > 0 ? results.slice(0, 5).map(result => {
+                        const exam = activeOrg.exams.find(e => e.id === result.examId);
+                        if (!exam) return null;
+                        const isPass = result.score >= exam.passScore;
+                        return (
+                            <div key={result.testId} className="bg-slate-50 p-3 rounded-lg flex justify-between items-center hover:bg-slate-100 transition">
+                                <div>
+                                    <p className="font-semibold text-slate-800">{exam.name}</p>
+                                    <p className="text-xs text-slate-500">{new Date(result.timestamp).toLocaleString()}</p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <span className={`font-bold text-lg ${isPass ? 'text-green-600' : 'text-red-600'}`}>{result.score}%</span>
+                                    {isPass ? <CheckCircle size={20} className="text-green-500" /> : <XCircle size={20} className="text-red-500" />}
+                                    <button onClick={() => navigate(`/results/${result.testId}`)} className="text-cyan-600 hover:text-cyan-800">
+                                        <ChevronRight size={20} />
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    }) : <p className="text-center text-slate-500 py-4">You haven't completed any exams yet.</p>}
+                     {results.length > 5 && (
+                        <div className="text-center mt-4">
+                            <button onClick={() => navigate('/profile')} className="font-semibold text-cyan-600 hover:underline">
+                                View All History
+                            </button>
                         </div>
-                    ) : <p className="text-center text-slate-500 py-10">No exam history yet.</p>}
+                    )}
                 </div>
             </div>
         </div>
