@@ -19,9 +19,12 @@ interface ExamCardProps {
 const ExamCard: FC<ExamCardProps> = ({ exam, isPractice, results, gradientClass }) => {
     const navigate = useNavigate();
     const { paidExamIds, isSubscribed } = useAuth();
+    const { activeOrg } = useAppContext();
 
     const attempts = useMemo(() => results.filter(r => r.examId === exam.id), [results, exam.id]);
     const hasPassed = useMemo(() => attempts.some(r => r.score >= exam.passScore), [attempts, exam.passScore]);
+    const category = useMemo(() => activeOrg?.examProductCategories.find(cat => cat.practiceExamId === exam.id || cat.certificationExamId === exam.id), [activeOrg, exam.id]);
+
 
     let buttonText = 'Start Exam';
     let buttonDisabled = false;
@@ -88,6 +91,11 @@ const ExamCard: FC<ExamCardProps> = ({ exam, isPractice, results, gradientClass 
                     <span className="text-xl font-bold">${price.toFixed(2)}</span>
                     {regularPrice && regularPrice > price && <span className="text-sm line-through text-white/70 ml-1.5">${regularPrice.toFixed(2)}</span>}
                 </div>
+            )}
+            {category && (
+                <a href={`/#/program/${category.id}`} className="text-xs text-center text-white/70 mt-3 hover:text-white hover:underline">
+                    View Program Details
+                </a>
             )}
         </div>
     );

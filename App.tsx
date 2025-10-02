@@ -1,6 +1,3 @@
-
-
-
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { Navigate, useLocation, Routes, Route, HashRouter } from 'react-router-dom';
@@ -36,6 +33,7 @@ import Integration from './components/Integration.tsx';
 import UpdateNameModal from './components/UpdateNameModal.tsx';
 import MasqueradeBanner from './components/MasqueradeBanner.tsx';
 import BookStore from './components/BookStore.tsx';
+import ExamProgram from './components/ExamProgram.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -130,6 +128,11 @@ const AppContent: FC = () => {
                         <Route path="/refund-policy" element={<SidebarLayout><RefundPolicy /></SidebarLayout>} />
                         <Route path="/terms-of-service" element={<SidebarLayout><TermsOfService /></SidebarLayout>} />
                         <Route path="/bookstore" element={<SidebarLayout><BookStore /></SidebarLayout>} />
+                        <Route path="/program/:programId" element={
+                          <ProtectedRoute>
+                            <SidebarLayout><ExamProgram /></SidebarLayout>
+                          </ProtectedRoute>
+                        } />
                         <Route path="/profile" element={
                           <ProtectedRoute>
                             <SidebarLayout><Profile /></SidebarLayout>

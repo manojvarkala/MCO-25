@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) exit;
 // --- SHORTCODE REGISTRATION ---
 if (!function_exists('mco_register_shortcode_hooks')) {
     function mco_register_shortcode_hooks() {
+        add_shortcode('mco_exam_login', 'mco_shortcode_exam_login');
         add_shortcode('mco_exam_showcase', 'mco_shortcode_exam_showcase');
         add_shortcode('mco_book_showcase', 'mco_shortcode_book_showcase');
         add_shortcode('mco_news_slider', 'mco_shortcode_news_slider');
@@ -14,11 +15,51 @@ if (!function_exists('mco_register_shortcode_hooks')) {
 // --- STYLESHEET ENQUEUE ---
 if (!function_exists('mco_enqueue_styles')) {
     function mco_enqueue_styles() {
-        if (is_a(get_post(), 'WP_Post') && (has_shortcode(get_post()->post_content, 'mco_exam_showcase') || has_shortcode(get_post()->post_content, 'mco_book_showcase') || has_shortcode(get_post()->post_content, 'mco_news_slider'))) {
+        if (is_a(get_post(), 'WP_Post') && (has_shortcode(get_post()->post_content, 'mco_exam_login') || has_shortcode(get_post()->post_content, 'mco_exam_showcase') || has_shortcode(get_post()->post_content, 'mco_book_showcase') || has_shortcode(get_post()->post_content, 'mco_news_slider'))) {
             wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
         }
     }
 }
+
+// --- EXAM LOGIN SHORTCODE ---
+if (!function_exists('mco_shortcode_exam_login')) {
+    function mco_shortcode_exam_login() {
+        ob_start();
+
+        if (is_user_logged_in()) {
+            $user_id = get_current_user_id();
+            $token = mco_generate_exam_jwt($user_id);
+            $app_url = mco_get_exam_app_url();
+
+            if ($token && $app_url) {
+                $redirect_url = rtrim($app_url, '/') . '/#/auth?token=' . $token;
+                ?>
+                <div class="mco-login-wrapper">
+                    <p class="mco-login-message">You are logged in. Click the button below to access your exam dashboard.</p>
+                    <a href="<?php echo esc_url($redirect_url); ?>" class="mco-login-button">Proceed to Dashboard</a>
+                </div>
+                <?php
+            } else {
+                echo '<p class="mco-login-error">Could not generate login token or app URL is not configured.</p>';
+            }
+        } else {
+            $login_url = wp_login_url(get_permalink());
+            $register_url = wp_registration_url();
+            ?>
+            <div class="mco-login-wrapper">
+                <p class="mco-login-message">Please log in or register to access the exam portal.</p>
+                <div class="mco-login-actions">
+                    <a href="<?php echo esc_url($login_url); ?>" class="mco-login-button">Login</a>
+                    <a href="<?php echo esc_url($register_url); ?>" class="mco-login-button mco-login-button--secondary">Register</a>
+                </div>
+            </div>
+            <?php
+        }
+
+        return ob_get_clean();
+    }
+}
+
 
 // --- NEWS SLIDER SHORTCODE ---
 if (!function_exists('mco_shortcode_news_slider')) {

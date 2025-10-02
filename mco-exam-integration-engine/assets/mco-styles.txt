@@ -6,6 +6,54 @@ body .entry-content > .alignfull.mco-hero-section:first-child {
 }
 .mco-hero-section .wp-block-button__link { color: white; } /* Ensure button text is visible */
 
+/* --- EXAM LOGIN SHORTCODE --- */
+.mco-login-wrapper {
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05);
+    border: 1px solid #e2e8f0; /* slate-200 */
+    text-align: center;
+    max-width: 500px;
+    margin: 2rem auto;
+}
+.mco-login-message {
+    font-size: 1.125rem;
+    color: #334155; /* slate-700 */
+    margin: 0 0 1.5rem;
+}
+.mco-login-error {
+    color: #dc2626; /* red-600 */
+}
+.mco-login-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+.mco-login-button {
+    display: inline-block;
+    padding: 0.75rem 2rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    cursor: pointer;
+    background-color: #0891b2; /* cyan-600 */
+    color: white;
+}
+.mco-login-button:hover {
+    background-color: #0e7490; /* cyan-700 */
+}
+.mco-login-button--secondary {
+    background-color: #f1f5f9; /* slate-100 */
+    color: #1e293b; /* slate-800 */
+    border-color: #e2e8f0; /* slate-200 */
+}
+.mco-login-button--secondary:hover {
+    background-color: #e2e8f0; /* slate-200 */
+}
+
 /* --- GENERAL SHOWCASE GRID --- */
 .mco-showcase-grid {
     display: grid;
