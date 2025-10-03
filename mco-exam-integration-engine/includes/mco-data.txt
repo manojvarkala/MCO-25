@@ -44,7 +44,6 @@ function mco_get_app_config_data() {
         $program_id_for_app = 'prod-' . $post->ID;
         $practice_exam_id_for_app = 'exam-' . $program_id_for_app . '-practice';
         
-        // --- FIX: Fetch WooCommerce image URL ---
         $image_url = '';
         if ($cert_sku) {
             $product_id = wc_get_product_id_by_sku($cert_sku);
@@ -56,7 +55,7 @@ function mco_get_app_config_data() {
         $exam_product_categories[] = [
             'id' => $program_id_for_app,
             'name' => get_the_title($post),
-            'description' => has_excerpt($post->ID) ? get_the_excerpt($post->ID) : apply_filters('the_content', $post->post_content),
+            'description' => apply_filters('the_content', $post->post_content),
             'practiceExamId' => $practice_exam_id_for_app,
             'certificationExamId' => $cert_sku,
             'questionSourceUrl' => $question_source,
@@ -87,7 +86,7 @@ function mco_get_app_config_data() {
                  $all_exams[] = [
                     'id' => $cert_sku,
                     'name' => get_the_title($post),
-                    'description' => has_excerpt($post->ID) ? get_the_excerpt($post->ID) : apply_filters('the_content', $post->post_content),
+                    'description' => apply_filters('the_content', $post->post_content),
                     'price' => (float)$product->get_price(),
                     'regularPrice' => (float)$product->get_regular_price(),
                     'productSku' => $cert_sku,
@@ -164,11 +163,13 @@ function mco_get_app_config_data() {
     return $data;
 }
 
-function mco_get_single_term($post_id, $taxonomy, $field = 'name') {
-    $terms = get_the_terms($post_id, $taxonomy);
-    if (!empty($terms) && !is_wp_error($terms)) {
-        return $terms[0]->$field;
+if (!function_exists('mco_get_single_term')) {
+    function mco_get_single_term($post_id, $taxonomy, $field = 'name') {
+        $terms = get_the_terms($post_id, $taxonomy);
+        if (!empty($terms) && !is_wp_error($terms)) {
+            return $terms[0]->$field;
+        }
+        return '';
     }
-    return '';
 }
 ?>

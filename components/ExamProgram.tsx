@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, RecommendedBook } from '../types.ts';
-import { BookOpen, CheckCircle, Clock, HelpCircle, PlayCircle, ShoppingCart, Award } from 'lucide-react';
+import { BookOpen, CheckCircle, Clock, HelpCircle, PlayCircle, ShoppingCart, Award, ShoppingBag } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 import Spinner from './Spinner.tsx';
 
@@ -65,6 +65,27 @@ const ExamProgram: FC = () => {
         return suggestedBooks.filter(book => programData.certExam.recommendedBookIds.includes(book.id));
     }, [programData, suggestedBooks]);
 
+    const { certExam } = programData || {};
+    const isCertPurchased = certExam ? paidExamIds.includes(certExam.productSku) : false;
+    const canTakeCert = isSubscribed || isCertPurchased;
+
+    const bundleProductSku = useMemo(() => {
+        if (!certExam?.productSku) return null;
+        // Bundles are often sold as a separate product with a specific SKU pattern
+        return `${certExam.productSku}-1`;
+    }, [certExam]);
+
+    const bundlePriceData = useMemo(() => {
+        if (!bundleProductSku || !examPrices) return null;
+        return examPrices[bundleProductSku];
+    }, [bundleProductSku, examPrices]);
+
+    const bundleAddToCartUrl = useMemo(() => {
+        if (!bundlePriceData?.productId || !activeOrg) return null;
+        return `https://www.${activeOrg.website}/cart/?add-to-cart=${bundlePriceData.productId}`;
+    }, [bundlePriceData, activeOrg]);
+
+
     if (isInitializing) {
         return <div className="text-center py-10"><Spinner size="lg" /></div>;
     }
@@ -81,7 +102,7 @@ const ExamProgram: FC = () => {
         );
     }
 
-    const { category, practiceExam, certExam } = programData;
+    const { category, practiceExam } = programData;
     const imageUrl = certExam?.imageUrl || practiceExam?.imageUrl;
 
     const handleButtonClick = (exam: Exam, canTake: boolean) => {
@@ -99,9 +120,6 @@ const ExamProgram: FC = () => {
             toast.error("This exam is not available for purchase at the moment.");
         }
     };
-    
-    const isCertPurchased = certExam ? paidExamIds.includes(certExam.productSku) : false;
-    const canTakeCert = isSubscribed || isCertPurchased;
     
     // Use the most detailed description available
     const fullDescription = certExam?.description || practiceExam?.description || category.description;
@@ -204,6 +222,35 @@ const ExamProgram: FC = () => {
                             {canTakeCert ? <PlayCircle size={18} /> : <ShoppingCart size={18} />}
                             {canTakeCert ? 'Start Exam' : 'Add to Cart'}
                         </button>
+                    </div>
+                )}
+
+                {certExam && !canTakeCert && bundlePriceData && bundleAddToCartUrl && (
+                    <div className="bg-white p-6 rounded-xl shadow-md border-2 border-purple-500 relative">
+                        <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-purple-500 text-white text-xs font-bold uppercase px-3 py-1 rounded-full">Best Value</div>
+                        <h3 className="font-bold text-xl text-purple-600 flex items-center gap-3"><ShoppingBag /> Exam Bundle</h3>
+                        <div className="text-center my-4">
+                            {bundlePriceData.regularPrice && bundlePriceData.regularPrice > bundlePriceData.price ? (
+                                <div className="flex items-baseline justify-center gap-2">
+                                    <span className="text-lg line-through text-slate-500">${bundlePriceData.regularPrice.toFixed(2)}</span>
+                                    <span className="text-3xl font-bold text-slate-800">${bundlePriceData.price.toFixed(2)}</span>
+                                </div>
+                            ) : (
+                                <span className="text-3xl font-bold text-slate-800">${bundlePriceData.price.toFixed(2)}</span>
+                            )}
+                        </div>
+                        <ul className="space-y-2 text-slate-600 text-sm mb-4">
+                            <li className="flex items-center gap-2"><CheckCircle size={16} className="text-green-500" /> One Certification Exam</li>
+                            <li className="flex items-center gap-2"><CheckCircle size={16} className="text-green-500" /> 1-Month Unlimited Practice</li>
+                            <li className="flex items-center gap-2"><CheckCircle size={16} className="text-green-500" /> 1-Month Unlimited AI Feedback</li>
+                        </ul>
+                        <a
+                            href={bundleAddToCartUrl}
+                            className="w-full flex items-center justify-center gap-2 font-semibold py-3 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-transform transform hover:scale-105"
+                        >
+                            <ShoppingCart size={18} />
+                            Add Bundle to Cart
+                        </a>
                     </div>
                 )}
             </aside>
