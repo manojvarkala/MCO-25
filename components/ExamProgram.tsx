@@ -1,8 +1,9 @@
-import React, { FC, useMemo } from 'react';
+import React, { FC, useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
-import type { RecommendedBook } from '../types.ts';
+import { googleSheetsService } from '../services/googleSheetsService.ts';
+import type { RecommendedBook, TestResult } from '../types.ts';
 import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 import Spinner from './Spinner.tsx';
@@ -48,10 +49,21 @@ const ExamProgram: FC = () => {
     const { programId } = useParams<{ programId: string }>();
     const navigate = useNavigate();
     const { activeOrg, suggestedBooks, isInitializing, examPrices } = useAppContext();
-    const { paidExamIds, isSubscribed } = useAuth();
+    const { user, paidExamIds, isSubscribed } = useAuth();
+    
+    const [results, setResults] = useState<TestResult[]>([]);
     
     const practiceGradients = ['bg-gradient-to-br from-sky-500 to-cyan-500', 'bg-gradient-to-br from-emerald-500 to-green-500'];
     const certGradients = ['bg-gradient-to-br from-indigo-500 to-purple-600', 'bg-gradient-to-br from-rose-500 to-pink-600'];
+
+    useEffect(() => {
+        if (user) {
+            const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
+            setResults(userResults);
+        } else {
+            setResults([]); // Clear results if user logs out
+        }
+    }, [user]);
 
     const programData = useMemo(() => {
         if (!activeOrg || !programId) return null;
@@ -118,6 +130,7 @@ const ExamProgram: FC = () => {
     }
 
     const { category, practiceExam, certExam } = programData;
+    const certAttempts = user && certExam ? results.filter(r => r.examId === certExam.id).length : undefined;
     const fullDescription = certExam?.description || practiceExam?.description || category.description;
 
     return (
@@ -201,6 +214,7 @@ const ExamProgram: FC = () => {
                         activeOrg={activeOrg} 
                         examPrices={examPrices}
                         hideDetailsLink={true}
+                        attemptsMade={certAttempts}
                     />
                 )}
                 {certExam && (

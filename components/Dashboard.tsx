@@ -50,11 +50,14 @@ const Dashboard: FC = () => {
             userResults.sort((a, b) => b.timestamp - a.timestamp);
             setResults(userResults);
             setIsLoading(false);
+        } else {
+            // If no user, we're not loading user-specific data
+            setIsLoading(false);
         }
     }, [user, token]); // Re-run if token changes (after sync)
 
     const stats = useMemo(() => {
-        if (results.length === 0) {
+        if (!user || results.length === 0) {
             return { totalAttempts: 0, averageScore: 'N/A', bestScore: 'N/A', examsPassed: 0 };
         }
         const totalScore = results.reduce((acc, r) => acc + r.score, 0);
@@ -66,7 +69,7 @@ const Dashboard: FC = () => {
         }).length;
 
         return { totalAttempts: results.length, averageScore, bestScore, examsPassed };
-    }, [results, activeOrg]);
+    }, [results, activeOrg, user]);
 
     const examCategories = useMemo(() => {
         if (!activeOrg) return [];
@@ -98,7 +101,7 @@ const Dashboard: FC = () => {
         return <div className="text-center py-10"><Spinner size="lg" /></div>;
     }
 
-    if (!user || !activeOrg) {
+    if (!activeOrg) {
         return <p>Could not load dashboard data.</p>;
     }
 
@@ -106,20 +109,26 @@ const Dashboard: FC = () => {
         <div className="space-y-8">
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-800">Welcome back, {user.name}!</h1>
-                    <p className="text-slate-500">Ready to ace your next exam?</p>
+                    <h1 className="text-3xl font-bold text-slate-800">
+                        {user ? `Welcome back, ${user.name}!` : "Welcome to the Examination Portal!"}
+                    </h1>
+                    <p className="text-slate-500">
+                        {user ? "Ready to ace your next exam?" : "Browse our programs and start your certification journey."}
+                    </p>
                 </div>
-                <button
-                    onClick={handleSync}
-                    disabled={isSyncing}
-                    className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
-                >
-                    <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
-                    {isSyncing ? 'Syncing...' : 'Sync My Exams'}
-                </button>
+                {user && token && (
+                    <button
+                        onClick={handleSync}
+                        disabled={isSyncing}
+                        className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
+                    >
+                        <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+                        {isSyncing ? 'Syncing...' : 'Sync My Exams'}
+                    </button>
+                )}
             </div>
 
-            {inProgressExam && (
+            {user && inProgressExam && (
                 <div className="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-400 flex justify-between items-center">
                     <div>
                         <h3 className="font-bold text-amber-800">You have an exam in progress!</h3>
@@ -191,66 +200,74 @@ const Dashboard: FC = () => {
                 </div>
             )}
 
-            <div className="bg-white p-6 rounded-xl shadow-md">
-                <h2 className="text-xl font-bold text-slate-800 mb-4">My Stats</h2>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <StatCard title="Total Attempts" value={stats.totalAttempts} icon={<FileText className="text-cyan-600" />} />
-                    <StatCard title="Average Score" value={stats.averageScore} icon={<Activity className="text-cyan-600" />} />
-                    <StatCard title="Best Score" value={stats.bestScore} icon={<BarChart2 className="text-cyan-600" />} />
-                    <StatCard title="Exams Passed" value={stats.examsPassed} icon={<Award className="text-cyan-600" />} />
+            {user && (
+                <div className="bg-white p-6 rounded-xl shadow-md">
+                    <h2 className="text-xl font-bold text-slate-800 mb-4">My Stats</h2>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <StatCard title="Total Attempts" value={stats.totalAttempts} icon={<FileText className="text-cyan-600" />} />
+                        <StatCard title="Average Score" value={stats.averageScore} icon={<Activity className="text-cyan-600" />} />
+                        <StatCard title="Best Score" value={stats.bestScore} icon={<BarChart2 className="text-cyan-600" />} />
+                        <StatCard title="Exams Passed" value={stats.examsPassed} icon={<Award className="text-cyan-600" />} />
+                    </div>
                 </div>
-            </div>
+            )}
 
             <div>
-                 <h2 className="text-2xl font-bold text-slate-800 mb-4">My Exam Programs</h2>
+                 <h2 className="text-2xl font-bold text-slate-800 mb-4">Exam Programs</h2>
                  <div className="space-y-6">
-                     {examCategories.map((category, index) => (
-                        <div key={category.id} id={category.id} className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-                            <Link to={`/program/${category.id}`} className="group">
-                                <h3 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-cyan-600 transition">{category.name}</h3>
-                            </Link>
-                            <div className="text-slate-500 mb-4 text-sm" dangerouslySetInnerHTML={{ __html: category.description }} />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} gradientClass={practiceGradients[index % practiceGradients.length]} activeOrg={activeOrg} examPrices={examPrices} />}
-                                {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} gradientClass={certGradients[index % certGradients.length]} activeOrg={activeOrg} examPrices={examPrices}/>}
+                     {examCategories.map((category, index) => {
+                         const certAttempts = user && category.certExam ? results.filter(r => r.examId === category.certExam.id).length : undefined;
+
+                         return (
+                            <div key={category.id} id={category.id} className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                                <Link to={`/program/${category.id}`} className="group">
+                                    <h3 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-cyan-600 transition">{category.name}</h3>
+                                </Link>
+                                <div className="text-slate-500 mb-4 text-sm" dangerouslySetInnerHTML={{ __html: category.description }} />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} gradientClass={practiceGradients[index % practiceGradients.length]} activeOrg={activeOrg} examPrices={examPrices} />}
+                                    {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} gradientClass={certGradients[index % certGradients.length]} activeOrg={activeOrg} examPrices={examPrices} attemptsMade={certAttempts}/>}
+                                </div>
                             </div>
-                        </div>
-                     ))}
+                         );
+                     })}
                  </div>
             </div>
 
-             <div className="bg-white p-6 rounded-xl shadow-md">
-                <h2 className="text-xl font-bold text-slate-800 mb-4">My Exam History</h2>
-                <div className="space-y-3">
-                    {results.length > 0 ? results.slice(0, 5).map(result => {
-                        const exam = activeOrg.exams.find(e => e.id === result.examId);
-                        if (!exam) return null;
-                        const isPass = result.score >= exam.passScore;
-                        return (
-                            <div key={result.testId} className="bg-slate-50 p-3 rounded-lg flex justify-between items-center hover:bg-slate-100 transition">
-                                <div>
-                                    <p className="font-semibold text-slate-800">{exam.name}</p>
-                                    <p className="text-xs text-slate-500">{new Date(result.timestamp).toLocaleString()}</p>
+             {user && (
+                <div className="bg-white p-6 rounded-xl shadow-md">
+                    <h2 className="text-xl font-bold text-slate-800 mb-4">My Exam History</h2>
+                    <div className="space-y-3">
+                        {results.length > 0 ? results.slice(0, 5).map(result => {
+                            const exam = activeOrg.exams.find(e => e.id === result.examId);
+                            if (!exam) return null;
+                            const isPass = result.score >= exam.passScore;
+                            return (
+                                <div key={result.testId} className="bg-slate-50 p-3 rounded-lg flex justify-between items-center hover:bg-slate-100 transition">
+                                    <div>
+                                        <p className="font-semibold text-slate-800">{exam.name}</p>
+                                        <p className="text-xs text-slate-500">{new Date(result.timestamp).toLocaleString()}</p>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <span className={`font-bold text-lg ${isPass ? 'text-green-600' : 'text-red-600'}`}>{result.score}%</span>
+                                        {isPass ? <CheckCircle size={20} className="text-green-500" /> : <XCircle size={20} className="text-red-500" />}
+                                        <button onClick={() => navigate(`/results/${result.testId}`)} className="text-cyan-600 hover:text-cyan-800">
+                                            <ChevronRight size={20} />
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    <span className={`font-bold text-lg ${isPass ? 'text-green-600' : 'text-red-600'}`}>{result.score}%</span>
-                                    {isPass ? <CheckCircle size={20} className="text-green-500" /> : <XCircle size={20} className="text-red-500" />}
-                                    <button onClick={() => navigate(`/results/${result.testId}`)} className="text-cyan-600 hover:text-cyan-800">
-                                        <ChevronRight size={20} />
-                                    </button>
-                                </div>
+                            );
+                        }) : <p className="text-center text-slate-500 py-4">You haven't completed any exams yet.</p>}
+                         {results.length > 5 && (
+                            <div className="text-center mt-4">
+                                <Link to='/profile' className="font-semibold text-cyan-600 hover:underline">
+                                    View All History
+                                </Link>
                             </div>
-                        );
-                    }) : <p className="text-center text-slate-500 py-4">You haven't completed any exams yet.</p>}
-                     {results.length > 5 && (
-                        <div className="text-center mt-4">
-                            <Link to='/profile' className="font-semibold text-cyan-600 hover:underline">
-                                View All History
-                            </Link>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };

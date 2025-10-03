@@ -4,23 +4,30 @@ import toast from 'react-hot-toast';
 import type { User, TokenPayload } from '../types.ts';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 
-interface AuthContextType {
-  user: User | null;
-  token: string | null;
-  paidExamIds: string[];
-  isSubscribed: boolean;
-  spinsAvailable: number;
-  wonPrize: { prizeId: string; prizeLabel: string; } | null;
+type MasqueradeMode = 'none' | 'user' | 'visitor';
+
+interface AuthState {
+    user: User | null;
+    token: string | null;
+    paidExamIds: string[];
+    isSubscribed: boolean;
+    spinsAvailable: number;
+    wonPrize: { prizeId: string; prizeLabel: string; } | null;
+    isSpinWheelEnabled: boolean;
+}
+
+interface AuthContextType extends AuthState {
   wheelModalDismissed: boolean;
   canSpinWheel: boolean;
-  isSpinWheelEnabled: boolean;
   isEffectivelyAdmin: boolean;
   isMasquerading: boolean;
+  masqueradeAs: MasqueradeMode;
   loginWithToken: (token: string, isSyncOnly?: boolean) => Promise<void>;
   logout: () => void;
   updateUserName: (name: string) => void;
   setWheelModalDismissed: (dismissed: boolean) => void;
-  toggleMasquerade: () => void;
+  startMasquerade: (as: 'user' | 'visitor') => void;
+  stopMasquerade: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -99,12 +106,14 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
           return false;
       }
   });
-  const [isMasquerading, setIsMasquerading] = useState<boolean>(false);
+  
+  const [masqueradeAs, setMasqueradeAs] = useState<MasqueradeMode>('none');
+  const [originalAuthState, setOriginalAuthState] = useState<AuthState | null>(null);
 
   const isEffectivelyAdmin = useMemo(() => {
     if (!user) return false;
-    return user.isAdmin && !isMasquerading;
-  }, [user, isMasquerading]);
+    return user.isAdmin && masqueradeAs === 'none';
+  }, [user, masqueradeAs]);
   
   const canSpinWheel = useMemo(() => {
     if (!user || !isSpinWheelEnabled) return false;
@@ -121,7 +130,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setSpinsAvailable(0);
     setWonPrize(null);
     setIsSpinWheelEnabled(false);
-    setIsMasquerading(false); // Reset on logout
+    setMasqueradeAs('none');
+    setOriginalAuthState(null);
     localStorage.removeItem('examUser');
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
@@ -192,7 +202,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setUser(payload.user);
             setPaidExamIds(payload.paidExamIds);
             setToken(jwtToken);
-            setIsMasquerading(false); // Reset on new login/sync
+            setMasqueradeAs('none');
+            setOriginalAuthState(null);
             localStorage.setItem('examUser', JSON.stringify(payload.user));
             localStorage.setItem('paidExamIds', JSON.stringify(payload.paidExamIds));
             localStorage.setItem('authToken', jwtToken);
@@ -246,16 +257,41 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   }, [logout]);
   
-  const toggleMasquerade = useCallback(() => {
-    setIsMasquerading(prev => {
-        if (!prev) {
-            toast('Masquerade mode enabled. Viewing as a regular user.', { icon: '🎭' });
-        } else {
-            toast.success('Returned to Admin view.');
+    const startMasquerade = (as: 'user' | 'visitor') => {
+        if (masqueradeAs !== 'none' || !user?.isAdmin) return;
+    
+        setOriginalAuthState({ user, token, paidExamIds, isSubscribed, spinsAvailable, wonPrize, isSpinWheelEnabled });
+        setMasqueradeAs(as);
+
+        if (as === 'user') {
+            toast('Masquerade mode enabled. Viewing as a logged-in user.', { icon: '🎭' });
+        } else { // visitor
+            setUser(null);
+            setToken(null);
+            setPaidExamIds([]);
+            setIsSubscribed(false);
+            setSpinsAvailable(0);
+            setWonPrize(null);
+            setIsSpinWheelEnabled(false);
+            toast('Masquerade mode enabled. Viewing as a visitor.', { icon: '👻' });
         }
-        return !prev;
-    });
-  }, []);
+    };
+
+    const stopMasquerade = () => {
+        if (masqueradeAs === 'none' || !originalAuthState) return;
+
+        setUser(originalAuthState.user);
+        setToken(originalAuthState.token);
+        setPaidExamIds(originalAuthState.paidExamIds);
+        setIsSubscribed(originalAuthState.isSubscribed);
+        setSpinsAvailable(originalAuthState.spinsAvailable);
+        setWonPrize(originalAuthState.wonPrize);
+        setIsSpinWheelEnabled(originalAuthState.isSpinWheelEnabled);
+
+        setOriginalAuthState(null);
+        setMasqueradeAs('none');
+        toast.success('Returned to Admin view.');
+    };
 
   const updateUserName = useCallback((name: string) => {
     if (user) {
@@ -274,6 +310,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   }, []);
 
+  const isMasquerading = masqueradeAs !== 'none';
 
   const value = useMemo(() => ({
     user,
@@ -287,16 +324,18 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     isSpinWheelEnabled,
     isEffectivelyAdmin,
     isMasquerading,
+    masqueradeAs,
     loginWithToken,
     logout,
     updateUserName,
     setWheelModalDismissed: updateWheelModalDismissed,
-    toggleMasquerade
+    startMasquerade,
+    stopMasquerade,
   }), [
     user, token, paidExamIds, isSubscribed,
     spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel,
-    isSpinWheelEnabled, isEffectivelyAdmin, isMasquerading, loginWithToken,
-    logout, updateUserName, updateWheelModalDismissed, toggleMasquerade
+    isSpinWheelEnabled, isEffectivelyAdmin, isMasquerading, masqueradeAs, loginWithToken,
+    logout, updateUserName, updateWheelModalDismissed, startMasquerade, stopMasquerade
   ]);
 
   return (

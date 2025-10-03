@@ -101,8 +101,8 @@ const AppContent: FC = () => {
         : "container mx-auto px-4 py-8";
 
     return (
-        <div className={`flex flex-col min-h-screen bg-slate-50 text-slate-800 ${user?.isAdmin && isMasquerading ? 'pt-10' : ''}`}>
-            {user && user.isAdmin && <MasqueradeBanner />}
+        <div className={`flex flex-col min-h-screen bg-slate-50 text-slate-800 ${isMasquerading ? 'pt-10' : ''}`}>
+            {isMasquerading && <MasqueradeBanner />}
             {user && <UpdateNameModal isOpen={isNameModalOpen} onClose={() => setIsNameModalOpen(false)} />}
             {canSpinWheel && isWheelModalOpen && (
               <WheelOfFortune 
@@ -128,11 +128,10 @@ const AppContent: FC = () => {
                         <Route path="/refund-policy" element={<SidebarLayout><RefundPolicy /></SidebarLayout>} />
                         <Route path="/terms-of-service" element={<SidebarLayout><TermsOfService /></SidebarLayout>} />
                         <Route path="/bookstore" element={<SidebarLayout><BookStore /></SidebarLayout>} />
-                        <Route path="/program/:programId" element={
-                          <ProtectedRoute>
-                            <SidebarLayout><ExamProgram /></SidebarLayout>
-                          </ProtectedRoute>
-                        } />
+                        <Route path="/program/:programId" element={<SidebarLayout><ExamProgram /></SidebarLayout>} />
+                        <Route path="/dashboard" element={<SidebarLayout><Dashboard /></SidebarLayout>} />
+
+                        {/* Protected Routes */}
                         <Route path="/profile" element={
                           <ProtectedRoute>
                             <SidebarLayout><Profile /></SidebarLayout>
@@ -142,11 +141,6 @@ const AppContent: FC = () => {
                           <ProtectedRoute>
                             <SidebarLayout><Results /></SidebarLayout>
                           </ProtectedRoute>
-                        } />
-                        <Route path="/dashboard" element={
-                            <ProtectedRoute>
-                                <SidebarLayout><Dashboard /></SidebarLayout>
-                            </ProtectedRoute>
                         } />
 
                         {/* Routes with their own layout or no sidebar */}

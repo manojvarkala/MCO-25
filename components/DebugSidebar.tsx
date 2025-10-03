@@ -4,16 +4,17 @@ import React, { FC, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { DebugData } from '../types.ts';
-import { Bug, X, Server, User, ShoppingCart, FileText, CheckCircle, AlertTriangle, Eye, Shield } from 'lucide-react';
+import { Bug, X, Server, User, ShoppingCart, FileText, CheckCircle, AlertTriangle, Eye, Shield, Users, Ghost } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
 
 const DebugSidebar: FC = () => {
-    const { token, toggleMasquerade, isMasquerading } = useAuth();
+    const { token, startMasquerade, stopMasquerade, masqueradeAs } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [debugData, setDebugData] = useState<DebugData | null>(null);
+    const isMasquerading = masqueradeAs !== 'none';
 
     useEffect(() => {
         // Prevent fetching data while masquerading or when closed
@@ -91,13 +92,34 @@ const DebugSidebar: FC = () => {
                         </button>
                     </div>
 
-                    <button
-                        onClick={toggleMasquerade}
-                        className={`w-full mb-4 flex items-center justify-center gap-2 font-bold py-2 px-4 rounded-lg transition ${isMasquerading ? 'bg-green-500 hover:bg-green-600' : 'bg-amber-500 hover:bg-amber-600'} text-white`}
-                    >
-                        {isMasquerading ? <Shield size={16} /> : <Eye size={16} />}
-                        {isMasquerading ? 'Return to Admin View' : 'View as User'}
-                    </button>
+                    <div className="mb-4">
+                        {masqueradeAs === 'none' ? (
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    onClick={() => startMasquerade('user')}
+                                    className="flex items-center justify-center gap-2 font-bold py-2 px-3 rounded-lg transition bg-amber-500 hover:bg-amber-600 text-white text-sm"
+                                >
+                                    <Users size={16} />
+                                    View as User
+                                </button>
+                                <button
+                                    onClick={() => startMasquerade('visitor')}
+                                    className="flex items-center justify-center gap-2 font-bold py-2 px-3 rounded-lg transition bg-sky-500 hover:bg-sky-600 text-white text-sm"
+                                >
+                                    <Ghost size={16} />
+                                    View as Visitor
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={stopMasquerade}
+                                className="w-full flex items-center justify-center gap-2 font-bold py-2 px-4 rounded-lg transition bg-green-500 hover:bg-green-600 text-white"
+                            >
+                                <Shield size={16} />
+                                Return to Admin View
+                            </button>
+                        )}
+                    </div>
 
                     {!isMasquerading ? (
                         <div className="flex-grow bg-slate-900 rounded-lg p-4 overflow-auto font-mono text-sm">
@@ -238,7 +260,10 @@ const DebugSidebar: FC = () => {
                          <div className="flex-grow flex flex-col items-center justify-center text-center bg-slate-900 rounded-lg p-4">
                             <Eye size={32} className="text-amber-400 mb-4" />
                             <h3 className="font-bold text-lg text-slate-200">Masquerade Mode Active</h3>
-                            <p className="text-slate-400 mt-2 text-sm">All admin-only UI and data is hidden. Use the button above or the top banner to return to your admin view.</p>
+                            <p className="text-slate-400 mt-2 text-sm">
+                                {masqueradeAs === 'user' ? 'Viewing as a regular user.' : 'Viewing as a visitor.'}
+                            </p>
+                            <p className="text-slate-400 text-xs">Use the button above or the top banner to return to your admin view.</p>
                         </div>
                     )}
                 </div>

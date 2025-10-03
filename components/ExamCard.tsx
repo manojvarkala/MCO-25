@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import type { Exam, Organization } from '../types.ts';
-import { Award, BookOpen, CheckCircle, Clock, HelpCircle, PlayCircle, ShoppingCart } from 'lucide-react';
+import { Award, BookOpen, CheckCircle, Clock, HelpCircle, History, PlayCircle, ShoppingCart } from 'lucide-react';
 
 export interface ExamCardProps {
     exam: Exam;
@@ -14,9 +14,10 @@ export interface ExamCardProps {
     activeOrg: Organization;
     examPrices: { [key: string]: any } | null;
     hideDetailsLink?: boolean;
+    attemptsMade?: number;
 }
 
-const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, gradientClass, activeOrg, examPrices, hideDetailsLink = false }) => {
+const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, gradientClass, activeOrg, examPrices, hideDetailsLink = false, attemptsMade }) => {
     const navigate = useNavigate();
     const { isSubscribed } = useAuth();
     const canTake = isPractice || isPurchased || isSubscribed;
@@ -59,10 +60,13 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                 
                 <h3 className="text-lg font-bold mb-2 leading-tight flex-grow">{exam.name}</h3>
 
-                <div className="flex justify-between text-sm text-white/80 my-4 p-3 bg-black/10 rounded-md">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-white/80 my-4 p-3 bg-black/10 rounded-md">
                     <span><HelpCircle size={14} className="inline mr-1" />{exam.numberOfQuestions} Qs</span>
                     <span><Clock size={14} className="inline mr-1" />{exam.durationMinutes} Mins</span>
                     <span><CheckCircle size={14} className="inline mr-1" />{exam.passScore}% Pass</span>
+                    {typeof attemptsMade === 'number' && !isPractice && (
+                         <span><History size={14} className="inline mr-1" />{attemptsMade}/3 Attempts</span>
+                    )}
                 </div>
                 
                 {!canTake && exam.price > 0 && (
