@@ -1,13 +1,14 @@
 import React, { FC, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { RecommendedBook } from '../types.ts';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';
+import SubscriptionOfferCard from './SubscriptionOfferCard.tsx';
 
 const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } | null => {
     const links = book.affiliateLinks;
@@ -47,7 +48,7 @@ const ExamProgram: FC = () => {
     const { programId } = useParams<{ programId: string }>();
     const navigate = useNavigate();
     const { activeOrg, suggestedBooks, isInitializing, examPrices } = useAppContext();
-    const { paidExamIds } = useAuth();
+    const { paidExamIds, isSubscribed } = useAuth();
     
     const practiceGradients = ['bg-gradient-to-br from-sky-500 to-cyan-500', 'bg-gradient-to-br from-emerald-500 to-green-500'];
     const certGradients = ['bg-gradient-to-br from-indigo-500 to-purple-600', 'bg-gradient-to-br from-rose-500 to-pink-600'];
@@ -68,6 +69,36 @@ const ExamProgram: FC = () => {
         if (!programData?.certExam?.recommendedBookIds || !suggestedBooks) return [];
         return suggestedBooks.filter(book => programData.certExam.recommendedBookIds.includes(book.id));
     }, [programData, suggestedBooks]);
+
+    const { monthlyPrice, yearlyPrice, monthlySubUrl, yearlySubUrl } = useMemo(() => {
+        const monthlyData = examPrices?.['sub-monthly'];
+        const yearlyData = examPrices?.['sub-yearly'];
+        const website = activeOrg ? `https://www.${activeOrg.website}` : '';
+
+        return {
+            monthlyPrice: monthlyData?.price ?? 19.99,
+            yearlyPrice: yearlyData?.price ?? 149.99,
+            monthlySubUrl: monthlyData?.productId ? `${website}/cart/?add-to-cart=${monthlyData.productId}` : `${website}/product/monthly-subscription/`,
+            yearlySubUrl: yearlyData?.productId ? `${website}/cart/?add-to-cart=${yearlyData.productId}` : `${website}/product/yearly-subscription/`,
+        };
+    }, [examPrices, activeOrg]);
+    
+    const navigationLinks = useMemo(() => {
+        if (!activeOrg || !programId) return { prev: null, next: null };
+
+        const categories = activeOrg.examProductCategories;
+        const currentIndex = categories.findIndex(cat => cat.id === programId);
+
+        if (currentIndex === -1) return { prev: null, next: null };
+
+        const prevProgram = currentIndex > 0 ? categories[currentIndex - 1] : null;
+        const nextProgram = currentIndex < categories.length - 1 ? categories[currentIndex + 1] : null;
+
+        return {
+            prev: prevProgram ? { id: prevProgram.id, name: prevProgram.name } : null,
+            next: nextProgram ? { id: nextProgram.id, name: nextProgram.name } : null,
+        };
+    }, [programId, activeOrg]);
 
 
     if (isInitializing) {
@@ -94,7 +125,33 @@ const ExamProgram: FC = () => {
             <main className="lg:col-span-2 space-y-8">
                 <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                     <h1 className="text-3xl font-extrabold text-slate-900">{category.name}</h1>
-                    <div className="mt-4 prose max-w-none text-slate-600" dangerouslySetInnerHTML={{ __html: fullDescription }} />
+                    
+                    <div className="flex justify-between items-center mt-4 mb-6 border-t border-b border-slate-200 py-3">
+                        {navigationLinks.prev ? (
+                            <Link to={`/program/${navigationLinks.prev.id}`} className="flex items-center gap-2 text-cyan-600 hover:text-cyan-800 transition-colors group">
+                                <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform"/>
+                                <div>
+                                    <span className="text-xs text-slate-500">Previous</span>
+                                    <span className="block font-semibold text-sm line-clamp-1">{navigationLinks.prev.name}</span>
+                                </div>
+                            </Link>
+                        ) : (
+                            <div /> // Placeholder to keep the 'Next' button on the right
+                        )}
+                        {navigationLinks.next ? (
+                            <Link to={`/program/${navigationLinks.next.id}`} className="flex items-center gap-2 text-cyan-600 hover:text-cyan-800 transition-colors text-right group">
+                                <div className="text-right">
+                                    <span className="text-xs text-slate-500">Next</span>
+                                    <span className="block font-semibold text-sm line-clamp-1">{navigationLinks.next.name}</span>
+                                </div>
+                                <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform"/>
+                            </Link>
+                        ) : (
+                            <div /> // Placeholder
+                        )}
+                    </div>
+
+                    <div className="prose max-w-none text-slate-600" dangerouslySetInnerHTML={{ __html: fullDescription }} />
                 </div>
 
                 {recommendedBooksForProgram.length > 0 && (
@@ -152,6 +209,35 @@ const ExamProgram: FC = () => {
                         activeOrg={activeOrg}
                         examPrices={examPrices}
                     />
+                )}
+                {!isSubscribed && (
+                    <>
+                        <SubscriptionOfferCard
+                            planName="Monthly Subscription"
+                            price={monthlyPrice}
+                            priceUnit="month"
+                            url={monthlySubUrl}
+                            features={[
+                                'Unlimited Practice Exams',
+                                'Unlimited AI Feedback',
+                                'Cancel Anytime',
+                            ]}
+                            gradientClass="bg-gradient-to-br from-cyan-500 to-sky-600"
+                        />
+                        <SubscriptionOfferCard
+                            planName="Yearly Subscription"
+                            price={yearlyPrice}
+                            priceUnit="year"
+                            url={yearlySubUrl}
+                            features={[
+                                'All Monthly features',
+                                'Access All Exam Programs',
+                                'Saves over 35%!',
+                            ]}
+                            isBestValue={true}
+                            gradientClass="bg-gradient-to-br from-purple-600 to-indigo-700"
+                        />
+                    </>
                 )}
             </aside>
         </div>
