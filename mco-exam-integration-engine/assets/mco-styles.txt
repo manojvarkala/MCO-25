@@ -1,18 +1,35 @@
 /* --- MCO Shortcode Styles --- */
 
-/* Main Grid Layout */
+/* Main Grid Layout for showcases (used by books) */
 .mco-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 2rem;
 }
 
+/* NEW: Main container for the exam program showcase */
+.mco-showcase-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* 1 column by default */
+    gap: 2rem;
+}
+
+/* Media query for 2 columns on larger screens */
+@media (min-width: 1024px) {
+    .mco-showcase-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* A single program group, which is an item in the showcase grid */
 .mco-program-group {
-    grid-column: 1 / -1; /* Span full width */
+    /* grid-column: 1 / -1; /* This was causing the single-column layout */
     padding: 1.5rem;
     background-color: #f8fafc; /* slate-50 */
     border: 1px solid #e2e8f0; /* slate-200 */
     border-radius: 1rem;
+    display: flex; /* Use flexbox to organize content vertically */
+    flex-direction: column;
 }
 
 .mco-program-group__title {
@@ -30,8 +47,17 @@
     font-size: 1rem;
     color: #64748b; /* slate-500 */
     margin: 0 0 1.5rem 0;
+    flex-grow: 1; /* Allows description to grow, pushing cards down */
 }
 
+/* NEW: The grid that holds the two cards (practice & cert) inside a group */
+.mco-program-group__cards {
+    display: grid;
+    /* This will make the two cards sit side-by-side if there's space, or stack if not. */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+    gap: 1.5rem;
+    margin-top: auto; /* Push cards to the bottom of the group, aligning buttons */
+}
 
 /* Card Base */
 .mco-card {

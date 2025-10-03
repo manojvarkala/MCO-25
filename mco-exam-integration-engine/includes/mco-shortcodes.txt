@@ -101,7 +101,7 @@ function mco_exam_showcase_shortcode() {
     ];
 
     ob_start();
-    echo '<div class="mco-grid">';
+    echo '<div class="mco-showcase-grid">';
     
     foreach ($exam_programs as $index => $program) {
         $program_id_for_app = 'prod-' . $program->ID;
@@ -124,7 +124,7 @@ function mco_exam_showcase_shortcode() {
         echo '<div class="mco-program-group">';
         echo '<a href="' . esc_url($program_details_url) . '"><h3 class="mco-program-group__title">' . esc_html($category_name) . '</h3></a>';
         echo '<p class="mco-program-group__description">' . esc_html($category_desc) . '</p>';
-        echo '<div class="mco-grid">';
+        echo '<div class="mco-program-group__cards">';
         
         // Practice Exam Card
         if ($practice_questions && $practice_duration) {

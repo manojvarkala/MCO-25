@@ -23,15 +23,16 @@ if (!function_exists('mco_add_admin_menu')) {
             'dashicons-awards',
             25
         );
+        add_submenu_page('mco-exam-engine', 'Settings & Tools', 'Settings & Tools', 'manage_options', 'mco-exam-engine');
         add_submenu_page('mco-exam-engine', 'Exam Programs', 'Exam Programs', 'manage_options', 'edit.php?post_type=mco_exam_program');
         add_submenu_page('mco-exam-engine', 'Recommended Books', 'Recommended Books', 'manage_options', 'edit.php?post_type=mco_recommended_book');
-        add_submenu_page('mco-exam-engine', 'Certificate Templates', 'Certificate Templates', 'manage_options', 'mco-exam-engine&tab=certificate_templates');
     }
 }
 
 if (!function_exists('mco_admin_enqueue_styles')) {
     function mco_admin_enqueue_styles($hook) {
-        if ($hook !== 'toplevel_page_mco-exam-engine') {
+        // Load styles only on our plugin page
+        if (strpos($hook, 'mco-exam-engine') === false) {
             return;
         }
         ?>
@@ -39,6 +40,7 @@ if (!function_exists('mco_admin_enqueue_styles')) {
             .mco-admin-wrap { max-width: 960px; }
             .mco-admin-wrap h1 { margin-bottom: 20px; }
             .mco-admin-wrap .nav-tab { font-size: 14px; }
+            .mco-admin-wrap .tab-content { margin-top: 20px; }
             .mco-admin-wrap .form-table th { width: 200px; }
             .mco-admin-wrap .form-table td input[type="text"], .mco-admin-wrap .form-table td textarea { width: 100%; max-width: 500px; }
             .mco-admin-wrap .form-table td textarea { height: 100px; }
@@ -57,14 +59,20 @@ if (!function_exists('mco_admin_enqueue_styles')) {
 
 if (!function_exists('mco_exam_engine_admin_page')) {
     function mco_exam_engine_admin_page() {
+        // This check ensures that if the 'mco-exam-engine' page is loaded without a tab, it defaults to main_settings.
+        if (isset($_GET['page']) && $_GET['page'] === 'mco-exam-engine' && !isset($_GET['tab'])) {
+            $_GET['tab'] = 'main_settings';
+        }
+
         $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'main_settings';
         ?>
         <div class="wrap mco-admin-wrap">
-            <h1>Exam App Engine Settings</h1>
+            <h1>Exam App Engine - Settings & Tools</h1>
             <nav class="nav-tab-wrapper">
                 <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
                 <a href="?page=mco-exam-engine&tab=bulk_import" class="nav-tab <?php echo $active_tab == 'bulk_import' ? 'nav-tab-active' : ''; ?>">Bulk Import</a>
                 <a href="?page=mco-exam-engine&tab=certificate_templates" class="nav-tab <?php echo $active_tab == 'certificate_templates' ? 'nav-tab-active' : ''; ?>">Certificate Templates</a>
+                <a href="?page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
             </nav>
             <div class="tab-content">
                 <?php
@@ -74,6 +82,8 @@ if (!function_exists('mco_exam_engine_admin_page')) {
                     mco_render_bulk_import_tab();
                 } elseif ($active_tab == 'certificate_templates') {
                     mco_render_certificate_templates_tab();
+                } elseif ($active_tab == 'tools') {
+                    mco_render_tools_tab();
                 }
                 ?>
             </div>
@@ -478,6 +488,31 @@ function mco_render_certificate_templates_tab() {
             <?php endforeach; ?>
         </div>
         <?php submit_button('Save Templates'); ?>
+    </form>
+    <?php
+}
+
+function mco_render_tools_tab() {
+    if (isset($_POST['mco_clear_cache_nonce']) && wp_verify_nonce($_POST['mco_clear_cache_nonce'], 'mco_clear_cache')) {
+        delete_transient('mco_app_config_data');
+        update_option('mco_config_version', current_time('YmdHis'));
+        echo '<div class="notice notice-success is-dismissible"><p>Server-side application config cache has been cleared. The app will fetch fresh data on its next load.</p></div>';
+    }
+    ?>
+    <h2>Tools</h2>
+    <p>Use these tools for maintenance and troubleshooting.</p>
+    
+    <form method="post" action="">
+        <?php wp_nonce_field('mco_clear_cache', 'mco_clear_cache_nonce'); ?>
+        <table class="form-table">
+            <tr valign="top">
+                <th scope="row">Server Cache</th>
+                <td>
+                    <p class="description" style="margin-bottom: 10px;">The plugin caches the main application configuration data for 1 hour to improve performance. If you've made changes to exam programs, books, or products and don't see them reflected in the app, you can clear this cache manually.</p>
+                    <?php submit_button('Clear Server Config Cache', 'secondary', 'submit_clear_cache', false); ?>
+                </td>
+            </tr>
+        </table>
     </form>
     <?php
 }
