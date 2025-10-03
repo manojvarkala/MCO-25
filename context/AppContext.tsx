@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
 import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -111,13 +112,8 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     if (processedData) {
       setOrganizations(processedData.processedOrgs);
       
-      let prices = null;
-      if (config.examPrices) { // API response structure
-          prices = config.examPrices;
-      } else if (config.organizations && config.organizations[0] && config.organizations[0].examPrices) { // Static file structure
-          prices = config.organizations[0].examPrices;
-      }
-      setExamPrices(prices);
+      // Simplified logic: examPrices is always at the root level for both API and static files.
+      setExamPrices(config.examPrices || null);
       
       setSuggestedBooks(processedData.allSuggestedBooks);
       const newActiveOrg = processedData.processedOrgs[0] || null;

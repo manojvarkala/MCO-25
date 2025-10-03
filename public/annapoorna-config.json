@@ -1,5 +1,3 @@
-
-
 {
     "version": "1.0.0",
     "organizations": [
@@ -48,5 +46,17 @@
                 { "id": "book-aws-guide", "title": "AWS Certified Cloud Practitioner Study Guide", "description": "A comprehensive guide to prepare for the CLF-C01 exam, covering all exam objectives and concepts.", "thumbnailUrl": "", "affiliateLinks": { "com": "https://www.amazon.com/dp/1119713609?tag=mykada-20", "in": "https://www.amazon.in/dp/1119713609?tag=httpcodingonl-21", "ae": "https://www.amazon.ae/dp/1119713609?tag=medical0f1-21"}}
             ]
         }
-    ]
+    ],
+    "examPrices": {
+        "exam-dm-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "digital-marketing-certification" },
+        "exam-pa-cert": { "price": 1, "regularPrice": 29.99, "productSlug": "platform-admin-certification" },
+        "exam-wp-cert": { "price": 1, "regularPrice": 59.99, "productSlug": "wordpress-integration-specialist" },
+        "exam-pmp-cert": { "price": 1, "regularPrice": 79.99, "productSlug": "pmp-exam-preparation" },
+        "exam-csm-cert": { "price": 1, "regularPrice": 69.99, "productSlug": "csm-exam-prep" },
+        "exam-aws-cert": { "price": 1, "regularPrice": 69.99, "productSlug": "aws-cloud-practitioner-prep" },
+        "exam-cpc-cert-1": { 
+          "price": 10.00,
+          "regularPrice": 59.99 
+        }
+    }
 }

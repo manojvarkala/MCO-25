@@ -1,4 +1,4 @@
-import React, { FC, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { FC, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu, Video, DownloadCloud, Loader, CheckCircle, XCircle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, SearchedUser, ExamStat } from '../types.ts';
@@ -7,14 +7,6 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
-
-const prizeOptions = [
-    { id: 'SUB_YEARLY', label: 'Annual Subscription' },
-    { id: 'SUB_MONTHLY', label: 'Monthly Subscription' },
-    { id: 'SUB_WEEKLY', label: 'Weekly Subscription' },
-    { id: 'EXAM_CPC', label: 'Free CPC Exam' },
-    { id: 'EXAM_CCA', label: 'Free CCA Exam' },
-];
 
 // FIX: Define a union type for health status to ensure type safety.
 type HealthStatus = 'idle' | 'success' | 'failed' | 'loading';
@@ -79,6 +71,19 @@ const HealthCheckItem: FC<HealthCheckItemProps> = ({ status, title, message, tro
 const Admin: FC = () => {
     const { activeOrg, updateActiveOrg } = useAppContext();
     const { token } = useAuth();
+    
+    const prizeOptions = useMemo(() => {
+        const cpcExam = activeOrg?.exams.find(e => e.productSku === 'exam-cpc-cert');
+        const ccaExam = activeOrg?.exams.find(e => e.productSku === 'exam-cca-cert');
+    
+        return [
+            { id: 'SUB_YEARLY', label: 'Annual Subscription' },
+            { id: 'SUB_MONTHLY', label: 'Monthly Subscription' },
+            { id: 'SUB_WEEKLY', label: 'Weekly Subscription' },
+            { id: 'EXAM_CPC', label: cpcExam ? `Free ${cpcExam.name}` : 'Free CPC Exam' },
+            { id: 'EXAM_CCA', label: ccaExam ? `Free ${ccaExam.name}` : 'Free CCA Exam' },
+        ];
+    }, [activeOrg]);
 
     // State for user prize management
     const [searchTerm, setSearchTerm] = useState('');

@@ -610,13 +610,25 @@ function mco_api_spin_wheel(WP_REST_Request $request) {
         return new WP_Error('no_spins', 'You have no spins left.', ['status' => 403]);
     }
 
-    // Define prizes and their weights
+    // Get product names dynamically for labels
+    $cpc_sku = 'exam-cpc-cert';
+    $cca_sku = 'exam-cca-cert';
+    
+    $cpc_product_id = wc_get_product_id_by_sku($cpc_sku);
+    $cpc_product = $cpc_product_id ? wc_get_product($cpc_product_id) : null;
+    $cpc_name = $cpc_product ? $cpc_product->get_name() : 'CPC Exam';
+
+    $cca_product_id = wc_get_product_id_by_sku($cca_sku);
+    $cca_product = $cca_product_id ? wc_get_product($cca_product_id) : null;
+    $cca_name = $cca_product ? $cca_product->get_name() : 'CCA Exam';
+
+    // Define prizes and their weights, using stable IDs but dynamic labels
     $prizes = [
         'SUB_YEARLY' => ['label' => 'Annual Subscription', 'weight' => 1],
         'SUB_MONTHLY' => ['label' => 'Monthly Subscription', 'weight' => 5],
         'SUB_WEEKLY' => ['label' => 'Weekly Subscription', 'weight' => 10],
-        'EXAM_CPC' => ['label' => 'Free CPC Exam', 'weight' => 15],
-        'EXAM_CCA' => ['label' => 'Free CCA Exam', 'weight' => 15],
+        'EXAM_CPC' => ['label' => 'Free ' . $cpc_name, 'weight' => 15],
+        'EXAM_CCA' => ['label' => 'Free ' . $cca_name, 'weight' => 15],
         'NEXT_TIME' => ['label' => 'Better Luck Next Time', 'weight' => 54],
     ];
 

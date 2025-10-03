@@ -868,135 +868,135 @@
             "ae": "https://www.amazon.ae/s?k=Medical+Coders+Career+Guide&tag=medical0f1-21"
           }
         }
-      ],
-      "examPrices": {
-        "exam-mcf-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1241379,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-hi-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1241378,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-rcm-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1241377,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-em-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1241376,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-ap-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1241375,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-mta-cert": {
-          "price": 1,
-          "regularPrice": 80,
-          "productId": 1240733,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-cic-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1240732,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-coc-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1240731,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-cpma-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1240730,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-crc-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1240729,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-cpb-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1240728,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-icd-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1240723,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-risk-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1240722,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-ccs-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1240720,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-billing-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1240721,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-cca-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1240718,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-cpc-cert": {
-          "price": 1,
-          "regularPrice": 49.99,
-          "productId": 1240706,
-          "avgRating": 0,
-          "reviewCount": 0
-        },
-        "exam-cpc-cert-1": {
-          "price": 10,
-          "regularPrice": 59.99,
-          "productId": 1241444,
-          "avgRating": 0,
-          "reviewCount": 0
-        }
-      }
+      ]
     }
-  ]
+  ],
+  "examPrices": {
+    "exam-mcf-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1241379,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-hi-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1241378,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-rcm-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1241377,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-em-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1241376,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-ap-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1241375,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-mta-cert": {
+      "price": 1,
+      "regularPrice": 80,
+      "productId": 1240733,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-cic-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1240732,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-coc-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1240731,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-cpma-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1240730,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-crc-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1240729,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-cpb-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1240728,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-icd-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1240723,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-risk-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1240722,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-ccs-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1240720,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-billing-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1240721,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-cca-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1240718,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-cpc-cert": {
+      "price": 1,
+      "regularPrice": 49.99,
+      "productId": 1240706,
+      "avgRating": 0,
+      "reviewCount": 0
+    },
+    "exam-cpc-cert-1": {
+      "price": 10,
+      "regularPrice": 59.99,
+      "productId": 1241444,
+      "avgRating": 0,
+      "reviewCount": 0
+    }
+  }
 }

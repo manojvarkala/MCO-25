@@ -1,8 +1,26 @@
 import React from 'react';
 import toast from 'react-hot-toast';
 import { Copy } from 'lucide-react';
+import { useAppContext } from './AppContext.tsx';
 
 export default function PurchaseNotifier() {
+    const { activeOrg } = useAppContext();
+
+    const examNames = activeOrg?.exams
+        .filter(e => !e.isPractice && e.price > 0 && e.name)
+        .map(e => e.name)
+        .slice(0, 6) // Limit to a reasonable number for variety
+        || [
+            'CPC Certification Exam',
+            'CCA Certification Exam',
+            'Medical Billing Certification',
+            'CPB Certification Exam',
+            'CRC Certification Exam',
+            'Risk Adjustment Certification'
+        ];
+    
+    const examsArrayString = JSON.stringify(examNames);
+
     const standaloneCode = `
 <!-- START: MCO Live Purchase Notifier -->
 <div id="mco-purchase-notifier" style="display: none; position: fixed; bottom: 1.5rem; left: 1.5rem; z-index: 9999; background-color: white; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); border: 1px solid #e5e7eb; width: 100%; max-width: 320px; font-family: sans-serif;">
@@ -44,14 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const notificationData = {
         names: ['John', 'Maria', 'David', 'Sarah', 'Michael', 'Jessica', 'Chris', 'Emily', 'Daniel', 'Laura'],
         locations: ['New York, NY', 'London, UK', 'Sydney, AU', 'Toronto, CA', 'Mumbai, IN', 'Los Angeles, CA', 'Chicago, IL', 'Dubai, AE'],
-        exams: [
-            'CPC Certification Exam',
-            'CCA Certification Exam',
-            'Medical Billing Certification',
-            'CPB Certification Exam',
-            'CRC Certification Exam',
-            'Risk Adjustment Certification'
-        ]
+        exams: ${examsArrayString}
     };
 
     function getRandomItem(arr) {
