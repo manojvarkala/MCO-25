@@ -137,8 +137,21 @@ function mco_get_app_config_data() {
     // Add subscription products to prices list for the pricing page
     $sub_monthly_prod = wc_get_product_id_by_sku('sub-monthly') ? wc_get_product(wc_get_product_id_by_sku('sub-monthly')) : null;
     $sub_yearly_prod = wc_get_product_id_by_sku('sub-yearly') ? wc_get_product(wc_get_product_id_by_sku('sub-yearly')) : null;
-    if($sub_monthly_prod) $all_prices['sub-monthly'] = ['price' => (float)$sub_monthly_prod->get_price(), 'regularPrice' => (float)$sub_monthly_prod->get_regular_price()];
-    if($sub_yearly_prod) $all_prices['sub-yearly'] = ['price' => (float)$sub_yearly_prod->get_price(), 'regularPrice' => (float)$sub_yearly_prod->get_regular_price()];
+    
+    if($sub_monthly_prod) {
+        $all_prices['sub-monthly'] = [
+            'price' => (float)$sub_monthly_prod->get_price(), 
+            'regularPrice' => (float)$sub_monthly_prod->get_regular_price(),
+            'productId' => $sub_monthly_prod->get_id()
+        ];
+    }
+    if($sub_yearly_prod) {
+        $all_prices['sub-yearly'] = [
+            'price' => (float)$sub_yearly_prod->get_price(), 
+            'regularPrice' => (float)$sub_yearly_prod->get_regular_price(),
+            'productId' => $sub_yearly_prod->get_id()
+        ];
+    }
 
     $data = [
         'exams' => $all_exams,

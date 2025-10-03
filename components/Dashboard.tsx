@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, Organization } from '../types.ts';
-import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, ShoppingCart, RefreshCw, PlayCircle, Star, BookOpen } from 'lucide-react';
+import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, ShoppingCart, RefreshCw, PlayCircle, Star, BookOpen, Check, ShoppingBag } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 const StatCard: FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
@@ -53,7 +53,14 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
     const Icon = isPractice ? BookOpen : Award;
 
     return (
-        <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col text-white ${gradientClass}`}>
+        <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col text-white relative ${gradientClass}`}>
+            {isPractice && (
+                <div className="absolute top-2 -right-10">
+                    <div className="bg-green-500 text-white text-xs font-bold uppercase py-1 px-8 transform rotate-45">
+                        Free
+                    </div>
+                </div>
+            )}
             <div className="p-6 flex flex-col flex-grow">
                 <div className="flex items-center gap-3 mb-3">
                     <div className="bg-white/10 p-2 rounded-full">
@@ -165,6 +172,23 @@ const Dashboard: FC = () => {
             return { ...category, practiceExam, certExam };
         });
     }, [activeOrg]);
+    
+    const { monthlyPrice, yearlyPrice, monthlySubUrl, yearlySubUrl, bundlePrice, bundleRegularPrice, bundleUrl } = useMemo(() => {
+        const monthlyData = examPrices?.['sub-monthly'];
+        const yearlyData = examPrices?.['sub-yearly'];
+        const bundleData = examPrices?.['exam-cpc-cert-1']; // Representative bundle
+        const website = activeOrg ? `https://www.${activeOrg.website}` : '';
+
+        return {
+            monthlyPrice: monthlyData?.price ?? 19.99,
+            yearlyPrice: yearlyData?.price ?? 149.99,
+            monthlySubUrl: monthlyData?.productId ? `${website}/cart/?add-to-cart=${monthlyData.productId}` : `${website}/product/monthly-subscription/`,
+            yearlySubUrl: yearlyData?.productId ? `${website}/cart/?add-to-cart=${yearlyData.productId}` : `${website}/product/yearly-subscription/`,
+            bundlePrice: bundleData?.price ?? 10.00,
+            bundleRegularPrice: bundleData?.regularPrice ?? 59.99,
+            bundleUrl: `${website}/exam-programs/`
+        };
+    }, [examPrices, activeOrg]);
 
     if (isInitializing || isLoading) {
         return <div className="text-center py-10"><Spinner size="lg" /></div>;
@@ -203,14 +227,64 @@ const Dashboard: FC = () => {
                 </div>
             )}
             
-             {!isSubscribed && (
-                 <div className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-6 rounded-xl shadow-lg flex flex-wrap justify-between items-center gap-4">
-                    <div>
-                        <h2 className="text-2xl font-bold flex items-center gap-2"><Star /> Go Premium!</h2>
-                        <p className="text-blue-100">Unlock unlimited practice exams and AI-powered study guides.</p>
+            {!isSubscribed && (
+                <div className="bg-white p-6 rounded-xl shadow-md">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-2"><Star className="text-yellow-400" /> Unlock Your Full Potential</h2>
+                    <p className="text-slate-500 mb-6">Choose a plan to get unlimited access to all practice exams, AI-powered study guides, and more.</p>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+                        {/* Monthly Plan Card */}
+                        <div className="border border-slate-200 rounded-lg p-6 flex flex-col">
+                            <h3 className="text-xl font-bold text-cyan-600">Monthly Subscription</h3>
+                            <p className="flex-grow text-slate-500 mt-2 text-sm">Perfect for focused, short-term preparation.</p>
+                            <p className="text-4xl font-extrabold text-slate-800 mt-4">${monthlyPrice.toFixed(2)} <span className="text-base font-medium text-slate-500">/month</span></p>
+                            <ul className="space-y-2 text-slate-600 mt-4 flex-grow">
+                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> Unlimited Practice Exams</li>
+                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> Unlimited AI Feedback</li>
+                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> Cancel Anytime</li>
+                            </ul>
+                            <a href={monthlySubUrl} target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-cyan-600 text-white font-bold py-3 text-center rounded-lg hover:bg-cyan-700 transition">Subscribe Now</a>
+                        </div>
+
+                        {/* Yearly Plan Card (Highlighted) */}
+                        <div className="border-2 border-purple-500 rounded-lg p-6 flex flex-col relative transform lg:scale-105">
+                            <div className="absolute top-0 -translate-y-1/2 bg-purple-500 text-white text-xs font-bold uppercase px-3 py-1 rounded-full">Best Value</div>
+                            <h3 className="text-xl font-bold text-purple-600">Yearly Subscription</h3>
+                             <p className="flex-grow text-slate-500 mt-2 text-sm">For continuous learning and mastering your craft.</p>
+                            <p className="text-4xl font-extrabold text-slate-800 mt-4">${yearlyPrice.toFixed(2)} <span className="text-base font-medium text-slate-500">/year</span></p>
+                            <p className="text-sm text-green-600 font-semibold">Saves over 35%!</p>
+                            <ul className="space-y-2 text-slate-600 mt-4 flex-grow">
+                                 <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> Unlimited Practice Exams</li>
+                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> Unlimited AI Feedback</li>
+                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> Billed Annually</li>
+                            </ul>
+                            <a href={yearlySubUrl} target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-purple-600 text-white font-bold py-3 text-center rounded-lg hover:bg-purple-700 transition">Subscribe & Save</a>
+                        </div>
+
+                        {/* Exam Bundle Card */}
+                        <div className="border border-slate-200 rounded-lg p-6 flex flex-col">
+                            <h3 className="text-xl font-bold text-amber-600">Exam Bundle</h3>
+                             <p className="flex-grow text-slate-500 mt-2 text-sm">The complete package for one certification.</p>
+                             <div className="mt-4">
+                                {bundlePrice && bundleRegularPrice && bundleRegularPrice > bundlePrice ? (
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-xl line-through text-slate-400">${bundleRegularPrice.toFixed(2)}</span>
+                                        <span className="text-4xl font-extrabold text-slate-800">${bundlePrice.toFixed(2)}</span>
+                                    </div>
+                                ) : (
+                                    <span className="text-4xl font-extrabold text-slate-800">
+                                        {bundlePrice ? `$${bundlePrice.toFixed(2)}` : '$59.99'}
+                                    </span>
+                                )}
+                            </div>
+                             <ul className="space-y-2 text-slate-600 mt-4 flex-grow">
+                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> One Certification Exam</li>
+                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> 1-Month Unlimited Practice</li>
+                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> 1-Month Unlimited AI Feedback</li>
+                            </ul>
+                            <a href={bundleUrl} target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-amber-500 text-white font-bold py-3 text-center rounded-lg hover:bg-amber-600 transition">Browse Bundles</a>
+                        </div>
                     </div>
-                    <button onClick={() => navigate('/pricing')} className="bg-white text-cyan-600 font-bold py-2 px-6 rounded-lg transition hover:bg-cyan-50">View Plans</button>
-                 </div>
+                </div>
             )}
 
             <div className="bg-white p-6 rounded-xl shadow-md">

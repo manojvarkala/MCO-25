@@ -151,7 +151,12 @@ const ExamProgram: FC = () => {
             {/* Sidebar with Exam Cards */}
             <aside className="space-y-6 lg:col-span-1">
                 {practiceExam && (
-                    <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-cyan-500">
+                    <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-cyan-500 relative overflow-hidden">
+                        <div className="absolute top-2 -right-10">
+                            <div className="bg-green-500 text-white text-xs font-bold uppercase py-1 px-8 transform rotate-45">
+                                Free
+                            </div>
+                        </div>
                         <h3 className="font-bold text-xl text-slate-800 flex items-center gap-3"><BookOpen />{practiceExam.name}</h3>
                         <div className="flex justify-between text-sm text-slate-600 my-4 p-3 bg-slate-50 rounded-md">
                             <span><HelpCircle size={14} className="inline mr-1" />{practiceExam.numberOfQuestions} Qs</span>
