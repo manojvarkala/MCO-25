@@ -696,7 +696,11 @@ function mco_process_csv_import($file_key, $post_type) {
 
     $message = "Import complete. Created: <strong>{$created_count}</strong>, Updated: <strong>{$updated_count}</strong>, Failed/Skipped: <strong>{$failed_count}</strong>.";
     if (!empty($errors)) {
-        $message .= '<br/>Details: ' . esc_html(implode('; ', array_slice($errors, 0, 3)));
+        $message .= '<br/><br/><strong>Error Details:</strong><ul style="list-style-type: disc; margin-left: 20px; max-height: 200px; overflow-y: auto; background: #fff8f8; border: 1px solid #fecaca; padding: 10px; border-radius: 4px;">';
+        foreach ($errors as $error) {
+            $message .= '<li>' . esc_html($error) . '</li>';
+        }
+        $message .= '</ul>';
     }
     
     return ['type' => $failed_count > 0 ? 'warning' : 'success', 'message' => $message];

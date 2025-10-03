@@ -1,6 +1,7 @@
 
 
 
+
 import React, { FC, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -104,7 +105,7 @@ const Header: FC = () => {
                     </a>
                     {isCategoriesMenuOpen && (
                         <div className={`absolute left-0 top-full pt-2 w-64 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50 ${isSubscribed ? 'bg-slate-800' : 'bg-white'}`}>
-                            <div className="py-1">
+                            <div className="py-1 max-h-[calc(100vh-10rem)] overflow-y-auto">
                                 {examCategories.map(category => (
                                     <a
                                         key={category.id}

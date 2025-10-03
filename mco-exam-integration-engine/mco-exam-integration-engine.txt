@@ -11,6 +11,7 @@
  * 2. DELETE the deactivated plugin. Your settings and data will NOT be lost.
  * 3. UPLOAD the new .zip file of the plugin.
  * 4. ACTIVATE the new plugin.
+ * 5. CLEAR ALL CACHES on your site (e.g., WP Rocket, LiteSpeed, server cache) to ensure changes take effect.
  * ---------------------------------
  */
 
