@@ -112,6 +112,10 @@ const Admin: FC = () => {
     });
     const [isCheckingHealth, setIsCheckingHealth] = useState(false);
 
+    // State for CSV downloads
+    const [isDownloadingExams, setIsDownloadingExams] = useState(false);
+    const [isDownloadingBooks, setIsDownloadingBooks] = useState(false);
+
     const certificateTemplates = activeOrg?.certificateTemplates || [];
 
 
@@ -302,6 +306,95 @@ const Admin: FC = () => {
         }, 500);
     };
 
+    const escapeCsvField = (field: any): string => {
+        if (field === null || field === undefined) return '';
+        if (typeof field === 'boolean') return field ? '1' : '0';
+        const str = String(field);
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+    };
+    
+    const createCsvContent = (headers: string[], data: any[][]): string => {
+        const headerRow = headers.map(escapeCsvField).join(',');
+        const dataRows = data.map(row => row.map(escapeCsvField).join(','));
+        return [headerRow, ...dataRows].join('\n');
+    };
+
+    const downloadCsv = (csvContent: string, filename: string) => {
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const handleDownloadExamPrograms = () => {
+        if (!activeOrg) {
+            toast.error("Organization data not loaded.");
+            return;
+        }
+        setIsDownloadingExams(true);
+        const toastId = toast.loading('Preparing exam programs CSV...', { id: 'download-exams' });
+
+        try {
+            const headers = ['program_title', 'program_description', 'question_source_url', 'certification_exam_sku', 'is_proctored', 'recommended_book_id', 'practice_questions', 'practice_duration', 'cert_questions', 'cert_duration', 'pass_score', 'status'];
+            const data = activeOrg.examProductCategories.map(category => {
+                const practiceExam = activeOrg.exams.find(e => e.id === category.practiceExamId);
+                const certExam = activeOrg.exams.find(e => e.id === category.certificationExamId);
+                return [
+                    category.name, category.description, category.questionSourceUrl || certExam?.questionSourceUrl || '',
+                    category.certificationExamId, certExam?.isProctored, certExam?.recommendedBookIds?.join(',') || '',
+                    practiceExam?.numberOfQuestions || '', practiceExam?.durationMinutes || '',
+                    certExam?.numberOfQuestions || '', certExam?.durationMinutes || '',
+                    certExam?.passScore || '', 'publish'
+                ];
+            });
+
+            const csvContent = createCsvContent(headers, data);
+            downloadCsv(csvContent, 'exam_programs_export.csv');
+            toast.success('Exam programs downloaded!', { id: 'download-exams' });
+        } catch (error) {
+            console.error("Failed to generate exam programs CSV", error);
+            toast.error('Failed to download exam programs.', { id: 'download-exams' });
+        } finally {
+            setIsDownloadingExams(false);
+        }
+    };
+
+    const handleDownloadBooks = () => {
+        if (!activeOrg?.suggestedBooks) {
+            toast.error("Book data not loaded.");
+            return;
+        }
+        setIsDownloadingBooks(true);
+        toast.loading('Preparing books CSV...', { id: 'download-books' });
+
+        try {
+            const headers = ['book_id', 'title', 'description', 'thumbnail_url', 'link_com', 'link_in', 'link_ae', 'status'];
+            const data = activeOrg.suggestedBooks.map(book => [
+                book.id, book.title, book.description,
+                typeof book.thumbnailUrl === 'string' ? book.thumbnailUrl : '',
+                book.affiliateLinks.com, book.affiliateLinks.in, book.affiliateLinks.ae, 'publish'
+            ]);
+
+            const csvContent = createCsvContent(headers, data);
+            downloadCsv(csvContent, 'recommended_books_export.csv');
+            toast.success('Recommended books downloaded!', { id: 'download-books' });
+        } catch (error) {
+            console.error("Failed to generate books CSV", error);
+            toast.error('Failed to download recommended books.', { id: 'download-books' });
+        } finally {
+            setIsDownloadingBooks(false);
+        }
+    };
+
 
     const inputClass = "w-full p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition";
 
@@ -347,20 +440,38 @@ const Admin: FC = () => {
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                 <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
                     <FileSpreadsheet className="mr-3 text-cyan-500" />
-                    Bulk Data Management (CSV Upload)
+                    Bulk Data Management
                 </h2>
                 <p className="text-slate-600 mb-6">
-                    To create or update many Exam Programs or Recommended Books at once, use the CSV bulk import tools. This functionality is located in your WordPress admin dashboard for security and direct server-side processing.
+                    To create or update many items at once, use the CSV bulk tools. For security, uploads are processed through the WordPress admin dashboard, while downloads are generated here.
                 </p>
-                <a
-                    href={`${getApiBaseUrl()}/wp-admin/admin.php?page=mco-exam-engine&tab=bulk_import`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
-                >
-                    <ExternalLink size={20} className="mr-2" />
-                    Go to WordPress Bulk Import
-                </a>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <a
+                        href={`${getApiBaseUrl()}/wp-admin/admin.php?page=mco-exam-engine&tab=bulk_import`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="md:col-span-2 inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
+                    >
+                        <ExternalLink size={20} className="mr-2" />
+                        Go to WordPress Bulk Import (Upload)
+                    </a>
+                    <button
+                        onClick={handleDownloadExamPrograms}
+                        disabled={isDownloadingExams}
+                        className="inline-flex items-center justify-center px-6 py-3 border border-slate-300 text-base font-medium rounded-md shadow-sm text-slate-700 bg-white hover:bg-slate-50 transition-transform transform hover:scale-105 disabled:opacity-50"
+                    >
+                        {isDownloadingExams ? <Spinner size="sm" /> : <DownloadCloud size={20} />}
+                        <span className="ml-2">{isDownloadingExams ? 'Downloading...' : 'Download Exams (.csv)'}</span>
+                    </button>
+                    <button
+                        onClick={handleDownloadBooks}
+                        disabled={isDownloadingBooks}
+                        className="inline-flex items-center justify-center px-6 py-3 border border-slate-300 text-base font-medium rounded-md shadow-sm text-slate-700 bg-white hover:bg-slate-50 transition-transform transform hover:scale-105 disabled:opacity-50"
+                    >
+                        {isDownloadingBooks ? <Spinner size="sm" /> : <DownloadCloud size={20} />}
+                        <span className="ml-2">{isDownloadingBooks ? 'Downloading...' : 'Download Books (.csv)'}</span>
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
