@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
-import type { Exam, RecommendedBook, ExamProductCategory } from '../types.ts';
-import { AlertTriangle, BookOpen, CheckCircle, Clock, HelpCircle, PlayCircle, ShoppingCart, Award } from 'lucide-react';
+import type { Exam, RecommendedBook } from '../types.ts';
+import { BookOpen, CheckCircle, Clock, HelpCircle, PlayCircle, ShoppingCart, Award } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 import Spinner from './Spinner.tsx';
 
@@ -72,7 +72,6 @@ const ExamProgram: FC = () => {
     if (!programData) {
         return (
             <div className="text-center bg-white p-8 rounded-xl shadow-lg">
-                 <AlertTriangle className="mx-auto h-12 w-12 text-red-500" />
                 <h1 className="text-2xl font-bold text-slate-800 mt-4">Program Not Found</h1>
                 <p className="text-slate-600 mt-2">The exam program you are looking for does not exist or could not be loaded.</p>
                 <button onClick={() => navigate('/dashboard')} className="mt-6 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg">
@@ -103,87 +102,92 @@ const ExamProgram: FC = () => {
     
     const isCertPurchased = certExam ? paidExamIds.includes(certExam.productSku) : false;
     const canTakeCert = isSubscribed || isCertPurchased;
+    
+    // Use the most detailed description available
+    const fullDescription = certExam?.description || practiceExam?.description || category.description;
 
     return (
-        <div className="space-y-8">
-             {imageUrl && (
-                <div className="rounded-xl shadow-lg overflow-hidden relative">
-                    <img src={imageUrl} alt={category.name} className="w-full h-48 md:h-64 object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                    <div className="absolute bottom-0 left-0 p-8">
-                        <h1 className="text-3xl font-extrabold text-white shadow-md">{category.name}</h1>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-8">
+                 {imageUrl && (
+                    <div className="rounded-xl shadow-lg overflow-hidden relative">
+                        <img src={imageUrl} alt={category.name} className="w-full h-48 md:h-64 object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <div className="absolute bottom-0 left-0 p-8">
+                            <h1 className="text-3xl font-extrabold text-white shadow-md">{category.name}</h1>
+                        </div>
                     </div>
+                )}
+                <div className={`bg-white p-8 rounded-xl shadow-lg border border-slate-200 ${imageUrl ? '-mt-8 relative z-10' : ''}`}>
+                    {!imageUrl && <h1 className="text-3xl font-extrabold text-slate-900">{category.name}</h1>}
+                    <p className="mt-2 text-lg text-slate-600 prose max-w-none">{fullDescription}</p>
                 </div>
-            )}
-            <div className={`bg-white p-8 rounded-xl shadow-lg border border-slate-200 ${imageUrl ? '-mt-8 relative z-10' : ''}`}>
-                {!imageUrl && <h1 className="text-3xl font-extrabold text-slate-900">{category.name}</h1>}
-                <p className="mt-2 text-lg text-slate-600">{category.description}</p>
+                
+                 {recommendedBooksForProgram.length > 0 && (
+                    <div className="bg-white p-6 rounded-xl shadow-md">
+                        <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Books</h3>
+                        <div className="space-y-4">
+                            {recommendedBooksForProgram.map(book => {
+                                const linkData = getGeoAffiliateLink(book);
+                                if (!linkData) return null;
+                                return (
+                                    <div key={book.id} className="flex items-center gap-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                        <BookCover book={book} className="w-16 h-20 flex-shrink-0" />
+                                        <div className="flex-grow">
+                                            <h4 className="font-semibold text-sm text-slate-800 leading-tight">{book.title}</h4>
+                                                <a href={linkData.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-2 py-1 transition-colors">
+                                                Buy on {linkData.domainName}
+                                            </a>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* Practice Exam */}
-            {practiceExam && (
-                <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-cyan-500">
-                    <h3 className="font-bold text-xl text-slate-800 flex items-center gap-3"><BookOpen />{practiceExam.name}</h3>
-                        <p className="text-sm text-slate-500 mt-1 mb-4">{practiceExam.description}</p>
-                        <div className="flex justify-between text-sm text-slate-600 mb-4 p-3 bg-slate-50 rounded-md">
-                        <span><HelpCircle size={14} className="inline mr-1" />{practiceExam.numberOfQuestions} Questions</span>
-                        <span><Clock size={14} className="inline mr-1" />{practiceExam.durationMinutes} Mins</span>
-                        <span><CheckCircle size={14} className="inline mr-1" />{practiceExam.passScore}% to Pass</span>
-                    </div>
+            {/* Sidebar with Exam Cards */}
+            <aside className="space-y-6 lg:col-span-1">
+                {practiceExam && (
+                    <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-cyan-500">
+                        <h3 className="font-bold text-xl text-slate-800 flex items-center gap-3"><BookOpen />{practiceExam.name}</h3>
+                        <div className="flex justify-between text-sm text-slate-600 my-4 p-3 bg-slate-50 rounded-md">
+                            <span><HelpCircle size={14} className="inline mr-1" />{practiceExam.numberOfQuestions} Qs</span>
+                            <span><Clock size={14} className="inline mr-1" />{practiceExam.durationMinutes} Mins</span>
+                            <span><CheckCircle size={14} className="inline mr-1" />{practiceExam.passScore}% Pass</span>
+                        </div>
                         <button
-                        onClick={() => handleButtonClick(practiceExam, true)}
-                        className="w-full flex items-center justify-center gap-2 font-semibold py-3 px-4 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white transition-transform transform hover:scale-105"
-                    >
-                        <PlayCircle size={18} />
-                        Start Practice
-                    </button>
+                            onClick={() => handleButtonClick(practiceExam, true)}
+                            className="w-full flex items-center justify-center gap-2 font-semibold py-3 px-4 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white transition-transform transform hover:scale-105"
+                        >
+                            <PlayCircle size={18} />
+                            Start Practice
+                        </button>
                     </div>
-            )}
-            
-                {/* Certification Exam */}
-            {certExam && (
-                <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-amber-500">
-                    <h3 className="font-bold text-xl text-slate-800 flex items-center gap-3"><Award />{certExam.name}</h3>
-                    <p className="text-sm text-slate-500 mt-1 mb-4">{certExam.description}</p>
-                    <div className="flex justify-between text-sm text-slate-600 mb-4 p-3 bg-slate-50 rounded-md">
-                        <span><HelpCircle size={14} className="inline mr-1" />{certExam.numberOfQuestions} Questions</span>
-                        <span><Clock size={14} className="inline mr-1" />{certExam.durationMinutes} Mins</span>
-                        <span><CheckCircle size={14} className="inline mr-1" />{certExam.passScore}% to Pass</span>
-                    </div>
-                    <button
-                        onClick={() => handleButtonClick(certExam, canTakeCert)}
-                        className={`w-full flex items-center justify-center gap-2 font-semibold py-3 px-4 rounded-lg transition-transform transform hover:scale-105 ${
-                            canTakeCert ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'
-                        }`}
-                    >
-                        {canTakeCert ? <PlayCircle size={18} /> : <ShoppingCart size={18} />}
-                        {canTakeCert ? 'Start Exam' : 'Add to Cart'}
-                    </button>
-                </div>
-            )}
+                )}
                 
-            {recommendedBooksForProgram.length > 0 && (
-                <div className="bg-white p-6 rounded-xl shadow-md">
-                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Books for this Program</h3>
-                    <div className="space-y-4">
-                        {recommendedBooksForProgram.map(book => {
-                            const linkData = getGeoAffiliateLink(book);
-                            if (!linkData) return null;
-                            return (
-                                <div key={book.id} className="flex items-center gap-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                    <BookCover book={book} className="w-16 h-20 flex-shrink-0" />
-                                    <div className="flex-grow">
-                                        <h4 className="font-semibold text-sm text-slate-800 leading-tight">{book.title}</h4>
-                                            <a href={linkData.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-2 py-1 transition-colors">
-                                            Buy on {linkData.domainName}
-                                        </a>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                {certExam && (
+                    <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-amber-500">
+                        <h3 className="font-bold text-xl text-slate-800 flex items-center gap-3"><Award />{certExam.name}</h3>
+                        <div className="flex justify-between text-sm text-slate-600 my-4 p-3 bg-slate-50 rounded-md">
+                            <span><HelpCircle size={14} className="inline mr-1" />{certExam.numberOfQuestions} Qs</span>
+                            <span><Clock size={14} className="inline mr-1" />{certExam.durationMinutes} Mins</span>
+                            <span><CheckCircle size={14} className="inline mr-1" />{certExam.passScore}% Pass</span>
+                        </div>
+                        <button
+                            onClick={() => handleButtonClick(certExam, canTakeCert)}
+                            className={`w-full flex items-center justify-center gap-2 font-semibold py-3 px-4 rounded-lg transition-transform transform hover:scale-105 ${
+                                canTakeCert ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'
+                            }`}
+                        >
+                            {canTakeCert ? <PlayCircle size={18} /> : <ShoppingCart size={18} />}
+                            {canTakeCert ? 'Start Exam' : 'Add to Cart'}
+                        </button>
                     </div>
-                </div>
-            )}
+                )}
+            </aside>
         </div>
     );
 };

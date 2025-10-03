@@ -1,7 +1,3 @@
-
-
-
-
 import React, { FC, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -109,7 +105,7 @@ const Header: FC = () => {
                                 {examCategories.map(category => (
                                     <a
                                         key={category.id}
-                                        href={`/#/dashboard#${category.id}`}
+                                        href={`/#/program/${category.id}`}
                                         onClick={() => setIsCategoriesMenuOpen(false)}
                                         className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}
                                     >
