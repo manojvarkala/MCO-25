@@ -42,11 +42,10 @@ const decodeHtmlEntities = (text: string | undefined): string => {
 
 
 // This function processes a raw config object (either static or from the API)
-// and prepares it for the application state.
+// and prepares it for the application state by decoding entities and mapping data.
 const processConfigData = (configData: any) => {
     if (!configData || !configData.organizations) return null;
     const processedOrgs: Organization[] = JSON.parse(JSON.stringify(configData.organizations));
-    const allPrices: { [key: string]: any } = {};
     let allSuggestedBooks: RecommendedBook[] = [];
 
     processedOrgs.forEach((org: Organization) => {
@@ -65,12 +64,6 @@ const processConfigData = (configData: any) => {
         org.exams = (org.exams || []).map((exam: Exam): Exam => {
             exam.name = decodeHtmlEntities(exam.name);
             exam.description = decodeHtmlEntities(exam.description);
-            if (exam.productSku) {
-                allPrices[exam.productSku] = {
-                    price: exam.price,
-                    regularPrice: exam.regularPrice,
-                };
-            }
             const questionSourceUrl = categoryUrlMap.get(exam.id) || exam.questionSourceUrl;
 
             return { ...exam, questionSourceUrl };
@@ -98,7 +91,6 @@ const processConfigData = (configData: any) => {
     return { 
         version: configData.version || '1.0.0',
         processedOrgs, 
-        allPrices,
         allSuggestedBooks
     };
 };
@@ -113,13 +105,20 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [isWheelModalOpen, setWheelModalOpen] = useState(false);
   const [inProgressExam, setInProgressExam] = useState<InProgressExamInfo | null>(null);
-  // FIX: Corrected syntax for useState generic type and initial value.
   const [examPrices, setExamPrices] = useState<{ [key: string]: any } | null>(null);
 
-  const setProcessedConfig = (processedData: any) => {
+  const setProcessedConfig = (config: any, processedData: any) => {
     if (processedData) {
       setOrganizations(processedData.processedOrgs);
-      setExamPrices(processedData.allPrices);
+      
+      let prices = null;
+      if (config.examPrices) { // API response structure
+          prices = config.examPrices;
+      } else if (config.organizations && config.organizations[0] && config.organizations[0].examPrices) { // Static file structure
+          prices = config.organizations[0].examPrices;
+      }
+      setExamPrices(prices);
+      
       setSuggestedBooks(processedData.allSuggestedBooks);
       const newActiveOrg = processedData.processedOrgs[0] || null;
       setActiveOrg(newActiveOrg);
@@ -143,7 +142,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 const cachedConfig = JSON.parse(cachedConfigJSON);
                 activeConfig = cachedConfig;
                 const processedData = processConfigData(cachedConfig);
-                setProcessedConfig(processedData);
+                setProcessedConfig(cachedConfig, processedData);
                 loadedFromCache = true;
             }
         } catch (e) {
@@ -161,7 +160,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             if (!activeConfig || activeConfig.version !== liveConfig.version) {
                 localStorage.setItem('appConfigCache', JSON.stringify(liveConfig));
                 const processedData = processConfigData(liveConfig);
-                setProcessedConfig(processedData);
+                setProcessedConfig(liveConfig, processedData);
                 if (activeConfig) toast.success('Content and features have been updated!', { duration: 3000 });
             }
             setIsInitializing(false); // Success, we're done.
@@ -176,13 +175,12 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         // Stage 3: API failed and no cache. Try loading static fallback file.
         try {
-            // FIX: Replaced toast.warn with toast.error as 'warn' is not a valid method in react-hot-toast.
             toast.error("Could not connect to the server. Displaying default content which may be outdated.", { duration: 6000 });
             const response = await fetch(tenantConfig.staticConfigPath);
             if (!response.ok) throw new Error(`Static config file not found: ${response.status}`);
             const staticConfig = await response.json();
             const processedData = processConfigData(staticConfig);
-            setProcessedConfig(processedData);
+            setProcessedConfig(staticConfig, processedData);
         } catch (staticError) {
             console.error("Failed to fetch static config:", staticError);
             toast.error("Could not load application configuration. Please check your connection and try again.", { duration: 10000 });
