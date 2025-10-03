@@ -70,6 +70,19 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                     <span><CheckCircle size={14} className="inline mr-1" />{exam.passScore}% Pass</span>
                 </div>
                 
+                {!canTake && exam.price > 0 && (
+                    <div className="text-center mb-4">
+                        {exam.regularPrice && exam.regularPrice > exam.price ? (
+                            <div className="flex items-baseline justify-center gap-2">
+                                <span className="text-xl line-through text-white/70">${exam.regularPrice.toFixed(2)}</span>
+                                <span className="text-4xl font-extrabold text-white">${exam.price.toFixed(2)}</span>
+                            </div>
+                        ) : (
+                            <span className="text-4xl font-extrabold text-white">${exam.price.toFixed(2)}</span>
+                        )}
+                    </div>
+                )}
+
                 <div className="mt-auto space-y-2">
                     <button
                         onClick={handleButtonClick}

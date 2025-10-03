@@ -56,7 +56,7 @@ function mco_get_app_config_data() {
         $exam_product_categories[] = [
             'id' => $program_id_for_app,
             'name' => get_the_title($post),
-            'description' => has_excerpt($post->ID) ? get_the_excerpt($post->ID) : wp_trim_words($post->post_content, 30),
+            'description' => has_excerpt($post->ID) ? get_the_excerpt($post->ID) : apply_filters('the_content', $post->post_content),
             'practiceExamId' => $practice_exam_id_for_app,
             'certificationExamId' => $cert_sku,
             'questionSourceUrl' => $question_source,
@@ -87,7 +87,7 @@ function mco_get_app_config_data() {
                  $all_exams[] = [
                     'id' => $cert_sku,
                     'name' => get_the_title($post),
-                    'description' => has_excerpt($post->ID) ? get_the_excerpt($post->ID) : wp_trim_words($post->post_content, 30),
+                    'description' => has_excerpt($post->ID) ? get_the_excerpt($post->ID) : apply_filters('the_content', $post->post_content),
                     'price' => (float)$product->get_price(),
                     'regularPrice' => (float)$product->get_regular_price(),
                     'productSku' => $cert_sku,

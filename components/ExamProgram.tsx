@@ -121,7 +121,7 @@ const ExamProgram: FC = () => {
                 )}
                 <div className={`bg-white p-8 rounded-xl shadow-lg border border-slate-200 ${imageUrl ? '-mt-8 relative z-10' : ''}`}>
                     {!imageUrl && <h1 className="text-3xl font-extrabold text-slate-900">{category.name}</h1>}
-                    <p className="mt-2 text-lg text-slate-600 prose max-w-none">{fullDescription}</p>
+                    <div className="mt-2 text-lg text-slate-600 prose max-w-none" dangerouslySetInnerHTML={{ __html: fullDescription }} />
                 </div>
                 
                  {recommendedBooksForProgram.length > 0 && (
@@ -176,6 +176,20 @@ const ExamProgram: FC = () => {
                             <span><Clock size={14} className="inline mr-1" />{certExam.durationMinutes} Mins</span>
                             <span><CheckCircle size={14} className="inline mr-1" />{certExam.passScore}% Pass</span>
                         </div>
+                        
+                        {!canTakeCert && certExam.price > 0 && (
+                            <div className="text-center mb-4">
+                                {certExam.regularPrice && certExam.regularPrice > certExam.price ? (
+                                    <div className="flex items-baseline justify-center gap-2">
+                                        <span className="text-lg line-through text-slate-500">${certExam.regularPrice.toFixed(2)}</span>
+                                        <span className="text-3xl font-bold text-slate-800">${certExam.price.toFixed(2)}</span>
+                                    </div>
+                                ) : (
+                                    <span className="text-3xl font-bold text-slate-800">${certExam.price.toFixed(2)}</span>
+                                )}
+                            </div>
+                        )}
+
                         <button
                             onClick={() => handleButtonClick(certExam, canTakeCert)}
                             className={`w-full flex items-center justify-center gap-2 font-semibold py-3 px-4 rounded-lg transition-transform transform hover:scale-105 ${
