@@ -13,9 +13,10 @@ export interface ExamCardProps {
     gradientClass: string;
     activeOrg: Organization;
     examPrices: { [key: string]: any } | null;
+    hideDetailsLink?: boolean;
 }
 
-const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, gradientClass, activeOrg, examPrices }) => {
+const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, gradientClass, activeOrg, examPrices, hideDetailsLink = false }) => {
     const navigate = useNavigate();
     const { isSubscribed } = useAuth();
     const canTake = isPractice || isPurchased || isSubscribed;
@@ -41,19 +42,19 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
 
     return (
         <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col text-white relative ${gradientClass}`}>
-            {isPractice && (
-                <div className="absolute top-2 -right-10">
-                    <div className="bg-green-500 text-white text-xs font-bold uppercase py-1 px-8 transform rotate-45">
-                        Free
-                    </div>
-                </div>
-            )}
             <div className="p-6 flex flex-col flex-grow">
-                <div className="flex items-center gap-3 mb-3">
-                    <div className="bg-white/10 p-2 rounded-full">
-                        <Icon size={20} />
+                <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white/10 p-2 rounded-full">
+                            <Icon size={20} />
+                        </div>
+                        <span className="font-bold text-sm uppercase tracking-wider">{isPractice ? "Practice Exam" : "Certification Exam"}</span>
                     </div>
-                    <span className="font-bold text-sm uppercase tracking-wider">{isPractice ? "Practice Exam" : "Certification Exam"}</span>
+                    {isPractice && (
+                        <span className="bg-green-500 text-white text-xs font-bold uppercase px-3 py-1 rounded-full shadow-md">
+                            Free
+                        </span>
+                    )}
                 </div>
                 
                 <h3 className="text-lg font-bold mb-2 leading-tight flex-grow">{exam.name}</h3>
@@ -89,12 +90,14 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                         {isPractice ? <PlayCircle size={18} /> : (canTake ? <PlayCircle size={18} /> : <ShoppingCart size={18} />)}
                         {buttonText}
                     </button>
-                    <Link
-                        to={`/program/${programId}`}
-                        className="block w-full text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all"
-                    >
-                        View Program Details
-                    </Link>
+                    {!hideDetailsLink && (
+                        <Link
+                            to={`/program/${programId}`}
+                            className="block w-full text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all"
+                        >
+                            View Program Details
+                        </Link>
+                    )}
                 </div>
             </div>
         </div>

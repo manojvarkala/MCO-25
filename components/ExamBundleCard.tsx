@@ -11,34 +11,59 @@ interface ExamBundleCardProps {
 const ExamBundleCard: FC<ExamBundleCardProps> = ({ certExam, activeOrg, examPrices }) => {
     const bundleData = useMemo(() => {
         if (!certExam?.productSku || !examPrices || !activeOrg) return null;
-        
-        // A common convention for bundles is to append '-1' to the certification SKU.
-        const bundleSku = `${certExam.productSku}-1`;
-        const priceData = examPrices[bundleSku];
-
-        if (!priceData) return null;
 
         const website = `https://www.${activeOrg.website}`;
-        // The productSlug for a bundle might not be directly on the certExam object, so we build a generic link.
-        const bundleUrl = priceData.productId 
-            ? `${website}/cart/?add-to-cart=${priceData.productId}`
-            : `${website}/product/${certExam.productSlug}/`; // Fallback to main product page
+        
+        // 1. Look for a specific bundle for the current exam (e.g., exam-cpc-cert-1)
+        const specificBundleSku = `${certExam.productSku}-1`;
+        const specificPriceData = examPrices[specificBundleSku];
 
-        return {
-            price: priceData.price,
-            regularPrice: priceData.regularPrice,
-            url: bundleUrl,
-        };
+        if (specificPriceData) {
+            const bundleUrl = specificPriceData.productId
+                ? `${website}/cart/?add-to-cart=${specificPriceData.productId}`
+                : `${website}/product/${certExam.productSlug}/`; // Fallback to main product
+            
+            return {
+                isSpecific: true,
+                title: 'Exam Bundle',
+                buttonText: 'Purchase Bundle',
+                price: specificPriceData.price,
+                regularPrice: specificPriceData.regularPrice,
+                url: bundleUrl,
+            };
+        }
+
+        // 2. If not found, look for a representative fallback bundle (e.g., the main CPC bundle)
+        const fallbackBundleSku = 'exam-cpc-cert-1';
+        const fallbackPriceData = examPrices[fallbackBundleSku];
+
+        if (fallbackPriceData) {
+            // The URL for a generic offer should go to the main programs/store page
+            const bundleUrl = `${website}/exam-programs/`;
+            
+            return {
+                isSpecific: false,
+                title: 'Featured Bundle',
+                buttonText: 'Browse All Bundles',
+                price: fallbackPriceData.price,
+                regularPrice: fallbackPriceData.regularPrice,
+                url: bundleUrl,
+            };
+        }
+
+        return null;
     }, [certExam, examPrices, activeOrg]);
 
     if (!bundleData) {
-        return null; // Don't render if there's no corresponding bundle product
+        return null;
     }
 
     return (
         <div className="bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-xl shadow-lg p-6 flex flex-col">
-            <h3 className="text-xl font-bold flex items-center gap-2"><ShoppingBag size={20} /> Exam Bundle</h3>
-            <p className="text-sm text-orange-100 mt-2 mb-4 flex-grow">The complete package for your certification.</p>
+            <h3 className="text-xl font-bold flex items-center gap-2"><ShoppingBag size={20} /> {bundleData.title}</h3>
+            <p className="text-sm text-orange-100 mt-2 mb-4 flex-grow">
+                {bundleData.isSpecific ? 'The complete package for your certification.' : 'Get the best value with a complete package.'}
+            </p>
 
             <div className="my-4 text-center">
                 {bundleData.regularPrice && bundleData.regularPrice > bundleData.price ? (
@@ -63,7 +88,7 @@ const ExamBundleCard: FC<ExamBundleCardProps> = ({ certExam, activeOrg, examPric
                 rel="noopener noreferrer" 
                 className="mt-auto block w-full bg-white text-orange-600 font-bold py-3 text-center rounded-lg hover:bg-orange-50 transition"
             >
-                Purchase Bundle
+                {bundleData.buttonText}
             </a>
         </div>
     );

@@ -91,11 +91,34 @@ const ExamProgram: FC = () => {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <main className="lg:col-span-2">
-                <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200 h-full">
+            <main className="lg:col-span-2 space-y-8">
+                <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                     <h1 className="text-3xl font-extrabold text-slate-900">{category.name}</h1>
                     <div className="mt-4 prose max-w-none text-slate-600" dangerouslySetInnerHTML={{ __html: fullDescription }} />
                 </div>
+
+                {recommendedBooksForProgram.length > 0 && (
+                    <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                        <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                            {recommendedBooksForProgram.map(book => {
+                                const linkData = getGeoAffiliateLink(book);
+                                if (!linkData) return null;
+                                return (
+                                    <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full flex-shrink-0 flex flex-col transform hover:-translate-y-1 transition-transform duration-200">
+                                        <BookCover book={book} className="w-full h-40"/>
+                                        <div className="p-4 flex flex-col flex-grow">
+                                            <h4 className="font-bold text-slate-800 text-sm mb-2 leading-tight flex-grow">{book.title}</h4>
+                                            <a href={linkData.url} target="_blank" rel="noopener noreferrer" className="mt-auto w-full flex items-center justify-center text-xs text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-2 py-1.5 transition-colors">
+                                                Buy on {linkData.domainName}
+                                            </a>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
             </main>
 
             <aside className="space-y-8">
@@ -108,6 +131,7 @@ const ExamProgram: FC = () => {
                         gradientClass={practiceGradients[0]} 
                         activeOrg={activeOrg} 
                         examPrices={examPrices} 
+                        hideDetailsLink={true}
                     />
                 )}
                 {certExam && (
@@ -119,6 +143,7 @@ const ExamProgram: FC = () => {
                         gradientClass={certGradients[0]} 
                         activeOrg={activeOrg} 
                         examPrices={examPrices}
+                        hideDetailsLink={true}
                     />
                 )}
                 {certExam && (
@@ -127,29 +152,6 @@ const ExamProgram: FC = () => {
                         activeOrg={activeOrg}
                         examPrices={examPrices}
                     />
-                )}
-
-                {recommendedBooksForProgram.length > 0 && (
-                    <div className="bg-white p-6 rounded-xl shadow-md">
-                        <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-                            {recommendedBooksForProgram.map(book => {
-                                const linkData = getGeoAffiliateLink(book);
-                                if (!linkData) return null;
-                                return (
-                                    <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full flex-shrink-0">
-                                        <BookCover book={book} className="w-full h-32"/>
-                                        <div className="p-3">
-                                            <h4 className="font-bold text-slate-800 text-xs mb-2 leading-tight">{book.title}</h4>
-                                            <a href={linkData.url} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-center text-xs text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-2 py-1.5 transition-colors">
-                                                Buy on {linkData.domainName}
-                                            </a>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    </div>
                 )}
             </aside>
         </div>
