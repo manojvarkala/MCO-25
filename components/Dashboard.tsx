@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { TestResult, Exam } from '../types.ts';
+import type { TestResult, Exam, Organization } from '../types.ts';
 import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, ShoppingCart, RefreshCw, PlayCircle, Star, BookOpen } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
@@ -24,19 +24,27 @@ interface ExamCardProps {
     isPractice: boolean;
     isPurchased: boolean;
     gradientClass: string;
+    activeOrg: Organization;
+    examPrices: { [key: string]: any } | null;
 }
 
-const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, gradientClass }) => {
+const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, gradientClass, activeOrg, examPrices }) => {
     const navigate = useNavigate();
     const { isSubscribed } = useAuth();
     const canTake = isPractice || isPurchased || isSubscribed;
-    const buttonText = isPractice ? 'Start Practice' : canTake ? 'Start Exam' : 'Purchase Exam';
+    const buttonText = isPractice ? 'Start Practice' : canTake ? 'Start Exam' : 'Add to Cart';
 
     const handleButtonClick = () => {
         if (canTake) {
             navigate(`/test/${exam.id}`);
-        } else if (exam.productSlug) {
-            navigate(`/checkout/${exam.productSlug}`);
+        } else if (exam.productSku && examPrices && activeOrg) {
+            const product = examPrices[exam.productSku];
+            if (product && product.productId) {
+                const addToCartUrl = `https://www.${activeOrg.website}/cart/?add-to-cart=${product.productId}`;
+                window.location.href = addToCartUrl;
+            } else {
+                 toast.error("This exam cannot be added to the cart at this moment.");
+            }
         } else {
             toast.error("This exam is not available for purchase at the moment.");
         }
@@ -89,7 +97,7 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
 
 const Dashboard: FC = () => {
     const { user, token, paidExamIds, isSubscribed, loginWithToken } = useAuth();
-    const { activeOrg, isInitializing, inProgressExam } = useAppContext();
+    const { activeOrg, isInitializing, inProgressExam, examPrices } = useAppContext();
     const navigate = useNavigate();
 
     const [results, setResults] = useState<TestResult[]>([]);
@@ -212,8 +220,8 @@ const Dashboard: FC = () => {
                             </Link>
                             <p className="text-slate-500 mb-4">{category.description}</p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} gradientClass={practiceGradients[index % practiceGradients.length]} />}
-                                {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} gradientClass={certGradients[index % certGradients.length]}/>}
+                                {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} gradientClass={practiceGradients[index % practiceGradients.length]} activeOrg={activeOrg} examPrices={examPrices} />}
+                                {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} gradientClass={certGradients[index % certGradients.length]} activeOrg={activeOrg} examPrices={examPrices}/>}
                             </div>
                         </div>
                      ))}

@@ -45,7 +45,7 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
 const ExamProgram: FC = () => {
     const { programId } = useParams<{ programId: string }>();
     const navigate = useNavigate();
-    const { activeOrg, suggestedBooks, isInitializing } = useAppContext();
+    const { activeOrg, suggestedBooks, isInitializing, examPrices } = useAppContext();
     const { paidExamIds, isSubscribed } = useAuth();
 
     const programData = useMemo(() => {
@@ -88,8 +88,14 @@ const ExamProgram: FC = () => {
     const handleButtonClick = (exam: Exam, canTake: boolean) => {
         if (canTake) {
             navigate(`/test/${exam.id}`);
-        } else if (exam.productSlug) {
-            navigate(`/checkout/${exam.productSlug}`);
+        } else if (exam.productSku && examPrices && activeOrg) {
+            const product = examPrices[exam.productSku];
+            if (product && product.productId) {
+                const addToCartUrl = `https://www.${activeOrg.website}/cart/?add-to-cart=${product.productId}`;
+                window.location.href = addToCartUrl;
+            } else {
+                toast.error("This exam cannot be added to the cart at this moment.");
+            }
         } else {
             toast.error("This exam is not available for purchase at the moment.");
         }
@@ -151,7 +157,7 @@ const ExamProgram: FC = () => {
                         }`}
                     >
                         {canTakeCert ? <PlayCircle size={18} /> : <ShoppingCart size={18} />}
-                        {canTakeCert ? 'Start Exam' : 'Purchase Exam'}
+                        {canTakeCert ? 'Start Exam' : 'Add to Cart'}
                     </button>
                 </div>
             )}

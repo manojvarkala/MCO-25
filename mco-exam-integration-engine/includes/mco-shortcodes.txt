@@ -10,8 +10,46 @@ if (!function_exists('mco_register_shortcode_hooks')) {
         add_shortcode('mco_book_showcase', 'mco_book_showcase_shortcode');
         add_shortcode('mco_news_slider', 'mco_news_slider_shortcode');
         add_shortcode('mco_exam_program_details', 'mco_exam_program_details_shortcode');
+        
+        // Enqueue styles for the shortcodes on the frontend
+        add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles');
     }
 }
+
+// --- STYLES ---
+if (!function_exists('mco_enqueue_shortcode_styles')) {
+    function mco_enqueue_shortcode_styles() {
+        wp_enqueue_style(
+            'mco-styles',
+            MCO_PLUGIN_URL . 'assets/mco-styles.css',
+            [], // No dependencies
+            MCO_PLUGIN_VERSION // Use plugin version for cache busting
+        );
+    }
+}
+
+// --- HELPER FUNCTIONS ---
+
+if (!function_exists('mco_get_single_term')) {
+    function mco_get_single_term($post_id, $taxonomy, $field = 'name') {
+        $terms = get_the_terms($post_id, $taxonomy);
+        if (!empty($terms) && !is_wp_error($terms)) {
+            return $terms[0]->$field;
+        }
+        return '';
+    }
+}
+
+if (!function_exists('mco_simple_hash_to_color_index')) {
+    function mco_simple_hash_to_color_index($str, $color_count) {
+        $hash = 0;
+        for ($i = 0; $i < strlen($str); $i++) {
+            $hash = ord($str[$i]) + (($hash << 5) - $hash);
+        }
+        return abs($hash) % $color_count;
+    }
+}
+
 
 // --- SHORTCODE IMPLEMENTATIONS ---
 
@@ -59,38 +97,85 @@ function mco_exam_showcase_shortcode() {
     if (empty($exam_programs)) return '<p>No exam programs found.</p>';
 
     $app_login_url = home_url('/exam-login/');
-    $gradient_classes = ['mco-card--gradient-1', 'mco-card--gradient-2', 'mco-card--gradient-3', 'mco-card--gradient-4'];
+    $practice_gradients = ['mco-card--gradient-blue', 'mco-card--gradient-green'];
+    $cert_gradients = ['mco-card--gradient-purple', 'mco-card--gradient-rose'];
 
     ob_start();
     echo '<div class="mco-card-grid">';
-    foreach ($exam_programs as $index => $program) {
-        $program_id_for_app = 'prod-' . $program->ID;
-        $cert_sku = get_post_meta($program->ID, '_mco_certification_exam_sku', true);
-        $practice_exam_id_for_app = 'exam-'.$program_id_for_app.'-practice';
-        
-        $title = get_the_title($program);
-        $description = has_excerpt($program->ID) ? get_the_excerpt($program->ID) : wp_trim_words($program->post_content, 20, '...');
 
-        // All buttons now deep-link into the app via the SSO login page
+    foreach ($exam_programs as $index => $program) {
+        // --- Get Common Data ---
+        $program_id_for_app = 'prod-' . $program->ID;
+        $title = get_the_title($program);
+        $pass_score = mco_get_single_term($program->ID, 'exam_pass_score');
+
+        // --- Practice Exam Data ---
+        $practice_exam_id_for_app = 'exam-' . $program_id_for_app . '-practice';
+        $practice_questions = mco_get_single_term($program->ID, 'exam_practice_questions');
+        $practice_duration = mco_get_single_term($program->ID, 'exam_practice_duration');
         $practice_url = add_query_arg('redirect_to', urlencode('/#/test/' . $practice_exam_id_for_app), $app_login_url);
-        $details_url = add_query_arg('redirect_to', urlencode('/#/program/' . $program_id_for_app), $app_login_url);
         
-        $gradient_class = $gradient_classes[$index % count($gradient_classes)];
-        ?>
-        <div class="mco-card <?php echo $gradient_class; ?>">
-            <div class="mco-card__icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+        // --- Certification Exam Data ---
+        $cert_sku = get_post_meta($program->ID, '_mco_certification_exam_sku', true);
+        $cert_questions = mco_get_single_term($program->ID, 'exam_cert_questions');
+        $cert_duration = mco_get_single_term($program->ID, 'exam_cert_duration');
+        $cert_product = $cert_sku ? wc_get_product(wc_get_product_id_by_sku($cert_sku)) : null;
+        $cert_url = $cert_product ? get_permalink($cert_product->get_id()) : home_url('/');
+
+        // --- Render Practice Exam Card ---
+        if ($practice_questions && $practice_duration) {
+            $practice_gradient_class = $practice_gradients[$index % count($practice_gradients)];
+            ?>
+            <div class="mco-card <?php echo $practice_gradient_class; ?>">
+                <div class="mco-card__body">
+                    <div class="mco-card__header">
+                        <div class="mco-card__icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                        </div>
+                        <span class="mco-card__header-text">Practice Exam</span>
+                    </div>
+                    <h3 class="mco-card__title"><?php echo esc_html($title); ?> Practice</h3>
+                    <div class="mco-card__stats">
+                        <span><?php echo esc_html($practice_questions); ?> Qs</span>
+                        <span><?php echo esc_html($practice_duration); ?> Mins</span>
+                        <span><?php echo esc_html($pass_score); ?>% Pass</span>
+                    </div>
+                    <div class="mco-card__footer">
+                        <a href="<?php echo esc_url($practice_url); ?>" class="mco-card__button mco-card__button--primary">Start Practice</a>
+                    </div>
+                </div>
             </div>
-            <h3 class="mco-card__title"><?php echo esc_html($title); ?></h3>
-            <p class="mco-card__description"><?php echo esc_html($description); ?></p>
-            <div class="mco-card__footer">
-                <a href="<?php echo esc_url($practice_url); ?>" class="mco-card__button mco-card__button--secondary">Start Practice</a>
-                <a href="<?php echo esc_url(get_permalink($program->ID)); ?>" class="mco-card__button mco-card__button--secondary">View Details</a>
-                <a href="<?php echo esc_url($details_url); ?>" class="mco-card__button mco-card__button--primary">Purchase Exam</a>
+            <?php
+        }
+
+        // --- Render Certification Exam Card ---
+        if ($cert_sku && $cert_product) {
+            $cert_gradient_class = $cert_gradients[$index % count($cert_gradients)];
+            ?>
+            <div class="mco-card <?php echo $cert_gradient_class; ?>">
+                <div class="mco-card__body">
+                    <div class="mco-card__header">
+                         <div class="mco-card__icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17h4v-2.34"/><path d="M8 19h8"/><path d="M12 11.66V14"/><path d="M11 17h2"/><path d="M12 3v1.34"/><path d="M12 21v-2"/></svg>
+                        </div>
+                        <span class="mco-card__header-text">Certification Exam</span>
+                    </div>
+                    <h3 class="mco-card__title"><?php echo esc_html($title); ?></h3>
+                    <p class="mco-card__description"><?php echo has_excerpt($program->ID) ? esc_html(get_the_excerpt($program->ID)) : esc_html(wp_trim_words($program->post_content, 15, '...')); ?></p>
+                    <div class="mco-card__stats">
+                        <span><?php echo esc_html($cert_questions); ?> Qs</span>
+                        <span><?php echo esc_html($cert_duration); ?> Mins</span>
+                        <span><?php echo esc_html($pass_score); ?>% Pass</span>
+                    </div>
+                    <div class="mco-card__footer">
+                        <a href="<?php echo esc_url($cert_url); ?>" class="mco-card__button mco-card__button--purchase">Purchase Exam</a>
+                    </div>
+                </div>
             </div>
-        </div>
-        <?php
+            <?php
+        }
     }
+
     echo '</div>';
     return ob_get_clean();
 }
@@ -105,22 +190,41 @@ function mco_book_showcase_shortcode() {
     echo '<div class="mco-card-grid">';
     foreach ($books as $index => $book) {
         $title = get_the_title($book);
-        $description = has_excerpt($book->ID) ? get_the_excerpt($book->ID) : wp_trim_words($book->post_content, 15, '...');
+        $description = has_excerpt($book->ID) ? get_the_excerpt($book->ID) : wp_trim_words($book->post_content, 20, '...');
         $link_com = get_post_meta($book->ID, '_mco_link_com', true);
         $link_in = get_post_meta($book->ID, '_mco_link_in', true);
         $link_ae = get_post_meta($book->ID, '_mco_link_ae', true);
+        $thumbnail_url = get_the_post_thumbnail_url($book->ID, 'medium');
         $gradient_class = $gradient_classes[$index % count($gradient_classes)];
         ?>
-        <div class="mco-card <?php echo $gradient_class; ?>">
-             <div class="mco-card__icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
-            </div>
-            <h3 class="mco-card__title"><?php echo esc_html($title); ?></h3>
-            <p class="mco-card__description"><?php echo esc_html($description); ?></p>
-            <div class="mco-card__footer">
-                <?php if ($link_com) : ?><a href="<?php echo esc_url($link_com); ?>" target="_blank" rel="noopener" class="mco-card__button mco-card__button--primary">Amazon.com</a><?php endif; ?>
-                <?php if ($link_in) : ?><a href="<?php echo esc_url($link_in); ?>" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary">Amazon.in</a><?php endif; ?>
-                <?php if ($link_ae) : ?><a href="<?php echo esc_url($link_ae); ?>" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary">Amazon.ae</a><?php endif; ?>
+        <div class="mco-card mco-card--book <?php echo $gradient_class; ?>">
+            <?php if ($thumbnail_url): ?>
+                <div class="mco-card__image-container">
+                    <img src="<?php echo esc_url($thumbnail_url); ?>" alt="<?php echo esc_attr($title); ?>" class="mco-card__image" />
+                </div>
+            <?php else:
+                $color_index = mco_simple_hash_to_color_index($title, 9);
+                $words = explode(' ', $title);
+            ?>
+                <div class="mco-card__placeholder-cover mco-placeholder-bg-<?php echo $color_index; ?>">
+                    <div class="mco-placeholder-content">
+                        <h4 class="mco-placeholder-title"><?php echo esc_html(implode(' ', array_slice($words, 0, 4))); ?></h4>
+                        <?php if (count($words) > 4): ?>
+                            <p class="mco-placeholder-subtitle"><?php echo esc_html(implode(' ', array_slice($words, 4))); ?></p>
+                        <?php endif; ?>
+                    </div>
+                    <div class="mco-placeholder-accent"></div>
+                </div>
+            <?php endif; ?>
+            
+            <div class="mco-card__body">
+                <h3 class="mco-card__title"><?php echo esc_html($title); ?></h3>
+                <p class="mco-card__description"><?php echo esc_html($description); ?></p>
+                <div class="mco-card__footer mco-card__footer--stacked">
+                    <?php if ($link_com) : ?><a href="<?php echo esc_url($link_com); ?>" target="_blank" rel="noopener" class="mco-card__button mco-card__button--purchase">Buy on Amazon.com</a><?php endif; ?>
+                    <?php if ($link_in) : ?><a href="<?php echo esc_url($link_in); ?>" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary">Buy on Amazon.in</a><?php endif; ?>
+                    <?php if ($link_ae) : ?><a href="<?php echo esc_url($link_ae); ?>" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary">Buy on Amazon.ae</a><?php endif; ?>
+                </div>
             </div>
         </div>
         <?php
