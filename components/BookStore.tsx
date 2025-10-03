@@ -1,11 +1,11 @@
-import React, { FC, useState, useEffect, useRef } from 'react';
+import React, { FC } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import type { RecommendedBook } from '../types.ts';
 import { ShoppingCart, BookOpenCheck } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 
-const BookCard: FC<{ book: RecommendedBook, gradientClass: string }> = ({ book, gradientClass }) => {
+const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
     const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
         const links = book.affiliateLinks;
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -51,18 +51,18 @@ const BookCard: FC<{ book: RecommendedBook, gradientClass: string }> = ({ book, 
         : [];
 
     return (
-        <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-1 transition-transform duration-300 text-white ${gradientClass}`}>
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-1 transition-transform duration-300 border border-slate-200">
             <BookCover book={book} className="w-full h-48" />
             <div className="p-6 flex flex-col flex-grow">
-                <h3 className="text-lg font-bold mb-2 leading-tight">{book.title}</h3>
+                <h3 className="text-lg font-bold text-slate-800 mb-2 leading-tight">{book.title}</h3>
                 
                 <div className="flex-grow">
-                    <p className="text-white/80 text-sm mb-4">
+                    <p className="text-slate-600 text-sm mb-4">
                         {book.description}
                     </p>
                 </div>
 
-                <div className="mt-auto pt-4 border-t border-white/20 space-y-2">
+                <div className="mt-auto pt-4 border-t border-slate-200 space-y-2">
                     {primaryLink ? (
                         <>
                             <a 
@@ -79,14 +79,14 @@ const BookCard: FC<{ book: RecommendedBook, gradientClass: string }> = ({ book, 
                                     href={store.url}
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="w-full text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-all"
+                                    className="w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-all"
                                 >
                                 Buy on {store.name}
                                 </a>
                             ))}
                         </>
                     ) : (
-                        <p className="text-sm text-center text-white/70">Purchase links currently unavailable.</p>
+                        <p className="text-sm text-center text-slate-500">Purchase links currently unavailable.</p>
                     )}
                 </div>
             </div>
@@ -96,13 +96,6 @@ const BookCard: FC<{ book: RecommendedBook, gradientClass: string }> = ({ book, 
 
 const BookStore: FC = () => {
     const { suggestedBooks, isInitializing } = useAppContext();
-    const gradients = [
-        'bg-gradient-to-br from-stone-800 to-zinc-900',      // Dark Slate/Black
-        'bg-gradient-to-br from-amber-900 to-stone-900',     // Dark Brown
-        'bg-gradient-to-br from-emerald-800 to-gray-900',    // Dark Green
-        'bg-gradient-to-br from-rose-900 to-slate-900',      // Dark Red/Maroon
-        'bg-gradient-to-br from-indigo-900 to-slate-900',    // Dark Purple
-    ];
 
     if (isInitializing) {
         return (
@@ -128,8 +121,8 @@ const BookStore: FC = () => {
 
             {suggestedBooks.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {suggestedBooks.map((book, index) => (
-                        <BookCard key={book.id} book={book} gradientClass={gradients[index % gradients.length]} />
+                    {suggestedBooks.map((book) => (
+                        <BookCard key={book.id} book={book} />
                     ))}
                 </div>
             ) : (
