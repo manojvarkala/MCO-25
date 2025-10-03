@@ -286,17 +286,22 @@ const Admin: FC = () => {
     };
 
     const handleClearClientCache = () => {
-        if (!window.confirm('Are you sure you want to clear the client-side configuration cache? The app will reload to fetch the latest data from the server.')) {
+        if (!window.confirm('Are you sure you want to clear all client-side configuration caches? The app will reload to fetch the latest data from the server.')) {
             return;
         }
         setIsClearingCache(true);
-        const toastId = toast.loading('Clearing client cache...');
-
+        const toastId = toast.loading('Clearing client caches...');
+    
         setTimeout(() => {
             try {
-                localStorage.removeItem('appConfigCache');
+                // Iterate through localStorage and remove all app config cache keys to handle multi-tenancy.
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('appConfigCache')) { // Catches old and new tenant-specific keys
+                        localStorage.removeItem(key);
+                    }
+                });
                 localStorage.removeItem('activeOrgId');
-                toast.success('Client cache cleared. Reloading application...', { id: toastId });
+                toast.success('Client caches cleared. Reloading application...', { id: toastId });
                 setTimeout(() => window.location.reload(), 1000);
             } catch (e) {
                 console.error("Failed to clear client cache", e);

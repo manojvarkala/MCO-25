@@ -326,7 +326,11 @@ function mco_api_get_certificate_data(WP_REST_Request $request) {
     // Generate a professional, unique certificate number
     $user_id = $payload['user']['id'];
     $timestamp_sec = floor($result['timestamp'] / 1000);
-    $cert_number = sprintf('MCO-%s-%s-%s', $user_id, $exam_post_id, $timestamp_sec);
+
+    // Hardcoded prefix for Medical Coding Online, as requested.
+    $prefix = 'MCO';
+    
+    $cert_number = sprintf('%s-%s-%s-%s', $prefix, $user_id, $exam_post_id, $timestamp_sec);
 
     return new WP_REST_Response([
         'certificateNumber' => $cert_number, 

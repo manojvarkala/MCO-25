@@ -128,12 +128,13 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const loadAppConfig = async () => {
         setIsInitializing(true);
         const tenantConfig: TenantConfig = getTenantConfig();
+        const cacheKey = `appConfigCache_${tenantConfig.apiBaseUrl}`;
         let activeConfig = null;
         let loadedFromCache = false;
 
-        // Stage 1: Attempt to load from cache for an instant UI update.
+        // Stage 1: Attempt to load from tenant-specific cache for an instant UI update.
         try {
-            const cachedConfigJSON = localStorage.getItem('appConfigCache');
+            const cachedConfigJSON = localStorage.getItem(cacheKey);
             if (cachedConfigJSON) {
                 const cachedConfig = JSON.parse(cachedConfigJSON);
                 activeConfig = cachedConfig;
@@ -143,7 +144,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             }
         } catch (e) {
             console.warn("Could not load cached config:", e);
-            localStorage.removeItem('appConfigCache');
+            localStorage.removeItem(cacheKey);
         }
 
         // Stage 2: Always try fetching the latest config from the API.
@@ -154,7 +155,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             const liveConfig = await response.json();
             
             if (!activeConfig || activeConfig.version !== liveConfig.version) {
-                localStorage.setItem('appConfigCache', JSON.stringify(liveConfig));
+                localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
                 const processedData = processConfigData(liveConfig);
                 setProcessedConfig(liveConfig, processedData);
                 if (activeConfig) toast.success('Content and features have been updated!', { duration: 3000 });
