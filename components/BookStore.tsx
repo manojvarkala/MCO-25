@@ -108,26 +108,28 @@ const BookStore: FC = () => {
 
     return (
         <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-12">
-                 <BookOpenCheck className="mx-auto h-12 w-12 text-cyan-500" />
-                 <h1 className="text-4xl font-extrabold text-slate-900 mt-4">Recommended Study Materials</h1>
-                <p className="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">
-                    Enhance your learning with our curated list of essential books for medical coding professionals. Each book has been selected to help you succeed in your exams and career.
-                </p>
-                <p className="text-xs text-slate-400 mt-4">
-                    As an Amazon Associate, we earn from qualifying purchases. Using our links doesn't cost you anything extra and helps support our platform to keep creating great content for you. Please note that book availability may vary by region.
-                </p>
-            </div>
-
-            {suggestedBooks.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {suggestedBooks.map((book) => (
-                        <BookCard key={book.id} book={book} />
-                    ))}
+            <div className="bg-white p-8 rounded-xl shadow-lg">
+                <div className="text-center mb-12">
+                     <BookOpenCheck className="mx-auto h-12 w-12 text-cyan-500" />
+                     <h1 className="text-4xl font-extrabold text-slate-900 mt-4">Recommended Study Materials</h1>
+                    <p className="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">
+                        Enhance your learning with our curated list of essential books for medical coding professionals. Each book has been selected to help you succeed in your exams and career.
+                    </p>
+                    <p className="text-xs text-slate-400 mt-4">
+                        As an Amazon Associate, we earn from qualifying purchases. Using our links doesn't cost you anything extra and helps support our platform to keep creating great content for you. Please note that book availability may vary by region.
+                    </p>
                 </div>
-            ) : (
-                <p className="text-center text-slate-500">No books are currently recommended.</p>
-            )}
+
+                {suggestedBooks.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {suggestedBooks.map((book) => (
+                            <BookCard key={book.id} book={book} />
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-center text-slate-500">No books are currently recommended.</p>
+                )}
+            </div>
         </div>
     );
 };

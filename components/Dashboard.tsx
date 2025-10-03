@@ -209,7 +209,7 @@ const Dashboard: FC = () => {
                             <Link to={`/program/${category.id}`} className="group">
                                 <h3 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-cyan-600 transition">{category.name}</h3>
                             </Link>
-                            <p className="text-slate-500 mb-4">{category.description}</p>
+                            <div className="text-slate-500 mb-4 text-sm" dangerouslySetInnerHTML={{ __html: category.description }} />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} gradientClass={practiceGradients[index % practiceGradients.length]} activeOrg={activeOrg} examPrices={examPrices} />}
                                 {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} gradientClass={certGradients[index % certGradients.length]} activeOrg={activeOrg} examPrices={examPrices}/>}

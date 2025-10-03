@@ -23,7 +23,6 @@
 
 /* A single program group, which is an item in the showcase grid */
 .mco-program-group {
-    /* grid-column: 1 / -1; /* This was causing the single-column layout */
     padding: 1.5rem;
     background-color: #f8fafc; /* slate-50 */
     border: 1px solid #e2e8f0; /* slate-200 */
@@ -38,10 +37,15 @@
     color: #1e293b; /* slate-800 */
     margin: 0 0 0.5rem 0;
     transition: color 0.2s;
+    text-decoration: none;
 }
-.mco-program-group__title:hover {
+.mco-program-group a:hover .mco-program-group__title {
     color: #0891b2; /* cyan-600 */
 }
+.mco-program-group a {
+    text-decoration: none;
+}
+
 
 .mco-program-group__description {
     font-size: 1rem;
@@ -100,16 +104,16 @@
     flex-direction: column;
 }
 
-.mco-card__title {
-    font-size: 1.25rem;
+.mco-card__title { /* This is for books */
+    font-size: 1.125rem; /* slightly smaller for books */
     font-weight: 700;
-    line-height: 1.3;
+    line-height: 1.4;
     margin: 0 0 0.5rem 0;
 }
-.mco-card__subtitle {
+.mco-card__subtitle { /* This is for exams */
     font-size: 1.125rem;
     font-weight: 700;
-    line-height: 1.3;
+    line-height: 1.4;
     margin: 0 0 1rem 0;
     flex-grow: 1;
 }
@@ -130,7 +134,7 @@
     background-color: rgba(0,0,0,0.1);
     padding: 0.75rem;
     border-radius: 0.375rem;
-    margin: 1rem 0;
+    margin-top: 1rem;
 }
 .mco-card__stats span {
     display: flex;
@@ -163,15 +167,16 @@
     transform: scale(1.03);
 }
 
-.mco-card__button--primary,
-.mco-card__button--purchase {
+.mco-card__button--primary {
     background-color: white;
     color: #1e293b;
     font-size: 1rem;
 }
 .mco-card__button--purchase {
     background-color: #facc15; /* yellow-400 */
+    color: #1e293b;
 }
+
 .mco-card__button--secondary {
     background-color: rgba(255,255,255,0.1);
     color: white;
@@ -182,8 +187,20 @@
 .mco-card__button--secondary:hover { background-color: rgba(255,255,255,0.2); }
 
 /* Book Card Specifics */
+.mco-card--book {
+    background-color: #ffffff;
+    color: #334155; /* slate-700 */
+    border: 1px solid #e2e8f0; /* slate-200 */
+}
 .mco-card--book .mco-card__body { padding-top: 1rem; }
-.mco-card--book .mco-card__footer { padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.2); }
+.mco-card--book .mco-card__description { color: #475569; } /* slate-600 */
+.mco-card--book .mco-card__footer { padding-top: 1rem; border-top: 1px solid #e2e8f0; } /* slate-200 */
+.mco-card--book .mco-card__button--purchase { background-color: #f59e0b; color: #1e293b; } /* amber-500 */
+.mco-card--book .mco-card__button--purchase:hover { background-color: #d97706; } /* amber-600 */
+.mco-card--book .mco-card__button--secondary { background-color: #f1f5f9; color: #475569; } /* slate-100 / slate-600 */
+.mco-card--book .mco-card__button--secondary:hover { background-color: #e2e8f0; }
+.mco-card__no-links { font-size: 0.875rem; text-align: center; color: #64748b; padding: 1rem 0; }
+
 
 /* Procedural Book Cover */
 .mco-book-cover {
@@ -204,7 +221,7 @@
     overflow: hidden;
 }
 .mco-book-cover__title { font-weight: 700; font-size: 1.25rem; line-height: 1.2; margin: 0; }
-.mco-book-cover__subtitle { font-size: 0.875rem; opacity: 0.8; margin: 0; }
+.mco-book-cover__subtitle { font-size: 0.875rem; opacity: 0.8; margin: 0.25rem 0 0 0; }
 .mco-book-cover__accent { width: 33.33%; height: 0.25rem; border-radius: 9999px; }
 
 /* Gradients & Colors */
@@ -213,11 +230,7 @@
 .mco-gradient--cert-1 { background-image: linear-gradient(to bottom right, #6366f1, #8b5cf6); }
 .mco-gradient--cert-2 { background-image: linear-gradient(to bottom right, #f43f5e, #ec4899); }
 
-.mco-gradient--book-1 { background-image: linear-gradient(to bottom right, #57534e, #292524); }
-.mco-gradient--book-2 { background-image: linear-gradient(to bottom right, #92400e, #422006); }
-.mco-gradient--book-3 { background-image: linear-gradient(to bottom right, #065f46, #1e3a2a); }
-.mco-gradient--book-4 { background-image: linear-gradient(to bottom right, #881337, #4a044e); }
-
+/* Procedural Book Cover Colors (Light theme) */
 .mco-book-cover--color-0 { background-color: #fef2f2; color: #7f1d1d; }
 .mco-book-cover--color-0 .mco-book-cover__accent { background-color: #fca5a5; }
 .mco-book-cover--color-1 { background-color: #fefce8; color: #713f12; }
@@ -228,6 +241,3 @@
 .mco-book-cover--color-3 .mco-book-cover__accent { background-color: #93c5fd; }
 .mco-book-cover--color-4 { background-color: #f5f3ff; color: #4c1d95; }
 .mco-book-cover--color-4 .mco-book-cover__accent { background-color: #c4b5fd; }
-
-/* Shortcode page specific styles */
-.mco-card__no-links { font-size: 0.875rem; text-align: center; color: rgba(255,255,255,0.7); }
