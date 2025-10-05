@@ -6,7 +6,7 @@ import Spinner from './Spinner.tsx';
 
 const Integration: FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
-    const pluginVersion = "1.0.0";
+    const pluginVersion = "1.0.1";
 
     const pluginFiles = [
         'mco-exam-integration-engine/mco-exam-integration-engine.txt',
@@ -33,13 +33,15 @@ const Integration: FC = () => {
                 const content = await response.text();
                 
                 let finalPath = filePath.replace('mco-exam-integration-engine/', '');
+                
                 if (finalPath.endsWith('.txt')) {
-                    // Correctly rename based on directory and specific filenames
-                    if (finalPath.includes('includes/') || finalPath === 'mco-exam-integration-engine.txt' || finalPath === 'plugin-header.txt') {
+                    // This logic now correctly renames files, leaving plugin-header.txt alone.
+                    if (finalPath === 'mco-exam-integration-engine.txt' || finalPath.includes('includes/')) {
                          finalPath = finalPath.replace('.txt', '.php');
                     } else if (finalPath.includes('assets/')) {
                          finalPath = finalPath.replace('.txt', '.css');
                     }
+                    // IMPORTANT: 'plugin-header.txt' is intentionally left as a .txt file and is not renamed.
                 }
                 
                 rootFolder.file(finalPath, content);
