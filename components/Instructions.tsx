@@ -1,4 +1,5 @@
 import React, { FC } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 
 const Instructions: FC = () => {
@@ -65,7 +66,7 @@ const Instructions: FC = () => {
 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">WordPress Integration for Admins</h2>
                 <p>
-                    For instructions on how to set up the SSO and results-sync functionality with your WordPress site, please see the <a href="#/integration" className="text-cyan-600">Integration Guide</a>.
+                    For instructions on how to set up the SSO and results-sync functionality with your WordPress site, please see the <Link to="/admin/integration" className="text-cyan-600">Integration Guide</Link>.
                 </p>
             </div>
         </div>

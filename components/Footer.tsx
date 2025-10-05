@@ -1,4 +1,5 @@
 import React, { FC } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 
@@ -23,21 +24,21 @@ const Footer: FC = () => {
     <footer className="bg-[rgb(var(--color-card-rgb))] mt-auto">
       <div className="container mx-auto px-4 py-4 text-center text-[rgb(var(--color-text-muted-rgb))] text-sm">
         <div className="flex justify-center items-center space-x-4 mb-2 flex-wrap">
-            <a href="/#/instructions" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Instructions</a>
+            <Link to="/instructions" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Instructions</Link>
             <span className="text-slate-300">|</span>
-            <a href="/#/faq" className="text-[rgb(var(--color-primary-rgb))] hover:underline">FAQ</a>
+            <Link to="/faq" className="text-[rgb(var(--color-primary-rgb))] hover:underline">FAQ</Link>
             <span className="text-slate-300">|</span>
-            <a href="/#/user-guide" className="text-[rgb(var(--color-primary-rgb))] hover:underline">User Guide</a>
+            <Link to="/user-guide" className="text-[rgb(var(--color-primary-rgb))] hover:underline">User Guide</Link>
             <span className="text-slate-300">|</span>
-            <a href="/#/about-us" className="text-[rgb(var(--color-primary-rgb))] hover:underline">About Us</a>
+            <Link to="/about-us" className="text-[rgb(var(--color-primary-rgb))] hover:underline">About Us</Link>
             <span className="text-slate-300">|</span>
-            <a href="/#/feedback" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Feedback</a>
+            <Link to="/feedback" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Feedback</Link>
             <span className="text-slate-300">|</span>
-            <a href="/#/terms-of-service" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Terms of Service</a>
+            <Link to="/terms-of-service" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Terms of Service</Link>
             <span className="text-slate-300">|</span>
-            <a href="/#/privacy-policy" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Privacy Policy</a>
+            <Link to="/privacy-policy" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Privacy Policy</Link>
             <span className="text-slate-300">|</span>
-            <a href="/#/refund-policy" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Refund Policy</a>
+            <Link to="/refund-policy" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Refund Policy</Link>
         </div>
         <p>&copy; {new Date().getFullYear()} {activeOrg.name}. All Rights Reserved.</p>
         <p>An <a href="https://annapoornainfo.com" target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Annapoorna Infotech</a> Venture.</p>

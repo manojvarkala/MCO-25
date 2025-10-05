@@ -1,6 +1,6 @@
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
-import { Navigate, useLocation, Routes, Route, HashRouter, Outlet } from 'react-router-dom';
+import { Navigate, useLocation, Routes, Route, BrowserRouter, Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
@@ -197,10 +197,10 @@ const App: FC = () => {
   return (
     <AuthProvider>
       <AppProvider>
-        <HashRouter>
+        <BrowserRouter>
             <AppContent />
             <Toaster position="top-right" reverseOrder={false} />
-        </HashRouter>
+        </BrowserRouter>
       </AppProvider>
     </AuthProvider>
   );
