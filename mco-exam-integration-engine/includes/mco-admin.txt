@@ -151,9 +151,23 @@ if (!function_exists('mco_exam_engine_admin_page')) {
 
             if ($form_action === 'save_main_settings') {
                 update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
-                update_option('mco_logo_url', esc_url_raw($_POST['mco_logo_url']));
+                
+                // Handle logo URL: allow data URIs, otherwise sanitize as URL
+                $logo_url_input = $_POST['mco_logo_url'];
+                $sanitized_logo_url = '';
+                if (strpos(trim($logo_url_input), 'data:image/') === 0) {
+                    // It's a data URI. We'll allow it as it's pasted by an admin.
+                    // A more robust solution might validate the base64 content, but this is a significant improvement.
+                    $sanitized_logo_url = $logo_url_input;
+                } else {
+                    // It's a regular URL, so sanitize it as such
+                    $sanitized_logo_url = esc_url_raw($logo_url_input);
+                }
+                update_option('mco_logo_url', $sanitized_logo_url);
+                
                 update_option('mco_is_spin_wheel_enabled', isset($_POST['mco_is_spin_wheel_enabled']) ? 1 : 0);
                 $settings_saved = true;
+
             } elseif ($form_action === 'save_theme_settings') {
                 update_option('mco_active_theme', sanitize_text_field($_POST['mco_active_theme']));
                 $settings_saved = true;
@@ -213,8 +227,8 @@ function mco_render_main_settings_tab() {
              <tr valign="top">
                 <th scope="row">Custom Logo URL</th>
                 <td>
-                    <input type="text" name="mco_logo_url" value="<?php echo esc_attr(get_option('mco_logo_url')); ?>" />
-                    <p class="description">Optional. Enter the full URL to a custom logo. If empty, it will use the Site Icon from Customizer.</p>
+                    <textarea name="mco_logo_url" rows="4"><?php echo esc_textarea(get_option('mco_logo_url')); ?></textarea>
+                    <p class="description">Optional. Enter the full URL to a custom logo (e.g., https://...) or paste a base64 data URI (e.g., data:image/png;base64,...). If empty, it will use the Site Icon from Customizer.</p>
                 </td>
             </tr>
             <tr valign="top">

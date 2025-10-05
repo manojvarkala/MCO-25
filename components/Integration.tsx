@@ -9,7 +9,7 @@ const Integration: FC = () => {
             <h1 className="text-3xl font-extrabold text-slate-800">WordPress Integration Plugin</h1>
             
             <div className="bg-white p-6 rounded-lg shadow-lg border border-slate-200">
-                <h2 className="text-xl font-bold mb-2 text-slate-800">The Integration Engine (v30.2.0)</h2>
+                <h2 className="text-xl font-bold mb-2 text-slate-800">The Integration Engine (v30.2.4)</h2>
                 <p className="mb-4 text-slate-600">
                     This is the master plugin for integrating the exam app with your WordPress site. It handles Single Sign-On (SSO), data synchronization, CORS headers, and provides powerful shortcodes for displaying content.
                 </p>
@@ -58,21 +58,37 @@ const Integration: FC = () => {
                 </ol>
 
                 <h3 className="text-lg font-semibold text-slate-700 mt-8">Updating the Plugin:</h3>
-                <div className="bg-red-50 p-4 rounded-md border border-red-200 text-red-800">
+                <div className="bg-blue-50 p-4 rounded-md border border-blue-200 text-blue-800">
                     <div className="flex items-start gap-3">
-                        <AlertTriangle className="h-6 w-6 text-red-500 flex-shrink-0" />
+                        <Info className="h-6 w-6 text-blue-500 flex-shrink-0" />
                         <div>
-                            <strong className="font-bold">IMPORTANT UPDATE PROCEDURE</strong>
-                            <p className="text-sm mt-1">To prevent "Cannot redeclare function" errors, you must deactivate and delete the old plugin before uploading the new version. Your settings will be preserved.</p>
+                            <strong className="font-bold">RECOMMENDED UPDATE METHOD</strong>
                             <ol className="list-decimal pl-5 mt-2 text-sm space-y-1">
-                                <li>In WordPress, go to <strong>Plugins</strong>.</li>
-                                <li><strong>Deactivate</strong> the "Exam App Integration Engine" plugin.</li>
-                                <li><strong>Delete</strong> the plugin.</li>
-                                <li>Follow the installation steps above to upload the new <code>.zip</code> file and activate it.</li>
+                                <li>In WordPress, go to <strong>Plugins &rarr; Add New &rarr; Upload Plugin</strong>.</li>
+                                <li>Choose the new <code>.zip</code> file for the plugin.</li>
+                                <li>WordPress should detect the existing plugin and ask you to <strong>"Replace current with uploaded"</strong>. Click this button to upgrade.</li>
+                                <li>Activate the plugin if prompted.</li>
+                                <li>Finally, <strong>clear all caches</strong> on your site (e.g., WP Rocket, server cache) to ensure all changes take effect.</li>
                             </ol>
                         </div>
                     </div>
                 </div>
+
+                <div className="mt-4 bg-amber-50 p-4 rounded-md border border-amber-200 text-amber-800">
+                    <div className="flex items-start gap-3">
+                        <AlertTriangle className="h-6 w-6 text-amber-500 flex-shrink-0" />
+                        <div>
+                            <strong className="font-bold">TROUBLESHOOTING: PLUGIN INSTALLED SEPARATELY?</strong>
+                            <p className="text-sm mt-1">
+                                If WordPress installs the update as a <strong>new, separate plugin</strong> instead of offering to replace the current one, it means the folder name inside your new <code>.zip</code> file is different from the installed plugin's folder name (which should be <code>mco-exam-integration-engine</code>).
+                            </p>
+                            <p className="text-sm mt-2">
+                                <strong>To fix this:</strong> Go to your Plugins page, find the two "Exam App Integration Engine" plugins, and <strong>deactivate and delete the OLDER version</strong>. The plugin is designed to prevent errors if both are active, but it's important to clean up duplicates.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
 
                  <div className="mt-8 text-center">
                     <a 
@@ -81,7 +97,7 @@ const Integration: FC = () => {
                         className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
                     >
                         <DownloadCloud size={20} className="mr-2" />
-                        Download Plugin (.zip) v30.2.0
+                        Download Plugin (.zip) v30.2.4
                     </a>
                 </div>
             </div>

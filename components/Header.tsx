@@ -1,7 +1,7 @@
 import React, { FC, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
-import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, Tag, Users, Gift, Star, List, BookOpen } from 'lucide-react';
+import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, Tag, Users, Gift, Star, List, BookOpen, Menu } from 'lucide-react';
 
 const Header: FC = () => {
   const { user, logout, canSpinWheel, isSubscribed, isEffectivelyAdmin } = useAuth();
@@ -41,13 +41,19 @@ const Header: FC = () => {
   return (
     <header className={headerClasses}>
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        {activeOrg && activeOrg.logo ? (
+        {activeOrg ? (
             <a href={headerLink} className="flex items-center space-x-3">
-                 <img
-                    src={activeOrg.logo}
-                    alt={`${activeOrg.name} Logo`}
-                    className="h-14 w-14 object-contain"
-                />
+                 {activeOrg.logo ? (
+                    <img
+                        src={activeOrg.logo}
+                        alt={`${activeOrg.name} Logo`}
+                        className="h-14 w-14 object-contain"
+                    />
+                 ) : (
+                    <div className="h-14 w-14 bg-slate-200 rounded-full flex items-center justify-center">
+                        <Menu className="h-8 w-8 text-slate-400" />
+                    </div>
+                 )}
                 <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                         <span className="text-3xl font-bold font-display text-[rgb(var(--color-text-strong-rgb))]">
