@@ -144,25 +144,26 @@ if (!function_exists('mco_admin_enqueue_styles')) {
 
 if (!function_exists('mco_exam_engine_admin_page')) {
     function mco_exam_engine_admin_page() {
-        // Handle saving settings for ANY tab before any HTML is rendered.
+        $settings_saved = false;
+
         if (isset($_POST['mco_save_settings_nonce']) && wp_verify_nonce($_POST['mco_save_settings_nonce'], 'mco_save_settings')) {
-            if (isset($_POST['mco_exam_app_url'])) {
+            $form_action = isset($_POST['mco_form_action']) ? sanitize_text_field($_POST['mco_form_action']) : '';
+
+            if ($form_action === 'save_main_settings') {
                 update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
-            }
-            if (isset($_POST['mco_logo_url'])) {
                 update_option('mco_logo_url', esc_url_raw($_POST['mco_logo_url']));
-            }
-            if (isset($_POST['mco_is_spin_wheel_enabled_hidden'])) { // Use hidden field to detect presence
                 update_option('mco_is_spin_wheel_enabled', isset($_POST['mco_is_spin_wheel_enabled']) ? 1 : 0);
-            }
-             if (isset($_POST['mco_active_theme'])) {
+                $settings_saved = true;
+            } elseif ($form_action === 'save_theme_settings') {
                 update_option('mco_active_theme', sanitize_text_field($_POST['mco_active_theme']));
+                $settings_saved = true;
             }
             
-            // Clear config cache on save
-            delete_transient('mco_app_config_data');
-            update_option('mco_config_version', current_time('YmdHis')); // Bust client cache
-            echo '<div class="notice notice-success is-dismissible"><p>Settings saved and cache cleared.</p></div>';
+            if ($settings_saved) {
+                delete_transient('mco_app_config_data');
+                update_option('mco_config_version', current_time('YmdHis')); // Bust client cache
+                echo '<div class="notice notice-success is-dismissible"><p>Settings saved and cache cleared.</p></div>';
+            }
         }
 
         $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'main_settings';
@@ -200,6 +201,7 @@ function mco_render_main_settings_tab() {
     ?>
     <form method="post" action="?page=mco-exam-engine&tab=main_settings">
         <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
+        <input type="hidden" name="mco_form_action" value="save_main_settings">
         <table class="form-table">
             <tr valign="top">
                 <th scope="row">Exam Application URL(s)</th>
@@ -218,7 +220,6 @@ function mco_render_main_settings_tab() {
             <tr valign="top">
                 <th scope="row">Enable "Spin & Win"</th>
                 <td>
-                    <input type="hidden" name="mco_is_spin_wheel_enabled_hidden" value="1" />
                     <input type="checkbox" name="mco_is_spin_wheel_enabled" value="1" <?php checked(1, get_option('mco_is_spin_wheel_enabled', 0)); ?> />
                     <label for="mco_is_spin_wheel_enabled">Enable the gamified prize wheel for users.</label>
                 </td>
@@ -240,6 +241,7 @@ function mco_render_theme_selector_tab() {
     ?>
     <form method="post" action="?page=mco-exam-engine&tab=theme_selector">
         <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
+        <input type="hidden" name="mco_form_action" value="save_theme_settings">
         <h2>Application Theme</h2>
         <p>Select the default visual theme for the exam application. Users can override this choice in their own profile.</p>
         <table class="form-table">
