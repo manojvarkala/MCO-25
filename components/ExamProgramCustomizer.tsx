@@ -1,9 +1,8 @@
-import React, { FC, useState, useMemo } from 'react';
+import React, { FC, useState, useMemo, ChangeEvent } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, Organization } from '../types.ts';
-// FIX: Add HelpCircle to imports from lucide-react.
 import { Settings, Save, X, BookOpen, Link as LinkIcon, Edit, FileText, Clock, Percent, Award, Shield, CheckSquare, Square, RefreshCw, HelpCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Spinner from './Spinner.tsx';
@@ -16,7 +15,8 @@ const ExamProgramCustomizer: FC = () => {
     const { activeOrg, updateActiveOrg } = useAppContext();
     const { token } = useAuth();
     const [editingState, setEditingState] = useState<EditState>({});
-    const [isSaving, setIsSaving] = useState<string | null>(null); // Holds the program ID being saved
+    const [isSaving, setIsSaving] = useState<string | null>(null); // Holds the program ID being saved for individual saves
+    const [isSavingAll, setIsSavingAll] = useState<boolean>(false); // For the "Save All" button
 
     const handleEdit = (id: string, field: string, value: any) => {
         setEditingState(prev => ({
@@ -41,7 +41,6 @@ const ExamProgramCustomizer: FC = () => {
         try {
             const updatedConfig = await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
             if (updatedConfig && updatedConfig.organizations) {
-                // Update the entire org in context with the fresh data from the server
                 updateActiveOrg(updatedConfig.organizations[0]);
                 toast.success("Program updated successfully!");
                 setEditingState(prev => {
@@ -66,12 +65,51 @@ const ExamProgramCustomizer: FC = () => {
             return newState;
         });
     };
+
+    const handleSaveAll = async () => {
+        if (!token || Object.keys(editingState).length === 0) {
+            return;
+        }
+    
+        setIsSavingAll(true);
+        const toastId = toast.loading('Saving all changes...');
+    
+        try {
+            const savePromises = Object.keys(editingState).map(programId => 
+                googleSheetsService.adminUpdateExamProgram(token, programId, editingState[programId])
+            );
+    
+            const responses = await Promise.all(savePromises);
+    
+            const lastResponse = responses[responses.length - 1];
+            if (lastResponse && lastResponse.organizations) {
+                updateActiveOrg(lastResponse.organizations[0]);
+                setEditingState({});
+                toast.success('All changes saved successfully!', { id: toastId });
+            } else {
+                throw new Error('Invalid response from server after saving.');
+            }
+    
+        } catch (error: any) {
+            toast.error(error.message || 'An error occurred. Some changes may not have been saved.', { id: toastId });
+        } finally {
+            setIsSavingAll(false);
+        }
+    };
+
+    const handleCancelAll = () => {
+        if (window.confirm('Are you sure you want to discard all unsaved changes?')) {
+            setEditingState({});
+            toast('All changes discarded.');
+        }
+    };
     
     const inputClass = "w-full p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition text-sm";
     const isDirty = (programId: string) => !!editingState[programId];
+    const anyChanges = Object.keys(editingState).length > 0;
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8">
+        <div className={`max-w-6xl mx-auto space-y-8 ${anyChanges ? 'pb-24' : ''}`}>
             <h1 className="text-4xl font-extrabold text-slate-900">Exam Program Customizer</h1>
             <p className="text-slate-600 -mt-6">Manage the core settings for each exam program. Changes are saved directly to your WordPress backend.</p>
 
@@ -84,15 +122,15 @@ const ExamProgramCustomizer: FC = () => {
                     if (!practiceExam || !certExam) return null;
 
                     return (
-                        <div key={program.id} className={`bg-white p-6 rounded-xl shadow-lg border ${isDirty(program.id) ? 'border-cyan-500' : 'border-slate-200'}`}>
+                        <div key={program.id} className={`bg-white p-6 rounded-xl shadow-lg border transition-colors ${isDirty(program.id) ? 'border-cyan-400' : 'border-slate-200'}`}>
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="text-2xl font-bold text-slate-800">{currentEdit.programName ?? program.name}</h2>
                                 {isDirty(program.id) && (
                                     <div className="flex items-center gap-2">
-                                        <button onClick={() => handleSave(program.id)} disabled={isSaving === program.id} className="flex items-center gap-1 px-3 py-1 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600 disabled:bg-slate-400">
+                                        <button onClick={() => handleSave(program.id)} disabled={isSaving === program.id || isSavingAll} className="flex items-center gap-1 px-3 py-1 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600 disabled:opacity-50">
                                             {isSaving === program.id ? <Spinner size="sm"/> : <Save size={14} />} Save
                                         </button>
-                                        <button onClick={() => handleCancel(program.id)} disabled={isSaving === program.id} className="flex items-center gap-1 px-3 py-1 bg-slate-200 text-slate-700 rounded-md text-sm font-semibold hover:bg-slate-300">
+                                        <button onClick={() => handleCancel(program.id)} disabled={isSaving === program.id || isSavingAll} className="flex items-center gap-1 px-3 py-1 bg-slate-200 text-slate-700 rounded-md text-sm font-semibold hover:bg-slate-300 disabled:opacity-50">
                                             <X size={14} /> Cancel
                                         </button>
                                     </div>
@@ -135,6 +173,38 @@ const ExamProgramCustomizer: FC = () => {
                     );
                 })}
             </div>
+
+            {anyChanges && (
+                <div className="fixed bottom-0 left-0 right-0 bg-slate-800 p-3 shadow-lg z-20 border-t border-slate-600 animate-fade-in-up">
+                    <div className="max-w-6xl mx-auto flex justify-end items-center gap-4">
+                        <p className="text-white font-semibold mr-auto">You have unsaved changes.</p>
+                        <button 
+                            onClick={handleCancelAll} 
+                            disabled={isSavingAll || !!isSaving} 
+                            className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-md text-sm font-semibold hover:bg-slate-500 disabled:opacity-50"
+                        >
+                            <X size={16} /> Discard All
+                        </button>
+                        <button 
+                            onClick={handleSaveAll} 
+                            disabled={isSavingAll || !!isSaving} 
+                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50"
+                        >
+                            {isSavingAll ? <Spinner size="sm" /> : <Save size={16} />}
+                            {isSavingAll ? 'Saving...' : 'Save All Changes'}
+                        </button>
+                    </div>
+                     <style>{`
+                        @keyframes fade-in-up {
+                            from { opacity: 0; transform: translateY(100%); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                        .animate-fade-in-up {
+                            animation: fade-in-up 0.3s ease-out forwards;
+                        }
+                    `}</style>
+                </div>
+            )}
         </div>
     );
 };

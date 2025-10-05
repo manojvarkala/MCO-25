@@ -7,9 +7,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
-import { Link } from 'react-router-dom';
 
-// FIX: Define a union type for health status to ensure type safety.
 type HealthStatus = 'idle' | 'success' | 'failed' | 'loading';
 
 interface HealthCheckItemProps {
@@ -39,7 +37,7 @@ const decodeHtmlEntities = (text: string | undefined): string => {
 
 const HealthCheckItem: FC<HealthCheckItemProps> = ({ status, title, message, troubleshooting }) => {
     const StatusIcon = {
-        idle: <div className="w-5 h-5 bg-slate-300 rounded-full flex-shrink-0" />,
+        idle: <div className="w-5 h-5 bg-slate-300 rounded-full flex-shrink-0"></div>,
         loading: <Loader size={20} className="text-blue-500 animate-spin flex-shrink-0" />,
         success: <CheckCircle size={20} className="text-green-500 flex-shrink-0" />,
         failed: <XCircle size={20} className="text-red-500 flex-shrink-0" />,
@@ -73,38 +71,6 @@ const Admin: FC = () => {
     const { activeOrg, updateActiveOrg } = useAppContext();
     const { token } = useAuth();
     
-    const prizeOptions = useMemo(() => {
-        const cpcExam = activeOrg?.exams.find(e => e.productSku === 'exam-cpc-cert');
-        const ccaExam = activeOrg?.exams.find(e => e.productSku === 'exam-cca-cert');
-    
-        return [
-            { id: 'SUB_YEARLY', label: 'Annual Subscription' },
-            { id: 'SUB_MONTHLY', label: 'Monthly Subscription' },
-            { id: 'SUB_WEEKLY', label: 'Weekly Subscription' },
-            { id: 'EXAM_CPC', label: cpcExam ? `Free ${cpcExam.name}` : 'Free CPC Exam' },
-            { id: 'EXAM_CCA', label: ccaExam ? `Free ${ccaExam.name}` : 'Free CCA Exam' },
-        ];
-    }, [activeOrg]);
-
-    // State for user prize management
-    const [searchTerm, setSearchTerm] = useState('');
-    const [isSearching, setIsSearching] = useState(false);
-    const [searchResults, setSearchResults] = useState<SearchedUser[]>([]);
-    const [selectedUser, setSelectedUser] = useState<SearchedUser | null>(null);
-
-    const [spinsToAdd, setSpinsToAdd] = useState('1');
-    const [prizeToGrant, setPrizeToGrant] = useState(prizeOptions[0].id);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    // State for exam stats
-    const [stats, setStats] = useState<ExamStat[] | null>(null);
-    const [isLoadingStats, setIsLoadingStats] = useState(true);
-    const [statsError, setStatsError] = useState<string | null>(null);
-    
-    // State for config download & cache clear
-    const [isDownloadingConfig, setIsDownloadingConfig] = useState(false);
-    const [isClearingCache, setIsClearingCache] = useState(false);
-    
     // State for health check
     const [healthCheckStatus, setHealthCheckStatus] = useState<HealthCheckState>({
         connectivity: { status: 'idle', message: '' },
@@ -114,35 +80,9 @@ const Admin: FC = () => {
     const [isCheckingHealth, setIsCheckingHealth] = useState(false);
 
     // State for CSV downloads
-    const [isDownloadingExams, setIsDownloadingExams] = useState(false);
-    const [isDownloadingBooks, setIsDownloadingBooks] = useState(false);
     const [isGeneratingWooCsv, setIsGeneratingWooCsv] = useState(false);
 
     const certificateTemplates = activeOrg?.certificateTemplates || [];
-
-
-    const fetchStats = useCallback(async () => {
-        if (!token) return;
-        setIsLoadingStats(true);
-        setStatsError(null);
-        try {
-            const data = await googleSheetsService.getExamStats(token);
-            if (data && Array.isArray(data)) {
-                data.forEach(stat => {
-                    stat.examName = decodeHtmlEntities(stat.examName);
-                });
-            }
-            setStats(data);
-        } catch (error: any) {
-            setStatsError(error.message || 'Failed to load statistics.');
-        } finally {
-            setIsLoadingStats(false);
-        }
-    }, [token]);
-
-    useEffect(() => {
-        fetchStats();
-    }, [fetchStats]);
 
     const handleRunHealthCheck = async () => {
         setIsCheckingHealth(true);
@@ -152,7 +92,6 @@ const Admin: FC = () => {
             apiEndpoint: { status: 'idle', message: '' },
             authentication: { status: 'idle', message: '' },
         };
-        // FIX: Remove 'as any' and use strongly typed state to resolve assignment errors.
         setHealthCheckStatus(initialStatus);
     
         // Check 1: Basic Connectivity
@@ -162,7 +101,6 @@ const Admin: FC = () => {
             setHealthCheckStatus(prev => ({ ...prev, connectivity: { status: 'success', message: <>Server is reachable at <code className="bg-slate-200 px-1 rounded">{baseUrl}</code></> } }));
     
             // Check 2: API Endpoint
-            // FIX: This update is now type-safe due to the strongly typed state.
             setHealthCheckStatus(prev => ({ ...prev, apiEndpoint: { status: 'loading', message: 'Checking for plugin API...' } }));
             try {
                 const apiResponse = await fetch(`${baseUrl}/wp-json/mco-app/v1/config`);
@@ -170,7 +108,6 @@ const Admin: FC = () => {
                 setHealthCheckStatus(prev => ({ ...prev, apiEndpoint: { status: 'success', message: 'Plugin API endpoint is active.' } }));
     
                 // Check 3: Authentication
-                // FIX: This update is now type-safe due to the strongly typed state.
                 setHealthCheckStatus(prev => ({ ...prev, authentication: { status: 'loading', message: 'Testing authentication...' } }));
                 try {
                     if (!token) throw new Error('No admin token available in the app.');
@@ -194,125 +131,7 @@ const Admin: FC = () => {
             setIsCheckingHealth(false);
         }
     };
-
-    const handleUserSearch = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!token || !searchTerm.trim()) return;
-        setIsSearching(true);
-        setSelectedUser(null);
-        try {
-            const results = await googleSheetsService.searchUser(token, searchTerm.trim());
-            if (results && Array.isArray(results)) {
-                results.forEach(user => {
-                    user.name = decodeHtmlEntities(user.name);
-                });
-            }
-            setSearchResults(results);
-            if(results.length === 0) toast.error('No users found matching that term.');
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to search for users.');
-        } finally {
-            setIsSearching(false);
-        }
-    }
-
-    const handleAddSpins = async () => {
-        if (!token || !selectedUser) return;
-        setIsSubmitting(true);
-        try {
-            const spins = parseInt(spinsToAdd);
-            if (isNaN(spins) || spins <= 0) { toast.error("Please enter a valid number of spins."); return; }
-            await googleSheetsService.addSpins(token, selectedUser.id, spins);
-            toast.success(`Successfully added ${spins} spin(s) to ${selectedUser.name}.`);
-            setSpinsToAdd('1');
-        } catch (error: any) { toast.error(error.message || "Failed to add spins."); } finally { setIsSubmitting(false); }
-    };
-
-    const handleGrantPrize = async () => {
-        if (!token || !selectedUser) return;
-         setIsSubmitting(true);
-        try {
-            await googleSheetsService.grantPrize(token, selectedUser.id, prizeToGrant);
-            toast.success(`Successfully granted prize to ${selectedUser.name}.`);
-        } catch (error: any) { toast.error(error.message || "Failed to grant prize."); } finally { setIsSubmitting(false); }
-    };
-
-    const handleResetSpins = async () => {
-        if (!token || !selectedUser) return;
-        if (!window.confirm(`Are you sure you want to reset all available spins for ${selectedUser.name} to zero?`)) return;
-        setIsSubmitting(true);
-        try {
-            await googleSheetsService.resetSpins(token, selectedUser.id);
-            toast.success(`Spins for ${selectedUser.name} have been reset to 0.`);
-        } catch (error: any) { toast.error(error.message || "Failed to reset spins."); } finally { setIsSubmitting(false); }
-    }
-
-    const handleRemovePrize = async () => {
-        if (!token || !selectedUser) return;
-        if (!window.confirm(`Are you sure you want to remove the won prize and any associated benefits for ${selectedUser.name}? This cannot be undone.`)) return;
-        setIsSubmitting(true);
-        try {
-            await googleSheetsService.removePrize(token, selectedUser.id);
-            toast.success(`Prize removed for ${selectedUser.name}.`);
-        } catch (error: any) { toast.error(error.message || "Failed to remove prize."); } finally { setIsSubmitting(false); }
-    }
     
-    const handleDownloadConfig = async () => {
-        setIsDownloadingConfig(true);
-        const toastId = toast.loading('Downloading configuration...');
-        try {
-            const baseUrl = getApiBaseUrl();
-            const response = await fetch(`${baseUrl}/wp-json/mco-app/v1/config`);
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: `Failed to fetch config: ${response.statusText}` }));
-                throw new Error(errorData.message || `Failed to fetch config: ${response.statusText}`);
-            }
-            const configData = await response.json();
-            const jsonString = JSON.stringify(configData, null, 2);
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${configData.organizations[0]?.website.replace(/\..+$/, '') || 'config'}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            toast.success('Configuration downloaded!', { id: toastId });
-        } catch (error: any) {
-            console.error('Download failed:', error);
-            toast.error(`Download failed: ${error.message}`, { id: toastId });
-        } finally {
-            setIsDownloadingConfig(false);
-        }
-    };
-
-    const handleClearClientCache = () => {
-        if (!window.confirm('Are you sure you want to clear all client-side configuration caches? The app will reload to fetch the latest data from the server.')) {
-            return;
-        }
-        setIsClearingCache(true);
-        const toastId = toast.loading('Clearing client caches...');
-    
-        setTimeout(() => {
-            try {
-                // Iterate through localStorage and remove all app config cache keys to handle multi-tenancy.
-                Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('appConfigCache')) { // Catches old and new tenant-specific keys
-                        localStorage.removeItem(key);
-                    }
-                });
-                localStorage.removeItem('activeOrgId');
-                toast.success('Client caches cleared. Reloading application...', { id: toastId });
-                setTimeout(() => window.location.reload(), 1000);
-            } catch (e) {
-                console.error("Failed to clear client cache", e);
-                toast.error('Failed to clear client cache.', { id: toastId });
-                setIsClearingCache(false);
-            }
-        }, 500);
-    };
-
     const escapeCsvField = (field: any): string => {
         if (field === null || field === undefined) return '';
         if (typeof field === 'boolean') return field ? '1' : '0';
@@ -341,67 +160,7 @@ const Admin: FC = () => {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     };
-
-    const handleDownloadExamPrograms = () => {
-        if (!activeOrg) {
-            toast.error("Organization data not loaded.");
-            return;
-        }
-        setIsDownloadingExams(true);
-        const toastId = toast.loading('Preparing exam programs CSV...', { id: 'download-exams' });
-
-        try {
-            const headers = ['program_title', 'program_description', 'question_source_url', 'certification_exam_sku', 'is_proctored', 'certificate_enabled', 'recommended_book_id', 'practice_questions', 'practice_duration', 'cert_questions', 'cert_duration', 'pass_score', 'status'];
-            const data = activeOrg.examProductCategories.map(category => {
-                const practiceExam = activeOrg.exams.find(e => e.id === category.practiceExamId);
-                const certExam = activeOrg.exams.find(e => e.id === category.certificationExamId);
-                return [
-                    category.name, category.description, category.questionSourceUrl || certExam?.questionSourceUrl || '',
-                    category.certificationExamId, certExam?.isProctored, certExam?.certificateEnabled, certExam?.recommendedBookIds?.join(',') || '',
-                    practiceExam?.numberOfQuestions || '', practiceExam?.durationMinutes || '',
-                    certExam?.numberOfQuestions || '', certExam?.durationMinutes || '',
-                    certExam?.passScore || '', 'publish'
-                ];
-            });
-
-            const csvContent = createCsvContent(headers, data);
-            downloadCsv(csvContent, 'exam_programs_export.csv');
-            toast.success('Exam programs downloaded!', { id: 'download-exams' });
-        } catch (error) {
-            console.error("Failed to generate exam programs CSV", error);
-            toast.error('Failed to download exam programs.', { id: 'download-exams' });
-        } finally {
-            setIsDownloadingExams(false);
-        }
-    };
-
-    const handleDownloadBooks = () => {
-        if (!activeOrg?.suggestedBooks) {
-            toast.error("Book data not loaded.");
-            return;
-        }
-        setIsDownloadingBooks(true);
-        toast.loading('Preparing books CSV...', { id: 'download-books' });
-
-        try {
-            const headers = ['book_id', 'title', 'description', 'thumbnail_url', 'link_com', 'link_in', 'link_ae', 'status'];
-            const data = activeOrg.suggestedBooks.map(book => [
-                book.id, book.title, book.description,
-                typeof book.thumbnailUrl === 'string' ? book.thumbnailUrl : '',
-                book.affiliateLinks.com, book.affiliateLinks.in, book.affiliateLinks.ae, 'publish'
-            ]);
-
-            const csvContent = createCsvContent(headers, data);
-            downloadCsv(csvContent, 'recommended_books_export.csv');
-            toast.success('Recommended books downloaded!', { id: 'download-books' });
-        } catch (error) {
-            console.error("Failed to generate books CSV", error);
-            toast.error('Failed to download recommended books.', { id: 'download-books' });
-        } finally {
-            setIsDownloadingBooks(false);
-        }
-    };
-
+    
     const handleGenerateWooCsv = () => {
         if (!activeOrg?.examProductCategories || !activeOrg.exams) {
             toast.error("Exam data not loaded.");
@@ -438,7 +197,7 @@ const Admin: FC = () => {
             const csvContent = createCsvContent(headers, data as any[][]);
             downloadCsv(csvContent, 'woo_products_from_programs.csv');
             toast.success('WooCommerce products CSV generated!', { id: toastId });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to generate WooCommerce products CSV", error);
             toast.error('Failed to generate products CSV.', { id: toastId });
         } finally {
@@ -446,86 +205,56 @@ const Admin: FC = () => {
         }
     };
 
-
-    const inputClass = "w-full p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition";
-
     return (
-        <div className="max-w-4xl mx-auto space-y-8">
-            <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">Admin Panel</h1>
+        <div className="space-y-8">
+            <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">Admin Dashboard</h1>
 
             <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                 <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
-                    <Code className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    WordPress Integration & Data
+                    <Cpu className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                    System Health Check
                 </h2>
                 <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                    Manage the connection to your WordPress backend. Use these tools for debugging and content management. The "Live Config" is the exact JSON data the app is using. "Clear Client Cache" forces the app to reload this data from your server.
+                    If you are experiencing "No route found" errors when saving, or other connection issues, run this health check. It will test the connection to your WordPress backend and provide troubleshooting steps for common server configuration problems.
                 </p>
-                <div className="flex flex-wrap gap-4">
-                    <a
-                        href="/#/integration"
-                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-[rgb(var(--color-primary-rgb))] hover:bg-[rgb(var(--color-primary-hover-rgb))] transition-transform transform hover:scale-105"
-                    >
-                        <ExternalLink size={20} className="mr-2" />
-                        Get Unified Plugin Code
-                    </a>
-                    <button
-                        onClick={handleDownloadConfig}
-                        disabled={isDownloadingConfig}
-                        className="inline-flex items-center justify-center px-6 py-3 border border-[rgb(var(--color-border-rgb))] text-base font-medium rounded-md shadow-sm text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] transition-transform transform hover:scale-105 disabled:opacity-50"
-                    >
-                        {isDownloadingConfig ? <Spinner size="sm" /> : <DownloadCloud size={20} />}
-                        <span className="ml-2">{isDownloadingConfig ? 'Downloading...' : 'Download Live Config (.json)'}</span>
-                    </button>
-                    <button
-                        onClick={handleClearClientCache}
-                        disabled={isClearingCache}
-                        className="inline-flex items-center justify-center px-6 py-3 border border-amber-300 text-base font-medium rounded-md shadow-sm text-amber-700 bg-amber-100 hover:bg-amber-200 transition-transform transform hover:scale-105 disabled:opacity-50"
-                    >
-                        {isClearingCache ? <Spinner size="sm" /> : <RotateCcw size={20} />}
-                        <span className="ml-2">{isClearingCache ? 'Clearing...' : 'Clear Client Cache & Reload'}</span>
-                    </button>
-                </div>
+                <button
+                    onClick={handleRunHealthCheck}
+                    disabled={isCheckingHealth}
+                    className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-transform transform hover:scale-105 disabled:opacity-50"
+                >
+                    {isCheckingHealth ? <Spinner size="sm" /> : <RefreshCw size={20} />}
+                    <span className="ml-2">{isCheckingHealth ? 'Running Checks...' : 'Run System Health Check'}</span>
+                </button>
+                {healthCheckStatus.connectivity.status !== 'idle' && (
+                    <div className="mt-6 space-y-4">
+                        <HealthCheckItem status={healthCheckStatus.connectivity.status} title="Server Connectivity" message={healthCheckStatus.connectivity.message} />
+                        <HealthCheckItem status={healthCheckStatus.apiEndpoint.status} title="Plugin API Endpoint" message={healthCheckStatus.apiEndpoint.message} />
+                        <HealthCheckItem 
+                            status={healthCheckStatus.authentication.status} 
+                            title="Authentication & CORS" 
+                            message={healthCheckStatus.authentication.message}
+                            troubleshooting={
+                                <div className="space-y-3">
+                                    <p>This error almost always means your server is stripping the "Authorization" header from API requests.</p>
+                                    <div>
+                                        <strong className="text-amber-900">Primary Solution (for Apache/LiteSpeed servers):</strong>
+                                        <p>Add the following code to the <strong>very top</strong> of your <code>.htaccess</code> file in the WordPress root directory (before the <code># BEGIN WordPress</code> block):</p>
+                                        <pre className="whitespace-pre-wrap bg-slate-100 p-2 rounded my-1 text-xs"><code>
+{`<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>`}
+                                        </code></pre>
+                                        <p>After adding this, clear any server or plugin caches.</p>
+                                    </div>
+                                </div>
+                            }
+                        />
+                    </div>
+                )}
             </div>
-
-            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
-                    <Settings className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    Exam Program Settings
-                </h2>
-                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                    Manage core exam settings like names, question counts, and source URLs directly. Changes are saved to WordPress instantly.
-                </p>
-                <div className="flex flex-wrap gap-4">
-                    <Link
-                        to="/admin/programs"
-                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-[rgb(var(--color-primary-rgb))] hover:bg-[rgb(var(--color-primary-hover-rgb))] transition-transform transform hover:scale-105"
-                    >
-                        <Edit size={20} className="mr-2" />
-                        Go to Exam Program Customizer
-                    </Link>
-                </div>
-            </div>
-
-            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
-                    <ShoppingCart className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    WooCommerce Product Customizer
-                </h2>
-                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                    Define WooCommerce product variations for your exam programs, such as bundles and subscriptions. Then, generate a compatible CSV for easy importing.
-                </p>
-                <div className="flex flex-wrap gap-4">
-                    <Link
-                        to="/admin/products"
-                        className="inline-flex items-center justify-center px-6 py-3 border border-[rgb(var(--color-primary-rgb))] text-base font-medium rounded-md shadow-sm text-[rgb(var(--color-primary-rgb))] bg-[rgba(var(--color-primary-rgb),0.1)] hover:bg-[rgba(var(--color-primary-rgb),0.2)] transition-transform transform hover:scale-105"
-                    >
-                        <Paintbrush size={20} className="mr-2" />
-                        Go to Product Customizer
-                    </Link>
-                </div>
-            </div>
-
+            
             <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                 <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
                     <FileSpreadsheet className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
@@ -566,30 +295,7 @@ const Admin: FC = () => {
                         </li>
                     </ol>
                 </div>
-                
-                <h3 className="font-bold text-lg text-[rgb(var(--color-text-default-rgb))] mt-6">Export Existing Data:</h3>
-                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-4">Download your current data as a CSV. This is useful for making bulk edits or for backups.</p>
-
-                <div className="flex flex-wrap gap-4">
-                    <button
-                        onClick={handleDownloadExamPrograms}
-                        disabled={isDownloadingExams}
-                        className="inline-flex items-center justify-center px-4 py-2 border border-[rgb(var(--color-border-rgb))] text-base font-medium rounded-md shadow-sm text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] disabled:opacity-50"
-                    >
-                        {isDownloadingExams ? <Spinner size="sm" /> : <DownloadCloud size={20} />}
-                        <span className="ml-2">{isDownloadingExams ? 'Exporting...' : 'Export Exam Programs (.csv)'}</span>
-                    </button>
-                    <button
-                        onClick={handleDownloadBooks}
-                        disabled={isDownloadingBooks}
-                        className="inline-flex items-center justify-center px-4 py-2 border border-[rgb(var(--color-border-rgb))] text-base font-medium rounded-md shadow-sm text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] disabled:opacity-50"
-                    >
-                        {isDownloadingBooks ? <Spinner size="sm" /> : <DownloadCloud size={20} />}
-                        <span className="ml-2">{isDownloadingBooks ? 'Exporting...' : 'Export Books (.csv)'}</span>
-                    </button>
-                </div>
             </div>
-
 
             <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                 <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
@@ -599,7 +305,6 @@ const Admin: FC = () => {
                 <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
                     This is a read-only overview of the certificate templates configured in your WordPress backend. To edit these, go to <strong>Exam App Engine &rarr; Certificate Templates</strong> in your WP admin dashboard.
                 </p>
-                {/* FIX: Complete truncated JSX and add default export to the component. */}
                 <div className="space-y-4 max-h-96 overflow-y-auto pr-4">
                     {certificateTemplates.map(template => (
                         <div key={template.id} className="bg-[rgb(var(--color-muted-rgb))] p-3 rounded-md border border-[rgb(var(--color-border-rgb))]">

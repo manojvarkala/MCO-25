@@ -1,6 +1,6 @@
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
-import { Navigate, useLocation, Routes, Route, HashRouter } from 'react-router-dom';
+import { Navigate, useLocation, Routes, Route, HashRouter, Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
@@ -36,6 +36,7 @@ import BookStore from './components/BookStore.tsx';
 import ExamProgram from './components/ExamProgram.tsx';
 import ProductCustomizer from './components/ProductCustomizer.tsx';
 import ExamProgramCustomizer from './components/ExamProgramCustomizer.tsx';
+import AdminLayout from './components/AdminLayout.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -62,6 +63,9 @@ const AppContent: FC = () => {
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
     
     const isTestPage = location.pathname.startsWith('/test/');
+    const isAdminPage = location.pathname.startsWith('/admin');
+
+    const mainLayoutComponent = isAdminPage ? <Outlet /> : <SidebarLayout><Outlet /></SidebarLayout>;
 
     useEffect(() => {
         if (activeTheme) {
@@ -126,42 +130,52 @@ const AppContent: FC = () => {
                 <main className={mainClasses}>
                     {/* Fix: Use <Routes> and v6 Route syntax */}
                     <Routes>
-                        {/* Routes with generic sidebar */}
-                        <Route path="/instructions" element={<SidebarLayout><Instructions /></SidebarLayout>} />
-                        <Route path="/pricing" element={<SidebarLayout><Pricing /></SidebarLayout>} />
-                        <Route path="/feedback" element={<SidebarLayout><Feedback /></SidebarLayout>} />
-                        <Route path="/user-guide" element={<SidebarLayout><UserGuide /></SidebarLayout>} />
-                        <Route path="/about-us" element={<SidebarLayout><AboutUs /></SidebarLayout>} />
-                        <Route path="/privacy-policy" element={<SidebarLayout><PrivacyPolicy /></SidebarLayout>} />
-                        <Route path="/refund-policy" element={<SidebarLayout><RefundPolicy /></SidebarLayout>} />
-                        <Route path="/terms-of-service" element={<SidebarLayout><TermsOfService /></SidebarLayout>} />
-                        <Route path="/bookstore" element={<SidebarLayout><BookStore /></SidebarLayout>} />
-                        <Route path="/program/:programId" element={<SidebarLayout><ExamProgram /></SidebarLayout>} />
-                        <Route path="/dashboard" element={<SidebarLayout><Dashboard /></SidebarLayout>} />
-
-                        {/* Protected Routes */}
-                        <Route path="/profile" element={
-                          <ProtectedRoute>
-                            <SidebarLayout><Profile /></SidebarLayout>
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/results/:testId" element={
-                          <ProtectedRoute>
-                            <SidebarLayout><Results /></SidebarLayout>
-                          </ProtectedRoute>
-                        } />
-
-                        {/* Routes with their own layout or no sidebar */}
                         <Route path="/" element={<LandingPage />} />
                         <Route path="/auth" element={<Login />} />
                         <Route path="/checkout/:productSlug" element={<Checkout />} />
                         <Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
                         <Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
-                        <Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
-                        <Route path="/admin/products" element={<ProtectedRoute adminOnly={true}><ProductCustomizer /></ProtectedRoute>} />
-                        <Route path="/admin/programs" element={<ProtectedRoute adminOnly={true}><ExamProgramCustomizer /></ProtectedRoute>} />
-                        <Route path="/integration" element={<ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute>} />
+
+                        {/* Routes with Sidebar */}
+                        <Route element={<SidebarLayout><Outlet /></SidebarLayout>}>
+                            <Route path="/dashboard" element={<Dashboard />} />
+                            <Route path="/instructions" element={<Instructions />} />
+                            <Route path="/pricing" element={<Pricing />} />
+                            <Route path="/feedback" element={<Feedback />} />
+                            <Route path="/user-guide" element={<UserGuide />} />
+                            <Route path="/about-us" element={<AboutUs />} />
+                            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                            <Route path="/refund-policy" element={<RefundPolicy />} />
+                            <Route path="/terms-of-service" element={<TermsOfService />} />
+                            <Route path="/bookstore" element={<BookStore />} />
+                            <Route path="/program/:programId" element={<ExamProgram />} />
+                            <Route path="/profile" element={
+                              <ProtectedRoute>
+                                <Profile />
+                              </ProtectedRoute>
+                            } />
+                            <Route path="/results/:testId" element={
+                              <ProtectedRoute>
+                                <Results />
+                              </ProtectedRoute>
+                            } />
+                        </Route>
+
+                        {/* Admin Routes with dedicated layout */}
+                        <Route
+                          path="/admin"
+                          element={
+                            <ProtectedRoute adminOnly={true}>
+                              <AdminLayout />
+                            </ProtectedRoute>
+                          }
+                        >
+                          <Route index element={<Admin />} />
+                          <Route path="products" element={<ProductCustomizer />} />
+                          <Route path="programs" element={<ExamProgramCustomizer />} />
+                          <Route path="integration" element={<Integration />} />
+                        </Route>
                     
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>

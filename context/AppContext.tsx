@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
 import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook, Theme } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -119,13 +116,15 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [activeTheme, _setActiveTheme] = useState<string>('default');
 
   const setActiveTheme = useCallback((themeId: string) => {
+    const themeName = availableThemes.find(t => t.id === themeId)?.name || 'Theme';
     _setActiveTheme(themeId);
     try {
         localStorage.setItem('user-theme', themeId);
+        toast.success(`${themeName} theme applied!`);
     } catch(e) {
         console.warn("Could not save theme preference to localStorage.", e);
     }
-  }, []);
+  }, [availableThemes]);
 
   const setProcessedConfig = (config: any, processedData: any) => {
     if (processedData) {

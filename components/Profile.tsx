@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam } from '../types.ts';
-import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight, Gift, Star, Paintbrush } from 'lucide-react';
+import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight, Gift, Star, Paintbrush, Check } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 const Profile: FC = () => {
@@ -160,19 +160,25 @@ const Profile: FC = () => {
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     {availableThemes.map(theme => (
-                        <div 
-                            key={theme.id} 
-                            onClick={() => setActiveTheme(theme.id)} 
-                            className={`p-4 rounded-lg border-2 cursor-pointer transition ${activeTheme === theme.id ? 'border-[rgb(var(--color-primary-rgb))]' : 'border-[rgb(var(--color-border-rgb))] hover:border-[rgba(var(--color-primary-rgb),0.5)]'}`}
+                        <button
+                            type="button"
+                            key={theme.id}
+                            onClick={() => setActiveTheme(theme.id)}
+                            className={`relative p-4 rounded-lg border-2 cursor-pointer transition text-left ${activeTheme === theme.id ? 'border-[rgb(var(--color-primary-rgb))] ring-2 ring-[rgba(var(--color-primary-rgb),0.2)]' : 'border-[rgb(var(--color-border-rgb))] hover:border-[rgba(var(--color-primary-rgb),0.5)]'}`}
                         >
-                            <div className="flex justify-center space-x-1 h-8">
+                            {activeTheme === theme.id && (
+                                <div className="absolute -top-2 -right-2 bg-[rgb(var(--color-primary-rgb))] text-white rounded-full p-1 shadow-md">
+                                    <Check size={14} />
+                                </div>
+                            )}
+                            <div className="flex justify-center space-x-1 h-8 pointer-events-none">
                                 <div className={`w-1/4 rounded theme-swatch-${theme.id}-primary`}></div>
                                 <div className={`w-1/4 rounded theme-swatch-${theme.id}-secondary`}></div>
                                 <div className={`w-1/4 rounded theme-swatch-${theme.id}-accent`}></div>
                                 <div className={`w-1/4 rounded theme-swatch-${theme.id}-background`}></div>
                             </div>
-                            <p className="font-semibold text-center mt-2 text-[rgb(var(--color-text-default-rgb))]">{theme.name}</p>
-                        </div>
+                            <p className="font-semibold text-center mt-2 text-[rgb(var(--color-text-default-rgb))] pointer-events-none">{theme.name}</p>
+                        </button>
                     ))}
                 </div>
             </div>
