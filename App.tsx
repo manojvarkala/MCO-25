@@ -38,6 +38,7 @@ import ProductCustomizer from './components/ProductCustomizer.tsx';
 import ExamProgramCustomizer from './components/ExamProgramCustomizer.tsx';
 import AdminLayout from './components/AdminLayout.tsx';
 import FAQ from './components/FAQ.tsx';
+import DevelopmentHistory from './components/DevelopmentHistory.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -177,6 +178,7 @@ const AppContent: FC = () => {
                           <Route path="products" element={<ProductCustomizer />} />
                           <Route path="programs" element={<ExamProgramCustomizer />} />
                           <Route path="integration" element={<Integration />} />
+                          <Route path="history" element={<DevelopmentHistory />} />
                         </Route>
                     
                         <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,6 +1,6 @@
 import React, { FC } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Settings, ShoppingCart, Code, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Settings, ShoppingCart, Code, ArrowLeft, History } from 'lucide-react';
 
 const AdminLayout: FC = () => {
     const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -29,6 +29,10 @@ const AdminLayout: FC = () => {
                     <NavLink to="/admin/integration" className={navLinkClass}>
                         <Code size={18} />
                         <span>Integration</span>
+                    </NavLink>
+                    <NavLink to="/admin/history" className={navLinkClass}>
+                        <History size={18} />
+                        <span>Development History</span>
                     </NavLink>
                      <hr className="my-4 border-[rgb(var(--color-border-rgb))]" />
                     <NavLink to="/dashboard" className={navLinkClass}>
