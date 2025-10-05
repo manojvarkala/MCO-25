@@ -1,0 +1,3 @@
+Type,SKU,Name,Published,Virtual,"Regular price","Sale price"
+simple,sample-cert-sku,"Sample Certification Exam",1,1,49.99,
+simple,sample-bundle-sku-1,"Sample Exam Bundle",1,1,79.99,59.99

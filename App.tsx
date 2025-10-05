@@ -34,6 +34,7 @@ import UpdateNameModal from './components/UpdateNameModal.tsx';
 import MasqueradeBanner from './components/MasqueradeBanner.tsx';
 import BookStore from './components/BookStore.tsx';
 import ExamProgram from './components/ExamProgram.tsx';
+import ProductCustomizer from './components/ProductCustomizer.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -151,6 +152,7 @@ const AppContent: FC = () => {
                         <Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
+                        <Route path="/admin/products" element={<ProtectedRoute adminOnly={true}><ProductCustomizer /></ProtectedRoute>} />
                         <Route path="/integration" element={<ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute>} />
                     
                         <Route path="*" element={<Navigate to="/" replace />} />

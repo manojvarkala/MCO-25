@@ -174,3 +174,23 @@ export interface ExamProgress {
     answers: UserAnswer[];
     currentQuestionIndex: number;
 }
+
+// Types for Product Customizer
+export type ProductVariationType = 'simple' | 'subscription' | 'bundle';
+export type BillingPeriod = 'day' | 'week' | 'month' | 'year';
+
+export interface ProductVariation {
+  id: string;
+  name: string;
+  sku: string;
+  type: ProductVariationType;
+  regularPrice: string;
+  salePrice: string;
+  // Subscription fields
+  subscriptionPrice?: string;
+  subscriptionPeriod?: BillingPeriod;
+  subscriptionPeriodInterval?: string; // e.g., 1, 2, 3
+  subscriptionLength?: string; // 0 for renew indefinitely, or a number of periods
+  // Bundle fields
+  trialPeriodDays?: string;
+}

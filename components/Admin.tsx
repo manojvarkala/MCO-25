@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
+import { Link } from 'react-router-dom';
 
 // FIX: Define a union type for health status to ensure type safety.
 type HealthStatus = 'idle' | 'success' | 'failed' | 'loading';
@@ -115,6 +116,7 @@ const Admin: FC = () => {
     // State for CSV downloads
     const [isDownloadingExams, setIsDownloadingExams] = useState(false);
     const [isDownloadingBooks, setIsDownloadingBooks] = useState(false);
+    const [isGeneratingWooCsv, setIsGeneratingWooCsv] = useState(false);
 
     const certificateTemplates = activeOrg?.certificateTemplates || [];
 
@@ -400,6 +402,50 @@ const Admin: FC = () => {
         }
     };
 
+    const handleGenerateWooCsv = () => {
+        if (!activeOrg?.examProductCategories || !activeOrg.exams) {
+            toast.error("Exam data not loaded.");
+            return;
+        }
+        setIsGeneratingWooCsv(true);
+        const toastId = toast.loading('Generating WooCommerce products CSV...', { id: 'generate-woo-csv' });
+
+        try {
+            const headers = ['Type', 'SKU', 'Name', 'Published', 'Virtual', 'Regular price', 'Sale price'];
+            const data = activeOrg.examProductCategories
+                .map(category => {
+                    const certExam = activeOrg.exams.find(e => e.id === category.certificationExamId);
+                    if (certExam) {
+                        return [
+                            'simple',
+                            certExam.productSku,
+                            category.name,
+                            1,
+                            1,
+                            certExam.regularPrice ?? '',
+                            certExam.price ?? ''
+                        ];
+                    }
+                    return null;
+                })
+                .filter(row => row !== null);
+
+            if (data.length === 0) {
+                toast.error('No certification exams found to generate products for.', { id: toastId });
+                return;
+            }
+
+            const csvContent = createCsvContent(headers, data as any[][]);
+            downloadCsv(csvContent, 'woo_products_from_programs.csv');
+            toast.success('WooCommerce products CSV generated!', { id: toastId });
+        } catch (error) {
+            console.error("Failed to generate WooCommerce products CSV", error);
+            toast.error('Failed to generate products CSV.', { id: toastId });
+        } finally {
+            setIsGeneratingWooCsv(false);
+        }
+    };
+
 
     const inputClass = "w-full p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition";
 
@@ -444,40 +490,87 @@ const Admin: FC = () => {
 
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                 <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
+                    <ShoppingCart className="mr-3 text-cyan-500" />
+                    Product Customization
+                </h2>
+                <p className="text-slate-600 mb-6">
+                    Define WooCommerce product variations for your exam programs, such as bundles and subscriptions. Then, generate a compatible CSV for easy importing.
+                </p>
+                <div className="flex flex-wrap gap-4">
+                    <Link
+                        to="/admin/products"
+                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
+                    >
+                        <Paintbrush size={20} className="mr-2" />
+                        Go to Product Customizer
+                    </Link>
+                </div>
+            </div>
+
+            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
                     <FileSpreadsheet className="mr-3 text-cyan-500" />
                     Bulk Data Management
                 </h2>
                 <p className="text-slate-600 mb-6">
-                    To create or update many items at once, use the CSV bulk tools. For security, uploads are processed through the WordPress admin dashboard, while downloads are generated here.
+                    Streamline your content creation with this three-step workflow for bulk importing exam programs and their corresponding WooCommerce products.
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <a
-                        href={`${getApiBaseUrl()}/wp-admin/admin.php?page=mco-exam-engine&tab=bulk_import`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="md:col-span-2 inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
-                    >
-                        <ExternalLink size={20} className="mr-2" />
-                        Go to WordPress Bulk Import (Upload)
-                    </a>
+
+                <div className="space-y-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <ol className="list-decimal list-inside space-y-4 text-slate-600">
+                        <li>
+                            <strong className="text-slate-800">Step 1: Upload Exam Programs CSV</strong><br />
+                            Download the template, fill it with your exam program data, then upload it in your WordPress admin under <a href={`${getApiBaseUrl()}/wp-admin/admin.php?page=mco-exam-engine&tab=bulk_import`} target="_blank" rel="noopener noreferrer" className="text-cyan-600 font-semibold hover:underline">Exam App Engine &rarr; Bulk Import</a>.
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                <a href="/template-exam-programs.csv" download className="inline-flex items-center justify-center px-3 py-1.5 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">
+                                    <DownloadCloud size={16} className="mr-2"/> Download Exam Program Template
+                                </a>
+                            </div>
+                        </li>
+                        <li>
+                            <strong className="text-slate-800">Step 2: Generate WooCommerce Products CSV</strong><br />
+                            Once your programs are uploaded, click the button below. This will generate a new CSV file, pre-filled with the product details for each of your new certification exams.
+                             <div className="flex flex-wrap gap-2 mt-2">
+                                <button
+                                    onClick={handleGenerateWooCsv}
+                                    disabled={isGeneratingWooCsv}
+                                    className="inline-flex items-center justify-center px-3 py-1.5 border border-cyan-600 text-sm font-medium rounded-md text-cyan-700 bg-cyan-50 hover:bg-cyan-100 disabled:opacity-50"
+                                >
+                                    {isGeneratingWooCsv ? <Spinner size="sm" /> : <FileText size={16} className="mr-2"/>}
+                                    {isGeneratingWooCsv ? 'Generating...' : 'Generate & Download WooCommerce Products CSV'}
+                                </button>
+                            </div>
+                        </li>
+                        <li>
+                            <strong className="text-slate-800">Step 3: Upload WooCommerce Products CSV</strong><br />
+                            Review the generated CSV (you can adjust pricing here). Then, upload it in your WordPress admin under <a href={`${getApiBaseUrl()}/wp-admin/edit.php?post_type=product&page=product_importer`} target="_blank" rel="noopener noreferrer" className="text-cyan-600 font-semibold hover:underline">WooCommerce &rarr; Products &rarr; Import</a>.
+                        </li>
+                    </ol>
+                </div>
+                
+                <h3 className="font-bold text-lg text-slate-700 mt-6">Export Existing Data:</h3>
+                <p className="text-slate-600 mb-4">Download your current data as a CSV. This is useful for making bulk edits or for backups.</p>
+
+                <div className="flex flex-wrap gap-4">
                     <button
                         onClick={handleDownloadExamPrograms}
                         disabled={isDownloadingExams}
-                        className="inline-flex items-center justify-center px-6 py-3 border border-slate-300 text-base font-medium rounded-md shadow-sm text-slate-700 bg-white hover:bg-slate-50 transition-transform transform hover:scale-105 disabled:opacity-50"
+                        className="inline-flex items-center justify-center px-4 py-2 border border-slate-300 text-base font-medium rounded-md shadow-sm text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50"
                     >
                         {isDownloadingExams ? <Spinner size="sm" /> : <DownloadCloud size={20} />}
-                        <span className="ml-2">{isDownloadingExams ? 'Downloading...' : 'Download Exams (.csv)'}</span>
+                        <span className="ml-2">{isDownloadingExams ? 'Exporting...' : 'Export Exam Programs (.csv)'}</span>
                     </button>
                     <button
                         onClick={handleDownloadBooks}
                         disabled={isDownloadingBooks}
-                        className="inline-flex items-center justify-center px-6 py-3 border border-slate-300 text-base font-medium rounded-md shadow-sm text-slate-700 bg-white hover:bg-slate-50 transition-transform transform hover:scale-105 disabled:opacity-50"
+                        className="inline-flex items-center justify-center px-4 py-2 border border-slate-300 text-base font-medium rounded-md shadow-sm text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50"
                     >
                         {isDownloadingBooks ? <Spinner size="sm" /> : <DownloadCloud size={20} />}
-                        <span className="ml-2">{isDownloadingBooks ? 'Downloading...' : 'Download Books (.csv)'}</span>
+                        <span className="ml-2">{isDownloadingBooks ? 'Exporting...' : 'Export Books (.csv)'}</span>
                     </button>
                 </div>
             </div>
+
 
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                 <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
