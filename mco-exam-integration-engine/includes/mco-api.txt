@@ -430,7 +430,7 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
                 continue;
             }
 
-            $options_raw = explode('|', $data[1]);
+            $options_raw = preg_split('/\s*\|\s*/', $data[1]); // Split by pipe, allowing for whitespace
             $options = array_map(function($opt) {
                 return preg_replace('/^[\pZ\pC]+|[\pZ\pC]+$/u', '', $opt);
             }, $options_raw);

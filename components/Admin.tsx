@@ -284,6 +284,16 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
                                         </code></pre>
                                         <p>After adding this, clear any server or plugin caches.</p>
                                     </div>
+                                    <div className="pt-3 border-t border-amber-200">
+                                        <strong className="text-amber-900">Secondary Solution (if saving still fails after a successful check):</strong>
+                                        <p>If the check above passes but saving an exam program still gives a "No route found" error, your server's URL rules might be cached. The best way to fix this is to flush them:</p>
+                                        <ol className="list-decimal list-inside ml-4 mt-1">
+                                            <li>Go to your WordPress Admin Dashboard.</li>
+                                            <li>Navigate to <strong>Settings &rarr; Permalinks</strong>.</li>
+                                            <li>You don't need to change anything. Just click the <strong>"Save Changes"</strong> button.</li>
+                                            <li>This action forces WordPress to rebuild its internal URL routing table.</li>
+                                        </ol>
+                                    </div>
                                 </div>
                             }
                         />
