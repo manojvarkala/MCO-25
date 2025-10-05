@@ -1,4 +1,4 @@
-import React, { FC, useState, useCallback, useMemo } from 'react';
+import React, { FC, useState, useCallback, useMemo, ReactNode } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -8,10 +8,64 @@ import { Settings, Edit, Save, X, ChevronDown, ChevronUp, FileText, Award } from
 import Spinner from './Spinner.tsx';
 
 interface EditableProgramData {
-    category: Partial<ExamProductCategory>;
+    category?: Partial<ExamProductCategory>;
     practiceExam?: Partial<Exam>;
     certExam?: Partial<Exam>;
 }
+
+const BulkEditPanel: FC<{
+    onSave: (update: EditableProgramData) => Promise<void>;
+    onCancel: () => void;
+    isSaving: boolean;
+    selectedCount: number;
+}> = ({ onSave, onCancel, isSaving, selectedCount }) => {
+    const [isProctored, setIsProctored] = useState<string>('unchanged'); // 'unchanged', 'true', 'false'
+    const [certificateEnabled, setCertificateEnabled] = useState<string>('unchanged');
+    const [passScore, setPassScore] = useState<string>('');
+
+    const handleSave = () => {
+        const updateData: EditableProgramData = { certExam: {} };
+        if (isProctored !== 'unchanged') updateData.certExam!.isProctored = isProctored === 'true';
+        if (certificateEnabled !== 'unchanged') updateData.certExam!.certificateEnabled = certificateEnabled === 'true';
+        if (passScore !== '') updateData.certExam!.passScore = parseInt(passScore, 10);
+        onSave(updateData);
+    };
+
+    return (
+        <div className="bg-[rgb(var(--color-muted-rgb))] p-4 rounded-lg border border-[rgb(var(--color-primary-rgb))] space-y-4 mb-4">
+            <h3 className="font-bold text-lg">Bulk Edit {selectedCount} Programs</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label className="text-sm font-bold">Proctoring</label>
+                    <select value={isProctored} onChange={e => setIsProctored(e.target.value)} className="w-full p-2 mt-1 border rounded bg-white">
+                        <option value="unchanged">-- Unchanged --</option>
+                        <option value="true">Enable</option>
+                        <option value="false">Disable</option>
+                    </select>
+                </div>
+                 <div>
+                    <label className="text-sm font-bold">Certificate</label>
+                    <select value={certificateEnabled} onChange={e => setCertificateEnabled(e.target.value)} className="w-full p-2 mt-1 border rounded bg-white">
+                        <option value="unchanged">-- Unchanged --</option>
+                        <option value="true">Enable</option>
+                        <option value="false">Disable</option>
+                    </select>
+                </div>
+                 <div>
+                    <label className="text-sm font-bold">Pass Score (%)</label>
+                    <input type="number" value={passScore} onChange={e => setPassScore(e.target.value)} placeholder="-- Unchanged --" className="w-full p-2 mt-1 border rounded bg-white" />
+                </div>
+            </div>
+            <div className="flex justify-end gap-2">
+                <button onClick={onCancel} className="px-4 py-2 bg-slate-200 rounded-lg font-semibold text-slate-700 hover:bg-slate-300">Cancel</button>
+                <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 px-4 py-2 bg-green-500 rounded-lg font-semibold text-white hover:bg-green-600 disabled:bg-slate-400">
+                    {isSaving ? <Spinner /> : <Save size={16} />} Apply Changes
+                </button>
+            </div>
+        </div>
+    );
+};
+
 
 const ExamEditor: FC<{
     program: { category: ExamProductCategory; practiceExam?: Exam; certExam?: Exam; };
@@ -104,23 +158,19 @@ const ExamProgramCustomizer: FC = () => {
     const [editingProgramId, setEditingProgramId] = useState<string | null>(null);
     const [expandedProgramId, setExpandedProgramId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-
+    const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
+    
     const handleSave = async (programId: string, data: EditableProgramData) => {
+// FIX: Changed return of a value from toast.error to a separate return statement to match Promise<void> type.
         if (!token) {
-            toast.error("Authentication session has expired. Please log in again.");
+            toast.error("Authentication session has expired.");
             return;
         }
         setIsSaving(true);
         try {
-            // The API expects the full updated data for the program.
             const result = await googleSheetsService.adminUpdateExamProgram(token, programId, data);
-            
-            // The API returns the entire updated organization list.
             const newOrg = result.organizations.find(o => o.id === activeOrg?.id);
-            if (newOrg) {
-                updateActiveOrg(newOrg);
-            }
-            
+            if (newOrg) updateActiveOrg(newOrg);
             toast.success("Exam program updated successfully!");
             setEditingProgramId(null);
         } catch (error: any) {
@@ -130,6 +180,45 @@ const ExamProgramCustomizer: FC = () => {
         }
     };
     
+    const handleBulkSave = async (updateData: EditableProgramData) => {
+// FIX: Changed return of a value from toast.error to a separate return statement to match Promise<void> type.
+        if (!token || !activeOrg) {
+            toast.error("Authentication error.");
+            return;
+        }
+        if (selectedProgramIds.length === 0) return;
+
+        setIsSaving(true);
+        const toastId = toast.loading(`Updating ${selectedProgramIds.length} programs...`);
+
+        const updatePromises = selectedProgramIds.map(programId => 
+            googleSheetsService.adminUpdateExamProgram(token, programId, updateData)
+        );
+
+        try {
+            const results = await Promise.all(updatePromises);
+            const lastResult = results[results.length - 1];
+            if (lastResult && lastResult.organizations) {
+                const newOrg = lastResult.organizations.find(o => o.id === activeOrg.id);
+                if (newOrg) updateActiveOrg(newOrg);
+            }
+            toast.success(`${selectedProgramIds.length} programs updated!`, { id: toastId });
+            setSelectedProgramIds([]);
+        } catch (error: any) {
+            toast.error(error.message || "An error occurred during bulk update.", { id: toastId });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSelectedProgramIds(e.target.checked ? programs.map(p => p.category.id) : []);
+    };
+    
+    const handleSelectOne = (id: string, checked: boolean) => {
+        setSelectedProgramIds(prev => checked ? [...prev, id] : prev.filter(pId => pId !== id));
+    };
+
     const programs = useMemo(() => {
         if (!activeOrg) return [];
         return activeOrg.examProductCategories.map(category => ({
@@ -139,36 +228,48 @@ const ExamProgramCustomizer: FC = () => {
         }));
     }, [activeOrg]);
 
-    if (!activeOrg) {
-        return <Spinner />;
-    }
+    if (!activeOrg) return <Spinner />;
+    
+    const isAllSelected = selectedProgramIds.length === programs.length && programs.length > 0;
 
     return (
         <div className="space-y-8">
-            <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3">
-                <Settings /> Exam Program Customizer
-            </h1>
-            <p className="text-[rgb(var(--color-text-muted-rgb))]">
-                Manage your exam programs, including their associated practice and certification exams. Changes made here will be reflected across the app.
-            </p>
+            <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3"><Settings /> Exam Program Customizer</h1>
+            <p className="text-[rgb(var(--color-text-muted-rgb))]">Manage your exam programs, including their associated practice and certification exams. Changes made here will be reflected across the app.</p>
+            
             <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                {selectedProgramIds.length > 0 ? (
+                    <BulkEditPanel 
+                        selectedCount={selectedProgramIds.length}
+                        onSave={handleBulkSave}
+                        onCancel={() => setSelectedProgramIds([])}
+                        isSaving={isSaving}
+                    />
+                ) : null}
                 <div className="space-y-2">
+                     <div className="flex items-center p-4 bg-[rgb(var(--color-card-rgb))] rounded-t-lg border-b border-[rgb(var(--color-border-rgb))]">
+                        <input type="checkbox" onChange={handleSelectAll} checked={isAllSelected} className="h-4 w-4 mr-4"/>
+                        <span className="font-semibold text-sm">Select All Programs</span>
+                    </div>
                     {programs.map((program) => (
                         <div key={program.category.id} className="border border-[rgb(var(--color-border-rgb))] rounded-lg">
                             <div className="flex justify-between items-center p-4 bg-[rgb(var(--color-card-rgb))] rounded-t-lg">
-                                <h2 className="font-bold text-lg text-[rgb(var(--color-text-strong-rgb))]">{program.category.name}</h2>
+                                <div className="flex items-center">
+                                    <input type="checkbox" checked={selectedProgramIds.includes(program.category.id)} onChange={e => handleSelectOne(program.category.id, e.target.checked)} className="h-4 w-4 mr-4"/>
+                                    <h2 className="font-bold text-lg text-[rgb(var(--color-text-strong-rgb))]">{program.category.name}</h2>
+                                </div>
                                 <div className="flex items-center gap-2">
                                     {editingProgramId !== program.category.id && (
                                         <button onClick={() => setEditingProgramId(program.category.id)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-300">
                                             <Edit size={14} /> Edit
                                         </button>
                                     )}
-                                    <button onClick={() => setExpandedProgramId(expandedProgramId === program.category.id ? null : program.category.id)} className="p-2 rounded-full hover:bg-slate-100">
+                                    <button onClick={() => setExpandedProgramId(expandedProgramId === program.category.id ? null : program.category.id)} className="p-2 rounded-full hover:bg-[rgb(var(--color-muted-rgb))]">
                                         {expandedProgramId === program.category.id ? <ChevronUp /> : <ChevronDown />}
                                     </button>
                                 </div>
                             </div>
-                            {expandedProgramId === program.category.id && !editingProgramId && (
+                            {expandedProgramId === program.category.id && editingProgramId !== program.category.id && (
                                 <div className="p-4 bg-[rgb(var(--color-muted-rgb))] rounded-b-lg text-sm space-y-2">
                                     <p><strong>Description:</strong> {program.category.description}</p>
                                     {program.practiceExam && <p><strong>Practice Exam:</strong> {program.practiceExam.name}</p>}
