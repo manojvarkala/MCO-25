@@ -80,7 +80,7 @@ const Test: FC = () => {
     
     try {
         const userAnswers: UserAnswer[] = Array.from(answers.entries()).map(([questionId, answer]) => ({ questionId, answer }));
-        const result = await googleSheetsService.submitTest(user, examId, userAnswers, questions, token);
+        const result = await googleSheetsService.submitTest(user, examId, userAnswers, questions, token, focusViolationCount);
         toast.success("Test submitted successfully!");
         navigate(`/results/${result.testId}`);
     } catch (error) {
@@ -88,7 +88,7 @@ const Test: FC = () => {
         setIsSubmitting(false);
         hasSubmittedRef.current = false; // Reset submit lock
     }
-  }, [examId, navigate, token, user, isSubmitting, questions, answers, progressKey]);
+  }, [examId, navigate, token, user, isSubmitting, questions, answers, progressKey, focusViolationCount]);
   
   // Effect 1: Load questions and saved progress.
   useEffect(() => {
@@ -363,13 +363,31 @@ const Test: FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="md:col-span-1 bg-slate-50 p-3 rounded-lg border border-slate-200 h-full max-h-96 md:max-h-full overflow-y-auto">
                         <h2 className="font-bold mb-2">Questions ({answers.size}/{questions.length})</h2>
-                        <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                            {questions.map((q, index) => (
-                                <button key={q.id} onClick={() => setCurrentQuestionIndex(index)} className={`w-10 h-10 rounded-md text-sm font-semibold transition ${ index === currentQuestionIndex ? 'bg-cyan-600 text-white ring-2 ring-offset-2 ring-cyan-500' : answers.has(q.id) ? 'bg-slate-300 text-slate-800' : 'bg-white border border-slate-300 hover:bg-slate-100' }`}>
-                                    {index + 1}
-                                </button>
-                            ))}
-                        </div>
+                        {examConfig.sections && examConfig.sections.length > 0 ? (
+                            examConfig.sections.map(section => (
+                                <div key={section.id} className="mb-4">
+                                    <h3 className="font-semibold text-sm text-slate-600 mb-2 border-b border-slate-200 pb-1">{section.name} (Q{section.startQuestion}-{section.endQuestion})</h3>
+                                    <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                                        {questions.slice(section.startQuestion - 1, section.endQuestion).map((q, index) => {
+                                            const questionNumber = section.startQuestion + index;
+                                            return (
+                                                <button key={q.id} onClick={() => setCurrentQuestionIndex(questionNumber - 1)} className={`w-10 h-10 rounded-md text-sm font-semibold transition ${ (questionNumber - 1) === currentQuestionIndex ? 'bg-cyan-600 text-white ring-2 ring-offset-2 ring-cyan-500' : answers.has(q.id) ? 'bg-slate-300 text-slate-800' : 'bg-white border border-slate-300 hover:bg-slate-100' }`}>
+                                                    {questionNumber}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                                {questions.map((q, index) => (
+                                    <button key={q.id} onClick={() => setCurrentQuestionIndex(index)} className={`w-10 h-10 rounded-md text-sm font-semibold transition ${ index === currentQuestionIndex ? 'bg-cyan-600 text-white ring-2 ring-offset-2 ring-cyan-500' : answers.has(q.id) ? 'bg-slate-300 text-slate-800' : 'bg-white border border-slate-300 hover:bg-slate-100' }`}>
+                                        {index + 1}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     <div className="md:col-span-2">
                         {currentQuestion ? (

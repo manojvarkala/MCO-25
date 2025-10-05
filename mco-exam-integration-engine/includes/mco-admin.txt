@@ -6,7 +6,7 @@ if (!defined('ABSPATH')) exit;
 if (!function_exists('mco_register_admin_hooks')) {
     function mco_register_admin_hooks() {
         add_action('admin_menu', 'mco_add_admin_menu');
-        add_action('admin_enqueue_scripts', 'mco_admin_enqueue_styles');
+        add_action('admin_enqueue_scripts', 'mco_admin_enqueue_scripts'); // Changed function name
         // Action to handle CSV upload form submission
         add_action('admin_post_mco_bulk_import_csv', 'mco_handle_csv_upload');
         // Actions for the new Exam Program meta box
@@ -114,12 +114,16 @@ if (!function_exists('mco_save_exam_program_meta_data')) {
 }
 
 
-if (!function_exists('mco_admin_enqueue_styles')) {
-    function mco_admin_enqueue_styles($hook) {
-        // Load styles only on our plugin page
+if (!function_exists('mco_admin_enqueue_scripts')) {
+    function mco_admin_enqueue_scripts($hook) {
+        // Load styles and scripts only on our plugin page
         if (strpos($hook, 'mco-exam-engine') === false) {
             return;
         }
+        
+        // Enqueue WordPress media scripts
+        wp_enqueue_media();
+
         ?>
         <style>
             .mco-admin-wrap { max-width: 960px; }
@@ -128,6 +132,8 @@ if (!function_exists('mco_admin_enqueue_styles')) {
             .mco-admin-wrap .tab-content { margin-top: 20px; }
             .mco-admin-wrap .form-table th { width: 200px; }
             .mco-admin-wrap .form-table td input[type="text"], .mco-admin-wrap .form-table td textarea { width: 100%; max-width: 500px; }
+            .mco-admin-wrap .form-table td .image-upload-wrapper { display: flex; align-items: center; gap: 10px; }
+            .mco-admin-wrap .form-table td .image-upload-wrapper textarea { flex-grow: 1; }
             .mco-admin-wrap .form-table td textarea { height: 100px; }
             .mco-admin-wrap .notice-success { border-left-color: #4CAF50; }
             .mco-admin-wrap .notice-error { border-left-color: #F44336; }
@@ -138,6 +144,28 @@ if (!function_exists('mco_admin_enqueue_styles')) {
             .mco-feedback-box li.error { color: #dc3545; }
             .mco-feedback-box li.success { color: #28a745; }
         </style>
+        <script>
+        jQuery(document).ready(function($){
+            $('body').on('click', '.mco-upload-image-button', function(e) {
+                e.preventDefault();
+                var button = $(this);
+                var targetInput = button.siblings('textarea');
+                
+                var mediaUploader = wp.media({
+                    title: 'Select or Upload Signature Image',
+                    button: { text: 'Use this image URL' },
+                    multiple: false
+                });
+
+                mediaUploader.on('select', function() {
+                    var attachment = mediaUploader.state().get('selection').first().toJSON();
+                    targetInput.val(attachment.url);
+                });
+
+                mediaUploader.open();
+            });
+        });
+        </script>
         <?php
     }
 }
@@ -155,22 +183,19 @@ if (!function_exists('mco_exam_engine_admin_page')) {
                 $url_to_save = '';
                 
                 if (strpos($logo_url_input, 'data:image') === 0) {
-                    // For data URIs, we don't sanitize further to avoid breaking them. WordPress does its own sanitization on update_option.
                     $url_to_save = $logo_url_input;
                 } else {
-                    // For standard URLs, sanitize using esc_url_raw.
                     $url_to_save = esc_url_raw($logo_url_input);
                 }
 
                 update_option('mco_logo_url', $url_to_save);
                 
-                // After saving, check if the value was stored correctly, especially for long base64 strings.
                 $saved_logo_value = get_option('mco_logo_url');
                 if (!empty($logo_url_input) && empty($saved_logo_value)) {
                     add_settings_error(
                         'mco_settings',
                         'logo_save_failed',
-                        'The provided logo data URI could not be saved. This often happens if the base64 code is too long for your server\'s database or security configuration. <strong>Recommended solution:</strong> Upload the logo to your WordPress Media Library and paste the file URL here instead.',
+                        'The provided logo data URI could not be saved. This often happens if the base64 code is too long for your server\'s database configuration. <strong>Recommended solution:</strong> Upload the logo to your WordPress Media Library and paste the file URL here instead.',
                         'error'
                     );
                 }
@@ -590,6 +615,14 @@ function mco_render_certificate_templates_tab() {
             foreach ($templates_input as $template) {
                 $id = sanitize_text_field($template['id']);
                 if (empty($id)) continue;
+
+                // Custom sanitization for signature image URLs to allow base64
+                $sig1_url_input = isset($template['signature1ImageUrl']) ? trim(wp_unslash($template['signature1ImageUrl'])) : '';
+                $sig1_url_to_save = strpos($sig1_url_input, 'data:image') === 0 ? $sig1_url_input : esc_url_raw($sig1_url_input);
+                
+                $sig2_url_input = isset($template['signature2ImageUrl']) ? trim(wp_unslash($template['signature2ImageUrl'])) : '';
+                $sig2_url_to_save = strpos($sig2_url_input, 'data:image') === 0 ? $sig2_url_input : esc_url_raw($sig2_url_input);
+
                 $sanitized_templates[$id] = [
                     'id' => $id,
                     'name' => sanitize_text_field($template['name']),
@@ -597,10 +630,10 @@ function mco_render_certificate_templates_tab() {
                     'body' => wp_kses_post($template['body']),
                     'signature1Name' => sanitize_text_field($template['signature1Name']),
                     'signature1Title' => sanitize_text_field($template['signature1Title']),
-                    'signature1ImageUrl' => esc_url_raw($template['signature1ImageUrl']),
+                    'signature1ImageUrl' => $sig1_url_to_save,
                     'signature2Name' => sanitize_text_field($template['signature2Name']),
                     'signature2Title' => sanitize_text_field($template['signature2Title']),
-                    'signature2ImageUrl' => esc_url_raw($template['signature2ImageUrl']),
+                    'signature2ImageUrl' => $sig2_url_to_save,
                 ];
             }
         }
@@ -625,10 +658,22 @@ function mco_render_certificate_templates_tab() {
                     <tr><th>Body</th><td><textarea name="certificate_templates[<?php echo esc_attr($template['id']); ?>][body]"><?php echo esc_textarea($template['body']); ?></textarea></td></tr>
                     <tr><th>Signature 1 Name</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name']); ?>"></td></tr>
                     <tr><th>Signature 1 Title</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature1Title]" value="<?php echo esc_attr($template['signature1Title']); ?>"></td></tr>
-                    <tr><th>Signature 1 Image URL</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature1ImageUrl]" value="<?php echo esc_attr($template['signature1ImageUrl']); ?>"></td></tr>
+                    <tr><th>Signature 1 Image</th><td>
+                        <div class="image-upload-wrapper">
+                            <textarea name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature1ImageUrl]" rows="3"><?php echo esc_textarea($template['signature1ImageUrl']); ?></textarea>
+                            <button type="button" class="button mco-upload-image-button">Upload Image</button>
+                        </div>
+                        <p class="description"><strong>Recommended for PDF Downloads:</strong> Paste a <code>base64</code> data URI (e.g., <code>data:image/png;base64,...</code>). Use an online "Image to Base64" converter. Using a standard URL may cause CORS errors during PDF generation.</p>
+                    </td></tr>
                     <tr><th>Signature 2 Name</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature2Name]" value="<?php echo esc_attr($template['signature2Name']); ?>"></td></tr>
                     <tr><th>Signature 2 Title</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature2Title]" value="<?php echo esc_attr($template['signature2Title']); ?>"></td></tr>
-                    <tr><th>Signature 2 Image URL</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature2ImageUrl]" value="<?php echo esc_attr($template['signature2ImageUrl']); ?>"></td></tr>
+                    <tr><th>Signature 2 Image</th><td>
+                        <div class="image-upload-wrapper">
+                            <textarea name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature2ImageUrl]" rows="3"><?php echo esc_textarea($template['signature2ImageUrl']); ?></textarea>
+                            <button type="button" class="button mco-upload-image-button">Upload Image</button>
+                        </div>
+                        <p class="description"><strong>Recommended for PDF Downloads:</strong> Paste a <code>base64</code> data URI (e.g., <code>data:image/png;base64,...</code>). Using a standard URL may cause CORS errors during PDF generation.</p>
+                    </td></tr>
                 </table>
             </div>
             <?php endforeach; ?>

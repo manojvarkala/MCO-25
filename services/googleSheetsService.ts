@@ -73,11 +73,22 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
 };
 
 export const googleSheetsService = {
+    // --- ADMIN NOTIFICATION ---
+    notifyAdmin: async (token: string, subject: string, message: string, context: object): Promise<void> => {
+        try {
+            await apiFetch('/notify-admin', 'POST', token, { subject, message, context });
+        } catch (error) {
+            // We don't want to throw an error here, just log it. 
+            // The user experience shouldn't be interrupted if the notification fails.
+            console.error("Failed to send admin notification:", error);
+        }
+    },
+
     // --- AI FEEDBACK ---
-    getAIFeedback: async (prompt: string): Promise<string> => {
+    getAIFeedback: async (prompt: string, token: string): Promise<string> => {
         if (!process.env.API_KEY) {
             console.error("Gemini API key is not configured.");
-            throw new Error("The AI feedback feature is not configured. Please contact support.");
+            return "We're sorry, but the AI feedback feature is not configured correctly. Please contact support.";
         }
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -86,9 +97,18 @@ export const googleSheetsService = {
                 contents: prompt,
             });
             return response.text;
-        } catch (error) {
-            console.error("Error getting AI feedback:", error);
-            throw new Error("Failed to generate AI feedback. Please try again later.");
+        } catch (error: any) {
+            console.error("Error getting AI feedback from Gemini:", error);
+
+            const errorMessage = error.message || 'An unknown error occurred with the Gemini API.';
+            googleSheetsService.notifyAdmin(
+                token, 
+                "Gemini AI Feedback Failure", 
+                errorMessage,
+                { prompt_start: prompt.substring(0, 200) + '...' }
+            );
+            
+            return "We're sorry, but the AI feedback service is currently unavailable due to high demand or a temporary issue. Our technical team has been automatically notified. Please try again in a little while.";
         }
     },
     
@@ -232,7 +252,7 @@ export const googleSheetsService = {
     },
     
     // --- DUAL-MODE SUBMISSION ---
-    submitTest: async (user: User, examId: string, answers: UserAnswer[], questions: Question[], token: string): Promise<TestResult> => {
+    submitTest: async (user: User, examId: string, answers: UserAnswer[], questions: Question[], token: string, proctoringViolations: number): Promise<TestResult> => {
         const questionPool = questions;
         const answerMap = new Map(answers.map(a => [a.questionId, a.answer]));
         let correctCount = 0;
@@ -265,6 +285,7 @@ export const googleSheetsService = {
             totalQuestions,
             timestamp: Date.now(),
             review,
+            proctoringViolations,
         };
 
         // Save locally first for responsiveness

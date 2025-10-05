@@ -37,6 +37,7 @@ import ExamProgram from './components/ExamProgram.tsx';
 import ProductCustomizer from './components/ProductCustomizer.tsx';
 import ExamProgramCustomizer from './components/ExamProgramCustomizer.tsx';
 import AdminLayout from './components/AdminLayout.tsx';
+import FAQ from './components/FAQ.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -150,6 +151,7 @@ const AppContent: FC = () => {
                             <Route path="/terms-of-service" element={<TermsOfService />} />
                             <Route path="/bookstore" element={<BookStore />} />
                             <Route path="/program/:programId" element={<ExamProgram />} />
+                            <Route path="/faq" element={<FAQ />} />
                             <Route path="/profile" element={
                               <ProtectedRoute>
                                 <Profile />

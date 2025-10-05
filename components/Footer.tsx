@@ -25,6 +25,8 @@ const Footer: FC = () => {
         <div className="flex justify-center items-center space-x-4 mb-2 flex-wrap">
             <a href="/#/instructions" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Instructions</a>
             <span className="text-slate-300">|</span>
+            <a href="/#/faq" className="text-[rgb(var(--color-primary-rgb))] hover:underline">FAQ</a>
+            <span className="text-slate-300">|</span>
             <a href="/#/user-guide" className="text-[rgb(var(--color-primary-rgb))] hover:underline">User Guide</a>
             <span className="text-slate-300">|</span>
             <a href="/#/about-us" className="text-[rgb(var(--color-primary-rgb))] hover:underline">About Us</a>

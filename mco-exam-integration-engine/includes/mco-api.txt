@@ -260,6 +260,7 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/submit-feedback', ['methods' => 'POST', 'callback' => 'mco_api_submit_feedback', 'permission_callback' => 'mco_api_permission_check']);
     register_rest_route($namespace, '/submit-review', ['methods' => 'POST', 'callback' => 'mco_api_submit_review', 'permission_callback' => 'mco_api_permission_check']);
     register_rest_route($namespace, '/spin-wheel', ['methods' => 'POST', 'callback' => 'mco_api_spin_wheel', 'permission_callback' => 'mco_api_permission_check']);
+    register_rest_route($namespace, '/notify-admin', ['methods' => 'POST', 'callback' => 'mco_api_notify_admin', 'permission_callback' => 'mco_api_permission_check']);
 
     // ADMIN-ONLY ENDPOINTS
     register_rest_route($namespace, '/admin/add-spins', ['methods' => 'POST', 'callback' => 'mco_api_admin_add_spins', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
@@ -425,13 +426,11 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
 
     if (strpos($sheet_url, '/pub') !== false && strpos($sheet_url, 'output=csv') !== false) {
         $csv_url = $sheet_url;
-    } elseif (strpos($sheet_url, '/edit') !== false || strpos($sheet_url, '/view') !== false) {
-        return new WP_Error('unreliable_link', 'The provided URL is a standard "sharing" link. This format is unreliable. Please use the "File > Share > Publish to the web" option in Google Sheets and use the generated CSV link for guaranteed compatibility.', ['status' => 400]);
     } else {
-        return new WP_Error('bad_request', 'Invalid Google Sheet URL format. Please use a "Publish to the web" CSV link.', ['status' => 400]);
+        return new WP_Error('bad_request', 'Invalid Google Sheet URL format. Please use a "Publish to the web" CSV link for maximum reliability.', ['status' => 400]);
     }
 
-    $transient_key = 'mco_sheet_' . md5($sheet_url);
+    $transient_key = 'mco_sheet_' . md5($csv_url);
     $questions = get_transient($transient_key);
 
     if (false === $questions) {
@@ -443,9 +442,8 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
         
         $response_code = $response['response']['code'];
         if ($response_code != 200) {
-            $response_body = $response['body'];
-            $error_details = 'Could not fetch questions from Google Sheets. Please use the "Google Sheet URL Tester" in the admin panel to diagnose the issue.';
-            return new WP_Error('fetch_error', $error_details . ' (HTTP Status: ' . $response_code . ').', ['status' => 500]);
+            $error_details = 'HTTP Status ' . $response_code . '. Check sheet sharing settings.';
+            return new WP_Error('fetch_error', $error_details, ['status' => 500]);
         }
 
         $body = $response['body'];
@@ -551,7 +549,7 @@ function mco_api_get_debug_details(WP_REST_Request $request) {
         $user_results = [];
     }
 
-    $sheet_test = ['success' => false, 'message' => 'No exams with Sheet URL found to test.'];
+    $sheet_test = ['success' => false, 'message' => 'No exams with a Sheet URL were found to test.'];
     $config = mco_get_app_config_data();
     $test_url = '';
     
@@ -564,14 +562,17 @@ function mco_api_get_debug_details(WP_REST_Request $request) {
         }
     }
     
-    if ($test_url && preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $test_url, $matches)) {
-        $response = wp_remote_get("https://docs.google.com/spreadsheets/d/{$matches[1]}/export?format=csv", ['timeout' => 15]);
+    if ($test_url) {
+        $response = mco_fetch_remote_csv_content($test_url);
         if (is_wp_error($response)) {
             $sheet_test = ['success' => false, 'message' => 'WP_Error: ' . $response->get_error_message()];
-        } elseif (wp_remote_retrieve_response_code($response) != 200) {
-            $sheet_test = ['success' => false, 'message' => 'HTTP Status ' . wp_remote_retrieve_response_code($response) . '. Check sheet sharing settings.'];
         } else {
-            $sheet_test = ['success' => true, 'message' => 'Successfully fetched ' . strlen(wp_remote_retrieve_body($response)) . ' bytes.'];
+             $status_code = $response['response']['code'];
+             if ($status_code != 200) {
+                 $sheet_test = ['success' => false, 'message' => 'HTTP Status ' . $status_code . '. Check sheet sharing settings.'];
+             } else {
+                 $sheet_test = ['success' => true, 'message' => 'Successfully fetched ' . strlen($response['body']) . ' bytes.'];
+             }
         }
     }
     
@@ -716,6 +717,43 @@ function mco_api_spin_wheel(WP_REST_Request $request) {
     ], 200);
 }
 
+function mco_api_notify_admin(WP_REST_Request $request) {
+    $payload = $request->get_param('jwt_payload');
+    $user = $payload['user'];
+    
+    $params = $request->get_json_params();
+    $subject = isset($params['subject']) ? sanitize_text_field($params['subject']) : 'App Notification';
+    $error_message = isset($params['message']) ? sanitize_textarea_field($params['message']) : 'No message provided.';
+    $context = isset($params['context']) ? $params['context'] : [];
+
+    $admin_email = get_option('admin_email');
+    if (!$admin_email) {
+        error_log("MCO APP ERROR: Could not send notification because admin_email is not set. Error: " . $error_message);
+        return new WP_REST_Response(['success' => false, 'message' => 'Admin email not configured.'], 500);
+    }
+    
+    $email_subject = '[Exam App Alert] ' . $subject;
+    
+    $email_body = "An automated alert was triggered in the Exam Application.\n\n";
+    $email_body .= "--- User Details ---\n";
+    $email_body .= "User ID: " . $user['id'] . "\n";
+    $email_body .= "Name: " . $user['name'] . "\n";
+    $email_body .= "Email: " . $user['email'] . "\n\n";
+    $email_body .= "--- Error Details ---\n";
+    $email_body .= "Message: " . $error_message . "\n\n";
+    
+    if (!empty($context)) {
+        $email_body .= "--- Context ---\n";
+        $email_body .= print_r($context, true) . "\n";
+    }
+
+    $email_body .= "\nThis is an automated notification.";
+    
+    wp_mail($admin_email, $email_subject, $email_body);
+    
+    return new WP_REST_Response(['success' => true], 200);
+}
+
 // ADMIN ENDPOINTS
 function mco_api_admin_search_users(WP_REST_Request $request) {
     $search_term = sanitize_text_field($request->get_param('searchTerm'));
@@ -819,6 +857,22 @@ function mco_api_admin_update_exam_program(WP_REST_Request $request) {
     if (isset($update_payload['cert_certificateEnabled'])) {
         update_post_meta($post_id, '_mco_certificate_enabled', $update_payload['cert_certificateEnabled'] ? '1' : '0');
     }
+    
+    // Save Exam Sections
+    if (isset($update_payload['sections']) && is_array($update_payload['sections'])) {
+        // Basic sanitization for the sections array
+        $sanitized_sections = [];
+        foreach ($update_payload['sections'] as $section) {
+            $sanitized_sections[] = [
+                'id' => sanitize_text_field($section['id']),
+                'name' => sanitize_text_field($section['name']),
+                'startQuestion' => intval($section['startQuestion']),
+                'endQuestion' => intval($section['endQuestion']),
+            ];
+        }
+        update_post_meta($post_id, '_mco_exam_sections', wp_json_encode($sanitized_sections));
+    }
+
 
     // Bust server cache and get fresh data to send back to client
     delete_transient('mco_app_config_data');

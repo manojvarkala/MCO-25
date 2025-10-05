@@ -7,12 +7,12 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, Sparkles, Star, XCircle, BookOpen } from 'lucide-react';
+import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, Sparkles, Star, XCircle, BookOpen, AlertTriangle } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import BookCover from '../assets/BookCover.tsx';
 
-type CertVisibility = 'NONE' | 'USER_EARNED' | 'ADMIN_OVERRIDE';
+type CertVisibility = 'NONE' | 'USER_EARNED' | 'ADMIN_OVERRIDE' | 'REVIEW_PENDING';
 
 const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } => {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -58,6 +58,8 @@ const Results: FC = () => {
     const [result, setResult] = useState<TestResult | null>(null);
     const [exam, setExam] = useState<Exam | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isProcessing, setIsProcessing] = useState(true);
+    const [processingMessage, setProcessingMessage] = useState('Evaluating your answers...');
     const [isAiLoading, setIsAiLoading] = useState(false);
     const [aiFeedback, setAiFeedback] = useState<string | null>(null);
     const [rating, setRating] = useState(0);
@@ -80,6 +82,33 @@ const Results: FC = () => {
             setIsLoading(false);
         }
     }, [testId, user, activeOrg, navigate]);
+    
+    useEffect(() => {
+        if (!isLoading) {
+            const messages = [
+                "Cross-referencing with exam standards...",
+                "Calculating final score...",
+                "Finalizing report..."
+            ];
+            let messageIndex = 0;
+            const interval = setInterval(() => {
+                setProcessingMessage(messages[messageIndex]);
+                messageIndex++;
+                if (messageIndex >= messages.length) {
+                    clearInterval(interval);
+                }
+            }, 1200);
+
+            const timer = setTimeout(() => {
+                setIsProcessing(false);
+            }, 4500); // Total processing simulation time
+
+            return () => {
+                clearTimeout(timer);
+                clearInterval(interval);
+            };
+        }
+    }, [isLoading]);
 
     const isPassed = useMemo(() => {
         if (!result || !exam) return false;
@@ -87,15 +116,18 @@ const Results: FC = () => {
     }, [result, exam]);
 
     const certificateVisibility = useMemo((): CertVisibility => {
-        if (!exam) return 'NONE';
-        const normallyVisible = isPassed && !exam.isPractice && exam.certificateEnabled;
-
-        if (isEffectivelyAdmin) {
-            return normallyVisible ? 'USER_EARNED' : 'ADMIN_OVERRIDE';
+        if (!exam || !result || !isPassed || exam.isPractice || !exam.certificateEnabled) {
+            return 'NONE';
         }
 
-        return normallyVisible ? 'USER_EARNED' : 'NONE';
-    }, [exam, isPassed, isEffectivelyAdmin]);
+        const requiresReview = result.proctoringViolations && result.proctoringViolations > 0;
+
+        if (isEffectivelyAdmin) {
+            return requiresReview ? 'REVIEW_PENDING' : 'USER_EARNED'; // Admins see review status but can override
+        }
+
+        return requiresReview ? 'REVIEW_PENDING' : 'USER_EARNED';
+    }, [exam, result, isPassed, isEffectivelyAdmin]);
     
     const canGetAIFeedback = useMemo(() => {
         if (!exam || !result || isPassed) return false;
@@ -111,7 +143,7 @@ const Results: FC = () => {
 
 
     const generateAIFeedback = async () => {
-        if (!result || !exam) return;
+        if (!result || !exam || !token) return;
         setIsAiLoading(true);
         const toastId = toast.loading('Generating your personalized study guide...');
 
@@ -120,6 +152,7 @@ const Results: FC = () => {
             if (incorrectQuestions.length === 0) {
                 toast.success("Great job, you didn't have any incorrect answers!", { id: toastId });
                 setAiFeedback("No incorrect answers to analyze. Keep up the great work!");
+                setIsAiLoading(false);
                 return;
             }
 
@@ -143,9 +176,15 @@ const Results: FC = () => {
 
                 Please provide your expert feedback below.
             `;
-            const feedback = await googleSheetsService.getAIFeedback(prompt);
-            setAiFeedback(feedback);
-            toast.success("AI Study Guide generated!", { id: toastId });
+            const feedback = await googleSheetsService.getAIFeedback(prompt, token);
+            
+            if (feedback.startsWith("We're sorry")) {
+                setAiFeedback(feedback);
+                toast.error("AI Feedback Unavailable", { id: toastId });
+            } else {
+                setAiFeedback(feedback);
+                toast.success("AI Study Guide generated!", { id: toastId });
+            }
         } catch (error: any) {
             toast.error(error.message || 'Failed to generate AI feedback.', { id: toastId });
         } finally {
@@ -205,6 +244,16 @@ const Results: FC = () => {
     if (isLoading || !result || !exam) {
         return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4 text-slate-600">Loading your results...</p></div>;
     }
+    
+    if (isProcessing) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+                <LogoSpinner />
+                <h2 className="text-2xl font-bold text-slate-800 mt-6">Finalizing Your Results</h2>
+                <p className="text-slate-500 mt-2">{processingMessage}</p>
+            </div>
+        );
+    }
 
     const toggleQuestion = (id: number) => {
         setExpandedQuestion(expandedQuestion === id ? null : id);
@@ -236,15 +285,32 @@ const Results: FC = () => {
                         </div>
                     </div>
                     
-                    {certificateVisibility !== 'NONE' && (
+                    {certificateVisibility === 'USER_EARNED' && (
                         <button 
                             onClick={() => navigate(`/certificate/${result.testId}`)} 
                             className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
                         >
-                            <Award size={20} /> 
-                            {certificateVisibility === 'ADMIN_OVERRIDE' ? 'View Certificate (Admin)' : 'Download Your Certificate'}
+                            <Award size={20} /> Download Your Certificate
                         </button>
                     )}
+
+                    {certificateVisibility === 'REVIEW_PENDING' && (
+                        <div className="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-500 text-center">
+                            <h4 className="font-bold text-amber-800">Provisional Pass</h4>
+                             <p className="text-sm text-amber-700 mt-2">
+                                Congratulations on passing! Your certificate will be issued following a standard integrity review within 24 hours due to proctoring flags during your session. You will be notified via email.
+                            </p>
+                            {isEffectivelyAdmin && (
+                                <button 
+                                    onClick={() => navigate(`/certificate/${result.testId}`)} 
+                                    className="mt-3 w-full text-xs flex items-center justify-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-4 rounded-lg"
+                                >
+                                    <Award size={16} /> View Certificate (Admin)
+                                </button>
+                            )}
+                        </div>
+                    )}
+
 
                     {!reviewAlreadySubmitted && (
                          <div className="bg-white p-6 rounded-xl shadow-md">
@@ -284,11 +350,18 @@ const Results: FC = () => {
                                 </button>
                              )}
                              {aiFeedback && (
-                                <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg max-h-96 overflow-y-auto">
-                                    <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: aiFeedback.replace(/\n/g, '<br />') }}></div>
+                                <div className={`mt-4 p-4 border rounded-lg max-h-96 overflow-y-auto ${aiFeedback.startsWith("We're sorry") ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
+                                    {aiFeedback.startsWith("We're sorry") ? (
+                                        <div className="flex items-start gap-3 text-amber-800">
+                                            <AlertTriangle size={24} className="flex-shrink-0 mt-1"/>
+                                            <p>{aiFeedback}</p>
+                                        </div>
+                                    ) : (
+                                        <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: aiFeedback.replace(/\n/g, '<br />') }}></div>
+                                    )}
                                 </div>
                              )}
-                              {aiFeedback && (
+                              {aiFeedback && !aiFeedback.startsWith("We're sorry") && (
                                 <button onClick={downloadAiFeedback} className="w-full mt-4 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">
                                     <Download size={16}/> Download as PDF
                                 </button>

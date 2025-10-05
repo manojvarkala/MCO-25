@@ -41,8 +41,26 @@ const Instructions: FC = () => {
                 </div>
                 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Results and Certificates</h2>
+                 <p>
+                    Upon completing an exam, your results will be displayed after a brief evaluation animation.
+                </p>
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 my-4">
+                     <p className="font-bold text-blue-800">Understanding Your Results:</p>
+                     <ul className="list-disc pl-5 text-blue-700 space-y-2">
+                        <li>
+                            <strong>Immediate Score:</strong> Your score and pass/fail status are always shown immediately after the exam.
+                        </li>
+                        <li>
+                            <strong>Certificate Issuance:</strong>
+                            <ul className="list-['-_'] pl-5 mt-1">
+                                <li>If you pass an exam with <strong>no proctoring violations</strong>, your certificate will be available for download instantly.</li>
+                                <li>If you pass but the system logged proctoring violations (like exiting fullscreen), you will receive a <strong>"Provisional Pass"</strong>. Your certificate will be issued within 24 hours after a brief integrity review by our team.</li>
+                            </ul>
+                        </li>
+                     </ul>
+                </div>
                 <p>
-                    Upon completing an exam, your results will be displayed immediately. For practice tests, you will be able to review your answers. For paid certification exams, passing scores will unlock a downloadable certificate of completion.
+                    For practice tests, you will be able to review your answers. For paid certification exams, passing scores will unlock a downloadable certificate of completion.
                 </p>
 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">WordPress Integration for Admins</h2>

@@ -274,94 +274,92 @@ const Admin: FC = () => {
         <div className="space-y-8">
             <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">Admin Dashboard</h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
-                        <Cpu className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                        System Health Check
-                    </h2>
-                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                        Diagnose "No route found" errors and other connection issues with your WordPress backend.
-                    </p>
-                    <button
-                        onClick={handleRunHealthCheck}
-                        disabled={isCheckingHealth}
-                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-transform transform hover:scale-105 disabled:opacity-50"
-                    >
-                        {isCheckingHealth ? <Spinner size="sm" /> : <RefreshCw size={20} />}
-                        <span className="ml-2">{isCheckingHealth ? 'Running Checks...' : 'Run Health Check'}</span>
-                    </button>
-                    {healthCheckStatus.connectivity.status !== 'idle' && (
-                        <div className="mt-6 space-y-4">
-                            <HealthCheckItem status={healthCheckStatus.connectivity.status} title="Server Connectivity" message={healthCheckStatus.connectivity.message} />
-                            <HealthCheckItem status={healthCheckStatus.apiEndpoint.status} title="Plugin API Endpoint" message={healthCheckStatus.apiEndpoint.message} />
-                            <HealthCheckItem 
-                                status={healthCheckStatus.authentication.status} 
-                                title="Authentication & CORS" 
-                                message={healthCheckStatus.authentication.message}
-                                troubleshooting={
-                                    <div className="space-y-3">
-                                        <p>This error almost always means your server is stripping the "Authorization" header from API requests.</p>
-                                        <div>
-                                            <strong className="text-amber-900">Primary Solution (for Apache/LiteSpeed servers):</strong>
-                                            <p>Add the following code to the <strong>very top</strong> of your <code>.htaccess</code> file in the WordPress root directory (before the <code># BEGIN WordPress</code> block):</p>
-                                            <pre className="whitespace-pre-wrap bg-slate-100 p-2 rounded my-1 text-xs"><code>
-    {`<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteCond %{HTTP:Authorization} .
-    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-    </IfModule>`}
-                                            </code></pre>
-                                            <p>After adding this, clear any server or plugin caches.</p>
-                                        </div>
-                                        <div className="pt-3 border-t border-amber-200">
-                                            <strong className="text-amber-900">Secondary Solution (if saving still fails after a successful check):</strong>
-                                            <p>If the check above passes but saving an exam program still gives a "No route found" error, your server's URL rules might be cached. The best way to fix this is to flush them:</p>
-                                            <ol className="list-decimal list-inside ml-4 mt-1">
-                                                <li>Go to your WordPress Admin Dashboard.</li>
-                                                <li>Navigate to <strong>Settings &rarr; Permalinks</strong>.</li>
-                                                <li>You don't need to change anything. Just click the <strong>"Save Changes"</strong> button.</li>
-                                                <li>This action forces WordPress to rebuild its internal URL routing table.</li>
-                                            </ol>
-                                        </div>
+            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                    <Cpu className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                    System Health Check
+                </h2>
+                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                    Diagnose "No route found" errors and other connection issues with your WordPress backend.
+                </p>
+                <button
+                    onClick={handleRunHealthCheck}
+                    disabled={isCheckingHealth}
+                    className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-transform transform hover:scale-105 disabled:opacity-50"
+                >
+                    {isCheckingHealth ? <Spinner size="sm" /> : <RefreshCw size={20} />}
+                    <span className="ml-2">{isCheckingHealth ? 'Running Checks...' : 'Run Health Check'}</span>
+                </button>
+                {healthCheckStatus.connectivity.status !== 'idle' && (
+                    <div className="mt-6 space-y-4">
+                        <HealthCheckItem status={healthCheckStatus.connectivity.status} title="Server Connectivity" message={healthCheckStatus.connectivity.message} />
+                        <HealthCheckItem status={healthCheckStatus.apiEndpoint.status} title="Plugin API Endpoint" message={healthCheckStatus.apiEndpoint.message} />
+                        <HealthCheckItem 
+                            status={healthCheckStatus.authentication.status} 
+                            title="Authentication & CORS" 
+                            message={healthCheckStatus.authentication.message}
+                            troubleshooting={
+                                <div className="space-y-3">
+                                    <p>This error almost always means your server is stripping the "Authorization" header from API requests.</p>
+                                    <div>
+                                        <strong className="text-amber-900">Primary Solution (for Apache/LiteSpeed servers):</strong>
+                                        <p>Add the following code to the <strong>very top</strong> of your <code>.htaccess</code> file in the WordPress root directory (before the <code># BEGIN WordPress</code> block):</p>
+                                        <pre className="whitespace-pre-wrap bg-slate-100 p-2 rounded my-1 text-xs"><code>
+{`<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>`}
+                                        </code></pre>
+                                        <p>After adding this, clear any server or plugin caches.</p>
                                     </div>
-                                }
-                            />
-                        </div>
-                    )}
-                </div>
+                                    <div className="pt-3 border-t border-amber-200">
+                                        <strong className="text-amber-900">Secondary Solution (if saving still fails after a successful check):</strong>
+                                        <p>If the check above passes but saving an exam program still gives a "No route found" error, your server's URL rules might be cached. The best way to fix this is to flush them:</p>
+                                        <ol className="list-decimal list-inside ml-4 mt-1">
+                                            <li>Go to your WordPress Admin Dashboard.</li>
+                                            <li>Navigate to <strong>Settings &rarr; Permalinks</strong>.</li>
+                                            <li>You don't need to change anything. Just click the <strong>"Save Changes"</strong> button.</li>
+                                            <li>This action forces WordPress to rebuild its internal URL routing table.</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            }
+                        />
+                    </div>
+                )}
+            </div>
 
-                 <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
-                        <Trash className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                        Cache Management
-                    </h2>
-                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                        Force the server to reload data. Use these tools after making changes in WordPress that don't appear in the app.
-                    </p>
-                    <div className="space-y-4">
+            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                    <Trash className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                    Cache Management
+                </h2>
+                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                    Force the server to reload data. Use these tools after making changes in WordPress that don't appear in the app.
+                </p>
+                <div className="space-y-4">
+                    <div>
+                        <button
+                            onClick={handleClearConfigCache}
+                            disabled={!!isClearingCache}
+                            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                        >
+                            {isClearingCache === 'config' ? <Spinner size="sm" /> : <RefreshCw size={16} />}
+                            <span className="ml-2">{isClearingCache === 'config' ? 'Clearing...' : 'Clear App Config Cache'}</span>
+                        </button>
+                        <p className="text-xs text-slate-500 mt-1">Clears all exam programs, products, and settings cache.</p>
+                    </div>
                         <div>
-                            <button
-                                onClick={handleClearConfigCache}
-                                disabled={!!isClearingCache}
-                                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
-                            >
-                                {isClearingCache === 'config' ? <Spinner size="sm" /> : <RefreshCw size={16} />}
-                                <span className="ml-2">{isClearingCache === 'config' ? 'Clearing...' : 'Clear App Config Cache'}</span>
-                            </button>
-                            <p className="text-xs text-slate-500 mt-1">Clears all exam programs, products, and settings cache.</p>
-                        </div>
-                         <div>
-                            <button
-                                onClick={handleClearQuestionCache}
-                                disabled={!!isClearingCache}
-                                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
-                            >
-                                {isClearingCache === 'questions' ? <Spinner size="sm" /> : <RefreshCw size={16} />}
-                                <span className="ml-2">{isClearingCache === 'questions' ? 'Clearing...' : 'Clear All Question Caches'}</span>
-                            </button>
-                            <p className="text-xs text-slate-500 mt-1">Forces the app to re-fetch questions from all Google Sheets.</p>
-                        </div>
+                        <button
+                            onClick={handleClearQuestionCache}
+                            disabled={!!isClearingCache}
+                            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                        >
+                            {isClearingCache === 'questions' ? <Spinner size="sm" /> : <RefreshCw size={16} />}
+                            <span className="ml-2">{isClearingCache === 'questions' ? 'Clearing...' : 'Clear All Question Caches'}</span>
+                        </button>
+                        <p className="text-xs text-slate-500 mt-1">Forces the app to re-fetch questions from all Google Sheets.</p>
                     </div>
                 </div>
             </div>
