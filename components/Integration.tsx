@@ -6,7 +6,7 @@ import Spinner from './Spinner.tsx';
 
 const Integration: FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
-    const pluginVersion = "1.0.1";
+    const pluginVersion = "1.0.2";
 
     const pluginFiles = [
         'mco-exam-integration-engine/mco-exam-integration-engine.txt',
@@ -24,27 +24,27 @@ const Integration: FC = () => {
         const toastId = toast.loading('Generating plugin .zip file...');
         try {
             const zip = new JSZip();
-            const rootFolder = zip.folder('mco-exam-integration-engine');
-            if (!rootFolder) throw new Error("Could not create zip folder.");
 
             for (const filePath of pluginFiles) {
                 const response = await fetch(`/${filePath}`);
                 if (!response.ok) throw new Error(`Failed to fetch ${filePath}`);
                 const content = await response.text();
                 
+                // This creates the correct path inside the zip (e.g., "includes/mco-cpts.txt")
                 let finalPath = filePath.replace('mco-exam-integration-engine/', '');
                 
+                // This logic correctly renames files, leaving plugin-header.txt alone.
                 if (finalPath.endsWith('.txt')) {
-                    // This logic now correctly renames files, leaving plugin-header.txt alone.
-                    if (finalPath === 'mco-exam-integration-engine.txt' || finalPath.includes('includes/')) {
+                    if (finalPath === 'mco-exam-integration-engine.txt' || finalPath.startsWith('includes/')) {
                          finalPath = finalPath.replace('.txt', '.php');
-                    } else if (finalPath.includes('assets/')) {
+                    } else if (finalPath.startsWith('assets/')) {
                          finalPath = finalPath.replace('.txt', '.css');
                     }
-                    // IMPORTANT: 'plugin-header.txt' is intentionally left as a .txt file and is not renamed.
+                    // IMPORTANT: 'plugin-header.txt' is intentionally left as a .txt file.
                 }
                 
-                rootFolder.file(finalPath, content);
+                // Add the file directly to the zip's root, with its proper path.
+                zip.file(finalPath, content);
             }
             
             const zipBlob = await zip.generateAsync({ type: 'blob' });
