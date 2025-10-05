@@ -6,11 +6,11 @@ import Spinner from './Spinner.tsx';
 
 const Integration: FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
-    const pluginVersion = "1.0.2";
+    const pluginVersion = "1.0.0"; // Resetting to a clean baseline
 
+    // The list of files that make up the plugin. Note: plugin-header.txt is removed.
     const pluginFiles = [
         'mco-exam-integration-engine/mco-exam-integration-engine.txt',
-        'mco-exam-integration-engine/plugin-header.txt',
         'mco-exam-integration-engine/includes/mco-cpts.txt',
         'mco-exam-integration-engine/includes/mco-admin.txt',
         'mco-exam-integration-engine/includes/mco-api.txt',
@@ -24,27 +24,31 @@ const Integration: FC = () => {
         const toastId = toast.loading('Generating plugin .zip file...');
         try {
             const zip = new JSZip();
+            const pluginFolder = zip.folder("mco-exam-integration-engine"); // Create the root folder
+
+            if (!pluginFolder) {
+                throw new Error("Could not create plugin folder in zip.");
+            }
 
             for (const filePath of pluginFiles) {
                 const response = await fetch(`/${filePath}`);
                 if (!response.ok) throw new Error(`Failed to fetch ${filePath}`);
                 const content = await response.text();
                 
-                // This creates the correct path inside the zip (e.g., "includes/mco-cpts.txt")
+                // Get the final path within the root folder (e.g., includes/mco-cpts.php)
                 let finalPath = filePath.replace('mco-exam-integration-engine/', '');
                 
-                // This logic correctly renames files, leaving plugin-header.txt alone.
+                // Rename files to their correct extensions
                 if (finalPath.endsWith('.txt')) {
-                    if (finalPath === 'mco-exam-integration-engine.txt' || finalPath.startsWith('includes/')) {
+                    if (finalPath.startsWith('includes/') || finalPath === 'mco-exam-integration-engine.txt') {
                          finalPath = finalPath.replace('.txt', '.php');
                     } else if (finalPath.startsWith('assets/')) {
                          finalPath = finalPath.replace('.txt', '.css');
                     }
-                    // IMPORTANT: 'plugin-header.txt' is intentionally left as a .txt file.
                 }
                 
-                // Add the file directly to the zip's root, with its proper path.
-                zip.file(finalPath, content);
+                // Add the file to the plugin folder
+                pluginFolder.file(finalPath, content);
             }
             
             const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -82,7 +86,7 @@ const Integration: FC = () => {
                      <ol className="list-decimal list-inside space-y-4 text-[rgb(var(--color-text-muted-rgb))]">
                         <li>
                             <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 1: Generate & Download the Plugin</strong><br />
-                            Click the button below to generate a ready-to-install <code>.zip</code> file. This process automatically handles all file naming for you.
+                            Click the button below to generate a ready-to-install <code>.zip</code> file. This process automatically handles all file naming and structuring for you.
                             <div className="flex flex-wrap gap-2 mt-2">
                                  <button
                                     onClick={generateZip}

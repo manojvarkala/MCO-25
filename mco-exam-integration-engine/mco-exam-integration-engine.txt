@@ -1,9 +1,15 @@
 <?php
-// Main plugin bootstrap file.
-
-// Include the plugin header with version information from its own separate file.
-// This makes version updates safer and isolates metadata from logic.
-require_once plugin_dir_path(__FILE__) . 'plugin-header.txt';
+/**
+ * Plugin Name:       MCO Exam Integration Engine
+ * Plugin URI:        https://annapoornainfo.com
+ * Description:       Provides the backend API, user authentication (SSO), and content management for the React-based examination app.
+ * Version:           1.0.0
+ * Author:            Annapoorna Infotech
+ * Author URI:        https://annapoornainfo.com
+ * License:           GPL v2 or later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain:       mco-exam-engine
+ */
 
 if (!defined('ABSPATH')) exit;
 
@@ -71,11 +77,11 @@ $mco_plugin_data = get_plugin_data(MCO_PLUGIN_FILE);
 define('MCO_PLUGIN_VERSION', $mco_plugin_data['Version']);
 
 // Include all the necessary logic files
-require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.txt';
-require_once MCO_PLUGIN_PATH . 'includes/mco-data.txt';
-require_once MCO_PLUGIN_PATH . 'includes/mco-api.txt';
-require_once MCO_PLUGIN_PATH . 'includes/mco-admin.txt';
-require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.txt';
+require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-data.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-api.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
 
 
 // --- INITIALIZATION HOOKS ---
