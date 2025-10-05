@@ -1,4 +1,4 @@
-import React, { FC, useState, useMemo } from 'react';
+import React, { FC, useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, Tag, Users, Gift, Star, List, BookOpen, Menu } from 'lucide-react';
@@ -8,6 +8,12 @@ const Header: FC = () => {
   const { activeOrg, setWheelModalOpen } = useAppContext();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isCategoriesMenuOpen, setIsCategoriesMenuOpen] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+
+  // Reset error state if the logo URL changes
+  useEffect(() => {
+      setLogoError(false);
+  }, [activeOrg?.logo]);
 
   // Updated URL generation with fallback
   const mainSiteBaseUrl = useMemo(() => {
@@ -43,11 +49,12 @@ const Header: FC = () => {
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         {activeOrg ? (
             <a href={headerLink} className="flex items-center space-x-3">
-                 {activeOrg.logo ? (
+                 {activeOrg.logo && !logoError ? (
                     <img
                         src={activeOrg.logo}
                         alt={`${activeOrg.name} Logo`}
                         className="h-14 w-14 object-contain"
+                        onError={() => setLogoError(true)}
                     />
                  ) : (
                     <div className="h-14 w-14 bg-slate-200 rounded-full flex items-center justify-center">

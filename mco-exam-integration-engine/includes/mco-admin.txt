@@ -144,39 +144,44 @@ if (!function_exists('mco_admin_enqueue_styles')) {
 
 if (!function_exists('mco_exam_engine_admin_page')) {
     function mco_exam_engine_admin_page() {
-        $settings_saved = false;
-
         if (isset($_POST['mco_save_settings_nonce']) && wp_verify_nonce($_POST['mco_save_settings_nonce'], 'mco_save_settings')) {
             $form_action = isset($_POST['mco_form_action']) ? sanitize_text_field($_POST['mco_form_action']) : '';
 
             if ($form_action === 'save_main_settings') {
                 update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
+                update_option('mco_is_spin_wheel_enabled', isset($_POST['mco_is_spin_wheel_enabled']) ? 1 : 0);
                 
-                // Handle logo URL: allow data URIs, otherwise sanitize as URL
-                $logo_url_input = $_POST['mco_logo_url'];
+                // --- ROBUST LOGO SAVING ---
+                $logo_url_input = isset($_POST['mco_logo_url']) ? wp_unslash($_POST['mco_logo_url']) : '';
                 $sanitized_logo_url = '';
+
                 if (strpos(trim($logo_url_input), 'data:image/') === 0) {
-                    // It's a data URI. We'll allow it as it's pasted by an admin.
-                    // A more robust solution might validate the base64 content, but this is a significant improvement.
-                    $sanitized_logo_url = $logo_url_input;
+                    if (preg_match('/^data:image\/(jpeg|png|gif|svg\+xml);base64,/', $logo_url_input)) {
+                        $sanitized_logo_url = $logo_url_input;
+                    } else {
+                        add_settings_error('mco_settings', 'invalid_data_uri', 'Invalid base64 data URI format. Please ensure it starts with a valid "data:image/...;base64," prefix.', 'error');
+                    }
                 } else {
-                    // It's a regular URL, so sanitize it as such
                     $sanitized_logo_url = esc_url_raw($logo_url_input);
                 }
+                
                 update_option('mco_logo_url', $sanitized_logo_url);
                 
-                update_option('mco_is_spin_wheel_enabled', isset($_POST['mco_is_spin_wheel_enabled']) ? 1 : 0);
-                $settings_saved = true;
+                $saved_logo = get_option('mco_logo_url');
+                if (!empty($logo_url_input) && empty($saved_logo) && empty(get_settings_errors('mco_settings'))) {
+                    add_settings_error('mco_settings', 'logo_save_failed', 'The provided logo data URI could not be saved. This is often due to server security rules or data length limits. Please try uploading the logo to the Media Library and using its direct URL instead.', 'error');
+                }
+                // --- END ROBUST LOGO SAVING ---
+
+                delete_transient('mco_app_config_data');
+                update_option('mco_config_version', current_time('YmdHis'));
+                echo '<div class="notice notice-success is-dismissible"><p>Settings saved and cache cleared.</p></div>';
 
             } elseif ($form_action === 'save_theme_settings') {
                 update_option('mco_active_theme', sanitize_text_field($_POST['mco_active_theme']));
-                $settings_saved = true;
-            }
-            
-            if ($settings_saved) {
                 delete_transient('mco_app_config_data');
-                update_option('mco_config_version', current_time('YmdHis')); // Bust client cache
-                echo '<div class="notice notice-success is-dismissible"><p>Settings saved and cache cleared.</p></div>';
+                update_option('mco_config_version', current_time('YmdHis'));
+                echo '<div class="notice notice-success is-dismissible"><p>Theme settings saved.</p></div>';
             }
         }
 
@@ -184,6 +189,7 @@ if (!function_exists('mco_exam_engine_admin_page')) {
         ?>
         <div class="wrap mco-admin-wrap">
             <h1>Exam App Engine - Settings & Tools</h1>
+            <?php settings_errors('mco_settings'); ?>
             <nav class="nav-tab-wrapper">
                 <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
                 <a href="?page=mco-exam-engine&tab=theme_selector" class="nav-tab <?php echo $active_tab == 'theme_selector' ? 'nav-tab-active' : ''; ?>">Theme Selector</a>
