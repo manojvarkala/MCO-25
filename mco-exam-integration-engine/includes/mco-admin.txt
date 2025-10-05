@@ -144,9 +144,25 @@ if (!function_exists('mco_admin_enqueue_styles')) {
 
 if (!function_exists('mco_exam_engine_admin_page')) {
     function mco_exam_engine_admin_page() {
-        // This check ensures that if the 'mco-exam-engine' page is loaded without a tab, it defaults to main_settings.
-        if (isset($_GET['page']) && $_GET['page'] === 'mco-exam-engine' && !isset($_GET['tab'])) {
-            $_GET['tab'] = 'main_settings';
+        // Handle saving settings for ANY tab before any HTML is rendered.
+        if (isset($_POST['mco_save_settings_nonce']) && wp_verify_nonce($_POST['mco_save_settings_nonce'], 'mco_save_settings')) {
+            if (isset($_POST['mco_exam_app_url'])) {
+                update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
+            }
+            if (isset($_POST['mco_logo_url'])) {
+                update_option('mco_logo_url', esc_url_raw($_POST['mco_logo_url']));
+            }
+            if (isset($_POST['mco_is_spin_wheel_enabled_hidden'])) { // Use hidden field to detect presence
+                update_option('mco_is_spin_wheel_enabled', isset($_POST['mco_is_spin_wheel_enabled']) ? 1 : 0);
+            }
+             if (isset($_POST['mco_active_theme'])) {
+                update_option('mco_active_theme', sanitize_text_field($_POST['mco_active_theme']));
+            }
+            
+            // Clear config cache on save
+            delete_transient('mco_app_config_data');
+            update_option('mco_config_version', current_time('YmdHis')); // Bust client cache
+            echo '<div class="notice notice-success is-dismissible"><p>Settings saved and cache cleared.</p></div>';
         }
 
         $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'main_settings';
@@ -155,6 +171,7 @@ if (!function_exists('mco_exam_engine_admin_page')) {
             <h1>Exam App Engine - Settings & Tools</h1>
             <nav class="nav-tab-wrapper">
                 <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
+                <a href="?page=mco-exam-engine&tab=theme_selector" class="nav-tab <?php echo $active_tab == 'theme_selector' ? 'nav-tab-active' : ''; ?>">Theme Selector</a>
                 <a href="?page=mco-exam-engine&tab=bulk_import" class="nav-tab <?php echo $active_tab == 'bulk_import' ? 'nav-tab-active' : ''; ?>">Bulk Import</a>
                 <a href="?page=mco-exam-engine&tab=certificate_templates" class="nav-tab <?php echo $active_tab == 'certificate_templates' ? 'nav-tab-active' : ''; ?>">Certificate Templates</a>
                 <a href="?page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
@@ -163,6 +180,8 @@ if (!function_exists('mco_exam_engine_admin_page')) {
                 <?php
                 if ($active_tab == 'main_settings') {
                     mco_render_main_settings_tab();
+                } elseif ($active_tab == 'theme_selector') {
+                    mco_render_theme_selector_tab();
                 } elseif ($active_tab == 'bulk_import') {
                     mco_render_bulk_import_tab();
                 } elseif ($active_tab == 'certificate_templates') {
@@ -178,19 +197,8 @@ if (!function_exists('mco_exam_engine_admin_page')) {
 }
 
 function mco_render_main_settings_tab() {
-    if (isset($_POST['mco_save_settings_nonce']) && wp_verify_nonce($_POST['mco_save_settings_nonce'], 'mco_save_settings')) {
-        update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
-        update_option('mco_logo_url', esc_url_raw($_POST['mco_logo_url']));
-        update_option('mco_is_spin_wheel_enabled', isset($_POST['mco_is_spin_wheel_enabled']) ? 1 : 0);
-        update_option('mco_active_theme', sanitize_text_field($_POST['mco_active_theme']));
-        
-        // Clear config cache on save
-        delete_transient('mco_app_config_data');
-        update_option('mco_config_version', current_time('YmdHis')); // Bust client cache
-        echo '<div class="notice notice-success is-dismissible"><p>Settings saved and cache cleared.</p></div>';
-    }
     ?>
-    <form method="post" action="">
+    <form method="post" action="?page=mco-exam-engine&tab=main_settings">
         <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
         <table class="form-table">
             <tr valign="top">
@@ -210,21 +218,9 @@ function mco_render_main_settings_tab() {
             <tr valign="top">
                 <th scope="row">Enable "Spin & Win"</th>
                 <td>
+                    <input type="hidden" name="mco_is_spin_wheel_enabled_hidden" value="1" />
                     <input type="checkbox" name="mco_is_spin_wheel_enabled" value="1" <?php checked(1, get_option('mco_is_spin_wheel_enabled', 0)); ?> />
                     <label for="mco_is_spin_wheel_enabled">Enable the gamified prize wheel for users.</label>
-                </td>
-            </tr>
-            <tr valign="top">
-                <th scope="row">Application Theme</th>
-                <td>
-                    <select name="mco_active_theme">
-                        <option value="default" <?php selected(get_option('mco_active_theme', 'default'), 'default'); ?>>Cyberpunk (Default)</option>
-                        <option value="professional" <?php selected(get_option('mco_active_theme'), 'professional'); ?>>Professional (Blue)</option>
-                        <option value="serene" <?php selected(get_option('mco_active_theme'), 'serene'); ?>>Serene (Green)</option>
-                        <option value="academic" <?php selected(get_option('mco_active_theme'), 'academic'); ?>>Academic (Crimson)</option>
-                        <option value="noir" <?php selected(get_option('mco_active_theme'), 'noir'); ?>>Noir (Dark)</option>
-                    </select>
-                    <p class="description">Select the default visual theme for the exam application.</p>
                 </td>
             </tr>
             <tr valign="top">
@@ -239,6 +235,32 @@ function mco_render_main_settings_tab() {
     </form>
     <?php
 }
+
+function mco_render_theme_selector_tab() {
+    ?>
+    <form method="post" action="?page=mco-exam-engine&tab=theme_selector">
+        <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
+        <h2>Application Theme</h2>
+        <p>Select the default visual theme for the exam application. Users can override this choice in their own profile.</p>
+        <table class="form-table">
+            <tr valign="top">
+                <th scope="row">Default Theme</th>
+                <td>
+                    <select name="mco_active_theme" style="min-width: 200px;">
+                        <option value="default" <?php selected(get_option('mco_active_theme', 'default'), 'default'); ?>>Cyberpunk (Default)</option>
+                        <option value="professional" <?php selected(get_option('mco_active_theme'), 'professional'); ?>>Professional (Blue)</option>
+                        <option value="serene" <?php selected(get_option('mco_active_theme'), 'serene'); ?>>Serene (Green)</option>
+                        <option value="academic" <?php selected(get_option('mco_active_theme'), 'academic'); ?>>Academic (Crimson)</option>
+                        <option value="noir" <?php selected(get_option('mco_active_theme'), 'noir'); ?>>Noir (Dark)</option>
+                    </select>
+                </td>
+            </tr>
+        </table>
+        <?php submit_button(); ?>
+    </form>
+    <?php
+}
+
 
 function mco_render_bulk_import_tab() {
     ?>
@@ -593,28 +615,97 @@ function mco_render_certificate_templates_tab() {
 }
 
 function mco_render_tools_tab() {
+    // Handle cache clearing
     if (isset($_POST['mco_clear_cache_nonce']) && wp_verify_nonce($_POST['mco_clear_cache_nonce'], 'mco_clear_cache')) {
         delete_transient('mco_app_config_data');
         update_option('mco_config_version', current_time('YmdHis'));
-        echo '<div class="notice notice-success is-dismissible"><p>Server-side application config cache has been cleared. The app will fetch fresh data on its next load.</p></div>';
+        echo '<div class="notice notice-success is-dismissible"><p>Server-side application config cache has been cleared.</p></div>';
     }
+
+    // Handle Google Sheet URL Tester
+    $test_results_html = '';
+    if (isset($_POST['mco_test_sheet_url_nonce']) && wp_verify_nonce($_POST['mco_test_sheet_url_nonce'], 'mco_test_sheet_url_action')) {
+        $sheet_url_to_test = esc_url_raw($_POST['sheet_url_to_test']);
+        $test_results_html = mco_run_sheet_url_test($sheet_url_to_test);
+    }
+
     ?>
     <h2>Tools</h2>
     <p>Use these tools for maintenance and troubleshooting.</p>
     
-    <form method="post" action="">
-        <?php wp_nonce_field('mco_clear_cache', 'mco_clear_cache_nonce'); ?>
-        <table class="form-table">
-            <tr valign="top">
-                <th scope="row">Server Cache</th>
-                <td>
-                    <p class="description" style="margin-bottom: 10px;">The plugin caches the main application configuration data for 1 hour to improve performance. If you've made changes to exam programs, books, or products and don't see them reflected in the app, you can clear this cache manually.</p>
+    <table class="form-table">
+        <tr valign="top">
+            <th scope="row">Server Cache</th>
+            <td>
+                <form method="post" action="">
+                    <?php wp_nonce_field('mco_clear_cache', 'mco_clear_cache_nonce'); ?>
+                    <p class="description" style="margin-bottom: 10px;">The plugin caches app configuration data for performance. Clear this cache if you've made changes and don't see them reflected in the app.</p>
                     <?php submit_button('Clear Server Config Cache', 'secondary', 'submit_clear_cache', false); ?>
-                </td>
-            </tr>
-        </table>
-    </form>
+                </form>
+            </td>
+        </tr>
+        <tr valign="top">
+            <th scope="row">Google Sheet URL Tester</th>
+            <td>
+                <form method="post" action="">
+                    <?php wp_nonce_field('mco_test_sheet_url_action', 'mco_test_sheet_url_nonce'); ?>
+                    <p class="description" style="margin-bottom: 10px;">Test if a Google Sheet URL is accessible from your server. This helps diagnose "Question Sheet: Failure" errors.</p>
+                    <input type="text" name="sheet_url_to_test" class="widefat" placeholder="Paste Google Sheet URL here..." value="<?php echo isset($_POST['sheet_url_to_test']) ? esc_attr($_POST['sheet_url_to_test']) : ''; ?>" />
+                    <?php submit_button('Test URL', 'secondary', 'submit_test_url', false); ?>
+                </form>
+                <?php if (!empty($test_results_html)) : ?>
+                    <div class="mco-feedback-box" style="margin-top: 15px;"><?php echo $test_results_html; ?></div>
+                <?php endif; ?>
+            </td>
+        </tr>
+    </table>
     <?php
 }
+
+function mco_run_sheet_url_test($sheet_url) {
+    if (empty($sheet_url)) {
+        return '<p class="error">Please provide a URL to test.</p>';
+    }
+    
+    $csv_url = '';
+    if (strpos($sheet_url, '/pub?output=csv') !== false) {
+        $csv_url = $sheet_url;
+    } elseif (preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
+        $sheet_id = $matches[1];
+        $csv_url = "https://docs.google.com/spreadsheets/d/{$sheet_id}/export?format=csv&gid=0";
+    }
+
+    if (empty($csv_url)) {
+        return '<p class="error">Invalid Google Sheet URL format.</p>';
+    }
+
+    $response = wp_remote_get($csv_url, ['timeout' => 20, 'sslverify' => false]);
+
+    if (is_wp_error($response)) {
+        return '<p class="error">Connection Error: ' . esc_html($response->get_error_message()) . '</p>';
+    }
+
+    $status_code = wp_remote_retrieve_response_code($response);
+    $body = wp_remote_retrieve_body($response);
+
+    $output = '<ul>';
+    if ($status_code != 200) {
+        $output .= '<li class="error"><strong>Test Failed.</strong> HTTP Status: ' . esc_html($status_code) . '</li>';
+        if ($status_code == 404) {
+            $output .= '<li class="error">This means the sheet was "Not Found". Please ensure its sharing setting is "Anyone with the link can view".</li>';
+        } else {
+            $output .= '<li class="error">Raw Response Body (first 200 chars): <br><code>' . esc_html(substr(strip_tags($body), 0, 200)) . '</code></li>';
+        }
+    } else {
+        $rows = preg_split('/\r\n|\r|\n/', $body);
+        $output .= '<li class="success"><strong>Test Succeeded!</strong> HTTP Status: 200 OK.</li>';
+        $output .= '<li class="success">Found ' . (count($rows) - 1) . ' data rows.</li>';
+        $output .= '<li><strong>Data Preview (first 5 rows):</strong><br><pre>' . esc_html(implode("\n", array_slice($rows, 0, 5))) . '</pre></li>';
+    }
+    $output .= '</ul>';
+
+    return $output;
+}
+
 
 ?>

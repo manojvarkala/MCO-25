@@ -7,6 +7,14 @@
       "name": "Medical Coding Online",
       "website": "coding-online.net",
       "logo": "https://www.coding-online.net/wp-content/uploads/2025/09/coding-logo-vectorised-Copy.png",
+      "availableThemes": [
+          { "id": "default", "name": "Cyberpunk" },
+          { "id": "professional", "name": "Professional" },
+          { "id": "serene", "name": "Serene" },
+          { "id": "academic", "name": "Academic" },
+          { "id": "noir", "name": "Noir" }
+      ],
+      "activeThemeId": "default",
       "exams": [
         {
           "id": "exam-mcf-practice-practice",
