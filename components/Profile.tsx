@@ -6,12 +6,12 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam } from '../types.ts';
-import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight, Gift, Star } from 'lucide-react';
+import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight, Gift, Star, Paintbrush } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 const Profile: FC = () => {
     const { user, token, updateUserName, wonPrize, isSubscribed } = useAuth();
-    const { activeOrg } = useAppContext();
+    const { activeOrg, availableThemes, activeTheme, setActiveTheme } = useAppContext();
     // Fix: Use useNavigate for navigation in v6
     const navigate = useNavigate();
 
@@ -148,6 +148,33 @@ const Profile: FC = () => {
                 ) : (
                     <p className="text-center text-slate-500">Could not load user profile.</p>
                 )}
+            </div>
+            
+            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                    <Paintbrush className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                    Theme & Appearance
+                </h2>
+                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                    Select a theme to change the application's appearance. Your choice is saved on this browser.
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {availableThemes.map(theme => (
+                        <div 
+                            key={theme.id} 
+                            onClick={() => setActiveTheme(theme.id)} 
+                            className={`p-4 rounded-lg border-2 cursor-pointer transition ${activeTheme === theme.id ? 'border-[rgb(var(--color-primary-rgb))]' : 'border-[rgb(var(--color-border-rgb))] hover:border-[rgba(var(--color-primary-rgb),0.5)]'}`}
+                        >
+                            <div className="flex justify-center space-x-1 h-8">
+                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-primary`}></div>
+                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-secondary`}></div>
+                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-accent`}></div>
+                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-background`}></div>
+                            </div>
+                            <p className="font-semibold text-center mt-2 text-[rgb(var(--color-text-default-rgb))]">{theme.name}</p>
+                        </div>
+                    ))}
+                </div>
             </div>
 
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">

@@ -10,11 +10,11 @@ import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 
 const StatCard: FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
-    <div className="bg-slate-50 p-4 rounded-lg flex items-center">
-        <div className="bg-cyan-100 p-3 rounded-full mr-4">{icon}</div>
+    <div className="bg-[rgb(var(--color-muted-rgb))] p-4 rounded-lg flex items-center border border-[rgb(var(--color-border-rgb))]">
+        <div className="bg-[rgba(var(--color-primary-rgb),0.1)] p-3 rounded-full mr-4">{icon}</div>
         <div>
-            <p className="text-sm text-slate-500">{title}</p>
-            <p className="text-2xl font-bold text-slate-800">{value}</p>
+            <p className="text-sm text-[rgb(var(--color-text-muted-rgb))]">{title}</p>
+            <p className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))]">{value}</p>
         </div>
     </div>
 );
@@ -109,10 +109,10 @@ const Dashboard: FC = () => {
         <div className="space-y-8">
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-800">
+                    <h1 className="text-3xl font-bold text-[rgb(var(--color-text-strong-rgb))]">
                         {user ? `Welcome back, ${user.name}!` : "Welcome to the Examination Portal!"}
                     </h1>
-                    <p className="text-slate-500">
+                    <p className="text-[rgb(var(--color-text-muted-rgb))]">
                         {user ? "Ready to ace your next exam?" : "Browse our programs and start your certification journey."}
                     </p>
                 </div>
@@ -120,7 +120,7 @@ const Dashboard: FC = () => {
                     <button
                         onClick={handleSync}
                         disabled={isSyncing}
-                        className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
+                        className="flex items-center gap-2 bg-[rgb(var(--color-muted-rgb))] hover:bg-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-default-rgb))] font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
                     >
                         <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
                         {isSyncing ? 'Syncing...' : 'Sync My Exams'}
@@ -129,101 +129,101 @@ const Dashboard: FC = () => {
             </div>
 
             {user && inProgressExam && (
-                <div className="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-400 flex justify-between items-center">
+                <div className="bg-[rgba(var(--color-secondary-rgb),0.1)] p-4 rounded-lg border-l-4 border-[rgb(var(--color-secondary-rgb))] flex justify-between items-center">
                     <div>
-                        <h3 className="font-bold text-amber-800">You have an exam in progress!</h3>
-                        <p className="text-sm text-amber-700">"{inProgressExam.examName}"</p>
+                        <h3 className="font-bold text-[rgb(var(--color-secondary-hover-rgb))]">You have an exam in progress!</h3>
+                        <p className="text-sm text-[rgb(var(--color-secondary-hover-rgb))] opacity-80">"{inProgressExam.examName}"</p>
                     </div>
-                    <button onClick={() => navigate(`/test/${inProgressExam.examId}`)} className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg">
+                    <button onClick={() => navigate(`/test/${inProgressExam.examId}`)} className="bg-[rgb(var(--color-secondary-rgb))] hover:bg-[rgb(var(--color-secondary-hover-rgb))] text-white font-bold py-2 px-4 rounded-lg">
                         Resume Exam
                     </button>
                 </div>
             )}
             
             {!isSubscribed && (
-                <div className="bg-white p-6 rounded-xl shadow-md">
-                    <h2 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-2"><Star className="text-yellow-400" /> Unlock Your Full Potential</h2>
-                    <p className="text-slate-500 mb-6">Choose a plan to get unlimited access to all practice exams, AI-powered study guides, and more.</p>
+                <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2 flex items-center gap-2"><Star className="text-yellow-400" /> Unlock Your Full Potential</h2>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">Choose a plan to get unlimited access to all practice exams, AI-powered study guides, and more.</p>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
                         {/* Monthly Plan Card */}
-                        <div className="border border-slate-200 rounded-lg p-6 flex flex-col">
-                            <h3 className="text-xl font-bold text-cyan-600">Monthly Subscription</h3>
-                            <p className="flex-grow text-slate-500 mt-2 text-sm">Perfect for focused, short-term preparation.</p>
-                            <p className="text-4xl font-extrabold text-slate-800 mt-4">${monthlyPrice.toFixed(2)} <span className="text-base font-medium text-slate-500">/month</span></p>
-                            <ul className="space-y-2 text-slate-600 mt-4 flex-grow">
-                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> Unlimited Practice Exams</li>
-                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> Unlimited AI Feedback</li>
-                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> Cancel Anytime</li>
+                        <div className="border border-[rgb(var(--color-border-rgb))] rounded-lg p-6 flex flex-col bg-[rgb(var(--color-muted-rgb))]">
+                            <h3 className="text-xl font-bold text-[rgb(var(--color-primary-rgb))]">Monthly Subscription</h3>
+                            <p className="flex-grow text-[rgb(var(--color-text-muted-rgb))] mt-2 text-sm">Perfect for focused, short-term preparation.</p>
+                            <p className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] mt-4">${monthlyPrice.toFixed(2)} <span className="text-base font-medium text-[rgb(var(--color-text-muted-rgb))]">/month</span></p>
+                            <ul className="space-y-2 text-[rgb(var(--color-text-default-rgb))] mt-4 flex-grow">
+                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> Unlimited Practice Exams</li>
+                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> Unlimited AI Feedback</li>
+                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> Cancel Anytime</li>
                             </ul>
-                            <a href={monthlySubUrl} target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-cyan-600 text-white font-bold py-3 text-center rounded-lg hover:bg-cyan-700 transition">Subscribe Now</a>
+                            <a href={monthlySubUrl} target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-[rgb(var(--color-primary-rgb))] text-white font-bold py-3 text-center rounded-lg hover:bg-[rgb(var(--color-primary-hover-rgb))] transition">Subscribe Now</a>
                         </div>
 
                         {/* Yearly Plan Card (Highlighted) */}
-                        <div className="border-2 border-purple-500 rounded-lg p-6 flex flex-col relative transform lg:scale-105">
-                            <div className="absolute top-0 -translate-y-1/2 bg-purple-500 text-white text-xs font-bold uppercase px-3 py-1 rounded-full">Best Value</div>
-                            <h3 className="text-xl font-bold text-purple-600">Yearly Subscription</h3>
-                             <p className="flex-grow text-slate-500 mt-2 text-sm">For continuous learning and mastering your craft.</p>
-                            <p className="text-4xl font-extrabold text-slate-800 mt-4">${yearlyPrice.toFixed(2)} <span className="text-base font-medium text-slate-500">/year</span></p>
-                            <p className="text-sm text-green-600 font-semibold">Saves over 35%!</p>
-                            <ul className="space-y-2 text-slate-600 mt-4 flex-grow">
-                                 <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> Unlimited Practice Exams</li>
-                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> Unlimited AI Feedback</li>
-                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> Billed Annually</li>
+                        <div className="border-2 border-[rgb(var(--color-accent-rgb))] bg-[rgb(var(--color-card-rgb))] rounded-lg p-6 flex flex-col relative transform lg:scale-105">
+                            <div className="absolute top-0 -translate-y-1/2 bg-[rgb(var(--color-accent-rgb))] text-white text-xs font-bold uppercase px-3 py-1 rounded-full">Best Value</div>
+                            <h3 className="text-xl font-bold text-[rgb(var(--color-accent-rgb))]">Yearly Subscription</h3>
+                             <p className="flex-grow text-[rgb(var(--color-text-muted-rgb))] mt-2 text-sm">For continuous learning and mastering your craft.</p>
+                            <p className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] mt-4">${yearlyPrice.toFixed(2)} <span className="text-base font-medium text-[rgb(var(--color-text-muted-rgb))]">/year</span></p>
+                            <p className="text-sm text-[rgb(var(--color-success-rgb))] font-semibold">Saves over 35%!</p>
+                            <ul className="space-y-2 text-[rgb(var(--color-text-default-rgb))] mt-4 flex-grow">
+                                 <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> Unlimited Practice Exams</li>
+                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> Unlimited AI Feedback</li>
+                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> Billed Annually</li>
                             </ul>
-                            <a href={yearlySubUrl} target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-purple-600 text-white font-bold py-3 text-center rounded-lg hover:bg-purple-700 transition">Subscribe & Save</a>
+                            <a href={yearlySubUrl} target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-[rgb(var(--color-accent-rgb))] text-white font-bold py-3 text-center rounded-lg hover:opacity-90 transition">Subscribe & Save</a>
                         </div>
 
                         {/* Exam Bundle Card */}
-                        <div className="border border-slate-200 rounded-lg p-6 flex flex-col">
-                            <h3 className="text-xl font-bold text-amber-600">Exam Bundle</h3>
-                             <p className="flex-grow text-slate-500 mt-2 text-sm">The complete package for one certification.</p>
+                        <div className="border border-[rgb(var(--color-border-rgb))] bg-[rgb(var(--color-muted-rgb))] rounded-lg p-6 flex flex-col">
+                            <h3 className="text-xl font-bold text-[rgb(var(--color-secondary-hover-rgb))]">Exam Bundle</h3>
+                             <p className="flex-grow text-[rgb(var(--color-text-muted-rgb))] mt-2 text-sm">The complete package for one certification.</p>
                              <div className="mt-4">
                                 {bundlePrice && bundleRegularPrice && bundleRegularPrice > bundlePrice ? (
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-xl line-through text-slate-400">${bundleRegularPrice.toFixed(2)}</span>
-                                        <span className="text-4xl font-extrabold text-slate-800">${bundlePrice.toFixed(2)}</span>
+                                        <span className="text-xl line-through text-[rgb(var(--color-text-muted-rgb))] opacity-70">${bundleRegularPrice.toFixed(2)}</span>
+                                        <span className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))]">${bundlePrice.toFixed(2)}</span>
                                     </div>
                                 ) : (
-                                    <span className="text-4xl font-extrabold text-slate-800">
+                                    <span className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))]">
                                         {bundlePrice ? `$${bundlePrice.toFixed(2)}` : '$59.99'}
                                     </span>
                                 )}
                             </div>
-                             <ul className="space-y-2 text-slate-600 mt-4 flex-grow">
-                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> One Certification Exam</li>
-                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> 1-Month Unlimited Practice</li>
-                                <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> 1-Month Unlimited AI Feedback</li>
+                             <ul className="space-y-2 text-[rgb(var(--color-text-default-rgb))] mt-4 flex-grow">
+                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> One Certification Exam</li>
+                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> 1-Month Unlimited Practice</li>
+                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> 1-Month Unlimited AI Feedback</li>
                             </ul>
-                            <a href={bundleUrl} target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-amber-500 text-white font-bold py-3 text-center rounded-lg hover:bg-amber-600 transition">Browse Bundles</a>
+                            <a href={bundleUrl} target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-[rgb(var(--color-secondary-rgb))] text-white font-bold py-3 text-center rounded-lg hover:bg-[rgb(var(--color-secondary-hover-rgb))] transition">Browse Bundles</a>
                         </div>
                     </div>
                 </div>
             )}
 
             {user && (
-                <div className="bg-white p-6 rounded-xl shadow-md">
-                    <h2 className="text-xl font-bold text-slate-800 mb-4">My Stats</h2>
+                <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">My Stats</h2>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <StatCard title="Total Attempts" value={stats.totalAttempts} icon={<FileText className="text-cyan-600" />} />
-                        <StatCard title="Average Score" value={stats.averageScore} icon={<Activity className="text-cyan-600" />} />
-                        <StatCard title="Best Score" value={stats.bestScore} icon={<BarChart2 className="text-cyan-600" />} />
-                        <StatCard title="Exams Passed" value={stats.examsPassed} icon={<Award className="text-cyan-600" />} />
+                        <StatCard title="Total Attempts" value={stats.totalAttempts} icon={<FileText className="text-[rgb(var(--color-primary-rgb))]" />} />
+                        <StatCard title="Average Score" value={stats.averageScore} icon={<Activity className="text-[rgb(var(--color-primary-rgb))]" />} />
+                        <StatCard title="Best Score" value={stats.bestScore} icon={<BarChart2 className="text-[rgb(var(--color-primary-rgb))]" />} />
+                        <StatCard title="Exams Passed" value={stats.examsPassed} icon={<Award className="text-[rgb(var(--color-primary-rgb))]" />} />
                     </div>
                 </div>
             )}
 
             <div>
-                 <h2 className="text-2xl font-bold text-slate-800 mb-4">Exam Programs</h2>
+                 <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">Exam Programs</h2>
                  <div className="space-y-6">
                      {examCategories.map((category, index) => {
                          const certAttempts = user && category.certExam ? results.filter(r => r.examId === category.certExam.id).length : undefined;
 
                          return (
-                            <div key={category.id} id={category.id} className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                            <div key={category.id} id={category.id} className="bg-[rgb(var(--color-muted-rgb))] p-6 rounded-xl border border-[rgb(var(--color-border-rgb))]">
                                 <Link to={`/program/${category.id}`} className="group">
-                                    <h3 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-cyan-600 transition">{category.name}</h3>
+                                    <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-1 group-hover:text-[rgb(var(--color-primary-rgb))] transition">{category.name}</h3>
                                 </Link>
-                                <div className="text-slate-500 mb-4 text-sm" dangerouslySetInnerHTML={{ __html: category.description }} />
+                                <div className="text-[rgb(var(--color-text-muted-rgb))] mb-4 text-sm" dangerouslySetInnerHTML={{ __html: category.description }} />
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} gradientClass={practiceGradients[index % practiceGradients.length]} activeOrg={activeOrg} examPrices={examPrices} />}
                                     {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} gradientClass={certGradients[index % certGradients.length]} activeOrg={activeOrg} examPrices={examPrices} attemptsMade={certAttempts}/>}
@@ -235,32 +235,32 @@ const Dashboard: FC = () => {
             </div>
 
              {user && (
-                <div className="bg-white p-6 rounded-xl shadow-md">
-                    <h2 className="text-xl font-bold text-slate-800 mb-4">My Exam History</h2>
+                <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">My Exam History</h2>
                     <div className="space-y-3">
                         {results.length > 0 ? results.slice(0, 5).map(result => {
                             const exam = activeOrg.exams.find(e => e.id === result.examId);
                             if (!exam) return null;
                             const isPass = result.score >= exam.passScore;
                             return (
-                                <div key={result.testId} className="bg-slate-50 p-3 rounded-lg flex justify-between items-center hover:bg-slate-100 transition">
+                                <div key={result.testId} className="bg-[rgb(var(--color-muted-rgb))] p-3 rounded-lg flex justify-between items-center hover:bg-[rgb(var(--color-border-rgb))] transition">
                                     <div>
-                                        <p className="font-semibold text-slate-800">{exam.name}</p>
-                                        <p className="text-xs text-slate-500">{new Date(result.timestamp).toLocaleString()}</p>
+                                        <p className="font-semibold text-[rgb(var(--color-text-strong-rgb))]">{exam.name}</p>
+                                        <p className="text-xs text-[rgb(var(--color-text-muted-rgb))]">{new Date(result.timestamp).toLocaleString()}</p>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <span className={`font-bold text-lg ${isPass ? 'text-green-600' : 'text-red-600'}`}>{result.score}%</span>
-                                        {isPass ? <CheckCircle size={20} className="text-green-500" /> : <XCircle size={20} className="text-red-500" />}
-                                        <button onClick={() => navigate(`/results/${result.testId}`)} className="text-cyan-600 hover:text-cyan-800">
+                                        <span className={`font-bold text-lg ${isPass ? 'text-[rgb(var(--color-success-rgb))]' : 'text-[rgb(var(--color-danger-rgb))]'}`}>{result.score}%</span>
+                                        {isPass ? <CheckCircle size={20} className="text-[rgb(var(--color-success-rgb))]" /> : <XCircle size={20} className="text-[rgb(var(--color-danger-rgb))]" />}
+                                        <button onClick={() => navigate(`/results/${result.testId}`)} className="text-[rgb(var(--color-primary-rgb))] hover:text-[rgb(var(--color-primary-hover-rgb))]">
                                             <ChevronRight size={20} />
                                         </button>
                                     </div>
                                 </div>
                             );
-                        }) : <p className="text-center text-slate-500 py-4">You haven't completed any exams yet.</p>}
+                        }) : <p className="text-center text-[rgb(var(--color-text-muted-rgb))] py-4">You haven't completed any exams yet.</p>}
                          {results.length > 5 && (
                             <div className="text-center mt-4">
-                                <Link to='/profile' className="font-semibold text-cyan-600 hover:underline">
+                                <Link to='/profile' className="font-semibold text-[rgb(var(--color-primary-rgb))] hover:underline">
                                     View All History
                                 </Link>
                             </div>

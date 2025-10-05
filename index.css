@@ -102,6 +102,33 @@ html[data-theme='noir'] {
   --color-text-inverted-rgb: 17 24 39; /* gray-900 */
 }
 
+/* Theme Swatches for UI Picker */
+.theme-swatch-default-primary { background-color: #0ea5e9; }
+.theme-swatch-default-secondary { background-color: #eab308; }
+.theme-swatch-default-accent { background-color: #a855f7; }
+.theme-swatch-default-background { background-color: #f1f5f9; border: 1px solid #e2e8f0; }
+
+.theme-swatch-professional-primary { background-color: #3b82f6; }
+.theme-swatch-professional-secondary { background-color: #10b981; }
+.theme-swatch-professional-accent { background-color: #ef4444; }
+.theme-swatch-professional-background { background-color: #f3f4f6; border: 1px solid #e5e7eb; }
+
+.theme-swatch-serene-primary { background-color: #31c48d; }
+.theme-swatch-serene-secondary { background-color: #fb923c; }
+.theme-swatch-serene-accent { background-color: #6366f1; }
+.theme-swatch-serene-background { background-color: #f0fdf4; border: 1px solid #dcfce7; }
+
+.theme-swatch-academic-primary { background-color: #991b1b; }
+.theme-swatch-academic-secondary { background-color: #ca8a04; }
+.theme-swatch-academic-accent { background-color: #172554; }
+.theme-swatch-academic-background { background-color: #fefce8; border: 1px solid #fef9c3; }
+
+.theme-swatch-noir-primary { background-color: #1d4ed8; }
+.theme-swatch-noir-secondary { background-color: #ca8a04; }
+.theme-swatch-noir-accent { background-color: #7c3aed; }
+.theme-swatch-noir-background { background-color: #111827; border: 1px solid #374151; }
+
+
 /* Helper styles for themed gradients on cards */
 .premium-header-gradient {
   background: linear-gradient(to right, rgb(var(--color-card-rgb)) 25%, rgb(var(--color-background-rgb)) 45%);

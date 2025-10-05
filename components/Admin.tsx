@@ -70,7 +70,7 @@ const HealthCheckItem: FC<HealthCheckItemProps> = ({ status, title, message, tro
 };
 
 const Admin: FC = () => {
-    const { activeOrg, updateActiveOrg, availableThemes, activeTheme, setActiveTheme } = useAppContext();
+    const { activeOrg, updateActiveOrg } = useAppContext();
     const { token } = useAuth();
     
     const prizeOptions = useMemo(() => {
@@ -452,33 +452,6 @@ const Admin: FC = () => {
     return (
         <div className="max-w-4xl mx-auto space-y-8">
             <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">Admin Panel</h1>
-            
-            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
-                    <Paintbrush className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    Theme & Appearance
-                </h2>
-                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                    Select a theme to change the application's appearance. Your choice is saved locally on this browser and overrides the site-wide default.
-                </p>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {availableThemes.map(theme => (
-                        <div 
-                            key={theme.id} 
-                            onClick={() => setActiveTheme(theme.id)} 
-                            className={`p-4 rounded-lg border-2 cursor-pointer transition ${activeTheme === theme.id ? 'border-[rgb(var(--color-primary-rgb))]' : 'border-[rgb(var(--color-border-rgb))] hover:border-[rgba(var(--color-primary-rgb),0.5)]'}`}
-                        >
-                            <div className="flex justify-center space-x-1 h-8">
-                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-primary`}></div>
-                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-secondary`}></div>
-                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-accent`}></div>
-                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-background`}></div>
-                            </div>
-                            <p className="font-semibold text-center mt-2 text-[rgb(var(--color-text-default-rgb))]">{theme.name}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
 
             <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                 <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
