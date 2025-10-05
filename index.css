@@ -134,6 +134,14 @@ html[data-theme='noir'] {
   background: linear-gradient(to right, rgb(var(--color-card-rgb)) 25%, rgb(var(--color-background-rgb)) 45%);
 }
 
+.exam-card--practice {
+  background-image: linear-gradient(to bottom right, rgb(var(--color-secondary-rgb)), rgb(var(--color-accent-rgb)));
+}
+.exam-card--cert {
+  background-image: linear-gradient(to bottom right, rgb(var(--color-primary-rgb)), rgb(var(--color-accent-rgb)));
+}
+
+
 @keyframes pointer-tick {
   0%, 100% { transform: rotate(0deg); }
   50% { transform: rotate(-5deg); }

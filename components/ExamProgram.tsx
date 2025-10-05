@@ -53,9 +53,6 @@ const ExamProgram: FC = () => {
     
     const [results, setResults] = useState<TestResult[]>([]);
     
-    const practiceGradients = ['bg-gradient-to-br from-sky-500 to-cyan-500', 'bg-gradient-to-br from-emerald-500 to-green-500'];
-    const certGradients = ['bg-gradient-to-br from-indigo-500 to-purple-600', 'bg-gradient-to-br from-rose-500 to-pink-600'];
-
     useEffect(() => {
         if (user) {
             const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
@@ -198,7 +195,6 @@ const ExamProgram: FC = () => {
                         programId={category.id} 
                         isPractice={true} 
                         isPurchased={false} 
-                        gradientClass={practiceGradients[0]} 
                         activeOrg={activeOrg} 
                         examPrices={examPrices} 
                         hideDetailsLink={true}
@@ -210,7 +206,6 @@ const ExamProgram: FC = () => {
                         programId={category.id} 
                         isPractice={false} 
                         isPurchased={paidExamIds.includes(certExam.productSku)} 
-                        gradientClass={certGradients[0]} 
                         activeOrg={activeOrg} 
                         examPrices={examPrices}
                         hideDetailsLink={true}

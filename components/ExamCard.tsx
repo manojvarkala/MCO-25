@@ -10,14 +10,13 @@ export interface ExamCardProps {
     programId: string;
     isPractice: boolean;
     isPurchased: boolean;
-    gradientClass: string;
     activeOrg: Organization;
     examPrices: { [key: string]: any } | null;
     hideDetailsLink?: boolean;
     attemptsMade?: number;
 }
 
-const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, gradientClass, activeOrg, examPrices, hideDetailsLink = false, attemptsMade }) => {
+const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, activeOrg, examPrices, hideDetailsLink = false, attemptsMade }) => {
     const navigate = useNavigate();
     const { isSubscribed } = useAuth();
     const canTake = isPractice || isPurchased || isSubscribed;
@@ -41,9 +40,10 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
 
     const Icon = isPractice ? BookOpen : Award;
     const headerText = isPractice ? "Practice Exam" : (exam.certificateEnabled ? "Certification Exam" : "Proficiency Exam");
+    const themeGradientClass = isPractice ? 'exam-card--practice' : 'exam-card--cert';
 
     return (
-        <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col text-white relative ${gradientClass}`}>
+        <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col text-white relative ${themeGradientClass}`}>
             <div className="p-6 flex flex-col flex-grow">
                 <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">

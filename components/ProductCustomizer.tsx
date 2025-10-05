@@ -1,7 +1,7 @@
 import React, { FC, useState, useMemo, ChangeEvent } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { ProductVariation, ProductVariationType, BillingPeriod } from '../types.ts';
-import { DownloadCloud, Package, PlusCircle, Trash2, Edit, Save, X, Tag } from 'lucide-react';
+import { DownloadCloud, Package, PlusCircle, Trash2, Edit, Save, X, Tag, CheckSquare, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ProductCustomizer: FC = () => {
@@ -37,12 +37,59 @@ const ProductCustomizer: FC = () => {
     });
 
     const [editingVariation, setEditingVariation] = useState<ProductVariation | null>(null);
+    const [selectedVariations, setSelectedVariations] = useState<Set<string>>(new Set());
 
-    const handleUpdateVariation = (programId: string, variationId: string, field: keyof ProductVariation, value: string) => {
-        setProductConfigs(prev => ({
-            ...prev,
-            [programId]: prev[programId].map(v => v.id === variationId ? { ...v, [field]: value } : v)
-        }));
+    // State for bulk edit toolbar
+    const [bulkRegularPrice, setBulkRegularPrice] = useState('');
+    const [bulkSalePrice, setBulkSalePrice] = useState('');
+
+    const allVariationIds = useMemo(() => {
+        return Object.values(productConfigs).flat().map(v => v.id);
+    }, [productConfigs]);
+
+    const handleSelectVariation = (variationId: string) => {
+        setSelectedVariations(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(variationId)) {
+                newSet.delete(variationId);
+            } else {
+                newSet.add(variationId);
+            }
+            return newSet;
+        });
+    };
+
+    const handleSelectAll = () => {
+        if (selectedVariations.size === allVariationIds.length) {
+            setSelectedVariations(new Set());
+        } else {
+            setSelectedVariations(new Set(allVariationIds));
+        }
+    };
+
+    const handleApplyBulkEdit = (field: 'regularPrice' | 'salePrice') => {
+        const value = field === 'regularPrice' ? bulkRegularPrice : bulkSalePrice;
+        if (value === '') {
+            toast.error(`Please enter a value to apply.`);
+            return;
+        }
+
+        setProductConfigs(prev => {
+            const newConfigs = { ...prev };
+            for (const progId in newConfigs) {
+                newConfigs[progId] = newConfigs[progId].map(v => {
+                    if (selectedVariations.has(v.id)) {
+                        return { ...v, [field]: value };
+                    }
+                    return v;
+                });
+            }
+            return newConfigs;
+        });
+
+        toast.success(`Applied ${field} to ${selectedVariations.size} items.`);
+        if (field === 'regularPrice') setBulkRegularPrice('');
+        if (field === 'salePrice') setBulkSalePrice('');
     };
     
     const handleAddVariation = (programId: string) => {
@@ -204,7 +251,7 @@ const ProductCustomizer: FC = () => {
     };
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8">
+        <div className={`max-w-6xl mx-auto space-y-8 ${selectedVariations.size > 0 ? 'pb-24' : ''}`}>
              {editingVariation && <EditModal programId={Object.keys(productConfigs).find(key => productConfigs[key].some(v => v.id === editingVariation.id)) || ''} />}
             <div className="flex justify-between items-center">
                 <h1 className="text-4xl font-extrabold text-slate-900">Product Customizer</h1>
@@ -220,11 +267,13 @@ const ProductCustomizer: FC = () => {
             <div className="space-y-6">
                 {activeOrg?.examProductCategories.map(program => (
                     <div key={program.id} className="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-2xl font-bold text-slate-800 flex items-center">
-                                <Package className="mr-3 text-cyan-500" />
-                                {program.name}
-                            </h2>
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h2 className="text-2xl font-bold text-slate-800 flex items-center">
+                                    <Package className="mr-3 text-cyan-500" />
+                                    {program.name}
+                                </h2>
+                            </div>
                             <button onClick={() => handleAddVariation(program.id)} className="text-cyan-600 hover:text-cyan-800 flex items-center gap-1 font-semibold text-sm">
                                 <PlusCircle size={16}/> Add Variation
                             </button>
@@ -232,12 +281,20 @@ const ProductCustomizer: FC = () => {
 
                         <div className="space-y-3">
                             {productConfigs[program.id]?.map(variation => (
-                                <div key={variation.id} className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex justify-between items-center">
-                                    <div>
-                                        <p className="font-semibold text-slate-800">{variation.name} <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-mono">{variation.sku}</span></p>
-                                        <p className="text-sm text-slate-500">
-                                            Type: <span className="font-medium">{variation.type}</span> | Price: <span className="font-medium">${variation.regularPrice}</span> {variation.salePrice && <span className="line-through text-slate-400">${variation.salePrice}</span>}
-                                        </p>
+                                <div key={variation.id} className={`p-3 rounded-lg border flex justify-between items-center transition-colors ${selectedVariations.has(variation.id) ? 'bg-cyan-50 border-cyan-300' : 'bg-slate-50 border-slate-200'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            className="h-5 w-5 rounded text-cyan-600 focus:ring-cyan-500 border-slate-300"
+                                            checked={selectedVariations.has(variation.id)}
+                                            onChange={() => handleSelectVariation(variation.id)}
+                                        />
+                                        <div>
+                                            <p className="font-semibold text-slate-800">{variation.name} <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-mono">{variation.sku}</span></p>
+                                            <p className="text-sm text-slate-500">
+                                                Type: <span className="font-medium">{variation.type}</span> | Price: <span className="font-medium">${variation.regularPrice}</span> {variation.salePrice && <span className="line-through text-slate-400">${variation.salePrice}</span>}
+                                            </p>
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <button onClick={() => handleEditClick(variation)} className="p-2 text-slate-500 hover:text-blue-600 rounded-full hover:bg-blue-100"><Edit size={16}/></button>
@@ -249,6 +306,41 @@ const ProductCustomizer: FC = () => {
                     </div>
                 ))}
             </div>
+
+            {selectedVariations.size > 0 && (
+                 <div className="fixed bottom-0 left-0 right-0 bg-slate-800 p-3 shadow-lg z-20 border-t border-slate-600 animate-fade-in-up">
+                    <div className="max-w-6xl mx-auto flex justify-between items-center gap-4">
+                        <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 text-white font-semibold cursor-pointer">
+                                <input 
+                                    type="checkbox"
+                                    className="h-5 w-5 rounded text-cyan-500 bg-slate-700 border-slate-500 focus:ring-cyan-500"
+                                    onChange={handleSelectAll}
+                                    checked={selectedVariations.size === allVariationIds.length}
+                                />
+                                {selectedVariations.size} selected
+                            </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <input type="text" value={bulkRegularPrice} onChange={e => setBulkRegularPrice(e.target.value)} placeholder="Regular Price" className="p-2 rounded-md bg-slate-700 text-white border border-slate-500 text-sm w-32"/>
+                            <button onClick={() => handleApplyBulkEdit('regularPrice')} className="px-3 py-2 bg-slate-600 text-white rounded-md text-sm font-semibold hover:bg-slate-500">Apply</button>
+                        </div>
+                         <div className="flex items-center gap-2">
+                            <input type="text" value={bulkSalePrice} onChange={e => setBulkSalePrice(e.target.value)} placeholder="Sale Price" className="p-2 rounded-md bg-slate-700 text-white border border-slate-500 text-sm w-32"/>
+                            <button onClick={() => handleApplyBulkEdit('salePrice')} className="px-3 py-2 bg-slate-600 text-white rounded-md text-sm font-semibold hover:bg-slate-500">Apply</button>
+                        </div>
+                    </div>
+                     <style>{`
+                        @keyframes fade-in-up {
+                            from { opacity: 0; transform: translateY(100%); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                        .animate-fade-in-up {
+                            animation: fade-in-up 0.3s ease-out forwards;
+                        }
+                    `}</style>
+                </div>
+            )}
         </div>
     );
 };

@@ -15,8 +15,57 @@ const ExamProgramCustomizer: FC = () => {
     const { activeOrg, updateActiveOrg } = useAppContext();
     const { token } = useAuth();
     const [editingState, setEditingState] = useState<EditState>({});
-    const [isSaving, setIsSaving] = useState<string | null>(null); // Holds the program ID being saved for individual saves
-    const [isSavingAll, setIsSavingAll] = useState<boolean>(false); // For the "Save All" button
+    const [isSaving, setIsSaving] = useState<string | null>(null);
+    const [isSavingAll, setIsSavingAll] = useState<boolean>(false);
+    
+    // State for bulk editing
+    const [selectedPrograms, setSelectedPrograms] = useState<Set<string>>(new Set());
+    const [bulkState, setBulkState] = useState({
+        questionSourceUrl: '',
+        practice_numberOfQuestions: '',
+        practice_durationMinutes: '',
+        cert_numberOfQuestions: '',
+        cert_durationMinutes: '',
+    });
+
+    const allProgramIds = useMemo(() => {
+        return activeOrg?.examProductCategories.map(p => p.id) || [];
+    }, [activeOrg]);
+
+    const handleSelectProgram = (programId: string) => {
+        setSelectedPrograms(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(programId)) {
+                newSet.delete(programId);
+            } else {
+                newSet.add(programId);
+            }
+            return newSet;
+        });
+    };
+
+    const handleSelectAll = () => {
+        if (selectedPrograms.size === allProgramIds.length) {
+            setSelectedPrograms(new Set());
+        } else {
+            setSelectedPrograms(new Set(allProgramIds));
+        }
+    };
+
+    const handleApplyBulkEdit = (field: keyof typeof bulkState) => {
+        const value = bulkState[field];
+        if (value.trim() === '') {
+            toast.error(`Please enter a value to apply.`);
+            return;
+        }
+
+        selectedPrograms.forEach(programId => {
+            handleEdit(programId, field, value);
+        });
+
+        toast.success(`Staged changes for '${field}' on ${selectedPrograms.size} items.`);
+        setBulkState(prev => ({ ...prev, [field]: '' }));
+    };
 
     const handleEdit = (id: string, field: string, value: any) => {
         setEditingState(prev => ({
@@ -75,16 +124,19 @@ const ExamProgramCustomizer: FC = () => {
         const toastId = toast.loading('Saving all changes...');
     
         try {
-            const savePromises = Object.keys(editingState).map(programId => 
-                googleSheetsService.adminUpdateExamProgram(token, programId, editingState[programId])
-            );
-    
-            const responses = await Promise.all(savePromises);
-    
-            const lastResponse = responses[responses.length - 1];
+            // Create a single payload for all updates
+            const fullUpdatePayload: { [programId: string]: any } = {};
+            Object.keys(editingState).forEach(programId => {
+                fullUpdatePayload[programId] = editingState[programId];
+            });
+            
+            // This assumes the backend can handle a batch update. If not, revert to Promise.all
+            const lastResponse = await googleSheetsService.adminUpdateExamProgram(token, 'batch', fullUpdatePayload);
+
             if (lastResponse && lastResponse.organizations) {
                 updateActiveOrg(lastResponse.organizations[0]);
                 setEditingState({});
+                setSelectedPrograms(new Set());
                 toast.success('All changes saved successfully!', { id: toastId });
             } else {
                 throw new Error('Invalid response from server after saving.');
@@ -100,6 +152,7 @@ const ExamProgramCustomizer: FC = () => {
     const handleCancelAll = () => {
         if (window.confirm('Are you sure you want to discard all unsaved changes?')) {
             setEditingState({});
+            setSelectedPrograms(new Set());
             toast('All changes discarded.');
         }
     };
@@ -109,11 +162,24 @@ const ExamProgramCustomizer: FC = () => {
     const anyChanges = Object.keys(editingState).length > 0;
 
     return (
-        <div className={`max-w-6xl mx-auto space-y-8 ${anyChanges ? 'pb-24' : ''}`}>
+        <div className={`max-w-6xl mx-auto space-y-8 ${(anyChanges || selectedPrograms.size > 0) ? 'pb-24' : ''}`}>
             <h1 className="text-4xl font-extrabold text-slate-900">Exam Program Customizer</h1>
             <p className="text-slate-600 -mt-6">Manage the core settings for each exam program. Changes are saved directly to your WordPress backend.</p>
 
             <div className="space-y-6">
+                <div className="bg-white p-2 rounded-lg border border-slate-200">
+                     <label className="flex items-center gap-3 p-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            className="h-5 w-5 rounded text-cyan-600 focus:ring-cyan-500 border-slate-300"
+                            onChange={handleSelectAll}
+                            checked={selectedPrograms.size === allProgramIds.length && allProgramIds.length > 0}
+                            disabled={allProgramIds.length === 0}
+                        />
+                        <span className="font-semibold text-slate-700">Select All Programs</span>
+                    </label>
+                </div>
+
                 {activeOrg?.examProductCategories.map(program => {
                     const practiceExam = activeOrg.exams.find(e => e.id === program.practiceExamId);
                     const certExam = activeOrg.exams.find(e => e.id === program.certificationExamId);
@@ -122,77 +188,84 @@ const ExamProgramCustomizer: FC = () => {
                     if (!practiceExam || !certExam) return null;
 
                     return (
-                        <div key={program.id} className={`bg-white p-6 rounded-xl shadow-lg border transition-colors ${isDirty(program.id) ? 'border-cyan-400' : 'border-slate-200'}`}>
-                            <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-2xl font-bold text-slate-800">{currentEdit.programName ?? program.name}</h2>
-                                {isDirty(program.id) && (
-                                    <div className="flex items-center gap-2">
-                                        <button onClick={() => handleSave(program.id)} disabled={isSaving === program.id || isSavingAll} className="flex items-center gap-1 px-3 py-1 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600 disabled:opacity-50">
-                                            {isSaving === program.id ? <Spinner size="sm"/> : <Save size={14} />} Save
-                                        </button>
-                                        <button onClick={() => handleCancel(program.id)} disabled={isSaving === program.id || isSavingAll} className="flex items-center gap-1 px-3 py-1 bg-slate-200 text-slate-700 rounded-md text-sm font-semibold hover:bg-slate-300 disabled:opacity-50">
-                                            <X size={14} /> Cancel
-                                        </button>
+                        <div key={program.id} className={`bg-white p-6 rounded-xl shadow-lg border transition-colors ${selectedPrograms.has(program.id) ? 'border-cyan-400 bg-cyan-50/50' : (isDirty(program.id) ? 'border-amber-400' : 'border-slate-200')}`}>
+                           <div className="flex items-start gap-4">
+                                <input
+                                    type="checkbox"
+                                    className="h-5 w-5 rounded text-cyan-600 focus:ring-cyan-500 border-slate-300 mt-2"
+                                    checked={selectedPrograms.has(program.id)}
+                                    onChange={() => handleSelectProgram(program.id)}
+                                />
+                                <div className="flex-grow">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="text-2xl font-bold text-slate-800">{currentEdit.programName ?? program.name}</h2>
+                                        {isDirty(program.id) && !selectedPrograms.has(program.id) && (
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={() => handleSave(program.id)} disabled={isSaving === program.id || isSavingAll} className="flex items-center gap-1 px-3 py-1 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600 disabled:opacity-50">
+                                                    {isSaving === program.id ? <Spinner size="sm"/> : <Save size={14} />} Save
+                                                </button>
+                                                <button onClick={() => handleCancel(program.id)} disabled={isSaving === program.id || isSavingAll} className="flex items-center gap-1 px-3 py-1 bg-slate-200 text-slate-700 rounded-md text-sm font-semibold hover:bg-slate-300 disabled:opacity-50">
+                                                    <X size={14} /> Cancel
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
 
-                            <div className="space-y-2 mb-6">
-                                <div className="flex items-center gap-2"><LinkIcon size={14} className="text-slate-400"/><span className="font-semibold text-sm w-40">Question Source URL:</span><input type="text" value={currentEdit.questionSourceUrl ?? program.questionSourceUrl} onChange={(e) => handleEdit(program.id, 'questionSourceUrl', e.target.value)} className={inputClass} /></div>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Practice Exam */}
-                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
-                                    <h3 className="font-bold text-lg text-slate-700">Practice Exam</h3>
-                                    <div className="flex items-center gap-2"><FileText size={14} className="text-slate-400"/><span className="font-semibold text-sm w-32">Name:</span><input type="text" value={currentEdit.practice_name ?? practiceExam.name} onChange={(e) => handleEdit(program.id, 'practice_name', e.target.value)} className={inputClass} /></div>
-                                    <div className="flex items-center gap-2"><HelpCircle size={14} className="text-slate-400"/><span className="font-semibold text-sm w-32"># Questions:</span><input type="number" value={currentEdit.practice_numberOfQuestions ?? practiceExam.numberOfQuestions} onChange={(e) => handleEdit(program.id, 'practice_numberOfQuestions', e.target.value)} className={inputClass} /></div>
-                                    <div className="flex items-center gap-2"><Clock size={14} className="text-slate-400"/><span className="font-semibold text-sm w-32">Duration (Mins):</span><input type="number" value={currentEdit.practice_durationMinutes ?? practiceExam.durationMinutes} onChange={(e) => handleEdit(program.id, 'practice_durationMinutes', e.target.value)} className={inputClass} /></div>
-                                </div>
+                                    <div className="space-y-2 mb-6">
+                                        <div className="flex items-center gap-2"><LinkIcon size={14} className="text-slate-400"/><span className="font-semibold text-sm w-40">Question Source URL:</span><input type="text" value={currentEdit.questionSourceUrl ?? program.questionSourceUrl} onChange={(e) => handleEdit(program.id, 'questionSourceUrl', e.target.value)} className={inputClass} /></div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+                                            <h3 className="font-bold text-lg text-slate-700">Practice Exam</h3>
+                                            <div className="flex items-center gap-2"><FileText size={14} className="text-slate-400"/><span className="font-semibold text-sm w-32">Name:</span><input type="text" value={currentEdit.practice_name ?? practiceExam.name} onChange={(e) => handleEdit(program.id, 'practice_name', e.target.value)} className={inputClass} /></div>
+                                            <div className="flex items-center gap-2"><HelpCircle size={14} className="text-slate-400"/><span className="font-semibold text-sm w-32"># Questions:</span><input type="number" value={currentEdit.practice_numberOfQuestions ?? practiceExam.numberOfQuestions} onChange={(e) => handleEdit(program.id, 'practice_numberOfQuestions', e.target.value)} className={inputClass} /></div>
+                                            <div className="flex items-center gap-2"><Clock size={14} className="text-slate-400"/><span className="font-semibold text-sm w-32">Duration (Mins):</span><input type="number" value={currentEdit.practice_durationMinutes ?? practiceExam.durationMinutes} onChange={(e) => handleEdit(program.id, 'practice_durationMinutes', e.target.value)} className={inputClass} /></div>
+                                        </div>
 
-                                {/* Certification Exam */}
-                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-3">
-                                    <h3 className="font-bold text-lg text-blue-800">Certification Exam</h3>
-                                    <div className="flex items-center gap-2"><FileText size={14} className="text-slate-400"/><span className="font-semibold text-sm w-32">Name:</span><input type="text" value={currentEdit.cert_name ?? certExam.name} onChange={(e) => handleEdit(program.id, 'cert_name', e.target.value)} className={inputClass} /></div>
-                                    <div className="flex items-center gap-2"><HelpCircle size={14} className="text-slate-400"/><span className="font-semibold text-sm w-32"># Questions:</span><input type="number" value={currentEdit.cert_numberOfQuestions ?? certExam.numberOfQuestions} onChange={(e) => handleEdit(program.id, 'cert_numberOfQuestions', e.target.value)} className={inputClass} /></div>
-                                    <div className="flex items-center gap-2"><Clock size={14} className="text-slate-400"/><span className="font-semibold text-sm w-32">Duration (Mins):</span><input type="number" value={currentEdit.cert_durationMinutes ?? certExam.durationMinutes} onChange={(e) => handleEdit(program.id, 'cert_durationMinutes', e.target.value)} className={inputClass} /></div>
-                                    <div className="flex items-center gap-2"><Percent size={14} className="text-slate-400"/><span className="font-semibold text-sm w-32">Pass Score %:</span><input type="number" value={currentEdit.cert_passScore ?? certExam.passScore} onChange={(e) => handleEdit(program.id, 'cert_passScore', e.target.value)} className={inputClass} /></div>
-                                    <div className="flex items-center gap-4 pt-2">
-                                        <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold">
-                                            <input type="checkbox" checked={currentEdit.cert_certificateEnabled ?? certExam.certificateEnabled} onChange={(e) => handleEdit(program.id, 'cert_certificateEnabled', e.target.checked)} className="h-4 w-4 rounded text-cyan-600 focus:ring-cyan-500"/>
-                                            <Award size={14} className="inline"/> Enable Certificate
-                                        </label>
-                                         <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold">
-                                            <input type="checkbox" checked={currentEdit.cert_isProctored ?? certExam.isProctored} onChange={(e) => handleEdit(program.id, 'cert_isProctored', e.target.checked)} className="h-4 w-4 rounded text-cyan-600 focus:ring-cyan-500"/>
-                                            <Shield size={14} className="inline"/> Enable Proctoring
-                                        </label>
+                                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-3">
+                                            <h3 className="font-bold text-lg text-blue-800">Certification Exam</h3>
+                                            <div className="flex items-center gap-2"><FileText size={14} className="text-slate-400"/><span className="font-semibold text-sm w-32">Name:</span><input type="text" value={currentEdit.cert_name ?? certExam.name} onChange={(e) => handleEdit(program.id, 'cert_name', e.target.value)} className={inputClass} /></div>
+                                            <div className="flex items-center gap-2"><HelpCircle size={14} className="text-slate-400"/><span className="font-semibold text-sm w-32"># Questions:</span><input type="number" value={currentEdit.cert_numberOfQuestions ?? certExam.numberOfQuestions} onChange={(e) => handleEdit(program.id, 'cert_numberOfQuestions', e.target.value)} className={inputClass} /></div>
+                                            <div className="flex items-center gap-2"><Clock size={14} className="text-slate-400"/><span className="font-semibold text-sm w-32">Duration (Mins):</span><input type="number" value={currentEdit.cert_durationMinutes ?? certExam.durationMinutes} onChange={(e) => handleEdit(program.id, 'cert_durationMinutes', e.target.value)} className={inputClass} /></div>
+                                            <div className="flex items-center gap-2"><Percent size={14} className="text-slate-400"/><span className="font-semibold text-sm w-32">Pass Score %:</span><input type="number" value={currentEdit.cert_passScore ?? certExam.passScore} onChange={(e) => handleEdit(program.id, 'cert_passScore', e.target.value)} className={inputClass} /></div>
+                                            <div className="flex items-center gap-4 pt-2">
+                                                <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold"><input type="checkbox" checked={currentEdit.cert_certificateEnabled ?? certExam.certificateEnabled} onChange={(e) => handleEdit(program.id, 'cert_certificateEnabled', e.target.checked)} className="h-4 w-4 rounded text-cyan-600 focus:ring-cyan-500"/><Award size={14} className="inline"/> Enable Certificate</label>
+                                                <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold"><input type="checkbox" checked={currentEdit.cert_isProctored ?? certExam.isProctored} onChange={(e) => handleEdit(program.id, 'cert_isProctored', e.target.checked)} className="h-4 w-4 rounded text-cyan-600 focus:ring-cyan-500"/><Shield size={14} className="inline"/> Enable Proctoring</label>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                           </div>
                         </div>
                     );
                 })}
             </div>
 
-            {anyChanges && (
+            {(anyChanges || selectedPrograms.size > 0) && (
                 <div className="fixed bottom-0 left-0 right-0 bg-slate-800 p-3 shadow-lg z-20 border-t border-slate-600 animate-fade-in-up">
-                    <div className="max-w-6xl mx-auto flex justify-end items-center gap-4">
-                        <p className="text-white font-semibold mr-auto">You have unsaved changes.</p>
-                        <button 
-                            onClick={handleCancelAll} 
-                            disabled={isSavingAll || !!isSaving} 
-                            className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-md text-sm font-semibold hover:bg-slate-500 disabled:opacity-50"
-                        >
-                            <X size={16} /> Discard All
-                        </button>
-                        <button 
-                            onClick={handleSaveAll} 
-                            disabled={isSavingAll || !!isSaving} 
-                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50"
-                        >
-                            {isSavingAll ? <Spinner size="sm" /> : <Save size={16} />}
-                            {isSavingAll ? 'Saving...' : 'Save All Changes'}
-                        </button>
+                    <div className="max-w-6xl mx-auto flex justify-between items-center gap-4">
+                        {selectedPrograms.size > 0 ? (
+                             <div className="flex items-center gap-2">
+                                <span className="text-white font-semibold">{selectedPrograms.size} items selected</span>
+                                <div className="flex items-center gap-2 border-l border-slate-600 ml-2 pl-4">
+                                    <input type="text" value={bulkState.questionSourceUrl} onChange={e => setBulkState({...bulkState, questionSourceUrl: e.target.value})} placeholder="Question URL" className="p-2 rounded-md bg-slate-700 text-white border border-slate-500 text-sm w-40"/>
+                                    <button onClick={() => handleApplyBulkEdit('questionSourceUrl')} className="px-3 py-2 bg-slate-600 text-white rounded-md text-sm font-semibold hover:bg-slate-500">Apply</button>
+                                </div>
+                                <div className="flex items-center gap-2 border-l border-slate-600 ml-2 pl-4">
+                                    <input type="number" value={bulkState.practice_numberOfQuestions} onChange={e => setBulkState({...bulkState, practice_numberOfQuestions: e.target.value})} placeholder="Practice Qs" className="p-2 rounded-md bg-slate-700 text-white border border-slate-500 text-sm w-28"/>
+                                    <input type="number" value={bulkState.cert_numberOfQuestions} onChange={e => setBulkState({...bulkState, cert_numberOfQuestions: e.target.value})} placeholder="Cert Qs" className="p-2 rounded-md bg-slate-700 text-white border border-slate-500 text-sm w-28"/>
+                                    <button onClick={() => { handleApplyBulkEdit('practice_numberOfQuestions'); handleApplyBulkEdit('cert_numberOfQuestions');}} className="px-3 py-2 bg-slate-600 text-white rounded-md text-sm font-semibold hover:bg-slate-500">Apply Qs</button>
+                                </div>
+                            </div>
+                        ) : (
+                             <p className="text-white font-semibold">You have unsaved changes.</p>
+                        )}
+                        <div className="flex items-center gap-2">
+                            <button onClick={handleCancelAll} disabled={isSavingAll || !!isSaving} className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-md text-sm font-semibold hover:bg-slate-500 disabled:opacity-50"><X size={16} /> Discard All</button>
+                            {/* FIX: Corrected a JSX syntax error where a conditional render was malformed as an invalid HTML tag. */}
+                            <button onClick={handleSaveAll} disabled={!anyChanges || isSavingAll || !!isSaving} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 disabled:bg-green-800">{isSavingAll ? <Spinner size="sm" /> : <Save size={16} />} {isSavingAll ? 'Saving...' : 'Save All Changes'}</button>
+                        </div>
                     </div>
                      <style>{`
                         @keyframes fade-in-up {
