@@ -40,6 +40,7 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
     };
 
     const Icon = isPractice ? BookOpen : Award;
+    const headerText = isPractice ? "Practice Exam" : (exam.certificateEnabled ? "Certification Exam" : "Proficiency Exam");
 
     return (
         <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col text-white relative ${gradientClass}`}>
@@ -49,7 +50,7 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                         <div className="bg-white/10 p-2 rounded-full">
                             <Icon size={20} />
                         </div>
-                        <span className="font-bold text-sm uppercase tracking-wider">{isPractice ? "Practice Exam" : "Certification Exam"}</span>
+                        <span className="font-bold text-sm uppercase tracking-wider">{headerText}</span>
                     </div>
                     {isPractice && (
                         <span className="bg-green-500 text-white text-xs font-bold uppercase px-3 py-1 rounded-full shadow-md">

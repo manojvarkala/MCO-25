@@ -86,6 +86,13 @@ const Certificate: FC = () => {
 
                 if (partialData && partialData.examId) {
                     const exam = activeOrg.exams.find(e => e.id === partialData.examId);
+                    
+                    if (exam && !exam.certificateEnabled) {
+                        toast.error("A certificate is not available for this exam.");
+                        navigate(`/results/${testId}`, { replace: true });
+                        return;
+                    }
+
                     const template = activeOrg.certificateTemplates.find(t => t.id === exam?.certificateTemplateId);
 
                     if (exam && template) {

@@ -88,7 +88,7 @@ const Results: FC = () => {
 
     const certificateVisibility = useMemo((): CertVisibility => {
         if (!exam) return 'NONE';
-        const normallyVisible = isPassed && !exam.isPractice;
+        const normallyVisible = isPassed && !exam.isPractice && exam.certificateEnabled;
 
         if (isEffectivelyAdmin) {
             return normallyVisible ? 'USER_EARNED' : 'ADMIN_OVERRIDE';

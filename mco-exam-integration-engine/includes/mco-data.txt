@@ -30,6 +30,13 @@ function mco_get_app_config_data() {
         $cert_sku = get_post_meta($post->ID, '_mco_certification_exam_sku', true);
         $question_source = get_post_meta($post->ID, '_mco_question_source_url', true);
         $is_proctored = (bool) get_post_meta($post->ID, '_mco_is_proctored', true);
+        
+        $certificate_enabled_meta = get_post_meta($post->ID, '_mco_certificate_enabled', true);
+        $certificate_enabled = ($certificate_enabled_meta === '') ? true : (bool) $certificate_enabled_meta;
+
+        $practice_name_override = get_post_meta($post->ID, '_mco_practice_exam_title_override', true);
+        $cert_name_override = get_post_meta($post->ID, '_mco_cert_exam_title_override', true);
+
         $book_post_ids = get_post_meta($post->ID, '_mco_recommended_book_ids', true) ?: [];
         $recommended_book_ids = [];
         if (is_array($book_post_ids)) {
@@ -60,11 +67,14 @@ function mco_get_app_config_data() {
             'certificationExamId' => $cert_sku,
             'questionSourceUrl' => $question_source,
         ];
+        
+        $practice_exam_name = !empty($practice_name_override) ? $practice_name_override : get_the_title($post) . ' Practice';
+        $cert_exam_name = !empty($cert_name_override) ? $cert_name_override : get_the_title($post);
 
         // Practice Exam
         $all_exams[] = [
             'id' => $practice_exam_id_for_app,
-            'name' => get_the_title($post) . ' Practice',
+            'name' => $practice_exam_name,
             'description' => 'A practice test to assess your knowledge for the ' . get_the_title($post) . '.',
             'price' => 0,
             'productSku' => 'practice-' . $cert_sku,
@@ -72,6 +82,7 @@ function mco_get_app_config_data() {
             'passScore' => (int)$pass_score,
             'certificateTemplateId' => 'cert-practice',
             'isPractice' => true,
+            'certificateEnabled' => false, // Practice exams never have certificates
             'isProctored' => false,
             'durationMinutes' => (int)$practice_duration,
             'questionSourceUrl' => $question_source,
@@ -85,7 +96,7 @@ function mco_get_app_config_data() {
             if ($product) {
                  $all_exams[] = [
                     'id' => $cert_sku,
-                    'name' => get_the_title($post),
+                    'name' => $cert_exam_name,
                     'description' => apply_filters('the_content', $post->post_content),
                     'price' => (float)$product->get_price(),
                     'regularPrice' => (float)$product->get_regular_price(),
@@ -95,6 +106,7 @@ function mco_get_app_config_data() {
                     'passScore' => (int)$pass_score,
                     'certificateTemplateId' => 'cert-completion',
                     'isPractice' => false,
+                    'certificateEnabled' => $certificate_enabled,
                     'isProctored' => $is_proctored,
                     'durationMinutes' => (int)$cert_duration,
                     'questionSourceUrl' => $question_source,

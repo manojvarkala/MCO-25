@@ -1,6 +1,8 @@
 
+
+
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
-import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook } from '../types.ts';
+import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook, Theme } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
 import { getTenantConfig, TenantConfig } from '../services/apiConfig.ts';
@@ -12,11 +14,15 @@ interface AppContextType {
   isInitializing: boolean;
   setActiveOrgById: (orgId: string) => void;
   updateActiveOrg: (updatedOrg: Organization) => void;
+  updateExamInOrg: (examId: string, updatedExamData: Partial<Exam>) => void;
   isWheelModalOpen: boolean;
   setWheelModalOpen: (isOpen: boolean) => void;
   inProgressExam: InProgressExamInfo | null;
   examPrices: { [key: string]: any } | null;
   suggestedBooks: RecommendedBook[];
+  availableThemes: Theme[];
+  activeTheme: string;
+  setActiveTheme: (themeId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -108,18 +114,33 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [inProgressExam, setInProgressExam] = useState<InProgressExamInfo | null>(null);
   const [examPrices, setExamPrices] = useState<{ [key: string]: any } | null>(null);
 
+  // Theme state
+  const [availableThemes, setAvailableThemes] = useState<Theme[]>([]);
+  const [activeTheme, _setActiveTheme] = useState<string>('default');
+
+  const setActiveTheme = useCallback((themeId: string) => {
+    _setActiveTheme(themeId);
+    try {
+        localStorage.setItem('user-theme', themeId);
+    } catch(e) {
+        console.warn("Could not save theme preference to localStorage.", e);
+    }
+  }, []);
+
   const setProcessedConfig = (config: any, processedData: any) => {
     if (processedData) {
       setOrganizations(processedData.processedOrgs);
-      
-      // Simplified logic: examPrices is always at the root level for both API and static files.
       setExamPrices(config.examPrices || null);
-      
       setSuggestedBooks(processedData.allSuggestedBooks);
+      
       const newActiveOrg = processedData.processedOrgs[0] || null;
       setActiveOrg(newActiveOrg);
+
       if (newActiveOrg) {
           localStorage.setItem('activeOrgId', newActiveOrg.id);
+          setAvailableThemes(newActiveOrg.availableThemes || []);
+          const initialTheme = localStorage.getItem('user-theme') || newActiveOrg.activeThemeId || 'default';
+          _setActiveTheme(initialTheme);
       }
     }
   };
@@ -230,6 +251,16 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setOrganizations(updatedOrganizations);
     setActiveOrg(updatedOrg);
   }, [organizations]);
+  
+  const updateExamInOrg = useCallback((examId: string, updatedExamData: Partial<Exam>) => {
+    setActiveOrg(prevOrg => {
+        if (!prevOrg) return null;
+        const newExams = prevOrg.exams.map(exam => 
+            exam.id === examId ? { ...exam, ...updatedExamData } : exam
+        );
+        return { ...prevOrg, exams: newExams };
+    });
+  }, []);
 
   const value = useMemo(() => ({
     organizations,
@@ -238,14 +269,19 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     isInitializing,
     setActiveOrgById,
     updateActiveOrg,
+    updateExamInOrg,
     isWheelModalOpen,
     setWheelModalOpen,
     inProgressExam,
     examPrices,
-    suggestedBooks
+    suggestedBooks,
+    availableThemes,
+    activeTheme,
+    setActiveTheme
   }), [
     organizations, activeOrg, isInitializing, setActiveOrgById,
-    updateActiveOrg, isWheelModalOpen, setWheelModalOpen, inProgressExam, examPrices, suggestedBooks
+    updateActiveOrg, updateExamInOrg, isWheelModalOpen, setWheelModalOpen, inProgressExam, examPrices, suggestedBooks,
+    availableThemes, activeTheme, setActiveTheme
   ]);
 
   return (

@@ -218,7 +218,7 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/admin/search-users', ['methods' => 'POST', 'callback' => 'mco_api_admin_search_users', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/reset-spins', ['methods' => 'POST', 'callback' => 'mco_api_admin_reset_spins', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/remove-prize', ['methods' => 'POST', 'callback' => 'mco_api_admin_remove_prize', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
-
+    register_rest_route($namespace, '/admin/update-exam-program', ['methods' => 'POST', 'callback' => 'mco_api_admin_update_exam_program', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
 }
 
 function mco_api_permission_check(WP_REST_Request $request) {
@@ -256,6 +256,13 @@ function mco_api_get_full_config(WP_REST_Request $request) {
     $custom_logo_url = get_option('mco_logo_url', '');
     $logo_url = !empty($custom_logo_url) ? $custom_logo_url : (get_site_icon_url(512) ?: '');
 
+    $available_themes = [
+        [ 'id' => 'default', 'name' => 'Cyberpunk' ],
+        [ 'id' => 'professional', 'name' => 'Professional' ],
+        [ 'id' => 'serene', 'name' => 'Serene' ],
+        [ 'id' => 'academic', 'name' => 'Academic' ],
+        [ 'id' => 'noir', 'name' => 'Noir' ],
+    ];
 
     $config_object = [
         "version" => get_option('mco_config_version', current_time('YmdHis')),
@@ -265,6 +272,8 @@ function mco_api_get_full_config(WP_REST_Request $request) {
                 "name" => $site_name,
                 "website" => str_replace('www.', '', $site_host),
                 "logo" => $logo_url,
+                "availableThemes" => $available_themes,
+                "activeThemeId" => get_option('mco_active_theme', 'default'),
                 "exams" => $dynamic_data['exams'],
                 "examProductCategories" => $dynamic_data['examProductCategories'],
                 "certificateTemplates" => array_values($templates),
@@ -722,4 +731,60 @@ function mco_api_admin_remove_prize(WP_REST_Request $request) {
     return new WP_REST_Response(['success' => true, 'message' => 'Won prize data removed.'], 200);
 }
 
+
+function mco_api_admin_update_exam_program(WP_REST_Request $request) {
+    $params = $request->get_json_params();
+
+    $program_id_str = sanitize_text_field($params['programId']);
+    $post_id = (int) str_replace('prod-', '', $program_id_str);
+
+    if (get_post_type($post_id) !== 'mco_exam_program') {
+        return new WP_Error('not_found', 'Exam program not found.', ['status' => 404]);
+    }
+
+    $update_payload = $params['updateData'];
+
+    // Update Program-level settings
+    if (isset($update_payload['questionSourceUrl'])) {
+        update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($update_payload['questionSourceUrl']));
+    }
+    if (isset($update_payload['programName'])) {
+        wp_update_post(['ID' => $post_id, 'post_title' => sanitize_text_field($update_payload['programName'])]);
+    }
+    if (isset($update_payload['programDescription'])) {
+        wp_update_post(['ID' => $post_id, 'post_content' => wp_kses_post($update_payload['programDescription'])]);
+    }
+
+    // Update Practice Exam settings
+    if (isset($update_payload['practice_numberOfQuestions'])) {
+        wp_set_post_terms($post_id, sanitize_text_field($update_payload['practice_numberOfQuestions']), 'exam_practice_questions', false);
+    }
+    if (isset($update_payload['practice_durationMinutes'])) {
+        wp_set_post_terms($post_id, sanitize_text_field($update_payload['practice_durationMinutes']), 'exam_practice_duration', false);
+    }
+
+    // Update Certification Exam settings
+    if (isset($update_payload['cert_numberOfQuestions'])) {
+        wp_set_post_terms($post_id, sanitize_text_field($update_payload['cert_numberOfQuestions']), 'exam_cert_questions', false);
+    }
+    if (isset($update_payload['cert_durationMinutes'])) {
+        wp_set_post_terms($post_id, sanitize_text_field($update_payload['cert_durationMinutes']), 'exam_cert_duration', false);
+    }
+    if (isset($update_payload['cert_passScore'])) {
+        wp_set_post_terms($post_id, sanitize_text_field($update_payload['cert_passScore']), 'exam_pass_score', false);
+    }
+    if (isset($update_payload['cert_isProctored'])) {
+        update_post_meta($post_id, '_mco_is_proctored', $update_payload['cert_isProctored'] ? '1' : '0');
+    }
+    if (isset($update_payload['cert_certificateEnabled'])) {
+        update_post_meta($post_id, '_mco_certificate_enabled', $update_payload['cert_certificateEnabled'] ? '1' : '0');
+    }
+
+    // Bust server cache and get fresh data to send back to client
+    delete_transient('mco_app_config_data');
+    update_option('mco_config_version', current_time('YmdHis'));
+    
+    // Return the full, updated config so the client can refresh its state
+    return mco_api_get_full_config(new WP_REST_Request());
+}
 ?>

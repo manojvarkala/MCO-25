@@ -1,4 +1,4 @@
-import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, SpinWheelResult, SearchedUser, ExamStat } from '../types.ts';
+import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, SpinWheelResult, SearchedUser, ExamStat, Organization } from '../types.ts';
 import toast from 'react-hot-toast';
 import { GoogleGenAI, Type } from "@google/genai";
 import { getApiBaseUrl } from './apiConfig.ts';
@@ -364,6 +364,15 @@ export const googleSheetsService = {
             return await apiFetch('/admin/remove-prize', 'POST', token, { userId });
         } catch (error) {
             console.error("Failed to remove prize:", error);
+            throw error;
+        }
+    },
+
+    adminUpdateExamProgram: async (token: string, programId: string, updateData: any): Promise<{ organizations: Organization[] }> => {
+        try {
+            return await apiFetch('/admin/update-exam-program', 'POST', token, { programId, updateData });
+        } catch (error) {
+            console.error("Failed to update exam program:", error);
             throw error;
         }
     },

@@ -4,9 +4,109 @@ html {
 body { font-family: 'Inter', sans-serif; }
 .font-serif-display { font-family: 'Source Serif 4', serif; }
 .font-script { font-family: 'Dancing Script', cursive; }
-.premium-header-gradient {
-  background: linear-gradient(to right, #ffffff 25%, #1e293b 45%);
+
+/* --- THEME ENGINE: CSS VARIABLES --- */
+
+/* 1. Cyberpunk Theme (Default) */
+html, html[data-theme='default'] {
+  --color-primary-rgb: 14 165 233; /* cyan-600 */
+  --color-primary-hover-rgb: 14 116 144; /* cyan-800 */
+  --color-secondary-rgb: 234 179 8; /* yellow-500 */
+  --color-secondary-hover-rgb: 202 138 4; /* yellow-600 */
+  --color-accent-rgb: 168 85 247; /* purple-500 */
+  --color-success-rgb: 22 163 74; /* green-600 */
+  --color-danger-rgb: 220 38 38; /* red-600 */
+
+  --color-background-rgb: 241 245 249; /* slate-100 */
+  --color-card-rgb: 255 255 255;
+  --color-muted-rgb: 248 250 252; /* slate-50 */
+  --color-border-rgb: 226 232 240; /* slate-200 */
+
+  --color-text-strong-rgb: 15 23 42; /* slate-900 */
+  --color-text-default-rgb: 30 41 59; /* slate-800 */
+  --color-text-muted-rgb: 100 116 139; /* slate-500 */
+  --color-text-inverted-rgb: 255 255 255;
+
+  --font-main: 'Inter', sans-serif;
+  --font-display: 'Inter', sans-serif;
 }
+
+/* 2. Professional Theme */
+html[data-theme='professional'] {
+  --color-primary-rgb: 59 130 246; /* blue-500 */
+  --color-primary-hover-rgb: 37 99 235;
+  --color-secondary-rgb: 16 185 129; /* emerald-500 */
+  --color-secondary-hover-rgb: 5 150 105;
+  --color-accent-rgb: 239 68 68; /* red-500 */
+  --color-background-rgb: 243 244 246; /* gray-100 */
+  --color-card-rgb: 255 255 255;
+  --color-muted-rgb: 249 250 251; /* gray-50 */
+  --color-border-rgb: 229 231 235; /* gray-200 */
+  --color-text-strong-rgb: 17 24 39; /* gray-900 */
+  --color-text-default-rgb: 31 41 55; /* gray-800 */
+  --color-text-muted-rgb: 107 114 128; /* gray-500 */
+}
+
+/* 3. Serene Theme */
+html[data-theme='serene'] {
+  --color-primary-rgb: 49 196 141; /* mint green */
+  --color-primary-hover-rgb: 39 174 125;
+  --color-secondary-rgb: 251 146 60; /* orange-400 */
+  --color-secondary-hover-rgb: 249 115 22;
+  --color-accent-rgb: 99 102 241; /* indigo-500 */
+  --color-background-rgb: 240 253 244; /* green-50 */
+  --color-card-rgb: 255 255 255;
+  --color-muted-rgb: 253 253 253;
+  --color-border-rgb: 222 247 228;
+  --color-text-strong-rgb: 20 83 45; /* green-900 */
+  --color-text-default-rgb: 21 94 52;
+  --color-text-muted-rgb: 101 116 109;
+}
+
+/* 4. Academic Theme */
+html[data-theme='academic'] {
+  --color-primary-rgb: 153 27 27; /* red-800 */
+  --color-primary-hover-rgb: 127 29 29;
+  --color-secondary-rgb: 202 138 4; /* yellow-600 */
+  --color-secondary-hover-rgb: 161 98 7;
+  --color-accent-rgb: 23 37 84; /* blue-900 */
+  --color-background-rgb: 254 252 232; /* yellow-50 */
+  --color-card-rgb: 255 251 235; /* yellow-100 */
+  --color-muted-rgb: 253 252 245;
+  --color-border-rgb: 250 233 189;
+  --color-text-strong-rgb: 28 25 23; /* stone-900 */
+  --color-text-default-rgb: 41 37 36;
+  --color-text-muted-rgb: 87 83 78;
+  --font-main: 'Source Serif 4', serif;
+  --font-display: 'Source Serif 4', serif;
+}
+
+/* 5. Noir Theme (Dark Mode) */
+html[data-theme='noir'] {
+  --color-primary-rgb: 29 78 216; /* blue-700 */
+  --color-primary-hover-rgb: 30 64 175;
+  --color-secondary-rgb: 202 138 4; /* yellow-600 */
+  --color-secondary-hover-rgb: 217 119 6;
+  --color-accent-rgb: 124 58 237; /* purple-600 */
+  --color-success-rgb: 21 128 61; /* green-700 */
+  --color-danger-rgb: 185 28 28; /* red-700 */
+  
+  --color-background-rgb: 17 24 39; /* gray-900 */
+  --color-card-rgb: 31 41 55; /* gray-800 */
+  --color-muted-rgb: 55 65 81; /* gray-700 */
+  --color-border-rgb: 75 85 99; /* gray-600 */
+
+  --color-text-strong-rgb: 249 250 251; /* gray-50 */
+  --color-text-default-rgb: 229 231 235; /* gray-200 */
+  --color-text-muted-rgb: 156 163 175; /* gray-400 */
+  --color-text-inverted-rgb: 17 24 39; /* gray-900 */
+}
+
+/* Helper styles for themed gradients on cards */
+.premium-header-gradient {
+  background: linear-gradient(to right, rgb(var(--color-card-rgb)) 25%, rgb(var(--color-background-rgb)) 45%);
+}
+
 @keyframes pointer-tick {
   0%, 100% { transform: rotate(0deg); }
   50% { transform: rotate(-5deg); }

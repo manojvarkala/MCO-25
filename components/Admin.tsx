@@ -70,7 +70,7 @@ const HealthCheckItem: FC<HealthCheckItemProps> = ({ status, title, message, tro
 };
 
 const Admin: FC = () => {
-    const { activeOrg, updateActiveOrg } = useAppContext();
+    const { activeOrg, updateActiveOrg, availableThemes, activeTheme, setActiveTheme } = useAppContext();
     const { token } = useAuth();
     
     const prizeOptions = useMemo(() => {
@@ -351,13 +351,13 @@ const Admin: FC = () => {
         const toastId = toast.loading('Preparing exam programs CSV...', { id: 'download-exams' });
 
         try {
-            const headers = ['program_title', 'program_description', 'question_source_url', 'certification_exam_sku', 'is_proctored', 'recommended_book_id', 'practice_questions', 'practice_duration', 'cert_questions', 'cert_duration', 'pass_score', 'status'];
+            const headers = ['program_title', 'program_description', 'question_source_url', 'certification_exam_sku', 'is_proctored', 'certificate_enabled', 'recommended_book_id', 'practice_questions', 'practice_duration', 'cert_questions', 'cert_duration', 'pass_score', 'status'];
             const data = activeOrg.examProductCategories.map(category => {
                 const practiceExam = activeOrg.exams.find(e => e.id === category.practiceExamId);
                 const certExam = activeOrg.exams.find(e => e.id === category.certificationExamId);
                 return [
                     category.name, category.description, category.questionSourceUrl || certExam?.questionSourceUrl || '',
-                    category.certificationExamId, certExam?.isProctored, certExam?.recommendedBookIds?.join(',') || '',
+                    category.certificationExamId, certExam?.isProctored, certExam?.certificateEnabled, certExam?.recommendedBookIds?.join(',') || '',
                     practiceExam?.numberOfQuestions || '', practiceExam?.durationMinutes || '',
                     certExam?.numberOfQuestions || '', certExam?.durationMinutes || '',
                     certExam?.passScore || '', 'publish'
@@ -451,20 +451,47 @@ const Admin: FC = () => {
 
     return (
         <div className="max-w-4xl mx-auto space-y-8">
-            <h1 className="text-4xl font-extrabold text-slate-900">Admin Panel</h1>
+            <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">Admin Panel</h1>
             
-            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
-                    <Code className="mr-3 text-cyan-500" />
+            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                    <Paintbrush className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                    Theme & Appearance
+                </h2>
+                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                    Select a theme to change the application's appearance. Your choice is saved locally on this browser and overrides the site-wide default.
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {availableThemes.map(theme => (
+                        <div 
+                            key={theme.id} 
+                            onClick={() => setActiveTheme(theme.id)} 
+                            className={`p-4 rounded-lg border-2 cursor-pointer transition ${activeTheme === theme.id ? 'border-[rgb(var(--color-primary-rgb))]' : 'border-[rgb(var(--color-border-rgb))] hover:border-[rgba(var(--color-primary-rgb),0.5)]'}`}
+                        >
+                            <div className="flex justify-center space-x-1 h-8">
+                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-primary`}></div>
+                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-secondary`}></div>
+                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-accent`}></div>
+                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-background`}></div>
+                            </div>
+                            <p className="font-semibold text-center mt-2 text-[rgb(var(--color-text-default-rgb))]">{theme.name}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                    <Code className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
                     WordPress Integration & Data
                 </h2>
-                <p className="text-slate-600 mb-6">
+                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
                     Manage the connection to your WordPress backend. Use these tools for debugging and content management. The "Live Config" is the exact JSON data the app is using. "Clear Client Cache" forces the app to reload this data from your server.
                 </p>
                 <div className="flex flex-wrap gap-4">
                     <a
                         href="/#/integration"
-                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
+                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-[rgb(var(--color-primary-rgb))] hover:bg-[rgb(var(--color-primary-hover-rgb))] transition-transform transform hover:scale-105"
                     >
                         <ExternalLink size={20} className="mr-2" />
                         Get Unified Plugin Code
@@ -472,7 +499,7 @@ const Admin: FC = () => {
                     <button
                         onClick={handleDownloadConfig}
                         disabled={isDownloadingConfig}
-                        className="inline-flex items-center justify-center px-6 py-3 border border-slate-300 text-base font-medium rounded-md shadow-sm text-slate-700 bg-white hover:bg-slate-50 transition-transform transform hover:scale-105 disabled:opacity-50"
+                        className="inline-flex items-center justify-center px-6 py-3 border border-[rgb(var(--color-border-rgb))] text-base font-medium rounded-md shadow-sm text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] transition-transform transform hover:scale-105 disabled:opacity-50"
                     >
                         {isDownloadingConfig ? <Spinner size="sm" /> : <DownloadCloud size={20} />}
                         <span className="ml-2">{isDownloadingConfig ? 'Downloading...' : 'Download Live Config (.json)'}</span>
@@ -488,18 +515,37 @@ const Admin: FC = () => {
                 </div>
             </div>
 
-            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
-                    <ShoppingCart className="mr-3 text-cyan-500" />
-                    Product Customization
+            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                    <Settings className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                    Exam Program Settings
                 </h2>
-                <p className="text-slate-600 mb-6">
+                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                    Manage core exam settings like names, question counts, and source URLs directly. Changes are saved to WordPress instantly.
+                </p>
+                <div className="flex flex-wrap gap-4">
+                    <Link
+                        to="/admin/programs"
+                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-[rgb(var(--color-primary-rgb))] hover:bg-[rgb(var(--color-primary-hover-rgb))] transition-transform transform hover:scale-105"
+                    >
+                        <Edit size={20} className="mr-2" />
+                        Go to Exam Program Customizer
+                    </Link>
+                </div>
+            </div>
+
+            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                    <ShoppingCart className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                    WooCommerce Product Customizer
+                </h2>
+                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
                     Define WooCommerce product variations for your exam programs, such as bundles and subscriptions. Then, generate a compatible CSV for easy importing.
                 </p>
                 <div className="flex flex-wrap gap-4">
                     <Link
                         to="/admin/products"
-                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
+                        className="inline-flex items-center justify-center px-6 py-3 border border-[rgb(var(--color-primary-rgb))] text-base font-medium rounded-md shadow-sm text-[rgb(var(--color-primary-rgb))] bg-[rgba(var(--color-primary-rgb),0.1)] hover:bg-[rgba(var(--color-primary-rgb),0.2)] transition-transform transform hover:scale-105"
                     >
                         <Paintbrush size={20} className="mr-2" />
                         Go to Product Customizer
@@ -507,34 +553,34 @@ const Admin: FC = () => {
                 </div>
             </div>
 
-            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
-                    <FileSpreadsheet className="mr-3 text-cyan-500" />
+            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                    <FileSpreadsheet className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
                     Bulk Data Management
                 </h2>
-                <p className="text-slate-600 mb-6">
+                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
                     Streamline your content creation with this three-step workflow for bulk importing exam programs and their corresponding WooCommerce products.
                 </p>
 
-                <div className="space-y-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                    <ol className="list-decimal list-inside space-y-4 text-slate-600">
+                <div className="space-y-4 p-4 bg-[rgb(var(--color-muted-rgb))] rounded-lg border border-[rgb(var(--color-border-rgb))]">
+                    <ol className="list-decimal list-inside space-y-4 text-[rgb(var(--color-text-muted-rgb))]">
                         <li>
-                            <strong className="text-slate-800">Step 1: Upload Exam Programs CSV</strong><br />
-                            Download the template, fill it with your exam program data, then upload it in your WordPress admin under <a href={`${getApiBaseUrl()}/wp-admin/admin.php?page=mco-exam-engine&tab=bulk_import`} target="_blank" rel="noopener noreferrer" className="text-cyan-600 font-semibold hover:underline">Exam App Engine &rarr; Bulk Import</a>.
+                            <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 1: Upload Exam Programs CSV</strong><br />
+                            Download the template, fill it with your exam program data, then upload it in your WordPress admin under <a href={`${getApiBaseUrl()}/wp-admin/admin.php?page=mco-exam-engine&tab=bulk_import`} target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] font-semibold hover:underline">Exam App Engine &rarr; Bulk Import</a>.
                             <div className="flex flex-wrap gap-2 mt-2">
-                                <a href="/template-exam-programs.csv" download className="inline-flex items-center justify-center px-3 py-1.5 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">
+                                <a href="/template-exam-programs.csv" download className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-border-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]">
                                     <DownloadCloud size={16} className="mr-2"/> Download Exam Program Template
                                 </a>
                             </div>
                         </li>
                         <li>
-                            <strong className="text-slate-800">Step 2: Generate WooCommerce Products CSV</strong><br />
+                            <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 2: Generate WooCommerce Products CSV</strong><br />
                             Once your programs are uploaded, click the button below. This will generate a new CSV file, pre-filled with the product details for each of your new certification exams.
                              <div className="flex flex-wrap gap-2 mt-2">
                                 <button
                                     onClick={handleGenerateWooCsv}
                                     disabled={isGeneratingWooCsv}
-                                    className="inline-flex items-center justify-center px-3 py-1.5 border border-cyan-600 text-sm font-medium rounded-md text-cyan-700 bg-cyan-50 hover:bg-cyan-100 disabled:opacity-50"
+                                    className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-primary-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-primary-rgb))] bg-[rgba(var(--color-primary-rgb),0.1)] hover:bg-[rgba(var(--color-primary-rgb),0.2)] disabled:opacity-50"
                                 >
                                     {isGeneratingWooCsv ? <Spinner size="sm" /> : <FileText size={16} className="mr-2"/>}
                                     {isGeneratingWooCsv ? 'Generating...' : 'Generate & Download WooCommerce Products CSV'}
@@ -542,20 +588,20 @@ const Admin: FC = () => {
                             </div>
                         </li>
                         <li>
-                            <strong className="text-slate-800">Step 3: Upload WooCommerce Products CSV</strong><br />
-                            Review the generated CSV (you can adjust pricing here). Then, upload it in your WordPress admin under <a href={`${getApiBaseUrl()}/wp-admin/edit.php?post_type=product&page=product_importer`} target="_blank" rel="noopener noreferrer" className="text-cyan-600 font-semibold hover:underline">WooCommerce &rarr; Products &rarr; Import</a>.
+                            <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 3: Upload WooCommerce Products CSV</strong><br />
+                            Review the generated CSV (you can adjust pricing here). Then, upload it in your WordPress admin under <a href={`${getApiBaseUrl()}/wp-admin/edit.php?post_type=product&page=product_importer`} target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] font-semibold hover:underline">WooCommerce &rarr; Products &rarr; Import</a>.
                         </li>
                     </ol>
                 </div>
                 
-                <h3 className="font-bold text-lg text-slate-700 mt-6">Export Existing Data:</h3>
-                <p className="text-slate-600 mb-4">Download your current data as a CSV. This is useful for making bulk edits or for backups.</p>
+                <h3 className="font-bold text-lg text-[rgb(var(--color-text-default-rgb))] mt-6">Export Existing Data:</h3>
+                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-4">Download your current data as a CSV. This is useful for making bulk edits or for backups.</p>
 
                 <div className="flex flex-wrap gap-4">
                     <button
                         onClick={handleDownloadExamPrograms}
                         disabled={isDownloadingExams}
-                        className="inline-flex items-center justify-center px-4 py-2 border border-slate-300 text-base font-medium rounded-md shadow-sm text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50"
+                        className="inline-flex items-center justify-center px-4 py-2 border border-[rgb(var(--color-border-rgb))] text-base font-medium rounded-md shadow-sm text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] disabled:opacity-50"
                     >
                         {isDownloadingExams ? <Spinner size="sm" /> : <DownloadCloud size={20} />}
                         <span className="ml-2">{isDownloadingExams ? 'Exporting...' : 'Export Exam Programs (.csv)'}</span>
@@ -563,7 +609,7 @@ const Admin: FC = () => {
                     <button
                         onClick={handleDownloadBooks}
                         disabled={isDownloadingBooks}
-                        className="inline-flex items-center justify-center px-4 py-2 border border-slate-300 text-base font-medium rounded-md shadow-sm text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50"
+                        className="inline-flex items-center justify-center px-4 py-2 border border-[rgb(var(--color-border-rgb))] text-base font-medium rounded-md shadow-sm text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] disabled:opacity-50"
                     >
                         {isDownloadingBooks ? <Spinner size="sm" /> : <DownloadCloud size={20} />}
                         <span className="ml-2">{isDownloadingBooks ? 'Exporting...' : 'Export Books (.csv)'}</span>
@@ -572,24 +618,24 @@ const Admin: FC = () => {
             </div>
 
 
-            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
-                    <Award className="mr-3 text-cyan-500" />
+            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                    <Award className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
                     Certificate Templates Overview
                 </h2>
-                <p className="text-slate-600 mb-6">
+                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
                     This is a read-only overview of the certificate templates configured in your WordPress backend. To edit these, go to <strong>Exam App Engine &rarr; Certificate Templates</strong> in your WP admin dashboard.
                 </p>
                 {/* FIX: Complete truncated JSX and add default export to the component. */}
                 <div className="space-y-4 max-h-96 overflow-y-auto pr-4">
                     {certificateTemplates.map(template => (
-                        <div key={template.id} className="bg-slate-100 p-3 rounded-md border border-slate-200">
-                            <p className="font-semibold text-slate-800">{template.name || `ID: ${template.id}`}</p>
-                            <p className="text-xs text-slate-600 truncate" title={template.title}>Title: "{template.title}"</p>
+                        <div key={template.id} className="bg-[rgb(var(--color-muted-rgb))] p-3 rounded-md border border-[rgb(var(--color-border-rgb))]">
+                            <p className="font-semibold text-[rgb(var(--color-text-strong-rgb))]">{template.name || `ID: ${template.id}`}</p>
+                            <p className="text-xs text-[rgb(var(--color-text-muted-rgb))] truncate" title={template.title}>Title: "{template.title}"</p>
                         </div>
                     ))}
                     {certificateTemplates.length === 0 && (
-                        <p className="text-slate-500 text-center py-4">No certificate templates found.</p>
+                        <p className="text-[rgb(var(--color-text-muted-rgb))] text-center py-4">No certificate templates found.</p>
                     )}
                 </div>
             </div>

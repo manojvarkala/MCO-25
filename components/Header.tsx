@@ -30,11 +30,11 @@ const Header: FC = () => {
 
   const headerClasses = isSubscribed
     ? "shadow-lg sticky top-0 z-50 premium-header-gradient"
-    : "bg-white shadow-md sticky top-0 z-50";
+    : "bg-[rgb(var(--color-card-rgb))] shadow-md sticky top-0 z-50";
 
   const linkClasses = isSubscribed
     ? "text-slate-300 hover:text-white"
-    : "text-slate-600 hover:text-cyan-600";
+    : "text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-secondary-rgb))]";
     
   const examCategories = activeOrg?.examProductCategories || [];
 
@@ -50,7 +50,7 @@ const Header: FC = () => {
                 />
                 <div className="flex flex-col">
                     <div className="flex items-center gap-2">
-                        <span className="text-3xl font-bold font-serif text-slate-900">
+                        <span className="text-3xl font-bold font-display text-[rgb(var(--color-text-strong-rgb))]">
                             {activeOrg.name}
                         </span>
                         {isSubscribed && (
@@ -59,7 +59,7 @@ const Header: FC = () => {
                             </span>
                         )}
                     </div>
-                    <span className="text-md font-serif text-slate-500">
+                    <span className="text-md font-display text-[rgb(var(--color-text-muted-rgb))]">
                         {activeOrg.website}
                     </span>
                 </div>
@@ -100,14 +100,14 @@ const Header: FC = () => {
                         <span className="hidden sm:inline font-semibold">Exam Programs</span>
                     </a>
                     {isCategoriesMenuOpen && (
-                        <div className={`absolute left-0 top-full pt-2 w-64 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50 ${isSubscribed ? 'bg-slate-800' : 'bg-white'}`}>
+                        <div className={`absolute left-0 top-full pt-2 w-64 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50 ${isSubscribed ? 'bg-slate-800' : 'bg-[rgb(var(--color-card-rgb))]'}`}>
                             <div className="py-1 max-h-[calc(100vh-10rem)] overflow-y-auto">
                                 {examCategories.map(category => (
                                     <a
                                         key={category.id}
                                         href={`/#/program/${category.id}`}
                                         onClick={() => setIsCategoriesMenuOpen(false)}
-                                        className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}
+                                        className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-[rgb(var(--color-text-default-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]'}`}
                                     >
                                         {category.name}
                                     </a>
@@ -142,16 +142,16 @@ const Header: FC = () => {
                     <span className="hidden sm:inline">Profile</span>
                 </a>
                  {isProfileMenuOpen && (
-                    <div className={`absolute right-0 top-full pt-2 w-56 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50 ${isSubscribed ? 'bg-slate-800' : 'bg-white'}`}>
+                    <div className={`absolute right-0 top-full pt-2 w-56 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50 ${isSubscribed ? 'bg-slate-800' : 'bg-[rgb(var(--color-card-rgb))]'}`}>
                         <div className="px-4 py-2 text-xs text-slate-400">Welcome, {user.name}</div>
-                         <a href="/#/profile" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
+                         <a href="/#/profile" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-[rgb(var(--color-text-default-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]'}`}>
                             <User size={14}/> Profile Details
                         </a>
-                        <a href={myAccountUrl} target="_blank" rel="noopener noreferrer" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
+                        <a href={myAccountUrl} target="_blank" rel="noopener noreferrer" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-[rgb(var(--color-text-default-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]'}`}>
                            <UserCircle size={14}/> My Account (Main Site)
                         </a>
                         {isEffectivelyAdmin && (
-                            <a href="/#/admin" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-100'}`}>
+                            <a href="/#/admin" className={`block w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${isSubscribed ? 'text-slate-300 hover:bg-slate-700' : 'text-[rgb(var(--color-text-default-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]'}`}>
                                <Shield size={14}/> Admin Panel
                             </a>
                         )}
@@ -160,7 +160,7 @@ const Header: FC = () => {
               </div>
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition duration-200"
+                className="flex items-center space-x-2 bg-[rgb(var(--color-muted-rgb))] hover:bg-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-default-rgb))] font-semibold py-2 px-4 rounded-lg transition duration-200"
               >
                 <LogOut size={16} />
                 <span>Logout</span>
@@ -170,14 +170,14 @@ const Header: FC = () => {
              <div className="flex items-center space-x-2">
                 <a
                     href={loginUrl}
-                    className="flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition duration-200"
+                    className="flex items-center space-x-2 bg-[rgb(var(--color-muted-rgb))] hover:bg-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-default-rgb))] font-semibold py-2 px-4 rounded-lg transition duration-200"
                 >
                     <LogIn size={16} />
                     <span>Login</span>
                 </a>
                 <a
                     href={registerUrl}
-                    className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                    className="flex items-center space-x-2 bg-[rgb(var(--color-primary-rgb))] hover:bg-[rgb(var(--color-primary-hover-rgb))] text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
                     >
                     <UserPlus size={16} />
                     <span>Register</span>

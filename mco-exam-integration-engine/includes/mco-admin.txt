@@ -9,6 +9,9 @@ if (!function_exists('mco_register_admin_hooks')) {
         add_action('admin_enqueue_scripts', 'mco_admin_enqueue_styles');
         // Action to handle CSV upload form submission
         add_action('admin_post_mco_bulk_import_csv', 'mco_handle_csv_upload');
+        // Actions for the new Exam Program meta box
+        add_action('add_meta_boxes', 'mco_add_exam_program_meta_boxes');
+        add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta_data');
     }
 }
 
@@ -28,6 +31,88 @@ if (!function_exists('mco_add_admin_menu')) {
         add_submenu_page('mco-exam-engine', 'Recommended Books', 'Recommended Books', 'manage_options', 'edit.php?post_type=mco_recommended_book');
     }
 }
+
+// --- EXAM PROGRAM CPT META BOX ---
+
+if (!function_exists('mco_add_exam_program_meta_boxes')) {
+    function mco_add_exam_program_meta_boxes() {
+        add_meta_box(
+            'mco_exam_program_settings',
+            'Exam Program Settings',
+            'mco_render_exam_program_meta_box',
+            'mco_exam_program',
+            'normal', // Changed to 'normal' to accommodate more fields
+            'high'
+        );
+    }
+}
+
+if (!function_exists('mco_render_exam_program_meta_box')) {
+    function mco_render_exam_program_meta_box($post) {
+        wp_nonce_field('mco_save_exam_program_meta_data', 'mco_exam_program_meta_nonce');
+        
+        $certificate_enabled = get_post_meta($post->ID, '_mco_certificate_enabled', true);
+        if ($certificate_enabled === '') $certificate_enabled = '1';
+
+        $practice_title_override = get_post_meta($post->ID, '_mco_practice_exam_title_override', true);
+        $cert_title_override = get_post_meta($post->ID, '_mco_cert_exam_title_override', true);
+        ?>
+        <table class="form-table">
+            <tbody>
+                <tr>
+                    <th scope="row"><label for="mco_practice_exam_title_override">Practice Exam Title Override</label></th>
+                    <td><input type="text" id="mco_practice_exam_title_override" name="mco_practice_exam_title_override" value="<?php echo esc_attr($practice_title_override); ?>" class="widefat" />
+                    <p class="description">Optional. If empty, defaults to "[Program Title] Practice".</p></td>
+                </tr>
+                 <tr>
+                    <th scope="row"><label for="mco_cert_exam_title_override">Certification Exam Title Override</label></th>
+                    <td><input type="text" id="mco_cert_exam_title_override" name="mco_cert_exam_title_override" value="<?php echo esc_attr($cert_title_override); ?>" class="widefat" />
+                     <p class="description">Optional. If empty, defaults to the main program title.</p></td>
+                </tr>
+                <tr>
+                    <th scope="row">Certificate</th>
+                    <td>
+                        <label for="mco_certificate_enabled">
+                            <input type="checkbox" name="mco_certificate_enabled" id="mco_certificate_enabled" value="1" <?php checked($certificate_enabled, '1'); ?> />
+                            <strong>Enable Certificate on Pass</strong>
+                        </label>
+                        <p class="description">
+                            If checked, a certificate will be issued for the main "Certification Exam". If unchecked, it will be treated as a "Proficiency Exam" with no certificate.
+                        </p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <?php
+    }
+}
+
+if (!function_exists('mco_save_exam_program_meta_data')) {
+    function mco_save_exam_program_meta_data($post_id) {
+        if (!isset($_POST['mco_exam_program_meta_nonce']) || !wp_verify_nonce($_POST['mco_exam_program_meta_nonce'], 'mco_save_exam_program_meta_data')) {
+            return;
+        }
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+            return;
+        }
+        if (!current_user_can('edit_post', $post_id)) {
+            return;
+        }
+
+        // Save certificate enabled status
+        $cert_enabled_value = isset($_POST['mco_certificate_enabled']) && $_POST['mco_certificate_enabled'] === '1' ? '1' : '0';
+        update_post_meta($post_id, '_mco_certificate_enabled', $cert_enabled_value);
+
+        // Save title overrides
+        if (isset($_POST['mco_practice_exam_title_override'])) {
+            update_post_meta($post_id, '_mco_practice_exam_title_override', sanitize_text_field($_POST['mco_practice_exam_title_override']));
+        }
+        if (isset($_POST['mco_cert_exam_title_override'])) {
+            update_post_meta($post_id, '_mco_cert_exam_title_override', sanitize_text_field($_POST['mco_cert_exam_title_override']));
+        }
+    }
+}
+
 
 if (!function_exists('mco_admin_enqueue_styles')) {
     function mco_admin_enqueue_styles($hook) {
@@ -97,6 +182,7 @@ function mco_render_main_settings_tab() {
         update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
         update_option('mco_logo_url', esc_url_raw($_POST['mco_logo_url']));
         update_option('mco_is_spin_wheel_enabled', isset($_POST['mco_is_spin_wheel_enabled']) ? 1 : 0);
+        update_option('mco_active_theme', sanitize_text_field($_POST['mco_active_theme']));
         
         // Clear config cache on save
         delete_transient('mco_app_config_data');
@@ -126,6 +212,19 @@ function mco_render_main_settings_tab() {
                 <td>
                     <input type="checkbox" name="mco_is_spin_wheel_enabled" value="1" <?php checked(1, get_option('mco_is_spin_wheel_enabled', 0)); ?> />
                     <label for="mco_is_spin_wheel_enabled">Enable the gamified prize wheel for users.</label>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">Application Theme</th>
+                <td>
+                    <select name="mco_active_theme">
+                        <option value="default" <?php selected(get_option('mco_active_theme', 'default'), 'default'); ?>>Cyberpunk (Default)</option>
+                        <option value="professional" <?php selected(get_option('mco_active_theme'), 'professional'); ?>>Professional (Blue)</option>
+                        <option value="serene" <?php selected(get_option('mco_active_theme'), 'serene'); ?>>Serene (Green)</option>
+                        <option value="academic" <?php selected(get_option('mco_active_theme'), 'academic'); ?>>Academic (Crimson)</option>
+                        <option value="noir" <?php selected(get_option('mco_active_theme'), 'noir'); ?>>Noir (Dark)</option>
+                    </select>
+                    <p class="description">Select the default visual theme for the exam application.</p>
                 </td>
             </tr>
             <tr valign="top">
@@ -163,7 +262,7 @@ function mco_render_bulk_import_tab() {
     ?>
 
     <h3>Import Exam Programs</h3>
-    <p>Required columns: <code>program_title, program_description, question_source_url, certification_exam_sku, is_proctored, recommended_book_id, practice_questions, practice_duration, cert_questions, cert_duration, pass_score, status</code></p>
+    <p>Required columns: <code>program_title, program_description, question_source_url, certification_exam_sku, is_proctored, certificate_enabled, recommended_book_id, practice_questions, practice_duration, cert_questions, cert_duration, pass_score, status</code></p>
     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
         <input type="hidden" name="action" value="mco_bulk_import_csv">
         <input type="hidden" name="import_type" value="exam_programs">
@@ -228,7 +327,7 @@ function mco_process_csv_import($file_path) {
     if ($handle === FALSE) { return '<p class="error">Could not open file.</p>'; }
 
     $headers = array_map('trim', fgetcsv($handle, 1000, ","));
-    $required_headers = ['program_title', 'program_description', 'question_source_url', 'certification_exam_sku', 'is_proctored', 'recommended_book_id', 'practice_questions', 'practice_duration', 'cert_questions', 'cert_duration', 'pass_score', 'status'];
+    $required_headers = ['program_title', 'program_description', 'question_source_url', 'certification_exam_sku', 'is_proctored', 'certificate_enabled', 'recommended_book_id', 'practice_questions', 'practice_duration', 'cert_questions', 'cert_duration', 'pass_score', 'status'];
     
     if (count(array_intersect($required_headers, $headers)) !== count($required_headers)) {
         return '<p class="error">CSV headers do not match the required format. Missing: ' . implode(', ', array_diff($required_headers, $headers)) . '</p>';
@@ -289,6 +388,7 @@ function mco_process_csv_import($file_path) {
             update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($row['certification_exam_sku']));
             update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($row['question_source_url']));
             update_post_meta($post_id, '_mco_is_proctored', intval($row['is_proctored']));
+            update_post_meta($post_id, '_mco_certificate_enabled', intval($row['certificate_enabled']));
             
             $book_slugs = array_map('trim', explode(',', $row['recommended_book_id']));
             $book_post_ids = [];

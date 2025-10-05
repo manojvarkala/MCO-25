@@ -63,6 +63,7 @@ export interface Exam {
   regularPrice?: number;
   questionSourceUrl?: string;
   certificateTemplateId: string;
+  certificateEnabled: boolean;
   isProctored: boolean;
   recommendedBookIds: string[];
   imageUrl?: string;
@@ -102,11 +103,18 @@ export interface ExamProductCategory {
     questionSourceUrl: string;
 }
 
+export interface Theme {
+  id: string;
+  name: string;
+}
+
 export interface Organization {
   id: string;
   name: string;
   website: string;
   logo: string;
+  availableThemes: Theme[];
+  activeThemeId: string;
   exams: Exam[];
   certificateTemplates: CertificateTemplate[];
   examProductCategories: ExamProductCategory[];

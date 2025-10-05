@@ -35,6 +35,7 @@ import MasqueradeBanner from './components/MasqueradeBanner.tsx';
 import BookStore from './components/BookStore.tsx';
 import ExamProgram from './components/ExamProgram.tsx';
 import ProductCustomizer from './components/ProductCustomizer.tsx';
+import ExamProgramCustomizer from './components/ExamProgramCustomizer.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -56,11 +57,17 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }
 
 const AppContent: FC = () => {
     const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed, isMasquerading } = useAuth();
-    const { isWheelModalOpen, setWheelModalOpen, activeOrg } = useAppContext();
+    const { isWheelModalOpen, setWheelModalOpen, activeOrg, activeTheme } = useAppContext();
     const location = useLocation();
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
     
     const isTestPage = location.pathname.startsWith('/test/');
+
+    useEffect(() => {
+        if (activeTheme) {
+            document.documentElement.setAttribute('data-theme', activeTheme);
+        }
+    }, [activeTheme]);
 
     useEffect(() => {
         if (activeOrg) {
@@ -102,7 +109,7 @@ const AppContent: FC = () => {
         : "container mx-auto px-4 py-8";
 
     return (
-        <div className={`flex flex-col min-h-screen bg-slate-50 text-slate-800 ${isMasquerading ? 'pt-10' : ''}`}>
+        <div className={`flex flex-col min-h-screen bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-default-rgb))] font-main ${isMasquerading ? 'pt-10' : ''}`}>
             {isMasquerading && <MasqueradeBanner />}
             {user && <UpdateNameModal isOpen={isNameModalOpen} onClose={() => setIsNameModalOpen(false)} />}
             {canSpinWheel && isWheelModalOpen && (
@@ -153,6 +160,7 @@ const AppContent: FC = () => {
                         <Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
                         <Route path="/admin" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
                         <Route path="/admin/products" element={<ProtectedRoute adminOnly={true}><ProductCustomizer /></ProtectedRoute>} />
+                        <Route path="/admin/programs" element={<ProtectedRoute adminOnly={true}><ExamProgramCustomizer /></ProtectedRoute>} />
                         <Route path="/integration" element={<ProtectedRoute adminOnly={true}><Integration /></ProtectedRoute>} />
                     
                         <Route path="*" element={<Navigate to="/" replace />} />
