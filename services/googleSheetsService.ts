@@ -377,6 +377,15 @@ export const googleSheetsService = {
         }
     },
     
+    adminTestSheetUrl: async (token: string, sheetUrl: string): Promise<any> => {
+        try {
+            return await apiFetch('/admin/test-sheet-url', 'POST', token, { sheetUrl });
+        } catch (error) {
+            console.error("Failed to test sheet URL:", error);
+            throw error;
+        }
+    },
+
     // --- EXAM STATS ---
     getExamStats: async (token: string): Promise<ExamStat[]> => {
         try {

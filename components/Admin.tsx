@@ -23,6 +23,14 @@ interface HealthCheckState {
     authentication: { status: HealthStatus; message: ReactNode };
 }
 
+type SheetTestResult = {
+    success: boolean;
+    statusCode: number | string;
+    message: string;
+    dataPreview: string | null;
+} | null;
+
+
 const decodeHtmlEntities = (text: string | undefined): string => {
     if (!text || typeof text !== 'string') return text || '';
     try {
@@ -81,6 +89,12 @@ const Admin: FC = () => {
 
     // State for CSV downloads
     const [isGeneratingWooCsv, setIsGeneratingWooCsv] = useState(false);
+
+    // State for Sheet Tester
+    const [sheetUrlToTest, setSheetUrlToTest] = useState('');
+    const [isTestingSheet, setIsTestingSheet] = useState(false);
+    const [sheetTestResult, setSheetTestResult] = useState<SheetTestResult>(null);
+
 
     const certificateTemplates = activeOrg?.certificateTemplates || [];
 
@@ -205,6 +219,28 @@ const Admin: FC = () => {
         }
     };
 
+    const handleTestSheetUrl = async () => {
+        if (!sheetUrlToTest.trim() || !token) {
+            toast.error("Please enter a URL to test.");
+            return;
+        }
+        setIsTestingSheet(true);
+        setSheetTestResult(null);
+        try {
+            const result = await googleSheetsService.adminTestSheetUrl(token, sheetUrlToTest);
+            setSheetTestResult(result);
+        } catch (error: any) {
+            setSheetTestResult({
+                success: false,
+                statusCode: 'FETCH_ERROR',
+                message: error.message || "A client-side error occurred.",
+                dataPreview: null,
+            });
+        } finally {
+            setIsTestingSheet(false);
+        }
+    };
+
     return (
         <div className="space-y-8">
             <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">Admin Dashboard</h1>
@@ -255,6 +291,80 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
                 )}
             </div>
             
+            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                    <FileText className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                    Google Sheet URL Tester
+                </h2>
+                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                    If you're getting a "Question Sheet: Failure" error, paste the URL from your "Question Source URL" field here to test it directly and get detailed feedback.
+                </p>
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        value={sheetUrlToTest}
+                        onChange={(e) => setSheetUrlToTest(e.target.value)}
+                        placeholder="Paste your Google Sheet URL here..."
+                        className="flex-grow p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
+                        disabled={isTestingSheet}
+                    />
+                    <button
+                        onClick={handleTestSheetUrl}
+                        disabled={isTestingSheet}
+                        className="inline-flex items-center justify-center px-6 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50"
+                    >
+                        {isTestingSheet ? <Spinner size="sm" /> : <RefreshCw size={20} />}
+                        <span className="ml-2">{isTestingSheet ? 'Testing...' : 'Test URL'}</span>
+                    </button>
+                </div>
+
+                {sheetTestResult && (
+                    <div className="mt-6">
+                        <h3 className="font-bold mb-2">Test Result:</h3>
+                        <div className={`flex items-start gap-4 p-4 rounded-lg border ${sheetTestResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                            {sheetTestResult.success ? <CheckCircle size={24} className="text-green-500 flex-shrink-0" /> : <XCircle size={24} className="text-red-500 flex-shrink-0" />}
+                            <div className="flex-grow text-sm">
+                                <p className={`font-bold ${sheetTestResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                                    {sheetTestResult.success ? 'Success' : 'Failure'} (Status: {sheetTestResult.statusCode})
+                                </p>
+                                <p className="text-slate-700">{sheetTestResult.message}</p>
+                                {sheetTestResult.dataPreview && (
+                                    <div className="mt-3">
+                                        <h4 className="font-semibold text-xs text-slate-500">Data Preview (First 5 Rows):</h4>
+                                        <pre className="text-xs bg-slate-100 p-2 rounded mt-1 whitespace-pre-wrap font-mono">
+                                            {sheetTestResult.dataPreview}
+                                        </pre>
+                                    </div>
+                                )}
+                                {!sheetTestResult.success && (sheetTestResult.statusCode === 404 || String(sheetTestResult.message).includes('404')) && (
+                                    <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-left text-sm text-amber-800">
+                                        <h3 className="font-bold mb-2 flex items-center gap-2"><Lightbulb size={16} /> How to Fix This 404 Error:</h3>
+                                        <p className="mb-2">This "Not Found" error means the Google Sheet is not accessible to our server. Try the following solutions in order:</p>
+                                        <h4 className="font-semibold mt-3 mb-1">Method 1: Share Link (Recommended)</h4>
+                                        <ol className="list-decimal list-inside space-y-1">
+                                            <li>Open your Google Sheet.</li>
+                                            <li>Click the <strong>Share</strong> button (top-right).</li>
+                                            <li>Under "General access," change from "Restricted" to <strong>"Anyone with the link"</strong>.</li>
+                                            <li>Ensure the role is set to <strong>"Viewer"</strong>.</li>
+                                            <li>Copy the URL from your browser's address bar and paste it into the "Question Source" field.</li>
+                                        </ol>
+                                        <h4 className="font-semibold mt-4 mb-1">Method 2: Publish to the Web (More Reliable)</h4>
+                                        <p className="mb-2">If sharing doesn't work, publishing is a more stable option.</p>
+                                        <ol className="list-decimal list-inside space-y-1">
+                                             <li>In your Google Sheet, go to <strong>File &rarr; Share &rarr; Publish to the web</strong>.</li>
+                                             <li>In the dialog, select the correct sheet (e.g., "Sheet1").</li>
+                                             <li>Choose <strong>"Comma-separated values (.csv)"</strong> from the dropdown.</li>
+                                             <li>Click <strong>Publish</strong> and confirm.</li>
+                                             <li>Copy the generated link and paste it into the "Question Source" field.</li>
+                                        </ol>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
             <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                 <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
                     <FileSpreadsheet className="mr-3 text-[rgb(var(--color-primary-rgb))]" />

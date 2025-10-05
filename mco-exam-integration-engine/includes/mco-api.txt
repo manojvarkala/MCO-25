@@ -219,6 +219,7 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/admin/reset-spins', ['methods' => 'POST', 'callback' => 'mco_api_admin_reset_spins', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/remove-prize', ['methods' => 'POST', 'callback' => 'mco_api_admin_remove_prize', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/update-exam-program', ['methods' => 'POST', 'callback' => 'mco_api_admin_update_exam_program', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/test-sheet-url', ['methods' => 'POST', 'callback' => 'mco_api_admin_test_sheet_url', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
 }
 
 function mco_api_permission_check(WP_REST_Request $request) {
@@ -786,5 +787,71 @@ function mco_api_admin_update_exam_program(WP_REST_Request $request) {
     
     // Return the full, updated config so the client can refresh its state
     return mco_api_get_full_config(new WP_REST_Request());
+}
+
+function mco_api_admin_test_sheet_url(WP_REST_Request $request) {
+    $sheet_url = esc_url_raw($request->get_param('sheetUrl'));
+    $csv_url = '';
+    
+    if (empty($sheet_url)) {
+        return new WP_Error('bad_request', 'Sheet URL cannot be empty.', ['status' => 400]);
+    }
+
+    if (strpos($sheet_url, '/pub?output=csv') !== false) {
+        $csv_url = $sheet_url;
+    } elseif (preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
+        $sheet_id = $matches[1];
+        $csv_url = "https://docs.google.com/spreadsheets/d/{$sheet_id}/export?format=csv&gid=0";
+    }
+
+    if (empty($csv_url)) {
+        return new WP_Error('bad_request', 'Invalid Google Sheet URL format.', ['status' => 400]);
+    }
+    
+    $args = [
+        'timeout' => 20,
+        'user-agent' => 'WordPress/' . get_bloginfo('version') . '; ' . get_bloginfo('url'),
+        'sslverify' => false
+    ];
+    $response = wp_remote_get($csv_url, $args);
+
+    if (is_wp_error($response)) {
+        return new WP_REST_Response([
+            'success' => false,
+            'statusCode' => 'N/A',
+            'message' => 'WordPress connection error: ' . $response->get_error_message(),
+            'dataPreview' => null
+        ], 200);
+    }
+    
+    $status_code = wp_remote_retrieve_response_code($response);
+    $body = wp_remote_retrieve_body($response);
+    
+    if ($status_code != 200) {
+        $error_message = 'HTTP Status ' . $status_code . '. ';
+        if ($status_code == 404) {
+             $error_message .= 'This means the sheet was "Not Found". Check sharing settings and make sure it is set to "Anyone with the link can view".';
+        } else {
+             $error_message .= 'An unexpected error occurred. Raw response: ' . substr(strip_tags($body), 0, 150);
+        }
+
+        return new WP_REST_Response([
+            'success' => false,
+            'statusCode' => $status_code,
+            'message' => $error_message,
+            'dataPreview' => null
+        ], 200);
+    }
+    
+    $rows = preg_split('/\r\n|\r|\n/', $body);
+    $preview_rows = array_slice($rows, 0, 5); // Get first 5 rows for preview
+    $data_preview = implode("\n", $preview_rows);
+
+    return new WP_REST_Response([
+        'success' => true,
+        'statusCode' => $status_code,
+        'message' => 'Successfully fetched ' . count($rows) . ' rows from the sheet.',
+        'dataPreview' => $data_preview
+    ], 200);
 }
 ?>
