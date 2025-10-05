@@ -197,7 +197,7 @@ body {
 .editable-card {
   border-radius: 1rem;
   overflow: hidden;
-  color: var(--color-text-strong-rgb);
+  color: rgb(var(--color-text-strong-rgb));
   display: flex;
   flex-direction: column;
   transition: all 0.2s ease;
