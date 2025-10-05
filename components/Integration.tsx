@@ -1,9 +1,61 @@
-
-
-import React, { FC } from 'react';
+import React, { FC, useState } from 'react';
 import { DownloadCloud, Info, AlertTriangle } from 'lucide-react';
+import JSZip from 'jszip';
+import toast from 'react-hot-toast';
+import Spinner from './Spinner.tsx';
+
+const pluginFiles = [
+    { source: '/mco-exam-integration-engine/mco-exam-integration-engine.txt', dest: 'mco-exam-integration-engine/mco-exam-integration-engine.php' },
+    { source: '/mco-exam-integration-engine/includes/mco-admin.txt', dest: 'mco-exam-integration-engine/includes/mco-admin.php' },
+    { source: '/mco-exam-integration-engine/includes/mco-api.txt', dest: 'mco-exam-integration-engine/includes/mco-api.php' },
+    { source: '/mco-exam-integration-engine/includes/mco-cpts.txt', dest: 'mco-exam-integration-engine/includes/mco-cpts.php' },
+    { source: '/mco-exam-integration-engine/includes/mco-data.txt', dest: 'mco-exam-integration-engine/includes/mco-data.php' },
+    { source: '/mco-exam-integration-engine/includes/mco-shortcodes.txt', dest: 'mco-exam-integration-engine/includes/mco-shortcodes.php' },
+    { source: '/mco-exam-integration-engine/assets/mco-styles.txt', dest: 'mco-exam-integration-engine/assets/mco-styles.css' },
+];
 
 const Integration: FC = () => {
+    const [isZipping, setIsZipping] = useState(false);
+
+    const handleGenerateAndDownloadZip = async () => {
+        setIsZipping(true);
+        const toastId = toast.loading('Preparing plugin files...');
+
+        try {
+            const zip = new JSZip();
+            const filePromises = pluginFiles.map(file =>
+                fetch(file.source).then(res => {
+                    if (!res.ok) throw new Error(`Failed to fetch ${file.source}`);
+                    return res.text();
+                })
+            );
+
+            const fileContents = await Promise.all(filePromises);
+
+            fileContents.forEach((content, index) => {
+                const file = pluginFiles[index];
+                zip.file(file.dest, content);
+            });
+
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(zipBlob);
+            link.download = 'mco-exam-integration-engine.zip';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+
+            toast.success('Plugin .zip file generated!', { id: toastId });
+        } catch (error: any) {
+            console.error('Failed to generate zip:', error);
+            toast.error(error.message || 'Failed to generate plugin zip.', { id: toastId });
+        } finally {
+            setIsZipping(false);
+        }
+    };
+
     return (
         <div className="max-w-4xl mx-auto space-y-8">
             <h1 className="text-3xl font-extrabold text-slate-800">WordPress Integration Plugin</h1>
@@ -20,7 +72,7 @@ const Integration: FC = () => {
                         </div>
                         <div className="ml-3">
                             <p className="text-sm text-cyan-700">
-                                The plugin files are located inside the <strong>`mco-exam-integration-engine`</strong> folder within this project's source code. You will need to prepare these files before uploading.
+                                This tool dynamically generates a ready-to-install <code>.zip</code> file for you, eliminating the need for manual file renaming.
                             </p>
                         </div>
                     </div>
@@ -29,25 +81,13 @@ const Integration: FC = () => {
                 <h3 className="text-lg font-semibold text-slate-700 mt-6">Installation Instructions:</h3>
                 <ol className="list-decimal pl-5 space-y-3 mt-2 text-slate-600">
                     <li>
-                        Locate the <strong>`mco-exam-integration-engine`</strong> directory in the source files of this application.
-                    </li>
-                    <li className="bg-amber-50 p-3 rounded-md border border-amber-200">
-                        <strong className="text-amber-800">Crucial Step: Rename Files</strong><br />
-                        Before zipping, you must rename the files from <code>.txt</code> to their correct extensions for WordPress to recognize them.
-                        <ul className="list-disc pl-5 mt-2 text-sm">
-                            <li>The main file <code>mco-exam-integration-engine.txt</code> must be renamed to <strong><code>mco-exam-integration-engine.php</code></strong>.</li>
-                            <li>In the <code>/includes/</code> folder, rename all <code>.txt</code> files to <strong><code>.php</code></strong>.</li>
-                            <li>In the <code>/assets/</code> folder, rename <code>mco-styles.txt</code> to <strong><code>mco-styles.css</code></strong>.</li>
-                        </ul>
-                    </li>
-                    <li>
-                        After renaming, create a <strong>.zip</strong> file of the entire <strong>`mco-exam-integration-engine`</strong> directory.
+                        Click the <strong>"Generate & Download Plugin"</strong> button below. Your browser will prepare and download the <code>mco-exam-integration-engine.zip</code> file.
                     </li>
                     <li>
                         In your WordPress admin dashboard, navigate to <strong>Plugins &rarr; Add New &rarr; Upload Plugin</strong>.
                     </li>
                     <li>
-                        Choose the .zip file you just created and click "Install Now".
+                        Choose the <code>.zip</code> file you just downloaded and click "Install Now".
                     </li>
                      <li>
                         Activate the plugin after installation.
@@ -64,8 +104,9 @@ const Integration: FC = () => {
                         <div>
                             <strong className="font-bold">RECOMMENDED UPDATE METHOD</strong>
                             <ol className="list-decimal pl-5 mt-2 text-sm space-y-1">
+                                <li>Download the new plugin version using the button below.</li>
                                 <li>In WordPress, go to <strong>Plugins &rarr; Add New &rarr; Upload Plugin</strong>.</li>
-                                <li>Choose the new <code>.zip</code> file for the plugin.</li>
+                                <li>Choose the new <code>.zip</code> file.</li>
                                 <li>WordPress should detect the existing plugin and ask you to <strong>"Replace current with uploaded"</strong>. Click this button to upgrade.</li>
                                 <li>Activate the plugin if prompted.</li>
                                 <li>Finally, <strong>clear all caches</strong> on your site (e.g., WP Rocket, server cache) to ensure all changes take effect.</li>
@@ -80,7 +121,7 @@ const Integration: FC = () => {
                         <div>
                             <strong className="font-bold">TROUBLESHOOTING: PLUGIN INSTALLED SEPARATELY?</strong>
                             <p className="text-sm mt-1">
-                                If WordPress installs the update as a <strong>new, separate plugin</strong> instead of offering to replace the current one, it means the folder name inside your new <code>.zip</code> file is different from the installed plugin's folder name (which should be <code>mco-exam-integration-engine</code>).
+                                If WordPress installs the update as a <strong>new, separate plugin</strong> instead of offering to replace it, it's a minor issue. It means the folder name from a previous version was different.
                             </p>
                             <p className="text-sm mt-2">
                                 <strong>To fix this:</strong> Go to your Plugins page, find the two "Exam App Integration Engine" plugins, and <strong>deactivate and delete the OLDER version</strong>. The plugin is designed to prevent errors if both are active, but it's important to clean up duplicates.
@@ -91,14 +132,14 @@ const Integration: FC = () => {
 
 
                  <div className="mt-8 text-center">
-                    <a 
-                        href="/mco-exam-integration-engine.zip" 
-                        download
-                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105"
+                    <button 
+                        onClick={handleGenerateAndDownloadZip}
+                        disabled={isZipping}
+                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105 disabled:opacity-50"
                     >
-                        <DownloadCloud size={20} className="mr-2" />
-                        Download Plugin (.zip) v30.2.4
-                    </a>
+                        {isZipping ? <Spinner size="sm" /> : <DownloadCloud size={20} className="mr-2" />}
+                        {isZipping ? 'Generating...' : 'Generate & Download Plugin (.zip) v30.2.4'}
+                    </button>
                 </div>
             </div>
         </div>
