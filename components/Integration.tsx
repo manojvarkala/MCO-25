@@ -1,145 +1,110 @@
 import React, { FC, useState } from 'react';
-import { DownloadCloud, Info, AlertTriangle } from 'lucide-react';
-import JSZip from 'jszip';
 import toast from 'react-hot-toast';
+import JSZip from 'jszip';
+import { DownloadCloud, FileText, Code } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
-const pluginFiles = [
-    { source: '/mco-exam-integration-engine/mco-exam-integration-engine.txt', dest: 'mco-exam-integration-engine/mco-exam-integration-engine.php' },
-    { source: '/mco-exam-integration-engine/includes/mco-admin.txt', dest: 'mco-exam-integration-engine/includes/mco-admin.php' },
-    { source: '/mco-exam-integration-engine/includes/mco-api.txt', dest: 'mco-exam-integration-engine/includes/mco-api.php' },
-    { source: '/mco-exam-integration-engine/includes/mco-cpts.txt', dest: 'mco-exam-integration-engine/includes/mco-cpts.php' },
-    { source: '/mco-exam-integration-engine/includes/mco-data.txt', dest: 'mco-exam-integration-engine/includes/mco-data.php' },
-    { source: '/mco-exam-integration-engine/includes/mco-shortcodes.txt', dest: 'mco-exam-integration-engine/includes/mco-shortcodes.php' },
-    { source: '/mco-exam-integration-engine/assets/mco-styles.txt', dest: 'mco-exam-integration-engine/assets/mco-styles.css' },
-];
-
 const Integration: FC = () => {
-    const [isZipping, setIsZipping] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const pluginVersion = "1.0.0";
 
-    const handleGenerateAndDownloadZip = async () => {
-        setIsZipping(true);
-        const toastId = toast.loading('Preparing plugin files...');
+    const pluginFiles = [
+        'mco-exam-integration-engine/mco-exam-integration-engine.txt',
+        'mco-exam-integration-engine/plugin-header.txt',
+        'mco-exam-integration-engine/includes/mco-cpts.txt',
+        'mco-exam-integration-engine/includes/mco-admin.txt',
+        'mco-exam-integration-engine/includes/mco-api.txt',
+        'mco-exam-integration-engine/includes/mco-data.txt',
+        'mco-exam-integration-engine/includes/mco-shortcodes.txt',
+        'mco-exam-integration-engine/assets/mco-styles.txt',
+    ];
 
+    const generateZip = async () => {
+        setIsGenerating(true);
+        const toastId = toast.loading('Generating plugin .zip file...');
         try {
             const zip = new JSZip();
-            const filePromises = pluginFiles.map(file =>
-                fetch(file.source).then(res => {
-                    if (!res.ok) throw new Error(`Failed to fetch ${file.source}`);
-                    return res.text();
-                })
-            );
+            const rootFolder = zip.folder('mco-exam-integration-engine');
+            if (!rootFolder) throw new Error("Could not create zip folder.");
 
-            const fileContents = await Promise.all(filePromises);
-
-            fileContents.forEach((content, index) => {
-                const file = pluginFiles[index];
-                zip.file(file.dest, content);
-            });
-
-            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            for (const filePath of pluginFiles) {
+                const response = await fetch(`/${filePath}`);
+                if (!response.ok) throw new Error(`Failed to fetch ${filePath}`);
+                const content = await response.text();
+                
+                let finalPath = filePath.replace('mco-exam-integration-engine/', '');
+                if (finalPath.endsWith('.txt')) {
+                    // Correctly rename based on directory and specific filenames
+                    if (finalPath.includes('includes/') || finalPath === 'mco-exam-integration-engine.txt' || finalPath === 'plugin-header.txt') {
+                         finalPath = finalPath.replace('.txt', '.php');
+                    } else if (finalPath.includes('assets/')) {
+                         finalPath = finalPath.replace('.txt', '.css');
+                    }
+                }
+                
+                rootFolder.file(finalPath, content);
+            }
             
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(zipBlob);
-            link.download = 'mco-exam-integration-engine.zip';
+            link.download = `mco-exam-integration-engine-v${pluginVersion}.zip`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(link.href);
 
-            toast.success('Plugin .zip file generated!', { id: toastId });
+            toast.success('Plugin .zip generated successfully!', { id: toastId });
         } catch (error: any) {
-            console.error('Failed to generate zip:', error);
-            toast.error(error.message || 'Failed to generate plugin zip.', { id: toastId });
+            console.error(error);
+            toast.error(`Failed to generate .zip: ${error.message}`, { id: toastId });
         } finally {
-            setIsZipping(false);
+            setIsGenerating(false);
         }
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8">
-            <h1 className="text-3xl font-extrabold text-slate-800">WordPress Integration Plugin</h1>
+        <div className="space-y-8">
+            <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">Plugin Installation Guide</h1>
             
-            <div className="bg-white p-6 rounded-lg shadow-lg border border-slate-200">
-                <h2 className="text-xl font-bold mb-2 text-slate-800">The Integration Engine (v30.2.4)</h2>
-                <p className="mb-4 text-slate-600">
-                    This is the master plugin for integrating the exam app with your WordPress site. It handles Single Sign-On (SSO), data synchronization, CORS headers, and provides powerful shortcodes for displaying content.
+            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                    <Code className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                    WordPress Integration Plugin
+                </h2>
+                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                    This plugin provides the backend API, user authentication (SSO), and content management for the React-based examination app. Follow these steps to install or update it on your WordPress site.
                 </p>
-                <div className="bg-cyan-50 border-l-4 border-cyan-500 p-4 my-4">
-                    <div className="flex">
-                        <div className="flex-shrink-0">
-                            <Info className="h-5 w-5 text-cyan-600" aria-hidden="true" />
-                        </div>
-                        <div className="ml-3">
-                            <p className="text-sm text-cyan-700">
-                                This tool dynamically generates a ready-to-install <code>.zip</code> file for you, eliminating the need for manual file renaming.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                <h3 className="text-lg font-semibold text-slate-700 mt-6">Installation Instructions:</h3>
-                <ol className="list-decimal pl-5 space-y-3 mt-2 text-slate-600">
-                    <li>
-                        Click the <strong>"Generate & Download Plugin"</strong> button below. Your browser will prepare and download the <code>mco-exam-integration-engine.zip</code> file.
-                    </li>
-                    <li>
-                        In your WordPress admin dashboard, navigate to <strong>Plugins &rarr; Add New &rarr; Upload Plugin</strong>.
-                    </li>
-                    <li>
-                        Choose the <code>.zip</code> file you just downloaded and click "Install Now".
-                    </li>
-                     <li>
-                        Activate the plugin after installation.
-                    </li>
-                     <li>
-                        Navigate to the new <strong>"Exam App Engine"</strong> menu in your WordPress admin sidebar to configure the required settings, such as your Exam App URL.
-                    </li>
-                </ol>
 
-                <h3 className="text-lg font-semibold text-slate-700 mt-8">Updating the Plugin:</h3>
-                <div className="bg-blue-50 p-4 rounded-md border border-blue-200 text-blue-800">
-                    <div className="flex items-start gap-3">
-                        <Info className="h-6 w-6 text-blue-500 flex-shrink-0" />
-                        <div>
-                            <strong className="font-bold">RECOMMENDED UPDATE METHOD</strong>
-                            <ol className="list-decimal pl-5 mt-2 text-sm space-y-1">
-                                <li>Download the new plugin version using the button below.</li>
-                                <li>In WordPress, go to <strong>Plugins &rarr; Add New &rarr; Upload Plugin</strong>.</li>
-                                <li>Choose the new <code>.zip</code> file.</li>
-                                <li>WordPress should detect the existing plugin and ask you to <strong>"Replace current with uploaded"</strong>. Click this button to upgrade.</li>
-                                <li>Activate the plugin if prompted.</li>
-                                <li>Finally, <strong>clear all caches</strong> on your site (e.g., WP Rocket, server cache) to ensure all changes take effect.</li>
-                            </ol>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mt-4 bg-amber-50 p-4 rounded-md border border-amber-200 text-amber-800">
-                    <div className="flex items-start gap-3">
-                        <AlertTriangle className="h-6 w-6 text-amber-500 flex-shrink-0" />
-                        <div>
-                            <strong className="font-bold">TROUBLESHOOTING: PLUGIN INSTALLED SEPARATELY?</strong>
-                            <p className="text-sm mt-1">
-                                If WordPress installs the update as a <strong>new, separate plugin</strong> instead of offering to replace it, it's a minor issue. It means the folder name from a previous version was different.
-                            </p>
-                            <p className="text-sm mt-2">
-                                <strong>To fix this:</strong> Go to your Plugins page, find the two "Exam App Integration Engine" plugins, and <strong>deactivate and delete the OLDER version</strong>. The plugin is designed to prevent errors if both are active, but it's important to clean up duplicates.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-
-                 <div className="mt-8 text-center">
-                    <button 
-                        onClick={handleGenerateAndDownloadZip}
-                        disabled={isZipping}
-                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 transition-transform transform hover:scale-105 disabled:opacity-50"
-                    >
-                        {isZipping ? <Spinner size="sm" /> : <DownloadCloud size={20} className="mr-2" />}
-                        {isZipping ? 'Generating...' : 'Generate & Download Plugin (.zip) v30.2.4'}
-                    </button>
+                <div className="space-y-4 p-4 bg-[rgb(var(--color-muted-rgb))] rounded-lg border border-[rgb(var(--color-border-rgb))]">
+                     <ol className="list-decimal list-inside space-y-4 text-[rgb(var(--color-text-muted-rgb))]">
+                        <li>
+                            <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 1: Generate & Download the Plugin</strong><br />
+                            Click the button below to generate a ready-to-install <code>.zip</code> file. This process automatically handles all file naming for you.
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                 <button
+                                    onClick={generateZip}
+                                    disabled={isGenerating}
+                                    className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                                >
+                                    {isGenerating ? <Spinner size="sm" /> : <DownloadCloud size={16} className="mr-2"/>}
+                                    {isGenerating ? 'Generating...' : `Generate & Download Plugin (v${pluginVersion})`}
+                                </button>
+                            </div>
+                        </li>
+                        <li>
+                             <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 2: Install or Update in WordPress</strong><br />
+                             Go to your WordPress admin dashboard, navigate to <strong>Plugins &rarr; Add New &rarr; Upload Plugin</strong>, and upload the <code>.zip</code> file you just downloaded.
+                             <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                                 <h4 className="font-bold">Updating the plugin?</h4>
+                                 <p>If you already have an older version installed, WordPress will automatically detect it and ask you to "Replace current with uploaded". Click this button to complete the update safely.</p>
+                             </div>
+                        </li>
+                        <li>
+                            <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 3: Activate & Configure</strong><br />
+                            After installation, activate the "MCO Exam Integration Engine" plugin. Then, navigate to the new <strong>Exam App Engine</strong> menu in your WordPress admin to configure the Main Settings.
+                        </li>
+                     </ol>
                 </div>
             </div>
         </div>

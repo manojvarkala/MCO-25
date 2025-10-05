@@ -1,159 +1,110 @@
 <?php
-/**
- * Plugin Name:       Exam App Integration Engine
- * Description:       A multi-tenant engine to integrate the React examination app with any WordPress/WooCommerce site, handling SSO, dynamic data, and API services. Now with Spin & Win, user reviews, and admin tools.
- * Version:           30.2.5
- * Author:            Annapoorna Infotech
- * 
- * --- HOW TO UPDATE THIS PLUGIN ---
- * To prevent fatal errors from duplicate function definitions, please follow these steps exactly:
- * 1. DEACTIVATE the existing "Exam App Integration Engine" plugin in your WordPress dashboard.
- * 2. DELETE the deactivated plugin. Your settings and data will NOT be lost.
- * 3. UPLOAD the new .zip file of the plugin.
- * 4. ACTIVATE the new plugin.
- * 5. CLEAR ALL CACHES on your site (e.g., WP Rocket, LiteSpeed, server cache) to ensure changes take effect.
- * ---------------------------------
- */
+// Main plugin bootstrap file.
 
-// --- DUPLICATE PLUGIN CHECK ---
-// This check prevents "Cannot redeclare function" fatal errors if two versions of the plugin are
-// accidentally activated at the same time, which can happen during a faulty update.
-if (defined('MCO_EXAM_ENGINE_LOADED')) {
-    add_action('admin_notices', function() {
-        echo '<div class="notice notice-error is-dismissible"><p>';
-        echo '<strong>Error: Duplicate Exam App Integration Engine Plugin Detected.</strong><br>';
-        echo 'You have two versions of the plugin activated. This can cause fatal errors. The newly uploaded plugin has been automatically deactivated.';
-        echo '<br><strong>To fix this:</strong> Please go to your Plugins page, identify the two "Exam App Integration Engine" plugins (one may have a different folder name), and <strong>delete the older version</strong>.';
-        echo '</p></div>';
-    });
-    
-    require_once ABSPATH . 'wp-admin/includes/plugin.php';
-    deactivate_plugins(plugin_basename(__FILE__));
-    if (isset($_GET['activate'])) {
-        unset($_GET['activate']);
-    }
-    return; // Stop loading this instance of the plugin.
-}
-define('MCO_EXAM_ENGINE_LOADED', true);
-
+// Include the plugin header with version information from its own separate file.
+// This makes version updates safer and isolates metadata from logic.
+require_once plugin_dir_path(__FILE__) . 'plugin-header.txt';
 
 if (!defined('ABSPATH')) exit;
 
-define('MCO_PLUGIN_VERSION', '30.2.5');
-define('MCO_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('MCO_PLUGIN_URL', plugin_dir_url(__FILE__));
+// Prevent duplicate plugin activation errors. This runs on every admin page load.
+if (!function_exists('mco_is_plugin_already_active')) {
+    function mco_is_plugin_already_active() {
+        if (is_admin() && current_user_can('activate_plugins') && is_plugin_active(plugin_basename(__FILE__))) {
+            $plugins = get_option('active_plugins');
+            $this_plugin_path = plugin_basename(__FILE__);
+            $this_plugin_dir = dirname($this_plugin_path);
+            $duplicates = [];
 
-// --- FAILSAFE DEPENDENCY CHECK ---
-if (!function_exists('mco_failsafe_dependency_check')) {
-    function mco_failsafe_dependency_check() {
-        if (!class_exists('WooCommerce')) {
-            add_action('admin_notices', 'mco_dependency_error_notice');
-            deactivate_plugins(plugin_basename(__FILE__));
-            if (isset($_GET['activate'])) {
-                unset($_GET['activate']);
-            }
-        }
-    }
-}
-if (!function_exists('mco_dependency_error_notice')) {
-    function mco_dependency_error_notice() {
-        echo '<div class="notice notice-error is-dismissible">';
-        echo '<p><strong>Exam App Engine:</strong> has been automatically deactivated because it requires the <strong>WooCommerce</strong> plugin to be installed and active. Please install or activate WooCommerce, then try activating this plugin again.</p>';
-        echo '</div>';
-    }
-}
-add_action('admin_init', 'mco_failsafe_dependency_check');
+            // Get data for the current plugin to compare against others
+            $current_plugin_data = get_plugin_data(__FILE__);
+            $current_plugin_name = $current_plugin_data['Name'];
 
-// --- ACTIVATION / DEACTIVATION HOOKS ---
-register_activation_hook(__FILE__, 'mco_plugin_activate');
-register_deactivation_hook(__FILE__, 'mco_plugin_deactivate');
+            foreach ($plugins as $plugin_path) {
+                if ($plugin_path === $this_plugin_path) continue; // Skip itself
 
-if (!function_exists('mco_plugin_activate')) {
-    function mco_plugin_activate() {
-        require_once MCO_PLUGIN_DIR . 'includes/mco-cpts.php';
-        mco_register_custom_post_types();
-        flush_rewrite_rules(true);
-        
-        // Seed default certificate templates on first activation or if empty
-        if (!get_option('mco_certificate_templates')) {
-            require_once MCO_PLUGIN_DIR . 'includes/mco-admin.php';
-            update_option('mco_certificate_templates', mco_get_default_certificate_templates());
-        }
-        
-        mco_run_updates(); // Run updates on activation
-        update_option('mco_plugin_version', MCO_PLUGIN_VERSION);
-    }
-}
-
-if (!function_exists('mco_plugin_deactivate')) {
-    function mco_plugin_deactivate() {
-        flush_rewrite_rules();
-        delete_option('mco_plugin_version');
-    }
-}
-
-// --- DATA MIGRATION/UPDATE HANDLER ---
-if (!function_exists('mco_run_updates')) {
-    function mco_run_updates() {
-        $saved_version = get_option('mco_plugin_version', '1.0.0');
-        
-        // Check if the saved version is less than the current version to run updates.
-        if (version_compare($saved_version, MCO_PLUGIN_VERSION, '<')) {
-            
-            // Fix for incorrect certificate template keys (from v30.0.3 and earlier)
-            if (version_compare($saved_version, '30.0.4', '<')) {
-                $templates = get_option('mco_certificate_templates');
-                if (is_array($templates)) {
-                    $updated = false;
-                    // Migrate 'cert-practice-1' to 'cert-practice'
-                    if (isset($templates['cert-practice-1']) && !isset($templates['cert-practice'])) {
-                        $templates['cert-practice'] = $templates['cert-practice-1'];
-                        $templates['cert-practice']['id'] = 'cert-practice';
-                        unset($templates['cert-practice-1']);
-                        $updated = true;
-                    }
-                    // Migrate 'cert-generic' to 'cert-completion'
-                    if (isset($templates['cert-generic']) && !isset($templates['cert-completion'])) {
-                        $templates['cert-completion'] = $templates['cert-generic'];
-                        $templates['cert-completion']['id'] = 'cert-completion';
-                        unset($templates['cert-generic']);
-                        $updated = true;
-                    }
-                    if ($updated) {
-                        update_option('mco_certificate_templates', $templates);
+                // Check if another plugin with the same name exists in a different folder
+                if (file_exists(WP_PLUGIN_DIR . '/' . $plugin_path)) {
+                    $plugin_data = get_plugin_data(WP_PLUGIN_DIR . '/' . $plugin_path);
+                    if ($plugin_data['Name'] === $current_plugin_name && dirname($plugin_path) !== $this_plugin_dir) {
+                        $duplicates[] = $plugin_path;
                     }
                 }
             }
             
-            // After all updates, flush rewrite rules and update the version number.
-            flush_rewrite_rules(true);
-            update_option('mco_plugin_version', MCO_PLUGIN_VERSION);
+            if (!empty($duplicates)) {
+                // A duplicate was found. Deactivate this (the newly activated) one.
+                deactivate_plugins($this_plugin_path);
+                // Set a transient to show an admin notice.
+                set_transient('mco_duplicate_plugin_error', true, 60);
+                // Prevent the "Plugin activated." message from appearing.
+                if (isset($_GET['activate'])) {
+                    unset($_GET['activate']);
+                }
+            }
         }
     }
+    add_action('admin_init', 'mco_is_plugin_already_active');
+
+    function mco_show_duplicate_plugin_notice() {
+        if (get_transient('mco_duplicate_plugin_error')) {
+            echo '<div class="notice notice-error is-dismissible"><p><strong>Warning:</strong> A duplicate "MCO Exam Integration Engine" plugin was detected and has been deactivated to prevent site errors. Please go to your Plugins page and delete the older version before re-activating.</p></div>';
+            delete_transient('mco_duplicate_plugin_error');
+        }
+    }
+    add_action('admin_notices', 'mco_show_duplicate_plugin_notice');
 }
 
 
-// --- INITIALIZATION ---
-if (!function_exists('mco_plugin_init')) {
-    function mco_plugin_init() {
-        mco_run_updates(); // Check for updates on every load
-        
-        if (!class_exists('WooCommerce')) {
-            return;
-        }
+// --- CONSTANTS & INCLUDES ---
 
-        require_once MCO_PLUGIN_DIR . 'includes/mco-cpts.php';
-        require_once MCO_PLUGIN_DIR . 'includes/mco-admin.php';
-        require_once MCO_PLUGIN_DIR . 'includes/mco-data.php';
-        require_once MCO_PLUGIN_DIR . 'includes/mco-api.php';
-        require_once MCO_PLUGIN_DIR . 'includes/mco-shortcodes.php';
+// Define core plugin constants
+define('MCO_PLUGIN_FILE', __FILE__);
+define('MCO_PLUGIN_PATH', plugin_dir_path(MCO_PLUGIN_FILE));
+define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
 
-        // Register all components now that files are loaded to prevent timing conflicts
+// Define version constant dynamically from the header file's data
+if (!function_exists('get_plugin_data')) {
+    require_once(ABSPATH . 'wp-admin/includes/plugin.php');
+}
+$mco_plugin_data = get_plugin_data(MCO_PLUGIN_FILE);
+define('MCO_PLUGIN_VERSION', $mco_plugin_data['Version']);
+
+// Include all the necessary logic files
+require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.txt';
+require_once MCO_PLUGIN_PATH . 'includes/mco-data.txt';
+require_once MCO_PLUGIN_PATH . 'includes/mco-api.txt';
+require_once MCO_PLUGIN_PATH . 'includes/mco-admin.txt';
+require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.txt';
+
+
+// --- INITIALIZATION HOOKS ---
+
+// Main initialization function to register all hooks
+if (!function_exists('mco_exam_engine_init')) {
+    function mco_exam_engine_init() {
         mco_register_custom_post_types();
-        mco_register_shortcode_hooks();
-        mco_register_admin_hooks();
         mco_register_api_hooks();
+        mco_register_admin_hooks();
+        mco_register_shortcode_hooks();
     }
+    add_action('init', 'mco_exam_engine_init');
 }
-add_action('init', 'mco_plugin_init');
+
+// Activation hook for flushing rewrite rules
+if (!function_exists('mco_exam_engine_activate')) {
+    function mco_exam_engine_activate() {
+        mco_register_custom_post_types();
+        flush_rewrite_rules();
+    }
+    register_activation_hook(MCO_PLUGIN_FILE, 'mco_exam_engine_activate');
+}
+
+// Deactivation hook
+if (!function_exists('mco_exam_engine_deactivate')) {
+    function mco_exam_engine_deactivate() {
+        flush_rewrite_rules();
+    }
+    register_deactivation_hook(MCO_PLUGIN_FILE, 'mco_exam_engine_deactivate');
+}
 ?>
