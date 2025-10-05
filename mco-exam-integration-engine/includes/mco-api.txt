@@ -24,6 +24,55 @@ if (!defined('ABSPATH')) exit;
  * =================================================================================================
  */
 
+// --- New Universal Fetcher Function ---
+if (!function_exists('mco_fetch_remote_csv_content')) {
+    function mco_fetch_remote_csv_content($url) {
+        if (function_exists('curl_init')) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_MAXREDIRS, 10);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36');
+            
+            $body = curl_exec($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curl_error = curl_error($ch);
+            curl_close($ch);
+
+            if ($curl_error) {
+                return new WP_Error('curl_error', 'cURL Error: ' . $curl_error);
+            }
+
+            return [
+                'response' => ['code' => $http_code],
+                'body' => $body
+            ];
+        }
+
+        // Fallback to wp_remote_get if cURL isn't available
+        $args = [
+            'timeout' => 30,
+            'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+            'sslverify' => false,
+            'redirection' => 10
+        ];
+        $response = wp_remote_get($url, $args);
+        
+        if (is_wp_error($response)) {
+            return $response;
+        }
+
+        return [
+            'response' => ['code' => wp_remote_retrieve_response_code($response)],
+            'body' => wp_remote_retrieve_body($response)
+        ];
+    }
+}
+
+
 // --- JWT & HELPER FUNCTIONS ---
 
 if (!function_exists('mco_base64url_encode')) {
@@ -220,6 +269,8 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/admin/remove-prize', ['methods' => 'POST', 'callback' => 'mco_api_admin_remove_prize', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/update-exam-program', ['methods' => 'POST', 'callback' => 'mco_api_admin_update_exam_program', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/test-sheet-url', ['methods' => 'POST', 'callback' => 'mco_api_admin_test_sheet_url', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/clear-config-cache', ['methods' => 'POST', 'callback' => 'mco_api_clear_config_cache', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/clear-question-caches', ['methods' => 'POST', 'callback' => 'mco_api_clear_question_caches', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
 }
 
 function mco_api_permission_check(WP_REST_Request $request) {
@@ -371,45 +422,33 @@ function mco_api_submit_result(WP_REST_Request $request) {
 function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
     $sheet_url = esc_url_raw($request->get_param('sheetUrl'));
     $csv_url = '';
-    $error_message = 'Could not fetch questions from Google Sheets. Please ensure the sheet is public ("Anyone with the link can view"). If the issue persists, try the more reliable "Publish to the web" option (as a CSV) inside Google Sheets and use that link instead.';
 
-    // Check for "Publish to the web" format first (handles modern /pub?output=csv and older /pub?gid= formats).
-    if (strpos($sheet_url, '/pub?output=csv') !== false) {
+    if (strpos($sheet_url, '/pub') !== false && strpos($sheet_url, 'output=csv') !== false) {
         $csv_url = $sheet_url;
-    } 
-    // Fallback to constructing the export URL from a standard sharing link.
-    elseif (preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
-        $sheet_id = $matches[1];
-        $csv_url = "https://docs.google.com/spreadsheets/d/{$sheet_id}/export?format=csv&gid=0";
+    } elseif (strpos($sheet_url, '/edit') !== false || strpos($sheet_url, '/view') !== false) {
+        return new WP_Error('unreliable_link', 'The provided URL is a standard "sharing" link. This format is unreliable. Please use the "File > Share > Publish to the web" option in Google Sheets and use the generated CSV link for guaranteed compatibility.', ['status' => 400]);
+    } else {
+        return new WP_Error('bad_request', 'Invalid Google Sheet URL format. Please use a "Publish to the web" CSV link.', ['status' => 400]);
     }
 
-    if (empty($csv_url)) {
-        return new WP_Error('bad_request', 'Invalid Google Sheet URL format. Please use the standard sharing link or a "Publish to the web" CSV link.', ['status' => 400]);
-    }
-
-    $transient_key = 'mco_sheet_' . md5($sheet_url); // Key based on the original URL to bust cache if URL changes.
+    $transient_key = 'mco_sheet_' . md5($sheet_url);
     $questions = get_transient($transient_key);
 
     if (false === $questions) {
-        $args = [
-            'timeout' => 20,
-            'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-            'sslverify' => false
-        ];
-        $response = wp_remote_get($csv_url, $args);
+        $response = mco_fetch_remote_csv_content($csv_url);
 
         if (is_wp_error($response)) {
             return new WP_Error('fetch_error', 'Could not connect to Google Sheets: ' . $response->get_error_message(), ['status' => 500]);
         }
         
-        $response_code = wp_remote_retrieve_response_code($response);
+        $response_code = $response['response']['code'];
         if ($response_code != 200) {
-            $response_body = wp_remote_retrieve_body($response);
-            $error_details = !empty($response_body) ? ' Server response: ' . substr(strip_tags($response_body), 0, 200) : '';
-            return new WP_Error('fetch_error', $error_message . ' (HTTP Status: ' . $response_code . ').' . $error_details, ['status' => 500]);
+            $response_body = $response['body'];
+            $error_details = 'Could not fetch questions from Google Sheets. Please use the "Google Sheet URL Tester" in the admin panel to diagnose the issue.';
+            return new WP_Error('fetch_error', $error_details . ' (HTTP Status: ' . $response_code . ').', ['status' => 500]);
         }
 
-        $body = wp_remote_retrieve_body($response);
+        $body = $response['body'];
         if (function_exists('mb_convert_encoding')) {
             $body = mb_convert_encoding($body, 'UTF-8', mb_detect_encoding($body, 'UTF-8, ISO-8859-1', true));
         }
@@ -797,24 +836,21 @@ function mco_api_admin_test_sheet_url(WP_REST_Request $request) {
         return new WP_Error('bad_request', 'Sheet URL cannot be empty.', ['status' => 400]);
     }
 
-    if (strpos($sheet_url, '/pub?output=csv') !== false) {
+    if (strpos($sheet_url, '/pub') !== false && strpos($sheet_url, 'output=csv') !== false) {
         $csv_url = $sheet_url;
-    } elseif (preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
-        $sheet_id = $matches[1];
-        $csv_url = "https://docs.google.com/spreadsheets/d/{$sheet_id}/export?format=csv&gid=0";
-    }
-
-    if (empty($csv_url)) {
+    } elseif (strpos($sheet_url, '/edit') !== false || strpos($sheet_url, '/view') !== false) {
+        return new WP_REST_Response([
+            'success' => false,
+            'statusCode' => 400,
+            'message' => 'The provided URL is a standard "sharing" link. This format is unreliable. Please use the "File > Share > Publish to the web" option in Google Sheets and use the generated CSV link instead.',
+            'dataPreview' => null
+        ], 200);
+    } else {
         return new WP_Error('bad_request', 'Invalid Google Sheet URL format.', ['status' => 400]);
     }
     
-    $args = [
-        'timeout' => 20,
-        'user-agent' => 'WordPress/' . get_bloginfo('version') . '; ' . get_bloginfo('url'),
-        'sslverify' => false
-    ];
-    $response = wp_remote_get($csv_url, $args);
-
+    $response = mco_fetch_remote_csv_content($csv_url);
+    
     if (is_wp_error($response)) {
         return new WP_REST_Response([
             'success' => false,
@@ -824,13 +860,13 @@ function mco_api_admin_test_sheet_url(WP_REST_Request $request) {
         ], 200);
     }
     
-    $status_code = wp_remote_retrieve_response_code($response);
-    $body = wp_remote_retrieve_body($response);
+    $status_code = $response['response']['code'];
+    $body = $response['body'];
     
     if ($status_code != 200) {
         $error_message = 'HTTP Status ' . $status_code . '. ';
         if ($status_code == 404) {
-             $error_message .= 'This means the sheet was "Not Found". Check sharing settings and make sure it is set to "Anyone with the link can view".';
+             $error_message .= 'Google\'s server responded with "Not Found". This can happen even if the URL is correct in your browser. It means your web server cannot access it.';
         } else {
              $error_message .= 'An unexpected error occurred. Raw response: ' . substr(strip_tags($body), 0, 150);
         }
@@ -853,5 +889,27 @@ function mco_api_admin_test_sheet_url(WP_REST_Request $request) {
         'message' => 'Successfully fetched ' . count($rows) . ' rows from the sheet.',
         'dataPreview' => $data_preview
     ], 200);
+}
+
+function mco_api_clear_config_cache(WP_REST_Request $request) {
+    delete_transient('mco_app_config_data');
+    update_option('mco_config_version', current_time('YmdHis'));
+    return new WP_REST_Response(['success' => true, 'message' => 'App config cache cleared.'], 200);
+}
+
+function mco_api_clear_question_caches(WP_REST_Request $request) {
+    global $wpdb;
+    $prefix = $wpdb->prefix;
+    $transients = $wpdb->get_results(
+        "SELECT option_name FROM {$prefix}options WHERE option_name LIKE '\_transient\_mco\_sheet\_%'"
+    );
+    $count = 0;
+    foreach ($transients as $transient) {
+        $transient_name = str_replace('_transient_', '', $transient->option_name);
+        if (delete_transient($transient_name)) {
+            $count++;
+        }
+    }
+    return new WP_REST_Response(['success' => true, 'message' => "Cleared {$count} question caches."], 200);
 }
 ?>

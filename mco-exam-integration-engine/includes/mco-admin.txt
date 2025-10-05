@@ -151,27 +151,29 @@ if (!function_exists('mco_exam_engine_admin_page')) {
                 update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
                 update_option('mco_is_spin_wheel_enabled', isset($_POST['mco_is_spin_wheel_enabled']) ? 1 : 0);
                 
-                // --- ROBUST LOGO SAVING ---
-                $logo_url_input = isset($_POST['mco_logo_url']) ? wp_unslash($_POST['mco_logo_url']) : '';
-                $sanitized_logo_url = '';
-
-                if (strpos(trim($logo_url_input), 'data:image/') === 0) {
-                    if (preg_match('/^data:image\/(jpeg|png|gif|svg\+xml);base64,/', $logo_url_input)) {
-                        $sanitized_logo_url = $logo_url_input;
-                    } else {
-                        add_settings_error('mco_settings', 'invalid_data_uri', 'Invalid base64 data URI format. Please ensure it starts with a valid "data:image/...;base64," prefix.', 'error');
-                    }
+                $logo_url_input = isset($_POST['mco_logo_url']) ? trim(wp_unslash($_POST['mco_logo_url'])) : '';
+                $url_to_save = '';
+                
+                if (strpos($logo_url_input, 'data:image') === 0) {
+                    // For data URIs, we don't sanitize further to avoid breaking them. WordPress does its own sanitization on update_option.
+                    $url_to_save = $logo_url_input;
                 } else {
-                    $sanitized_logo_url = esc_url_raw($logo_url_input);
+                    // For standard URLs, sanitize using esc_url_raw.
+                    $url_to_save = esc_url_raw($logo_url_input);
                 }
+
+                update_option('mco_logo_url', $url_to_save);
                 
-                update_option('mco_logo_url', $sanitized_logo_url);
-                
-                $saved_logo = get_option('mco_logo_url');
-                if (!empty($logo_url_input) && empty($saved_logo) && empty(get_settings_errors('mco_settings'))) {
-                    add_settings_error('mco_settings', 'logo_save_failed', 'The provided logo data URI could not be saved. This is often due to server security rules or data length limits. Please try uploading the logo to the Media Library and using its direct URL instead.', 'error');
+                // After saving, check if the value was stored correctly, especially for long base64 strings.
+                $saved_logo_value = get_option('mco_logo_url');
+                if (!empty($logo_url_input) && empty($saved_logo_value)) {
+                    add_settings_error(
+                        'mco_settings',
+                        'logo_save_failed',
+                        'The provided logo data URI could not be saved. This often happens if the base64 code is too long for your server\'s database or security configuration. <strong>Recommended solution:</strong> Upload the logo to your WordPress Media Library and paste the file URL here instead.',
+                        'error'
+                    );
                 }
-                // --- END ROBUST LOGO SAVING ---
 
                 delete_transient('mco_app_config_data');
                 update_option('mco_config_version', current_time('YmdHis'));

@@ -47,45 +47,46 @@ const Header: FC = () => {
   return (
     <header className={headerClasses}>
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        {activeOrg ? (
-            <a href={headerLink} className="flex items-center space-x-3">
-                 {activeOrg.logo && !logoError ? (
-                    <img
-                        src={activeOrg.logo}
-                        alt={`${activeOrg.name} Logo`}
-                        className="h-14 w-14 object-contain"
-                        onError={() => setLogoError(true)}
-                    />
-                 ) : (
-                    <div className="h-14 w-14 bg-slate-200 rounded-full flex items-center justify-center">
-                        <Menu className="h-8 w-8 text-slate-400" />
-                    </div>
-                 )}
-                <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                        <span className="text-3xl font-bold font-display text-[rgb(var(--color-text-strong-rgb))]">
-                            {activeOrg.name}
-                        </span>
-                        {isSubscribed && (
-                            <span className="bg-yellow-400 text-yellow-900 text-xs font-bold uppercase px-2 py-0.5 rounded-full self-center">
-                                PRO
-                            </span>
-                        )}
-                    </div>
-                    <span className="text-md font-display text-[rgb(var(--color-text-muted-rgb))]">
-                        {activeOrg.website}
-                    </span>
+        <a href={headerLink} className="flex items-center space-x-3">
+             {activeOrg && (activeOrg.logo && !logoError) ? (
+                <img
+                    src={activeOrg.logo}
+                    alt={`${activeOrg.name} Logo`}
+                    className="h-14 w-14 object-contain"
+                    onError={() => setLogoError(true)}
+                />
+             ) : activeOrg ? (
+                <div className="h-14 w-14 bg-slate-200 rounded-full flex items-center justify-center">
+                    <Menu className="h-8 w-8 text-slate-400" />
                 </div>
-            </a>
-        ) : (
-             <div className="flex items-center space-x-3">
-                 <div className="h-14 w-14 bg-slate-200 rounded-full animate-pulse"></div>
-                 <div className="flex flex-col">
-                    <div className="h-8 w-48 bg-slate-200 rounded animate-pulse mb-2"></div>
-                    <div className="h-4 w-32 bg-slate-200 rounded animate-pulse"></div>
-                 </div>
-             </div>
-        )}
+             ) : (
+                <div className="h-14 w-14 bg-slate-200 rounded-full animate-pulse"></div>
+             )}
+            <div className="flex flex-col">
+                {activeOrg ? (
+                     <>
+                        <div className="flex items-center gap-2">
+                            <span className="text-3xl font-bold font-display text-[rgb(var(--color-text-strong-rgb))]">
+                                {activeOrg.name}
+                            </span>
+                            {isSubscribed && (
+                                <span className="bg-yellow-400 text-yellow-900 text-xs font-bold uppercase px-2 py-0.5 rounded-full self-center">
+                                    PRO
+                                </span>
+                            )}
+                        </div>
+                        <span className="text-md font-display text-[rgb(var(--color-text-muted-rgb))]">
+                            {activeOrg.website}
+                        </span>
+                     </>
+                ) : (
+                    <>
+                        <div className="h-8 w-48 bg-slate-200 rounded animate-pulse mb-2"></div>
+                        <div className="h-4 w-32 bg-slate-200 rounded animate-pulse"></div>
+                    </>
+                )}
+            </div>
+        </a>
        
         <nav className="flex items-center space-x-4">
             {canSpinWheel && (

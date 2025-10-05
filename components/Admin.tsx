@@ -1,5 +1,5 @@
 import React, { FC, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
-import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu, Video, DownloadCloud, Loader, CheckCircle, XCircle } from 'lucide-react';
+import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu, Video, DownloadCloud, Loader, CheckCircle, XCircle, Trash } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, SearchedUser, ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -94,6 +94,9 @@ const Admin: FC = () => {
     const [sheetUrlToTest, setSheetUrlToTest] = useState('');
     const [isTestingSheet, setIsTestingSheet] = useState(false);
     const [sheetTestResult, setSheetTestResult] = useState<SheetTestResult>(null);
+    
+    // State for Cache Clearing
+    const [isClearingCache, setIsClearingCache] = useState<'config' | 'questions' | null>(null);
 
 
     const certificateTemplates = activeOrg?.certificateTemplates || [];
@@ -241,64 +244,126 @@ const Admin: FC = () => {
         }
     };
 
+    const handleClearConfigCache = async () => {
+        if (!token || !window.confirm("Are you sure you want to clear the server's app config cache? The app will need to reload all data on the next request.")) return;
+        setIsClearingCache('config');
+        try {
+            const result = await googleSheetsService.adminClearConfigCache(token);
+            toast.success(result.message || "App config cache cleared!");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to clear config cache.");
+        } finally {
+            setIsClearingCache(null);
+        }
+    };
+
+    const handleClearQuestionCache = async () => {
+        if (!token || !window.confirm("Are you sure you want to clear ALL server-side question caches? This will force the app to re-fetch questions from every Google Sheet.")) return;
+        setIsClearingCache('questions');
+        try {
+            const result = await googleSheetsService.adminClearQuestionCaches(token);
+            toast.success(result.message || "All question caches cleared!");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to clear question caches.");
+        } finally {
+            setIsClearingCache(null);
+        }
+    };
+
     return (
         <div className="space-y-8">
             <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">Admin Dashboard</h1>
 
-            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
-                    <Cpu className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    System Health Check
-                </h2>
-                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                    If you are experiencing "No route found" errors when saving, or other connection issues, run this health check. It will test the connection to your WordPress backend and provide troubleshooting steps for common server configuration problems.
-                </p>
-                <button
-                    onClick={handleRunHealthCheck}
-                    disabled={isCheckingHealth}
-                    className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-transform transform hover:scale-105 disabled:opacity-50"
-                >
-                    {isCheckingHealth ? <Spinner size="sm" /> : <RefreshCw size={20} />}
-                    <span className="ml-2">{isCheckingHealth ? 'Running Checks...' : 'Run System Health Check'}</span>
-                </button>
-                {healthCheckStatus.connectivity.status !== 'idle' && (
-                    <div className="mt-6 space-y-4">
-                        <HealthCheckItem status={healthCheckStatus.connectivity.status} title="Server Connectivity" message={healthCheckStatus.connectivity.message} />
-                        <HealthCheckItem status={healthCheckStatus.apiEndpoint.status} title="Plugin API Endpoint" message={healthCheckStatus.apiEndpoint.message} />
-                        <HealthCheckItem 
-                            status={healthCheckStatus.authentication.status} 
-                            title="Authentication & CORS" 
-                            message={healthCheckStatus.authentication.message}
-                            troubleshooting={
-                                <div className="space-y-3">
-                                    <p>This error almost always means your server is stripping the "Authorization" header from API requests.</p>
-                                    <div>
-                                        <strong className="text-amber-900">Primary Solution (for Apache/LiteSpeed servers):</strong>
-                                        <p>Add the following code to the <strong>very top</strong> of your <code>.htaccess</code> file in the WordPress root directory (before the <code># BEGIN WordPress</code> block):</p>
-                                        <pre className="whitespace-pre-wrap bg-slate-100 p-2 rounded my-1 text-xs"><code>
-{`<IfModule mod_rewrite.c>
-RewriteEngine On
-RewriteCond %{HTTP:Authorization} .
-RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-</IfModule>`}
-                                        </code></pre>
-                                        <p>After adding this, clear any server or plugin caches.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                        <Cpu className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        System Health Check
+                    </h2>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                        Diagnose "No route found" errors and other connection issues with your WordPress backend.
+                    </p>
+                    <button
+                        onClick={handleRunHealthCheck}
+                        disabled={isCheckingHealth}
+                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-transform transform hover:scale-105 disabled:opacity-50"
+                    >
+                        {isCheckingHealth ? <Spinner size="sm" /> : <RefreshCw size={20} />}
+                        <span className="ml-2">{isCheckingHealth ? 'Running Checks...' : 'Run Health Check'}</span>
+                    </button>
+                    {healthCheckStatus.connectivity.status !== 'idle' && (
+                        <div className="mt-6 space-y-4">
+                            <HealthCheckItem status={healthCheckStatus.connectivity.status} title="Server Connectivity" message={healthCheckStatus.connectivity.message} />
+                            <HealthCheckItem status={healthCheckStatus.apiEndpoint.status} title="Plugin API Endpoint" message={healthCheckStatus.apiEndpoint.message} />
+                            <HealthCheckItem 
+                                status={healthCheckStatus.authentication.status} 
+                                title="Authentication & CORS" 
+                                message={healthCheckStatus.authentication.message}
+                                troubleshooting={
+                                    <div className="space-y-3">
+                                        <p>This error almost always means your server is stripping the "Authorization" header from API requests.</p>
+                                        <div>
+                                            <strong className="text-amber-900">Primary Solution (for Apache/LiteSpeed servers):</strong>
+                                            <p>Add the following code to the <strong>very top</strong> of your <code>.htaccess</code> file in the WordPress root directory (before the <code># BEGIN WordPress</code> block):</p>
+                                            <pre className="whitespace-pre-wrap bg-slate-100 p-2 rounded my-1 text-xs"><code>
+    {`<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    </IfModule>`}
+                                            </code></pre>
+                                            <p>After adding this, clear any server or plugin caches.</p>
+                                        </div>
+                                        <div className="pt-3 border-t border-amber-200">
+                                            <strong className="text-amber-900">Secondary Solution (if saving still fails after a successful check):</strong>
+                                            <p>If the check above passes but saving an exam program still gives a "No route found" error, your server's URL rules might be cached. The best way to fix this is to flush them:</p>
+                                            <ol className="list-decimal list-inside ml-4 mt-1">
+                                                <li>Go to your WordPress Admin Dashboard.</li>
+                                                <li>Navigate to <strong>Settings &rarr; Permalinks</strong>.</li>
+                                                <li>You don't need to change anything. Just click the <strong>"Save Changes"</strong> button.</li>
+                                                <li>This action forces WordPress to rebuild its internal URL routing table.</li>
+                                            </ol>
+                                        </div>
                                     </div>
-                                    <div className="pt-3 border-t border-amber-200">
-                                        <strong className="text-amber-900">Secondary Solution (if saving still fails after a successful check):</strong>
-                                        <p>If the check above passes but saving an exam program still gives a "No route found" error, your server's URL rules might be cached. The best way to fix this is to flush them:</p>
-                                        <ol className="list-decimal list-inside ml-4 mt-1">
-                                            <li>Go to your WordPress Admin Dashboard.</li>
-                                            <li>Navigate to <strong>Settings &rarr; Permalinks</strong>.</li>
-                                            <li>You don't need to change anything. Just click the <strong>"Save Changes"</strong> button.</li>
-                                            <li>This action forces WordPress to rebuild its internal URL routing table.</li>
-                                        </ol>
-                                    </div>
-                                </div>
-                            }
-                        />
+                                }
+                            />
+                        </div>
+                    )}
+                </div>
+
+                 <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                        <Trash className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Cache Management
+                    </h2>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                        Force the server to reload data. Use these tools after making changes in WordPress that don't appear in the app.
+                    </p>
+                    <div className="space-y-4">
+                        <div>
+                            <button
+                                onClick={handleClearConfigCache}
+                                disabled={!!isClearingCache}
+                                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                            >
+                                {isClearingCache === 'config' ? <Spinner size="sm" /> : <RefreshCw size={16} />}
+                                <span className="ml-2">{isClearingCache === 'config' ? 'Clearing...' : 'Clear App Config Cache'}</span>
+                            </button>
+                            <p className="text-xs text-slate-500 mt-1">Clears all exam programs, products, and settings cache.</p>
+                        </div>
+                         <div>
+                            <button
+                                onClick={handleClearQuestionCache}
+                                disabled={!!isClearingCache}
+                                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                            >
+                                {isClearingCache === 'questions' ? <Spinner size="sm" /> : <RefreshCw size={16} />}
+                                <span className="ml-2">{isClearingCache === 'questions' ? 'Clearing...' : 'Clear All Question Caches'}</span>
+                            </button>
+                            <p className="text-xs text-slate-500 mt-1">Forces the app to re-fetch questions from all Google Sheets.</p>
+                        </div>
                     </div>
-                )}
+                </div>
             </div>
             
             <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
@@ -346,27 +411,19 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
                                         </pre>
                                     </div>
                                 )}
-                                {!sheetTestResult.success && (sheetTestResult.statusCode === 404 || String(sheetTestResult.message).includes('404')) && (
+                                {!sheetTestResult.success && (
                                     <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-left text-sm text-amber-800">
-                                        <h3 className="font-bold mb-2 flex items-center gap-2"><Lightbulb size={16} /> How to Fix This 404 Error:</h3>
-                                        <p className="mb-2">This "Not Found" error means the Google Sheet is not accessible to our server. Try the following solutions in order:</p>
-                                        <h4 className="font-semibold mt-3 mb-1">Method 1: Share Link (Recommended)</h4>
+                                        <h3 className="font-bold mb-2 flex items-center gap-2"><Lightbulb size={16} /> How to Fix This Error:</h3>
+                                        <p className="mb-2">This error means your server cannot access the Google Sheet URL. The only 100% reliable method is to use a <strong>"Publish to the web"</strong> link.</p>
+                                        <h4 className="font-semibold mt-3 mb-1">Required Steps:</h4>
                                         <ol className="list-decimal list-inside space-y-1">
-                                            <li>Open your Google Sheet.</li>
-                                            <li>Click the <strong>Share</strong> button (top-right).</li>
-                                            <li>Under "General access," change from "Restricted" to <strong>"Anyone with the link"</strong>.</li>
-                                            <li>Ensure the role is set to <strong>"Viewer"</strong>.</li>
-                                            <li>Copy the URL from your browser's address bar and paste it into the "Question Source" field.</li>
+                                            <li>In your Google Sheet, go to <strong>File &rarr; Share &rarr; Publish to the web</strong>.</li>
+                                            <li>In the dialog, under the "Link" tab, select the correct sheet (e.g., "Sheet1").</li>
+                                            <li>Choose <strong>"Comma-separated values (.csv)"</strong> from the dropdown.</li>
+                                            <li>Click <strong>Publish</strong> and confirm.</li>
+                                            <li>Copy the generated link. This is the URL you must use.</li>
                                         </ol>
-                                        <h4 className="font-semibold mt-4 mb-1">Method 2: Publish to the Web (More Reliable)</h4>
-                                        <p className="mb-2">If sharing doesn't work, publishing is a more stable option.</p>
-                                        <ol className="list-decimal list-inside space-y-1">
-                                             <li>In your Google Sheet, go to <strong>File &rarr; Share &rarr; Publish to the web</strong>.</li>
-                                             <li>In the dialog, select the correct sheet (e.g., "Sheet1").</li>
-                                             <li>Choose <strong>"Comma-separated values (.csv)"</strong> from the dropdown.</li>
-                                             <li>Click <strong>Publish</strong> and confirm.</li>
-                                             <li>Copy the generated link and paste it into the "Question Source" field.</li>
-                                        </ol>
+                                        <p className="text-xs mt-3"><strong>Note:</strong> Standard "Share with anyone with the link" URLs will not work reliably and will be rejected by the system.</p>
                                     </div>
                                 )}
                             </div>

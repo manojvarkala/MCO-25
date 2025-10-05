@@ -386,6 +386,24 @@ export const googleSheetsService = {
         }
     },
 
+    adminClearConfigCache: async (token: string): Promise<any> => {
+        try {
+            return await apiFetch('/admin/clear-config-cache', 'POST', token);
+        } catch (error) {
+            console.error("Failed to clear config cache:", error);
+            throw error;
+        }
+    },
+
+    adminClearQuestionCaches: async (token: string): Promise<any> => {
+        try {
+            return await apiFetch('/admin/clear-question-caches', 'POST', token);
+        } catch (error) {
+            console.error("Failed to clear question caches:", error);
+            throw error;
+        }
+    },
+
     // --- EXAM STATS ---
     getExamStats: async (token: string): Promise<ExamStat[]> => {
         try {
