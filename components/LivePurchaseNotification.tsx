@@ -31,8 +31,26 @@ const LivePurchaseNotification: FC = () => {
     const { activeOrg } = useAppContext();
     const [isVisible, setIsVisible] = useState(false);
     const [notification, setNotification] = useState({ name: '', location: '', exam: '', time: '' });
+    
+    const [adminPrefersHidden, setAdminPrefersHidden] = useState(() => {
+        try {
+            return localStorage.getItem('mco_show_notifications') === 'false';
+        } catch {
+            return false;
+        }
+    });
 
-    const adminPrefersHidden = localStorage.getItem('mco_show_notifications') === 'false';
+    useEffect(() => {
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'mco_show_notifications') {
+                setAdminPrefersHidden(e.newValue === 'false');
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
+
+
     if (isEffectivelyAdmin && adminPrefersHidden) {
         return null; // Don't render for admins who have opted out.
     }
@@ -56,7 +74,7 @@ const LivePurchaseNotification: FC = () => {
             setIsVisible(true);
 
             // Hide after 5 seconds
-            const hideTimeoutId = window.setTimeout(() => {
+            window.setTimeout(() => {
                 setIsVisible(false);
             }, 5000);
 

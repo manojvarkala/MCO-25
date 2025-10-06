@@ -108,7 +108,6 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
-        // Fix: Added an initial value of 0 to the reducer to prevent crash on empty array
         return selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
     }, [selectedItems]);
 
@@ -449,7 +448,7 @@ const ProductCustomizer: FC = () => {
                 id: priceData.productId?.toString() || priceData.sku,
                 sku: priceData.sku,
                 name: priceData.name || 'Unknown Product',
-                type: 'simple', // Default
+                type: 'simple',
                 salePrice: priceData.price?.toString() || '0',
                 regularPrice: priceData.regularPrice?.toString() || '0',
                 isBundle: priceData.isBundle,
@@ -458,24 +457,35 @@ const ProductCustomizer: FC = () => {
                 subscriptionPeriodInterval: priceData.subscription_period_interval,
                 subscriptionLength: priceData.subscription_length,
             };
-
-            // Prioritized categorization logic to prevent misclassification
-            if (product.isBundle) {
-                product.type = 'bundle';
-            } else if (priceData.type === 'subscription' || priceData.type === 'variable-subscription') {
-                product.type = 'subscription';
-            } else {
-                product.type = 'simple';
-            }
             return product;
         });
         
-        const sortedAll = all.sort((a, b) => a.name.localeCompare(b.name));
-        const simple = sortedAll.filter(p => p.type === 'simple');
-        const subs = sortedAll.filter(p => p.type === 'subscription');
-        const bundles = sortedAll.filter(p => p.type === 'bundle');
+        const simples: ProductVariation[] = [];
+        const subs: ProductVariation[] = [];
+        const bundles: ProductVariation[] = [];
 
-        return { allProducts: sortedAll, simpleProducts: simple, subscriptionProducts: subs, bundleProducts: bundles };
+        all.forEach(p => {
+            const priceData = examPrices[p.sku];
+            if (p.isBundle) {
+                p.type = 'bundle';
+                bundles.push(p);
+            } else if (priceData && (priceData.type === 'subscription' || priceData.type === 'variable-subscription')) {
+                p.type = 'subscription';
+                subs.push(p);
+            } else {
+                p.type = 'simple';
+                simples.push(p);
+            }
+        });
+        
+        const sortByName = (a: ProductVariation, b: ProductVariation) => a.name.localeCompare(b.name);
+
+        return { 
+            allProducts: all.sort(sortByName), 
+            simpleProducts: simples.sort(sortByName), 
+            subscriptionProducts: subs.sort(sortByName), 
+            bundleProducts: bundles.sort(sortByName)
+        };
     }, [examPrices]);
 
     const handleUpsert = async (productData: any, type: 'Bundle' | 'Product' | 'Subscription') => {
@@ -514,15 +524,14 @@ const ProductCustomizer: FC = () => {
         const toastId = toast.loading(`Updating ${selectedSkus.length} products...`);
         
         try {
-            const updatePromises = selectedSkus.map(sku => {
+            // Using a for...of loop to process sequentially to avoid potential race conditions on the backend
+            let lastResult;
+            for (const sku of selectedSkus) {
                 const productData: any = { sku };
                 if (salePrice) productData.price = parseFloat(salePrice);
                 if (regularPrice) productData.regularPrice = parseFloat(regularPrice);
-                return googleSheetsService.adminUpsertProduct(token, productData);
-            });
-
-            const results = await Promise.all(updatePromises);
-            const lastResult = results[results.length - 1];
+                lastResult = await googleSheetsService.adminUpsertProduct(token, productData);
+            }
 
             if (lastResult && lastResult.organizations && lastResult.examPrices) {
                 updateConfigData(lastResult.organizations, lastResult.examPrices);
@@ -568,8 +577,8 @@ const ProductCustomizer: FC = () => {
     }, []);
 
     const handleSelectOne = useCallback((sku: string, isSelected: boolean) => {
-        setSelectedSkus(prevSkus => {
-            const newSkus = new Set(prevSkus);
+        setSelectedSkus(currentSkus => {
+            const newSkus = new Set(currentSkus);
             if (isSelected) {
                 newSkus.add(sku);
             } else {
@@ -583,6 +592,11 @@ const ProductCustomizer: FC = () => {
         const isCurrentlySelected = selectedSkus.includes(sku);
         handleSelectOne(sku, !isCurrentlySelected);
     }, [selectedSkus, handleSelectOne]);
+    
+    const handleOpenEditor = (product: ProductVariation) => {
+        const type = product.isBundle ? 'bundle' : (product.type === 'subscription' ? 'subscription' : 'simple');
+        setProductToEdit({ ...product, type });
+    };
 
     const renderProducts = (products: ProductVariation[]) => {
         return (
@@ -590,7 +604,7 @@ const ProductCustomizer: FC = () => {
                 {products.map(product => (
                     <div 
                         key={product.sku} 
-                        className={`flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg cursor-pointer transition-all duration-150 ${selectedSkus.includes(product.sku) ? 'ring-2 ring-[rgb(var(--color-primary-rgb))]' : 'ring-0'}`}
+                        className={`flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg transition-all duration-150 ${selectedSkus.includes(product.sku) ? 'ring-2 ring-[rgb(var(--color-primary-rgb))]' : 'ring-0'}`}
                         onDoubleClick={() => handleDoubleClickSelect(product.sku)}
                     >
                         <div className="flex items-center">
@@ -600,7 +614,7 @@ const ProductCustomizer: FC = () => {
                                 checked={selectedSkus.includes(product.sku)}
                                 onChange={e => handleSelectOne(product.sku, e.target.checked)}
                             />
-                            <div className="cursor-pointer group" onClick={() => setProductToEdit(product)}>
+                            <div className="cursor-pointer group" onClick={() => handleOpenEditor(product)}>
                                 <p className="font-semibold group-hover:text-[rgb(var(--color-primary-rgb))] transition-colors">{product.name}</p>
                                 <p className="text-xs text-slate-500">SKU: {product.sku}</p>
                             </div>
@@ -612,7 +626,7 @@ const ProductCustomizer: FC = () => {
                                 )}
                                 <span className="font-bold ml-2">${parseFloat(product.salePrice).toFixed(2)}</span>
                             </div>
-                            <button onClick={() => setProductToEdit(product)} className="p-2 rounded-full hover:bg-[rgb(var(--color-border-rgb))]">
+                            <button onClick={() => handleOpenEditor(product)} className="p-2 rounded-full hover:bg-[rgb(var(--color-border-rgb))]">
                                 <Edit size={16} />
                             </button>
                             <button onClick={() => handleDeleteProduct(product)} className="p-2 rounded-full text-red-500 hover:bg-red-100" title="Delete Product">
@@ -673,31 +687,45 @@ const ProductCustomizer: FC = () => {
         );
     };
 
+    const getModalForProduct = () => {
+        if (!productToEdit) return null;
+        const { type } = productToEdit;
+
+        switch (type) {
+            case 'simple':
+                return <UpsertSimpleProductModal 
+                    isOpen={true}
+                    onClose={() => setProductToEdit(null)}
+                    onSave={(data) => handleUpsert(data, 'Product')}
+                    isSaving={isSaving}
+                    productToEdit={productToEdit}
+                />;
+            case 'subscription':
+                return <UpsertSubscriptionModal
+                    isOpen={true}
+                    onClose={() => setProductToEdit(null)}
+                    onSave={(data) => handleUpsert(data, 'Subscription')}
+                    isSaving={isSaving}
+                    productToEdit={productToEdit}
+                />;
+            case 'bundle':
+                 return <UpsertBundleModal 
+                    isOpen={true}
+                    onClose={() => setProductToEdit(null)}
+                    onSave={(data) => handleUpsert(data, 'Bundle')}
+                    isSaving={isSaving}
+                    productToEdit={productToEdit}
+                    simpleProducts={simpleProducts}
+                    subscriptionProducts={subscriptionProducts}
+                />;
+            default:
+                return null;
+        }
+    }
+
     return (
          <div className="space-y-8">
-            <UpsertBundleModal 
-                isOpen={productToEdit?.type === 'bundle'}
-                onClose={() => setProductToEdit(null)}
-                onSave={(data) => handleUpsert(data, 'Bundle')}
-                isSaving={isSaving}
-                productToEdit={productToEdit}
-                simpleProducts={simpleProducts}
-                subscriptionProducts={subscriptionProducts}
-            />
-            <UpsertSimpleProductModal
-                isOpen={productToEdit?.type === 'simple'}
-                onClose={() => setProductToEdit(null)}
-                onSave={(data) => handleUpsert(data, 'Product')}
-                isSaving={isSaving}
-                productToEdit={productToEdit}
-            />
-            <UpsertSubscriptionModal
-                isOpen={productToEdit?.type === 'subscription'}
-                onClose={() => setProductToEdit(null)}
-                onSave={(data) => handleUpsert(data, 'Subscription')}
-                isSaving={isSaving}
-                productToEdit={productToEdit}
-            />
+            {getModalForProduct()}
 
             <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3"><ShoppingCart /> Product Customizer</h1>
             <p className="text-[rgb(var(--color-text-muted-rgb))]">Manage your exam products and pricing. Changes made here are saved live to your WooCommerce store.</p>

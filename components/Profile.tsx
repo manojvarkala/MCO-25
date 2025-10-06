@@ -33,7 +33,7 @@ const Profile: FC = () => {
         setShowNotifications(newValue);
         try {
             localStorage.setItem('mco_show_notifications', String(newValue));
-            toast.success(`Sales notifications ${newValue ? 'enabled' : 'disabled'}.`);
+            toast.success(`Sales notifications ${newValue ? 'enabled' : 'disabled'}. Refresh to see changes.`);
         } catch (e) {
             toast.error("Could not save preference.");
         }
