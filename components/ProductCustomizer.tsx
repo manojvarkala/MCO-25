@@ -108,7 +108,6 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
-        if (selectedItems.length === 0) return 0;
         const total = selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
         return total > 0 ? total : 0;
     }, [selectedItems]);
@@ -572,14 +571,28 @@ const ProductCustomizer: FC = () => {
         }
     };
 
+    const handleSelectOne = (sku: string, isSelected: boolean) => {
+        setSelectedSkus(prevSkus => {
+            if (isSelected) {
+                return [...prevSkus, sku];
+            } else {
+                return prevSkus.filter(s => s !== sku);
+            }
+        });
+    };
+
     const renderProducts = (products: ProductVariation[]) => {
         return (
             <div className="space-y-2">
                 {products.map(product => (
                     <div key={product.sku} className={`flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg ${selectedSkus.includes(product.sku) ? 'ring-2 ring-[rgb(var(--color-primary-rgb))]' : ''}`}>
                         <div className="flex items-center">
-                            {/* The individual checkbox is removed as requested to fix the selection bug. An empty div is used for alignment. */}
-                            <div className="w-4 h-4 mr-4 flex-shrink-0"></div>
+                            <input
+                                type="checkbox"
+                                className="h-4 w-4 mr-4 flex-shrink-0"
+                                checked={selectedSkus.includes(product.sku)}
+                                onChange={e => handleSelectOne(product.sku, e.target.checked)}
+                            />
                             <div className="cursor-pointer group" onClick={() => setProductToEdit(product)}>
                                 <p className="font-semibold group-hover:text-[rgb(var(--color-primary-rgb))] transition-colors">{product.name}</p>
                                 <p className="text-xs text-slate-500">SKU: {product.sku}</p>
@@ -613,7 +626,7 @@ const ProductCustomizer: FC = () => {
         if (activeTab === 'subscription') { products = subscriptionProducts; title = 'Subscription Products'; }
         if (activeTab === 'bundle') { products = bundleProducts; title = 'Bundle Products'; }
         
-        const isAllSelected = selectedSkus.length === products.length && products.length > 0;
+        const isAllSelected = products.length > 0 && selectedSkus.length === products.length;
 
         return (
             <div>
