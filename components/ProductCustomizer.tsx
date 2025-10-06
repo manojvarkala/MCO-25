@@ -433,7 +433,8 @@ const ProductCustomizer: FC = () => {
         const bundles: ProductVariation[] = [];
 
         Object.values(examPrices).forEach((priceData: any) => {
-            const product: ProductVariation = {
+            // FIX: Removed explicit 'ProductVariation' type to allow for 'variable-subscription' from API data.
+            const product = {
                 id: priceData.productId?.toString() || priceData.sku,
                 sku: priceData.sku,
                 name: priceData.name || 'Unknown Product',
