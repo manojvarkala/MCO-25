@@ -465,7 +465,7 @@ const ProductCustomizer: FC = () => {
             if (product.isBundle) {
                 product.type = 'bundle';
                 bundles.push(product);
-            } else if (priceData.type === 'subscription' || priceData.type === 'variable-subscription') {
+            } else if (priceData.type === 'subscription' || priceData.type === 'variable-subscription' || product.sku.startsWith('sub-')) {
                 product.type = 'subscription';
                 subs.push(product);
             } else {
