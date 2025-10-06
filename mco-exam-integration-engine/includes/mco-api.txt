@@ -273,6 +273,7 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/admin/clear-config-cache', ['methods' => 'POST', 'callback' => 'mco_api_clear_config_cache', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/clear-question-caches', ['methods' => 'POST', 'callback' => 'mco_api_clear_question_caches', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/upsert-product', ['methods' => 'POST', 'callback' => 'mco_api_admin_upsert_product', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/create-exam-program', ['methods' => 'POST', 'callback' => 'mco_api_admin_create_exam_program', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
 }
 
 function mco_api_permission_check(WP_REST_Request $request) {
@@ -980,25 +981,35 @@ function mco_api_admin_upsert_product(WP_REST_Request $request) {
         return new WP_Error('bad_request', 'Product SKU is required.', ['status' => 400]);
     }
 
+    $is_subscription = isset($params['subscription_period']);
     $product_id = wc_get_product_id_by_sku($sku);
-    $product = $product_id ? wc_get_product($product_id) : new WC_Product_Simple();
-
-    if (isset($params['name'])) {
-        $product->set_name(sanitize_text_field($params['name']));
+    
+    if ($is_subscription && !class_exists('WC_Product_Subscription')) {
+        return new WP_Error('subscriptions_not_active', 'WooCommerce Subscriptions is not active.', ['status' => 500]);
     }
-    if (isset($params['price'])) {
-        $product->set_sale_price($params['price']);
+
+    $product_type = $is_subscription ? 'subscription' : 'simple';
+    $product = $product_id ? wc_get_product($product_id) : ($is_subscription ? new WC_Product_Subscription() : new WC_Product_Simple());
+    
+    if (isset($params['name'])) $product->set_name(sanitize_text_field($params['name']));
+    if (isset($params['price'])) $product->set_sale_price($params['price']);
+    if (isset($params['regularPrice'])) $product->set_regular_price($params['regularPrice']);
+
+    // For subscriptions, sale price is the main price.
+    if ($is_subscription && isset($params['price'])) {
         $product->set_price($params['price']);
     }
-    if (isset($params['regularPrice'])) {
-        $product->set_regular_price($params['regularPrice']);
-    }
-    
-    // If it's a new product
+
     if (!$product_id) {
         $product->set_sku($sku);
         $product->set_virtual(true);
         $product->set_status('publish');
+    }
+    
+    if ($is_subscription) {
+        $product->set_subscription_period(sanitize_text_field($params['subscription_period']));
+        $product->set_subscription_period_interval(sanitize_text_field($params['subscription_period_interval']));
+        $product->set_subscription_length(sanitize_text_field($params['subscription_length']));
     }
 
     if (isset($params['isBundle']) && $params['isBundle']) {
@@ -1011,7 +1022,50 @@ function mco_api_admin_upsert_product(WP_REST_Request $request) {
 
     $product->save();
 
-    // Bust cache and return fresh config
+    delete_transient('mco_app_config_data');
+    update_option('mco_config_version', current_time('YmdHis'));
+    return mco_api_get_full_config(new WP_REST_Request());
+}
+
+function mco_api_admin_create_exam_program(WP_REST_Request $request) {
+    $params = $request->get_json_params();
+    $program_name = sanitize_text_field($params['programName']);
+
+    if (empty($program_name)) {
+        return new WP_Error('bad_request', 'Program name is required.', ['status' => 400]);
+    }
+    
+    $post_id = wp_insert_post([
+        'post_title' => $program_name,
+        'post_status' => 'publish',
+        'post_type' => 'mco_exam_program',
+    ]);
+
+    if (is_wp_error($post_id)) {
+        return $post_id;
+    }
+    
+    // Set some sensible defaults for the new program
+    $new_sku = 'new-cert-' . $post_id;
+    update_post_meta($post_id, '_mco_certification_exam_sku', $new_sku);
+    wp_set_post_terms($post_id, '100', 'exam_cert_questions', false);
+    wp_set_post_terms($post_id, '120', 'exam_cert_duration', false);
+    wp_set_post_terms($post_id, '25', 'exam_practice_questions', false);
+    wp_set_post_terms($post_id, '60', 'exam_practice_duration', false);
+    wp_set_post_terms($post_id, '70', 'exam_pass_score', false);
+    update_post_meta($post_id, '_mco_is_proctored', '1');
+    update_post_meta($post_id, '_mco_certificate_enabled', '1');
+    
+    // Also create a corresponding simple product in WooCommerce
+    $product = new WC_Product_Simple();
+    $product->set_name($program_name);
+    $product->set_sku($new_sku);
+    $product->set_regular_price('49.99');
+    $product->set_price('49.99');
+    $product->set_virtual(true);
+    $product->set_status('publish');
+    $product->save();
+
     delete_transient('mco_app_config_data');
     update_option('mco_config_version', current_time('YmdHis'));
     return mco_api_get_full_config(new WP_REST_Request());

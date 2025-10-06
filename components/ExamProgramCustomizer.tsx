@@ -1,10 +1,10 @@
-import React, { FC, useState, useCallback, useMemo, ReactNode } from 'react';
+import React, { FC, useState, useCallback, useMemo, ReactNode, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, ExamProductCategory, Organization } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Settings, Edit, Save, X, ChevronDown, ChevronUp, FileText, Award } from 'lucide-react';
+import { Settings, Edit, Save, X, ChevronDown, ChevronUp, FileText, Award, PlusCircle } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 interface EditableProgramData {
@@ -163,6 +163,35 @@ const ExamEditor: FC<{
     );
 };
 
+const CreateProgramModal: FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (name: string) => Promise<void>;
+    isSaving: boolean;
+}> = ({ isOpen, onClose, onSave, isSaving }) => {
+    const [name, setName] = useState('');
+    useEffect(() => { if(isOpen) setName(''); }, [isOpen]);
+    if(!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-lg w-full max-w-md p-6">
+                 <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">Create New Exam Program</h2>
+                 <div>
+                    <label className="text-sm font-medium">Program Name</label>
+                    <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. New Certification Program" className="w-full p-2 mt-1 border rounded bg-white" />
+                 </div>
+                 <div className="flex justify-end gap-3 mt-6">
+                    <button onClick={onClose} disabled={isSaving} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition">Cancel</button>
+                    <button onClick={() => onSave(name)} disabled={isSaving || !name} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
+                        {isSaving ? <Spinner /> : <Save size={16} />} Create Program
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const ExamProgramCustomizer: FC = () => {
     const { activeOrg, updateActiveOrg } = useAppContext();
@@ -171,6 +200,7 @@ const ExamProgramCustomizer: FC = () => {
     const [expandedProgramId, setExpandedProgramId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     
     const handleSave = async (programId: string, data: EditableProgramData) => {
         if (!token) {
@@ -234,6 +264,25 @@ const ExamProgramCustomizer: FC = () => {
         }
     };
 
+    const handleCreateProgram = async (name: string) => {
+        if (!token || !activeOrg) {
+            toast.error("Authentication error.");
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const result = await googleSheetsService.adminCreateExamProgram(token, name);
+            const newOrg = result.organizations.find(o => o.id === activeOrg.id);
+            if (newOrg) updateActiveOrg(newOrg);
+            toast.success(`Program "${name}" created successfully!`);
+            setIsCreateModalOpen(false);
+        } catch (error: any) {
+            toast.error(error.message || "Failed to create program.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSelectedProgramIds(e.target.checked ? programs.map(p => p.category.id) : []);
     };
@@ -257,8 +306,21 @@ const ExamProgramCustomizer: FC = () => {
 
     return (
         <div className="space-y-8">
-            <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3"><Settings /> Exam Program Customizer</h1>
-            <p className="text-[rgb(var(--color-text-muted-rgb))]">Manage your exam programs, including their associated practice and certification exams. Changes made here will be reflected across the app.</p>
+            <CreateProgramModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSave={handleCreateProgram}
+                isSaving={isSaving}
+            />
+            <div className="flex justify-between items-start">
+                <div>
+                    <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3"><Settings /> Exam Program Customizer</h1>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mt-2">Manage your exam programs. Changes made here will be reflected across the app.</p>
+                </div>
+                <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition">
+                    <PlusCircle size={18}/> Create New Program
+                </button>
+            </div>
             
             <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                 {selectedProgramIds.length > 0 ? (

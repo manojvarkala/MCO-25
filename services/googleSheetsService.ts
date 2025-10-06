@@ -398,7 +398,26 @@ export const googleSheetsService = {
         }
     },
     
-    adminUpsertProduct: async (token: string, productData: { sku: string; name?: string; price?: number; regularPrice?: number; isBundle?: boolean, bundled_skus?: string[] }): Promise<any> => {
+    adminCreateExamProgram: async (token: string, programName: string): Promise<{ organizations: Organization[], examPrices: any }> => {
+        try {
+            return await apiFetch('/admin/create-exam-program', 'POST', token, { programName });
+        } catch (error) {
+            console.error("Failed to create exam program:", error);
+            throw error;
+        }
+    },
+    
+    adminUpsertProduct: async (token: string, productData: { 
+        sku: string; 
+        name?: string; 
+        price?: number; 
+        regularPrice?: number; 
+        isBundle?: boolean;
+        bundled_skus?: string[];
+        subscription_period?: 'day' | 'week' | 'month' | 'year';
+        subscription_period_interval?: string;
+        subscription_length?: string;
+    }): Promise<any> => {
         try {
             return await apiFetch('/admin/upsert-product', 'POST', token, productData);
         } catch (error) {
