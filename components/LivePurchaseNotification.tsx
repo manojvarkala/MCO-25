@@ -1,6 +1,7 @@
 import React, { FC, useState, useEffect } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
+import { useAuth } from '../context/AuthContext.tsx';
 
 // Data for fake notifications
 const firstNames = ['John', 'Maria', 'David', 'Sarah', 'Michael', 'Jessica', 'Chris', 'Emily', 'Daniel', 'Laura',
@@ -11,7 +12,7 @@ const firstNames = ['John', 'Maria', 'David', 'Sarah', 'Michael', 'Jessica', 'Ch
   'Abigail', 'Elijah', 'Natalie', 'Andrew', 'Hannah', 'Joshua', 'Julia', 'Ryan', 'Victoria',
   'Nathan', 'Sofia', 'Jacob', 'Ella', 'Christopher', 'Addison', 'Luke', 'Mila', 'Nicholas',
   'Brooklyn', 'Jonathan', 'Leah', 'Isaac', 'Audrey', 'Steven', 'Claire', 'Owen', 'Lila',
-  'Caleb', 'Violet', 'Aaron', 'Stella', 'Kevin', 'Layla', 'Zachary', 'Nora', 'Evan', 'Hazel'];
+  'Caleb', 'Violet', 'Stella', 'Aaron', 'Layla', 'Kevin', 'Nora', 'Zachary', 'Hazel', 'Evan'];
 const locations = [
   'New York, NY', 'London, UK', 'Sydney, AU', 'Toronto, CA', 'Mumbai, IN', 'Los Angeles, CA', 'Chicago, IL', 'Dubai, AE',
   'Paris, FR', 'Tokyo, JP', 'Singapore, SG', 'Hong Kong, HK', 'Berlin, DE', 'Melbourne, AU', 'São Paulo, BR', 'Cape Town, ZA',
@@ -26,9 +27,15 @@ const locations = [
   'Seattle, WA'
 ];
 const LivePurchaseNotification: FC = () => {
+    const { isEffectivelyAdmin } = useAuth();
     const { activeOrg } = useAppContext();
     const [isVisible, setIsVisible] = useState(false);
     const [notification, setNotification] = useState({ name: '', location: '', exam: '', time: '' });
+
+    const adminPrefersHidden = localStorage.getItem('mco_show_notifications') === 'false';
+    if (isEffectivelyAdmin && adminPrefersHidden) {
+        return null; // Don't render for admins who have opted out.
+    }
 
     const certificationExams = activeOrg?.exams.filter(e => !e.isPractice && e.price > 0).map(e => e.name) || [];
 

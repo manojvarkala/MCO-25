@@ -10,7 +10,7 @@ import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight
 import Spinner from './Spinner.tsx';
 
 const Profile: FC = () => {
-    const { user, token, updateUserName, wonPrize, isSubscribed } = useAuth();
+    const { user, token, updateUserName, wonPrize, isSubscribed, isEffectivelyAdmin } = useAuth();
     const { activeOrg, availableThemes, activeTheme, setActiveTheme } = useAppContext();
     // Fix: Use useNavigate for navigation in v6
     const navigate = useNavigate();
@@ -20,6 +20,24 @@ const Profile: FC = () => {
     const [isSavingName, setIsSavingName] = useState(false);
     const [name, setName] = useState(user?.name || '');
     const [isLoadingResults, setIsLoadingResults] = useState(true);
+    const [showNotifications, setShowNotifications] = useState(() => {
+        try {
+            return localStorage.getItem('mco_show_notifications') !== 'false';
+        } catch (e) {
+            return true;
+        }
+    });
+
+    const handleToggleNotifications = () => {
+        const newValue = !showNotifications;
+        setShowNotifications(newValue);
+        try {
+            localStorage.setItem('mco_show_notifications', String(newValue));
+            toast.success(`Sales notifications ${newValue ? 'enabled' : 'disabled'}.`);
+        } catch (e) {
+            toast.error("Could not save preference.");
+        }
+    };
 
     useEffect(() => {
         if (user && token) {
@@ -144,6 +162,30 @@ const Profile: FC = () => {
                             <label className="text-sm font-medium text-slate-500">User ID</label>
                             <p className="text-lg font-semibold text-slate-800">{user.id}</p>
                         </div>
+                        {isEffectivelyAdmin && (
+                            <div className="bg-slate-50 p-4 rounded-lg">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-500">Admin: Show Sales Notifications</label>
+                                        <p className="text-xs text-slate-400">Toggle the live purchase pop-ups for your account.</p>
+                                    </div>
+                                    <button
+                                        onClick={handleToggleNotifications}
+                                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${
+                                            showNotifications ? 'bg-cyan-600' : 'bg-slate-300'
+                                        }`}
+                                        role="switch"
+                                        aria-checked={showNotifications}
+                                    >
+                                        <span
+                                            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                                showNotifications ? 'translate-x-5' : 'translate-x-0'
+                                            }`}
+                                        />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <p className="text-center text-slate-500">Could not load user profile.</p>

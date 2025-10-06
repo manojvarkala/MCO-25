@@ -40,7 +40,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     
     useEffect(() => {
         if (isOpen) {
-            if (productToEdit?.sku) { // Editing existing bundle
+            if (productToEdit && productToEdit.sku) { // Editing existing bundle
                 setName(productToEdit.name || '');
                 setSku(productToEdit.sku || '');
                 setPrice(productToEdit.salePrice?.toString() || '');
@@ -67,8 +67,8 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if (!name || !sku || !price || !regularPrice) {
-            toast.error("All fields are required.");
+        if (!name || !sku || !price) {
+            toast.error("Name, SKU, and Sale Price are required.");
             return;
         }
         if (selectedSimpleSkus.length === 0) {
@@ -84,7 +84,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
             name,
             sku,
             price: parseFloat(price),
-            regularPrice: parseFloat(regularPrice),
+            regularPrice: parseFloat(regularPrice) || parseFloat(price),
             isBundle: true,
             bundled_skus,
         });
@@ -108,7 +108,8 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
-        return selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
+        const total = selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
+        return total > 0 ? total : 0;
     }, [selectedItems]);
 
 
@@ -206,21 +207,28 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
 
     useEffect(() => {
         if (isOpen) {
-            setName(productToEdit?.name || '');
-            setSku(productToEdit?.sku || '');
-            setPrice(productToEdit?.salePrice?.toString() || '');
-            setRegularPrice(productToEdit?.regularPrice?.toString() || '');
+            if (productToEdit && productToEdit.sku) { // Check if we are editing
+                setName(productToEdit.name || '');
+                setSku(productToEdit.sku || '');
+                setPrice(productToEdit.salePrice?.toString() || '');
+                setRegularPrice(productToEdit.regularPrice?.toString() || '');
+            } else { // We are creating
+                setName('');
+                setSku('');
+                setPrice('');
+                setRegularPrice('');
+            }
         }
     }, [isOpen, productToEdit]);
 
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if (!name || !sku || !price || !regularPrice) {
-            toast.error("All fields are required.");
+        if (!name || !sku || !price) {
+            toast.error("Name, SKU, and Sale Price are required.");
             return;
         }
-        onSave({ name, sku, price: parseFloat(price), regularPrice: parseFloat(regularPrice) });
+        onSave({ name, sku, price: parseFloat(price), regularPrice: parseFloat(regularPrice) || parseFloat(price) });
     };
 
     return (
@@ -277,27 +285,37 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
 
     useEffect(() => {
         if (isOpen) {
-            setName(productToEdit?.name || 'Monthly Subscription');
-            setSku(productToEdit?.sku || 'sub-monthly');
-            setPrice(productToEdit?.salePrice?.toString() || '19.99');
-            setRegularPrice(productToEdit?.regularPrice?.toString() || '29.99');
-            setPeriod(productToEdit?.subscriptionPeriod || 'month');
-            setInterval(productToEdit?.subscriptionPeriodInterval || '1');
-            setLength(productToEdit?.subscriptionLength || '0');
+            if (productToEdit && productToEdit.sku) {
+                setName(productToEdit.name || '');
+                setSku(productToEdit.sku || '');
+                setPrice(productToEdit.salePrice?.toString() || '');
+                setRegularPrice(productToEdit.regularPrice?.toString() || '');
+                setPeriod(productToEdit.subscriptionPeriod || 'month');
+                setInterval(productToEdit.subscriptionPeriodInterval || '1');
+                setLength(productToEdit.subscriptionLength || '0');
+            } else {
+                setName('Monthly Subscription');
+                setSku('sub-monthly');
+                setPrice('19.99');
+                setRegularPrice('29.99');
+                setPeriod('month');
+                setInterval('1');
+                setLength('0');
+            }
         }
     }, [isOpen, productToEdit]);
 
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if (!name || !sku || !price || !regularPrice || !period || !interval) {
-            toast.error("All fields except length are required.");
+        if (!name || !sku || !price || !period || !interval) {
+            toast.error("All fields except regular price & length are required.");
             return;
         }
         onSave({
             name, sku,
             price: parseFloat(price),
-            regularPrice: parseFloat(regularPrice),
+            regularPrice: parseFloat(regularPrice) || parseFloat(price),
             subscription_period: period,
             subscription_period_interval: interval,
             subscription_length: length,
