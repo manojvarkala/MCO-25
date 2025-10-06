@@ -443,11 +443,11 @@ const ProductCustomizer: FC = () => {
                 ...priceData
             };
             
-            // FIX: Refactored logic to be more robust. If it's not a bundle or subscription, it's simple.
-            if (priceData.isBundle) {
+            // FIX: Robust, prioritized filtering to prevent items from being missed.
+            if (product.isBundle) {
                 product.type = 'bundle';
                 bundles.push(product);
-            } else if (priceData.type && (priceData.type === 'subscription' || priceData.type === 'variable-subscription')) {
+            } else if (product.type === 'subscription' || product.type === 'variable-subscription') {
                 product.type = 'subscription';
                 subscriptions.push(product);
             } else {
@@ -554,13 +554,12 @@ const ProductCustomizer: FC = () => {
     
     const handleSelectOne = (skuToToggle: string) => {
         setSelectedSkus(currentSkus => {
-            const nextSkus = new Set(currentSkus);
-            if (nextSkus.has(skuToToggle)) {
-                nextSkus.delete(skuToToggle);
+            const isSelected = currentSkus.includes(skuToToggle);
+            if (isSelected) {
+                return currentSkus.filter(sku => sku !== skuToToggle);
             } else {
-                nextSkus.add(skuToToggle);
+                return [...currentSkus, skuToToggle];
             }
-            return Array.from(nextSkus);
         });
     };
 
