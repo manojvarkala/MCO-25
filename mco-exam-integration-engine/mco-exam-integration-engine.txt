@@ -1,12 +1,6 @@
 <?php
-// This is the main plugin file.
-// It now dynamically includes the header from `plugin-header.php` at runtime.
 
 if (!defined('ABSPATH')) exit;
-
-// Include the header file which contains all the plugin metadata.
-// This allows for safe version number updates without editing this file.
-require_once plugin_dir_path(__FILE__) . 'plugin-header.php';
 
 // Prevent duplicate plugin activation errors. This runs on every admin page load.
 if (!function_exists('mco_is_plugin_already_active')) {

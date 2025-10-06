@@ -4,20 +4,19 @@ import JSZip from 'jszip';
 import { DownloadCloud, Code } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
+// Import file contents as raw strings using Vite's ?raw feature
+import pluginHeaderFile from '/mco-exam-integration-engine/plugin-header.txt?raw';
+import mainPluginFile from '/mco-exam-integration-engine/mco-exam-integration-engine.txt?raw';
+import cptsFile from '/mco-exam-integration-engine/includes/mco-cpts.txt?raw';
+import adminFile from '/mco-exam-integration-engine/includes/mco-admin.txt?raw';
+import apiFile from '/mco-exam-integration-engine/includes/mco-api.txt?raw';
+import dataFile from '/mco-exam-integration-engine/includes/mco-data.txt?raw';
+import shortcodesFile from '/mco-exam-integration-engine/includes/mco-shortcodes.txt?raw';
+import stylesFile from '/mco-exam-integration-engine/assets/mco-styles.txt?raw';
+
 const Integration: FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const pluginVersion = "1.0.0";
-
-    const pluginFiles = [
-        'mco-exam-integration-engine/plugin-header.txt',
-        'mco-exam-integration-engine/mco-exam-integration-engine.txt',
-        'mco-exam-integration-engine/includes/mco-cpts.txt',
-        'mco-exam-integration-engine/includes/mco-admin.txt',
-        'mco-exam-integration-engine/includes/mco-api.txt',
-        'mco-exam-integration-engine/includes/mco-data.txt',
-        'mco-exam-integration-engine/includes/mco-shortcodes.txt',
-        'mco-exam-integration-engine/assets/mco-styles.txt',
-    ];
 
     const generateZip = async () => {
         setIsGenerating(true);
@@ -30,25 +29,24 @@ const Integration: FC = () => {
             if (!rootFolder) {
                 throw new Error("Could not create root folder in zip.");
             }
+            
+            // Combine the separate header and main logic files into one valid plugin file.
+            // WordPress requires the header to be in the main PHP file it loads.
+            const combinedPhpContent = `${pluginHeaderFile}\n${mainPluginFile}`;
 
-            for (const filePath of pluginFiles) {
-                const response = await fetch(`/${filePath}`);
-                if (!response.ok) throw new Error(`Failed to fetch ${filePath}`);
-                const content = await response.text();
-                
-                // Get the path relative to the root folder (e.g., 'includes/mco-cpts.txt')
-                let relativePath = filePath.substring(rootFolderName.length + 1);
-                
-                // Rename files to their correct extensions
-                if (relativePath.endsWith('.txt')) {
-                    if (relativePath.endsWith('mco-styles.txt')) {
-                         relativePath = relativePath.replace('.txt', '.css');
-                    } else {
-                         relativePath = relativePath.replace('.txt', '.php');
-                    }
-                }
-                
-                rootFolder.file(relativePath, content);
+            const filesToZip = {
+                'mco-exam-integration-engine.php': combinedPhpContent,
+                'includes/mco-cpts.php': cptsFile,
+                'includes/mco-admin.php': adminFile,
+                'includes/mco-api.php': apiFile,
+                'includes/mco-data.php': dataFile,
+                'includes/mco-shortcodes.php': shortcodesFile,
+                'assets/mco-styles.css': stylesFile,
+            };
+
+            // Add all files to the zip's root folder
+            for (const path in filesToZip) {
+                rootFolder.file(path, filesToZip[path as keyof typeof filesToZip]);
             }
             
             const zipBlob = await zip.generateAsync({ type: 'blob' });
