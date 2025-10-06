@@ -5,9 +5,11 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam } from '../types.ts';
-import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Check, ShoppingBag } from 'lucide-react';
+import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
+import ExamBundleCard from './ExamBundleCard.tsx';
+import SubscriptionOfferCard from './SubscriptionOfferCard.tsx';
 
 const StatCard: FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
     <div className="bg-[rgb(var(--color-muted-rgb))] p-4 rounded-lg flex items-center border border-[rgb(var(--color-border-rgb))]">
@@ -77,10 +79,9 @@ const Dashboard: FC = () => {
         });
     }, [activeOrg]);
     
-    const { monthlyPrice, yearlyPrice, monthlySubUrl, yearlySubUrl, bundlePrice, bundleRegularPrice, bundleUrl } = useMemo(() => {
+    const { monthlyPrice, yearlyPrice, monthlySubUrl, yearlySubUrl } = useMemo(() => {
         const monthlyData = examPrices?.['sub-monthly'];
         const yearlyData = examPrices?.['sub-yearly'];
-        const bundleData = examPrices?.['exam-cpc-cert-1']; // Representative bundle
         const website = activeOrg ? `https://www.${activeOrg.website}` : '';
 
         return {
@@ -88,9 +89,6 @@ const Dashboard: FC = () => {
             yearlyPrice: yearlyData?.price ?? 149.99,
             monthlySubUrl: monthlyData?.productId ? `${website}/cart/?add-to-cart=${monthlyData.productId}` : `${website}/product/monthly-subscription/`,
             yearlySubUrl: yearlyData?.productId ? `${website}/cart/?add-to-cart=${yearlyData.productId}` : `${website}/product/yearly-subscription/`,
-            bundlePrice: bundleData?.price ?? 10.00,
-            bundleRegularPrice: bundleData?.regularPrice ?? 59.99,
-            bundleUrl: `${website}/exam-programs/`
         };
     }, [examPrices, activeOrg]);
 
@@ -140,59 +138,33 @@ const Dashboard: FC = () => {
             {!isSubscribed && (
                 <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
                     <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2 flex items-center gap-2"><Star className="text-yellow-400" /> Unlock Your Full Potential</h2>
-                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">Choose a plan to get unlimited access to all practice exams, AI-powered study guides, and more.</p>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-                        {/* Monthly Plan Card */}
-                        <div className="border border-[rgb(var(--color-border-rgb))] rounded-lg p-6 flex flex-col bg-[rgb(var(--color-muted-rgb))]">
-                            <h3 className="text-xl font-bold text-[rgb(var(--color-primary-rgb))]">Monthly Subscription</h3>
-                            <p className="flex-grow text-[rgb(var(--color-text-muted-rgb))] mt-2 text-sm">Perfect for focused, short-term preparation.</p>
-                            <p className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] mt-4">${monthlyPrice.toFixed(2)} <span className="text-base font-medium text-[rgb(var(--color-text-muted-rgb))]">/month</span></p>
-                            <ul className="space-y-2 text-[rgb(var(--color-text-default-rgb))] mt-4 flex-grow">
-                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> Unlimited Practice Exams</li>
-                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> Unlimited AI Feedback</li>
-                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> Cancel Anytime</li>
-                            </ul>
-                            <a href={monthlySubUrl} target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-[rgb(var(--color-primary-rgb))] text-white font-bold py-3 text-center rounded-lg hover:bg-[rgb(var(--color-primary-hover-rgb))] transition">Subscribe Now</a>
-                        </div>
-
-                        {/* Yearly Plan Card (Highlighted) */}
-                        <div className="border-2 border-[rgb(var(--color-accent-rgb))] bg-[rgb(var(--color-card-rgb))] rounded-lg p-6 flex flex-col relative transform lg:scale-105">
-                            <div className="absolute top-0 -translate-y-1/2 bg-[rgb(var(--color-accent-rgb))] text-white text-xs font-bold uppercase px-3 py-1 rounded-full">Best Value</div>
-                            <h3 className="text-xl font-bold text-[rgb(var(--color-accent-rgb))]">Yearly Subscription</h3>
-                             <p className="flex-grow text-[rgb(var(--color-text-muted-rgb))] mt-2 text-sm">For continuous learning and mastering your craft.</p>
-                            <p className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] mt-4">${yearlyPrice.toFixed(2)} <span className="text-base font-medium text-[rgb(var(--color-text-muted-rgb))]">/year</span></p>
-                            <p className="text-sm text-[rgb(var(--color-success-rgb))] font-semibold">Saves over 35%!</p>
-                            <ul className="space-y-2 text-[rgb(var(--color-text-default-rgb))] mt-4 flex-grow">
-                                 <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> Unlimited Practice Exams</li>
-                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> Unlimited AI Feedback</li>
-                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> Billed Annually</li>
-                            </ul>
-                            <a href={yearlySubUrl} target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-[rgb(var(--color-accent-rgb))] text-white font-bold py-3 text-center rounded-lg hover:opacity-90 transition">Subscribe & Save</a>
-                        </div>
-
-                        {/* Exam Bundle Card */}
-                        <div className="border border-[rgb(var(--color-border-rgb))] bg-[rgb(var(--color-muted-rgb))] rounded-lg p-6 flex flex-col">
-                            <h3 className="text-xl font-bold text-[rgb(var(--color-secondary-hover-rgb))]">Exam Bundle</h3>
-                             <p className="flex-grow text-[rgb(var(--color-text-muted-rgb))] mt-2 text-sm">The complete package for one certification.</p>
-                             <div className="mt-4">
-                                {bundlePrice && bundleRegularPrice && bundleRegularPrice > bundlePrice ? (
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-xl line-through text-[rgb(var(--color-text-muted-rgb))] opacity-70">${bundleRegularPrice.toFixed(2)}</span>
-                                        <span className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))]">${bundlePrice.toFixed(2)}</span>
-                                    </div>
-                                ) : (
-                                    <span className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))]">
-                                        {bundlePrice ? `$${bundlePrice.toFixed(2)}` : '$59.99'}
-                                    </span>
-                                )}
-                            </div>
-                             <ul className="space-y-2 text-[rgb(var(--color-text-default-rgb))] mt-4 flex-grow">
-                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> One Certification Exam</li>
-                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> 1-Month Unlimited Practice</li>
-                                <li className="flex items-center gap-2"><Check size={16} className="text-[rgb(var(--color-success-rgb))]" /> 1-Month Unlimited AI Feedback</li>
-                            </ul>
-                            <a href={bundleUrl} target="_blank" rel="noopener noreferrer" className="mt-6 block w-full bg-[rgb(var(--color-secondary-rgb))] text-white font-bold py-3 text-center rounded-lg hover:bg-[rgb(var(--color-secondary-hover-rgb))] transition">Browse Bundles</a>
-                        </div>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">Get unlimited access to all practice exams and AI study guides with a subscription.</p>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+                        <SubscriptionOfferCard
+                            planName="Monthly Subscription"
+                            price={monthlyPrice}
+                            priceUnit="month"
+                            url={monthlySubUrl}
+                            features={[
+                                'Unlimited Practice Exams',
+                                'Unlimited AI Feedback',
+                                'Cancel Anytime',
+                            ]}
+                            gradientClass="bg-gradient-to-br from-cyan-500 to-sky-600"
+                        />
+                        <SubscriptionOfferCard
+                            planName="Yearly Subscription"
+                            price={yearlyPrice}
+                            priceUnit="year"
+                            url={yearlySubUrl}
+                            features={[
+                                'All Monthly features',
+                                'Access All Exam Programs',
+                                'Saves over 35%!',
+                            ]}
+                            isBestValue={true}
+                            gradientClass="bg-gradient-to-br from-purple-600 to-indigo-700"
+                        />
                     </div>
                 </div>
             )}
@@ -221,9 +193,10 @@ const Dashboard: FC = () => {
                                     <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-1 group-hover:text-[rgb(var(--color-primary-rgb))] transition">{category.name}</h3>
                                 </Link>
                                 <div className="text-[rgb(var(--color-text-muted-rgb))] mb-4 text-sm" dangerouslySetInnerHTML={{ __html: category.description }} />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} />}
                                     {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} attemptsMade={certAttempts}/>}
+                                    {category.certExam && <ExamBundleCard certExam={category.certExam} activeOrg={activeOrg} examPrices={examPrices} />}
                                 </div>
                             </div>
                          );
