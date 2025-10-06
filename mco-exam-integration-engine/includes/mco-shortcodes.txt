@@ -189,7 +189,7 @@ function mco_exam_showcase_shortcode() {
     
     foreach ($exam_programs as $index => $program) {
         $program_id_for_app = 'prod-' . $program->ID;
-        $category_name = get_the_title($program);
+        $category_name = wp_strip_all_tags(get_the_title($program));
         $category_desc = has_excerpt($program->ID) ? get_the_excerpt($program->ID) : wp_trim_words($program->post_content, 30, '...');
         $program_details_url = $app_base_url ? rtrim($app_base_url, '/') . '/program/' . $program_id_for_app : '#';
         

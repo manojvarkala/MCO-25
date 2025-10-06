@@ -15,25 +15,25 @@ if (!function_exists('mco_register_admin_hooks')) {
         // Actions for custom admin columns
         add_filter('manage_mco_exam_program_posts_columns', 'mco_add_exam_program_columns');
         add_action('manage_mco_exam_program_posts_custom_column', 'mco_display_exam_program_columns', 10, 2);
+        // Filter to clean up the title in the admin list view
+        add_filter('the_title', 'mco_strip_tags_from_admin_title', 10, 2);
     }
 }
 
-if (!function_exists('mco_add_admin_menu')) {
-    function mco_add_admin_menu() {
-        add_menu_page(
-            'Exam App Engine',
-            'Exam App Engine',
-            'manage_options',
-            'mco-exam-engine',
-            'mco_exam_engine_admin_page',
-            'dashicons-awards',
-            25
-        );
-        add_submenu_page('mco-exam-engine', 'Settings & Tools', 'Settings & Tools', 'manage_options', 'mco-exam-engine');
-        add_submenu_page('mco-exam-engine', 'Exam Programs', 'Exam Programs', 'manage_options', 'edit.php?post_type=mco_exam_program');
-        add_submenu_page('mco-exam-engine', 'Recommended Books', 'Recommended Books', 'manage_options', 'edit.php?post_type=mco_recommended_book');
+// New function to strip tags from the title on the exam program admin list page
+if (!function_exists('mco_strip_tags_from_admin_title')) {
+    function mco_strip_tags_from_admin_title($title, $id = null) {
+        // Only run on the admin edit list page for our specific post type.
+        if (is_admin() && function_exists('get_current_screen')) {
+            $screen = get_current_screen();
+            if ($screen && $screen->id === 'edit-mco_exam_program' && $screen->post_type === 'mco_exam_program') {
+                return wp_strip_all_tags($title);
+            }
+        }
+        return $title;
     }
 }
+
 
 // --- EXAM PROGRAM CPT META BOX ---
 
