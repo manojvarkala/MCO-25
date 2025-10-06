@@ -999,8 +999,13 @@ function mco_api_admin_upsert_product(WP_REST_Request $request) {
         $product->set_sku($sku);
         $product->set_virtual(true);
         $product->set_status('publish');
-        if (isset($params['isBundle']) && $params['isBundle']) {
-            $product->update_meta_data('_mco_is_bundle', 'yes');
+    }
+
+    if (isset($params['isBundle']) && $params['isBundle']) {
+        $product->update_meta_data('_mco_is_bundle', 'yes');
+        if ( isset( $params['bundled_skus'] ) && is_array( $params['bundled_skus'] ) ) {
+            $sanitized_skus = array_map( 'sanitize_text_field', $params['bundled_skus'] );
+            $product->update_meta_data('_mco_bundled_skus', $sanitized_skus);
         }
     }
 

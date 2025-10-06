@@ -200,4 +200,6 @@ export interface ProductVariation {
     subscriptionPeriod?: BillingPeriod;
     subscriptionPeriodInterval?: string;
     subscriptionLength?: string;
+    isBundle?: boolean;
+    bundledSkus?: string[];
 }

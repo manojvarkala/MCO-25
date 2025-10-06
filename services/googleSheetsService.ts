@@ -398,7 +398,7 @@ export const googleSheetsService = {
         }
     },
     
-    adminUpsertProduct: async (token: string, productData: { sku: string; name?: string; price?: number; regularPrice?: number; isBundle?: boolean }): Promise<any> => {
+    adminUpsertProduct: async (token: string, productData: { sku: string; name?: string; price?: number; regularPrice?: number; isBundle?: boolean, bundled_skus?: string[] }): Promise<any> => {
         try {
             return await apiFetch('/admin/upsert-product', 'POST', token, productData);
         } catch (error) {
