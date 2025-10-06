@@ -1,4 +1,5 @@
 import React, { FC } from 'react';
+import { Link } from 'react-router-dom';
 
 const TermsOfService: FC = () => {
     return (
@@ -64,7 +65,7 @@ const TermsOfService: FC = () => {
 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">Contact Us</h2>
                 <p>
-                    If you have any questions about these Terms, please contact us through the <a href="#/feedback" className="text-cyan-600">Feedback form</a> on our site.
+                    If you have any questions about these Terms, please contact us through the <Link to="/feedback" className="text-cyan-600">Feedback form</Link> on our site.
                 </p>
             </div>
         </div>

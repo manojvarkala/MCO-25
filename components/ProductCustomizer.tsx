@@ -2,7 +2,7 @@ import React, { FC, useState, useMemo, useCallback, ReactNode, useEffect } from 
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { Exam, Organization, ProductVariation } from '../types.ts';
+import type { Exam, Organization, ProductVariation, ProductVariationType } from '../types.ts';
 import toast from 'react-hot-toast';
 import { Edit, Save, X, ShoppingCart, Tag, RefreshCw, Trash2, PlusCircle } from 'lucide-react';
 import Spinner from './Spinner.tsx';
@@ -420,7 +420,9 @@ const ProductCustomizer: FC = () => {
     }, [activeTab]);
     
     const { simpleProducts, subscriptionProducts, bundleProducts } = useMemo(() => {
-        if (!activeOrg || !examPrices) return { simpleProducts: [], subscriptionProducts: [], bundleProducts: [] };
+        if (!activeOrg || !examPrices) {
+            return { simpleProducts: [], subscriptionProducts: [], bundleProducts: [] };
+        }
 
         const simple: ProductVariation[] = [];
         const subscriptions: ProductVariation[] = [];
@@ -429,21 +431,29 @@ const ProductCustomizer: FC = () => {
         Object.values(examPrices).forEach((priceData: any) => {
             const exam = activeOrg.exams.find(e => e.productSku === priceData.sku && !e.isPractice);
 
+            // Normalize the type to satisfy the ProductVariation interface, avoiding TS errors.
+            const typeFromData = priceData.type || 'simple';
+            let normalizedType: ProductVariationType = 'simple';
+            if (typeFromData === 'subscription' || typeFromData === 'variable-subscription') {
+                normalizedType = 'subscription';
+            } else if (priceData.isBundle) {
+                normalizedType = 'bundle';
+            }
+
             const product: ProductVariation = {
                 id: priceData.productId?.toString() || priceData.sku,
                 sku: priceData.sku,
                 name: priceData.name || exam?.name || 'Unknown Product',
-                type: priceData.type || 'simple',
+                type: normalizedType,
                 salePrice: priceData.price?.toString() || '0',
                 regularPrice: priceData.regularPrice?.toString() || '0',
                 ...priceData
             };
             
-            const typeFromData = priceData.type || 'simple';
-
+            // Categorize based on the original, more detailed type information from WooCommerce.
             if (typeFromData === 'subscription' || typeFromData === 'variable-subscription') {
                 subscriptions.push(product);
-            } else if (product.isBundle) {
+            } else if (priceData.isBundle) {
                 bundles.push(product);
             } else if (typeFromData === 'simple') {
                 simple.push(product);
@@ -451,9 +461,9 @@ const ProductCustomizer: FC = () => {
         });
 
         return { 
-            simpleProducts: simple.sort((a,b) => a.name.localeCompare(b.name)), 
-            subscriptionProducts: subscriptions.sort((a,b) => a.name.localeCompare(b.name)), 
-            bundleProducts: bundles.sort((a,b) => a.name.localeCompare(b.name)) 
+            simpleProducts: simple.sort((a, b) => a.name.localeCompare(b.name)), 
+            subscriptionProducts: subscriptions.sort((a, b) => a.name.localeCompare(b.name)), 
+            bundleProducts: bundles.sort((a, b) => a.name.localeCompare(b.name)) 
         };
     }, [activeOrg, examPrices]);
 
@@ -526,7 +536,6 @@ const ProductCustomizer: FC = () => {
         setSelectedSkus(e.target.checked ? products.map(p => p.sku) : []);
     };
     
-    // FIX: The selection logic was buggy. Re-implementing with a Set for robustness.
     const handleSelectOne = (sku: string, checked: boolean) => {
         setSelectedSkus(prev => {
             const newSet = new Set(prev);

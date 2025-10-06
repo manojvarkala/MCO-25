@@ -57,8 +57,8 @@ function mco_exam_login_shortcode() {
         
         if ($token) {
             $app_base_url = mco_get_exam_app_url();
-            $redirect_param = isset($_GET['redirect_to']) ? $_GET['redirect_to'] : '/#/dashboard';
-            $final_url = $app_base_url . '/#/auth?token=' . $token . '&redirect_to=' . urlencode($redirect_param);
+            $redirect_param = isset($_GET['redirect_to']) ? $_GET['redirect_to'] : '/dashboard';
+            $final_url = rtrim($app_base_url, '/') . '/auth?token=' . $token . '&redirect_to=' . urlencode($redirect_param);
             ?>
             <div>
                 <p>Login successful. Redirecting...</p>
@@ -107,12 +107,12 @@ function mco_exam_showcase_shortcode() {
         $program_id_for_app = 'prod-' . $program->ID;
         $category_name = get_the_title($program);
         $category_desc = has_excerpt($program->ID) ? get_the_excerpt($program->ID) : wp_trim_words($program->post_content, 30, '...');
-        $program_details_url = $app_base_url ? rtrim($app_base_url, '/') . '/#/program/' . $program_id_for_app : '#';
+        $program_details_url = $app_base_url ? rtrim($app_base_url, '/') . '/program/' . $program_id_for_app : '#';
         
         $practice_exam_id_for_app = 'exam-' . $program_id_for_app . '-practice';
         $practice_questions = mco_get_single_term($program->ID, 'exam_practice_questions');
         $practice_duration = mco_get_single_term($program->ID, 'exam_practice_duration');
-        $practice_url = $app_base_url ? rtrim($app_base_url, '/') . '/#/auth?redirect_to=' . urlencode('/test/' . $practice_exam_id_for_app) : '#';
+        $practice_url = $app_base_url ? rtrim($app_base_url, '/') . '/auth?redirect_to=' . urlencode('/test/' . $practice_exam_id_for_app) : '#';
 
         $cert_sku = get_post_meta($program->ID, '_mco_certification_exam_sku', true);
         $cert_questions = mco_get_single_term($program->ID, 'exam_cert_questions');
