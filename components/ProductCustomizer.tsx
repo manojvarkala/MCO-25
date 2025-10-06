@@ -108,6 +108,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
+        if (selectedItems.length === 0) return 0;
         const total = selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
         return total > 0 ? total : 0;
     }, [selectedItems]);
@@ -469,7 +470,7 @@ const ProductCustomizer: FC = () => {
             } else if (priceData.type === 'subscription' || priceData.type === 'variable-subscription') {
                 product.type = 'subscription';
                 subscriptions.push(product);
-            } else if (priceData.type === 'simple') {
+            } else {
                 product.type = 'simple';
                 simple.push(product);
             }
@@ -570,18 +571,6 @@ const ProductCustomizer: FC = () => {
             setSelectedSkus([]);
         }
     };
-    
-    const handleSelectOne = (skuToToggle: string, checked: boolean) => {
-        setSelectedSkus(prev => {
-            const newSkus = new Set(prev);
-            if (checked) {
-                newSkus.add(skuToToggle);
-            } else {
-                newSkus.delete(skuToToggle);
-            }
-            return Array.from(newSkus);
-        });
-    };
 
     const renderProducts = (products: ProductVariation[]) => {
         return (
@@ -589,12 +578,8 @@ const ProductCustomizer: FC = () => {
                 {products.map(product => (
                     <div key={product.sku} className={`flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg ${selectedSkus.includes(product.sku) ? 'ring-2 ring-[rgb(var(--color-primary-rgb))]' : ''}`}>
                         <div className="flex items-center">
-                            <input
-                                type="checkbox"
-                                checked={selectedSkus.includes(product.sku)}
-                                onChange={(e) => handleSelectOne(product.sku, e.target.checked)}
-                                className="h-4 w-4 mr-4"
-                            />
+                            {/* The individual checkbox is removed as requested to fix the selection bug. An empty div is used for alignment. */}
+                            <div className="w-4 h-4 mr-4 flex-shrink-0"></div>
                             <div className="cursor-pointer group" onClick={() => setProductToEdit(product)}>
                                 <p className="font-semibold group-hover:text-[rgb(var(--color-primary-rgb))] transition-colors">{product.name}</p>
                                 <p className="text-xs text-slate-500">SKU: {product.sku}</p>
