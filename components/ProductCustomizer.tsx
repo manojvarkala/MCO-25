@@ -109,8 +109,6 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
-        // FIX: The calculation logic has been corrected to handle potential NaN values from parseFloat,
-        // which was causing a "white screen" error on new bundle creation.
         return selectedItems.reduce((total, item) => total + (parseFloat(item.regularPrice) || 0), 0);
     }, [selectedItems]);
 
@@ -402,7 +400,7 @@ const BulkEditPanel: FC<{
 
 
 const ProductCustomizer: FC = () => {
-    const { activeOrg, examPrices, updateActiveOrg } = useAppContext();
+    const { activeOrg, examPrices, updateConfigData } = useAppContext();
     const { token } = useAuth();
     const [activeTab, setActiveTab] = useState<TabType>('simple');
     
@@ -431,7 +429,6 @@ const ProductCustomizer: FC = () => {
         Object.values(examPrices).forEach((priceData: any) => {
             const exam = activeOrg.exams.find(e => e.productSku === priceData.sku && !e.isPractice);
 
-            // Normalize the type to satisfy the ProductVariation interface, avoiding TS errors.
             const typeFromData = priceData.type || 'simple';
             let normalizedType: ProductVariationType = 'simple';
             if (typeFromData === 'subscription' || typeFromData === 'variable-subscription') {
@@ -450,7 +447,6 @@ const ProductCustomizer: FC = () => {
                 ...priceData
             };
             
-            // Categorize based on the original, more detailed type information from WooCommerce.
             if (typeFromData === 'subscription' || typeFromData === 'variable-subscription') {
                 subscriptions.push(product);
             } else if (priceData.isBundle) {
@@ -468,7 +464,7 @@ const ProductCustomizer: FC = () => {
     }, [activeOrg, examPrices]);
 
     const handleUpsert = async (productData: any, type: 'Bundle' | 'Product' | 'Subscription') => {
-        if (!token || !activeOrg) {
+        if (!token) {
             toast.error("Authentication error.");
             return;
         }
@@ -476,10 +472,8 @@ const ProductCustomizer: FC = () => {
         setIsSaving(true);
         try {
             const result = await googleSheetsService.adminUpsertProduct(token, productData);
-            const newOrgData = result.organizations.find((o: Organization) => o.id === activeOrg.id);
-            if (newOrgData) {
-                const updatedOrgWithNewPrices = { ...newOrgData, ...{ examPrices: result.examPrices } };
-                updateActiveOrg(updatedOrgWithNewPrices);
+            if (result.organizations && result.examPrices) {
+                updateConfigData(result.organizations, result.examPrices);
             }
             toast.success(`${type} "${productData.name}" saved successfully!`);
             setEditingProduct(undefined);
@@ -506,22 +500,18 @@ const ProductCustomizer: FC = () => {
         setIsBulkSaving(true);
         const toastId = toast.loading(`Updating ${selectedSkus.length} products...`);
         
-        const updatePromises = selectedSkus.map(sku => {
+        // Update products sequentially to avoid race conditions on the server
+        let lastResult: any = null;
+        for (const sku of selectedSkus) {
             const productData: any = { sku };
             if (salePrice) productData.price = parseFloat(salePrice);
             if (regularPrice) productData.regularPrice = parseFloat(regularPrice);
-            return googleSheetsService.adminUpsertProduct(token, productData);
-        });
+            lastResult = await googleSheetsService.adminUpsertProduct(token, productData);
+        }
 
         try {
-            const results = await Promise.all(updatePromises);
-            const lastResult = results[results.length - 1];
-            if (lastResult && lastResult.organizations) {
-                const newOrg = lastResult.organizations.find(o => o.id === activeOrg.id);
-                if (newOrg) {
-                    const updatedOrgWithNewPrices = { ...newOrg, ...{ examPrices: lastResult.examPrices } };
-                    updateActiveOrg(updatedOrgWithNewPrices);
-                }
+            if (lastResult && lastResult.organizations && lastResult.examPrices) {
+                updateConfigData(lastResult.organizations, lastResult.examPrices);
             }
             toast.success(`${selectedSkus.length} products updated!`, { id: toastId });
             setSelectedSkus([]);
@@ -536,13 +526,13 @@ const ProductCustomizer: FC = () => {
         setSelectedSkus(e.target.checked ? products.map(p => p.sku) : []);
     };
     
-    const handleSelectOne = (sku: string, checked: boolean) => {
-        setSelectedSkus(prev => {
-            const newSet = new Set(prev);
-            if (checked) {
-                newSet.add(sku);
+    const handleSelectOne = (skuToToggle: string) => {
+        setSelectedSkus(prevSkus => {
+            const newSet = new Set(prevSkus);
+            if (newSet.has(skuToToggle)) {
+                newSet.delete(skuToToggle);
             } else {
-                newSet.delete(sku);
+                newSet.add(skuToToggle);
             }
             return Array.from(newSet);
         });
@@ -559,7 +549,7 @@ const ProductCustomizer: FC = () => {
                                 <input
                                     type="checkbox"
                                     checked={selectedSkus.includes(product.sku)}
-                                    onChange={e => handleSelectOne(product.sku, e.target.checked)}
+                                    onChange={() => handleSelectOne(product.sku)}
                                     className="h-4 w-4 mr-4"
                                 />
                             )}

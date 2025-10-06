@@ -1030,6 +1030,7 @@ function mco_api_admin_upsert_product(WP_REST_Request $request) {
 function mco_api_admin_create_exam_program(WP_REST_Request $request) {
     $params = $request->get_json_params();
     $program_name = sanitize_text_field($params['programName']);
+    $product_link_data = isset($params['productLinkData']) ? $params['productLinkData'] : null;
 
     if (empty($program_name)) {
         return new WP_Error('bad_request', 'Program name is required.', ['status' => 400]);
@@ -1041,13 +1042,9 @@ function mco_api_admin_create_exam_program(WP_REST_Request $request) {
         'post_type' => 'mco_exam_program',
     ]);
 
-    if (is_wp_error($post_id)) {
-        return $post_id;
-    }
+    if (is_wp_error($post_id)) { return $post_id; }
     
     // Set some sensible defaults for the new program
-    $new_sku = 'new-cert-' . $post_id;
-    update_post_meta($post_id, '_mco_certification_exam_sku', $new_sku);
     wp_set_post_terms($post_id, '100', 'exam_cert_questions', false);
     wp_set_post_terms($post_id, '120', 'exam_cert_duration', false);
     wp_set_post_terms($post_id, '25', 'exam_practice_questions', false);
@@ -1055,16 +1052,43 @@ function mco_api_admin_create_exam_program(WP_REST_Request $request) {
     wp_set_post_terms($post_id, '70', 'exam_pass_score', false);
     update_post_meta($post_id, '_mco_is_proctored', '1');
     update_post_meta($post_id, '_mco_certificate_enabled', '1');
+
+    $product_created = false;
+
+    if ($product_link_data) {
+        if ($product_link_data['type'] === 'existing' && !empty($product_link_data['sku'])) {
+            $sku = sanitize_text_field($product_link_data['sku']);
+            // Link to the existing product SKU
+            update_post_meta($post_id, '_mco_certification_exam_sku', $sku);
+        } elseif ($product_link_data['type'] === 'new' && !empty($product_link_data['sku'])) {
+            // Create a new product with specified details
+            $product = new WC_Product_Simple();
+            $product->set_name(sanitize_text_field($product_link_data['name']));
+            $product->set_sku(sanitize_text_field($product_link_data['sku']));
+            $product->set_regular_price(sanitize_text_field($product_link_data['regularPrice']));
+            $product->set_price(sanitize_text_field($product_link_data['price']));
+            $product->set_virtual(true);
+            $product->set_status('publish');
+            $product->save();
+            update_post_meta($post_id, '_mco_certification_exam_sku', $product->get_sku());
+            $product_created = true;
+        }
+    } 
     
-    // Also create a corresponding simple product in WooCommerce
-    $product = new WC_Product_Simple();
-    $product->set_name($program_name);
-    $product->set_sku($new_sku);
-    $product->set_regular_price('49.99');
-    $product->set_price('49.99');
-    $product->set_virtual(true);
-    $product->set_status('publish');
-    $product->save();
+    if (!$product_link_data || $product_link_data['type'] === 'auto') {
+        // Default behavior: create and link a new product automatically
+        $new_sku = 'cert-' . $post_id;
+        $product = new WC_Product_Simple();
+        $product->set_name($program_name);
+        $product->set_sku($new_sku);
+        $product->set_regular_price('49.99');
+        $product->set_price('49.99');
+        $product->set_virtual(true);
+        $product->set_status('publish');
+        $product->save();
+        update_post_meta($post_id, '_mco_certification_exam_sku', $new_sku);
+        $product_created = true;
+    }
 
     delete_transient('mco_app_config_data');
     update_option('mco_config_version', current_time('YmdHis'));

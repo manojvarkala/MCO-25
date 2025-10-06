@@ -398,9 +398,9 @@ export const googleSheetsService = {
         }
     },
     
-    adminCreateExamProgram: async (token: string, programName: string): Promise<{ organizations: Organization[], examPrices: any }> => {
+    adminCreateExamProgram: async (token: string, programName: string, productLinkData?: any): Promise<{ organizations: Organization[], examPrices: any }> => {
         try {
-            return await apiFetch('/admin/create-exam-program', 'POST', token, { programName });
+            return await apiFetch('/admin/create-exam-program', 'POST', token, { programName, productLinkData });
         } catch (error) {
             console.error("Failed to create exam program:", error);
             throw error;

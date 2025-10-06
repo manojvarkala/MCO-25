@@ -11,6 +11,7 @@ interface AppContextType {
   isInitializing: boolean;
   setActiveOrgById: (orgId: string) => void;
   updateActiveOrg: (updatedOrg: Organization) => void;
+  updateConfigData: (organizations: Organization[], examPrices: any) => void;
   updateExamInOrg: (examId: string, updatedExamData: Partial<Exam>) => void;
   isWheelModalOpen: boolean;
   setWheelModalOpen: (isOpen: boolean) => void;
@@ -251,6 +252,15 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setActiveOrg(updatedOrg);
   }, [organizations]);
   
+  const updateConfigData = useCallback((newOrganizations: Organization[], newExamPrices: any) => {
+        setOrganizations(newOrganizations);
+        setExamPrices(newExamPrices);
+        const newActiveOrg = newOrganizations.find(o => o.id === activeOrg?.id) || newOrganizations[0] || null;
+        if (newActiveOrg) {
+            setActiveOrg(newActiveOrg);
+        }
+    }, [activeOrg?.id]);
+
   const updateExamInOrg = useCallback((examId: string, updatedExamData: Partial<Exam>) => {
     setActiveOrg(prevOrg => {
         if (!prevOrg) return null;
@@ -268,6 +278,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     isInitializing,
     setActiveOrgById,
     updateActiveOrg,
+    updateConfigData,
     updateExamInOrg,
     isWheelModalOpen,
     setWheelModalOpen,
@@ -279,7 +290,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setActiveTheme
   }), [
     organizations, activeOrg, isInitializing, setActiveOrgById,
-    updateActiveOrg, updateExamInOrg, isWheelModalOpen, setWheelModalOpen, inProgressExam, examPrices, suggestedBooks,
+    updateActiveOrg, updateConfigData, updateExamInOrg, isWheelModalOpen, setWheelModalOpen, inProgressExam, examPrices, suggestedBooks,
     availableThemes, activeTheme, setActiveTheme
   ]);
 
