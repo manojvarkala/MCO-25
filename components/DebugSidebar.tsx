@@ -1,5 +1,3 @@
-
-
 import React, { FC, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -8,9 +6,13 @@ import { Bug, X, Server, User, ShoppingCart, FileText, CheckCircle, AlertTriangl
 import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
 
-const DebugSidebar: FC = () => {
+interface DebugSidebarProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+const DebugSidebar: FC<DebugSidebarProps> = ({ isOpen, onClose }) => {
     const { token, startMasquerade, stopMasquerade, masqueradeAs } = useAuth();
-    const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [debugData, setDebugData] = useState<DebugData | null>(null);
@@ -70,24 +72,19 @@ const DebugSidebar: FC = () => {
 
     return (
         <>
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="fixed bottom-4 right-4 bg-slate-800 text-white p-3 rounded-full shadow-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 z-50 transition-transform transform hover:scale-110"
-                aria-label="Toggle Debug Sidebar"
-            >
-                <Bug size={24} />
-            </button>
-
             <div 
-                className={`absolute top-0 right-0 h-full bg-slate-800 text-white shadow-2xl transition-transform duration-300 ease-in-out z-40 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`fixed top-0 right-0 h-full bg-slate-800 text-white shadow-2xl transition-transform duration-300 ease-in-out z-[60] ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
                 style={{ width: 'min(90vw, 500px)' }}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="debug-sidebar-title"
             >
                 <div className="p-6 h-full flex flex-col">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold flex items-center gap-2">
+                        <h2 id="debug-sidebar-title" className="text-2xl font-bold flex items-center gap-2">
                             <Server /> Admin Debug Info
                         </h2>
-                        <button onClick={() => setIsOpen(false)} className="p-1 rounded-full hover:bg-slate-700">
+                        <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-700" aria-label="Close debug sidebar">
                             <X size={24} />
                         </button>
                     </div>
@@ -268,7 +265,7 @@ const DebugSidebar: FC = () => {
                     )}
                 </div>
             </div>
-            {isOpen && <div onClick={() => setIsOpen(false)} className="absolute inset-0 bg-black/50 z-30 transition-opacity"></div>}
+            {isOpen && <div onClick={onClose} className="fixed inset-0 bg-black/50 z-50 transition-opacity"></div>}
         </>
     );
 };

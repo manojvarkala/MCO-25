@@ -18,7 +18,6 @@ import Instructions from './components/Instructions.tsx';
 import Admin from './components/Admin.tsx';
 import Profile from './components/Profile.tsx';
 import Checkout from './components/Checkout.tsx';
-import DebugSidebar from './components/DebugSidebar.tsx';
 import Pricing from './components/Pricing.tsx';
 import Feedback from './components/Feedback.tsx';
 import UserGuide from './components/UserGuide.tsx';
@@ -184,7 +183,6 @@ const AppContent: FC = () => {
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </main>
-                {user && user.isAdmin && !isTestPage && <DebugSidebar />}
             </div>
             {!isTestPage && <Footer />}
             {!isTestPage && <LivePurchaseNotification />}

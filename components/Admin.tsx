@@ -1,5 +1,5 @@
 import React, { FC, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
-import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu, Video, DownloadCloud, Loader, CheckCircle, XCircle, Trash } from 'lucide-react';
+import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu, Video, DownloadCloud, Loader, CheckCircle, XCircle, Trash, Bug } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { Exam, SearchedUser, ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
+import DebugSidebar from './DebugSidebar.tsx';
 
 type HealthStatus = 'idle' | 'success' | 'failed' | 'loading';
 
@@ -86,6 +87,7 @@ const Admin: FC = () => {
         authentication: { status: 'idle', message: '' },
     });
     const [isCheckingHealth, setIsCheckingHealth] = useState(false);
+    const [isDebugSidebarOpen, setIsDebugSidebarOpen] = useState(false);
 
     // State for CSV downloads
     const [isGeneratingWooCsv, setIsGeneratingWooCsv] = useState(false);
@@ -112,7 +114,7 @@ const Admin: FC = () => {
         setShowNotifications(newValue);
         try {
             localStorage.setItem('mco_show_notifications', String(newValue));
-            toast.success(`Sales notifications ${newValue ? 'enabled' : 'disabled'}.`);
+            toast.success(`Sales notifications ${newValue ? 'enabled' : 'disabled'}. Changes apply after a page refresh.`);
         } catch (e) {
             toast.error("Could not save preference.");
         }
@@ -291,266 +293,286 @@ const Admin: FC = () => {
     };
 
     return (
-        <div className="space-y-8">
-            <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">Admin Dashboard</h1>
+        <>
+            <DebugSidebar isOpen={isDebugSidebarOpen} onClose={() => setIsDebugSidebarOpen(false)} />
+            <div className="space-y-8">
+                <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">Admin Dashboard</h1>
 
-            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
-                    <Cpu className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    System Health Check
-                </h2>
-                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                    Diagnose "No route found" errors and other connection issues with your WordPress backend.
-                </p>
-                <button
-                    onClick={handleRunHealthCheck}
-                    disabled={isCheckingHealth}
-                    className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-transform transform hover:scale-105 disabled:opacity-50"
-                >
-                    {isCheckingHealth ? <Spinner size="sm" /> : <RefreshCw size={20} />}
-                    <span className="ml-2">{isCheckingHealth ? 'Running Checks...' : 'Run Health Check'}</span>
-                </button>
-                {healthCheckStatus.connectivity.status !== 'idle' && (
-                    <div className="mt-6 space-y-4">
-                        <HealthCheckItem status={healthCheckStatus.connectivity.status} title="Server Connectivity" message={healthCheckStatus.connectivity.message} />
-                        <HealthCheckItem status={healthCheckStatus.apiEndpoint.status} title="Plugin API Endpoint" message={healthCheckStatus.apiEndpoint.message} />
-                        <HealthCheckItem 
-                            status={healthCheckStatus.authentication.status} 
-                            title="Authentication & CORS" 
-                            message={healthCheckStatus.authentication.message}
-                            troubleshooting={
-                                <div className="space-y-3">
-                                    <p>This error almost always means your server is stripping the "Authorization" header from API requests.</p>
-                                    <div>
-                                        <strong className="text-amber-900">Primary Solution (for Apache/LiteSpeed servers):</strong>
-                                        <p>Add the following code to the <strong>very top</strong> of your <code>.htaccess</code> file in the WordPress root directory (before the <code># BEGIN WordPress</code> block):</p>
-                                        <pre className="whitespace-pre-wrap bg-slate-100 p-2 rounded my-1 text-xs"><code>
-{`<IfModule mod_rewrite.c>
-RewriteEngine On
-RewriteCond %{HTTP:Authorization} .
-RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-</IfModule>`}
-                                        </code></pre>
-                                        <p>After adding this, clear any server or plugin caches.</p>
-                                    </div>
-                                    <div className="pt-3 border-t border-amber-200">
-                                        <strong className="text-amber-900">Secondary Solution (if saving still fails after a successful check):</strong>
-                                        <p>If the check above passes but saving an exam program still gives a "No route found" error, your server's URL rules might be cached. The best way to fix this is to flush them:</p>
-                                        <ol className="list-decimal list-inside ml-4 mt-1">
-                                            <li>Go to your WordPress Admin Dashboard.</li>
-                                            <li>Navigate to <strong>Settings &rarr; Permalinks</strong>.</li>
-                                            <li>You don't need to change anything. Just click the <strong>"Save Changes"</strong> button.</li>
-                                            <li>This action forces WordPress to rebuild its internal URL routing table.</li>
-                                        </ol>
-                                    </div>
-                                </div>
-                            }
-                        />
-                    </div>
-                )}
-            </div>
-
-            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
-                    <Paintbrush className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    Appearance &amp; UI
-                </h2>
-                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                    Customize the user interface for your administrator account.
-                </p>
-                <table className="form-table">
-                    <tbody>
-                        <tr>
-                            <th scope="row">Show Sales Notifications</th>
-                            <td>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-[rgb(var(--color-text-muted-rgb))]">Toggle the live purchase pop-ups for your account. Changes apply after a refresh.</p>
-                                    </div>
-                                    <button
-                                        onClick={handleToggleNotifications}
-                                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-rgb))] focus:ring-offset-2 ${
-                                            showNotifications ? 'bg-[rgb(var(--color-primary-rgb))]' : 'bg-slate-300'
-                                        }`}
-                                        role="switch"
-                                        aria-checked={showNotifications}
-                                    >
-                                        <span
-                                            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                                showNotifications ? 'translate-x-5' : 'translate-x-0'
-                                            }`}
-                                        />
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
-                    <Trash className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    Cache Management
-                </h2>
-                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                    Force the server to reload data. Use these tools after making changes in WordPress that don't appear in the app.
-                </p>
-                <div className="space-y-4">
-                    <div>
-                        <button
-                            onClick={handleClearConfigCache}
-                            disabled={!!isClearingCache}
-                            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
-                        >
-                            {isClearingCache === 'config' ? <Spinner size="sm" /> : <RefreshCw size={16} />}
-                            <span className="ml-2">{isClearingCache === 'config' ? 'Clearing...' : 'Clear App Config Cache'}</span>
-                        </button>
-                        <p className="text-xs text-slate-500 mt-1">Clears all exam programs, products, and settings cache.</p>
-                    </div>
-                        <div>
-                        <button
-                            onClick={handleClearQuestionCache}
-                            disabled={!!isClearingCache}
-                            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
-                        >
-                            {isClearingCache === 'questions' ? <Spinner size="sm" /> : <RefreshCw size={16} />}
-                            <span className="ml-2">{isClearingCache === 'questions' ? 'Clearing...' : 'Clear All Question Caches'}</span>
-                        </button>
-                        <p className="text-xs text-slate-500 mt-1">Forces the app to re-fetch questions from all Google Sheets.</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
-                    <FileText className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    Google Sheet URL Tester
-                </h2>
-                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                    If you're getting a "Question Sheet: Failure" error, paste the URL from your "Question Source URL" field here to test it directly and get detailed feedback.
-                </p>
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        value={sheetUrlToTest}
-                        onChange={(e) => setSheetUrlToTest(e.target.value)}
-                        placeholder="Paste your Google Sheet URL here..."
-                        className="flex-grow p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
-                        disabled={isTestingSheet}
-                    />
+                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                        <Bug className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Developer Tools
+                    </h2>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                        Access advanced diagnostic tools, user masquerading, and API inspection.
+                    </p>
                     <button
-                        onClick={handleTestSheetUrl}
-                        disabled={isTestingSheet}
-                        className="inline-flex items-center justify-center px-6 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50"
+                        onClick={() => setIsDebugSidebarOpen(true)}
+                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-slate-700 hover:bg-slate-800 transition"
                     >
-                        {isTestingSheet ? <Spinner size="sm" /> : <RefreshCw size={20} />}
-                        <span className="ml-2">{isTestingSheet ? 'Testing...' : 'Test URL'}</span>
+                        <Bug size={20} className="mr-2" />
+                        Launch Debug Sidebar
                     </button>
                 </div>
 
-                {sheetTestResult && (
-                    <div className="mt-6">
-                        <h3 className="font-bold mb-2">Test Result:</h3>
-                        <div className={`flex items-start gap-4 p-4 rounded-lg border ${sheetTestResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                            {sheetTestResult.success ? <CheckCircle size={24} className="text-green-500 flex-shrink-0" /> : <XCircle size={24} className="text-red-500 flex-shrink-0" />}
-                            <div className="flex-grow text-sm">
-                                <p className={`font-bold ${sheetTestResult.success ? 'text-green-800' : 'text-red-800'}`}>
-                                    {sheetTestResult.success ? 'Success' : 'Failure'} (Status: {sheetTestResult.statusCode})
-                                </p>
-                                <p className="text-slate-700">{sheetTestResult.message}</p>
-                                {sheetTestResult.dataPreview && (
-                                    <div className="mt-3">
-                                        <h4 className="font-semibold text-xs text-slate-500">Data Preview (First 5 Rows):</h4>
-                                        <pre className="text-xs bg-slate-100 p-2 rounded mt-1 whitespace-pre-wrap font-mono">
-                                            {sheetTestResult.dataPreview}
-                                        </pre>
+                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                        <Cpu className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        System Health Check
+                    </h2>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                        Diagnose "No route found" errors and other connection issues with your WordPress backend.
+                    </p>
+                    <button
+                        onClick={handleRunHealthCheck}
+                        disabled={isCheckingHealth}
+                        className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-transform transform hover:scale-105 disabled:opacity-50"
+                    >
+                        {isCheckingHealth ? <Spinner size="sm" /> : <RefreshCw size={20} />}
+                        <span className="ml-2">{isCheckingHealth ? 'Running Checks...' : 'Run Health Check'}</span>
+                    </button>
+                    {healthCheckStatus.connectivity.status !== 'idle' && (
+                        <div className="mt-6 space-y-4">
+                            <HealthCheckItem status={healthCheckStatus.connectivity.status} title="Server Connectivity" message={healthCheckStatus.connectivity.message} />
+                            <HealthCheckItem status={healthCheckStatus.apiEndpoint.status} title="Plugin API Endpoint" message={healthCheckStatus.apiEndpoint.message} />
+                            <HealthCheckItem 
+                                status={healthCheckStatus.authentication.status} 
+                                title="Authentication & CORS" 
+                                message={healthCheckStatus.authentication.message}
+                                troubleshooting={
+                                    <div className="space-y-3">
+                                        <p>This error almost always means your server is stripping the "Authorization" header from API requests.</p>
+                                        <div>
+                                            <strong className="text-amber-900">Primary Solution (for Apache/LiteSpeed servers):</strong>
+                                            <p>Add the following code to the <strong>very top</strong> of your <code>.htaccess</code> file in the WordPress root directory (before the <code># BEGIN WordPress</code> block):</p>
+                                            <pre className="whitespace-pre-wrap bg-slate-100 p-2 rounded my-1 text-xs"><code>
+    {`<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    </IfModule>`}
+                                            </code></pre>
+                                            <p>After adding this, clear any server or plugin caches.</p>
+                                        </div>
+                                        <div className="pt-3 border-t border-amber-200">
+                                            <strong className="text-amber-900">Secondary Solution (if saving still fails after a successful check):</strong>
+                                            <p>If the check above passes but saving an exam program still gives a "No route found" error, your server's URL rules might be cached. The best way to fix this is to flush them:</p>
+                                            <ol className="list-decimal list-inside ml-4 mt-1">
+                                                <li>Go to your WordPress Admin Dashboard.</li>
+                                                <li>Navigate to <strong>Settings &rarr; Permalinks</strong>.</li>
+                                                <li>You don't need to change anything. Just click the <strong>"Save Changes"</strong> button.</li>
+                                                <li>This action forces WordPress to rebuild its internal URL routing table.</li>
+                                            </ol>
+                                        </div>
                                     </div>
-                                )}
-                                {!sheetTestResult.success && (
-                                    <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-left text-sm text-amber-800">
-                                        <h3 className="font-bold mb-2 flex items-center gap-2"><Lightbulb size={16} /> How to Fix This Error:</h3>
-                                        <p className="mb-2">This error means your server cannot access the Google Sheet URL. The only 100% reliable method is to use a <strong>"Publish to the web"</strong> link.</p>
-                                        <h4 className="font-semibold mt-3 mb-1">Required Steps:</h4>
-                                        <ol className="list-decimal list-inside space-y-1">
-                                            <li>In your Google Sheet, go to <strong>File &rarr; Share &rarr; Publish to the web</strong>.</li>
-                                            <li>In the dialog, under the "Link" tab, select the correct sheet (e.g., "Sheet1").</li>
-                                            <li>Choose <strong>"Comma-separated values (.csv)"</strong> from the dropdown.</li>
-                                            <li>Click <strong>Publish</strong> and confirm.</li>
-                                            <li>Copy the generated link. This is the URL you must use.</li>
-                                        </ol>
-                                        <p className="text-xs mt-3"><strong>Note:</strong> Standard "Share with anyone with the link" URLs will not work reliably and will be rejected by the system.</p>
-                                    </div>
-                                )}
-                            </div>
+                                }
+                            />
                         </div>
-                    </div>
-                )}
-            </div>
-
-            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
-                    <FileSpreadsheet className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    Bulk Data Management
-                </h2>
-                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                    Streamline your content creation with this three-step workflow for bulk importing exam programs and their corresponding WooCommerce products.
-                </p>
-
-                <div className="space-y-4 p-4 bg-[rgb(var(--color-muted-rgb))] rounded-lg border border-[rgb(var(--color-border-rgb))]">
-                    <ol className="list-decimal list-inside space-y-4 text-[rgb(var(--color-text-muted-rgb))]">
-                        <li>
-                            <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 1: Upload Exam Programs CSV</strong><br />
-                            Download the template, fill it with your exam program data, then upload it in your WordPress admin under <a href={`${getApiBaseUrl()}/wp-admin/admin.php?page=mco-exam-engine&tab=bulk_import`} target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] font-semibold hover:underline">Exam App Engine &rarr; Bulk Import</a>.
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                <a href="/template-exam-programs.csv" download className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-border-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]">
-                                    <DownloadCloud size={16} className="mr-2"/> Download Exam Program Template
-                                </a>
-                            </div>
-                        </li>
-                        <li>
-                            <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 2: Generate WooCommerce Products CSV</strong><br />
-                            Once your programs are uploaded, click the button below. This will generate a new CSV file, pre-filled with the product details for each of your new certification exams.
-                             <div className="flex flex-wrap gap-2 mt-2">
-                                <button
-                                    onClick={handleGenerateWooCsv}
-                                    disabled={isGeneratingWooCsv}
-                                    className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-primary-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-primary-rgb))] bg-[rgba(var(--color-primary-rgb),0.1)] hover:bg-[rgba(var(--color-primary-rgb),0.2)] disabled:opacity-50"
-                                >
-                                    {isGeneratingWooCsv ? <Spinner size="sm" /> : <FileText size={16} className="mr-2"/>}
-                                    {isGeneratingWooCsv ? 'Generating...' : 'Generate & Download WooCommerce Products CSV'}
-                                </button>
-                            </div>
-                        </li>
-                        <li>
-                            <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 3: Upload WooCommerce Products CSV</strong><br />
-                            Review the generated CSV (you can adjust pricing here). Then, upload it in your WordPress admin under <a href={`${getApiBaseUrl()}/wp-admin/edit.php?post_type=product&page=product_importer`} target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] font-semibold hover:underline">WooCommerce &rarr; Products &rarr; Import</a>.
-                        </li>
-                    </ol>
-                </div>
-            </div>
-
-            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
-                    <Award className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    Certificate Templates Overview
-                </h2>
-                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                    This is a read-only overview of the certificate templates configured in your WordPress backend. To edit these, go to <strong>Exam App Engine &rarr; Certificate Templates</strong> in your WP admin dashboard.
-                </p>
-                <div className="space-y-4 max-h-96 overflow-y-auto pr-4">
-                    {certificateTemplates.map(template => (
-                        <div key={template.id} className="bg-[rgb(var(--color-muted-rgb))] p-3 rounded-md border border-[rgb(var(--color-border-rgb))]">
-                            <p className="font-semibold text-[rgb(var(--color-text-strong-rgb))]">{template.name || `ID: ${template.id}`}</p>
-                            <p className="text-xs text-[rgb(var(--color-text-muted-rgb))] truncate" title={template.title}>Title: "{template.title}"</p>
-                        </div>
-                    ))}
-                    {certificateTemplates.length === 0 && (
-                        <p className="text-[rgb(var(--color-text-muted-rgb))] text-center py-4">No certificate templates found.</p>
                     )}
                 </div>
+
+                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                        <Paintbrush className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Appearance &amp; UI
+                    </h2>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                        Customize the user interface for your administrator account.
+                    </p>
+                    <table className="form-table">
+                        <tbody>
+                            <tr>
+                                <th scope="row">Show Sales Notifications</th>
+                                <td>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm text-[rgb(var(--color-text-muted-rgb))]">Toggle the live purchase pop-ups for your account. Changes apply after a refresh.</p>
+                                        </div>
+                                        <button
+                                            onClick={handleToggleNotifications}
+                                            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-rgb))] focus:ring-offset-2 ${
+                                                showNotifications ? 'bg-[rgb(var(--color-primary-rgb))]' : 'bg-slate-300'
+                                            }`}
+                                            role="switch"
+                                            aria-checked={showNotifications}
+                                        >
+                                            <span
+                                                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                                    showNotifications ? 'translate-x-5' : 'translate-x-0'
+                                                }`}
+                                            />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                        <Trash className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Cache Management
+                    </h2>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                        Force the server to reload data. Use these tools after making changes in WordPress that don't appear in the app.
+                    </p>
+                    <div className="space-y-4">
+                        <div>
+                            <button
+                                onClick={handleClearConfigCache}
+                                disabled={!!isClearingCache}
+                                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                            >
+                                {isClearingCache === 'config' ? <Spinner size="sm" /> : <RefreshCw size={16} />}
+                                <span className="ml-2">{isClearingCache === 'config' ? 'Clearing...' : 'Clear App Config Cache'}</span>
+                            </button>
+                            <p className="text-xs text-slate-500 mt-1">Clears all exam programs, products, and settings cache.</p>
+                        </div>
+                            <div>
+                            <button
+                                onClick={handleClearQuestionCache}
+                                disabled={!!isClearingCache}
+                                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                            >
+                                {isClearingCache === 'questions' ? <Spinner size="sm" /> : <RefreshCw size={16} />}
+                                <span className="ml-2">{isClearingCache === 'questions' ? 'Clearing...' : 'Clear All Question Caches'}</span>
+                            </button>
+                            <p className="text-xs text-slate-500 mt-1">Forces the app to re-fetch questions from all Google Sheets.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                        <FileText className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Google Sheet URL Tester
+                    </h2>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                        If you're getting a "Question Sheet: Failure" error, paste the URL from your "Question Source URL" field here to test it directly and get detailed feedback.
+                    </p>
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={sheetUrlToTest}
+                            onChange={(e) => setSheetUrlToTest(e.target.value)}
+                            placeholder="Paste your Google Sheet URL here..."
+                            className="flex-grow p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition"
+                            disabled={isTestingSheet}
+                        />
+                        <button
+                            onClick={handleTestSheetUrl}
+                            disabled={isTestingSheet}
+                            className="inline-flex items-center justify-center px-6 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50"
+                        >
+                            {isTestingSheet ? <Spinner size="sm" /> : <RefreshCw size={20} />}
+                            <span className="ml-2">{isTestingSheet ? 'Testing...' : 'Test URL'}</span>
+                        </button>
+                    </div>
+
+                    {sheetTestResult && (
+                        <div className="mt-6">
+                            <h3 className="font-bold mb-2">Test Result:</h3>
+                            <div className={`flex items-start gap-4 p-4 rounded-lg border ${sheetTestResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                                {sheetTestResult.success ? <CheckCircle size={24} className="text-green-500 flex-shrink-0" /> : <XCircle size={24} className="text-red-500 flex-shrink-0" />}
+                                <div className="flex-grow text-sm">
+                                    <p className={`font-bold ${sheetTestResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                                        {sheetTestResult.success ? 'Success' : 'Failure'} (Status: {sheetTestResult.statusCode})
+                                    </p>
+                                    <p className="text-slate-700">{sheetTestResult.message}</p>
+                                    {sheetTestResult.dataPreview && (
+                                        <div className="mt-3">
+                                            <h4 className="font-semibold text-xs text-slate-500">Data Preview (First 5 Rows):</h4>
+                                            <pre className="text-xs bg-slate-100 p-2 rounded mt-1 whitespace-pre-wrap font-mono">
+                                                {sheetTestResult.dataPreview}
+                                            </pre>
+                                        </div>
+                                    )}
+                                    {!sheetTestResult.success && (
+                                        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-left text-sm text-amber-800">
+                                            <h3 className="font-bold mb-2 flex items-center gap-2"><Lightbulb size={16} /> How to Fix This Error:</h3>
+                                            <p className="mb-2">This error means your server cannot access the Google Sheet URL. The only 100% reliable method is to use a <strong>"Publish to the web"</strong> link.</p>
+                                            <h4 className="font-semibold mt-3 mb-1">Required Steps:</h4>
+                                            <ol className="list-decimal list-inside space-y-1">
+                                                <li>In your Google Sheet, go to <strong>File &rarr; Share &rarr; Publish to the web</strong>.</li>
+                                                <li>In the dialog, under the "Link" tab, select the correct sheet (e.g., "Sheet1").</li>
+                                                <li>Choose <strong>"Comma-separated values (.csv)"</strong> from the dropdown.</li>
+                                                <li>Click <strong>Publish</strong> and confirm.</li>
+                                                <li>Copy the generated link. This is the URL you must use.</li>
+                                            </ol>
+                                            <p className="text-xs mt-3"><strong>Note:</strong> Standard "Share with anyone with the link" URLs will not work reliably and will be rejected by the system.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                        <FileSpreadsheet className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Bulk Data Management
+                    </h2>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                        Streamline your content creation with this three-step workflow for bulk importing exam programs and their corresponding WooCommerce products.
+                    </p>
+
+                    <div className="space-y-4 p-4 bg-[rgb(var(--color-muted-rgb))] rounded-lg border border-[rgb(var(--color-border-rgb))]">
+                        <ol className="list-decimal list-inside space-y-4 text-[rgb(var(--color-text-muted-rgb))]">
+                            <li>
+                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 1: Upload Exam Programs CSV</strong><br />
+                                Download the template, fill it with your exam program data, then upload it in your WordPress admin under <a href={`${getApiBaseUrl()}/wp-admin/admin.php?page=mco-exam-engine&tab=bulk_import`} target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] font-semibold hover:underline">Exam App Engine &rarr; Bulk Import</a>.
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    <a href="/template-exam-programs.csv" download className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-border-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]">
+                                        <DownloadCloud size={16} className="mr-2"/> Download Exam Program Template
+                                    </a>
+                                </div>
+                            </li>
+                            <li>
+                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 2: Generate WooCommerce Products CSV</strong><br />
+                                Once your programs are uploaded, click the button below. This will generate a new CSV file, pre-filled with the product details for each of your new certification exams.
+                                 <div className="flex flex-wrap gap-2 mt-2">
+                                    <button
+                                        onClick={handleGenerateWooCsv}
+                                        disabled={isGeneratingWooCsv}
+                                        className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-primary-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-primary-rgb))] bg-[rgba(var(--color-primary-rgb),0.1)] hover:bg-[rgba(var(--color-primary-rgb),0.2)] disabled:opacity-50"
+                                    >
+                                        {isGeneratingWooCsv ? <Spinner size="sm" /> : <FileText size={16} className="mr-2"/>}
+                                        {isGeneratingWooCsv ? 'Generating...' : 'Generate & Download WooCommerce Products CSV'}
+                                    </button>
+                                </div>
+                            </li>
+                            <li>
+                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 3: Upload WooCommerce Products CSV</strong><br />
+                                Review the generated CSV (you can adjust pricing here). Then, upload it in your WordPress admin under <a href={`${getApiBaseUrl()}/wp-admin/edit.php?post_type=product&page=product_importer`} target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] font-semibold hover:underline">WooCommerce &rarr; Products &rarr; Import</a>.
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                        <Award className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Certificate Templates Overview
+                    </h2>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                        This is a read-only overview of the certificate templates configured in your WordPress backend. To edit these, go to <strong>Exam App Engine &rarr; Certificate Templates</strong> in your WP admin dashboard.
+                    </p>
+                    <div className="space-y-4 max-h-96 overflow-y-auto pr-4">
+                        {certificateTemplates.map(template => (
+                            <div key={template.id} className="bg-[rgb(var(--color-muted-rgb))] p-3 rounded-md border border-[rgb(var(--color-border-rgb))]">
+                                <p className="font-semibold text-[rgb(var(--color-text-strong-rgb))]">{template.name || `ID: ${template.id}`}</p>
+                                <p className="text-xs text-[rgb(var(--color-text-muted-rgb))] truncate" title={template.title}>Title: "{template.title}"</p>
+                            </div>
+                        ))}
+                        {certificateTemplates.length === 0 && (
+                            <p className="text-[rgb(var(--color-text-muted-rgb))] text-center py-4">No certificate templates found.</p>
+                        )}
+                    </div>
+                </div>
             </div>
-        </div>
+        </>
     );
 };
 

@@ -12,6 +12,9 @@ if (!function_exists('mco_register_admin_hooks')) {
         // Actions for the new Exam Program meta box
         add_action('add_meta_boxes', 'mco_add_exam_program_meta_boxes');
         add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta_data');
+        // Actions for custom admin columns
+        add_filter('manage_mco_exam_program_posts_columns', 'mco_add_exam_program_columns');
+        add_action('manage_mco_exam_program_posts_custom_column', 'mco_display_exam_program_columns', 10, 2);
     }
 }
 
@@ -777,4 +780,47 @@ function mco_run_sheet_url_test($sheet_url) {
 }
 
 
+// --- EXAM PROGRAM CPT ADMIN COLUMNS ---
+
+if (!function_exists('mco_add_exam_program_columns')) {
+    function mco_add_exam_program_columns($columns) {
+        $new_columns = [];
+        foreach ($columns as $key => $title) {
+            $new_columns[$key] = $title;
+            if ($key === 'title') {
+                $new_columns['_mco_certification_exam_sku'] = 'Certification SKU';
+                $new_columns['exam_practice_questions'] = 'Practice Qs';
+                $new_columns['exam_cert_questions'] = 'Cert Qs';
+                $new_columns['exam_pass_score'] = 'Pass Score';
+                $new_columns['_mco_is_proctored'] = 'Proctored';
+            }
+        }
+        return $new_columns;
+    }
+}
+
+if (!function_exists('mco_display_exam_program_columns')) {
+    function mco_display_exam_program_columns($column_name, $post_id) {
+        switch ($column_name) {
+            case '_mco_certification_exam_sku':
+                $sku = get_post_meta($post_id, '_mco_certification_exam_sku', true);
+                echo $sku ? esc_html($sku) : '—';
+                break;
+            case 'exam_practice_questions':
+            case 'exam_cert_questions':
+            case 'exam_pass_score':
+                $terms = get_the_terms($post_id, $column_name);
+                if (!empty($terms) && !is_wp_error($terms)) {
+                    echo esc_html($terms[0]->name);
+                } else {
+                    echo '—';
+                }
+                break;
+            case '_mco_is_proctored':
+                $is_proctored = get_post_meta($post_id, '_mco_is_proctored', true);
+                echo $is_proctored ? 'Yes' : 'No';
+                break;
+        }
+    }
+}
 ?>

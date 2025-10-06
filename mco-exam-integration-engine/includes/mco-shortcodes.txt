@@ -60,22 +60,106 @@ function mco_exam_login_shortcode() {
             $redirect_param = isset($_GET['redirect_to']) ? $_GET['redirect_to'] : '/dashboard';
             $final_url = rtrim($app_base_url, '/') . '/auth?token=' . $token . '&redirect_to=' . urlencode($redirect_param);
             ?>
-            <div>
-                <p>Login successful. Redirecting...</p>
+            <div class="mco-login-form-container">
+                <h2>Login Successful</h2>
+                <p style="text-align: center; color: #475569;">You are already logged in. Redirecting you to the dashboard...</p>
                 <script type="text/javascript">
-                    window.location.href = "<?php echo esc_url_raw($final_url); ?>";
+                    window.setTimeout(function() {
+                        window.location.href = "<?php echo esc_url_raw($final_url); ?>";
+                    }, 1500);
                 </script>
             </div>
             <?php
         } else {
-            echo '<div><p>Could not generate a secure login token. Please try again or contact support.</p></div>';
+            echo '<div class="mco-login-form-container"><p style="color: #dc2626;">Could not generate a secure login token. Please try again or contact support.</p></div>';
         }
     } else {
-        $redirect_url = home_url($_SERVER['REQUEST_URI']);
+        // User is not logged in, show the styled login form.
         ?>
-        <div>
-            <p>You must be logged in to access the examination portal.</p>
-            <a href="<?php echo esc_url(wp_login_url($redirect_url)); ?>">Login</a>
+        <style>
+            .mco-login-form-container {
+                background-color: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 1rem;
+                padding: 2.5rem;
+                max-width: 420px;
+                margin: 2rem auto;
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,.05), 0 4px 6px -4px rgba(0,0,0,.05);
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            }
+            .mco-login-form-container h2 {
+                font-size: 1.875rem;
+                font-weight: 700;
+                color: #1e293b;
+                text-align: center;
+                margin-bottom: 1.5rem;
+                margin-top: 0;
+            }
+            .mco-login-form-container .login-form { margin-bottom: 1rem; }
+            .mco-login-form-container .login-form label {
+                display: block;
+                font-weight: 600;
+                color: #475569;
+                margin-bottom: 0.5rem;
+            }
+            .mco-login-form-container .login-form input[type="text"],
+            .mco-login-form-container .login-form input[type="password"] {
+                width: 100%;
+                padding: 0.75rem 1rem;
+                border: 1px solid #cbd5e1;
+                border-radius: 0.5rem;
+                box-shadow: none;
+                transition: all 0.2s;
+                box-sizing: border-box;
+            }
+            .mco-login-form-container .login-form input[type="text"]:focus,
+            .mco-login-form-container .login-form input[type="password"]:focus {
+                border-color: #0891b2;
+                box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+                outline: none;
+            }
+            .mco-login-form-container .login-submit input[type="submit"] {
+                width: 100%;
+                background-color: #0891b2;
+                color: white;
+                font-weight: 700;
+                font-size: 1rem;
+                border: none;
+                border-radius: 0.5rem;
+                padding: 0.75rem 1.5rem;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .mco-login-form-container .login-submit input[type="submit"]:hover {
+                background-color: #0e7490;
+            }
+            .mco-login-form-container .login-remember { margin-top: 1rem; }
+            .mco-login-form-container #nav,
+            .mco-login-form-container #backtoblog {
+                text-align: center;
+                margin: 1.5rem 0 0 0;
+                padding: 0;
+            }
+            .mco-login-form-container #nav a,
+            .mco-login-form-container #backtoblog a {
+                color: #0891b2;
+                text-decoration: none;
+            }
+            .mco-login-form-container #nav a:hover,
+            .mco-login-form-container #backtoblog a:hover {
+                text-decoration: underline;
+            }
+        </style>
+        <div class="mco-login-form-container">
+            <h2>Sign In</h2>
+            <?php
+            // Redirect back to this same page after login to trigger the token generation.
+            wp_login_form([
+                'redirect' => home_url($_SERVER['REQUEST_URI']),
+                'label_username' => __('Email Address or Username'),
+                'remember' => true,
+            ]);
+            ?>
         </div>
         <?php
     }
