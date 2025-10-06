@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { Edit, Save, X, ShoppingCart, Tag, RefreshCw, Trash2, PlusCircle } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
-type TabType = 'simple' | 'subscription' | 'bundle';
+type TabType = 'all' | 'simple' | 'subscription' | 'bundle';
 
 const TabButton: FC<{ active: boolean; onClick: () => void; children: ReactNode }> = ({ active, onClick, children }) => (
     <button
@@ -427,7 +427,7 @@ const BulkEditPanel: FC<{
 const ProductCustomizer: FC = () => {
     const { activeOrg, examPrices, updateConfigData } = useAppContext();
     const { token } = useAuth();
-    const [activeTab, setActiveTab] = useState<TabType>('simple');
+    const [activeTab, setActiveTab] = useState<TabType>('all');
     
     const [productToEdit, setProductToEdit] = useState<Partial<ProductVariation> | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -439,21 +439,17 @@ const ProductCustomizer: FC = () => {
         setSelectedSkus([]);
     }, [activeTab]);
     
-    const { simpleProducts, subscriptionProducts, bundleProducts } = useMemo(() => {
+    const { allProducts, simpleProducts, subscriptionProducts, bundleProducts } = useMemo(() => {
         if (!activeOrg || !examPrices) {
-            return { simpleProducts: [], subscriptionProducts: [], bundleProducts: [] };
+            return { allProducts: [], simpleProducts: [], subscriptionProducts: [], bundleProducts: [] };
         }
 
-        const simple: ProductVariation[] = [];
-        const subscriptions: ProductVariation[] = [];
-        const bundles: ProductVariation[] = [];
-
-        Object.values(examPrices).forEach((priceData: any) => {
+        const all: ProductVariation[] = Object.values(examPrices).map((priceData: any) => {
             const product: ProductVariation = {
                 id: priceData.productId?.toString() || priceData.sku,
                 sku: priceData.sku,
                 name: priceData.name || 'Unknown Product',
-                type: 'simple', // Default type
+                type: 'simple', // Default type, will be overridden
                 salePrice: priceData.price?.toString() || '0',
                 regularPrice: priceData.regularPrice?.toString() || '0',
                 isBundle: priceData.isBundle,
@@ -462,23 +458,24 @@ const ProductCustomizer: FC = () => {
                 subscriptionPeriodInterval: priceData.subscription_period_interval,
                 subscriptionLength: priceData.subscription_length
             };
-            
+
             if (product.isBundle) {
                 product.type = 'bundle';
-                bundles.push(product);
             } else if (priceData.type === 'subscription' || priceData.type === 'variable-subscription') {
                 product.type = 'subscription';
-                subscriptions.push(product);
             } else {
                 product.type = 'simple';
-                simple.push(product);
             }
+            return product;
         });
+        
+        const sortedAll = all.sort((a, b) => a.name.localeCompare(b.name));
 
         return { 
-            simpleProducts: simple.sort((a, b) => a.name.localeCompare(b.name)), 
-            subscriptionProducts: subscriptions.sort((a, b) => a.name.localeCompare(b.name)), 
-            bundleProducts: bundles.sort((a, b) => a.name.localeCompare(b.name)) 
+            allProducts: sortedAll,
+            simpleProducts: sortedAll.filter(p => p.type === 'simple'),
+            subscriptionProducts: sortedAll.filter(p => p.type === 'subscription'),
+            bundleProducts: sortedAll.filter(p => p.type === 'bundle')
         };
     }, [activeOrg, examPrices]);
 
@@ -622,11 +619,13 @@ const ProductCustomizer: FC = () => {
         let products: ProductVariation[] = [];
         let title = '';
         
-        if (activeTab === 'simple') { products = simpleProducts; title = 'Simple Products'; }
-        if (activeTab === 'subscription') { products = subscriptionProducts; title = 'Subscription Products'; }
-        if (activeTab === 'bundle') { products = bundleProducts; title = 'Bundle Products'; }
+        if (activeTab === 'all') { products = allProducts; title = 'All Products'; }
+        else if (activeTab === 'simple') { products = simpleProducts; title = 'Simple Products'; }
+        else if (activeTab === 'subscription') { products = subscriptionProducts; title = 'Subscription Products'; }
+        else if (activeTab === 'bundle') { products = bundleProducts; title = 'Bundle Products'; }
         
         const isAllSelected = products.length > 0 && selectedSkus.length === products.length;
+        const canCreateNew = activeTab !== 'all';
 
         return (
             <div>
@@ -641,8 +640,10 @@ const ProductCustomizer: FC = () => {
                 <div className="flex justify-between items-center mb-3">
                     <h3 className="text-lg font-bold">{title}</h3>
                     <button 
-                        onClick={() => setProductToEdit({ type: activeTab })} 
-                        className="flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600"
+                        onClick={() => canCreateNew && setProductToEdit({ type: activeTab })} 
+                        className={`flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600 ${!canCreateNew ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!canCreateNew}
+                        title={!canCreateNew ? 'Please select a specific tab to create a new product' : 'Create New'}
                     >
                         <PlusCircle size={16}/> Create New
                     </button>
@@ -691,6 +692,7 @@ const ProductCustomizer: FC = () => {
             
             <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                 <div className="flex space-x-2 mb-4">
+                    <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>All Products</TabButton>
                     <TabButton active={activeTab === 'simple'} onClick={() => setActiveTab('simple')}>Simple Products</TabButton>
                     <TabButton active={activeTab === 'subscription'} onClick={() => setActiveTab('subscription')}>Subscriptions</TabButton>
                     <TabButton active={activeTab === 'bundle'} onClick={() => setActiveTab('bundle')}>Bundles</TabButton>
