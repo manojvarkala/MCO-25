@@ -6,7 +6,7 @@ import Spinner from './Spinner.tsx';
 
 const Integration: FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
-    const pluginVersion = "1.0.1";
+    const pluginVersion = "1.0.0";
 
     const pluginFiles = [
         'mco-exam-integration-engine/plugin-header.txt',
@@ -24,35 +24,31 @@ const Integration: FC = () => {
         const toastId = toast.loading('Generating plugin .zip file...');
         try {
             const zip = new JSZip();
-            const rootFolder = zip.folder('mco-exam-integration-engine');
-            if (!rootFolder) throw new Error("Could not create root folder in zip.");
+            const rootFolderName = 'mco-exam-integration-engine';
+            const rootFolder = zip.folder(rootFolderName);
+
+            if (!rootFolder) {
+                throw new Error("Could not create root folder in zip.");
+            }
 
             for (const filePath of pluginFiles) {
                 const response = await fetch(`/${filePath}`);
                 if (!response.ok) throw new Error(`Failed to fetch ${filePath}`);
                 const content = await response.text();
                 
-                let finalFileName = filePath.substring(filePath.lastIndexOf('/') + 1);
-                let finalFolderPath = filePath.substring(0, filePath.lastIndexOf('/'));
-                
-                // Determine the correct folder within the zip structure
-                let targetFolder = rootFolder;
-                if (finalFolderPath.includes('/includes')) {
-                    targetFolder = rootFolder.folder('includes') as JSZip;
-                } else if (finalFolderPath.includes('/assets')) {
-                    targetFolder = rootFolder.folder('assets') as JSZip;
-                }
+                // Get the path relative to the root folder (e.g., 'includes/mco-cpts.txt')
+                let relativePath = filePath.substring(rootFolderName.length + 1);
                 
                 // Rename files to their correct extensions
-                if (finalFileName.endsWith('.txt')) {
-                    if (finalFileName === 'mco-styles.txt') {
-                         finalFileName = finalFileName.replace('.txt', '.css');
+                if (relativePath.endsWith('.txt')) {
+                    if (relativePath.endsWith('mco-styles.txt')) {
+                         relativePath = relativePath.replace('.txt', '.css');
                     } else {
-                         finalFileName = finalFileName.replace('.txt', '.php');
+                         relativePath = relativePath.replace('.txt', '.php');
                     }
                 }
                 
-                targetFolder.file(finalFileName, content);
+                rootFolder.file(relativePath, content);
             }
             
             const zipBlob = await zip.generateAsync({ type: 'blob' });
