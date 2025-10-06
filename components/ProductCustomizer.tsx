@@ -108,7 +108,8 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
-        const total = selectedItems.reduce((total, item) => total + (parseFloat(item.regularPrice) || 0), 0);
+        // FIX: Added initial value of 0 to reduce() to prevent errors on empty arrays.
+        const total = selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
         return isNaN(total) ? 0 : total;
     }, [selectedItems]);
 
@@ -441,14 +442,15 @@ const ProductCustomizer: FC = () => {
                 regularPrice: priceData.regularPrice?.toString() || '0',
                 ...priceData
             };
-
+            
+            // FIX: Refactored logic to be more robust. If it's not a bundle or subscription, it's simple.
             if (priceData.isBundle) {
                 product.type = 'bundle';
                 bundles.push(product);
             } else if (priceData.type && (priceData.type === 'subscription' || priceData.type === 'variable-subscription')) {
                 product.type = 'subscription';
                 subscriptions.push(product);
-            } else if (priceData.type === 'simple') {
+            } else {
                 product.type = 'simple';
                 simple.push(product);
             }
