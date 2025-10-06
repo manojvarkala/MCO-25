@@ -469,7 +469,7 @@ const ProductCustomizer: FC = () => {
             } else if (priceData.type === 'subscription' || priceData.type === 'variable-subscription') {
                 product.type = 'subscription';
                 subscriptions.push(product);
-            } else {
+            } else if (priceData.type === 'simple') {
                 product.type = 'simple';
                 simple.push(product);
             }
