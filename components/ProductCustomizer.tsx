@@ -108,8 +108,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
-        const total = selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
-        return isNaN(total) ? 0 : total;
+        return selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
     }, [selectedItems]);
 
 
@@ -554,14 +553,15 @@ const ProductCustomizer: FC = () => {
         }
     };
     
-    const handleSelectOne = (skuToToggle: string) => {
-        setSelectedSkus(currentSkus => {
-            const isSelected = currentSkus.includes(skuToToggle);
-            if (isSelected) {
-                return currentSkus.filter(sku => sku !== skuToToggle);
+    const handleSelectOne = (skuToToggle: string, checked: boolean) => {
+        setSelectedSkus(prev => {
+            const newSkus = new Set(prev);
+            if (checked) {
+                newSkus.add(skuToToggle);
             } else {
-                return [...currentSkus, skuToToggle];
+                newSkus.delete(skuToToggle);
             }
+            return Array.from(newSkus);
         });
     };
 
@@ -574,7 +574,7 @@ const ProductCustomizer: FC = () => {
                             <input
                                 type="checkbox"
                                 checked={selectedSkus.includes(product.sku)}
-                                onChange={() => handleSelectOne(product.sku)}
+                                onChange={(e) => handleSelectOne(product.sku, e.target.checked)}
                                 className="h-4 w-4 mr-4"
                             />
                             <div className="cursor-pointer group" onClick={() => setProductToEdit(product)}>
