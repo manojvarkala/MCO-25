@@ -108,8 +108,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
-        const total = selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
-        return isNaN(total) ? 0 : total;
+        return selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
     }, [selectedItems]);
 
 
@@ -429,7 +428,7 @@ const ProductCustomizer: FC = () => {
     const { token } = useAuth();
     const [activeTab, setActiveTab] = useState<TabType>('all');
     
-    const [productToEdit, setProductToEdit] = useState<Partial<ProductVariation> | null>(null);
+    const [modalState, setModalState] = useState<{ type: TabType | null; product?: ProductVariation }>({ type: null });
     const [isSaving, setIsSaving] = useState(false);
 
     const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
@@ -444,38 +443,34 @@ const ProductCustomizer: FC = () => {
             return { allProducts: [], simpleProducts: [], subscriptionProducts: [], bundleProducts: [] };
         }
 
-        const all = Object.values(examPrices).map((priceData: any) => {
+        const all: ProductVariation[] = [];
+        const simples: ProductVariation[] = [];
+        const subs: ProductVariation[] = [];
+        const bundles: ProductVariation[] = [];
+        
+        Object.values(examPrices).forEach((priceData: any) => {
             const product: ProductVariation = {
                 id: priceData.productId?.toString() || priceData.sku,
                 sku: priceData.sku,
                 name: priceData.name || 'Unknown Product',
-                type: 'simple',
+                type: 'simple', // Default type
                 salePrice: priceData.price?.toString() || '0',
                 regularPrice: priceData.regularPrice?.toString() || '0',
                 isBundle: priceData.isBundle,
                 bundledSkus: priceData.bundledSkus,
-                subscriptionPeriod: priceData.subscription_period,
-                subscriptionPeriodInterval: priceData.subscription_period_interval,
-                subscriptionLength: priceData.subscription_length,
             };
-            return product;
-        });
-        
-        const simples: ProductVariation[] = [];
-        const subs: ProductVariation[] = [];
-        const bundles: ProductVariation[] = [];
+            
+            all.push(product);
 
-        all.forEach(p => {
-            const priceData = examPrices[p.sku];
-            if (p.isBundle) {
-                p.type = 'bundle';
-                bundles.push(p);
-            } else if (priceData && (priceData.type === 'subscription' || priceData.type === 'variable-subscription')) {
-                p.type = 'subscription';
-                subs.push(p);
+            if (product.isBundle) {
+                product.type = 'bundle';
+                bundles.push(product);
+            } else if (priceData.type === 'subscription' || priceData.type === 'variable-subscription') {
+                product.type = 'subscription';
+                subs.push(product);
             } else {
-                p.type = 'simple';
-                simples.push(p);
+                 product.type = 'simple';
+                 simples.push(product);
             }
         });
         
@@ -502,7 +497,7 @@ const ProductCustomizer: FC = () => {
                 updateConfigData(result.organizations, result.examPrices);
             }
             toast.success(`${type} "${productData.name}" saved successfully!`);
-            setProductToEdit(null);
+            setModalState({ type: null });
         } catch (error: any) {
             toast.error(error.message || `Failed to save ${type.toLowerCase()}.`);
         } finally {
@@ -594,8 +589,12 @@ const ProductCustomizer: FC = () => {
     }, [selectedSkus, handleSelectOne]);
     
     const handleOpenEditor = (product: ProductVariation) => {
-        const type = product.isBundle ? 'bundle' : (product.type === 'subscription' ? 'subscription' : 'simple');
-        setProductToEdit({ ...product, type });
+        setModalState({ type: product.type as TabType, product });
+    };
+
+    const handleOpenCreator = () => {
+        if (activeTab === 'all') return;
+        setModalState({ type: activeTab });
     };
 
     const renderProducts = (products: ProductVariation[]) => {
@@ -673,7 +672,7 @@ const ProductCustomizer: FC = () => {
                 <div className="flex justify-between items-center mb-4">
                      <h3 className="text-lg font-bold">{title} ({products.length})</h3>
                     <button 
-                        onClick={() => canCreateNew && setProductToEdit({ type: activeTab })} 
+                        onClick={handleOpenCreator} 
                         className={`flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600 ${!canCreateNew ? 'opacity-50 cursor-not-allowed' : ''}`}
                         disabled={!canCreateNew}
                         title={!canCreateNew ? 'Please select a specific tab to create a new product' : 'Create New'}
@@ -697,33 +696,32 @@ const ProductCustomizer: FC = () => {
     };
 
     const getModalForProduct = () => {
-        if (!productToEdit) return null;
-        const { type } = productToEdit;
-
-        switch (type) {
+        if (!modalState.type) return null;
+        
+        switch (modalState.type) {
             case 'simple':
                 return <UpsertSimpleProductModal 
                     isOpen={true}
-                    onClose={() => setProductToEdit(null)}
+                    onClose={() => setModalState({ type: null })}
                     onSave={(data) => handleUpsert(data, 'Product')}
                     isSaving={isSaving}
-                    productToEdit={productToEdit}
+                    productToEdit={modalState.product}
                 />;
             case 'subscription':
                 return <UpsertSubscriptionModal
                     isOpen={true}
-                    onClose={() => setProductToEdit(null)}
+                    onClose={() => setModalState({ type: null })}
                     onSave={(data) => handleUpsert(data, 'Subscription')}
                     isSaving={isSaving}
-                    productToEdit={productToEdit}
+                    productToEdit={modalState.product}
                 />;
             case 'bundle':
                  return <UpsertBundleModal 
                     isOpen={true}
-                    onClose={() => setProductToEdit(null)}
+                    onClose={() => setModalState({ type: null })}
                     onSave={(data) => handleUpsert(data, 'Bundle')}
                     isSaving={isSaving}
-                    productToEdit={productToEdit}
+                    productToEdit={modalState.product}
                     simpleProducts={simpleProducts}
                     subscriptionProducts={subscriptionProducts}
                 />;
