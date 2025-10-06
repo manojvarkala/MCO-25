@@ -20,8 +20,8 @@ const TabButton: FC<{ active: boolean; onClick: () => void; children: ReactNode 
     </button>
 );
 
-// This modal is only for bundles, it's fine as is.
-interface UpsertModalProps {
+// This modal is only for bundles.
+interface UpsertBundleModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (productData: any) => Promise<void>;
@@ -31,7 +31,7 @@ interface UpsertModalProps {
     subscriptionProducts: ProductVariation[];
 }
 
-const UpsertBundleModal: FC<UpsertModalProps> = ({ isOpen, onClose, onSave, isSaving, productToEdit, simpleProducts, subscriptionProducts }) => {
+const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave, isSaving, productToEdit, simpleProducts, subscriptionProducts }) => {
     const [name, setName] = useState('');
     const [sku, setSku] = useState('');
     const [price, setPrice] = useState('');
@@ -109,7 +109,9 @@ const UpsertBundleModal: FC<UpsertModalProps> = ({ isOpen, onClose, onSave, isSa
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
-        return selectedItems.reduce((total, item) => total + parseFloat(item.regularPrice || '0'), 0);
+        // FIX: The calculation logic has been corrected to handle potential NaN values from parseFloat,
+        // which was causing a "white screen" error on new bundle creation.
+        return selectedItems.reduce((total, item) => total + (parseFloat(item.regularPrice) || 0), 0);
     }, [selectedItems]);
 
 
@@ -191,6 +193,75 @@ const UpsertBundleModal: FC<UpsertModalProps> = ({ isOpen, onClose, onSave, isSa
     );
 };
 
+// NEW: Modal for creating simple products
+interface UpsertSimpleProductModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (productData: any) => Promise<void>;
+    isSaving: boolean;
+}
+
+const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, onClose, onSave, isSaving }) => {
+    const [name, setName] = useState('');
+    const [sku, setSku] = useState('');
+    const [price, setPrice] = useState('');
+    const [regularPrice, setRegularPrice] = useState('');
+
+    useEffect(() => {
+        if (isOpen) {
+            setName('');
+            setSku('');
+            setPrice('');
+            setRegularPrice('');
+        }
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    const handleSave = () => {
+        if (!name || !sku || !price || !regularPrice) {
+            toast.error("All fields are required.");
+            return;
+        }
+        onSave({ name, sku, price: parseFloat(price), regularPrice: parseFloat(regularPrice) });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-lg w-full max-w-lg p-6">
+                <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">Create New Simple Product</h2>
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-sm font-medium">Product Name</label>
+                        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. CPC Certification Exam" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium">SKU</label>
+                        <input type="text" value={sku} onChange={e => setSku(e.target.value)} placeholder="e.g. exam-cpc-cert" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-sm font-medium">Sale Price</label>
+                            <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="e.g., 49.99" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium">Regular Price</label>
+                            <input type="number" value={regularPrice} onChange={e => setRegularPrice(e.target.value)} placeholder="e.g., 79.99" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
+                        </div>
+                    </div>
+                </div>
+                <div className="flex justify-end gap-3 mt-6">
+                    <button onClick={onClose} disabled={isSaving} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition">Cancel</button>
+                    <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition">
+                        {isSaving ? <Spinner /> : <Save size={16} />} Create Product
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 const BulkEditPanel: FC<{
     selectedCount: number;
     onSave: (salePrice: string, regularPrice: string) => void;
@@ -241,15 +312,14 @@ const ProductCustomizer: FC = () => {
     const { token } = useAuth();
     const [activeTab, setActiveTab] = useState<TabType>('simple');
     
-    // State for bundle modal
     const [editingProduct, setEditingProduct] = useState<ProductVariation | undefined>(undefined);
     const [isSaving, setIsSaving] = useState(false);
+    const [isSimpleProductModalOpen, setIsSimpleProductModalOpen] = useState(false);
 
-    // State for bulk editing
+
     const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
     const [isBulkSaving, setIsBulkSaving] = useState(false);
 
-    // Clear selection when tab changes
     useEffect(() => {
         setSelectedSkus([]);
     }, [activeTab]);
@@ -261,41 +331,38 @@ const ProductCustomizer: FC = () => {
         const subscriptions: ProductVariation[] = [];
         const bundles: ProductVariation[] = [];
 
-        Object.keys(examPrices).forEach(sku => {
-            const priceData = examPrices[sku];
-            const exam = activeOrg.exams.find(e => e.productSku === sku && !e.isPractice);
+        Object.values(examPrices).forEach((priceData: any) => {
+            const exam = activeOrg.exams.find(e => e.productSku === priceData.sku && !e.isPractice);
 
             const product: ProductVariation = {
-                id: priceData.productId?.toString() || sku,
-                sku: sku,
+                id: priceData.productId?.toString() || priceData.sku,
+                sku: priceData.sku,
                 name: priceData.name || exam?.name || 'Unknown Product',
-                type: 'simple',
+                type: priceData.type || 'simple',
                 salePrice: priceData.price?.toString() || '0',
                 regularPrice: priceData.regularPrice?.toString() || '0',
                 ...priceData
             };
+            
+            const typeFromData = priceData.type || 'simple';
 
-            if (exam) {
-                simple.push(product);
-            } else if (sku.startsWith('sub-')) {
-                product.type = 'subscription';
-                if (sku.includes('monthly')) product.name = 'Monthly Subscription';
-                if (sku.includes('yearly')) product.name = 'Yearly Subscription';
+            if (typeFromData === 'subscription' || typeFromData === 'variable-subscription') {
                 subscriptions.push(product);
-            } else if (priceData.isBundle) {
-                product.type = 'bundle';
+            } else if (product.isBundle) {
                 bundles.push(product);
+            } else if (typeFromData === 'simple') {
+                simple.push(product);
             }
         });
 
         return { 
             simpleProducts: simple.sort((a,b) => a.name.localeCompare(b.name)), 
-            subscriptionProducts: subscriptions, 
+            subscriptionProducts: subscriptions.sort((a,b) => a.name.localeCompare(b.name)), 
             bundleProducts: bundles.sort((a,b) => a.name.localeCompare(b.name)) 
         };
     }, [activeOrg, examPrices]);
 
-    const handleUpsertBundle = async (productData: any) => {
+    const handleUpsert = async (productData: any, type: 'Bundle' | 'Product') => {
         if (!token || !activeOrg) {
             toast.error("Authentication error.");
             return;
@@ -309,10 +376,11 @@ const ProductCustomizer: FC = () => {
                 const updatedOrgWithNewPrices = { ...newOrgData, ...{ examPrices: result.examPrices } };
                 updateActiveOrg(updatedOrgWithNewPrices);
             }
-            toast.success(`Bundle "${productData.name}" saved successfully!`);
+            toast.success(`${type} "${productData.name}" saved successfully!`);
             setEditingProduct(undefined);
+            setIsSimpleProductModalOpen(false);
         } catch (error: any) {
-            toast.error(error.message || "Failed to save bundle.");
+            toast.error(error.message || `Failed to save ${type.toLowerCase()}.`);
         } finally {
             setIsSaving(false);
         }
@@ -411,7 +479,7 @@ const ProductCustomizer: FC = () => {
         let showCreate = false;
         let allowBulkEdit = false;
 
-        if (activeTab === 'simple') { products = simpleProducts; title = 'Certification Exams'; allowBulkEdit = true; }
+        if (activeTab === 'simple') { products = simpleProducts; title = 'Certification Exams'; allowBulkEdit = true; showCreate = true; }
         if (activeTab === 'subscription') { products = subscriptionProducts; title = 'Subscription Products'; allowBulkEdit = true; }
         if (activeTab === 'bundle') { products = bundleProducts; title = 'Bundle Products'; showCreate = true; }
         
@@ -430,8 +498,8 @@ const ProductCustomizer: FC = () => {
                 <div className="flex justify-between items-center mb-3">
                     <h3 className="text-lg font-bold">{title}</h3>
                     {showCreate && (
-                        <button onClick={() => setEditingProduct({ type: 'bundle' } as ProductVariation)} className="flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600">
-                            <PlusCircle size={16}/> Create New Bundle
+                        <button onClick={() => activeTab === 'bundle' ? setEditingProduct({ type: 'bundle' } as ProductVariation) : setIsSimpleProductModalOpen(true)} className="flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600">
+                            <PlusCircle size={16}/> Create New {activeTab === 'bundle' ? 'Bundle' : 'Product'}
                         </button>
                     )}
                 </div>
@@ -453,15 +521,21 @@ const ProductCustomizer: FC = () => {
             <UpsertBundleModal 
                 isOpen={!!editingProduct}
                 onClose={() => setEditingProduct(undefined)}
-                onSave={handleUpsertBundle}
+                onSave={(data) => handleUpsert(data, 'Bundle')}
                 isSaving={isSaving}
                 productToEdit={editingProduct?.type === 'bundle' ? editingProduct : undefined}
                 simpleProducts={simpleProducts}
                 subscriptionProducts={subscriptionProducts}
             />
+            <UpsertSimpleProductModal
+                isOpen={isSimpleProductModalOpen}
+                onClose={() => setIsSimpleProductModalOpen(false)}
+                onSave={(data) => handleUpsert(data, 'Product')}
+                isSaving={isSaving}
+            />
 
             <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3"><ShoppingCart /> Product Customizer</h1>
-            <p className="text-[rgb(var(--color-text-muted-rgb))]">Manage your exam products and pricing. Changes to Simple and Subscription products are saved live to WooCommerce.</p>
+            <p className="text-[rgb(var(--color-text-muted-rgb))]">Manage your exam products and pricing. Changes made here are saved live to your WooCommerce store.</p>
             
             <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                 <div className="flex space-x-2 mb-4">

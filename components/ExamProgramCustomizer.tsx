@@ -14,7 +14,7 @@ interface EditableProgramData {
 }
 
 const BulkEditPanel: FC<{
-    onSave: (update: EditableProgramData) => Promise<void>;
+    onSave: (update: any) => Promise<void>;
     onCancel: () => void;
     isSaving: boolean;
     selectedCount: number;
@@ -22,12 +22,20 @@ const BulkEditPanel: FC<{
     const [isProctored, setIsProctored] = useState<string>('unchanged'); // 'unchanged', 'true', 'false'
     const [certificateEnabled, setCertificateEnabled] = useState<string>('unchanged');
     const [passScore, setPassScore] = useState<string>('');
+    const [questionUrl, setQuestionUrl] = useState('');
+
 
     const handleSave = () => {
-        const updateData: EditableProgramData = { certExam: {} };
-        if (isProctored !== 'unchanged') updateData.certExam!.isProctored = isProctored === 'true';
-        if (certificateEnabled !== 'unchanged') updateData.certExam!.certificateEnabled = certificateEnabled === 'true';
-        if (passScore !== '') updateData.certExam!.passScore = parseInt(passScore, 10);
+        const updateData: any = {};
+        if (isProctored !== 'unchanged') updateData.cert_isProctored = isProctored === 'true';
+        if (certificateEnabled !== 'unchanged') updateData.cert_certificateEnabled = certificateEnabled === 'true';
+        if (passScore) updateData.cert_passScore = parseInt(passScore, 10);
+        if (questionUrl) updateData.questionSourceUrl = questionUrl;
+
+        if (Object.keys(updateData).length === 0) {
+            toast.error("No changes to apply.");
+            return;
+        }
         onSave(updateData);
     };
 
@@ -55,6 +63,10 @@ const BulkEditPanel: FC<{
                     <label className="text-sm font-bold">Pass Score (%)</label>
                     <input type="number" value={passScore} onChange={e => setPassScore(e.target.value)} placeholder="-- Unchanged --" className="w-full p-2 mt-1 border rounded bg-white" />
                 </div>
+            </div>
+            <div>
+                <label className="text-sm font-bold">Question Source URL</label>
+                <textarea value={questionUrl} onChange={e => setQuestionUrl(e.target.value)} placeholder="-- Unchanged --" className="w-full p-2 mt-1 border rounded bg-white" rows={2} />
             </div>
             <div className="flex justify-end gap-2">
                 <button onClick={onCancel} className="px-4 py-2 bg-slate-200 rounded-lg font-semibold text-slate-700 hover:bg-slate-300">Cancel</button>
@@ -161,14 +173,26 @@ const ExamProgramCustomizer: FC = () => {
     const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
     
     const handleSave = async (programId: string, data: EditableProgramData) => {
-// FIX: Changed return of a value from toast.error to a separate return statement to match Promise<void> type.
         if (!token) {
             toast.error("Authentication session has expired.");
             return;
         }
+
+        // FIX: Flatten the nested data state into a flat payload that the backend API expects.
+        // This resolves bugs where certain settings were not being saved correctly.
+        const payload: any = {};
+        if (data.category?.name) payload.programName = data.category.name;
+        if (data.category?.description) payload.programDescription = data.category.description;
+        if (data.practiceExam?.name) payload.practice_name_override = data.practiceExam.name;
+        if (data.practiceExam?.questionSourceUrl) payload.questionSourceUrl = data.practiceExam.questionSourceUrl;
+        if (data.certExam?.name) payload.cert_name_override = data.certExam.name;
+        if (typeof data.certExam?.isProctored === 'boolean') payload.cert_isProctored = data.certExam.isProctored;
+        if (typeof data.certExam?.certificateEnabled === 'boolean') payload.cert_certificateEnabled = data.certExam.certificateEnabled;
+        if (data.certExam?.passScore) payload.cert_passScore = data.certExam.passScore;
+
         setIsSaving(true);
         try {
-            const result = await googleSheetsService.adminUpdateExamProgram(token, programId, data);
+            const result = await googleSheetsService.adminUpdateExamProgram(token, programId, payload);
             const newOrg = result.organizations.find(o => o.id === activeOrg?.id);
             if (newOrg) updateActiveOrg(newOrg);
             toast.success("Exam program updated successfully!");
@@ -180,8 +204,7 @@ const ExamProgramCustomizer: FC = () => {
         }
     };
     
-    const handleBulkSave = async (updateData: EditableProgramData) => {
-// FIX: Changed return of a value from toast.error to a separate return statement to match Promise<void> type.
+    const handleBulkSave = async (updateData: any) => {
         if (!token || !activeOrg) {
             toast.error("Authentication error.");
             return;

@@ -14,6 +14,7 @@ function mco_get_app_config_data() {
     $all_suggested_books = [];
     $exam_product_categories = [];
 
+    // --- Step 1: Process Exam Programs to build the app's core exam structure ---
     $exam_program_posts = get_posts([
         'post_type' => 'mco_exam_program',
         'posts_per_page' => -1,
@@ -39,7 +40,6 @@ function mco_get_app_config_data() {
         
         $exam_sections_json = get_post_meta($post->ID, '_mco_exam_sections', true);
         $exam_sections = !empty($exam_sections_json) ? json_decode($exam_sections_json, true) : null;
-
 
         $book_post_ids = get_post_meta($post->ID, '_mco_recommended_book_ids', true) ?: [];
         $recommended_book_ids = [];
@@ -86,7 +86,7 @@ function mco_get_app_config_data() {
             'passScore' => (int)$pass_score,
             'certificateTemplateId' => 'cert-practice',
             'isPractice' => true,
-            'certificateEnabled' => false, // Practice exams never have certificates
+            'certificateEnabled' => false,
             'isProctored' => false,
             'durationMinutes' => (int)$practice_duration,
             'questionSourceUrl' => $question_source,
@@ -97,7 +97,7 @@ function mco_get_app_config_data() {
         
         // Certification Exam
         if ($cert_sku) {
-            $product = wc_get_product_id_by_sku($cert_sku) ? wc_get_product(wc_get_product_id_by_sku($cert_sku)) : null;
+            $product = $product_id ? wc_get_product($product_id) : null;
             if ($product) {
                  $all_exams[] = [
                     'id' => $cert_sku,
@@ -119,18 +119,32 @@ function mco_get_app_config_data() {
                     'imageUrl' => $image_url,
                     'sections' => $exam_sections,
                 ];
-
-                $all_prices[$cert_sku] = [
-                    'price' => (float)$product->get_price(),
-                    'regularPrice' => (float)$product->get_regular_price(),
-                    'productId' => $product->get_id(),
-                    'avgRating' => (float)$product->get_average_rating(),
-                    'reviewCount' => (int)$product->get_review_count()
-                ];
             }
         }
     }
 
+    // --- Step 2: Get ALL products from WooCommerce and build the price list ---
+    $all_wc_products = wc_get_products(['limit' => -1]);
+    
+    foreach ($all_wc_products as $product) {
+        $sku = $product->get_sku();
+        // Only include products with a SKU, as it's the primary identifier in the app
+        if ($sku) {
+            $all_prices[$sku] = [
+                'price' => (float)$product->get_price(), 
+                'regularPrice' => (float)$product->get_regular_price(),
+                'productId' => $product->get_id(),
+                'name' => $product->get_name(),
+                'type' => $product->get_type(),
+                'isBundle' => $product->get_meta('_mco_is_bundle') === 'yes',
+                'bundledSkus' => $product->get_meta('_mco_bundled_skus', true) ?: [],
+                'avgRating' => (float)$product->get_average_rating(),
+                'reviewCount' => (int)$product->get_review_count()
+            ];
+        }
+    }
+
+    // --- Step 3: Get all suggested books ---
     $book_posts = get_posts([
         'post_type' => 'mco_recommended_book',
         'posts_per_page' => -1,
@@ -150,46 +164,6 @@ function mco_get_app_config_data() {
             ]
         ];
     }
-    
-    // Add subscription products to prices list for the pricing page
-    $sub_monthly_prod = wc_get_product_id_by_sku('sub-monthly') ? wc_get_product(wc_get_product_id_by_sku('sub-monthly')) : null;
-    $sub_yearly_prod = wc_get_product_id_by_sku('sub-yearly') ? wc_get_product(wc_get_product_id_by_sku('sub-yearly')) : null;
-    
-    if($sub_monthly_prod) {
-        $all_prices['sub-monthly'] = [
-            'price' => (float)$sub_monthly_prod->get_price(), 
-            'regularPrice' => (float)$sub_monthly_prod->get_regular_price(),
-            'productId' => $sub_monthly_prod->get_id()
-        ];
-    }
-    if($sub_yearly_prod) {
-        $all_prices['sub-yearly'] = [
-            'price' => (float)$sub_yearly_prod->get_price(), 
-            'regularPrice' => (float)$sub_yearly_prod->get_regular_price(),
-            'productId' => $sub_yearly_prod->get_id()
-        ];
-    }
-    
-    // NEW: Add custom bundle products
-    $bundle_products = wc_get_products([
-        'meta_key' => '_mco_is_bundle',
-        'meta_value' => 'yes',
-        'limit' => -1,
-    ]);
-    foreach($bundle_products as $product) {
-        $sku = $product->get_sku();
-        if ($sku && !isset($all_prices[$sku])) { // Avoid overwriting if already processed
-            $all_prices[$sku] = [
-                'price' => (float)$product->get_price(),
-                'regularPrice' => (float)$product->get_regular_price(),
-                'productId' => $product->get_id(),
-                'name' => $product->get_name(), // Add name for display
-                'isBundle' => true,
-                'bundledSkus' => $product->get_meta('_mco_bundled_skus', true) ?: []
-            ];
-        }
-    }
-
 
     $data = [
         'exams' => $all_exams,

@@ -823,7 +823,6 @@ function mco_api_admin_update_exam_program(WP_REST_Request $request) {
 
     $update_payload = $params['updateData'];
 
-    // Update Program-level settings
     if (isset($update_payload['questionSourceUrl'])) {
         update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($update_payload['questionSourceUrl']));
     }
@@ -833,8 +832,14 @@ function mco_api_admin_update_exam_program(WP_REST_Request $request) {
     if (isset($update_payload['programDescription'])) {
         wp_update_post(['ID' => $post_id, 'post_content' => wp_kses_post($update_payload['programDescription'])]);
     }
+    if (isset($update_payload['practice_name_override'])) {
+        update_post_meta($post_id, '_mco_practice_exam_title_override', sanitize_text_field($update_payload['practice_name_override']));
+    }
+    if (isset($update_payload['cert_name_override'])) {
+        update_post_meta($post_id, '_mco_cert_exam_title_override', sanitize_text_field($update_payload['cert_name_override']));
+    }
 
-    // Update Practice Exam settings
+
     if (isset($update_payload['practice_numberOfQuestions'])) {
         wp_set_post_terms($post_id, sanitize_text_field($update_payload['practice_numberOfQuestions']), 'exam_practice_questions', false);
     }
@@ -842,7 +847,6 @@ function mco_api_admin_update_exam_program(WP_REST_Request $request) {
         wp_set_post_terms($post_id, sanitize_text_field($update_payload['practice_durationMinutes']), 'exam_practice_duration', false);
     }
 
-    // Update Certification Exam settings
     if (isset($update_payload['cert_numberOfQuestions'])) {
         wp_set_post_terms($post_id, sanitize_text_field($update_payload['cert_numberOfQuestions']), 'exam_cert_questions', false);
     }
@@ -859,9 +863,7 @@ function mco_api_admin_update_exam_program(WP_REST_Request $request) {
         update_post_meta($post_id, '_mco_certificate_enabled', $update_payload['cert_certificateEnabled'] ? '1' : '0');
     }
     
-    // Save Exam Sections
     if (isset($update_payload['sections']) && is_array($update_payload['sections'])) {
-        // Basic sanitization for the sections array
         $sanitized_sections = [];
         foreach ($update_payload['sections'] as $section) {
             $sanitized_sections[] = [
@@ -875,11 +877,9 @@ function mco_api_admin_update_exam_program(WP_REST_Request $request) {
     }
 
 
-    // Bust server cache and get fresh data to send back to client
     delete_transient('mco_app_config_data');
     update_option('mco_config_version', current_time('YmdHis'));
     
-    // Return the full, updated config so the client can refresh its state
     return mco_api_get_full_config(new WP_REST_Request());
 }
 
