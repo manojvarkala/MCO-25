@@ -274,6 +274,7 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/admin/clear-question-caches', ['methods' => 'POST', 'callback' => 'mco_api_clear_question_caches', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/upsert-product', ['methods' => 'POST', 'callback' => 'mco_api_admin_upsert_product', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/create-exam-program', ['methods' => 'POST', 'callback' => 'mco_api_admin_create_exam_program', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/delete-post', ['methods' => 'POST', 'callback' => 'mco_api_admin_delete_post', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
 }
 
 function mco_api_permission_check(WP_REST_Request $request) {
@@ -1054,14 +1055,13 @@ function mco_api_admin_create_exam_program(WP_REST_Request $request) {
     update_post_meta($post_id, '_mco_certificate_enabled', '1');
 
     $product_created = false;
+    $sku_to_link = '';
 
     if ($product_link_data) {
-        if ($product_link_data['type'] === 'existing' && !empty($product_link_data['sku'])) {
-            $sku = sanitize_text_field($product_link_data['sku']);
-            // Link to the existing product SKU
-            update_post_meta($post_id, '_mco_certification_exam_sku', $sku);
-        } elseif ($product_link_data['type'] === 'new' && !empty($product_link_data['sku'])) {
-            // Create a new product with specified details
+        $type = $product_link_data['type'];
+        if ($type === 'existing' && !empty($product_link_data['sku'])) {
+            $sku_to_link = sanitize_text_field($product_link_data['sku']);
+        } elseif ($type === 'new' && !empty($product_link_data['sku'])) {
             $product = new WC_Product_Simple();
             $product->set_name(sanitize_text_field($product_link_data['name']));
             $product->set_sku(sanitize_text_field($product_link_data['sku']));
@@ -1070,12 +1070,11 @@ function mco_api_admin_create_exam_program(WP_REST_Request $request) {
             $product->set_virtual(true);
             $product->set_status('publish');
             $product->save();
-            update_post_meta($post_id, '_mco_certification_exam_sku', $product->get_sku());
-            $product_created = true;
+            $sku_to_link = $product->get_sku();
         }
     } 
     
-    if (!$product_link_data || $product_link_data['type'] === 'auto') {
+    if (empty($sku_to_link)) {
         // Default behavior: create and link a new product automatically
         $new_sku = 'cert-' . $post_id;
         $product = new WC_Product_Simple();
@@ -1086,8 +1085,39 @@ function mco_api_admin_create_exam_program(WP_REST_Request $request) {
         $product->set_virtual(true);
         $product->set_status('publish');
         $product->save();
-        update_post_meta($post_id, '_mco_certification_exam_sku', $new_sku);
-        $product_created = true;
+        $sku_to_link = $new_sku;
+    }
+
+    if (!empty($sku_to_link)) {
+        update_post_meta($post_id, '_mco_certification_exam_sku', $sku_to_link);
+    }
+
+    delete_transient('mco_app_config_data');
+    update_option('mco_config_version', current_time('YmdHis'));
+    return mco_api_get_full_config(new WP_REST_Request());
+}
+
+function mco_api_admin_delete_post(WP_REST_Request $request) {
+    $params = $request->get_json_params();
+    $post_id = (int)$params['postId'];
+    $post_type = sanitize_text_field($params['postType']);
+
+    if ($post_id <= 0) {
+        return new WP_Error('bad_request', 'Invalid Post ID.', ['status' => 400]);
+    }
+    
+    $allowed_types = ['mco_exam_program', 'product'];
+    if (!in_array($post_type, $allowed_types)) {
+        return new WP_Error('bad_request', 'Invalid post type for deletion.', ['status' => 400]);
+    }
+    
+    if (get_post_type($post_id) !== $post_type) {
+        return new WP_Error('not_found', 'Post not found or type mismatch.', ['status' => 404]);
+    }
+
+    $result = wp_trash_post($post_id);
+    if ($result === false) {
+        return new WP_Error('delete_failed', 'Failed to move post to trash.', ['status' => 500]);
     }
 
     delete_transient('mco_app_config_data');

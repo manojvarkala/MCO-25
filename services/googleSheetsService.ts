@@ -389,7 +389,8 @@ export const googleSheetsService = {
         }
     },
 
-    adminUpdateExamProgram: async (token: string, programId: string, updateData: any): Promise<{ organizations: Organization[] }> => {
+// FIX: Update return type to include examPrices to match API response and usage in components.
+    adminUpdateExamProgram: async (token: string, programId: string, updateData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
         try {
             return await apiFetch('/admin/update-exam-program', 'POST', token, { programId, updateData });
         } catch (error) {
@@ -422,6 +423,15 @@ export const googleSheetsService = {
             return await apiFetch('/admin/upsert-product', 'POST', token, productData);
         } catch (error) {
             console.error("Failed to upsert product:", error);
+            throw error;
+        }
+    },
+
+    adminDeletePost: async (token: string, postId: string | number, postType: string): Promise<{ organizations: Organization[], examPrices: any }> => {
+        try {
+            return await apiFetch('/admin/delete-post', 'POST', token, { postId, postType });
+        } catch (error) {
+            console.error("Failed to delete post:", error);
             throw error;
         }
     },

@@ -2,9 +2,9 @@ import React, { FC, useState, useCallback, useMemo, ReactNode, useEffect } from 
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { Exam, ExamProductCategory, Organization } from '../types.ts';
+import type { Exam, ExamProductCategory, Organization, ProductVariation } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Settings, Edit, Save, X, ChevronDown, ChevronUp, FileText, Award, PlusCircle } from 'lucide-react';
+import { Settings, Edit, Save, X, ChevronDown, ChevronUp, FileText, Award, PlusCircle, Trash2, Link2 } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 interface EditableProgramData {
@@ -206,24 +206,93 @@ const ExamEditor: FC<{
 const CreateProgramModal: FC<{
     isOpen: boolean;
     onClose: () => void;
-    onSave: (name: string) => Promise<void>;
+    onSave: (name: string, productLinkData: any) => Promise<void>;
     isSaving: boolean;
-}> = ({ isOpen, onClose, onSave, isSaving }) => {
+    examPrices: { [key: string]: any } | null;
+    linkedSkus: string[];
+}> = ({ isOpen, onClose, onSave, isSaving, examPrices, linkedSkus }) => {
     const [name, setName] = useState('');
-    useEffect(() => { if(isOpen) setName(''); }, [isOpen]);
+    const [linkType, setLinkType] = useState('auto'); // 'auto', 'existing', 'new'
+    const [existingSku, setExistingSku] = useState('');
+    const [newProductName, setNewProductName] = useState('');
+    const [newProductSku, setNewProductSku] = useState('');
+    const [newProductPrice, setNewProductPrice] = useState('49.99');
+    const [newProductRegularPrice, setNewProductRegularPrice] = useState('49.99');
+    
+    useEffect(() => {
+        if(isOpen) {
+            setName('');
+            setLinkType('auto');
+            setExistingSku('');
+            setNewProductName('');
+            setNewProductSku('');
+        }
+    }, [isOpen]);
+
+    const unlinkedProducts = useMemo(() => {
+        if (!examPrices) return [];
+        return Object.values(examPrices)
+            .filter((p: any) => p.type === 'simple' && !linkedSkus.includes(p.sku))
+            .sort((a,b) => a.name.localeCompare(b.name));
+    }, [examPrices, linkedSkus]);
+
+    const handleSave = () => {
+        if (!name) { toast.error("Program Name is required."); return; }
+        let productLinkData: any = { type: linkType };
+        if (linkType === 'existing') {
+            if (!existingSku) { toast.error("Please select an existing product to link."); return; }
+            productLinkData.sku = existingSku;
+        } else if (linkType === 'new') {
+            if (!newProductName || !newProductSku) { toast.error("New Product Name and SKU are required."); return; }
+            productLinkData.name = newProductName;
+            productLinkData.sku = newProductSku;
+            productLinkData.price = newProductPrice;
+            productLinkData.regularPrice = newProductRegularPrice;
+        }
+        onSave(name, productLinkData);
+    };
+
     if(!isOpen) return null;
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-lg w-full max-w-md p-6">
+            <div className="bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-lg w-full max-w-lg p-6">
                  <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">Create New Exam Program</h2>
-                 <div>
-                    <label className="text-sm font-medium">Program Name</label>
-                    <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. New Certification Program" className="w-full p-2 mt-1 border rounded bg-white" />
+                 <div className="space-y-4">
+                    <div>
+                        <label className="text-sm font-medium">Program Name</label>
+                        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. New Certification Program" className="w-full p-2 mt-1 border rounded bg-white" />
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium">WooCommerce Product</label>
+                        <div className="mt-1 space-y-2 rounded-md bg-[rgb(var(--color-muted-rgb))] p-3 border border-[rgb(var(--color-border-rgb))]">
+                            <label className="flex items-center gap-2"><input type="radio" name="linkType" value="auto" checked={linkType==='auto'} onChange={e=>setLinkType(e.target.value)} /> Automatically create & link new product</label>
+                            <label className="flex items-center gap-2"><input type="radio" name="linkType" value="existing" checked={linkType==='existing'} onChange={e=>setLinkType(e.target.value)} /> Link to existing product</label>
+                            <label className="flex items-center gap-2"><input type="radio" name="linkType" value="new" checked={linkType==='new'} onChange={e=>setLinkType(e.target.value)} /> Create new product</label>
+                        </div>
+                    </div>
+                    {linkType === 'existing' && (
+                        <div>
+                            <select value={existingSku} onChange={e => setExistingSku(e.target.value)} className="w-full p-2 border rounded bg-white">
+                                <option value="">-- Select an unlinked product --</option>
+                                {unlinkedProducts.map((p: any) => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
+                            </select>
+                        </div>
+                    )}
+                    {linkType === 'new' && (
+                        <div className="space-y-2 p-3 border border-dashed rounded-md">
+                            <input type="text" value={newProductName} onChange={e => setNewProductName(e.target.value)} placeholder="New Product Name" className="w-full p-2 border rounded bg-white"/>
+                            <input type="text" value={newProductSku} onChange={e => setNewProductSku(e.target.value)} placeholder="New Product SKU" className="w-full p-2 border rounded bg-white"/>
+                            <div className="grid grid-cols-2 gap-2">
+                                <input type="number" value={newProductPrice} onChange={e => setNewProductPrice(e.target.value)} placeholder="Sale Price" className="w-full p-2 border rounded bg-white"/>
+                                <input type="number" value={newProductRegularPrice} onChange={e => setNewProductRegularPrice(e.target.value)} placeholder="Regular Price" className="w-full p-2 border rounded bg-white"/>
+                            </div>
+                        </div>
+                    )}
                  </div>
                  <div className="flex justify-end gap-3 mt-6">
                     <button onClick={onClose} disabled={isSaving} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition">Cancel</button>
-                    <button onClick={() => onSave(name)} disabled={isSaving || !name} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
+                    <button onClick={handleSave} disabled={isSaving || !name} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
                         {isSaving ? <Spinner /> : <Save size={16} />} Create Program
                     </button>
                 </div>
@@ -234,7 +303,7 @@ const CreateProgramModal: FC<{
 
 
 const ExamProgramCustomizer: FC = () => {
-    const { activeOrg, updateActiveOrg } = useAppContext();
+    const { activeOrg, updateConfigData, examPrices } = useAppContext();
     const { token } = useAuth();
     const [editingProgramId, setEditingProgramId] = useState<string | null>(null);
     const [expandedProgramId, setExpandedProgramId] = useState<string | null>(null);
@@ -242,14 +311,13 @@ const ExamProgramCustomizer: FC = () => {
     const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     
+// FIX: Corrected return type to match Promise<void> by not returning the toast id string.
     const handleSave = async (programId: string, data: EditableProgramData) => {
         if (!token) {
             toast.error("Authentication session has expired.");
             return;
         }
-
-        // FIX: Flatten the nested data state into a flat payload that the backend API expects.
-        // This resolves bugs where certain settings were not being saved correctly.
+        
         const payload: any = {};
         if (data.category?.name) payload.programName = data.category.name;
         if (data.category?.description) payload.programDescription = data.category.description;
@@ -263,8 +331,9 @@ const ExamProgramCustomizer: FC = () => {
         setIsSaving(true);
         try {
             const result = await googleSheetsService.adminUpdateExamProgram(token, programId, payload);
-            const newOrg = result.organizations.find(o => o.id === activeOrg?.id);
-            if (newOrg) updateActiveOrg(newOrg);
+            if (result.organizations && result.examPrices) {
+                updateConfigData(result.organizations, result.examPrices);
+            }
             toast.success("Exam program updated successfully!");
             setEditingProgramId(null);
         } catch (error: any) {
@@ -274,6 +343,7 @@ const ExamProgramCustomizer: FC = () => {
         }
     };
     
+// FIX: Corrected return type to match Promise<void> by not returning the toast id string.
     const handleBulkSave = async (updateData: any) => {
         if (!token || !activeOrg) {
             toast.error("Authentication error.");
@@ -284,16 +354,20 @@ const ExamProgramCustomizer: FC = () => {
         setIsSaving(true);
         const toastId = toast.loading(`Updating ${selectedProgramIds.length} programs...`);
 
-        const updatePromises = selectedProgramIds.map(programId => 
-            googleSheetsService.adminUpdateExamProgram(token, programId, updateData)
-        );
+        let lastResult: any = null;
+        for (const programId of selectedProgramIds) {
+            try {
+                lastResult = await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
+            } catch(e: any) {
+                toast.error(`Failed to update a program: ${e.message}`, { id: toastId });
+                setIsSaving(false);
+                return;
+            }
+        }
 
         try {
-            const results = await Promise.all(updatePromises);
-            const lastResult = results[results.length - 1];
-            if (lastResult && lastResult.organizations) {
-                const newOrg = lastResult.organizations.find(o => o.id === activeOrg.id);
-                if (newOrg) updateActiveOrg(newOrg);
+            if (lastResult && lastResult.organizations && lastResult.examPrices) {
+                updateConfigData(lastResult.organizations, lastResult.examPrices);
             }
             toast.success(`${selectedProgramIds.length} programs updated!`, { id: toastId });
             setSelectedProgramIds([]);
@@ -304,20 +378,47 @@ const ExamProgramCustomizer: FC = () => {
         }
     };
 
-    const handleCreateProgram = async (name: string) => {
+// FIX: Corrected return type to match Promise<void> by not returning the toast id string.
+    const handleCreateProgram = async (name: string, productLinkData: any) => {
         if (!token || !activeOrg) {
             toast.error("Authentication error.");
             return;
         }
+        
         setIsSaving(true);
         try {
-            const result = await googleSheetsService.adminCreateExamProgram(token, name);
-            const newOrg = result.organizations.find(o => o.id === activeOrg.id);
-            if (newOrg) updateActiveOrg(newOrg);
+            const result = await googleSheetsService.adminCreateExamProgram(token, name, productLinkData);
+            if (result.organizations && result.examPrices) {
+                updateConfigData(result.organizations, result.examPrices);
+            }
             toast.success(`Program "${name}" created successfully!`);
             setIsCreateModalOpen(false);
         } catch (error: any) {
             toast.error(error.message || "Failed to create program.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDeleteProgram = async (program: any) => {
+        if (!token) {
+            toast.error("Authentication error.");
+            return;
+        }
+        if (!window.confirm(`Are you sure you want to delete "${program.category.name}"? This will move it to the trash.`)) {
+            return;
+        }
+
+        setIsSaving(true);
+        const postId = program.category.id.replace('prod-', '');
+        try {
+            const result = await googleSheetsService.adminDeletePost(token, postId, 'mco_exam_program');
+            if (result.organizations && result.examPrices) {
+                updateConfigData(result.organizations, result.examPrices);
+            }
+            toast.success(`Program "${program.category.name}" moved to trash.`);
+        } catch (error: any) {
+            toast.error(error.message || "Failed to delete program.");
         } finally {
             setIsSaving(false);
         }
@@ -340,6 +441,8 @@ const ExamProgramCustomizer: FC = () => {
         }));
     }, [activeOrg]);
 
+    const linkedSkus = useMemo(() => programs.map(p => p.certExam?.productSku).filter(Boolean) as string[], [programs]);
+
     if (!activeOrg) return <Spinner />;
     
     const isAllSelected = selectedProgramIds.length === programs.length && programs.length > 0;
@@ -351,6 +454,8 @@ const ExamProgramCustomizer: FC = () => {
                 onClose={() => setIsCreateModalOpen(false)}
                 onSave={handleCreateProgram}
                 isSaving={isSaving}
+                examPrices={examPrices}
+                linkedSkus={linkedSkus}
             />
             <div className="flex justify-between items-start">
                 <div>
@@ -389,6 +494,9 @@ const ExamProgramCustomizer: FC = () => {
                                             <Edit size={14} /> Edit
                                         </button>
                                     )}
+                                    <button onClick={() => handleDeleteProgram(program)} className="p-2 rounded-full text-red-500 hover:bg-red-100" title="Delete Program">
+                                        <Trash2 size={16} />
+                                    </button>
                                     <button onClick={() => setExpandedProgramId(expandedProgramId === program.category.id ? null : program.category.id)} className="p-2 rounded-full hover:bg-[rgb(var(--color-muted-rgb))]">
                                         {expandedProgramId === program.category.id ? <ChevronUp /> : <ChevronDown />}
                                     </button>

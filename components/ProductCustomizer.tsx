@@ -109,7 +109,8 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
-        return selectedItems.reduce((total, item) => total + (parseFloat(item.regularPrice) || 0), 0);
+        const total = selectedItems.reduce((total, item) => total + (parseFloat(item.regularPrice) || 0), 0);
+        return isNaN(total) ? 0 : total;
     }, [selectedItems]);
 
 
@@ -500,13 +501,18 @@ const ProductCustomizer: FC = () => {
         setIsBulkSaving(true);
         const toastId = toast.loading(`Updating ${selectedSkus.length} products...`);
         
-        // Update products sequentially to avoid race conditions on the server
         let lastResult: any = null;
         for (const sku of selectedSkus) {
             const productData: any = { sku };
             if (salePrice) productData.price = parseFloat(salePrice);
             if (regularPrice) productData.regularPrice = parseFloat(regularPrice);
-            lastResult = await googleSheetsService.adminUpsertProduct(token, productData);
+            try {
+                lastResult = await googleSheetsService.adminUpsertProduct(token, productData);
+            } catch (error: any) {
+                toast.error(`Failed to update ${sku}: ${error.message}`, { id: toastId });
+                setIsBulkSaving(false);
+                return;
+            }
         }
 
         try {
@@ -522,8 +528,35 @@ const ProductCustomizer: FC = () => {
         }
     };
 
+    const handleDeleteProduct = async (product: ProductVariation) => {
+        if (!token) {
+            toast.error("Authentication error.");
+            return;
+        }
+        if (!window.confirm(`Are you sure you want to delete "${product.name}"? This action will move the product to the trash in WooCommerce.`)) {
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const result = await googleSheetsService.adminDeletePost(token, product.id, 'product');
+            if (result.organizations && result.examPrices) {
+                updateConfigData(result.organizations, result.examPrices);
+            }
+            toast.success(`Product "${product.name}" was moved to trash.`);
+        } catch (error: any) {
+            toast.error(error.message || "Failed to delete product.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>, products: ProductVariation[]) => {
-        setSelectedSkus(e.target.checked ? products.map(p => p.sku) : []);
+        if (e.target.checked) {
+            setSelectedSkus(products.map(p => p.sku));
+        } else {
+            setSelectedSkus([]);
+        }
     };
     
     const handleSelectOne = (skuToToggle: string) => {
@@ -539,26 +572,23 @@ const ProductCustomizer: FC = () => {
     };
 
     const renderProducts = (products: ProductVariation[], tab: TabType) => {
-        const allowEditing = tab === 'simple' || tab === 'subscription';
         return (
             <div className="space-y-2">
                 {products.map(product => (
                     <div key={product.sku} className={`flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg ${selectedSkus.includes(product.sku) ? 'ring-2 ring-[rgb(var(--color-primary-rgb))]' : ''}`}>
                         <div className="flex items-center">
-                            {allowEditing && (
-                                <input
-                                    type="checkbox"
-                                    checked={selectedSkus.includes(product.sku)}
-                                    onChange={() => handleSelectOne(product.sku)}
-                                    className="h-4 w-4 mr-4"
-                                />
-                            )}
+                            <input
+                                type="checkbox"
+                                checked={selectedSkus.includes(product.sku)}
+                                onChange={() => handleSelectOne(product.sku)}
+                                className="h-4 w-4 mr-4"
+                            />
                             <div>
                                 <p className="font-semibold">{product.name}</p>
                                 <p className="text-xs text-slate-500">SKU: {product.sku}</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
                             <div>
                                 {parseFloat(product.regularPrice) > parseFloat(product.salePrice) && (
                                     <span className="text-sm line-through text-slate-500">${parseFloat(product.regularPrice).toFixed(2)}</span>
@@ -570,6 +600,9 @@ const ProductCustomizer: FC = () => {
                                     <Edit size={16} />
                                 </button>
                             )}
+                             <button onClick={() => handleDeleteProduct(product)} className="p-2 rounded-full text-red-500 hover:bg-red-100" title="Delete Product">
+                                <Trash2 size={16} />
+                            </button>
                         </div>
                     </div>
                 ))}
@@ -581,17 +614,16 @@ const ProductCustomizer: FC = () => {
         let products: ProductVariation[] = [];
         let title = '';
         let showCreate = false;
-        let allowBulkEdit = false;
 
-        if (activeTab === 'simple') { products = simpleProducts; title = 'Certification Exams'; allowBulkEdit = true; showCreate = true; }
-        if (activeTab === 'subscription') { products = subscriptionProducts; title = 'Subscription Products'; allowBulkEdit = true; showCreate = true; }
+        if (activeTab === 'simple') { products = simpleProducts; title = 'Certification Exams'; showCreate = true; }
+        if (activeTab === 'subscription') { products = subscriptionProducts; title = 'Subscription Products'; showCreate = true; }
         if (activeTab === 'bundle') { products = bundleProducts; title = 'Bundle Products'; showCreate = true; }
         
         const isAllSelected = selectedSkus.length === products.length && products.length > 0;
 
         return (
             <div>
-                 {allowBulkEdit && selectedSkus.length > 0 && (
+                 {selectedSkus.length > 0 && (
                     <BulkEditPanel
                         selectedCount={selectedSkus.length}
                         onSave={handleBulkUpdate}
@@ -615,7 +647,7 @@ const ProductCustomizer: FC = () => {
                     )}
                 </div>
                 
-                 {allowBulkEdit && products.length > 0 && (
+                 {products.length > 0 && (
                     <div className="flex items-center p-2 mb-2">
                         <input type="checkbox" onChange={(e) => handleSelectAll(e, products)} checked={isAllSelected} className="h-4 w-4 mr-4"/>
                         <span className="font-semibold text-sm">Select All</span>
