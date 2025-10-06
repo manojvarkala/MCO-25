@@ -98,6 +98,26 @@ const Admin: FC = () => {
     // State for Cache Clearing
     const [isClearingCache, setIsClearingCache] = useState<'config' | 'questions' | null>(null);
 
+    // State for sales notification toggle
+    const [showNotifications, setShowNotifications] = useState(() => {
+        try {
+            return localStorage.getItem('mco_show_notifications') !== 'false';
+        } catch (e) {
+            return true;
+        }
+    });
+
+    const handleToggleNotifications = () => {
+        const newValue = !showNotifications;
+        setShowNotifications(newValue);
+        try {
+            localStorage.setItem('mco_show_notifications', String(newValue));
+            toast.success(`Sales notifications ${newValue ? 'enabled' : 'disabled'}.`);
+        } catch (e) {
+            toast.error("Could not save preference.");
+        }
+    };
+
 
     const certificateTemplates = activeOrg?.certificateTemplates || [];
 
@@ -328,6 +348,44 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
                         />
                     </div>
                 )}
+            </div>
+
+            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                    <Paintbrush className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                    Appearance &amp; UI
+                </h2>
+                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
+                    Customize the user interface for your administrator account.
+                </p>
+                <table className="form-table">
+                    <tbody>
+                        <tr>
+                            <th scope="row">Show Sales Notifications</th>
+                            <td>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm text-[rgb(var(--color-text-muted-rgb))]">Toggle the live purchase pop-ups for your account. Changes apply after a refresh.</p>
+                                    </div>
+                                    <button
+                                        onClick={handleToggleNotifications}
+                                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-rgb))] focus:ring-offset-2 ${
+                                            showNotifications ? 'bg-[rgb(var(--color-primary-rgb))]' : 'bg-slate-300'
+                                        }`}
+                                        role="switch"
+                                        aria-checked={showNotifications}
+                                    >
+                                        <span
+                                            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                                showNotifications ? 'translate-x-5' : 'translate-x-0'
+                                            }`}
+                                        />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
             <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
