@@ -23,7 +23,10 @@ const BulkEditPanel: FC<{
     const [certificateEnabled, setCertificateEnabled] = useState<string>('unchanged');
     const [passScore, setPassScore] = useState<string>('');
     const [questionUrl, setQuestionUrl] = useState('');
-
+    const [practiceQuestions, setPracticeQuestions] = useState('');
+    const [practiceDuration, setPracticeDuration] = useState('');
+    const [certQuestions, setCertQuestions] = useState('');
+    const [certDuration, setCertDuration] = useState('');
 
     const handleSave = () => {
         const updateData: any = {};
@@ -31,6 +34,10 @@ const BulkEditPanel: FC<{
         if (certificateEnabled !== 'unchanged') updateData.cert_certificateEnabled = certificateEnabled === 'true';
         if (passScore) updateData.cert_passScore = parseInt(passScore, 10);
         if (questionUrl) updateData.questionSourceUrl = questionUrl;
+        if (practiceQuestions) updateData.practice_numberOfQuestions = parseInt(practiceQuestions, 10);
+        if (practiceDuration) updateData.practice_durationMinutes = parseInt(practiceDuration, 10);
+        if (certQuestions) updateData.cert_numberOfQuestions = parseInt(certQuestions, 10);
+        if (certDuration) updateData.cert_durationMinutes = parseInt(certDuration, 10);
 
         if (Object.keys(updateData).length === 0) {
             toast.error("No changes to apply.");
@@ -39,36 +46,69 @@ const BulkEditPanel: FC<{
         onSave(updateData);
     };
 
+    const Label: FC<{ children: ReactNode }> = ({ children }) => <label className="text-xs font-bold block mb-1">{children}</label>;
+
     return (
         <div className="bg-[rgb(var(--color-muted-rgb))] p-4 rounded-lg border border-[rgb(var(--color-primary-rgb))] space-y-4 mb-4">
             <h3 className="font-bold text-lg">Bulk Edit {selectedCount} Programs</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label className="text-sm font-bold">Proctoring</label>
-                    <select value={isProctored} onChange={e => setIsProctored(e.target.value)} className="w-full p-2 mt-1 border rounded bg-white">
-                        <option value="unchanged">-- Unchanged --</option>
-                        <option value="true">Enable</option>
-                        <option value="false">Disable</option>
-                    </select>
-                </div>
-                 <div>
-                    <label className="text-sm font-bold">Certificate</label>
-                    <select value={certificateEnabled} onChange={e => setCertificateEnabled(e.target.value)} className="w-full p-2 mt-1 border rounded bg-white">
-                        <option value="unchanged">-- Unchanged --</option>
-                        <option value="true">Enable</option>
-                        <option value="false">Disable</option>
-                    </select>
-                </div>
-                 <div>
-                    <label className="text-sm font-bold">Pass Score (%)</label>
-                    <input type="number" value={passScore} onChange={e => setPassScore(e.target.value)} placeholder="-- Unchanged --" className="w-full p-2 mt-1 border rounded bg-white" />
-                </div>
-            </div>
+            
             <div>
-                <label className="text-sm font-bold">Question Source URL</label>
-                <textarea value={questionUrl} onChange={e => setQuestionUrl(e.target.value)} placeholder="-- Unchanged --" className="w-full p-2 mt-1 border rounded bg-white" rows={2} />
+                <h4 className="font-semibold text-base mb-2">General Settings</h4>
+                <div>
+                    <Label>Question Source URL</Label>
+                    <textarea value={questionUrl} onChange={e => setQuestionUrl(e.target.value)} placeholder="-- Unchanged --" className="w-full p-2 mt-1 border rounded bg-white" rows={2} />
+                </div>
             </div>
-            <div className="flex justify-end gap-2">
+
+            <div className="pt-4 mt-4 border-t border-[rgb(var(--color-border-rgb))]">
+                <h4 className="font-semibold text-base mb-2">Certification Exam Settings</h4>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div>
+                        <Label>Proctoring</Label>
+                        <select value={isProctored} onChange={e => setIsProctored(e.target.value)} className="w-full p-2 border rounded bg-white">
+                            <option value="unchanged">Unchanged</option>
+                            <option value="true">Enable</option>
+                            <option value="false">Disable</option>
+                        </select>
+                    </div>
+                    <div>
+                        <Label>Certificate</Label>
+                        <select value={certificateEnabled} onChange={e => setCertificateEnabled(e.target.value)} className="w-full p-2 border rounded bg-white">
+                            <option value="unchanged">Unchanged</option>
+                            <option value="true">Enable</option>
+                            <option value="false">Disable</option>
+                        </select>
+                    </div>
+                    <div>
+                        <Label>Pass Score (%)</Label>
+                        <input type="number" value={passScore} onChange={e => setPassScore(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded bg-white" />
+                    </div>
+                    <div>
+                        <Label>No. of Questions</Label>
+                        <input type="number" value={certQuestions} onChange={e => setCertQuestions(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded bg-white" />
+                    </div>
+                    <div>
+                        <Label>Duration (Mins)</Label>
+                        <input type="number" value={certDuration} onChange={e => setCertDuration(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded bg-white" />
+                    </div>
+                </div>
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-[rgb(var(--color-border-rgb))]">
+                <h4 className="font-semibold text-base mb-2">Practice Exam Settings</h4>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div>
+                        <Label>No. of Questions</Label>
+                        <input type="number" value={practiceQuestions} onChange={e => setPracticeQuestions(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded bg-white" />
+                    </div>
+                    <div>
+                        <Label>Duration (Mins)</Label>
+                        <input type="number" value={practiceDuration} onChange={e => setPracticeDuration(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded bg-white" />
+                    </div>
+                </div>
+            </div>
+            
+            <div className="flex justify-end gap-2 pt-4 border-t border-[rgb(var(--color-border-rgb))]">
                 <button onClick={onCancel} className="px-4 py-2 bg-slate-200 rounded-lg font-semibold text-slate-700 hover:bg-slate-300">Cancel</button>
                 <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 px-4 py-2 bg-green-500 rounded-lg font-semibold text-white hover:bg-green-600 disabled:bg-slate-400">
                     {isSaving ? <Spinner /> : <Save size={16} />} Apply Changes
