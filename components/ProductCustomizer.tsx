@@ -2,9 +2,9 @@ import React, { FC, useState, useMemo, useCallback, ReactNode, useEffect } from 
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { Exam, Organization, ProductVariation, ProductVariationType } from '../types.ts';
+import type { ProductVariation, ProductVariationType } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Edit, Save, X, ShoppingCart, Tag, RefreshCw, Trash2, PlusCircle } from 'lucide-react';
+import { Edit, Save, X, ShoppingCart, RefreshCw, Trash2, PlusCircle } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 type TabType = 'all' | 'simple' | 'subscription' | 'bundle';
@@ -108,6 +108,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
+        // Fix: Added an initial value of 0 to the reducer to prevent crash on empty array
         return selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
     }, [selectedItems]);
 
@@ -424,7 +425,7 @@ const BulkEditPanel: FC<{
 
 
 const ProductCustomizer: FC = () => {
-    const { activeOrg, examPrices, updateConfigData } = useAppContext();
+    const { examPrices, updateConfigData } = useAppContext();
     const { token } = useAuth();
     const [activeTab, setActiveTab] = useState<TabType>('all');
     
@@ -439,25 +440,26 @@ const ProductCustomizer: FC = () => {
     }, [activeTab]);
     
     const { allProducts, simpleProducts, subscriptionProducts, bundleProducts } = useMemo(() => {
-        if (!activeOrg || !examPrices) {
+        if (!examPrices) {
             return { allProducts: [], simpleProducts: [], subscriptionProducts: [], bundleProducts: [] };
         }
 
-        const all: ProductVariation[] = Object.values(examPrices).map((priceData: any) => {
+        const all = Object.values(examPrices).map((priceData: any) => {
             const product: ProductVariation = {
                 id: priceData.productId?.toString() || priceData.sku,
                 sku: priceData.sku,
                 name: priceData.name || 'Unknown Product',
-                type: 'simple', // Default type, will be overridden
+                type: 'simple', // Default
                 salePrice: priceData.price?.toString() || '0',
                 regularPrice: priceData.regularPrice?.toString() || '0',
                 isBundle: priceData.isBundle,
                 bundledSkus: priceData.bundledSkus,
                 subscriptionPeriod: priceData.subscription_period,
                 subscriptionPeriodInterval: priceData.subscription_period_interval,
-                subscriptionLength: priceData.subscription_length
+                subscriptionLength: priceData.subscription_length,
             };
 
+            // Prioritized categorization logic to prevent misclassification
             if (product.isBundle) {
                 product.type = 'bundle';
             } else if (priceData.type === 'subscription' || priceData.type === 'variable-subscription') {
@@ -469,14 +471,12 @@ const ProductCustomizer: FC = () => {
         });
         
         const sortedAll = all.sort((a, b) => a.name.localeCompare(b.name));
+        const simple = sortedAll.filter(p => p.type === 'simple');
+        const subs = sortedAll.filter(p => p.type === 'subscription');
+        const bundles = sortedAll.filter(p => p.type === 'bundle');
 
-        return { 
-            allProducts: sortedAll,
-            simpleProducts: sortedAll.filter(p => p.type === 'simple'),
-            subscriptionProducts: sortedAll.filter(p => p.type === 'subscription'),
-            bundleProducts: sortedAll.filter(p => p.type === 'bundle')
-        };
-    }, [activeOrg, examPrices]);
+        return { allProducts: sortedAll, simpleProducts: simple, subscriptionProducts: subs, bundleProducts: bundles };
+    }, [examPrices]);
 
     const handleUpsert = async (productData: any, type: 'Bundle' | 'Product' | 'Subscription') => {
         if (!token) {
@@ -500,7 +500,7 @@ const ProductCustomizer: FC = () => {
     };
     
     const handleBulkUpdate = async (salePrice: string, regularPrice: string) => {
-        if (!token || !activeOrg) {
+        if (!token) {
             toast.error("Authentication error.");
             return;
         }
@@ -559,30 +559,30 @@ const ProductCustomizer: FC = () => {
         }
     };
 
-    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>, products: ProductVariation[]) => {
+    const handleSelectAll = useCallback((e: React.ChangeEvent<HTMLInputElement>, products: ProductVariation[]) => {
         if (e.target.checked) {
             setSelectedSkus(products.map(p => p.sku));
         } else {
             setSelectedSkus([]);
         }
-    };
+    }, []);
 
-    const handleSelectOne = (sku: string, isSelected: boolean) => {
-        setSelectedSkus(prev => {
-            const newSet = new Set(prev);
+    const handleSelectOne = useCallback((sku: string, isSelected: boolean) => {
+        setSelectedSkus(prevSkus => {
+            const newSkus = new Set(prevSkus);
             if (isSelected) {
-                newSet.add(sku);
+                newSkus.add(sku);
             } else {
-                newSet.delete(sku);
+                newSkus.delete(sku);
             }
-            return Array.from(newSet);
+            return Array.from(newSkus);
         });
-    };
-    
-    const handleDoubleClickSelect = (sku: string) => {
+    }, []);
+
+    const handleDoubleClickSelect = useCallback((sku: string) => {
         const isCurrentlySelected = selectedSkus.includes(sku);
         handleSelectOne(sku, !isCurrentlySelected);
-    };
+    }, [selectedSkus, handleSelectOne]);
 
     const renderProducts = (products: ProductVariation[]) => {
         return (
@@ -590,7 +590,7 @@ const ProductCustomizer: FC = () => {
                 {products.map(product => (
                     <div 
                         key={product.sku} 
-                        className={`flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg cursor-pointer ${selectedSkus.includes(product.sku) ? 'ring-2 ring-[rgb(var(--color-primary-rgb))]' : ''}`}
+                        className={`flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg cursor-pointer transition-all duration-150 ${selectedSkus.includes(product.sku) ? 'ring-2 ring-[rgb(var(--color-primary-rgb))]' : 'ring-0'}`}
                         onDoubleClick={() => handleDoubleClickSelect(product.sku)}
                     >
                         <div className="flex items-center">
@@ -629,10 +629,12 @@ const ProductCustomizer: FC = () => {
         let products: ProductVariation[] = [];
         let title = '';
         
-        if (activeTab === 'all') { products = allProducts; title = 'All Products'; }
-        else if (activeTab === 'simple') { products = simpleProducts; title = 'Simple Products'; }
-        else if (activeTab === 'subscription') { products = subscriptionProducts; title = 'Subscription Products'; }
-        else if (activeTab === 'bundle') { products = bundleProducts; title = 'Bundle Products'; }
+        switch (activeTab) {
+            case 'all': products = allProducts; title = 'All Products'; break;
+            case 'simple': products = simpleProducts; title = 'Simple Products'; break;
+            case 'subscription': products = subscriptionProducts; title = 'Subscription Products'; break;
+            case 'bundle': products = bundleProducts; title = 'Bundle Products'; break;
+        }
         
         const isAllSelected = products.length > 0 && selectedSkus.length === products.length;
         const canCreateNew = activeTab !== 'all';
