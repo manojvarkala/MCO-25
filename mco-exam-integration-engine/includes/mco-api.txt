@@ -880,6 +880,28 @@ function mco_api_admin_update_exam_program(WP_REST_Request $request) {
         }
         update_post_meta($post_id, '_mco_exam_sections', wp_json_encode($sanitized_sections));
     }
+    
+    if (isset($update_payload['recommended_book_ids']) && is_array($update_payload['recommended_book_ids'])) {
+        $book_post_ids = [];
+        $custom_book_ids = array_map('sanitize_text_field', $update_payload['recommended_book_ids']);
+        
+        if (!empty($custom_book_ids)) {
+             $book_query = new WP_Query([
+                'post_type' => 'mco_recommended_book',
+                'meta_query' => [
+                    [
+                        'key' => '_mco_book_id',
+                        'value' => $custom_book_ids,
+                        'compare' => 'IN'
+                    ]
+                ],
+                'posts_per_page' => -1,
+                'fields' => 'ids'
+            ]);
+            $book_post_ids = $book_query->posts;
+        }
+        update_post_meta($post_id, '_mco_recommended_book_ids', $book_post_ids);
+    }
 
 
     delete_transient('mco_app_config_data');

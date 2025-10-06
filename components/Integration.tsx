@@ -16,7 +16,7 @@ import stylesFile from '/mco-exam-integration-engine/assets/mco-styles.txt?raw';
 
 const Integration: FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
-    const pluginVersion = "1.0.0";
+    const pluginVersion = "1.0.2";
 
     const generateZip = async () => {
         setIsGenerating(true);

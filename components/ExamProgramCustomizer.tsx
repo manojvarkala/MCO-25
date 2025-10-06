@@ -2,7 +2,7 @@ import React, { FC, useState, useCallback, useMemo, ReactNode, useEffect } from 
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { Exam, ExamProductCategory, Organization, ProductVariation } from '../types.ts';
+import type { Exam, ExamProductCategory, Organization, ProductVariation, RecommendedBook } from '../types.ts';
 import toast from 'react-hot-toast';
 import { Settings, Edit, Save, X, ChevronDown, ChevronUp, FileText, Award, PlusCircle, Trash2, Link2 } from 'lucide-react';
 import Spinner from './Spinner.tsx';
@@ -125,7 +125,8 @@ const ExamEditor: FC<{
     onCancel: () => void;
     isSaving: boolean;
     unlinkedProducts: any[];
-}> = ({ program, onSave, onCancel, isSaving, unlinkedProducts }) => {
+    suggestedBooks: RecommendedBook[];
+}> = ({ program, onSave, onCancel, isSaving, unlinkedProducts, suggestedBooks }) => {
     
     const [data, setData] = useState<EditableProgramData>({
         category: { ...program.category },
@@ -142,6 +143,23 @@ const ExamEditor: FC<{
             ...prev,
             [examType]: prev[examType] ? { ...prev[examType], [field]: value } : undefined
         }));
+    };
+
+    const handleBookSelectionChange = (bookId: string) => {
+        setData(prev => {
+            if (!prev.certExam) return prev;
+            const currentBookIds = prev.certExam.recommendedBookIds || [];
+            const newBookIds = currentBookIds.includes(bookId)
+                ? currentBookIds.filter(id => id !== bookId)
+                : [...currentBookIds, bookId];
+            return {
+                ...prev,
+                certExam: {
+                    ...prev.certExam,
+                    recommendedBookIds: newBookIds,
+                }
+            };
+        });
     };
     
     const { category, practiceExam, certExam } = data;
@@ -214,6 +232,21 @@ const ExamEditor: FC<{
                      <div className="flex items-center gap-4 pt-2">
                         <label className="flex items-center gap-2"><input type="checkbox" checked={certExam.isProctored || false} onChange={e => handleExamChange('certExam', 'isProctored', e.target.checked)} /> Enable Proctoring</label>
                         <label className="flex items-center gap-2"><input type="checkbox" checked={certExam.certificateEnabled || false} onChange={e => handleExamChange('certExam', 'certificateEnabled', e.target.checked)} /> Enable Certificate</label>
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold">Recommended Books</label>
+                        <div className="max-h-40 overflow-y-auto border rounded-lg bg-white p-2 mt-1 space-y-1">
+                            {suggestedBooks.map(book => (
+                                <label key={book.id} className="flex items-center gap-2 p-1 rounded hover:bg-slate-100 cursor-pointer">
+                                    <input 
+                                        type="checkbox"
+                                        checked={certExam?.recommendedBookIds?.includes(book.id) || false}
+                                        onChange={() => handleBookSelectionChange(book.id)}
+                                    />
+                                    <span>{book.title}</span>
+                                </label>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
@@ -327,7 +360,7 @@ const CreateProgramModal: FC<{
 
 
 const ExamProgramCustomizer: FC = () => {
-    const { activeOrg, updateConfigData, examPrices } = useAppContext();
+    const { activeOrg, updateConfigData, examPrices, suggestedBooks } = useAppContext();
     const { token } = useAuth();
     const [editingProgramId, setEditingProgramId] = useState<string | null>(null);
     const [expandedProgramId, setExpandedProgramId] = useState<string | null>(null);
@@ -357,6 +390,9 @@ const ExamProgramCustomizer: FC = () => {
         if (data.certExam?.passScore) payload.cert_passScore = data.certExam.passScore;
         if (data.certExam?.numberOfQuestions) payload.cert_numberOfQuestions = data.certExam.numberOfQuestions;
         if (data.certExam?.durationMinutes) payload.cert_durationMinutes = data.certExam.durationMinutes;
+        if (data.certExam && typeof data.certExam.recommendedBookIds !== 'undefined') {
+            payload.recommended_book_ids = data.certExam.recommendedBookIds;
+        }
         
         setIsSaving(true);
         try {
@@ -551,6 +587,7 @@ const ExamProgramCustomizer: FC = () => {
                                     onCancel={() => setEditingProgramId(null)}
                                     isSaving={isSaving}
                                     unlinkedProducts={unlinkedProducts}
+                                    suggestedBooks={suggestedBooks}
                                 />
                             )}
                         </div>

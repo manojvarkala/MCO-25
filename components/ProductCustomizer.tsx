@@ -20,13 +20,12 @@ const TabButton: FC<{ active: boolean; onClick: () => void; children: ReactNode 
     </button>
 );
 
-// This modal is only for bundles.
 interface UpsertBundleModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (productData: any) => Promise<void>;
     isSaving: boolean;
-    productToEdit?: ProductVariation;
+    productToEdit?: Partial<ProductVariation> | null;
     simpleProducts: ProductVariation[];
     subscriptionProducts: ProductVariation[];
 }
@@ -192,15 +191,15 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     );
 };
 
-// NEW: Modal for creating simple products
 interface UpsertSimpleProductModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (productData: any) => Promise<void>;
     isSaving: boolean;
+    productToEdit?: Partial<ProductVariation> | null;
 }
 
-const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, onClose, onSave, isSaving }) => {
+const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, onClose, onSave, isSaving, productToEdit }) => {
     const [name, setName] = useState('');
     const [sku, setSku] = useState('');
     const [price, setPrice] = useState('');
@@ -208,12 +207,12 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
 
     useEffect(() => {
         if (isOpen) {
-            setName('');
-            setSku('');
-            setPrice('');
-            setRegularPrice('');
+            setName(productToEdit?.name || '');
+            setSku(productToEdit?.sku || '');
+            setPrice(productToEdit?.salePrice?.toString() || '');
+            setRegularPrice(productToEdit?.regularPrice?.toString() || '');
         }
-    }, [isOpen]);
+    }, [isOpen, productToEdit]);
 
     if (!isOpen) return null;
 
@@ -228,7 +227,7 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-lg w-full max-w-lg p-6">
-                <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">Create New Simple Product</h2>
+                <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">{productToEdit?.sku ? 'Edit Simple Product' : 'Create New Simple Product'}</h2>
                 <div className="space-y-4">
                     <div>
                         <label className="text-sm font-medium">Product Name</label>
@@ -236,7 +235,7 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
                     </div>
                     <div>
                         <label className="text-sm font-medium">SKU</label>
-                        <input type="text" value={sku} onChange={e => setSku(e.target.value)} placeholder="e.g. exam-cpc-cert" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
+                        <input type="text" value={sku} onChange={e => setSku(e.target.value)} disabled={!!productToEdit?.sku} placeholder="e.g. exam-cpc-cert" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))] disabled:opacity-70" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -252,7 +251,7 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
                 <div className="flex justify-end gap-3 mt-6">
                     <button onClick={onClose} disabled={isSaving} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition">Cancel</button>
                     <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition">
-                        {isSaving ? <Spinner /> : <Save size={16} />} Create Product
+                        {isSaving ? <Spinner /> : <Save size={16} />} {productToEdit?.sku ? 'Save Changes' : 'Create Product'}
                     </button>
                 </div>
             </div>
@@ -260,22 +259,34 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
     );
 };
 
-// NEW: Modal for creating/editing subscriptions
 interface UpsertSubscriptionModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (productData: any) => Promise<void>;
     isSaving: boolean;
+    productToEdit?: Partial<ProductVariation> | null;
 }
 
-const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onClose, onSave, isSaving }) => {
-    const [name, setName] = useState('Monthly Subscription');
-    const [sku, setSku] = useState('sub-monthly');
-    const [price, setPrice] = useState('19.99');
-    const [regularPrice, setRegularPrice] = useState('29.99');
+const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onClose, onSave, isSaving, productToEdit }) => {
+    const [name, setName] = useState('');
+    const [sku, setSku] = useState('');
+    const [price, setPrice] = useState('');
+    const [regularPrice, setRegularPrice] = useState('');
     const [period, setPeriod] = useState('month');
     const [interval, setInterval] = useState('1');
-    const [length, setLength] = useState('0'); // 0 for indefinite
+    const [length, setLength] = useState('0');
+
+    useEffect(() => {
+        if (isOpen) {
+            setName(productToEdit?.name || 'Monthly Subscription');
+            setSku(productToEdit?.sku || 'sub-monthly');
+            setPrice(productToEdit?.salePrice?.toString() || '19.99');
+            setRegularPrice(productToEdit?.regularPrice?.toString() || '29.99');
+            setPeriod(productToEdit?.subscriptionPeriod || 'month');
+            setInterval(productToEdit?.subscriptionPeriodInterval || '1');
+            setLength(productToEdit?.subscriptionLength || '0');
+        }
+    }, [isOpen, productToEdit]);
 
     if (!isOpen) return null;
 
@@ -285,8 +296,7 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
             return;
         }
         onSave({
-            name,
-            sku,
+            name, sku,
             price: parseFloat(price),
             regularPrice: parseFloat(regularPrice),
             subscription_period: period,
@@ -298,9 +308,8 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-lg w-full max-w-2xl p-6">
-                <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">Create New Subscription</h2>
+                <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">{productToEdit?.sku ? 'Edit Subscription' : 'Create New Subscription'}</h2>
                 <div className="space-y-4">
-                    {/* Basic Info */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="text-sm font-medium">Subscription Name</label>
@@ -308,10 +317,9 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                         </div>
                         <div>
                             <label className="text-sm font-medium">SKU</label>
-                            <input type="text" value={sku} onChange={e => setSku(e.target.value)} className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
+                            <input type="text" value={sku} onChange={e => setSku(e.target.value)} disabled={!!productToEdit?.sku} className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))] disabled:opacity-70" />
                         </div>
                     </div>
-                    {/* Pricing */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="text-sm font-medium">Sale Price</label>
@@ -322,7 +330,6 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                             <input type="number" value={regularPrice} onChange={e => setRegularPrice(e.target.value)} className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
                         </div>
                     </div>
-                    {/* Subscription Settings */}
                     <div className="grid grid-cols-3 gap-4">
                         <div>
                             <label className="text-sm font-medium">Billing Period</label>
@@ -346,7 +353,7 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                 <div className="flex justify-end gap-3 mt-6">
                     <button onClick={onClose} disabled={isSaving} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition">Cancel</button>
                     <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition">
-                        {isSaving ? <Spinner /> : <Save size={16} />} Create Subscription
+                        {isSaving ? <Spinner /> : <Save size={16} />} {productToEdit?.sku ? 'Save Changes' : 'Create Subscription'}
                     </button>
                 </div>
             </div>
@@ -405,11 +412,8 @@ const ProductCustomizer: FC = () => {
     const { token } = useAuth();
     const [activeTab, setActiveTab] = useState<TabType>('simple');
     
-    const [editingProduct, setEditingProduct] = useState<ProductVariation | undefined>(undefined);
+    const [productToEdit, setProductToEdit] = useState<Partial<ProductVariation> | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [isSimpleProductModalOpen, setIsSimpleProductModalOpen] = useState(false);
-    const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
-
 
     const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
     const [isBulkSaving, setIsBulkSaving] = useState(false);
@@ -428,31 +432,24 @@ const ProductCustomizer: FC = () => {
         const bundles: ProductVariation[] = [];
 
         Object.values(examPrices).forEach((priceData: any) => {
-            const exam = activeOrg.exams.find(e => e.productSku === priceData.sku && !e.isPractice);
-
-            const typeFromData = priceData.type || 'simple';
-            let normalizedType: ProductVariationType = 'simple';
-            if (typeFromData === 'subscription' || typeFromData === 'variable-subscription') {
-                normalizedType = 'subscription';
-            } else if (priceData.isBundle) {
-                normalizedType = 'bundle';
-            }
-
             const product: ProductVariation = {
                 id: priceData.productId?.toString() || priceData.sku,
                 sku: priceData.sku,
-                name: priceData.name || exam?.name || 'Unknown Product',
-                type: normalizedType,
+                name: priceData.name || 'Unknown Product',
+                type: 'simple',
                 salePrice: priceData.price?.toString() || '0',
                 regularPrice: priceData.regularPrice?.toString() || '0',
                 ...priceData
             };
-            
-            if (typeFromData === 'subscription' || typeFromData === 'variable-subscription') {
-                subscriptions.push(product);
-            } else if (priceData.isBundle) {
+
+            if (priceData.isBundle) {
+                product.type = 'bundle';
                 bundles.push(product);
-            } else if (typeFromData === 'simple') {
+            } else if (priceData.type && (priceData.type === 'subscription' || priceData.type === 'variable-subscription')) {
+                product.type = 'subscription';
+                subscriptions.push(product);
+            } else if (priceData.type === 'simple') {
+                product.type = 'simple';
                 simple.push(product);
             }
         });
@@ -477,9 +474,7 @@ const ProductCustomizer: FC = () => {
                 updateConfigData(result.organizations, result.examPrices);
             }
             toast.success(`${type} "${productData.name}" saved successfully!`);
-            setEditingProduct(undefined);
-            setIsSimpleProductModalOpen(false);
-            setIsSubscriptionModalOpen(false);
+            setProductToEdit(null);
         } catch (error: any) {
             toast.error(error.message || `Failed to save ${type.toLowerCase()}.`);
         } finally {
@@ -501,21 +496,17 @@ const ProductCustomizer: FC = () => {
         setIsBulkSaving(true);
         const toastId = toast.loading(`Updating ${selectedSkus.length} products...`);
         
-        let lastResult: any = null;
-        for (const sku of selectedSkus) {
-            const productData: any = { sku };
-            if (salePrice) productData.price = parseFloat(salePrice);
-            if (regularPrice) productData.regularPrice = parseFloat(regularPrice);
-            try {
-                lastResult = await googleSheetsService.adminUpsertProduct(token, productData);
-            } catch (error: any) {
-                toast.error(`Failed to update ${sku}: ${error.message}`, { id: toastId });
-                setIsBulkSaving(false);
-                return;
-            }
-        }
-
         try {
+            const updatePromises = selectedSkus.map(sku => {
+                const productData: any = { sku };
+                if (salePrice) productData.price = parseFloat(salePrice);
+                if (regularPrice) productData.regularPrice = parseFloat(regularPrice);
+                return googleSheetsService.adminUpsertProduct(token, productData);
+            });
+
+            const results = await Promise.all(updatePromises);
+            const lastResult = results[results.length - 1];
+
             if (lastResult && lastResult.organizations && lastResult.examPrices) {
                 updateConfigData(lastResult.organizations, lastResult.examPrices);
             }
@@ -560,17 +551,18 @@ const ProductCustomizer: FC = () => {
     };
     
     const handleSelectOne = (skuToToggle: string) => {
-        setSelectedSkus(prev => {
-            const isSelected = prev.includes(skuToToggle);
-            if (isSelected) {
-                return prev.filter(sku => sku !== skuToToggle);
+        setSelectedSkus(currentSkus => {
+            const nextSkus = new Set(currentSkus);
+            if (nextSkus.has(skuToToggle)) {
+                nextSkus.delete(skuToToggle);
             } else {
-                return [...prev, skuToToggle];
+                nextSkus.add(skuToToggle);
             }
+            return Array.from(nextSkus);
         });
     };
 
-    const renderProducts = (products: ProductVariation[], tab: TabType) => {
+    const renderProducts = (products: ProductVariation[]) => {
         return (
             <div className="space-y-2">
                 {products.map(product => (
@@ -594,12 +586,10 @@ const ProductCustomizer: FC = () => {
                                 )}
                                 <span className="font-bold ml-2">${parseFloat(product.salePrice).toFixed(2)}</span>
                             </div>
-                            {product.type === 'bundle' && (
-                                <button onClick={() => setEditingProduct(product)} className="p-2 rounded-full hover:bg-[rgb(var(--color-border-rgb))]">
-                                    <Edit size={16} />
-                                </button>
-                            )}
-                             <button onClick={() => handleDeleteProduct(product)} className="p-2 rounded-full text-red-500 hover:bg-red-100" title="Delete Product">
+                            <button onClick={() => setProductToEdit(product)} className="p-2 rounded-full hover:bg-[rgb(var(--color-border-rgb))]">
+                                <Edit size={16} />
+                            </button>
+                            <button onClick={() => handleDeleteProduct(product)} className="p-2 rounded-full text-red-500 hover:bg-red-100" title="Delete Product">
                                 <Trash2 size={16} />
                             </button>
                         </div>
@@ -612,11 +602,10 @@ const ProductCustomizer: FC = () => {
     const renderContent = () => {
         let products: ProductVariation[] = [];
         let title = '';
-        let showCreate = false;
-
-        if (activeTab === 'simple') { products = simpleProducts; title = 'Certification Exams'; showCreate = true; }
-        if (activeTab === 'subscription') { products = subscriptionProducts; title = 'Subscription Products'; showCreate = true; }
-        if (activeTab === 'bundle') { products = bundleProducts; title = 'Bundle Products'; showCreate = true; }
+        
+        if (activeTab === 'simple') { products = simpleProducts; title = 'Simple Products'; }
+        if (activeTab === 'subscription') { products = subscriptionProducts; title = 'Subscription Products'; }
+        if (activeTab === 'bundle') { products = bundleProducts; title = 'Bundle Products'; }
         
         const isAllSelected = selectedSkus.length === products.length && products.length > 0;
 
@@ -632,18 +621,12 @@ const ProductCustomizer: FC = () => {
                  )}
                 <div className="flex justify-between items-center mb-3">
                     <h3 className="text-lg font-bold">{title}</h3>
-                    {showCreate && (
-                        <button 
-                            onClick={() => {
-                                if (activeTab === 'bundle') setEditingProduct({ type: 'bundle' } as ProductVariation);
-                                if (activeTab === 'simple') setIsSimpleProductModalOpen(true);
-                                if (activeTab === 'subscription') setIsSubscriptionModalOpen(true);
-                            }} 
-                            className="flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600"
-                        >
-                            <PlusCircle size={16}/> Create New
-                        </button>
-                    )}
+                    <button 
+                        onClick={() => setProductToEdit({ type: activeTab })} 
+                        className="flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600"
+                    >
+                        <PlusCircle size={16}/> Create New
+                    </button>
                 </div>
                 
                  {products.length > 0 && (
@@ -653,7 +636,7 @@ const ProductCustomizer: FC = () => {
                     </div>
                 )}
 
-                {products.length > 0 ? renderProducts(products, activeTab) : <p className="text-center p-4 text-slate-500">No {activeTab} products found.</p>}
+                {products.length > 0 ? renderProducts(products) : <p className="text-center p-4 text-slate-500">No {activeTab} products found.</p>}
             </div>
         );
     };
@@ -661,25 +644,27 @@ const ProductCustomizer: FC = () => {
     return (
          <div className="space-y-8">
             <UpsertBundleModal 
-                isOpen={!!editingProduct}
-                onClose={() => setEditingProduct(undefined)}
+                isOpen={productToEdit?.type === 'bundle'}
+                onClose={() => setProductToEdit(null)}
                 onSave={(data) => handleUpsert(data, 'Bundle')}
                 isSaving={isSaving}
-                productToEdit={editingProduct?.type === 'bundle' ? editingProduct : undefined}
+                productToEdit={productToEdit}
                 simpleProducts={simpleProducts}
                 subscriptionProducts={subscriptionProducts}
             />
             <UpsertSimpleProductModal
-                isOpen={isSimpleProductModalOpen}
-                onClose={() => setIsSimpleProductModalOpen(false)}
+                isOpen={productToEdit?.type === 'simple'}
+                onClose={() => setProductToEdit(null)}
                 onSave={(data) => handleUpsert(data, 'Product')}
                 isSaving={isSaving}
+                productToEdit={productToEdit}
             />
             <UpsertSubscriptionModal
-                isOpen={isSubscriptionModalOpen}
-                onClose={() => setIsSubscriptionModalOpen(false)}
+                isOpen={productToEdit?.type === 'subscription'}
+                onClose={() => setProductToEdit(null)}
                 onSave={(data) => handleUpsert(data, 'Subscription')}
                 isSaving={isSaving}
+                productToEdit={productToEdit}
             />
 
             <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3"><ShoppingCart /> Product Customizer</h1>
