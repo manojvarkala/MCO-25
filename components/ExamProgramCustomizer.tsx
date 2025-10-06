@@ -119,14 +119,17 @@ const BulkEditPanel: FC<{
 };
 
 
-const ExamEditor: FC<{
+interface ExamEditorProps {
     program: { category: ExamProductCategory; practiceExam?: Exam; certExam?: Exam; };
     onSave: (programId: string, data: EditableProgramData) => Promise<void>;
     onCancel: () => void;
     isSaving: boolean;
     unlinkedProducts: any[];
     suggestedBooks: RecommendedBook[];
-}> = ({ program, onSave, onCancel, isSaving, unlinkedProducts, suggestedBooks }) => {
+    examPrices: { [key: string]: any } | null;
+}
+
+const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, unlinkedProducts, suggestedBooks, examPrices }) => {
     
     const [data, setData] = useState<EditableProgramData>({
         category: { ...program.category },
@@ -163,6 +166,17 @@ const ExamEditor: FC<{
     };
     
     const { category, practiceExam, certExam } = data;
+    
+    const initialLinkedProductInfo = useMemo(() => {
+        if (!program.certExam?.productSku || !examPrices) return null;
+        const productInfo = examPrices[program.certExam.productSku];
+        if (productInfo) {
+            return { sku: productInfo.sku, name: productInfo.name };
+        }
+        // Fallback in case product isn't in prices for some reason (e.g., deleted from Woo)
+        return { sku: program.certExam.productSku, name: 'Linked Product (Name not found)' };
+    }, [program.certExam, examPrices]);
+
 
     return (
         <div className="bg-[rgb(var(--color-muted-rgb))] p-4 rounded-b-lg space-y-4">
@@ -207,11 +221,15 @@ const ExamEditor: FC<{
                         <input type="text" value={certExam.name || ''} onChange={e => handleExamChange('certExam', 'name', e.target.value)} className="w-full p-2 border rounded bg-white" />
                     </div>
                     <div>
-                        <label className="text-xs font-bold">Linked Product SKU</label>
+                        <label className="text-xs font-bold">Linked Product</label>
                         <select value={certExam.productSku || ''} onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} className="w-full p-2 border rounded bg-white">
                             <option value="">-- No Product Linked --</option>
-                            {/* Include the currently linked product in the list */}
-                            {certExam.productSku && <option value={certExam.productSku}>{certExam.productSku}</option>}
+                            {/* Display currently linked product first, ensuring it's always in the list for editing */}
+                            {initialLinkedProductInfo && (
+                                <option value={initialLinkedProductInfo.sku}>
+                                    {initialLinkedProductInfo.name} ({initialLinkedProductInfo.sku})
+                                </option>
+                            )}
                             {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
                         </select>
                     </div>
@@ -330,8 +348,9 @@ const CreateProgramModal: FC<{
                     </div>
                     {linkType === 'existing' && (
                         <div>
-                            <select value={existingSku} onChange={e => setExistingSku(e.target.value)} className="w-full p-2 border rounded bg-white">
-                                <option value="">-- Select an unlinked product --</option>
+                            <label className="text-sm font-medium block mt-2">Select an Unlinked Product</label>
+                            <select value={existingSku} onChange={e => setExistingSku(e.target.value)} className="w-full p-2 mt-1 border rounded bg-white">
+                                <option value="">-- Select a product --</option>
                                 {unlinkedProducts.map((p: any) => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
                             </select>
                         </div>
@@ -419,18 +438,14 @@ const ExamProgramCustomizer: FC = () => {
         setIsSaving(true);
         const toastId = toast.loading(`Updating ${selectedProgramIds.length} programs...`);
 
-        let lastResult: any = null;
-        for (const programId of selectedProgramIds) {
-            try {
-                lastResult = await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
-            } catch(e: any) {
-                toast.error(`Failed to update a program: ${e.message}`);
-                setIsSaving(false);
-                return;
-            }
-        }
-
         try {
+            // We can send multiple updates, but the backend processes one at a time.
+            // We only need the result of the last one to update our state.
+            let lastResult: { organizations: Organization[]; examPrices: any; } | null = null;
+            for (const programId of selectedProgramIds) {
+                lastResult = await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
+            }
+        
             if (lastResult && lastResult.organizations && lastResult.examPrices) {
                 updateConfigData(lastResult.organizations, lastResult.examPrices);
             }
@@ -587,7 +602,8 @@ const ExamProgramCustomizer: FC = () => {
                                     onCancel={() => setEditingProgramId(null)}
                                     isSaving={isSaving}
                                     unlinkedProducts={unlinkedProducts}
-                                    suggestedBooks={suggestedBooks}
+                                    suggestedBooks={suggestedBooks || []}
+                                    examPrices={examPrices}
                                 />
                             )}
                         </div>
