@@ -108,8 +108,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
-        const total = selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
-        return total > 0 ? total : 0;
+        return selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
     }, [selectedItems]);
 
 
@@ -569,20 +568,31 @@ const ProductCustomizer: FC = () => {
     };
 
     const handleSelectOne = (sku: string, isSelected: boolean) => {
-        setSelectedSkus(prevSkus => {
+        setSelectedSkus(prev => {
+            const newSet = new Set(prev);
             if (isSelected) {
-                return [...prevSkus, sku];
+                newSet.add(sku);
             } else {
-                return prevSkus.filter(s => s !== sku);
+                newSet.delete(sku);
             }
+            return Array.from(newSet);
         });
+    };
+    
+    const handleDoubleClickSelect = (sku: string) => {
+        const isCurrentlySelected = selectedSkus.includes(sku);
+        handleSelectOne(sku, !isCurrentlySelected);
     };
 
     const renderProducts = (products: ProductVariation[]) => {
         return (
             <div className="space-y-2">
                 {products.map(product => (
-                    <div key={product.sku} className={`flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg ${selectedSkus.includes(product.sku) ? 'ring-2 ring-[rgb(var(--color-primary-rgb))]' : ''}`}>
+                    <div 
+                        key={product.sku} 
+                        className={`flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg cursor-pointer ${selectedSkus.includes(product.sku) ? 'ring-2 ring-[rgb(var(--color-primary-rgb))]' : ''}`}
+                        onDoubleClick={() => handleDoubleClickSelect(product.sku)}
+                    >
                         <div className="flex items-center">
                             <input
                                 type="checkbox"
