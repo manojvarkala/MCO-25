@@ -24,14 +24,12 @@ const Integration: FC = () => {
         try {
             const zip = new JSZip();
             const rootFolderName = 'mco-exam-integration-engine';
-            const rootFolder = zip.folder(rootFolderName);
-
-            if (!rootFolder) {
-                throw new Error("Could not create root folder in zip.");
-            }
             
-            // Combine the separate header and main logic files into one valid plugin file.
-            // WordPress requires the header to be in the main PHP file it loads.
+            // This is the correct structure for WordPress: a single root folder in the zip.
+            // All files will be placed inside this folder.
+            const rootFolder = zip.folder(rootFolderName);
+            if (!rootFolder) throw new Error("Could not create root folder in zip.");
+
             const combinedPhpContent = `${pluginHeaderFile}\n${mainPluginFile}`;
 
             const filesToZip = {
@@ -44,7 +42,6 @@ const Integration: FC = () => {
                 'assets/mco-styles.css': stylesFile,
             };
 
-            // Add all files to the zip's root folder
             for (const path in filesToZip) {
                 rootFolder.file(path, filesToZip[path as keyof typeof filesToZip]);
             }

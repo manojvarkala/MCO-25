@@ -272,6 +272,7 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/admin/test-sheet-url', ['methods' => 'POST', 'callback' => 'mco_api_admin_test_sheet_url', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/clear-config-cache', ['methods' => 'POST', 'callback' => 'mco_api_clear_config_cache', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/clear-question-caches', ['methods' => 'POST', 'callback' => 'mco_api_clear_question_caches', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/upsert-product', ['methods' => 'POST', 'callback' => 'mco_api_admin_upsert_product', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
 }
 
 function mco_api_permission_check(WP_REST_Request $request) {
@@ -966,5 +967,48 @@ function mco_api_clear_question_caches(WP_REST_Request $request) {
         }
     }
     return new WP_REST_Response(['success' => true, 'message' => "Cleared {$count} question caches."], 200);
+}
+
+function mco_api_admin_upsert_product(WP_REST_Request $request) {
+    if (!class_exists('WooCommerce')) {
+        return new WP_Error('woocommerce_not_active', 'WooCommerce is not active.', ['status' => 500]);
+    }
+
+    $params = $request->get_json_params();
+    $sku = sanitize_text_field($params['sku']);
+    if (empty($sku)) {
+        return new WP_Error('bad_request', 'Product SKU is required.', ['status' => 400]);
+    }
+
+    $product_id = wc_get_product_id_by_sku($sku);
+    $product = $product_id ? wc_get_product($product_id) : new WC_Product_Simple();
+
+    if (isset($params['name'])) {
+        $product->set_name(sanitize_text_field($params['name']));
+    }
+    if (isset($params['price'])) {
+        $product->set_sale_price($params['price']);
+        $product->set_price($params['price']);
+    }
+    if (isset($params['regularPrice'])) {
+        $product->set_regular_price($params['regularPrice']);
+    }
+    
+    // If it's a new product
+    if (!$product_id) {
+        $product->set_sku($sku);
+        $product->set_virtual(true);
+        $product->set_status('publish');
+        if (isset($params['isBundle']) && $params['isBundle']) {
+            $product->update_meta_data('_mco_is_bundle', 'yes');
+        }
+    }
+
+    $product->save();
+
+    // Bust cache and return fresh config
+    delete_transient('mco_app_config_data');
+    update_option('mco_config_version', current_time('YmdHis'));
+    return mco_api_get_full_config(new WP_REST_Request());
 }
 ?>
