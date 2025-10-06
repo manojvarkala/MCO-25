@@ -10,66 +10,35 @@ interface ExamBundleCardProps {
 
 const ExamBundleCard: FC<ExamBundleCardProps> = ({ certExam, activeOrg, examPrices }) => {
     const bundleData = useMemo(() => {
-        // We must have an active org to build URLs
-        if (!activeOrg) return null;
-        
-        const website = `https://www.${activeOrg.website}`;
-
-        // First, try to find bundle data from the config if available
-        if (examPrices && certExam?.productSku) {
-            // 1. Look for a specific bundle for the current exam (e.g., exam-cpc-cert-1)
-            const specificBundleSku = `${certExam.productSku}-1`;
-            const specificPriceData = examPrices[specificBundleSku];
-
-            if (specificPriceData) {
-                const bundleUrl = specificPriceData.productId
-                    ? `${website}/cart/?add-to-cart=${specificPriceData.productId}`
-                    : `${website}/product/${certExam.productSlug}/`; // Fallback to main product page
-                
-                return {
-                    title: 'Exam Bundle',
-                    buttonText: 'Purchase Bundle',
-                    price: specificPriceData.price,
-                    regularPrice: specificPriceData.regularPrice,
-                    url: bundleUrl,
-                    description: 'The complete package for your certification.'
-                };
-            }
-
-            // 2. If not found, look for a representative fallback bundle (e.g., the main CPC bundle)
-            const fallbackBundleSku = 'exam-cpc-cert-1';
-            const fallbackPriceData = examPrices[fallbackBundleSku];
-
-            if (fallbackPriceData) {
-                // The URL for a generic offer should go to the main programs/store page
-                const bundleUrl = `${website}/exam-programs/`;
-                
-                return {
-                    title: 'Featured Bundle',
-                    buttonText: 'Browse All Bundles',
-                    price: fallbackPriceData.price,
-                    regularPrice: fallbackPriceData.regularPrice,
-                    url: bundleUrl,
-                    description: 'Get the best value with a complete package.'
-                };
-            }
+        if (!activeOrg || !examPrices || !certExam?.productSku) {
+            return null;
         }
 
-        // 3. If no bundle data is found in the config, provide a hardcoded generic offer to ensure the card always shows.
-        return {
-            title: 'Exam Bundle Offer',
-            buttonText: 'Browse All Bundles',
-            price: 59.99, // A sensible default price
-            regularPrice: 79.99, // A sensible default regular price
-            url: `${website}/exam-programs/`,
-            description: 'Get the best value with a complete package including practice access.'
-        };
+        const website = `https://www.${activeOrg.website}`;
+        const specificBundleSku = `${certExam.productSku}-1`;
+        const priceData = examPrices[specificBundleSku];
 
+        if (!priceData) {
+            // If the specific bundle for this exam doesn't exist, don't render the card.
+            return null;
+        }
+
+        const bundleUrl = priceData.productId
+            ? `${website}/cart/?add-to-cart=${priceData.productId}`
+            : `${website}/product/${certExam.productSlug}/`; // Fallback to product page just in case
+
+        return {
+            title: 'Exam Bundle',
+            buttonText: 'Purchase Bundle',
+            price: priceData.price,
+            regularPrice: priceData.regularPrice,
+            url: bundleUrl,
+            description: 'The complete package for your certification.'
+        };
     }, [certExam, examPrices, activeOrg]);
 
     if (!bundleData) {
-        // This will only be null for a brief moment while activeOrg is loading
-        return null;
+        return null; // Return null to prevent rendering if no specific bundle is found
     }
 
     return (

@@ -108,7 +108,6 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
-        // FIX: Added initial value of 0 to reduce() to prevent errors on empty arrays.
         const total = selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
         return isNaN(total) ? 0 : total;
     }, [selectedItems]);
@@ -433,22 +432,24 @@ const ProductCustomizer: FC = () => {
         const bundles: ProductVariation[] = [];
 
         Object.values(examPrices).forEach((priceData: any) => {
-            // FIX: Removed explicit 'ProductVariation' type to allow for 'variable-subscription' from API data.
-            const product = {
+            const product: ProductVariation = {
                 id: priceData.productId?.toString() || priceData.sku,
                 sku: priceData.sku,
                 name: priceData.name || 'Unknown Product',
-                type: 'simple',
+                type: 'simple', // Default type
                 salePrice: priceData.price?.toString() || '0',
                 regularPrice: priceData.regularPrice?.toString() || '0',
-                ...priceData
+                isBundle: priceData.isBundle,
+                bundledSkus: priceData.bundledSkus,
+                subscriptionPeriod: priceData.subscription_period,
+                subscriptionPeriodInterval: priceData.subscription_period_interval,
+                subscriptionLength: priceData.subscription_length
             };
             
-            // FIX: Robust, prioritized filtering to prevent items from being missed.
             if (product.isBundle) {
                 product.type = 'bundle';
                 bundles.push(product);
-            } else if (product.type === 'subscription' || product.type === 'variable-subscription') {
+            } else if (priceData.type === 'subscription' || priceData.type === 'variable-subscription') {
                 product.type = 'subscription';
                 subscriptions.push(product);
             } else {
@@ -576,8 +577,8 @@ const ProductCustomizer: FC = () => {
                                 onChange={() => handleSelectOne(product.sku)}
                                 className="h-4 w-4 mr-4"
                             />
-                            <div>
-                                <p className="font-semibold">{product.name}</p>
+                            <div className="cursor-pointer group" onClick={() => setProductToEdit(product)}>
+                                <p className="font-semibold group-hover:text-[rgb(var(--color-primary-rgb))] transition-colors">{product.name}</p>
                                 <p className="text-xs text-slate-500">SKU: {product.sku}</p>
                             </div>
                         </div>

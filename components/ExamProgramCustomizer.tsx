@@ -173,7 +173,6 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
         if (productInfo) {
             return { sku: productInfo.sku, name: productInfo.name };
         }
-        // Fallback in case product isn't in prices for some reason (e.g., deleted from Woo)
         return { sku: program.certExam.productSku, name: 'Linked Product (Name not found)' };
     }, [program.certExam, examPrices]);
 
@@ -224,7 +223,6 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
                         <label className="text-xs font-bold">Linked Product</label>
                         <select value={certExam.productSku || ''} onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} className="w-full p-2 border rounded bg-white">
                             <option value="">-- No Product Linked --</option>
-                            {/* Display currently linked product first, ensuring it's always in the list for editing */}
                             {initialLinkedProductInfo && (
                                 <option value={initialLinkedProductInfo.sku}>
                                     {initialLinkedProductInfo.name} ({initialLinkedProductInfo.sku})
@@ -439,8 +437,6 @@ const ExamProgramCustomizer: FC = () => {
         const toastId = toast.loading(`Updating ${selectedProgramIds.length} programs...`);
 
         try {
-            // We can send multiple updates, but the backend processes one at a time.
-            // We only need the result of the last one to update our state.
             let lastResult: { organizations: Organization[]; examPrices: any; } | null = null;
             for (const programId of selectedProgramIds) {
                 lastResult = await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
@@ -572,7 +568,12 @@ const ExamProgramCustomizer: FC = () => {
                             <div className="flex justify-between items-center p-4 bg-[rgb(var(--color-card-rgb))] rounded-t-lg">
                                 <div className="flex items-center">
                                     <input type="checkbox" checked={selectedProgramIds.includes(program.category.id)} onChange={e => handleSelectOne(program.category.id, e.target.checked)} className="h-4 w-4 mr-4"/>
-                                    <h2 className="font-bold text-lg text-[rgb(var(--color-text-strong-rgb))]">{program.category.name}</h2>
+                                    <h2 
+                                        className="font-bold text-lg text-[rgb(var(--color-text-strong-rgb))] cursor-pointer hover:text-[rgb(var(--color-primary-rgb))] transition-colors"
+                                        onClick={() => setEditingProgramId(program.category.id)}
+                                    >
+                                        {program.category.name}
+                                    </h2>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {editingProgramId !== program.category.id && (
