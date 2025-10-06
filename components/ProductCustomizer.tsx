@@ -108,7 +108,8 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
-        return selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
+        const total = selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
+        return isNaN(total) ? 0 : total;
     }, [selectedItems]);
 
 
@@ -524,7 +525,6 @@ const ProductCustomizer: FC = () => {
         const toastId = toast.loading(`Updating ${selectedSkus.length} products...`);
         
         try {
-            // Using a for...of loop to process sequentially to avoid potential race conditions on the backend
             let lastResult;
             for (const sku of selectedSkus) {
                 const productData: any = { sku };
@@ -600,38 +600,45 @@ const ProductCustomizer: FC = () => {
 
     const renderProducts = (products: ProductVariation[]) => {
         return (
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {products.map(product => (
-                    <div 
-                        key={product.sku} 
-                        className={`flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg transition-all duration-150 ${selectedSkus.includes(product.sku) ? 'ring-2 ring-[rgb(var(--color-primary-rgb))]' : 'ring-0'}`}
+                    <div
+                        key={product.sku}
+                        className={`editable-card ${selectedSkus.includes(product.sku) ? 'editable-card--selected' : ''}`}
                         onDoubleClick={() => handleDoubleClickSelect(product.sku)}
                     >
-                        <div className="flex items-center">
-                            <input
-                                type="checkbox"
-                                className="h-4 w-4 mr-4 flex-shrink-0"
-                                checked={selectedSkus.includes(product.sku)}
-                                onChange={e => handleSelectOne(product.sku, e.target.checked)}
-                            />
-                            <div className="cursor-pointer group" onClick={() => handleOpenEditor(product)}>
-                                <p className="font-semibold group-hover:text-[rgb(var(--color-primary-rgb))] transition-colors">{product.name}</p>
-                                <p className="text-xs text-slate-500">SKU: {product.sku}</p>
+                        <div className="editable-card__header">
+                            <div className="flex items-center gap-3 flex-grow">
+                                <input
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded text-[rgb(var(--color-primary-rgb))] focus:ring-[rgb(var(--color-primary-rgb))]"
+                                    checked={selectedSkus.includes(product.sku)}
+                                    onChange={e => handleSelectOne(product.sku, e.target.checked)}
+                                />
+                                <div className="flex-grow cursor-pointer group" onClick={() => handleOpenEditor(product)}>
+                                    <h3 className="font-bold text-base text-[rgb(var(--color-text-strong-rgb))] leading-tight group-hover:text-[rgb(var(--color-primary-rgb))] transition-colors">{product.name}</h3>
+                                    <p className="text-xs text-[rgb(var(--color-text-muted-rgb))]">SKU: {product.sku}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <button onClick={() => handleOpenEditor(product)} className="p-2 rounded-full hover:bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))]">
+                                    <Edit size={16} />
+                                </button>
+                                <button onClick={() => handleDeleteProduct(product)} className="p-2 rounded-full text-red-500 hover:bg-red-100" title="Delete Product">
+                                    <Trash2 size={16} />
+                                </button>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <div>
-                                {parseFloat(product.regularPrice) > parseFloat(product.salePrice) && (
-                                    <span className="text-sm line-through text-slate-500">${parseFloat(product.regularPrice).toFixed(2)}</span>
-                                )}
-                                <span className="font-bold ml-2">${parseFloat(product.salePrice).toFixed(2)}</span>
+                        <div className="editable-card__content !p-4">
+                            <div className="flex justify-between items-baseline">
+                                <span className="text-sm text-[rgb(var(--color-text-muted-rgb))]">Price</span>
+                                <div className="text-right">
+                                    {parseFloat(product.regularPrice) > parseFloat(product.salePrice) && (
+                                        <span className="text-base line-through text-[rgb(var(--color-text-muted-rgb))]">${parseFloat(product.regularPrice).toFixed(2)}</span>
+                                    )}
+                                    <span className="font-bold text-2xl text-[rgb(var(--color-text-strong-rgb))] ml-2">${parseFloat(product.salePrice).toFixed(2)}</span>
+                                </div>
                             </div>
-                            <button onClick={() => handleOpenEditor(product)} className="p-2 rounded-full hover:bg-[rgb(var(--color-border-rgb))]">
-                                <Edit size={16} />
-                            </button>
-                            <button onClick={() => handleDeleteProduct(product)} className="p-2 rounded-full text-red-500 hover:bg-red-100" title="Delete Product">
-                                <Trash2 size={16} />
-                            </button>
                         </div>
                     </div>
                 ))}
@@ -663,8 +670,8 @@ const ProductCustomizer: FC = () => {
                         isSaving={isBulkSaving}
                     />
                  )}
-                <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-lg font-bold">{title}</h3>
+                <div className="flex justify-between items-center mb-4">
+                     <h3 className="text-lg font-bold">{title} ({products.length})</h3>
                     <button 
                         onClick={() => canCreateNew && setProductToEdit({ type: activeTab })} 
                         className={`flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600 ${!canCreateNew ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -676,9 +683,11 @@ const ProductCustomizer: FC = () => {
                 </div>
                 
                  {products.length > 0 && (
-                    <div className="flex items-center p-2 mb-2">
-                        <input type="checkbox" onChange={(e) => handleSelectAll(e, products)} checked={isAllSelected} className="h-4 w-4 mr-4"/>
-                        <span className="font-semibold text-sm">Select All</span>
+                     <div className="flex items-center p-2 mb-4 border-b border-[rgb(var(--color-border-rgb))]">
+                        <label className="flex items-center gap-4 cursor-pointer">
+                            <input type="checkbox" onChange={(e) => handleSelectAll(e, products)} checked={isAllSelected} className="h-4 w-4 rounded text-[rgb(var(--color-primary-rgb))] focus:ring-[rgb(var(--color-primary-rgb))]"/>
+                            <span className="font-semibold text-sm">Select All ({selectedSkus.length} / {products.length})</span>
+                        </label>
                     </div>
                 )}
 
