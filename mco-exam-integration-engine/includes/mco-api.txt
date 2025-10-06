@@ -840,6 +840,9 @@ function mco_api_admin_update_exam_program(WP_REST_Request $request) {
     if (isset($update_payload['cert_name_override'])) {
         update_post_meta($post_id, '_mco_cert_exam_title_override', sanitize_text_field($update_payload['cert_name_override']));
     }
+    if (isset($update_payload['cert_productSku'])) {
+        update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($update_payload['cert_productSku']));
+    }
 
 
     if (isset($update_payload['practice_numberOfQuestions'])) {

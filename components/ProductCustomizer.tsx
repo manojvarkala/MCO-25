@@ -560,14 +560,13 @@ const ProductCustomizer: FC = () => {
     };
     
     const handleSelectOne = (skuToToggle: string) => {
-        setSelectedSkus(prevSkus => {
-            const newSet = new Set(prevSkus);
-            if (newSet.has(skuToToggle)) {
-                newSet.delete(skuToToggle);
+        setSelectedSkus(prev => {
+            const isSelected = prev.includes(skuToToggle);
+            if (isSelected) {
+                return prev.filter(sku => sku !== skuToToggle);
             } else {
-                newSet.add(skuToToggle);
+                return [...prev, skuToToggle];
             }
-            return Array.from(newSet);
         });
     };
 

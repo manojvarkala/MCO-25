@@ -389,7 +389,6 @@ export const googleSheetsService = {
         }
     },
 
-// FIX: Update return type to include examPrices to match API response and usage in components.
     adminUpdateExamProgram: async (token: string, programId: string, updateData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
         try {
             return await apiFetch('/admin/update-exam-program', 'POST', token, { programId, updateData });
