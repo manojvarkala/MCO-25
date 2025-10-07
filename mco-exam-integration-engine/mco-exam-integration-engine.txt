@@ -91,6 +91,8 @@ if (!function_exists('mco_exam_engine_activate')) {
     function mco_exam_engine_activate() {
         mco_register_custom_post_types();
         flush_rewrite_rules();
+        // Also clear the config transient to prevent issues with stale data after an update.
+        delete_transient('mco_app_config_data');
     }
     register_activation_hook(MCO_PLUGIN_FILE, 'mco_exam_engine_activate');
 }
