@@ -113,7 +113,15 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [isWheelModalOpen, setWheelModalOpen] = useState(false);
   const [inProgressExam, setInProgressExam] = useState<InProgressExamInfo | null>(null);
   const [examPrices, setExamPrices] = useState<{ [key: string]: any } | null>(null);
-  const [hitCount, setHitCount] = useState<number | null>(null);
+  
+  const [hitCount, setHitCount] = useState<number | null>(() => {
+    try {
+        const storedCount = sessionStorage.getItem('mco_site_hit_count');
+        return storedCount ? parseInt(storedCount, 10) : null;
+    } catch {
+        return null;
+    }
+  });
 
   // Theme state
   const [availableThemes, setAvailableThemes] = useState<Theme[]>([]);
@@ -212,34 +220,29 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     loadAppConfig();
   }, []);
 
-  // Effect to record a site hit once per session and display the count
+  // Effect to record a site hit once per session.
   useEffect(() => {
-    const manageHitCounter = async () => {
-        const hitCountedInSession = sessionStorage.getItem('mco_hit_counted');
-        const storedCount = sessionStorage.getItem('mco_site_hit_count');
+    const hitCountedInSession = sessionStorage.getItem('mco_hit_counted');
 
-        if (hitCountedInSession && storedCount) {
-            // Already counted and we have the count, just display it.
-            setHitCount(parseInt(storedCount, 10));
-            return;
-        }
-
-        // If not counted yet, call the API to increment and fetch.
-        try {
-            const data = await googleSheetsService.recordSiteHit();
-            if (data && data.count) {
-                const newCount = data.count;
-                setHitCount(newCount);
-                sessionStorage.setItem('mco_hit_counted', 'true');
-                sessionStorage.setItem('mco_site_hit_count', newCount.toString());
+    if (!hitCountedInSession) {
+        // If not counted yet for this session, call the API.
+        const recordHit = async () => {
+            try {
+                const data = await googleSheetsService.recordSiteHit();
+                if (data && data.count) {
+                    const newCount = data.count;
+                    setHitCount(newCount); // Update state with the new count from API
+                    sessionStorage.setItem('mco_hit_counted', 'true');
+                    sessionStorage.setItem('mco_site_hit_count', newCount.toString());
+                }
+            } catch (error) {
+                console.error("Could not record or fetch site hit:", error);
             }
-        } catch (error) {
-            console.error("Could not record or fetch site hit:", error);
-        }
-    };
+        };
 
-    manageHitCounter();
-  }, []);
+        recordHit();
+    }
+  }, []); // Empty dependency array ensures this runs only once per app load.
 
 
   // Effect 2: Check for in-progress exams when user logs in or active org changes.
