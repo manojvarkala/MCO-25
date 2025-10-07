@@ -25,8 +25,8 @@ const Login: FC = () => {
         if (token) {
             loginWithToken(token, isSyncLogin)
                 .then(() => {
-                    // Toasts are now handled inside loginWithToken. Navigate on completion.
-                    navigate(redirectTo, { replace: true });
+                    // Toasts are handled inside loginWithToken.
+                    // Navigation is now handled by App.tsx to avoid race conditions.
                 })
                 .catch((e: any) => {
                     // This catch only handles critical token validation errors.
