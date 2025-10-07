@@ -12,33 +12,8 @@ if (!function_exists('mco_register_admin_hooks')) {
         add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta_data');
         add_filter('manage_mco_exam_program_posts_columns', 'mco_add_exam_program_columns');
         add_action('manage_mco_exam_program_posts_custom_column', 'mco_display_exam_program_columns', 10, 2);
-        
-        // CRITICAL FIX: Conditionally add the title filter only on the correct admin screen
-        // to prevent fatal errors in other parts of the admin area.
-        add_action('current_screen', 'mco_conditionally_add_title_filter');
     }
 }
-
-// New function to add the title filter only when needed.
-if (!function_exists('mco_conditionally_add_title_filter')) {
-    function mco_conditionally_add_title_filter($current_screen) {
-        if (isset($current_screen->id) && $current_screen->id === 'edit-mco_exam_program') {
-            add_filter('the_title', 'mco_strip_tags_from_admin_title', 10, 2);
-        }
-    }
-}
-
-// Updated function to strip tags from the title.
-if (!function_exists('mco_strip_tags_from_admin_title')) {
-    function mco_strip_tags_from_admin_title($title, $id = null) {
-        // The filter is now added conditionally, but this check provides an extra layer of safety.
-        if (is_admin() && $id && get_post_type($id) === 'mco_exam_program') {
-            return wp_strip_all_tags($title);
-        }
-        return $title;
-    }
-}
-
 
 // --- EXAM PROGRAM CPT META BOX ---
 
@@ -789,24 +764,71 @@ function mco_run_sheet_url_test($sheet_url) {
 
 if (!function_exists('mco_add_exam_program_columns')) {
     function mco_add_exam_program_columns($columns) {
-        $new_columns = [];
-        foreach ($columns as $key => $title) {
-            $new_columns[$key] = $title;
-            if ($key === 'title') {
-                $new_columns['_mco_certification_exam_sku'] = 'Certification SKU';
-                $new_columns['exam_practice_questions'] = 'Practice Qs';
-                $new_columns['exam_cert_questions'] = 'Cert Qs';
-                $new_columns['exam_pass_score'] = 'Pass Score';
-                $new_columns['_mco_is_proctored'] = 'Proctored';
-            }
-        }
-        return $new_columns;
+        // Keep checkbox, create new title column, then merge others
+        $new_columns = [
+            'cb' => $columns['cb'],
+            'program_title' => __('Title'),
+        ];
+
+        // Remove old title and cb to prevent duplication
+        unset($columns['cb']);
+        unset($columns['title']);
+        
+        // Add our custom columns after the new title
+        $custom_cols_after_title = [
+            '_mco_certification_exam_sku' => 'Certification SKU',
+            'exam_practice_questions' => 'Practice Qs',
+            'exam_cert_questions' => 'Cert Qs',
+            'exam_pass_score' => 'Pass Score',
+            '_mco_is_proctored' => 'Proctored',
+        ];
+
+        return array_merge($new_columns, $custom_cols_after_title, $columns);
     }
 }
 
 if (!function_exists('mco_display_exam_program_columns')) {
     function mco_display_exam_program_columns($column_name, $post_id) {
         switch ($column_name) {
+            case 'program_title':
+                $post = get_post($post_id);
+                $title = strip_tags(get_the_title($post_id));
+                $can_edit_post = current_user_can('edit_post', $post->ID);
+
+                echo '<strong>';
+                if ($can_edit_post && $post->post_status != 'trash') {
+                    echo '<a class="row-title" href="' . esc_url(get_edit_post_link($post->ID)) . '">' . esc_html($title) . '</a>';
+                } else {
+                    echo esc_html($title);
+                }
+                echo '</strong>';
+
+                $actions = [];
+                if ($can_edit_post && 'trash' != $post->post_status) {
+                    $actions['edit'] = '<a href="' . get_edit_post_link($post->ID) . '">' . __('Edit') . '</a>';
+                    $actions['inline hide-if-no-js'] = '<button type="button" class="button-link editinline" aria-label="' . esc_attr(sprintf(__('Quick edit &#8220;%s&#8221; inline'), $post->post_title)) . '">' . __('Quick&nbsp;Edit') . '</button>';
+                }
+                if (current_user_can('delete_post', $post->ID)) {
+                    if ('trash' == $post->post_status) {
+                        $actions['untrash'] = '<a href="' . wp_nonce_url(admin_url(sprintf('post.php?post=%d&action=untrash', $post->ID)), 'untrash-post_' . $post->ID) . '">' . __('Restore') . '</a>';
+                        $actions['delete'] = '<a href="' . get_delete_post_link($post->ID, '', true) . '">' . __('Delete Permanently') . '</a>';
+                    } else {
+                        $actions['trash'] = '<a href="' . get_delete_post_link($post->ID) . '" class="submitdelete">' . __('Trash') . '</a>';
+                    }
+                }
+                if ('publish' == $post->post_status && is_post_type_viewable(get_post_type_object($post->post_type))) {
+                    $actions['view'] = '<a href="' . get_permalink($post->ID) . '" rel="bookmark" >' . __('View') . '</a>';
+                }
+
+                if (!empty($actions)) {
+                    echo '<div class="row-actions">' . implode(' | ', $actions) . '</div>';
+                }
+                
+                // Needed for Quick Edit functionality to work
+                if (function_exists('get_inline_data')) {
+                    get_inline_data($post);
+                }
+                break;
             case '_mco_certification_exam_sku':
                 $sku = get_post_meta($post_id, '_mco_certification_exam_sku', true);
                 echo $sku ? esc_html($sku) : '—';

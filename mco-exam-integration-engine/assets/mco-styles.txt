@@ -219,25 +219,59 @@
     padding: 1rem;
     text-align: center;
     overflow: hidden;
+    background-image: linear-gradient(to bottom right, var(--grad-from, #f9fafb), var(--grad-to, #f3f4f6));
 }
-.mco-book-cover__title { font-weight: 700; font-size: 1.25rem; line-height: 1.2; margin: 0; }
-.mco-book-cover__subtitle { font-size: 0.875rem; opacity: 0.8; margin: 0.25rem 0 0 0; }
-.mco-book-cover__accent { width: 33.33%; height: 0.25rem; border-radius: 9999px; }
+.mco-book-cover--procedural::before,
+.mco-book-cover--procedural::after {
+    content: '';
+    position: absolute;
+    border-radius: 9999px;
+    opacity: 0.5;
+    background-color: var(--accent-color, #cbd5e1);
+    z-index: 1;
+}
+.mco-book-cover--procedural::before { /* top-left */
+    width: 6rem;
+    height: 6rem;
+    top: -3rem;
+    left: -2rem;
+}
+.mco-book-cover--procedural::after { /* bottom-right */
+    width: 8rem;
+    height: 8rem;
+    bottom: -2.5rem;
+    right: -2.5rem;
+}
+.mco-book-cover__title, .mco-book-cover__subtitle { 
+    margin: 0;
+    position: relative;
+    z-index: 2;
+}
+.mco-book-cover__title { font-weight: 700; font-size: 1.25rem; line-height: 1.2; }
+.mco-book-cover__subtitle { font-size: 0.875rem; opacity: 0.8; margin-top: 0.25rem; }
+.mco-book-cover__accent {
+    width: 33.33%;
+    height: 0.25rem;
+    border-radius: 9999px;
+    background-color: var(--accent-color, #cbd5e1);
+    position: relative;
+    z-index: 2;
+}
 
-/* Gradients & Colors */
+/* Procedural Book Cover Colors (Light theme) */
+.mco-book-cover--color-0 { --grad-from: #fef2f2; --grad-to: #fee2e2; color: #7f1d1d; --accent-color: #fca5a5; } /* Red */
+.mco-book-cover--color-1 { --grad-from: #fefce8; --grad-to: #fef9c3; color: #713f12; --accent-color: #fcd34d; } /* Yellow */
+.mco-book-cover--color-2 { --grad-from: #f0fdf4; --grad-to: #dcfce7; color: #14532d; --accent-color: #86efac; } /* Green */
+.mco-book-cover--color-3 { --grad-from: #eff6ff; --grad-to: #dbeafe; color: #1e3a8a; --accent-color: #93c5fd; } /* Blue */
+.mco-book-cover--color-4 { --grad-from: #eef2ff; --grad-to: #e0e7ff; color: #312e81; --accent-color: #a5b4fc; } /* Indigo */
+.mco-book-cover--color-5 { --grad-from: #faf5ff; --grad-to: #f3e8ff; color: #581c87; --accent-color: #d8b4fe; } /* Purple */
+.mco-book-cover--color-6 { --grad-from: #fdf2f8; --grad-to: #fce7f3; color: #831843; --accent-color: #f9a8d4; } /* Pink */
+.mco-book-cover--color-7 { --grad-from: #f0fdfa; --grad-to: #ccfbf1; color: #0f766e; --accent-color: #5eead4; } /* Teal */
+.mco-book-cover--color-8 { --grad-from: #fff7ed; --grad-to: #ffedd5; color: #7c2d12; --accent-color: #fdba74; } /* Orange */
+
+
+/* Gradients & Colors for Exam Cards */
 .mco-gradient--practice-1 { background-image: linear-gradient(to bottom right, #38bdf8, #06b6d4); }
 .mco-gradient--practice-2 { background-image: linear-gradient(to bottom right, #34d399, #10b981); }
 .mco-gradient--cert-1 { background-image: linear-gradient(to bottom right, #6366f1, #8b5cf6); }
 .mco-gradient--cert-2 { background-image: linear-gradient(to bottom right, #f43f5e, #ec4899); }
-
-/* Procedural Book Cover Colors (Light theme) */
-.mco-book-cover--color-0 { background-color: #fef2f2; color: #7f1d1d; }
-.mco-book-cover--color-0 .mco-book-cover__accent { background-color: #fca5a5; }
-.mco-book-cover--color-1 { background-color: #fefce8; color: #713f12; }
-.mco-book-cover--color-1 .mco-book-cover__accent { background-color: #fcd34d; }
-.mco-book-cover--color-2 { background-color: #f0fdf4; color: #14532d; }
-.mco-book-cover--color-2 .mco-book-cover__accent { background-color: #86efac; }
-.mco-book-cover--color-3 { background-color: #eff6ff; color: #1e3a8a; }
-.mco-book-cover--color-3 .mco-book-cover__accent { background-color: #93c5fd; }
-.mco-book-cover--color-4 { background-color: #f5f3ff; color: #4c1d95; }
-.mco-book-cover--color-4 .mco-book-cover__accent { background-color: #c4b5fd; }
