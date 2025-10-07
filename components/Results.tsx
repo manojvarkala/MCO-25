@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useState, useMemo, useRef } from 'react';
+import React, { FC, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -7,7 +7,7 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, Sparkles, Star, XCircle, BookOpen, AlertTriangle, Share2 } from 'lucide-react';
+import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, Sparkles, Star, XCircle, BookOpen, AlertTriangle, Share2, Twitter, Linkedin, Facebook } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
@@ -72,6 +72,13 @@ const Results: FC = () => {
     
     const [isGeneratingShareImage, setIsGeneratingShareImage] = useState(false);
     const shareableResultRef = useRef<HTMLDivElement>(null);
+    const [canNativeShare, setCanNativeShare] = useState(false);
+
+    useEffect(() => {
+        if (navigator.share) {
+            setCanNativeShare(true);
+        }
+    }, []);
 
     useEffect(() => {
         if (user && testId && activeOrg) {
@@ -124,16 +131,16 @@ const Results: FC = () => {
         if (!exam || !result || !isPassed || !exam.certificateEnabled) {
             return 'NONE';
         }
-    
-        // This logic is now purely for the regular user's experience. Admins have a separate override.
+        if (isEffectivelyAdmin) {
+            return 'ADMIN_OVERRIDE';
+        }
         const requiresReview = exam.isProctored && result.proctoringViolations && result.proctoringViolations > 0;
         return requiresReview ? 'REVIEW_PENDING' : 'USER_EARNED';
-    }, [exam, result, isPassed]);
+    }, [exam, result, isPassed, isEffectivelyAdmin]);
     
     const canGetAIFeedback = useMemo(() => {
         if (!exam || !result || isPassed) return false;
         if (isSubscribed) return true;
-        // For non-subscribers, allow if they purchased the exam and haven't passed it yet.
         return paidExamIds.includes(exam.productSku);
     }, [exam, result, isPassed, isSubscribed, paidExamIds]);
 
@@ -210,7 +217,7 @@ const Results: FC = () => {
                 head: [['Personalized Feedback']],
                 body: splitText.map((line: string) => [line]),
                 theme: 'grid',
-                headStyles: { fillColor: [8, 145, 178] }, // cyan-600
+                headStyles: { fillColor: [8, 145, 178] },
                 styles: { cellPadding: 3, fontSize: 10 },
             });
             doc.save(`AI-Study-Guide-${exam.name.replace(/\s+/g, '_')}.pdf`);
@@ -223,10 +230,7 @@ const Results: FC = () => {
     
     const handleReviewSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (rating === 0) {
-            toast.error("Please select a star rating.");
-            return;
-        }
+        if (rating === 0) { toast.error("Please select a star rating."); return; }
         if (!token || !exam) return;
         setIsSubmittingReview(true);
         try {
@@ -240,10 +244,10 @@ const Results: FC = () => {
         }
     };
 
-    const handleShare = async () => {
-        if (!shareableResultRef.current || !exam || !result || !user) {
-            toast.error("Could not generate shareable image.");
-            return;
+    const generateImageBlob = useCallback(async (): Promise<Blob | null> => {
+        if (!shareableResultRef.current) {
+            toast.error("Could not generate shareable image component.");
+            return null;
         }
         setIsGeneratingShareImage(true);
         const toastId = toast.loading('Generating your shareable image...');
@@ -255,47 +259,101 @@ const Results: FC = () => {
                 backgroundColor: null,
                 logging: false,
             });
-    
-            canvas.toBlob(async (blob) => {
-                if (!blob) {
-                    toast.error("Failed to create image.", { id: toastId });
-                    setIsGeneratingShareImage(false);
-                    return;
-                }
-    
-                const file = new File([blob], 'annapoorna-exam-result.png', { type: 'image/png' });
-                const shareData = {
-                    title: `I passed the ${exam.name}!`,
-                    text: `I'm proud to announce I've passed the ${exam.name} with a score of ${result.score}%!`,
-                    files: [file],
-                };
-    
-                if (navigator.canShare && navigator.canShare(shareData)) {
-                    try {
-                        await navigator.share(shareData);
-                        toast.success("Result shared!", { id: toastId });
-                    } catch (error) {
-                        // This error is often thrown when the user closes the share dialog, so we don't show an error toast.
-                        console.log("Share cancelled or failed", error);
-                        toast.dismiss(toastId);
-                    }
-                } else {
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = 'exam-result.png';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(link.href);
-                    toast.success("Image downloaded! You can now share it on social media.", { id: toastId });
-                }
-                setIsGeneratingShareImage(false);
-            }, 'image/png');
+            const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+            toast.dismiss(toastId);
+            if (!blob) {
+                toast.error("Failed to create image from canvas.");
+                return null;
+            }
+            return blob;
         } catch (error) {
-            console.error(error);
+            console.error("html2canvas error:", error);
             toast.error("Could not generate image.", { id: toastId });
+            return null;
+        } finally {
             setIsGeneratingShareImage(false);
         }
+    }, [shareableResultRef, user, exam, result]);
+
+    const handleMobileShare = async () => {
+        if (!exam || !result || isGeneratingShareImage) return;
+
+        const blob = await generateImageBlob();
+        if (!blob) return;
+
+        const file = new File([blob], 'annapoorna-exam-result.png', { type: 'image/png' });
+        const shareData = {
+            title: `I passed the ${exam.name}!`,
+            text: `I'm proud to announce I've passed the ${exam.name} with a score of ${result.score}%!`,
+            files: [file],
+        };
+
+        if (navigator.canShare && navigator.canShare(shareData)) {
+            try {
+                await navigator.share(shareData);
+                toast.success("Result shared!");
+            } catch (error) {
+                console.log("Share cancelled or failed", error);
+            }
+        }
+    };
+
+    const DesktopShareButtons: FC = () => {
+        // FIX: Replaced undefined `organization` with `activeOrg` from component scope.
+        if (!exam || !result || !activeOrg) return null;
+
+        const handleDownloadImage = async () => {
+            if (isGeneratingShareImage) return;
+            const blob = await generateImageBlob();
+            if (!blob) return;
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'exam-result.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+            toast.success("Image downloaded! You can now attach it to your post.");
+        };
+
+        // FIX: Replaced undefined `organization` with `activeOrg` from component scope.
+        const shareText = `I'm proud to announce I've passed the ${exam.name} with a score of ${result.score}%! Thanks to ${activeOrg.name}.`;
+        // FIX: Replaced undefined `organization` with `activeOrg` from component scope.
+        const shareUrl = `https://www.${activeOrg.website}`;
+
+        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+        const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+        const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+
+        return (
+            <div className="bg-white p-6 rounded-xl shadow-md">
+                <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><Share2 className="mr-3 text-cyan-500" /> Share Your Achievement</h3>
+                <div className="space-y-3">
+                    <p className="text-sm text-center text-slate-600"><strong>Step 1:</strong> Download your personalized result image.</p>
+                    <button
+                        onClick={handleDownloadImage}
+                        disabled={isGeneratingShareImage}
+                        className="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold py-2 px-4 rounded-lg transition disabled:bg-slate-400"
+                    >
+                        {isGeneratingShareImage ? <Spinner size="sm" /> : <Download size={16} />}
+                        {isGeneratingShareImage ? 'Generating...' : 'Download Result Image'}
+                    </button>
+                    <p className="text-sm text-center text-slate-600 pt-2"><strong>Step 2:</strong> Share it on your favorite platform!</p>
+                    <div className="grid grid-cols-3 gap-2">
+                        <a href={twitterUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#1DA1F2] hover:bg-[#1A91DA] text-white font-semibold py-2 px-3 rounded-lg transition">
+                            <Twitter size={16} /> X
+                        </a>
+                        <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#0A66C2] hover:bg-[#004182] text-white font-semibold py-2 px-3 rounded-lg transition">
+                            <Linkedin size={16} /> LinkedIn
+                        </a>
+                        <a href={facebookUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#1877F2] hover:bg-[#166FE5] text-white font-semibold py-2 px-3 rounded-lg transition">
+                            <Facebook size={16} /> Facebook
+                        </a>
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     const reviewAlreadySubmitted = sessionStorage.getItem(reviewSubmittedKey) === 'true';
@@ -321,16 +379,13 @@ const Results: FC = () => {
     return (
         <>
         <div className="max-w-4xl mx-auto space-y-8">
-            {/* Header */}
             <div className={`p-8 rounded-xl text-white text-center shadow-lg ${isPassed ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-red-500 to-rose-600'}`}>
                 {isPassed ? <CheckCircle className="mx-auto h-16 w-16" /> : <XCircle className="mx-auto h-16 w-16" />}
                 <h1 className="text-4xl font-extrabold mt-4">{exam.name}</h1>
                 <p className="text-2xl mt-2">{isPassed ? 'Congratulations, You Passed!' : 'Further Study Recommended'}</p>
             </div>
 
-            {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: Stats & Actions */}
                 <div className="lg:col-span-1 space-y-8">
                     <div className="bg-white p-6 rounded-xl shadow-md">
                         <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><BarChart2 className="mr-3 text-cyan-500" /> Your Score</h3>
@@ -345,43 +400,46 @@ const Results: FC = () => {
                         </div>
                     </div>
                     
-                    {isEffectivelyAdmin ? (
+                    {certificateVisibility === 'ADMIN_OVERRIDE' && (
                         <button 
                             onClick={() => navigate(`/certificate/${result.testId}`)} 
                             className="w-full text-sm flex items-center justify-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-4 rounded-lg"
                         >
                             <Award size={16} /> View Certificate (Admin)
                         </button>
-                    ) : (
-                        <>
-                            {certificateVisibility === 'USER_EARNED' && (
-                                <button 
-                                    onClick={() => navigate(`/certificate/${result.testId}`)} 
-                                    className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
-                                >
-                                    <Award size={20} /> Download Your Certificate
-                                </button>
-                            )}
-                            {certificateVisibility === 'REVIEW_PENDING' && (
-                                <div className="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-500 text-center">
-                                    <h4 className="font-bold text-amber-800">Provisional Pass</h4>
-                                     <p className="text-sm text-amber-700 mt-2">
-                                        Congratulations on passing! Your certificate will be issued following a standard integrity review within 24 hours due to proctoring flags during your session. You will be notified via email.
-                                    </p>
-                                </div>
-                            )}
-                        </>
+                    )}
+
+                    {certificateVisibility === 'USER_EARNED' && (
+                        <button 
+                            onClick={() => navigate(`/certificate/${result.testId}`)} 
+                            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
+                        >
+                            <Award size={20} /> Download Your Certificate
+                        </button>
+                    )}
+
+                    {certificateVisibility === 'REVIEW_PENDING' && (
+                        <div className="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-500 text-center">
+                            <h4 className="font-bold text-amber-800">Provisional Pass</h4>
+                             <p className="text-sm text-amber-700 mt-2">
+                                Congratulations on passing! Your certificate will be issued following a standard integrity review within 24 hours due to proctoring flags during your session. You will be notified via email.
+                            </p>
+                        </div>
                     )}
                     
                     {isPassed && (
-                        <button
-                            onClick={handleShare}
-                            disabled={isGeneratingShareImage}
-                            className="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:bg-slate-400"
-                        >
-                            {isGeneratingShareImage ? <Spinner /> : <Share2 size={20} />}
-                            {isGeneratingShareImage ? 'Generating...' : 'Share Your Result'}
-                        </button>
+                        canNativeShare ? (
+                            <button
+                                onClick={handleMobileShare}
+                                disabled={isGeneratingShareImage}
+                                className="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:bg-slate-400"
+                            >
+                                {isGeneratingShareImage ? <Spinner /> : <Share2 size={20} />}
+                                {isGeneratingShareImage ? 'Generating...' : 'Share Your Result'}
+                            </button>
+                        ) : (
+                            <DesktopShareButtons />
+                        )
                     )}
 
                     {!reviewAlreadySubmitted && (
@@ -410,7 +468,6 @@ const Results: FC = () => {
                     )}
                 </div>
                 
-                {/* Right Column: Feedback, Review, & Books */}
                 <div className="lg:col-span-2 space-y-8">
                     {canGetAIFeedback && (
                         <div className="bg-white p-6 rounded-xl shadow-md">
@@ -502,5 +559,6 @@ const Results: FC = () => {
         </>
     );
 };
+
 
 export default Results;
