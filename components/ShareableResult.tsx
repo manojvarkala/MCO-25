@@ -28,7 +28,7 @@ const ShareableResult: FC<ShareableResultProps> = ({ user, exam, result, organiz
     return (
         <div 
             style={{ width: '1200px', height: '630px' }} 
-            className="p-12 bg-gradient-to-br from-green-500 to-emerald-700 text-white font-main flex flex-col justify-between"
+            className="p-12 bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white font-main flex flex-col justify-between"
         >
             {/* Header */}
             <header className="flex justify-between items-start">
@@ -40,23 +40,23 @@ const ShareableResult: FC<ShareableResultProps> = ({ user, exam, result, organiz
                     </div>
                 </div>
                 <div className="text-right">
-                    <p className="text-lg font-semibold">Verification of Achievement</p>
+                    <p className="text-lg font-semibold text-cyan-400">Verification of Achievement</p>
                 </div>
             </header>
 
             {/* Main Content */}
             <main className="text-center">
                 <p className="text-2xl text-white/90">This is to certify that</p>
-                <h2 className="text-7xl font-script my-4 py-2">{user.name}</h2>
+                <h2 className="text-7xl font-script my-4 py-2 text-cyan-300">{user.name}</h2>
                 <p className="text-2xl text-white/90">has successfully passed the</p>
                 <h3 className="text-4xl font-bold mt-3">{exam.name}</h3>
-                <p className="text-2xl mt-4">with a score of <span className="font-bold">{result.score}%</span> on {date}</p>
+                <p className="text-2xl mt-4">with a score of <span className="font-bold text-yellow-300">{result.score}%</span> on {date}</p>
             </main>
 
             {/* Footer */}
             <footer className="flex justify-between items-end">
-                <div className="text-lg">
-                    An <a href={`https://annapoornainfo.com`} target="_blank" rel="noopener noreferrer" className="font-bold hover:underline">Annapoorna Infotech</a> Venture.
+                <div className="text-lg text-slate-400">
+                    An <a href={`https://annapoornainfo.com`} target="_blank" rel="noopener noreferrer" className="font-bold hover:underline text-slate-300">Annapoorna Infotech</a> Venture.
                 </div>
                 <Seal className="w-32 h-32" />
             </footer>

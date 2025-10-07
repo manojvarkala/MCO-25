@@ -121,18 +121,14 @@ const Results: FC = () => {
     }, [result, exam]);
 
     const certificateVisibility = useMemo((): CertVisibility => {
-        if (!exam || !result || !isPassed || exam.isPractice || !exam.certificateEnabled) {
+        if (!exam || !result || !isPassed || !exam.certificateEnabled) {
             return 'NONE';
         }
-
-        const requiresReview = result.proctoringViolations && result.proctoringViolations > 0;
-
-        if (isEffectivelyAdmin) {
-            return requiresReview ? 'REVIEW_PENDING' : 'USER_EARNED'; // Admins see review status but can override
-        }
-
+    
+        // This logic is now purely for the regular user's experience. Admins have a separate override.
+        const requiresReview = exam.isProctored && result.proctoringViolations && result.proctoringViolations > 0;
         return requiresReview ? 'REVIEW_PENDING' : 'USER_EARNED';
-    }, [exam, result, isPassed, isEffectivelyAdmin]);
+    }, [exam, result, isPassed]);
     
     const canGetAIFeedback = useMemo(() => {
         if (!exam || !result || isPassed) return false;
@@ -279,6 +275,7 @@ const Results: FC = () => {
                         await navigator.share(shareData);
                         toast.success("Result shared!", { id: toastId });
                     } catch (error) {
+                        // This error is often thrown when the user closes the share dialog, so we don't show an error toast.
                         console.log("Share cancelled or failed", error);
                         toast.dismiss(toastId);
                     }
@@ -348,39 +345,32 @@ const Results: FC = () => {
                         </div>
                     </div>
                     
-                    {certificateVisibility === 'USER_EARNED' && (
-                        isEffectivelyAdmin ? (
-                            <button 
-                                onClick={() => navigate(`/certificate/${result.testId}`)} 
-                                className="w-full text-sm flex items-center justify-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-4 rounded-lg"
-                            >
-                                <Award size={16} /> View Certificate (Admin)
-                            </button>
-                        ) : (
-                            <button 
-                                onClick={() => navigate(`/certificate/${result.testId}`)} 
-                                className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
-                            >
-                                <Award size={20} /> Download Your Certificate
-                            </button>
-                        )
-                    )}
-
-                    {certificateVisibility === 'REVIEW_PENDING' && (
-                        <div className="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-500 text-center">
-                            <h4 className="font-bold text-amber-800">Provisional Pass</h4>
-                             <p className="text-sm text-amber-700 mt-2">
-                                Congratulations on passing! Your certificate will be issued following a standard integrity review within 24 hours due to proctoring flags during your session. You will be notified via email.
-                            </p>
-                            {isEffectivelyAdmin && (
+                    {isEffectivelyAdmin ? (
+                        <button 
+                            onClick={() => navigate(`/certificate/${result.testId}`)} 
+                            className="w-full text-sm flex items-center justify-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-4 rounded-lg"
+                        >
+                            <Award size={16} /> View Certificate (Admin)
+                        </button>
+                    ) : (
+                        <>
+                            {certificateVisibility === 'USER_EARNED' && (
                                 <button 
                                     onClick={() => navigate(`/certificate/${result.testId}`)} 
-                                    className="mt-3 w-full text-xs flex items-center justify-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-4 rounded-lg"
+                                    className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
                                 >
-                                    <Award size={16} /> View Certificate (Admin)
+                                    <Award size={20} /> Download Your Certificate
                                 </button>
                             )}
-                        </div>
+                            {certificateVisibility === 'REVIEW_PENDING' && (
+                                <div className="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-500 text-center">
+                                    <h4 className="font-bold text-amber-800">Provisional Pass</h4>
+                                     <p className="text-sm text-amber-700 mt-2">
+                                        Congratulations on passing! Your certificate will be issued following a standard integrity review within 24 hours due to proctoring flags during your session. You will be notified via email.
+                                    </p>
+                                </div>
+                            )}
+                        </>
                     )}
                     
                     {isPassed && (
