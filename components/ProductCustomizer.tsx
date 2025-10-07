@@ -449,6 +449,10 @@ const ProductCustomizer: FC = () => {
         const bundles: ProductVariation[] = [];
         
         Object.values(examPrices).forEach((priceData: any) => {
+            if (!priceData || typeof priceData !== 'object') {
+                console.warn('Skipping invalid product data entry in examPrices:', priceData);
+                return; // Skip this entry
+            }
             const product: ProductVariation = {
                 id: priceData.productId?.toString() || priceData.sku,
                 sku: priceData.sku,
@@ -465,7 +469,7 @@ const ProductCustomizer: FC = () => {
             if (product.isBundle) {
                 product.type = 'bundle';
                 bundles.push(product);
-            } else if (priceData.type === 'subscription' || priceData.type === 'variable-subscription' || product.sku.startsWith('sub-')) {
+            } else if (priceData.type === 'subscription' || priceData.type === 'variable-subscription' || (product.sku && product.sku.startsWith('sub-'))) {
                 product.type = 'subscription';
                 subs.push(product);
             } else {
@@ -474,7 +478,7 @@ const ProductCustomizer: FC = () => {
             }
         });
         
-        const sortByName = (a: ProductVariation, b: ProductVariation) => a.name.localeCompare(b.name);
+        const sortByName = (a: ProductVariation, b: ProductVariation) => (a.name || '').localeCompare(b.name || '');
 
         return { 
             allProducts: all.sort(sortByName), 

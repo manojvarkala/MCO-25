@@ -5,7 +5,7 @@ if (!defined('ABSPATH')) exit;
 // Prevent duplicate plugin activation errors. This runs on every admin page load.
 if (!function_exists('mco_is_plugin_already_active')) {
     function mco_is_plugin_already_active() {
-        if (is_admin() && current_user_can('activate_plugins') && is_plugin_active(plugin_basename(__FILE__))) {
+        if (is_admin() && current_user_can('activate_plugins') && function_exists('is_plugin_active') && is_plugin_active(plugin_basename(__FILE__))) {
             $plugins = get_option('active_plugins');
             $this_plugin_path = plugin_basename(__FILE__);
             $this_plugin_dir = dirname($this_plugin_path);
