@@ -1,6 +1,6 @@
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
-import { Navigate, useLocation, Routes, Route, BrowserRouter, Outlet, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, Routes, Route, BrowserRouter, Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
@@ -61,22 +61,19 @@ const AppContent: FC = () => {
     const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed, isMasquerading } = useAuth();
     const { isWheelModalOpen, setWheelModalOpen, activeOrg, activeTheme } = useAppContext();
     const location = useLocation();
-    const navigate = useNavigate();
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
     
+    // This is the correct, idiomatic way to handle post-login redirects in React Router v6.
+    // It checks on every render. If the user is logged in and they are on the /auth page,
+    // it immediately navigates them to the dashboard, avoiding useEffect race conditions.
+    if (user && location.pathname === '/auth') {
+        return <Navigate to="/dashboard" replace />;
+    }
+
     const isTestPage = location.pathname.startsWith('/test/');
     const isAdminPage = location.pathname.startsWith('/admin');
 
     const mainLayoutComponent = isAdminPage ? <Outlet /> : <SidebarLayout><Outlet /></SidebarLayout>;
-
-    useEffect(() => {
-        // After a successful login, the user object is populated. If we're still on the /auth page,
-        // it means the login process has just completed, and we should redirect to the dashboard.
-        // This avoids a race condition where the navigation happens before the user state is updated.
-        if (user && location.pathname === '/auth') {
-            navigate('/dashboard', { replace: true });
-        }
-    }, [user, location.pathname, navigate]);
 
     useEffect(() => {
         if (activeTheme) {

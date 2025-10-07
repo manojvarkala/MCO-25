@@ -8,40 +8,38 @@ import toast from 'react-hot-toast';
 const Login: FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, loginWithToken } = useAuth();
+    const { loginWithToken } = useAuth();
     const hasProcessed = useRef(false);
 
     useEffect(() => {
+        // This effect should only run once when the component mounts.
         if (hasProcessed.current) return;
         hasProcessed.current = true;
 
         const searchParams = new URLSearchParams(location.search);
         const token = searchParams.get('token');
-        const redirectTo = searchParams.get('redirect_to') || '/dashboard';
-
-        // Check if a user is already logged in to determine the context of the login action.
-        const isSyncLogin = !!user;
 
         if (token) {
+            // A user is attempting to log in with a token.
+            // We check localStorage to see if they were already logged in, which indicates a sync vs a fresh login.
+            const isSyncLogin = !!localStorage.getItem('examUser');
+
             loginWithToken(token, isSyncLogin)
-                .then(() => {
-                    // Toasts are handled inside loginWithToken.
-                    // Navigation is now handled by App.tsx to avoid race conditions.
-                })
                 .catch((e: any) => {
-                    // This catch only handles critical token validation errors.
+                    // This catch handles critical token validation errors from AuthContext.
                     const errorMessage = e.message || 'Invalid login token. Please try again.';
                     toast.error(errorMessage);
                     navigate('/', { replace: true });
                 });
-        } 
-        else if (user) {
-            navigate(redirectTo, { replace: true });
-        } 
-        else {
+        } else {
+            // No token found in the URL. This page shouldn't be accessed directly.
+            // Redirect to the landing page. The LandingPage component will handle
+            // redirecting to the dashboard if a user is already logged in.
             navigate('/', { replace: true });
         }
-    }, [user, location.search, loginWithToken, navigate]);
+        // The navigation logic is now handled reactively by the App component,
+        // so this component's only job is to start the login process.
+    }, [location.search, loginWithToken, navigate]);
 
     // This component's primary job is to process and redirect.
     // It will show a loading screen for the brief moment it's mounted.
