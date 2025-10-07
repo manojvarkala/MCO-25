@@ -229,6 +229,7 @@ function mco_exam_showcase_shortcode() {
             echo '</div>';
         }
         
+        
         // Certification Exam Card
         if ($cert_product) {
             echo '<div class="mco-card ' . esc_attr($cert_gradients[$index % count($cert_gradients)]) . '">';

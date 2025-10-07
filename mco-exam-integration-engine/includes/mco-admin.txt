@@ -819,6 +819,7 @@ if (!function_exists('mco_display_exam_program_columns')) {
                 if ('publish' == $post->post_status && is_post_type_viewable(get_post_type_object($post->post_type))) {
                     $actions['view'] = '<a href="' . get_permalink($post->ID) . '" rel="bookmark" >' . __('View') . '</a>';
                 }
+                
 
                 if (!empty($actions)) {
                     echo '<div class="row-actions">' . implode(' | ', $actions) . '</div>';
