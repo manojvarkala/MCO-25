@@ -441,13 +441,15 @@ if (!function_exists('mco_display_exam_program_columns')) {
             case 'program_title':
                 $title = wp_strip_all_tags(get_the_title($post_id));
                 echo '<strong><a class="row-title" href="' . get_edit_post_link($post_id) . '">' . esc_html($title) . '</a></strong>';
+                
+                // Manually recreate the row actions
                 $post = get_post($post_id);
                 $post_type_object = get_post_type_object($post->post_type);
                 $can_edit_post = current_user_can('edit_post', $post->ID);
+                
                 $actions = array();
                 if ($can_edit_post && 'trash' != $post->post_status) {
                     $actions['edit'] = sprintf('<a href="%s">%s</a>', get_edit_post_link($post->ID), __('Edit'));
-                    $actions['inline hide-if-no-js'] = sprintf('<button type="button" class="button-link editinline" aria-label="%s">%s</button>', esc_attr(sprintf(__('Quick edit &#8220;%s&#8221; inline'), $title)), __('Quick&nbsp;Edit'));
                 }
                 if (current_user_can('delete_post', $post->ID)) {
                     if ('trash' == $post->post_status) {
@@ -457,16 +459,10 @@ if (!function_exists('mco_display_exam_program_columns')) {
                         $actions['trash'] = sprintf('<a href="%s" class="submitdelete">%s</a>', get_delete_post_link($post->ID), __('Trash'));
                     }
                 }
-                if (is_post_type_viewable($post_type_object)) {
-                    if (in_array($post->post_status, array('pending', 'draft', 'future'))) {
-                        if ($can_edit_post) {
-                            $preview_link = get_preview_post_link($post);
-                            $actions['view'] = sprintf('<a href="%s" rel="bookmark" aria-label="%s">%s</a>', esc_url($preview_link), esc_attr(sprintf(__('Preview &#8220;%s&#8221;'), $title)), __('Preview'));
-                        }
-                    } elseif ('trash' != $post->post_status) {
-                        $actions['view'] = sprintf('<a href="%s" rel="bookmark" aria-label="%s">%s</a>', get_permalink($post->ID), esc_attr(sprintf(__('View &#8220;%s&#8221;'), $title)), __('View'));
-                    }
+                if (is_post_type_viewable($post_type_object) && 'trash' != $post->post_status) {
+                    $actions['view'] = sprintf('<a href="%s" rel="bookmark" aria-label="%s">%s</a>', get_permalink($post->ID), esc_attr(sprintf(__('View &#8220;%s&#8221;'), $title)), __('View'));
                 }
+
                 echo '<div class="row-actions">' . implode(' | ', $actions) . '</div>';
                 break;
             case '_mco_certification_exam_sku':
