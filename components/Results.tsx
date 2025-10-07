@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useState, useMemo } from 'react';
+import React, { FC, useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -7,10 +7,12 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, Sparkles, Star, XCircle, BookOpen, AlertTriangle } from 'lucide-react';
+import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, Sparkles, Star, XCircle, BookOpen, AlertTriangle, Share2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import BookCover from '../assets/BookCover.tsx';
+import ShareableResult from './ShareableResult.tsx';
 
 type CertVisibility = 'NONE' | 'USER_EARNED' | 'ADMIN_OVERRIDE' | 'REVIEW_PENDING';
 
@@ -67,6 +69,9 @@ const Results: FC = () => {
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
     const [expandedQuestion, setExpandedQuestion] = useState<number | null>(null);
     const reviewSubmittedKey = `review_submitted_${testId}`;
+    
+    const [isGeneratingShareImage, setIsGeneratingShareImage] = useState(false);
+    const shareableResultRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (user && testId && activeOrg) {
@@ -239,6 +244,63 @@ const Results: FC = () => {
         }
     };
 
+    const handleShare = async () => {
+        if (!shareableResultRef.current || !exam || !result || !user) {
+            toast.error("Could not generate shareable image.");
+            return;
+        }
+        setIsGeneratingShareImage(true);
+        const toastId = toast.loading('Generating your shareable image...');
+    
+        try {
+            const canvas = await html2canvas(shareableResultRef.current, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: null,
+                logging: false,
+            });
+    
+            canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    toast.error("Failed to create image.", { id: toastId });
+                    setIsGeneratingShareImage(false);
+                    return;
+                }
+    
+                const file = new File([blob], 'annapoorna-exam-result.png', { type: 'image/png' });
+                const shareData = {
+                    title: `I passed the ${exam.name}!`,
+                    text: `I'm proud to announce I've passed the ${exam.name} with a score of ${result.score}%!`,
+                    files: [file],
+                };
+    
+                if (navigator.canShare && navigator.canShare(shareData)) {
+                    try {
+                        await navigator.share(shareData);
+                        toast.success("Result shared!", { id: toastId });
+                    } catch (error) {
+                        console.log("Share cancelled or failed", error);
+                        toast.dismiss(toastId);
+                    }
+                } else {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'exam-result.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
+                    toast.success("Image downloaded! You can now share it on social media.", { id: toastId });
+                }
+                setIsGeneratingShareImage(false);
+            }, 'image/png');
+        } catch (error) {
+            console.error(error);
+            toast.error("Could not generate image.", { id: toastId });
+            setIsGeneratingShareImage(false);
+        }
+    };
+
     const reviewAlreadySubmitted = sessionStorage.getItem(reviewSubmittedKey) === 'true';
 
     if (isLoading || !result || !exam) {
@@ -260,6 +322,7 @@ const Results: FC = () => {
     };
 
     return (
+        <>
         <div className="max-w-4xl mx-auto space-y-8">
             {/* Header */}
             <div className={`p-8 rounded-xl text-white text-center shadow-lg ${isPassed ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-red-500 to-rose-600'}`}>
@@ -286,12 +349,21 @@ const Results: FC = () => {
                     </div>
                     
                     {certificateVisibility === 'USER_EARNED' && (
-                        <button 
-                            onClick={() => navigate(`/certificate/${result.testId}`)} 
-                            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
-                        >
-                            <Award size={20} /> Download Your Certificate
-                        </button>
+                        isEffectivelyAdmin ? (
+                            <button 
+                                onClick={() => navigate(`/certificate/${result.testId}`)} 
+                                className="w-full text-sm flex items-center justify-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-4 rounded-lg"
+                            >
+                                <Award size={16} /> View Certificate (Admin)
+                            </button>
+                        ) : (
+                            <button 
+                                onClick={() => navigate(`/certificate/${result.testId}`)} 
+                                className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
+                            >
+                                <Award size={20} /> Download Your Certificate
+                            </button>
+                        )
                     )}
 
                     {certificateVisibility === 'REVIEW_PENDING' && (
@@ -310,7 +382,17 @@ const Results: FC = () => {
                             )}
                         </div>
                     )}
-
+                    
+                    {isPassed && (
+                        <button
+                            onClick={handleShare}
+                            disabled={isGeneratingShareImage}
+                            className="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:bg-slate-400"
+                        >
+                            {isGeneratingShareImage ? <Spinner /> : <Share2 size={20} />}
+                            {isGeneratingShareImage ? 'Generating...' : 'Share Your Result'}
+                        </button>
+                    )}
 
                     {!reviewAlreadySubmitted && (
                          <div className="bg-white p-6 rounded-xl shadow-md">
@@ -417,6 +499,17 @@ const Results: FC = () => {
                 </div>
             </div>
         </div>
+        <div className="fixed -left-[9999px] top-0 pointer-events-none">
+            <div ref={shareableResultRef}>
+                <ShareableResult
+                    user={user}
+                    exam={exam}
+                    result={result}
+                    organization={activeOrg}
+                />
+            </div>
+        </div>
+        </>
     );
 };
 
