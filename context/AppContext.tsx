@@ -212,28 +212,33 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     loadAppConfig();
   }, []);
 
-  // Effect to record a site hit once per session
+  // Effect to record a site hit once per session and display the count
   useEffect(() => {
-    const recordHit = async () => {
-        const hitCounted = sessionStorage.getItem('mco_hit_counted');
-        if (hitCounted) {
-            // If already counted, we could fetch the latest count without incrementing,
-            // but for a simple hit counter, this is sufficient.
+    const manageHitCounter = async () => {
+        const hitCountedInSession = sessionStorage.getItem('mco_hit_counted');
+        const storedCount = sessionStorage.getItem('mco_site_hit_count');
+
+        if (hitCountedInSession && storedCount) {
+            // Already counted and we have the count, just display it.
+            setHitCount(parseInt(storedCount, 10));
             return;
         }
 
+        // If not counted yet, call the API to increment and fetch.
         try {
             const data = await googleSheetsService.recordSiteHit();
             if (data && data.count) {
-                setHitCount(data.count);
+                const newCount = data.count;
+                setHitCount(newCount);
                 sessionStorage.setItem('mco_hit_counted', 'true');
+                sessionStorage.setItem('mco_site_hit_count', newCount.toString());
             }
         } catch (error) {
-            console.error("Could not record site hit:", error);
+            console.error("Could not record or fetch site hit:", error);
         }
     };
 
-    recordHit();
+    manageHitCounter();
   }, []);
 
 

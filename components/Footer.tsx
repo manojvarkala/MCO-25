@@ -51,7 +51,7 @@ const Footer: FC = () => {
                     </span>
                 </p>
             </div>
-            
+
         )}
         <p className="mt-4">&copy; {new Date().getFullYear()} {activeOrg.name}. All Rights Reserved.</p>
         <p>An <a href="https://annapoornainfo.com" target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Annapoorna Infotech</a> Venture.</p>
@@ -59,5 +59,6 @@ const Footer: FC = () => {
     </footer>
   );
 };
+
 
 export default Footer;
