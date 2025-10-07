@@ -3,6 +3,7 @@ import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, Recom
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
 import { getTenantConfig, TenantConfig } from '../services/apiConfig.ts';
+import { googleSheetsService } from '../services/googleSheetsService.ts';
 
 interface AppContextType {
   organizations: Organization[];
@@ -21,6 +22,7 @@ interface AppContextType {
   availableThemes: Theme[];
   activeTheme: string;
   setActiveTheme: (themeId: string) => void;
+  hitCount: number | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -111,6 +113,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [isWheelModalOpen, setWheelModalOpen] = useState(false);
   const [inProgressExam, setInProgressExam] = useState<InProgressExamInfo | null>(null);
   const [examPrices, setExamPrices] = useState<{ [key: string]: any } | null>(null);
+  const [hitCount, setHitCount] = useState<number | null>(null);
 
   // Theme state
   const [availableThemes, setAvailableThemes] = useState<Theme[]>([]);
@@ -209,6 +212,30 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     loadAppConfig();
   }, []);
 
+  // Effect to record a site hit once per session
+  useEffect(() => {
+    const recordHit = async () => {
+        const hitCounted = sessionStorage.getItem('mco_hit_counted');
+        if (hitCounted) {
+            // If already counted, we could fetch the latest count without incrementing,
+            // but for a simple hit counter, this is sufficient.
+            return;
+        }
+
+        try {
+            const data = await googleSheetsService.recordSiteHit();
+            if (data && data.count) {
+                setHitCount(data.count);
+                sessionStorage.setItem('mco_hit_counted', 'true');
+            }
+        } catch (error) {
+            console.error("Could not record site hit:", error);
+        }
+    };
+
+    recordHit();
+  }, []);
+
 
   // Effect 2: Check for in-progress exams when user logs in or active org changes.
   useEffect(() => {
@@ -287,11 +314,12 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     suggestedBooks,
     availableThemes,
     activeTheme,
-    setActiveTheme
+    setActiveTheme,
+    hitCount
   }), [
     organizations, activeOrg, isInitializing, setActiveOrgById,
     updateActiveOrg, updateConfigData, updateExamInOrg, isWheelModalOpen, setWheelModalOpen, inProgressExam, examPrices, suggestedBooks,
-    availableThemes, activeTheme, setActiveTheme
+    availableThemes, activeTheme, setActiveTheme, hitCount
   ]);
 
   return (

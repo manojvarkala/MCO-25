@@ -2,10 +2,11 @@ import React, { FC } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
+import { Users } from 'lucide-react';
 
 const Footer: FC = () => {
   const { user } = useAuth();
-  const { activeOrg } = useAppContext();
+  const { activeOrg, hitCount } = useAppContext();
 
   if (!activeOrg) {
     return (
@@ -40,7 +41,19 @@ const Footer: FC = () => {
             <span className="text-slate-300">|</span>
             <Link to="/refund-policy" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Refund Policy</Link>
         </div>
-        <p>&copy; {new Date().getFullYear()} {activeOrg.name}. All Rights Reserved.</p>
+        {hitCount !== null && (
+            <div className="flex justify-center items-center gap-2 mt-4 text-slate-400">
+                <Users size={16} />
+                <p>
+                    Site Visitors: 
+                    <span className="font-bold text-slate-300 ml-1">
+                        {hitCount.toLocaleString()}
+                    </span>
+                </p>
+            </div>
+            
+        )}
+        <p className="mt-4">&copy; {new Date().getFullYear()} {activeOrg.name}. All Rights Reserved.</p>
         <p>An <a href="https://annapoornainfo.com" target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Annapoorna Infotech</a> Venture.</p>
       </div>
     </footer>

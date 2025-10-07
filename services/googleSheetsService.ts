@@ -73,6 +73,17 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
 };
 
 export const googleSheetsService = {
+    // --- SITE HIT COUNTER ---
+    recordSiteHit: async (): Promise<{ count: number }> => {
+        try {
+            // Public endpoint, so token is null.
+            return await apiFetch('/hit', 'POST', null);
+        } catch (error) {
+            console.error("Failed to record site hit:", error);
+            throw error;
+        }
+    },
+
     // --- ADMIN NOTIFICATION ---
     notifyAdmin: async (token: string, subject: string, message: string, context: object): Promise<void> => {
         try {

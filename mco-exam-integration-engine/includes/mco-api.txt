@@ -247,6 +247,7 @@ function mco_get_allowed_origins() {
 function mco_register_rest_routes() {
     $namespace = 'mco-app/v1';
     register_rest_route($namespace, '/config', ['methods' => 'GET', 'callback' => 'mco_api_get_full_config', 'permission_callback' => '__return_true']);
+    register_rest_route($namespace, '/hit', ['methods' => 'POST', 'callback' => 'mco_api_record_hit', 'permission_callback' => '__return_true']);
     register_rest_route($namespace, '/user-results', ['methods' => 'GET', 'callback' => 'mco_api_get_user_results', 'permission_callback' => 'mco_api_permission_check']);
     register_rest_route($namespace, '/certificate-data/(?P<testId>[a-zA-Z0-9-]+)', ['methods' => 'GET', 'callback' => 'mco_api_get_certificate_data', 'permission_callback' => 'mco_api_permission_check', 'args' => ['testId' => ['required' => true]]]);
     register_rest_route($namespace, '/update-name', ['methods' => 'POST', 'callback' => 'mco_api_update_name', 'permission_callback' => 'mco_api_permission_check']);
@@ -339,6 +340,13 @@ function mco_api_get_full_config(WP_REST_Request $request) {
         "examPrices" => $dynamic_data['examPrices'] ?? null
     ];
     return new WP_REST_Response($config_object, 200);
+}
+
+function mco_api_record_hit(WP_REST_Request $request) {
+    $count = (int) get_option('mco_site_hit_count', 0);
+    $count++;
+    update_option('mco_site_hit_count', $count);
+    return new WP_REST_Response(['count' => $count], 200);
 }
 
 function mco_api_get_user_results(WP_REST_Request $request) {

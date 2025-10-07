@@ -14,7 +14,7 @@ import html2canvas from 'html2canvas';
 import BookCover from '../assets/BookCover.tsx';
 import ShareableResult from './ShareableResult.tsx';
 
-type CertVisibility = 'NONE' | 'USER_EARNED' | 'ADMIN_OVERRIDE' | 'REVIEW_PENDING';
+type UserCertVisibility = 'NONE' | 'USER_EARNED' | 'REVIEW_PENDING';
 
 const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } => {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -127,16 +127,13 @@ const Results: FC = () => {
         return result.score >= exam.passScore;
     }, [result, exam]);
 
-    const certificateVisibility = useMemo((): CertVisibility => {
+    const userCertificateVisibility = useMemo((): UserCertVisibility => {
         if (!exam || !result || !isPassed || !exam.certificateEnabled) {
             return 'NONE';
         }
-        if (isEffectivelyAdmin) {
-            return 'ADMIN_OVERRIDE';
-        }
         const requiresReview = exam.isProctored && result.proctoringViolations && result.proctoringViolations > 0;
         return requiresReview ? 'REVIEW_PENDING' : 'USER_EARNED';
-    }, [exam, result, isPassed, isEffectivelyAdmin]);
+    }, [exam, result, isPassed]);
     
     const canGetAIFeedback = useMemo(() => {
         if (!exam || !result || isPassed) return false;
@@ -299,7 +296,6 @@ const Results: FC = () => {
     };
 
     const DesktopShareButtons: FC = () => {
-        // FIX: Replaced undefined `organization` with `activeOrg` from component scope.
         if (!exam || !result || !activeOrg) return null;
 
         const handleDownloadImage = async () => {
@@ -317,9 +313,7 @@ const Results: FC = () => {
             toast.success("Image downloaded! You can now attach it to your post.");
         };
 
-        // FIX: Replaced undefined `organization` with `activeOrg` from component scope.
         const shareText = `I'm proud to announce I've passed the ${exam.name} with a score of ${result.score}%! Thanks to ${activeOrg.name}.`;
-        // FIX: Replaced undefined `organization` with `activeOrg` from component scope.
         const shareUrl = `https://www.${activeOrg.website}`;
 
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
@@ -400,7 +394,7 @@ const Results: FC = () => {
                         </div>
                     </div>
                     
-                    {certificateVisibility === 'ADMIN_OVERRIDE' && (
+                    {isEffectivelyAdmin && (
                         <button 
                             onClick={() => navigate(`/certificate/${result.testId}`)} 
                             className="w-full text-sm flex items-center justify-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-4 rounded-lg"
@@ -409,7 +403,7 @@ const Results: FC = () => {
                         </button>
                     )}
 
-                    {certificateVisibility === 'USER_EARNED' && (
+                    {userCertificateVisibility === 'USER_EARNED' && (
                         <button 
                             onClick={() => navigate(`/certificate/${result.testId}`)} 
                             className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
@@ -418,7 +412,7 @@ const Results: FC = () => {
                         </button>
                     )}
 
-                    {certificateVisibility === 'REVIEW_PENDING' && (
+                    {userCertificateVisibility === 'REVIEW_PENDING' && (
                         <div className="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-500 text-center">
                             <h4 className="font-bold text-amber-800">Provisional Pass</h4>
                              <p className="text-sm text-amber-700 mt-2">
