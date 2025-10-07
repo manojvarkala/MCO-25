@@ -343,7 +343,7 @@ function mco_api_get_full_config(WP_REST_Request $request) {
 }
 
 function mco_api_record_hit(WP_REST_Request $request) {
-    $count = (int) get_option('mco_site_hit_count', 0);
+    $count = (int) get_option('mco_site_hit_count', 24567);
     $count++;
     update_option('mco_site_hit_count', $count);
     return new WP_REST_Response(['count' => $count], 200);
