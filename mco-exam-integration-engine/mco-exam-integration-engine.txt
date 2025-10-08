@@ -6,6 +6,11 @@ if (!defined('ABSPATH')) exit;
 if (!function_exists('mco_is_plugin_already_active')) {
     function mco_is_plugin_already_active() {
         if (is_admin() && current_user_can('activate_plugins') && function_exists('is_plugin_active') && is_plugin_active(plugin_basename(__FILE__))) {
+            // FIX: Ensure get_plugin_data() is available before using it to prevent fatal errors in some admin contexts.
+            if (!function_exists('get_plugin_data')) {
+                require_once(ABSPATH . 'wp-admin/includes/plugin.php');
+            }
+            
             $plugins = get_option('active_plugins');
             $this_plugin_path = plugin_basename(__FILE__);
             $this_plugin_dir = dirname($this_plugin_path);
@@ -58,12 +63,12 @@ define('MCO_PLUGIN_FILE', __FILE__);
 define('MCO_PLUGIN_PATH', plugin_dir_path(MCO_PLUGIN_FILE));
 define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
 
-// Define version constant dynamically from the header file's data
-if (!function_exists('get_plugin_data')) {
-    require_once(ABSPATH . 'wp-admin/includes/plugin.php');
+// FIX: Define version constant safely from the plugin header to prevent fatal errors on the front-end.
+// get_file_data() is available globally, unlike get_plugin_data().
+if (!defined('MCO_PLUGIN_VERSION')) {
+    $plugin_data = get_file_data(MCO_PLUGIN_FILE, ['Version' => 'Version']);
+    define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 }
-$mco_plugin_data = get_plugin_data(MCO_PLUGIN_FILE);
-define('MCO_PLUGIN_VERSION', $mco_plugin_data['Version']);
 
 // Include all the necessary logic files
 require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
