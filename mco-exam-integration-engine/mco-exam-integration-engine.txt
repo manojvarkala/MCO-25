@@ -6,18 +6,15 @@ if (!defined('ABSPATH')) exit;
 if (!function_exists('mco_is_plugin_already_active')) {
     function mco_is_plugin_already_active() {
         if (is_admin() && current_user_can('activate_plugins') && function_exists('is_plugin_active') && is_plugin_active(plugin_basename(__FILE__))) {
-            // FIX: Ensure get_plugin_data() is available before using it to prevent fatal errors in some admin contexts.
-            if (!function_exists('get_plugin_data')) {
-                require_once(ABSPATH . 'wp-admin/includes/plugin.php');
-            }
             
+            // FIX: Use the safer get_file_data() instead of the admin-only get_plugin_data() to prevent context-related fatal errors.
             $plugins = get_option('active_plugins');
             $this_plugin_path = plugin_basename(__FILE__);
             $this_plugin_dir = dirname($this_plugin_path);
             $duplicates = [];
 
             // Get data for the current plugin to compare against others
-            $current_plugin_data = get_plugin_data(__FILE__);
+            $current_plugin_data = get_file_data(__FILE__, ['Name' => 'Plugin Name']);
             $current_plugin_name = $current_plugin_data['Name'];
 
             foreach ($plugins as $plugin_path) {
@@ -25,8 +22,8 @@ if (!function_exists('mco_is_plugin_already_active')) {
 
                 // Check if another plugin with the same name exists in a different folder
                 if (file_exists(WP_PLUGIN_DIR . '/' . $plugin_path)) {
-                    $plugin_data = get_plugin_data(WP_PLUGIN_DIR . '/' . $plugin_path);
-                    if ($plugin_data['Name'] === $current_plugin_name && dirname($plugin_path) !== $this_plugin_dir) {
+                    $plugin_data = get_file_data(WP_PLUGIN_DIR . '/' . $plugin_path, ['Name' => 'Plugin Name']);
+                    if (isset($plugin_data['Name']) && $plugin_data['Name'] === $current_plugin_name && dirname($plugin_path) !== $this_plugin_dir) {
                         $duplicates[] = $plugin_path;
                     }
                 }
@@ -85,7 +82,10 @@ if (!function_exists('mco_exam_engine_init')) {
     function mco_exam_engine_init() {
         mco_register_custom_post_types();
         mco_register_api_hooks();
-        mco_register_admin_hooks();
+        // FIX: Admin-specific hooks should only be registered in the admin context to prevent fatal errors on front-end and AJAX requests.
+        if (is_admin()) {
+            mco_register_admin_hooks();
+        }
         mco_register_shortcode_hooks();
     }
     add_action('init', 'mco_exam_engine_init');
