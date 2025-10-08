@@ -540,21 +540,6 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
     return new WP_REST_Response($questions, 200);
 }
 
-function mco_api_get_exam_stats(WP_REST_Request $request) {
-    $all_results = [];
-    foreach (get_users(['fields' => ['ID']]) as $user) { if ($res = get_user_meta($user->ID, 'mco_exam_results', true)) $all_results = array_merge($all_results, array_values($res)); }
-    $cert_exams = array_filter(mco_get_app_config_data()['exams'], function($e) { return !$e['isPractice']; });
-    $stats = [];
-    foreach ($cert_exams as $exam) {
-        $attempts = array_filter($all_results, function($r) use ($exam) { return $r['examId'] === $exam['id']; });
-        $passed = array_filter($attempts, function($r) use ($exam) { return $r['score'] >= $exam['passScore']; });
-        $total_score = array_reduce($attempts, function($s, $r) { return $s + $r['score']; }, 0);
-        $product = ($pid = wc_get_product_id_by_sku($exam['id'])) ? wc_get_product($pid) : null;
-        $stats[] = ['examId' => $exam['id'], 'examName' => $exam['name'], 'totalSales' => $product ? $product->get_total_sales() : 0, 'totalAttempts' => count($attempts), 'passed' => count($passed), 'failed' => count($attempts) - count($passed), 'passRate' => count($attempts) > 0 ? (count($passed) / count($attempts)) * 100 : 0, 'averageScore' => count($attempts) > 0 ? $total_score / count($attempts) : 0];
-    }
-    return new WP_REST_Response($stats, 200);
-}
-
 function mco_api_get_debug_details(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
     
@@ -1159,5 +1144,42 @@ function mco_api_admin_delete_post(WP_REST_Request $request) {
     delete_transient('mco_app_config_data');
     update_option('mco_config_version', current_time('YmdHis'));
     return mco_api_get_full_config(new WP_REST_Request());
+}
+
+function mco_api_get_exam_stats(WP_REST_Request $request) {
+    $all_results = [];
+    $users = get_users(['fields' => 'ID']);
+    foreach ($users as $user_id) {
+        $user_results = get_user_meta($user_id, 'mco_exam_results', true);
+        if (is_array($user_results)) {
+            $all_results = array_merge($all_results, array_values($user_results));
+        }
+    }
+
+    $config_data = mco_get_app_config_data();
+    $cert_exams = array_filter($config_data['exams'], function($e) { return !$e['isPractice']; });
+    $stats = [];
+
+    foreach ($cert_exams as $exam) {
+        $exam_id = $exam['id'];
+        $attempts = array_filter($all_results, function($r) use ($exam_id) { return isset($r['examId']) && $r['examId'] === $exam_id; });
+        $passed = array_filter($attempts, function($r) use ($exam) { return isset($r['score']) && $r['score'] >= $exam['passScore']; });
+        $total_score = array_reduce($attempts, function($sum, $r) { return $sum + (isset($r['score']) ? $r['score'] : 0); }, 0);
+        
+        $product = ($pid = wc_get_product_id_by_sku($exam_id)) ? wc_get_product($pid) : null;
+        $total_sales = $product ? (int)$product->get_total_sales() : 0;
+        $current_price = $product ? (float)$product->get_price() : 0;
+        
+        $stats[] = [
+            'id'           => $exam_id,
+            'name'         => $exam['name'],
+            'attempts'     => count($attempts),
+            'averageScore' => count($attempts) > 0 ? round($total_score / count($attempts), 1) : 0,
+            'passRate'     => count($attempts) > 0 ? round((count($passed) / count($attempts)) * 100, 1) : 0,
+            'totalSales'   => $total_sales,
+            'totalRevenue' => $total_sales * $current_price,
+        ];
+    }
+    return new WP_REST_Response($stats, 200);
 }
 ?>

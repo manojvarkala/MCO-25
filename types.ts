@@ -172,6 +172,8 @@ export interface ExamStat {
     attempts: number;
     averageScore: number;
     passRate: number;
+    totalSales: number;
+    totalRevenue: number;
 }
 
 export interface InProgressExamInfo {

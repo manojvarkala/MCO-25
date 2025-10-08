@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, ExamProductCategory, Organization, ProductVariation, RecommendedBook, ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Settings, Edit, Save, X, ChevronDown, ChevronUp, FileText, Award, PlusCircle, Trash2, Link2, BarChart3 } from 'lucide-react';
+import { Settings, Edit, Save, X, ChevronDown, ChevronUp, FileText, Award, PlusCircle, Trash2, Link2, BarChart3, ShoppingCart } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 interface EditableProgramData {
@@ -583,6 +583,8 @@ const ExamProgramCustomizer: FC = () => {
                             <thead className="text-xs text-[rgb(var(--color-text-muted-rgb))] uppercase bg-[rgb(var(--color-muted-rgb))]">
                                 <tr>
                                     <th scope="col" className="px-6 py-3">Exam Program</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Sales</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Revenue</th>
                                     <th scope="col" className="px-6 py-3 text-center">Attempts</th>
                                     <th scope="col" className="px-6 py-3 text-center">Avg. Score</th>
                                     <th scope="col" className="px-6 py-3">Pass Rate</th>
@@ -598,6 +600,8 @@ const ExamProgramCustomizer: FC = () => {
                                     return (
                                         <tr key={stat.id} className="border-b border-[rgb(var(--color-border-rgb))]">
                                             <th scope="row" className="px-6 py-4 font-medium text-[rgb(var(--color-text-strong-rgb))] whitespace-nowrap">{stat.name}</th>
+                                            <td className="px-6 py-4 text-center">{stat.totalSales}</td>
+                                            <td className="px-6 py-4 text-center font-semibold">{stat.totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
                                             <td className="px-6 py-4 text-center">{stat.attempts}</td>
                                             <td className="px-6 py-4 text-center font-semibold">{stat.averageScore.toFixed(1)}%</td>
                                             <td className="px-6 py-4">
