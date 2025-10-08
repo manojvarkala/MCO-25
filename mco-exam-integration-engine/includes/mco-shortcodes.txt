@@ -139,9 +139,75 @@ function mco_exam_showcase_shortcode($atts) {
         'practice' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
         'cert' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>',
         'cart' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',
+        'bundle' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
+        'check' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+        'star' => '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
     ];
 
     ob_start();
+    
+    // --- Subscription Offers Section ---
+    $is_subscribed = (is_user_logged_in() && class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription(get_current_user_id(), '', 'active'));
+    
+    // Only show subscription offers on the main showcase page, not when a single program is displayed.
+    if (!$is_subscribed && empty($program_id_str)) {
+        $monthly_sub = $config_data['examPrices']['sub-monthly'] ?? null;
+        $yearly_sub = $config_data['examPrices']['sub-yearly'] ?? null;
+        
+        if (($monthly_sub && isset($monthly_sub['productId'])) || ($yearly_sub && isset($yearly_sub['productId']))) {
+            echo '<div class="mco-subscription-grid">';
+            
+            if ($monthly_sub && isset($monthly_sub['productId'])) {
+                $monthly_url = get_site_url() . '/cart/?add-to-cart=' . $monthly_sub['productId'];
+                echo '<div class="mco-card mco-gradient--sub-monthly">';
+                echo '<h3 class="mco-sub-card__title">Monthly Subscription</h3>';
+                echo '<p class="mco-sub-card__description">Perfect for focused, short-term preparation.</p>';
+                echo '<div class="mco-sub-card__price">';
+                if (isset($monthly_sub['regularPrice']) && $monthly_sub['regularPrice'] > $monthly_sub['price']) {
+                    echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($monthly_sub['regularPrice'], 2) . '</span> ';
+                }
+                echo '<span class="mco-sub-card__price-value">$' . number_format_i18n($monthly_sub['price'], 2) . '</span>';
+                echo '<span class="mco-sub-card__price-unit">/month</span>';
+                echo '</div>';
+                echo '<ul class="mco-sub-card__features">';
+                echo '<li>' . $icons['check'] . '<span>Unlimited Access to ALL Practice Exams</span></li>';
+                echo '<li>' . $icons['check'] . '<span>Unlimited AI-Powered Feedback & Study Guides</span></li>';
+                echo '<li>' . $icons['check'] . '<span>Cancel Anytime</span></li>';
+                echo '</ul>';
+                echo '<div class="mco-card__footer">';
+                echo '<a href="' . esc_url($monthly_url) . '" class="mco-card__button mco-card__button--primary">Subscribe Now</a>';
+                echo '</div></div>';
+            }
+            
+            if ($yearly_sub && isset($yearly_sub['productId'])) {
+                $yearly_url = get_site_url() . '/cart/?add-to-cart=' . $yearly_sub['productId'];
+                echo '<div class="mco-card mco-gradient--sub-yearly mco-card--best-value">';
+                echo '<div class="mco-best-value-tag">' . $icons['star'] . ' Best Value</div>';
+                echo '<h3 class="mco-sub-card__title">Yearly Subscription</h3>';
+                echo '<p class="mco-sub-card__description">For continuous learning and preparing for multiple certifications.</p>';
+                echo '<div class="mco-sub-card__price">';
+                if (isset($yearly_sub['regularPrice']) && $yearly_sub['regularPrice'] > $yearly_sub['price']) {
+                    echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($yearly_sub['regularPrice'], 2) . '</span> ';
+                }
+                echo '<span class="mco-sub-card__price-value">$' . number_format_i18n($yearly_sub['price'], 2) . '</span>';
+                echo '<span class="mco-sub-card__price-unit">/year</span>';
+                echo '</div>';
+                echo '<p style="text-align:center; font-size: 0.875rem; color: #fcd34d; font-weight: 600;">Saves over 35%!</p>';
+                echo '<ul class="mco-sub-card__features">';
+                echo '<li>' . $icons['check'] . '<span>All Monthly features</span></li>';
+                echo '<li>' . $icons['check'] . '<span>Access All Exam Programs</span></li>';
+                echo '<li>' . $icons['check'] . '<span>Billed Annually</span></li>';
+                echo '</ul>';
+                echo '<div class="mco-card__footer">';
+                echo '<a href="' . esc_url($yearly_url) . '" class="mco-card__button mco-card__button--primary">Subscribe & Save</a>';
+                echo '</div></div>';
+            }
+            
+            echo '</div>';
+        }
+    }
+
+
     echo '<div class="mco-showcase-grid">';
     foreach ($programs as $program_post) {
         $app_program_id = 'prod-' . $program_post->ID;
@@ -206,6 +272,37 @@ function mco_exam_showcase_shortcode($atts) {
             echo '<a href="' . esc_url($button_url) . '" class="mco-card__button ' . $button_class . '">' . $button_icon . ' ' . $button_text . '</a>';
             echo '</div>';
             echo '</div>';
+
+            // Exam Bundle Card
+            $bundle_sku = $cert_exam['productSku'] . '-1';
+            if (isset($config_data['examPrices'][$bundle_sku])) {
+                $bundle_data = $config_data['examPrices'][$bundle_sku];
+                $bundle_product_id = $bundle_data['productId'] ?? null;
+                $bundle_url = $bundle_product_id ? get_site_url() . '/cart/?add-to-cart=' . $bundle_product_id : '#';
+
+                echo '<div class="mco-card mco-gradient--bundle-1">';
+                echo '<div class="mco-card__header"><span>' . $icons['bundle'] . '</span> Exam Bundle</div>';
+                echo '<div class="mco-card__body">';
+                echo '<h3 class="mco-card__subtitle">The complete package for your certification.</h3>';
+                if (($bundle_data['price'] ?? 0) > 0) {
+                    echo '<div style="text-align: center; margin-bottom: 1rem;">';
+                    if (($bundle_data['regularPrice'] ?? 0) > $bundle_data['price']) {
+                        echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($bundle_data['regularPrice'], 2) . '</span>';
+                    }
+                    echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($bundle_data['price'], 2) . '</span>';
+                    echo '</div>';
+                }
+                echo '<ul class="mco-sub-card__features">';
+                echo '<li>' . $icons['check'] . '<span>One Certification Exam</span></li>';
+                echo '<li>' . $icons['check'] . '<span>1-Month Unlimited Practice</span></li>';
+                echo '<li>' . $icons['check'] . '<span>1-Month Unlimited AI Feedback</span></li>';
+                echo '</ul>';
+                echo '</div>';
+                echo '<div class="mco-card__footer">';
+                echo '<a href="' . esc_url($bundle_url) . '" class="mco-card__button mco-card__button--purchase">' . $icons['cart'] . ' Purchase Bundle</a>';
+                echo '</div>';
+                echo '</div>';
+            }
         }
 
         echo '</div></div>'; // Close cards and group

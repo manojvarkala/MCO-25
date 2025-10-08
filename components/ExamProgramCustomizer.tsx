@@ -2,9 +2,9 @@ import React, { FC, useState, useCallback, useMemo, ReactNode, useEffect } from 
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { Exam, ExamProductCategory, Organization, ProductVariation, RecommendedBook } from '../types.ts';
+import type { Exam, ExamProductCategory, Organization, ProductVariation, RecommendedBook, ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Settings, Edit, Save, X, ChevronDown, ChevronUp, FileText, Award, PlusCircle, Trash2, Link2 } from 'lucide-react';
+import { Settings, Edit, Save, X, ChevronDown, ChevronUp, FileText, Award, PlusCircle, Trash2, Link2, BarChart3 } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 interface EditableProgramData {
@@ -384,6 +384,27 @@ const ExamProgramCustomizer: FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+    const [stats, setStats] = useState<ExamStat[]>([]);
+    const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (!token) return;
+            setIsLoadingStats(true);
+            try {
+                const fetchedStats = await googleSheetsService.getExamStats(token);
+                const certExamIds = activeOrg?.exams.filter(e => !e.isPractice).map(e => e.id) || [];
+                const relevantStats = fetchedStats.filter(stat => certExamIds.includes(stat.id));
+                setStats(relevantStats);
+            } catch (error: any) {
+                toast.error("Could not load exam analytics: " + error.message);
+            } finally {
+                setIsLoadingStats(false);
+            }
+        };
+        fetchStats();
+    }, [token, activeOrg]);
     
     const handleSave = async (programId: string, data: EditableProgramData): Promise<void> => {
         if (!token) {
@@ -549,6 +570,55 @@ const ExamProgramCustomizer: FC = () => {
                 </button>
             </div>
             
+            <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-3 mb-4">
+                    <BarChart3 className="text-[rgb(var(--color-primary-rgb))]" />
+                    Analytics Overview
+                </h2>
+                {isLoadingStats ? (
+                    <div className="flex justify-center p-8"><Spinner /></div>
+                ) : stats.length > 0 ? (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="text-xs text-[rgb(var(--color-text-muted-rgb))] uppercase bg-[rgb(var(--color-muted-rgb))]">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3">Exam Program</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Attempts</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Avg. Score</th>
+                                    <th scope="col" className="px-6 py-3">Pass Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {stats.map(stat => {
+                                    const passRate = stat.passRate || 0;
+                                    let progressBarColor = 'bg-red-500';
+                                    if (passRate > 70) progressBarColor = 'bg-green-500';
+                                    else if (passRate > 50) progressBarColor = 'bg-yellow-500';
+                                    
+                                    return (
+                                        <tr key={stat.id} className="border-b border-[rgb(var(--color-border-rgb))]">
+                                            <th scope="row" className="px-6 py-4 font-medium text-[rgb(var(--color-text-strong-rgb))] whitespace-nowrap">{stat.name}</th>
+                                            <td className="px-6 py-4 text-center">{stat.attempts}</td>
+                                            <td className="px-6 py-4 text-center font-semibold">{stat.averageScore.toFixed(1)}%</td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-full bg-[rgb(var(--color-muted-rgb))] rounded-full h-2.5">
+                                                        <div className={`${progressBarColor} h-2.5 rounded-full`} style={{ width: `${passRate}%` }}></div>
+                                                    </div>
+                                                    <span className="font-semibold">{passRate.toFixed(1)}%</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <p className="text-center p-8 text-[rgb(var(--color-text-muted-rgb))]">No analytics data available yet. Data will appear after users complete certification exams.</p>
+                )}
+            </div>
+
             <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                 {selectedProgramIds.length > 0 ? (
                     <BulkEditPanel 
