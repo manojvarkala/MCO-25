@@ -447,21 +447,26 @@ const ProductCustomizer: FC = () => {
         const simples: ProductVariation[] = [];
         const subs: ProductVariation[] = [];
         const bundles: ProductVariation[] = [];
-        
-        Object.values(examPrices).forEach((priceData: any) => {
-            if (!priceData || typeof priceData !== 'object' || !priceData.sku) {
-                console.warn('Skipping invalid product data entry in examPrices:', priceData);
-                return; // Skip this entry
+
+        // FIX: Iterate over Object.entries to get both the SKU (key) and the product data (value).
+        Object.entries(examPrices).forEach(([sku, priceData]: [string, any]) => {
+            if (!priceData || typeof priceData !== 'object') {
+                console.warn('Skipping invalid product data entry for SKU:', sku);
+                return;
             }
+
             const product: ProductVariation = {
-                id: priceData.productId?.toString() || priceData.sku,
-                sku: priceData.sku,
+                id: priceData.productId?.toString() || sku,
+                sku: sku, // Use the key as the SKU
                 name: priceData.name || 'Unknown Product',
-                type: 'simple', // Default type
+                type: 'simple', // Default type, will be updated below
                 salePrice: priceData.price?.toString() || '0',
                 regularPrice: priceData.regularPrice?.toString() || '0',
                 isBundle: priceData.isBundle,
                 bundledSkus: priceData.bundledSkus,
+                subscriptionPeriod: priceData.subscriptionPeriod,
+                subscriptionPeriodInterval: priceData.subscriptionPeriodInterval?.toString(),
+                subscriptionLength: priceData.subscriptionLength?.toString(),
             };
             
             all.push(product);
@@ -469,12 +474,12 @@ const ProductCustomizer: FC = () => {
             if (product.isBundle) {
                 product.type = 'bundle';
                 bundles.push(product);
-            } else if (priceData.type?.includes('subscription') || (product.sku && product.sku.startsWith('sub-'))) {
+            } else if (priceData.type?.includes('subscription') || product.sku.startsWith('sub-')) {
                 product.type = 'subscription';
                 subs.push(product);
             } else {
-                 product.type = 'simple';
-                 simples.push(product);
+                product.type = 'simple';
+                simples.push(product);
             }
         });
         
