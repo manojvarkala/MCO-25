@@ -11,7 +11,6 @@
  * Text Domain:       mco-exam-engine
  * Update URI:        false
  */
-
 // This file contains only the plugin header metadata.
 // This allows for safe and easy version number updates without touching core plugin logic.
 
