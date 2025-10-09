@@ -39,6 +39,7 @@ import AdminLayout from './components/AdminLayout.tsx';
 import FAQ from './components/FAQ.tsx';
 import DevelopmentHistory from './components/DevelopmentHistory.tsx';
 import SalesAnalytics from './components/SalesAnalytics.tsx';
+import ContentEngine from './components/ContentEngine.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -178,6 +179,7 @@ const AppContent: FC = () => {
                           <Route path="analytics" element={<SalesAnalytics />} />
                           <Route path="products" element={<ProductCustomizer />} />
                           <Route path="programs" element={<ExamProgramCustomizer />} />
+                          <Route path="content-engine" element={<ContentEngine />} />
                           <Route path="integration" element={<Integration />} />
                           <Route path="history" element={<DevelopmentHistory />} />
                         </Route>

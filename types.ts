@@ -166,6 +166,21 @@ export interface SearchedUser {
     prize: string;
 }
 
+export interface WordpressAuthor {
+    ID: string;
+    display_name: string;
+}
+
+export interface WordpressCategory {
+    term_id: number;
+    name: string;
+}
+
+export interface PostCreationData {
+    authors: WordpressAuthor[];
+    categories: WordpressCategory[];
+}
+
 export interface ExamStat {
     id: string;
     name: string;

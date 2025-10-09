@@ -1,6 +1,6 @@
 import React, { FC } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Settings, ShoppingCart, Code, ArrowLeft, History, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Settings, ShoppingCart, Code, ArrowLeft, History, BarChart3, Sparkles } from 'lucide-react';
 
 const AdminLayout: FC = () => {
     const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -29,6 +29,10 @@ const AdminLayout: FC = () => {
                     <NavLink to="/admin/products" className={navLinkClass}>
                         <ShoppingCart size={18} />
                         <span>Product Customizer</span>
+                    </NavLink>
+                    <NavLink to="/admin/content-engine" className={navLinkClass}>
+                        <Sparkles size={18} />
+                        <span>Content Engine</span>
                     </NavLink>
                     <NavLink to="/admin/integration" className={navLinkClass}>
                         <Code size={18} />

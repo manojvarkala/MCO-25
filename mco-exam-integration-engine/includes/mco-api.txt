@@ -264,6 +264,8 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/notify-admin', ['methods' => 'POST', 'callback' => 'mco_api_notify_admin', 'permission_callback' => 'mco_api_permission_check']);
 
     // ADMIN-ONLY ENDPOINTS
+    register_rest_route($namespace, '/admin/post-creation-data', ['methods' => 'GET', 'callback' => 'mco_api_get_post_creation_data', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/create-post-from-app', ['methods' => 'POST', 'callback' => 'mco_api_create_post_from_app', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/add-spins', ['methods' => 'POST', 'callback' => 'mco_api_admin_add_spins', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/grant-prize', ['methods' => 'POST', 'callback' => 'mco_api_admin_grant_prize', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/search-users', ['methods' => 'POST', 'callback' => 'mco_api_admin_search_users', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
@@ -755,6 +757,62 @@ function mco_api_notify_admin(WP_REST_Request $request) {
 }
 
 // ADMIN ENDPOINTS
+function mco_api_get_post_creation_data(WP_REST_Request $request) {
+    $users_raw = get_users(['role__in' => ['author', 'editor', 'administrator'], 'fields' => ['ID', 'display_name']]);
+    $users = array_map(function($user) {
+        return ['ID' => $user->ID, 'display_name' => $user->display_name];
+    }, $users_raw);
+
+    $categories_raw = get_categories(['hide_empty' => false]);
+    $categories = [];
+    foreach($categories_raw as $cat) {
+        $categories[] = ['term_id' => $cat->term_id, 'name' => $cat->name];
+    }
+
+    return new WP_REST_Response(['authors' => $users, 'categories' => $categories], 200);
+}
+
+function mco_api_create_post_from_app(WP_REST_Request $request) {
+    $params = $request->get_json_params();
+
+    $program_post_id = isset($params['program_id']) ? intval($params['program_id']) : 0;
+    if (get_post_type($program_post_id) !== 'mco_exam_program') {
+        return new WP_Error('bad_request', 'Invalid source program ID.', ['status' => 400]);
+    }
+
+    $new_post_args = [
+        'post_title' => sanitize_text_field($params['post_title']),
+        'post_content' => wp_kses_post($params['post_content']),
+        'post_status' => 'future',
+        'post_date' => sanitize_text_field($params['post_date']),
+        'post_date_gmt' => get_gmt_from_date(sanitize_text_field($params['post_date'])),
+        'post_author' => isset($params['post_author']) ? intval($params['post_author']) : get_current_user_id(),
+        'post_category' => isset($params['post_category']) ? [intval($params['post_category'])] : [],
+    ];
+    
+    $programs_page_url = esc_url_raw(get_option('mco_exam_programs_page_url'));
+    if (!empty($programs_page_url)) {
+         $new_post_args['post_content'] .= '<!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|50","bottom":"var:preset|spacing|50","left":"var:preset|spacing|50","right":"var:preset|spacing|50"}},"border":{"radius":"8px"}},"backgroundColor":"vivid-cyan-blue","textColor":"white","layout":{"type":"constrained"}} --><div class="wp-block-group has-white-color has-vivid-cyan-blue-background-color has-text-color has-background" style="border-radius:8px;padding-top:var(--wp--preset--spacing--50);padding-right:var(--wp--preset--spacing--50);padding-bottom:var(--wp--preset--spacing--50);padding-left:var(--wp--preset--spacing--50)"><!-- wp:heading {"textAlign":"center","level":3,"textColor":"white"} --><h3 class="wp-block-heading has-text-align-center has-white-color has-text-color">Ready to Get Started?</h3><!-- /wp:heading --><!-- wp:paragraph {"align":"center"} --><p class="has-text-align-center">Our comprehensive exam showcase includes practice tests, certification exams, and valuable bundles to help you succeed.</p><!-- /wp:paragraph --><!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"}} --><div class="wp-block-buttons"><!-- wp:button {"backgroundColor":"luminous-vivid-amber","textColor":"black","className":"is-style-fill"} --><div class="wp-block-button is-style-fill"><a class="wp-block-button__link has-black-color has-luminous-vivid-amber-background-color has-text-color has-background" href="' . esc_url($programs_page_url) . '" rel="noopener">Explore All Exam Programs</a></div><!-- /wp:button --></div><!-- /wp:buttons --></div><!-- /wp:group -->';
+    }
+
+    $new_post_id = wp_insert_post($new_post_args, true);
+
+    if (is_wp_error($new_post_id)) {
+        return $new_post_id;
+    }
+
+    // Update meta for tracking
+    update_post_meta($program_post_id, '_mco_last_posted_timestamp', time());
+    add_post_meta($new_post_id, '_mco_source_program_id', $program_post_id);
+    add_post_meta($new_post_id, '_mco_ai_generated', '1');
+
+    return new WP_REST_Response([
+        'success' => true,
+        'post_id' => $new_post_id,
+        'post_url' => get_edit_post_link($new_post_id, 'raw')
+    ], 200);
+}
+
 function mco_api_admin_search_users(WP_REST_Request $request) {
     $search_term = sanitize_text_field($request->get_param('searchTerm'));
     if (empty($search_term)) {

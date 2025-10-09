@@ -1,4 +1,4 @@
-import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, SpinWheelResult, SearchedUser, ExamStat, Organization } from '../types.ts';
+import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, SpinWheelResult, SearchedUser, ExamStat, Organization, PostCreationData } from '../types.ts';
 import toast from 'react-hot-toast';
 import { GoogleGenAI, Type } from "@google/genai";
 import { getApiBaseUrl } from './apiConfig.ts';
@@ -95,7 +95,7 @@ export const googleSheetsService = {
         }
     },
 
-    // --- AI FEEDBACK ---
+    // --- AI CALLS (FRONTEND) ---
     getAIFeedback: async (prompt: string, token: string): Promise<string> => {
         if (!process.env.API_KEY) {
             console.error("Gemini API key is not configured.");
@@ -120,6 +120,44 @@ export const googleSheetsService = {
             );
             
             return "We're sorry, but the AI feedback service is currently unavailable due to high demand or a temporary issue. Our technical team has been automatically notified. Please try again in a little while.";
+        }
+    },
+
+    generateAIPostContent: async (programTitle: string, programDescription: string): Promise<string> => {
+        if (!process.env.API_KEY) {
+            throw new Error("Gemini API key is not configured in the application's environment.");
+        }
+        
+        const system_instruction = "You are an expert SEO content writer specializing in educational and certification-based websites. Your task is to generate an engaging, well-structured, and SEO-friendly blog post. The output must be formatted using WordPress block editor syntax (Gutenberg blocks like `<!-- wp:paragraph -->` and `<!-- wp:heading -->`). The content should be informative and persuasive, encouraging readers to explore the certification program.";
+        const user_prompt = `
+            Generate a blog post based on the following details:
+
+            Program Title: "${programTitle}"
+            Program Description: "${programDescription}"
+
+            The blog post should include these sections, formatted with \`<!-- wp:heading -->\`:
+            1. An engaging introduction that captures the reader's interest.
+            2. "Why This Certification Matters" - explaining the value and importance of this certification in the industry.
+            3. "What You'll Learn" - expanding on the provided description to detail the key knowledge areas and skills covered.
+            4. "Career Opportunities" - outlining potential job roles and career advancement for certified professionals.
+            5. A strong concluding paragraph that summarizes the benefits and encourages the reader to take the next step.
+
+            Ensure all text is wrapped in \`<!-- wp:paragraph --><p>...</p><!-- /wp:paragraph -->\` blocks. Do not include a main title for the post itself.
+        `;
+
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: user_prompt,
+                config: {
+                    systemInstruction: system_instruction,
+                },
+            });
+            return response.text;
+        } catch (error: any) {
+            console.error("Error generating AI post content from Gemini:", error);
+            throw new Error(error.message || 'An unknown error occurred while generating content.');
         }
     },
     
@@ -355,6 +393,24 @@ export const googleSheetsService = {
     },
 
     // --- ADMIN ACTIONS ---
+    getPostCreationData: async (token: string): Promise<PostCreationData> => {
+        try {
+            return await apiFetch('/admin/post-creation-data', 'GET', token);
+        } catch (error) {
+            console.error("Failed to get post creation data:", error);
+            throw error;
+        }
+    },
+
+    createPostFromApp: async (token: string, postData: any): Promise<{ success: boolean; post_id: number; post_url: string; }> => {
+        try {
+            return await apiFetch('/admin/create-post-from-app', 'POST', token, postData);
+        } catch (error) {
+            console.error("Failed to create post:", error);
+            throw error;
+        }
+    },
+
     addSpins: async (token: string, userId: string, spins: number): Promise<{ success: boolean; newTotal: number; }> => {
         try {
             return await apiFetch('/admin/add-spins', 'POST', token, { userId, spins });
