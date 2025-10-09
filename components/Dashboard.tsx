@@ -193,10 +193,11 @@ const Dashboard: FC = () => {
                                     <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-1 group-hover:text-[rgb(var(--color-primary-rgb))] transition">{category.name}</h3>
                                 </Link>
                                 <div className="text-[rgb(var(--color-text-muted-rgb))] mb-4 text-sm" dangerouslySetInnerHTML={{ __html: category.description }} />
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} />}
                                     {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} attemptsMade={certAttempts}/>}
-                                    {category.certExam && <ExamBundleCard certExam={category.certExam} activeOrg={activeOrg} examPrices={examPrices} />}
+                                    {category.certExam && <ExamBundleCard type="practice" certExam={category.certExam} activeOrg={activeOrg} examPrices={examPrices} />}
+                                    {category.certExam && <ExamBundleCard type="subscription" certExam={category.certExam} activeOrg={activeOrg} examPrices={examPrices} />}
                                 </div>
                             </div>
                          );

@@ -214,6 +214,15 @@ const ExamProgram: FC = () => {
                 )}
                 {certExam && (
                     <ExamBundleCard
+                        type="practice"
+                        certExam={certExam}
+                        activeOrg={activeOrg}
+                        examPrices={examPrices}
+                    />
+                )}
+                {certExam && (
+                    <ExamBundleCard
+                        type="subscription"
                         certExam={certExam}
                         activeOrg={activeOrg}
                         examPrices={examPrices}
