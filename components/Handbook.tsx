@@ -2,6 +2,8 @@ import React, { FC, useState, useMemo, useCallback } from 'react';
 import { BookOpen } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+// FIX: Added missing import for 'toast' to resolve 'Cannot find name' errors.
+import toast from 'react-hot-toast';
 
 // --- CHAPTER DATA ---
 // All content is stored here. New chapters can be added to this array.
@@ -294,22 +296,27 @@ const Handbook: FC = () => {
                 doc.setTextColor(15, 23, 42); // slate-900
                 doc.text(chapter.title, 14, 22);
 
+                // FIX: Corrected a type error by wrapping HTML content in a table, as jspdf-autotable expects an HTMLTableElement.
                 // Use autoTable's html parsing for robust content rendering
-                tempContainer.innerHTML = chapter.content;
-                autoTable(doc, {
-                    html: tempContainer,
-                    startY: 30,
-                    theme: 'plain',
-                    styles: {
-                        font: 'helvetica',
-                        fontSize: 10,
-                        textColor: [51, 65, 85], // slate-700
-                    },
-                    headStyles: {
-                        textColor: [15, 23, 42],
-                        fontStyle: 'bold',
-                    },
-                });
+                tempContainer.innerHTML = `<table><tbody><tr><td>${chapter.content}</td></tr></tbody></table>`;
+                const table = tempContainer.querySelector('table');
+
+                if (table) {
+                    autoTable(doc, {
+                        html: table,
+                        startY: 30,
+                        theme: 'plain',
+                        styles: {
+                            font: 'helvetica',
+                            fontSize: 10,
+                            textColor: [51, 65, 85], // slate-700
+                        },
+                        headStyles: {
+                            textColor: [15, 23, 42],
+                            fontStyle: 'bold',
+                        },
+                    });
+                }
             });
             
             // Add page numbers
