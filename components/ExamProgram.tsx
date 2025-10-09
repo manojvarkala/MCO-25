@@ -76,11 +76,11 @@ const ExamProgram: FC = () => {
     }, [user]);
 
     const programData = useMemo(() => {
-        if (!activeOrg || !programId || !activeOrg.examProductCategories || !Array.isArray(activeOrg.examProductCategories) || !activeOrg.exams || !Array.isArray(activeOrg.exams)) {
+        if (!activeOrg?.examProductCategories || !Array.isArray(activeOrg.examProductCategories) || !activeOrg?.exams || !Array.isArray(activeOrg.exams) || !programId) {
             return null;
         }
 
-        const category = activeOrg.examProductCategories.find(cat => cat.id === programId);
+        const category = activeOrg.examProductCategories.find(cat => cat && cat.id === programId);
         if (!category) return null;
 
         const practiceExam = activeOrg.exams.find(e => e.id === category.practiceExamId);

@@ -84,14 +84,16 @@ const Dashboard: FC = () => {
     }, [results, activeOrg, user]);
 
     const examCategories = useMemo(() => {
-        if (!activeOrg || !activeOrg.examProductCategories || !Array.isArray(activeOrg.examProductCategories) || !activeOrg.exams || !Array.isArray(activeOrg.exams)) {
+        if (!activeOrg?.examProductCategories || !Array.isArray(activeOrg.examProductCategories) || !activeOrg?.exams || !Array.isArray(activeOrg.exams)) {
             return [];
         }
-        return activeOrg.examProductCategories.map(category => {
-            const practiceExam = activeOrg.exams.find(e => e.id === category.practiceExamId);
-            const certExam = activeOrg.exams.find(e => e.id === category.certificationExamId);
-            return { ...category, practiceExam, certExam };
-        });
+        return activeOrg.examProductCategories
+            .filter(Boolean) // Add extra safety check for malformed arrays
+            .map(category => {
+                const practiceExam = activeOrg.exams.find(e => e.id === category.practiceExamId);
+                const certExam = activeOrg.exams.find(e => e.id === category.certificationExamId);
+                return { ...category, practiceExam, certExam };
+            });
     }, [activeOrg]);
     
     const { monthlyPrice, yearlyPrice, monthlySubUrl, yearlySubUrl } = useMemo(() => {
