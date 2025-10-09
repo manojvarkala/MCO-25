@@ -492,6 +492,12 @@ const ProductCustomizer: FC = () => {
             bundleProducts: bundles.sort(sortByName)
         };
     }, [examPrices]);
+    
+    const productMap = useMemo(() => {
+        const map = new Map<string, ProductVariation>();
+        allProducts.forEach(p => map.set(p.sku, p));
+        return map;
+    }, [allProducts]);
 
     const handleUpsert = async (productData: any, type: 'Bundle' | 'Product' | 'Subscription') => {
         if (!token) {
@@ -647,6 +653,25 @@ const ProductCustomizer: FC = () => {
                                     <span className="font-bold text-2xl text-[rgb(var(--color-text-strong-rgb))] ml-2">${parseFloat(product.salePrice).toFixed(2)}</span>
                                 </div>
                             </div>
+                            {product.type === 'bundle' && product.bundledSkus && product.bundledSkus.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-[rgb(var(--color-border-rgb))]">
+                                    <h4 className="text-xs font-bold text-[rgb(var(--color-text-muted-rgb))] mb-2 uppercase tracking-wider">Includes:</h4>
+                                    <ul className="text-sm space-y-1.5 text-[rgb(var(--color-text-default-rgb))]">
+                                        {product.bundledSkus.map(sku => {
+                                            const bundledProduct = productMap.get(sku);
+                                            const isSub = bundledProduct?.type === 'subscription';
+                                            return (
+                                                <li key={sku} className="flex items-center gap-2">
+                                                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isSub ? 'bg-purple-500' : 'bg-blue-500'}`}></span>
+                                                    <span className="flex-grow truncate" title={bundledProduct ? bundledProduct.name : sku}>
+                                                        {bundledProduct ? bundledProduct.name : sku}
+                                                    </span>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ))}

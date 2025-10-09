@@ -84,7 +84,9 @@ const Dashboard: FC = () => {
     }, [results, activeOrg, user]);
 
     const examCategories = useMemo(() => {
-        if (!activeOrg) return [];
+        if (!activeOrg || !Array.isArray(activeOrg.examProductCategories) || !Array.isArray(activeOrg.exams)) {
+            return [];
+        }
         return activeOrg.examProductCategories.map(category => {
             const practiceExam = activeOrg.exams.find(e => e.id === category.practiceExamId);
             const certExam = activeOrg.exams.find(e => e.id === category.certificationExamId);

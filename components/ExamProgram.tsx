@@ -76,7 +76,9 @@ const ExamProgram: FC = () => {
     }, [user]);
 
     const programData = useMemo(() => {
-        if (!activeOrg || !programId) return null;
+        if (!activeOrg || !programId || !Array.isArray(activeOrg.examProductCategories) || !Array.isArray(activeOrg.exams)) {
+            return null;
+        }
 
         const category = activeOrg.examProductCategories.find(cat => cat.id === programId);
         if (!category) return null;
