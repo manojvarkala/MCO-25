@@ -108,9 +108,11 @@ const ExamProgram: FC = () => {
     }, [examPrices, activeOrg]);
     
     const navigationLinks = useMemo(() => {
-        if (!activeOrg || !programId) return { prev: null, next: null };
+        if (!activeOrg || !Array.isArray(activeOrg.examProductCategories) || !programId) {
+            return { prev: null, next: null };
+        }
 
-        const categories = activeOrg.examProductCategories;
+        const categories = activeOrg.examProductCategories.filter(Boolean);
         const currentIndex = categories.findIndex(cat => cat.id === programId);
 
         if (currentIndex === -1) return { prev: null, next: null };
