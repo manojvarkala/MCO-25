@@ -1,9 +1,8 @@
 import React, { FC, useState, useCallback } from 'react';
 import { BookOpen, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import toast from 'react-hot-toast';
-import Seal from '../assets/Seal.tsx';
 
 // --- CHAPTER DATA ---
 const chapters = [
@@ -21,9 +20,11 @@ const chapters = [
                 </div>
                 <h1 class="text-5xl font-extrabold font-display">Annapoorna Infotech Examination Engine</h1>
                 <p class="mt-4 text-2xl font-script text-cyan-300">A Comprehensive Technical & Administrative Handbook</p>
-                <div class="mt-12 text-sm text-slate-400">
-                    <p>Version 1.0.3</p>
-                    <p>AI Engineering Division</p>
+                
+                <div class="mt-auto pt-8 text-sm text-slate-400">
+                    <p class="font-semibold text-slate-300 text-base">Manoj Balakrishnan</p>
+                    <p class="text-xs text-slate-400">Lead Architect & Visionary</p>
+                    <p class="mt-6">Version 1.0.3</p>
                 </div>
             </div>
         `
@@ -37,10 +38,34 @@ const chapters = [
         id: 'ch1',
         title: 'Chapter 1: Introduction',
         content: `
-            <h3 class="text-xl font-bold">1.1 The Vision: A Unified, Multi-Brand Examination Platform</h3>
-            <p>The Annapoorna Examination Engine was conceived as a powerful, multi-tenant platform capable of serving customized exam experiences for various brands or subjects (e.g., medical coding, law, finance) from a single, unified codebase.</p>
-            <h3 class="text-xl font-bold mt-4">1.2 Purpose of This Handbook</h3>
-            <p>This document provides a comprehensive overview of the platform's architecture, a practical guide for administrators and content managers, and a technical reference for developers.</p>
+            <h3 class="text-xl font-bold">1.1 The Vision: Your Centralized Examination Ecosystem</h3>
+            <p>Welcome to the Annapoorna Examination Engine, a revolutionary platform engineered not just to administer tests, but to build and scale entire educational enterprises. Our vision was to create a single, powerful, multi-tenant solution that empowers organizations to launch bespoke, branded examination portals with unparalleled speed and efficiency. Whether you operate in medical coding, legal studies, finance, or any other professional field, this engine is your launchpad for creating a world-class certification experience.</p>
+            <p>Imagine deploying a new, fully-branded exam portal for a client or a new subject in a matter of hours, not months. This platform is designed to eliminate technical barriers, allowing you to focus on what truly matters: creating high-quality content and growing your audience.</p>
+
+            <h3 class="text-xl font-bold mt-6">1.2 The Power of the Headless Engine</h3>
+            <p>At its core, the Annapoorna Engine operates on a "headless" architecture. This means we have separated the beautiful, lightning-fast user interface (the "head") from the robust content and e-commerce backend (the "body," powered by WordPress and WooCommerce). This separation is not just a technical detail—it is your competitive advantage.</p>
+            <ul>
+                <li><strong>Unmatched User Experience:</strong> Deliver a modern, app-like experience that is faster and more responsive than any traditional website, keeping your users engaged and focused.</li>
+                <li><strong>Infinite Flexibility:</strong> Change the look, feel, and functionality of your user-facing portals without ever risking your backend data. Adapt to market trends instantly.</li>
+                <li><strong>Scalability on Demand:</strong> Host your user-facing app on global, high-performance networks (like Vercel) while your backend remains secure and stable.</li>
+            </ul>
+
+            <h3 class="text-xl font-bold mt-6">1.3 Core Capabilities at a Glance</h3>
+            <p>This engine is more than just an exam player. It's a complete business solution with a suite of powerful, integrated features:</p>
+            <ul>
+                <li><strong>Monetization-Ready:</strong> Seamlessly integrated with WooCommerce to handle everything from single exam purchases to recurring subscriptions and complex product bundles.</li>
+                <li><strong>AI-Powered Learning:</strong> Leverage Google's Gemini API to provide users with personalized study guides, transforming a simple test result into a valuable learning opportunity.</li>
+                <li><strong>Gamified Engagement:</strong> Boost user retention and excitement with the "Spin & Win" feature, offering tangible rewards and a fun, interactive experience.</li>
+                <li><strong>Automated SEO Content Marketing:</strong> The built-in AI Content Engine turns your exam programs into a stream of SEO-friendly blog posts, driving organic traffic and building your site's authority automatically.</li>
+                <li><strong>Professional Certification:</strong> Generate and issue beautiful, verifiable PDF certificates upon exam completion, complete with custom branding and signatures.</li>
+                <li><strong>Effortless Administration:</strong> Manage everything from a centralized, intuitive admin panel built directly into the app—from creating exam programs to analyzing sales data.</li>
+            </ul>
+
+            <h3 class="text-xl font-bold mt-6">1.4 Purpose of This Handbook</h3>
+            <p>This handbook is your definitive guide to unlocking the full potential of the Annapoorna Examination Engine. It provides a comprehensive overview of the platform's architecture, a practical guide for administrators, and a technical reference for developers, ensuring you have all the knowledge needed to manage and grow your examination business.</p>
+            
+            <h3 class="text-xl font-bold mt-6">1.5 Intended Audience</h3>
+            <p>This guide is written for three primary groups: <strong>Administrators</strong> who manage content and users, <strong>Business Owners</strong> who strategize and scale the platform, and <strong>Developers</strong> who maintain and extend its capabilities.</p>
         `
     },
     {
@@ -175,50 +200,115 @@ chapters[1].content = tocContent;
 const Handbook: FC = () => {
     const [activeChapterIndex, setActiveChapterIndex] = useState(0);
 
-    const handleDownload = useCallback(() => {
-        const toastId = toast.loading('Generating PDF...');
+    const handleDownload = useCallback(async () => {
+        const toastId = toast.loading('Generating your handbook...');
         try {
             const doc = new jsPDF('p', 'mm', 'a4');
-            const tempContainer = document.createElement('div');
-            document.body.appendChild(tempContainer);
-            tempContainer.style.display = 'none';
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 15;
+            let currentY = margin;
 
-            // Start from index 1 to skip the cover page
-            chapters.forEach((chapter, index) => {
-                if (index === 0) return; 
+            // --- 1. RENDER COVER PAGE using html2canvas ---
+            const coverElement = document.createElement('div');
+            coverElement.style.position = 'absolute';
+            coverElement.style.left = '-9999px';
+            coverElement.style.width = `${pageWidth}mm`;
+            coverElement.style.height = `${pageHeight}mm`;
+            coverElement.innerHTML = chapters[0].content;
+            document.body.appendChild(coverElement);
+            
+            const coverCanvas = await html2canvas(coverElement.querySelector('div')!, { scale: 2, useCORS: true });
+            const coverImgData = coverCanvas.toDataURL('image/png');
+            doc.addImage(coverImgData, 'PNG', 0, 0, pageWidth, pageHeight);
+            document.body.removeChild(coverElement);
 
-                if (index > 1) {
+            // --- 2. RENDER TEXT-BASED CHAPTERS ---
+            const tempDiv = document.createElement('div');
+            
+            const addPageIfNeeded = (spaceNeeded: number) => {
+                if (currentY + spaceNeeded > pageHeight - margin) {
                     doc.addPage();
+                    currentY = margin;
                 }
+            };
+            
+            for (let i = 1; i < chapters.length; i++) {
+                doc.addPage();
+                currentY = margin;
+                const chapter = chapters[i];
 
                 doc.setFontSize(18);
-                doc.setTextColor(15, 23, 42); 
-                doc.text(chapter.title, 14, 22);
+                doc.setTextColor('#0f172a'); // slate-900
+                doc.setFont('helvetica', 'bold');
+                doc.text(chapter.title, margin, currentY);
+                currentY += 10;
+                doc.setDrawColor('#e2e8f0'); // slate-200
+                doc.line(margin, currentY, pageWidth - margin, currentY);
+                currentY += 10;
                 
-                tempContainer.innerHTML = `<table><tbody><tr><td>${chapter.content.replace(/<a[^>]*>|<\/a>/g, '')}</td></tr></tbody></table>`;
-                const table = tempContainer.querySelector('table');
+                tempDiv.innerHTML = chapter.content;
+                const nodes = Array.from(tempDiv.childNodes);
 
-                if (table) {
-                    autoTable(doc, {
-                        html: table,
-                        startY: 30,
-                        theme: 'plain',
-                        styles: { font: 'helvetica', fontSize: 10, textColor: [51, 65, 85] },
+                for (const node of nodes) {
+                    const element = node as HTMLElement;
+                    const text = (element.textContent || '').trim();
+                    if (!text) continue;
+
+                    let listPrefix = '';
+                    let leftMargin = margin;
+
+                    // Set styles based on tag
+                    switch (element.tagName) {
+                        case 'H3':
+                            addPageIfNeeded(10);
+                            doc.setFontSize(14);
+                            doc.setFont('helvetica', 'bold');
+                            currentY += 6;
+                            break;
+                        case 'P':
+                            addPageIfNeeded(8);
+                            doc.setFontSize(10);
+                            doc.setFont('helvetica', 'normal');
+                            currentY += 6;
+                            break;
+                        case 'UL':
+                        case 'OL':
+                            const listItems = Array.from(element.querySelectorAll('li'));
+                            listItems.forEach((li, liIndex) => {
+                                const liText = (li.textContent || '').trim();
+                                if (!liText) return;
+                                listPrefix = (element.tagName === 'OL') ? `${liIndex + 1}. ` : '• ';
+                                const lines = doc.splitTextToSize(liText, pageWidth - (margin * 2) - 5);
+                                lines.forEach((line: string, lineIndex: number) => {
+                                    addPageIfNeeded(5);
+                                    doc.text(lineIndex === 0 ? listPrefix + line : line, margin + 5, currentY);
+                                    currentY += 5;
+                                });
+                            });
+                            continue; // Skip the generic line processing
+                    }
+                    
+                    const lines = doc.splitTextToSize(text, pageWidth - (leftMargin * 2));
+                    lines.forEach((line: string) => {
+                        addPageIfNeeded(5);
+                        doc.text(line, leftMargin, currentY);
+                        currentY += 5;
                     });
                 }
-            });
-            
+            }
+
+            // --- 3. ADD PAGE NUMBERS ---
             const pageCount = doc.getNumberOfPages();
-            for(let i = 1; i <= pageCount; i++) {
+            for (let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
                 doc.setFontSize(8);
-                doc.setTextColor(156, 163, 175);
-                doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.width - 25, doc.internal.pageSize.height - 10);
+                doc.setTextColor('#9ca3af'); // slate-400
+                doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
             }
 
             doc.save('Annapoorna_Exam_Engine_Handbook.pdf');
-            document.body.removeChild(tempContainer);
-            toast.success('Handbook downloaded!', { id: toastId });
+            toast.success('Handbook downloaded successfully!', { id: toastId });
         } catch (error) {
             console.error("PDF generation failed:", error);
             toast.error('Failed to download PDF.', { id: toastId });
