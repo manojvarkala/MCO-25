@@ -3,6 +3,21 @@ if (!defined('ABSPATH')) exit;
 
 // --- ADMIN MENU & PAGE ---
 
+if (!function_exists('mco_add_admin_menu')) {
+    function mco_add_admin_menu() {
+        add_menu_page(
+            'Exam App Engine', // Page Title
+            'Exam App Engine', // Menu Title
+            'manage_options', // Capability
+            'mco-exam-engine', // Menu Slug
+            'mco_exam_engine_admin_page', // Callback function to render the page
+            'dashicons-welcome-learn-more', // Icon
+            25 // Position
+        );
+    }
+}
+
+
 if (!function_exists('mco_register_admin_hooks')) {
     function mco_register_admin_hooks() {
         add_action('admin_menu', 'mco_add_admin_menu');
@@ -123,7 +138,7 @@ if (!function_exists('mco_admin_enqueue_scripts')) {
         wp_enqueue_media();
         ?>
         <style>
-            .mco-admin-wrap { max-width: 960px; } .mco-admin-wrap h1 { margin-bottom: 20px; } .mco-admin-wrap .nav-tab { font-size: 14px; } .mco-admin-wrap .tab-content { margin-top: 20px; } .mco-admin-wrap .form-table th { width: 200px; } .mco-admin-wrap .form-table td input[type="text"], .mco-admin-wrap .form-table td textarea { width: 100%; max-width: 500px; } .mco-admin-wrap .form-table td .image-upload-wrapper { display: flex; align-items: center; gap: 10px; } .mco-admin-wrap .form-table td .image-upload-wrapper textarea { flex-grow: 1; } .mco-admin-wrap .form-table td textarea { height: 100px; } .mco-admin-wrap .notice-success { border-left-color: #4CAF50; } .mco-admin-wrap .notice-error { border-left-color: #F44336; } .mco-admin-wrap .notice-warning { border-left-color: #FFC107; } .mco-feedback-box { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin-top: 20px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 13px; } .mco-feedback-box.full-height { max-height: none; } .mco-feedback-box ul { margin: 0; padding-left: 20px; } .mco-feedback-box li.error { color: #dc3545; } .mco-feedback-box li.success { color: #28a745; }
+            .mco-admin-wrap { max-width: 960px; } .mco-admin-wrap h1 { margin-bottom: 20px; } .mco-admin-wrap .nav-tab { font-size: 14px; } .mco-admin-wrap .tab-content { margin-top: 20px; } .mco-admin-wrap .form-table th { width: 200px; } .mco-admin-wrap .form-table td input[type="text"], .mco-admin-wrap .form-table td textarea { width: 100%; max-width: 500px; } .mco-admin-wrap .form-table td .image-upload-wrapper { display: flex; align-items: center; gap: 10px; } .mco-admin-wrap .form-table td .image-upload-wrapper textarea { flex-grow: 1; } .mco-admin-wrap .form-table td textarea { height: 100px; } .mco-admin-wrap .notice-success { border-left-color: #4CAF50; } .mco-admin-wrap .notice-error { border-left-color: #F44336; } .mco-admin-wrap .notice-warning { border-left-color: #FFC107; } .mco-admin-wrap .mco-feedback-box { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin-top: 20px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 13px; } .mco-feedback-box.full-height { max-height: none; } .mco-feedback-box ul { margin: 0; padding-left: 20px; } .mco-feedback-box li.error { color: #dc3545; } .mco-feedback-box li.success { color: #28a745; }
         </style>
         <script>
         jQuery(document).ready(function($){
