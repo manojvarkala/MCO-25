@@ -83,8 +83,8 @@ const ExamProgram: FC = () => {
         const category = activeOrg.examProductCategories.find(cat => cat && cat.id === programId);
         if (!category) return null;
 
-        const practiceExam = activeOrg.exams.find(e => e.id === category.practiceExamId);
-        const certExam = activeOrg.exams.find(e => e.id === category.certificationExamId);
+        const practiceExam = activeOrg.exams.find(e => e && e.id === category.practiceExamId);
+        const certExam = activeOrg.exams.find(e => e && e.id === category.certificationExamId);
 
         return { category, practiceExam, certExam };
     }, [programId, activeOrg]);

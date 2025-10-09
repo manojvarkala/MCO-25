@@ -11,9 +11,9 @@ interface ShareButtonsProps {
 const ShareButtons: FC<ShareButtonsProps> = ({ shareUrl, shareText, shareTitle, size = 16 }) => {
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
     
-    // LinkedIn's 'shareArticle' endpoint is deprecated. The 'summary' parameter is the legacy
-    // way to suggest body text, which may work more reliably than 'text' in some cases.
-    const linkedinUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle || '')}&summary=${encodeURIComponent(shareText)}`;
+    // Reverting to the 'text' parameter as per user feedback that 'summary' was not working.
+    // LinkedIn's 'shareArticle' endpoint is deprecated and behavior can be inconsistent.
+    const linkedinUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle || '')}&text=${encodeURIComponent(shareText)}`;
     
     // Facebook's sharer primarily uses OG tags from the URL. The 'quote' parameter is a suggestion
     // that is often ignored by the platform, especially on mobile.

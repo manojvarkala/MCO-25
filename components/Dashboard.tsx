@@ -88,10 +88,10 @@ const Dashboard: FC = () => {
             return [];
         }
         return activeOrg.examProductCategories
-            .filter(Boolean) // Add extra safety check for malformed arrays
+            .filter(Boolean)
             .map(category => {
-                const practiceExam = activeOrg.exams.find(e => e.id === category.practiceExamId);
-                const certExam = activeOrg.exams.find(e => e.id === category.certificationExamId);
+                const practiceExam = activeOrg.exams.find(e => e && e.id === category.practiceExamId);
+                const certExam = activeOrg.exams.find(e => e && e.id === category.certificationExamId);
                 return { ...category, practiceExam, certExam };
             });
     }, [activeOrg]);

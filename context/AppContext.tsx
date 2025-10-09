@@ -220,18 +220,24 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     loadAppConfig();
   }, []);
 
-  // Effect to record a site hit once per session, ignoring admins.
+  // Effect to record a site hit once per session.
   useEffect(() => {
     const hitCountedInSession = sessionStorage.getItem('mco_hit_counted');
 
-    if (!hitCountedInSession && !isEffectivelyAdmin) {
-        // If not counted yet for this session and not an admin, call the API.
+    // The goal is to show the hit counter for everyone, but only increment it once per session.
+    // The previous logic prevented admins from seeing the count at all in a new session.
+    // This revised logic ensures the count is fetched for everyone on a new session.
+    // This will increment the counter for admins on their first hit of a session, which is an acceptable trade-off for UI consistency.
+    if (!hitCountedInSession) {
         const recordHit = async () => {
             try {
                 const data = await googleSheetsService.recordSiteHit();
                 if (data && data.count) {
                     const newCount = data.count;
-                    setHitCount(newCount); // Update state with the new count from API
+                    setHitCount(newCount);
+                    
+                    // Mark that a hit has been recorded for this session for EVERYONE.
+                    // This prevents admins from incrementing the counter on every page navigation within the same session.
                     sessionStorage.setItem('mco_hit_counted', 'true');
                     sessionStorage.setItem('mco_site_hit_count', newCount.toString());
                 }
@@ -242,7 +248,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         recordHit();
     }
-  }, [isEffectivelyAdmin]);
+  }, []); // Run only once on initial app mount.
 
 
   // Effect 2: Check for in-progress exams when user logs in or active org changes.
