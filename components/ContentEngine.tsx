@@ -49,6 +49,7 @@ const ContentEngine: FC = () => {
             .filter(p => p.certificationExamId && p.description) // Must have a cert exam and description
             .map(p => ({
                 id: p.id.replace('prod-', ''), // Get the raw post ID
+                appId: p.id,
                 name: p.name,
                 description: p.description
             }));
@@ -78,17 +79,41 @@ const ContentEngine: FC = () => {
                 scheduleDate.setDate(scheduleDate.getDate() + (i * parseInt(interval, 10)));
                 const postDate = scheduleDate.toISOString().slice(0, 19).replace('T', ' ');
 
+                // 3. Create the dynamic Call-To-Action block
+                const programUrl = `${window.location.origin}/program/${program.appId}`;
+                const ctaBlock = `
+<!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|50","bottom":"var:preset|spacing|50","left":"var:preset|spacing|50","right":"var:preset|spacing|50"}},"border":{"radius":"8px"}},"backgroundColor":"vivid-cyan-blue","textColor":"white","layout":{"type":"constrained"}} -->
+<div class="wp-block-group has-white-color has-vivid-cyan-blue-background-color has-text-color has-background" style="border-radius:8px;padding-top:var(--wp--preset--spacing--50);padding-right:var(--wp--preset--spacing--50);padding-bottom:var(--wp--preset--spacing--50);padding-left:var(--wp--preset--spacing--50)">
+<!-- wp:heading {"textAlign":"center","level":3,"textColor":"white"} -->
+<h3 class="wp-block-heading has-text-align-center has-white-color has-text-color">Ready to Get Certified?</h3>
+<!-- /wp:heading -->
+<!-- wp:paragraph {"align":"center"} -->
+<p class="has-text-align-center">Take the next step in your career. Explore our practice tests, certification exams, and valuable bundles for the ${program.name}.</p>
+<!-- /wp:paragraph -->
+<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"}} -->
+<div class="wp-block-buttons">
+<!-- wp:button {"backgroundColor":"luminous-vivid-amber","textColor":"black","className":"is-style-fill"} -->
+<div class="wp-block-button is-style-fill">
+<a class="wp-block-button__link has-black-color has-luminous-vivid-amber-background-color has-text-color has-background" href="${programUrl}" rel="noopener">View the Program Details</a>
+</div>
+<!-- /wp:button -->
+</div>
+<!-- /wp:buttons -->
+</div>
+<!-- /wp:group -->
+`;
+
                 const postPayload = {
                     program_id: program.id,
-                    post_title: `Prepare for the ${program.name} Exam`,
-                    post_content: aiContent,
+                    post_title: `How to Prepare for the ${program.name} Exam`,
+                    post_content: aiContent + '\n' + ctaBlock,
                     post_status: 'future',
                     post_date: postDate,
                     post_author: authorId || undefined,
                     post_category: categoryId ? parseInt(categoryId, 10) : undefined
                 };
 
-                // 3. Send to WordPress to create the post
+                // 4. Send to WordPress to create the post
                 const result = await googleSheetsService.createPostFromApp(token, postPayload);
                 if (result.success) {
                     setGeneratedPosts(prev => [...prev, { title: postPayload.post_title, url: result.post_url, programName: program.name }]);

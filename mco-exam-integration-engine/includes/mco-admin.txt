@@ -166,7 +166,6 @@ if (!function_exists('mco_exam_engine_admin_page')) {
 
             if ($form_action === 'save_main_settings') {
                 update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
-                update_option('mco_exam_programs_page_url', esc_url_raw($_POST['mco_exam_programs_page_url']));
                 update_option('mco_is_spin_wheel_enabled', isset($_POST['mco_is_spin_wheel_enabled']) ? 1 : 0);
                 $logo_url_input = isset($_POST['mco_logo_url']) ? trim(wp_unslash($_POST['mco_logo_url'])) : '';
                 $url_to_save = (strpos($logo_url_input, 'data:image') === 0) ? $logo_url_input : esc_url_raw($logo_url_input);
@@ -220,10 +219,6 @@ function mco_render_main_settings_tab() { ?>
             <tr valign="top">
                 <th scope="row">Exam Application URL(s)</th>
                 <td><textarea name="mco_exam_app_url"><?php echo esc_textarea(get_option('mco_exam_app_url')); ?></textarea><p class="description">Enter the full URL of your React exam app. Add multiple URLs on new lines if needed (e.g., for different environments like Vercel previews).</p></td>
-            </tr>
-             <tr valign="top">
-                <th scope="row">Exam Programs Page URL</th>
-                <td><input type="text" name="mco_exam_programs_page_url" value="<?php echo esc_url(get_option('mco_exam_programs_page_url')); ?>" class="widefat" /><p class="description">Enter the full URL of the page where your [mco_exam_showcase] shortcode is displayed. This is used for internal linking in generated blog posts.</p></td>
             </tr>
              <tr valign="top">
                 <th scope="row">Custom Logo URL</th>
