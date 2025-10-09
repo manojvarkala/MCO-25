@@ -10,6 +10,7 @@ import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';
 import SubscriptionOfferCard from './SubscriptionOfferCard.tsx';
+import ShareButtons from './ShareButtons.tsx';
 
 const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } | null => {
     const links = book.affiliateLinks;
@@ -43,6 +44,18 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
         }
     }
     return null;
+};
+
+const stripHtml = (html: string): string => {
+    if (!html || typeof html !== 'string') return html || '';
+    try {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        return tempDiv.textContent || tempDiv.innerText || '';
+    } catch (e) {
+        console.error("Could not parse HTML string for stripping", e);
+        return html;
+    }
 };
 
 const ExamProgram: FC = () => {
@@ -127,14 +140,31 @@ const ExamProgram: FC = () => {
     }
 
     const { category, practiceExam, certExam } = programData;
+    
+    const bundleTypeToShow = useMemo(() => {
+        if (!certExam || !examPrices) return null;
+        const subBundleSku = `${certExam.productSku}-1mo-addon`;
+        const practiceBundleSku = `${certExam.productSku}-1`;
+
+        if (examPrices[subBundleSku]) return 'subscription';
+        if (examPrices[practiceBundleSku]) return 'practice';
+        return null;
+    }, [certExam, examPrices]);
+
     const certAttempts = user && certExam ? results.filter(r => r.examId === certExam.id).length : undefined;
     const fullDescription = certExam?.description || practiceExam?.description || category.description;
+    
+    const shareUrl = `${window.location.origin}/program/${category.id}`;
+    const shareText = `Check out the ${stripHtml(category.name)} program on ${activeOrg.name}! Great for certification prep.`;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
             <main className="lg:col-span-3 space-y-8">
                 <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                    <h1 className="text-3xl font-extrabold text-slate-900">{category.name}</h1>
+                    <div className="flex flex-wrap justify-between items-start gap-2">
+                         <h1 className="text-3xl font-extrabold text-slate-900">{stripHtml(category.name)}</h1>
+                         <ShareButtons shareUrl={shareUrl} shareText={shareText} size={18} />
+                    </div>
                     
                     <div className="flex justify-between items-center mt-4 mb-6 border-t border-b border-slate-200 py-3">
                         {navigationLinks.prev ? (
@@ -142,7 +172,7 @@ const ExamProgram: FC = () => {
                                 <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform"/>
                                 <div>
                                     <span className="text-xs text-slate-500">Previous</span>
-                                    <span className="block font-semibold text-sm line-clamp-1">{navigationLinks.prev.name}</span>
+                                    <span className="block font-semibold text-sm line-clamp-1">{stripHtml(navigationLinks.prev.name)}</span>
                                 </div>
                             </Link>
                         ) : (
@@ -152,7 +182,7 @@ const ExamProgram: FC = () => {
                             <Link to={`/program/${navigationLinks.next.id}`} className="flex items-center gap-2 text-cyan-600 hover:text-cyan-800 transition-colors text-right group">
                                 <div className="text-right">
                                     <span className="text-xs text-slate-500">Next</span>
-                                    <span className="block font-semibold text-sm line-clamp-1">{navigationLinks.next.name}</span>
+                                    <span className="block font-semibold text-sm line-clamp-1">{stripHtml(navigationLinks.next.name)}</span>
                                 </div>
                                 <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform"/>
                             </Link>
@@ -212,17 +242,9 @@ const ExamProgram: FC = () => {
                         attemptsMade={certAttempts}
                     />
                 )}
-                {certExam && (
+                {certExam && bundleTypeToShow && (
                     <ExamBundleCard
-                        type="practice"
-                        certExam={certExam}
-                        activeOrg={activeOrg}
-                        examPrices={examPrices}
-                    />
-                )}
-                {certExam && (
-                    <ExamBundleCard
-                        type="subscription"
+                        type={bundleTypeToShow}
                         certExam={certExam}
                         activeOrg={activeOrg}
                         examPrices={examPrices}

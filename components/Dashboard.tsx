@@ -10,6 +10,7 @@ import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';
 import SubscriptionOfferCard from './SubscriptionOfferCard.tsx';
+import ShareButtons from './ShareButtons.tsx';
 
 const StatCard: FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
     <div className="bg-[rgb(var(--color-muted-rgb))] p-4 rounded-lg flex items-center border border-[rgb(var(--color-border-rgb))]">
@@ -20,6 +21,18 @@ const StatCard: FC<{ title: string; value: string | number; icon: React.ReactNod
         </div>
     </div>
 );
+
+const stripHtml = (html: string): string => {
+    if (!html || typeof html !== 'string') return html || '';
+    try {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        return tempDiv.textContent || tempDiv.innerText || '';
+    } catch (e) {
+        console.error("Could not parse HTML string for stripping", e);
+        return html;
+    }
+};
 
 const Dashboard: FC = () => {
     const { user, token, paidExamIds, isSubscribed, loginWithToken } = useAuth();
@@ -186,18 +199,42 @@ const Dashboard: FC = () => {
                  <div className="space-y-6">
                      {examCategories.map((category, index) => {
                          const certAttempts = user && category.certExam ? results.filter(r => r.examId === category.certExam.id).length : undefined;
+                         
+                         let bundleTypeToShow: 'practice' | 'subscription' | null = null;
+                         if (category.certExam && examPrices) {
+                             const subBundleSku = `${category.certExam.productSku}-1mo-addon`;
+                             const practiceBundleSku = `${category.certExam.productSku}-1`;
+                             if (examPrices[subBundleSku]) {
+                                 bundleTypeToShow = 'subscription';
+                             } else if (examPrices[practiceBundleSku]) {
+                                 bundleTypeToShow = 'practice';
+                             }
+                         }
+                         
+                         const shareUrl = `${window.location.origin}/program/${category.id}`;
+                         const shareText = `Check out the ${stripHtml(category.name)} program on ${activeOrg.name}! Great for certification prep.`;
+
 
                          return (
                             <div key={category.id} id={category.id} className="bg-[rgb(var(--color-muted-rgb))] p-6 rounded-xl border border-[rgb(var(--color-border-rgb))]">
-                                <Link to={`/program/${category.id}`} className="group">
-                                    <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-1 group-hover:text-[rgb(var(--color-primary-rgb))] transition">{category.name}</h3>
-                                </Link>
+                                <div className="flex flex-wrap justify-between items-start gap-2 mb-1">
+                                    <Link to={`/program/${category.id}`} className="group">
+                                        <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] group-hover:text-[rgb(var(--color-primary-rgb))] transition">{stripHtml(category.name)}</h3>
+                                    </Link>
+                                    <ShareButtons shareUrl={shareUrl} shareText={shareText} />
+                                </div>
                                 <div className="text-[rgb(var(--color-text-muted-rgb))] mb-4 text-sm" dangerouslySetInnerHTML={{ __html: category.description }} />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} />}
                                     {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} attemptsMade={certAttempts}/>}
-                                    {category.certExam && <ExamBundleCard type="practice" certExam={category.certExam} activeOrg={activeOrg} examPrices={examPrices} />}
-                                    {category.certExam && <ExamBundleCard type="subscription" certExam={category.certExam} activeOrg={activeOrg} examPrices={examPrices} />}
+                                    {category.certExam && bundleTypeToShow && (
+                                        <ExamBundleCard
+                                            type={bundleTypeToShow}
+                                            certExam={category.certExam}
+                                            activeOrg={activeOrg}
+                                            examPrices={examPrices}
+                                        />
+                                    )}
                                 </div>
                             </div>
                          );

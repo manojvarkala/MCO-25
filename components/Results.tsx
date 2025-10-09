@@ -314,7 +314,7 @@ const Results: FC = () => {
         };
 
         const shareText = `I'm proud to announce I've passed the ${exam.name} with a score of ${result.score}%! Thanks to ${activeOrg.name}.`;
-        const shareUrl = `https://www.${activeOrg.website}`;
+        const shareUrl = window.location.origin;
 
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
         const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;

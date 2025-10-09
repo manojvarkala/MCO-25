@@ -133,7 +133,7 @@ const AppContent: FC = () => {
                     {/* Fix: Use <Routes> and v6 Route syntax */}
                     <Routes>
                         <Route path="/" element={<LandingPage />} />
-                        <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+                        <Route path="/auth" element={<Login />} />
                         <Route path="/checkout/:productSlug" element={<Checkout />} />
                         <Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
                         <Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />

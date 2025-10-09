@@ -47,8 +47,8 @@ const SuggestedBooksSidebar: FC = () => {
         if (!suggestedBooks || suggestedBooks.length === 0) {
             return [];
         }
-        // Shuffle the array and take the first 3
-        return [...suggestedBooks].sort(() => 0.5 - Math.random()).slice(0, 3);
+        // Shuffle the array and take the first 5
+        return [...suggestedBooks].sort(() => 0.5 - Math.random()).slice(0, 5);
     }, [suggestedBooks]);
 
 

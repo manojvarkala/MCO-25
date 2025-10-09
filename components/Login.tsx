@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 const Login: FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { loginWithToken } = useAuth();
+    const { loginWithToken, user } = useAuth();
     const hasProcessed = useRef(false);
 
     useEffect(() => {
@@ -25,6 +25,11 @@ const Login: FC = () => {
             const isSyncLogin = !!localStorage.getItem('examUser');
 
             loginWithToken(token, isSyncLogin)
+                .then(() => {
+                    // After all auth state is set and sync is done, navigate.
+                    // This imperative navigation fixes a race condition on login.
+                    navigate('/dashboard', { replace: true });
+                })
                 .catch((e: any) => {
                     // This catch handles critical token validation errors from AuthContext.
                     const errorMessage = e.message || 'Invalid login token. Please try again.';
@@ -32,14 +37,15 @@ const Login: FC = () => {
                     navigate('/', { replace: true });
                 });
         } else {
-            // No token found in the URL. This page shouldn't be accessed directly.
-            // Redirect to the landing page. The LandingPage component will handle
-            // redirecting to the dashboard if a user is already logged in.
-            navigate('/', { replace: true });
+            // If there's no token but the user is already logged in, redirect them.
+            // Otherwise, send them to the landing page.
+            if (user) {
+                navigate('/dashboard', { replace: true });
+            } else {
+                navigate('/', { replace: true });
+            }
         }
-        // The navigation logic is now handled reactively by the App component,
-        // so this component's only job is to start the login process.
-    }, [location.search, loginWithToken, navigate]);
+    }, [location.search, loginWithToken, navigate, user]);
 
     // This component's primary job is to process and redirect.
     // It will show a loading screen for the brief moment it's mounted.
