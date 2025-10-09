@@ -155,7 +155,8 @@ const ExamProgram: FC = () => {
     const fullDescription = certExam?.description || practiceExam?.description || category.description;
     
     const shareUrl = `${window.location.origin}/program/${category.id}`;
-    const shareText = `Check out the ${stripHtml(category.name)} program on ${activeOrg.name}! Great for certification prep.`;
+    const shareTitle = stripHtml(category.name);
+    const shareText = `Check out the ${shareTitle} program on ${activeOrg.name}! Great for certification prep.`;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -163,7 +164,7 @@ const ExamProgram: FC = () => {
                 <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                     <div className="flex flex-wrap justify-between items-start gap-2">
                          <h1 className="text-3xl font-extrabold text-slate-900">{stripHtml(category.name)}</h1>
-                         <ShareButtons shareUrl={shareUrl} shareText={shareText} size={18} />
+                         <ShareButtons shareUrl={shareUrl} shareText={shareText} shareTitle={shareTitle} size={18} />
                     </div>
                     
                     <div className="flex justify-between items-center mt-4 mb-6 border-t border-b border-slate-200 py-3">

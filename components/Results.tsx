@@ -313,12 +313,13 @@ const Results: FC = () => {
             toast.success("Image downloaded! You can now attach it to your post.");
         };
 
-        const shareText = `I'm proud to announce I've passed the ${exam.name} with a score of ${result.score}%! Thanks to ${activeOrg.name}.`;
+        const shareTitle = `I passed the ${exam.name}!`;
+        const shareText = `I'm proud to announce I've passed the ${exam.name} with a score of ${result.score}%! Thanks to ${activeOrg.name}. Check out their programs!`;
         const shareUrl = window.location.origin;
 
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
-        const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
-        const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+        const linkedinUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle)}&summary=${encodeURIComponent(shareText)}`;
+        const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
 
         return (
             <div className="bg-white p-6 rounded-xl shadow-md">

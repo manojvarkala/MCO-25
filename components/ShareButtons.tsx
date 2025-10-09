@@ -4,13 +4,18 @@ import { Twitter, Linkedin, Facebook } from 'lucide-react';
 interface ShareButtonsProps {
     shareUrl: string;
     shareText: string;
+    shareTitle?: string;
     size?: number;
 }
 
-const ShareButtons: FC<ShareButtonsProps> = ({ shareUrl, shareText, size = 16 }) => {
+const ShareButtons: FC<ShareButtonsProps> = ({ shareUrl, shareText, shareTitle, size = 16 }) => {
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
-    const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+    
+    // LinkedIn's 'shareArticle' endpoint is more likely to accept title and summary than 'share-offsite'.
+    const linkedinUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle || '')}&summary=${encodeURIComponent(shareText)}`;
+    
+    // Facebook's sharer uses the 'quote' parameter to pre-populate text.
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
 
     const openShareWindow = (url: string) => {
         window.open(url, '_blank', 'noopener,noreferrer,width=600,height=400');

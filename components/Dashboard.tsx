@@ -212,8 +212,8 @@ const Dashboard: FC = () => {
                          }
                          
                          const shareUrl = `${window.location.origin}/program/${category.id}`;
-                         const shareText = `Check out the ${stripHtml(category.name)} program on ${activeOrg.name}! Great for certification prep.`;
-
+                         const shareTitle = stripHtml(category.name);
+                         const shareText = `Check out the ${shareTitle} program on ${activeOrg.name}! Great for certification prep.`;
 
                          return (
                             <div key={category.id} id={category.id} className="bg-[rgb(var(--color-muted-rgb))] p-6 rounded-xl border border-[rgb(var(--color-border-rgb))]">
@@ -221,7 +221,7 @@ const Dashboard: FC = () => {
                                     <Link to={`/program/${category.id}`} className="group">
                                         <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] group-hover:text-[rgb(var(--color-primary-rgb))] transition">{stripHtml(category.name)}</h3>
                                     </Link>
-                                    <ShareButtons shareUrl={shareUrl} shareText={shareText} />
+                                    <ShareButtons shareUrl={shareUrl} shareText={shareText} shareTitle={shareTitle} />
                                 </div>
                                 <div className="text-[rgb(var(--color-text-muted-rgb))] mb-4 text-sm" dangerouslySetInnerHTML={{ __html: category.description }} />
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
