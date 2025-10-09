@@ -7,12 +7,13 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook } from '../types.ts';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, Sparkles, Star, XCircle, BookOpen, AlertTriangle, Share2, Twitter, Linkedin, Facebook } from 'lucide-react';
+import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, Sparkles, Star, XCircle, BookOpen, AlertTriangle, Share2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import BookCover from '../assets/BookCover.tsx';
 import ShareableResult from './ShareableResult.tsx';
+import ShareButtons from './ShareButtons.tsx';
 
 type UserCertVisibility = 'NONE' | 'USER_EARNED' | 'REVIEW_PENDING';
 
@@ -72,13 +73,6 @@ const Results: FC = () => {
     
     const [isGeneratingShareImage, setIsGeneratingShareImage] = useState(false);
     const shareableResultRef = useRef<HTMLDivElement>(null);
-    const [canNativeShare, setCanNativeShare] = useState(false);
-
-    useEffect(() => {
-        if (navigator.share) {
-            setCanNativeShare(true);
-        }
-    }, []);
 
     useEffect(() => {
         if (user && testId && activeOrg) {
@@ -272,88 +266,24 @@ const Results: FC = () => {
         }
     }, [shareableResultRef, user, exam, result]);
 
-    const handleMobileShare = async () => {
-        if (!exam || !result || isGeneratingShareImage) return;
-
+    const handleDownloadImage = async () => {
+        if (isGeneratingShareImage) return;
         const blob = await generateImageBlob();
         if (!blob) return;
 
-        const file = new File([blob], 'annapoorna-exam-result.png', { type: 'image/png' });
-        const shareData = {
-            title: `I passed the ${exam.name}!`,
-            text: `I'm proud to announce I've passed the ${exam.name} with a score of ${result.score}%!`,
-            files: [file],
-        };
-
-        if (navigator.canShare && navigator.canShare(shareData)) {
-            try {
-                await navigator.share(shareData);
-                toast.success("Result shared!");
-            } catch (error) {
-                console.log("Share cancelled or failed", error);
-            }
-        }
-    };
-
-    const DesktopShareButtons: FC = () => {
-        if (!exam || !result || !activeOrg) return null;
-
-        const handleDownloadImage = async () => {
-            if (isGeneratingShareImage) return;
-            const blob = await generateImageBlob();
-            if (!blob) return;
-
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'exam-result.png';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(link.href);
-            toast.success("Image downloaded! You can now attach it to your post.");
-        };
-
-        const shareTitle = `I passed the ${exam.name}!`;
-        const shareText = `I'm proud to announce I've passed the ${exam.name} with a score of ${result.score}%! Thanks to ${activeOrg.name}. Check out their programs!`;
-        const shareUrl = window.location.origin;
-
-        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
-        const linkedinUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle)}&summary=${encodeURIComponent(shareText)}`;
-        const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
-
-        return (
-            <div className="bg-white p-6 rounded-xl shadow-md">
-                <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><Share2 className="mr-3 text-cyan-500" /> Share Your Achievement</h3>
-                <div className="space-y-3">
-                    <p className="text-sm text-center text-slate-600"><strong>Step 1:</strong> Download your personalized result image.</p>
-                    <button
-                        onClick={handleDownloadImage}
-                        disabled={isGeneratingShareImage}
-                        className="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold py-2 px-4 rounded-lg transition disabled:bg-slate-400"
-                    >
-                        {isGeneratingShareImage ? <Spinner size="sm" /> : <Download size={16} />}
-                        {isGeneratingShareImage ? 'Generating...' : 'Download Result Image'}
-                    </button>
-                    <p className="text-sm text-center text-slate-600 pt-2"><strong>Step 2:</strong> Share it on your favorite platform!</p>
-                    <div className="grid grid-cols-3 gap-2">
-                        <a href={twitterUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#1DA1F2] hover:bg-[#1A91DA] text-white font-semibold py-2 px-3 rounded-lg transition">
-                            <Twitter size={16} /> X
-                        </a>
-                        <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#0A66C2] hover:bg-[#004182] text-white font-semibold py-2 px-3 rounded-lg transition">
-                            <Linkedin size={16} /> LinkedIn
-                        </a>
-                        <a href={facebookUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#1877F2] hover:bg-[#166FE5] text-white font-semibold py-2 px-3 rounded-lg transition">
-                            <Facebook size={16} /> Facebook
-                        </a>
-                    </div>
-                </div>
-            </div>
-        );
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'exam-result.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+        toast.success("Image downloaded! You can now attach it to your post.");
     };
 
     const reviewAlreadySubmitted = sessionStorage.getItem(reviewSubmittedKey) === 'true';
 
-    if (isLoading || !result || !exam) {
+    if (isLoading || !result || !exam || !activeOrg) {
         return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4 text-slate-600">Loading your results...</p></div>;
     }
     
@@ -370,6 +300,9 @@ const Results: FC = () => {
     const toggleQuestion = (id: number) => {
         setExpandedQuestion(expandedQuestion === id ? null : id);
     };
+
+    const shareText = `I passed the ${exam.name} with a score of ${result.score}%! Thanks to ${activeOrg.name} for their great exam platform.`;
+    const shareTitle = `I passed the ${exam.name}!`;
 
     return (
         <>
@@ -423,18 +356,30 @@ const Results: FC = () => {
                     )}
                     
                     {isPassed && (
-                        canNativeShare ? (
-                            <button
-                                onClick={handleMobileShare}
-                                disabled={isGeneratingShareImage}
-                                className="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:bg-slate-400"
-                            >
-                                {isGeneratingShareImage ? <Spinner /> : <Share2 size={20} />}
-                                {isGeneratingShareImage ? 'Generating...' : 'Share Your Result'}
-                            </button>
-                        ) : (
-                            <DesktopShareButtons />
-                        )
+                        <div className="bg-white p-6 rounded-xl shadow-md">
+                            <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><Share2 className="mr-3 text-cyan-500" /> Share Your Achievement</h3>
+                            <p className="text-sm text-slate-600 mb-4">
+                                Share your success! For best results on social media, download the image below and attach it to your post.
+                            </p>
+                            <div className="space-y-3">
+                                <button
+                                    onClick={handleDownloadImage}
+                                    disabled={isGeneratingShareImage}
+                                    className="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold py-2 px-4 rounded-lg transition disabled:bg-slate-400"
+                                >
+                                    {isGeneratingShareImage ? <Spinner size="sm" /> : <Download size={16} />}
+                                    {isGeneratingShareImage ? 'Generating...' : 'Download Result Image'}
+                                </button>
+                                <div className="flex items-center justify-center gap-2 pt-2">
+                                    <span className="text-sm text-slate-600">Or share a link:</span>
+                                    <ShareButtons 
+                                        shareUrl={window.location.origin}
+                                        shareText={shareText}
+                                        shareTitle={shareTitle}
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     )}
 
                     {!reviewAlreadySubmitted && (
