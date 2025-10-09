@@ -569,12 +569,21 @@ const ExamProgramCustomizer: FC = () => {
                             <div className="flex justify-between items-center p-4 bg-[rgb(var(--color-card-rgb))] rounded-t-lg">
                                 <div className="flex items-center">
                                     <input type="checkbox" checked={selectedProgramIds.includes(program.category.id)} onChange={e => handleSelectOne(program.category.id, e.target.checked)} className="h-4 w-4 mr-4"/>
-                                    <h2 
-                                        className="font-bold text-lg text-[rgb(var(--color-text-strong-rgb))] cursor-pointer hover:text-[rgb(var(--color-primary-rgb))] transition-colors"
+                                    <div 
+                                        className="cursor-pointer group"
                                         onClick={() => setEditingProgramId(program.category.id)}
                                     >
-                                        {program.category.name}
-                                    </h2>
+                                        <h2 
+                                            className="font-bold text-lg text-[rgb(var(--color-text-strong-rgb))] group-hover:text-[rgb(var(--color-primary-rgb))] transition-colors"
+                                        >
+                                            {program.category.name}
+                                        </h2>
+                                        {program.certExam?.productSku && (
+                                            <p className="text-xs text-[rgb(var(--color-text-muted-rgb))]">
+                                                SKU: {program.certExam.productSku}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {editingProgramId !== program.category.id && (
@@ -594,7 +603,16 @@ const ExamProgramCustomizer: FC = () => {
                                 <div className="p-4 bg-[rgb(var(--color-muted-rgb))] rounded-b-lg text-sm space-y-2">
                                     <p><strong>Description:</strong> {program.category.description}</p>
                                     {program.practiceExam && <p><strong>Practice Exam:</strong> {program.practiceExam.name}</p>}
-                                    {program.certExam && <p><strong>Certification Exam:</strong> {program.certExam.name}</p>}
+                                    {program.certExam && (
+                                        <p>
+                                            <strong>Certification Exam:</strong> {program.certExam.name}
+                                            {program.certExam.productSku && (
+                                                <span className="ml-2 text-xs bg-slate-200 text-slate-600 font-mono px-1.5 py-0.5 rounded">
+                                                    SKU: {program.certExam.productSku}
+                                                </span>
+                                            )}
+                                        </p>
+                                    )}
                                 </div>
                             )}
                             {editingProgramId === program.category.id && (

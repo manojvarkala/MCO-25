@@ -76,7 +76,7 @@ const ExamProgram: FC = () => {
     }, [user]);
 
     const programData = useMemo(() => {
-        if (!activeOrg || !programId || !Array.isArray(activeOrg.examProductCategories) || !Array.isArray(activeOrg.exams)) {
+        if (!activeOrg || !programId || !activeOrg.examProductCategories || !Array.isArray(activeOrg.examProductCategories) || !activeOrg.exams || !Array.isArray(activeOrg.exams)) {
             return null;
         }
 

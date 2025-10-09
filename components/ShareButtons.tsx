@@ -11,10 +11,12 @@ interface ShareButtonsProps {
 const ShareButtons: FC<ShareButtonsProps> = ({ shareUrl, shareText, shareTitle, size = 16 }) => {
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
     
-    // LinkedIn's 'shareArticle' endpoint is more likely to accept title and summary than 'share-offsite'.
-    const linkedinUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle || '')}&summary=${encodeURIComponent(shareText)}`;
+    // LinkedIn's 'shareArticle' endpoint is deprecated but the only one that supports pre-filled text.
+    // Some versions respond to 'summary', others to 'text'. Using 'text' as it is more common.
+    const linkedinUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle || '')}&text=${encodeURIComponent(shareText)}`;
     
-    // Facebook's sharer uses the 'quote' parameter to pre-populate text.
+    // Facebook's sharer primarily uses OG tags from the URL. The 'quote' parameter is a suggestion
+    // that is often ignored by the platform, especially on mobile.
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
 
     const openShareWindow = (url: string) => {

@@ -136,9 +136,12 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
                             <h3 className="font-semibold mb-2">Included Exams</h3>
                             <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
                                 {simpleProducts.map(p => (
-                                    <label key={p.sku} className="flex items-center gap-2 p-2 rounded bg-[rgb(var(--color-card-rgb))] cursor-pointer">
-                                        <input type="checkbox" checked={selectedSimpleSkus.includes(p.sku)} onChange={() => handleSimpleProductToggle(p.sku)} />
-                                        <span>{p.name}</span>
+                                    <label key={p.sku} className="flex items-center justify-between gap-2 p-2 rounded bg-[rgb(var(--color-card-rgb))] cursor-pointer">
+                                        <div className="flex items-center gap-2">
+                                            <input type="checkbox" checked={selectedSimpleSkus.includes(p.sku)} onChange={() => handleSimpleProductToggle(p.sku)} />
+                                            <span className="truncate" title={p.name}>{p.name}</span>
+                                        </div>
+                                        <span className="text-xs font-mono text-[rgb(var(--color-text-muted-rgb))] flex-shrink-0">{p.sku}</span>
                                     </label>
                                 ))}
                             </div>
@@ -147,19 +150,19 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
                              <h3 className="font-semibold mb-2">Included Subscription</h3>
                             <select value={selectedSubscriptionSku} onChange={e => setSelectedSubscriptionSku(e.target.value)} className="w-full p-2 border rounded bg-white">
                                 <option value="">None</option>
-                                {subscriptionProducts.map(s => <option key={s.sku} value={s.sku}>{s.name}</option>)}
+                                {subscriptionProducts.map(s => <option key={s.sku} value={s.sku}>{s.name} ({s.sku})</option>)}
                             </select>
                         </div>
                     </div>
 
                     {/* --- Pricing --- */}
                     {selectedItems.length > 0 && (
-                        <div className="p-4 border-dashed border-2 rounded-lg border-slate-300">
+                        <div className="p-4 border-dashed border-2 rounded-lg border-[rgb(var(--color-border-rgb))]">
                              <h3 className="font-semibold mb-2">Selected Items (Total Value: ${totalRegularPrice.toFixed(2)})</h3>
                              <ul className="text-sm space-y-1">
                                 {selectedItems.map(item => (
                                     <li key={item.sku} className="flex justify-between">
-                                        <span>{item.name}</span>
+                                        <span className="truncate" title={item.name}>{item.name} <span className="text-xs font-mono text-[rgb(var(--color-text-muted-rgb))]">({item.sku})</span></span>
                                         <span className="font-mono">${parseFloat(item.regularPrice).toFixed(2)}</span>
                                     </li>
                                 ))}

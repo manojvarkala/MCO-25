@@ -84,7 +84,7 @@ const Dashboard: FC = () => {
     }, [results, activeOrg, user]);
 
     const examCategories = useMemo(() => {
-        if (!activeOrg || !Array.isArray(activeOrg.examProductCategories) || !Array.isArray(activeOrg.exams)) {
+        if (!activeOrg || !activeOrg.examProductCategories || !Array.isArray(activeOrg.examProductCategories) || !activeOrg.exams || !Array.isArray(activeOrg.exams)) {
             return [];
         }
         return activeOrg.examProductCategories.map(category => {
