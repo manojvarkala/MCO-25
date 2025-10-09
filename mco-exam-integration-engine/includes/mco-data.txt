@@ -62,24 +62,27 @@ function mco_get_app_config_data() {
                 $image_url = get_the_post_thumbnail_url($product_id, 'medium_large') ?: '';
             }
         }
+
+        // FIX: Strip HTML from title to prevent injection from other plugins.
+        $clean_title = wp_strip_all_tags(get_the_title($post));
         
         $exam_product_categories[] = [
             'id' => $program_id_for_app,
-            'name' => get_the_title($post),
+            'name' => $clean_title,
             'description' => apply_filters('the_content', $post->post_content),
             'practiceExamId' => $practice_exam_id_for_app,
             'certificationExamId' => $cert_sku,
             'questionSourceUrl' => $question_source,
         ];
         
-        $practice_exam_name = !empty($practice_name_override) ? $practice_name_override : get_the_title($post) . ' Practice';
-        $cert_exam_name = !empty($cert_name_override) ? $cert_name_override : get_the_title($post);
+        $practice_exam_name = !empty($practice_name_override) ? $practice_name_override : $clean_title . ' Practice';
+        $cert_exam_name = !empty($cert_name_override) ? $cert_name_override : $clean_title;
 
         // Practice Exam
         $all_exams[] = [
             'id' => $practice_exam_id_for_app,
             'name' => $practice_exam_name,
-            'description' => 'A practice test to assess your knowledge for the ' . get_the_title($post) . '.',
+            'description' => 'A practice test to assess your knowledge for the ' . $clean_title . '.',
             'price' => 0,
             'productSku' => 'practice-' . $cert_sku,
             'numberOfQuestions' => (int)$practice_questions,

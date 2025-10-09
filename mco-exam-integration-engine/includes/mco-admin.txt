@@ -23,6 +23,8 @@ if (!function_exists('mco_register_admin_hooks')) {
         add_action('admin_menu', 'mco_add_admin_menu');
         add_action('admin_enqueue_scripts', 'mco_admin_enqueue_scripts');
         add_action('admin_post_mco_bulk_import_csv', 'mco_handle_csv_upload');
+        // Rename the action for the new bulk scheduler
+        add_action('admin_post_mco_schedule_bulk_posts', 'mco_handle_schedule_bulk_posts');
         add_action('add_meta_boxes', 'mco_add_exam_program_meta_boxes');
         add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta_data');
         
@@ -166,6 +168,7 @@ if (!function_exists('mco_exam_engine_admin_page')) {
 
             if ($form_action === 'save_main_settings') {
                 update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
+                update_option('mco_exam_programs_page_url', esc_url_raw($_POST['mco_exam_programs_page_url']));
                 update_option('mco_is_spin_wheel_enabled', isset($_POST['mco_is_spin_wheel_enabled']) ? 1 : 0);
                 $logo_url_input = isset($_POST['mco_logo_url']) ? trim(wp_unslash($_POST['mco_logo_url'])) : '';
                 $url_to_save = (strpos($logo_url_input, 'data:image') === 0) ? $logo_url_input : esc_url_raw($logo_url_input);
@@ -193,6 +196,7 @@ if (!function_exists('mco_exam_engine_admin_page')) {
             <nav class="nav-tab-wrapper">
                 <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
                 <a href="?page=mco-exam-engine&tab=theme_selector" class="nav-tab <?php echo $active_tab == 'theme_selector' ? 'nav-tab-active' : ''; ?>">Theme Selector</a>
+                <a href="?page=mco-exam-engine&tab=content_engine" class="nav-tab <?php echo $active_tab == 'content_engine' ? 'nav-tab-active' : ''; ?>">Content Engine</a>
                 <a href="?page=mco-exam-engine&tab=bulk_import" class="nav-tab <?php echo $active_tab == 'bulk_import' ? 'nav-tab-active' : ''; ?>">Bulk Import</a>
                 <a href="?page=mco-exam-engine&tab=certificate_templates" class="nav-tab <?php echo $active_tab == 'certificate_templates' ? 'nav-tab-active' : ''; ?>">Certificate Templates</a>
                 <a href="?page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
@@ -201,6 +205,7 @@ if (!function_exists('mco_exam_engine_admin_page')) {
                 <?php
                 if ($active_tab == 'main_settings') mco_render_main_settings_tab();
                 elseif ($active_tab == 'theme_selector') mco_render_theme_selector_tab();
+                elseif ($active_tab == 'content_engine') mco_render_content_engine_tab();
                 elseif ($active_tab == 'bulk_import') mco_render_bulk_import_tab();
                 elseif ($active_tab == 'certificate_templates') mco_render_certificate_templates_tab();
                 elseif ($active_tab == 'tools') mco_render_tools_tab();
@@ -219,6 +224,10 @@ function mco_render_main_settings_tab() { ?>
             <tr valign="top">
                 <th scope="row">Exam Application URL(s)</th>
                 <td><textarea name="mco_exam_app_url"><?php echo esc_textarea(get_option('mco_exam_app_url')); ?></textarea><p class="description">Enter the full URL of your React exam app. Add multiple URLs on new lines if needed (e.g., for different environments like Vercel previews).</p></td>
+            </tr>
+             <tr valign="top">
+                <th scope="row">Exam Programs Page URL</th>
+                <td><input type="text" name="mco_exam_programs_page_url" value="<?php echo esc_url(get_option('mco_exam_programs_page_url')); ?>" class="widefat" /><p class="description">Enter the full URL of the page where your [mco_exam_showcase] shortcode is displayed. This is used for internal linking in generated blog posts.</p></td>
             </tr>
              <tr valign="top">
                 <th scope="row">Custom Logo URL</th>
@@ -258,6 +267,96 @@ function mco_render_theme_selector_tab() { ?>
         </table>
         <?php submit_button(); ?>
     </form>
+<?php }
+
+function mco_render_content_engine_tab() {
+    $programs_page_url = get_option('mco_exam_programs_page_url');
+
+    if (isset($_GET['mco_post_status'])) {
+        $status = sanitize_text_field($_GET['mco_post_status']);
+        $message = get_transient('mco_post_generator_message');
+        delete_transient('mco_post_generator_message');
+
+        if ($message) {
+            $notice_class = ($status === 'success') ? 'notice-success' : 'notice-warning';
+            echo '<div class="notice ' . $notice_class . ' is-dismissible"><p>' . wp_kses_post($message) . '</p></div>';
+        }
+    }
+    ?>
+    <h2>Content Engine & Post Scheduler</h2>
+    <p>Automatically generate and schedule SEO-friendly blog posts from your existing exam programs. This helps build internal links and target relevant keywords over time.</p>
+
+    <?php if (empty($programs_page_url)) : ?>
+        <div class="notice notice-error"><p><strong>Warning:</strong> The "Exam Programs Page URL" is not set in the Main Settings. Generated posts will not have a call-to-action link. Please <a href="?page=mco-exam-engine&tab=main_settings">set it now</a>.</p></div>
+    <?php endif; ?>
+
+    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+        <input type="hidden" name="action" value="mco_schedule_bulk_posts">
+        <?php wp_nonce_field('mco_schedule_bulk_posts_nonce'); ?>
+        <h3>Bulk Post Scheduler</h3>
+        <table class="form-table">
+            <tr valign="top">
+                <th scope="row"><label for="num_posts">Number of Posts</label></th>
+                <td><input type="number" id="num_posts" name="num_posts" min="1" max="10" value="5" class="small-text">
+                <p class="description">How many posts to generate and schedule (max 10 at a time).</p></td>
+            </tr>
+            <tr valign="top">
+                <th scope="row"><label for="start_date">Start Date</label></th>
+                <td><input type="date" id="start_date" name="start_date" value="<?php echo date('Y-m-d'); ?>">
+                <p class="description">The publication date for the first post.</p></td>
+            </tr>
+            <tr valign="top">
+                <th scope="row"><label for="post_interval">Posting Interval</label></th>
+                <td>
+                    <select id="post_interval" name="post_interval">
+                        <option value="1 day">Every Day</option>
+                        <option value="2 days">Every 2 Days</option>
+                        <option value="3 days">Every 3 Days</option>
+                        <option value="1 week">Every Week</option>
+                    </select>
+                    <p class="description">The time between each scheduled post.</p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row"><label for="post_author">Post Author</label></th>
+                <td>
+                    <?php wp_dropdown_users(['name' => 'post_author', 'who' => 'authors', 'show_option_none' => 'Default (Current User)']); ?>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row"><label for="post_category">Post Category</label></th>
+                <td>
+                    <?php wp_dropdown_categories(['name' => 'post_category', 'show_option_none' => 'Uncategorized', 'hide_empty' => 0, 'hierarchical' => 1]); ?>
+                </td>
+            </tr>
+        </table>
+        <?php submit_button('Schedule Posts'); ?>
+    </form>
+    <hr>
+    <h3>Recently Generated & Scheduled Posts</h3>
+    <?php
+    $recent_posts_query = new WP_Query([
+        'post_type' => 'post',
+        'posts_per_page' => 10,
+        'post_status' => ['publish', 'future'],
+        'meta_key' => '_mco_source_program_id',
+        'orderby' => 'date',
+        'order' => 'DESC'
+    ]);
+    if ($recent_posts_query->have_posts()) {
+        echo '<ul>';
+        while ($recent_posts_query->have_posts()) {
+            $recent_posts_query->the_post();
+            $source_program_id = get_post_meta(get_the_ID(), '_mco_source_program_id', true);
+            $post_status = get_post_status() == 'future' ? ' (Scheduled: ' . get_the_date('Y-m-d H:i') . ')' : '';
+            echo '<li>' . get_the_date() . ': <a href="' . get_edit_post_link() . '">' . get_the_title() . '</a><strong>' . esc_html($post_status) . '</strong> (from <a href="' . get_edit_post_link($source_program_id) . '">' . wp_strip_all_tags(get_the_title($source_program_id)) . '</a>)</li>';
+        }
+        echo '</ul>';
+    } else {
+        echo '<p>No posts have been generated yet.</p>';
+    }
+    wp_reset_postdata();
+    ?>
 <?php }
 
 function mco_render_bulk_import_tab() { ?>
@@ -489,5 +588,94 @@ if (!function_exists('mco_display_exam_program_columns')) {
                 break;
         }
     }
+}
+
+// --- CONTENT SEO ENGINE ---
+
+function mco_handle_schedule_bulk_posts() {
+    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_schedule_bulk_posts_nonce')) {
+        wp_die('Security check failed');
+    }
+    if (!current_user_can('publish_posts')) {
+        wp_die('You do not have permission to publish posts.');
+    }
+
+    $num_posts = isset($_POST['num_posts']) ? intval($_POST['num_posts']) : 1;
+    $start_date = isset($_POST['start_date']) ? sanitize_text_field($_POST['start_date']) : date('Y-m-d');
+    $post_interval_str = isset($_POST['post_interval']) ? sanitize_text_field($_POST['post_interval']) : '1 day';
+    $post_category = isset($_POST['post_category']) ? (int)$_POST['post_category'] : 0;
+    $post_author = isset($_POST['post_author']) ? (int)$_POST['post_author'] : get_current_user_id();
+
+    $programs_page_url = esc_url_raw(get_option('mco_exam_programs_page_url'));
+
+    $interval_in_seconds = strtotime('+ ' . $post_interval_str) - time();
+
+    $thirty_days_ago = time() - (30 * DAY_IN_SECONDS);
+    $args = [
+        'post_type' => 'mco_exam_program',
+        'posts_per_page' => -1,
+        'post_status' => 'publish',
+        'meta_query' => [
+            'relation' => 'OR',
+            ['key' => '_mco_last_posted_timestamp', 'compare' => 'NOT EXISTS'],
+            ['key' => '_mco_last_posted_timestamp', 'value' => $thirty_days_ago, 'compare' => '<', 'type' => 'NUMERIC'],
+        ],
+    ];
+    $eligible_programs = get_posts($args);
+    shuffle($eligible_programs);
+
+    $warning_message = '';
+    if (count($eligible_programs) < $num_posts) {
+        $warning_message = 'Warning: Only found ' . count($eligible_programs) . ' eligible programs. Scheduled ' . count($eligible_programs) . ' posts instead of the requested ' . $num_posts . '. ';
+        $num_posts = count($eligible_programs);
+    }
+
+    $scheduled_count = 0;
+    $errors = [];
+
+    for ($i = 0; $i < $num_posts; $i++) {
+        $program = $eligible_programs[$i];
+        $program_id = $program->ID;
+
+        $program_title = wp_strip_all_tags(get_the_title($program_id));
+        $program_desc = wp_strip_all_tags($program->post_content);
+
+        $schedule_timestamp = strtotime($start_date) + ($i * $interval_in_seconds);
+        $post_date = date('Y-m-d H:i:s', $schedule_timestamp);
+        $post_date_gmt = get_gmt_from_date($post_date);
+
+        $post_title = 'Prepare for the ' . $program_title . ' Exam';
+        
+        $post_content = '<!-- wp:paragraph --><p>Are you looking to advance your career and validate your expertise? The <strong>' . esc_html($program_title) . '</strong> certification is a significant step for professionals in our field. This exam is designed to test your comprehensive knowledge and practical skills.</p><!-- /wp:paragraph --><!-- wp:heading --><h2 class="wp-block-heading">About the ' . esc_html($program_title) . '</h2><!-- /wp:heading --><!-- wp:paragraph --><p>' . esc_html($program_desc) . '</p><!-- /wp:paragraph --><!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|50","bottom":"var:preset|spacing|50","left":"var:preset|spacing|50","right":"var:preset|spacing|50"}},"border":{"radius":"8px"}},"backgroundColor":"vivid-cyan-blue","textColor":"white","layout":{"type":"constrained"}} --><div class="wp-block-group has-white-color has-vivid-cyan-blue-background-color has-text-color has-background" style="border-radius:8px;padding-top:var(--wp--preset--spacing--50);padding-right:var(--wp--preset--spacing--50);padding-bottom:var(--wp--preset--spacing--50);padding-left:var(--wp--preset--spacing--50)"><!-- wp:heading {"textAlign":"center","level":3,"textColor":"white"} --><h3 class="wp-block-heading has-text-align-center has-white-color has-text-color">Ready to Get Started?</h3><!-- /wp:heading --><!-- wp:paragraph {"align":"center"} --><p class="has-text-align-center">Our comprehensive exam showcase includes practice tests, certification exams, and valuable bundles to help you succeed.</p><!-- /wp:paragraph --><!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"}} --><div class="wp-block-buttons"><!-- wp:button {"backgroundColor":"luminous-vivid-amber","textColor":"black","className":"is-style-fill"} --><div class="wp-block-button is-style-fill"><a class="wp-block-button__link has-black-color has-luminous-vivid-amber-background-color has-text-color has-background" href="' . esc_url($programs_page_url) . '" rel="noopener">Explore All Exam Programs</a></div><!-- /wp:button --></div><!-- /wp:buttons --></div><!-- /wp:group -->';
+
+        $new_post_args = [
+            'post_title' => $post_title,
+            'post_content' => $post_content,
+            'post_status' => 'future',
+            'post_date' => $post_date,
+            'post_date_gmt' => $post_date_gmt,
+            'post_author' => $post_author,
+            'post_category' => $post_category > 0 ? [$post_category] : [],
+        ];
+
+        $new_post_id = wp_insert_post($new_post_args, true);
+
+        if (is_wp_error($new_post_id)) {
+            $errors[] = $new_post_id->get_error_message();
+        } else {
+            update_post_meta($program_id, '_mco_last_posted_timestamp', time());
+            add_post_meta($new_post_id, '_mco_source_program_id', $program_id);
+            $scheduled_count++;
+        }
+    }
+
+    $final_message = $warning_message . 'Successfully scheduled ' . $scheduled_count . ' posts.';
+    if (!empty($errors)) {
+        $final_message .= ' Errors occurred for ' . count($errors) . ' posts: ' . implode(', ', $errors);
+    }
+    
+    set_transient('mco_post_generator_message', $final_message, 60);
+    wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=content_engine&mco_post_status=success'));
+    exit;
 }
 ?>

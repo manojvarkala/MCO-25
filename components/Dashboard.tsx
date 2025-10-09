@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam } from '../types.ts';
-import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star } from 'lucide-react';
+import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';
@@ -35,7 +35,7 @@ const stripHtml = (html: string): string => {
 };
 
 const Dashboard: FC = () => {
-    const { user, token, paidExamIds, isSubscribed, loginWithToken } = useAuth();
+    const { user, token, paidExamIds, isSubscribed, loginWithToken, isEffectivelyAdmin } = useAuth();
     const { activeOrg, isInitializing, inProgressExam, examPrices } = useAppContext();
     const navigate = useNavigate();
 
@@ -84,7 +84,7 @@ const Dashboard: FC = () => {
     }, [results, activeOrg, user]);
 
     const examCategories = useMemo(() => {
-        if (!activeOrg?.examProductCategories || !Array.isArray(activeOrg.examProductCategories) || !activeOrg?.exams || !Array.isArray(activeOrg.exams)) {
+        if (!activeOrg || !activeOrg.examProductCategories || !Array.isArray(activeOrg.examProductCategories) || !activeOrg.exams || !Array.isArray(activeOrg.exams)) {
             return [];
         }
         return activeOrg.examProductCategories
@@ -113,8 +113,8 @@ const Dashboard: FC = () => {
         return <div className="text-center py-10"><Spinner size="lg" /></div>;
     }
 
-    if (!activeOrg) {
-        return <p>Could not load dashboard data.</p>;
+    if (!activeOrg || !Array.isArray(activeOrg.examProductCategories) || !Array.isArray(activeOrg.exams)) {
+        return <div className="text-center py-10"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading dashboard data...</p></div>;
     }
 
     return (
@@ -225,7 +225,19 @@ const Dashboard: FC = () => {
                                     <Link to={`/program/${category.id}`} className="group">
                                         <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] group-hover:text-[rgb(var(--color-primary-rgb))] transition">{stripHtml(category.name)}</h3>
                                     </Link>
-                                    <ShareButtons shareUrl={shareUrl} shareText={shareText} shareTitle={shareTitle} />
+                                    <div className="flex items-center gap-3">
+                                        {isEffectivelyAdmin && (
+                                            <Link 
+                                                to={`/admin/programs#${category.id}`} 
+                                                className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 bg-amber-100 hover:bg-amber-200 px-2 py-1 rounded-md transition"
+                                                title="Edit Program"
+                                            >
+                                                <Edit size={12} />
+                                                Edit
+                                            </Link>
+                                        )}
+                                        <ShareButtons shareUrl={shareUrl} shareText={shareText} shareTitle={shareTitle} />
+                                    </div>
                                 </div>
                                 <div className="text-[rgb(var(--color-text-muted-rgb))] mb-4 text-sm" dangerouslySetInnerHTML={{ __html: category.description }} />
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

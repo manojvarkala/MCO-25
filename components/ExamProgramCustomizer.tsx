@@ -1,4 +1,5 @@
 import React, { FC, useState, useCallback, useMemo, ReactNode, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -384,8 +385,35 @@ const ExamProgramCustomizer: FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
+    const location = useLocation();
     
+    const programs = useMemo(() => {
+        if (!activeOrg) return [];
+        return activeOrg.examProductCategories.map(category => ({
+            category,
+            practiceExam: activeOrg.exams.find(e => e.id === category.practiceExamId),
+            certExam: activeOrg.exams.find(e => e.id === category.certificationExamId),
+        })).sort((a,b) => a.category.name.localeCompare(b.category.name));
+    }, [activeOrg]);
+
+    useEffect(() => {
+        const hash = location.hash;
+        if (hash) {
+            const programId = hash.substring(1);
+            const programExists = programs.some(p => p.category.id === programId);
+            if (programExists) {
+                setEditingProgramId(programId);
+                setExpandedProgramId(programId);
+                setTimeout(() => {
+                    const element = document.getElementById(`program-card-${programId}`);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 100);
+            }
+        }
+    }, [location.hash, programs]);
+
     const handleSave = async (programId: string, data: EditableProgramData): Promise<void> => {
         if (!token) {
             toast.error("Authentication session has expired.");
@@ -508,15 +536,6 @@ const ExamProgramCustomizer: FC = () => {
         setSelectedProgramIds(prev => checked ? [...prev, id] : prev.filter(pId => pId !== id));
     };
 
-    const programs = useMemo(() => {
-        if (!activeOrg) return [];
-        return activeOrg.examProductCategories.map(category => ({
-            category,
-            practiceExam: activeOrg.exams.find(e => e.id === category.practiceExamId),
-            certExam: activeOrg.exams.find(e => e.id === category.certificationExamId),
-        })).sort((a,b) => a.category.name.localeCompare(b.category.name));
-    }, [activeOrg]);
-
     const linkedSkus = useMemo(() => programs.map(p => p.certExam?.productSku).filter(Boolean) as string[], [programs]);
     
     const unlinkedProducts = useMemo(() => {
@@ -565,7 +584,7 @@ const ExamProgramCustomizer: FC = () => {
                         <span className="font-semibold text-sm">Select All Programs</span>
                     </div>
                     {programs.map((program) => (
-                        <div key={program.category.id} className="border border-[rgb(var(--color-border-rgb))] rounded-lg">
+                        <div key={program.category.id} id={`program-card-${program.category.id}`} className="border border-[rgb(var(--color-border-rgb))] rounded-lg">
                             <div className="flex justify-between items-center p-4 bg-[rgb(var(--color-card-rgb))] rounded-t-lg">
                                 <div className="flex items-center">
                                     <input type="checkbox" checked={selectedProgramIds.includes(program.category.id)} onChange={e => handleSelectOne(program.category.id, e.target.checked)} className="h-4 w-4 mr-4"/>

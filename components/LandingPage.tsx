@@ -1,5 +1,3 @@
-
-
 import React, { FC, useEffect } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useNavigate } from 'react-router-dom';
@@ -25,7 +23,7 @@ const LandingPage: FC = () => {
     const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
     const registerUrl = `${mainSiteBaseUrl}/wp-login.php?action=register`;
 
-    if (isInitializing || !activeOrg || user) {
+    if ((isInitializing && !activeOrg) || user) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh]">
                 <LogoSpinner />

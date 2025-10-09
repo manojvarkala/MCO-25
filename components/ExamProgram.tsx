@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { RecommendedBook, TestResult } from '../types.ts';
-import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, Edit } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
@@ -62,7 +62,7 @@ const ExamProgram: FC = () => {
     const { programId } = useParams<{ programId: string }>();
     const navigate = useNavigate();
     const { activeOrg, suggestedBooks, isInitializing, examPrices } = useAppContext();
-    const { user, paidExamIds, isSubscribed } = useAuth();
+    const { user, paidExamIds, isSubscribed, isEffectivelyAdmin } = useAuth();
     
     const [results, setResults] = useState<TestResult[]>([]);
     
@@ -76,7 +76,7 @@ const ExamProgram: FC = () => {
     }, [user]);
 
     const programData = useMemo(() => {
-        if (!activeOrg?.examProductCategories || !Array.isArray(activeOrg.examProductCategories) || !activeOrg?.exams || !Array.isArray(activeOrg.exams) || !programId) {
+        if (!activeOrg || !activeOrg.examProductCategories || !Array.isArray(activeOrg.examProductCategories) || !activeOrg.exams || !Array.isArray(activeOrg.exams) || !programId) {
             return null;
         }
 
@@ -167,8 +167,20 @@ const ExamProgram: FC = () => {
             <main className="lg:col-span-3 space-y-8">
                 <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                     <div className="flex flex-wrap justify-between items-start gap-2">
-                         <h1 className="text-3xl font-extrabold text-slate-900">{stripHtml(category.name)}</h1>
-                         <ShareButtons shareUrl={shareUrl} shareText={shareText} shareTitle={shareTitle} size={18} />
+                        <h1 className="text-3xl font-extrabold text-slate-900">{stripHtml(category.name)}</h1>
+                        <div className="flex items-center gap-3">
+                            {isEffectivelyAdmin && (
+                                <Link 
+                                    to={`/admin/programs#${category.id}`} 
+                                    className="flex items-center gap-1.5 text-sm font-semibold text-amber-600 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-md transition"
+                                    title="Edit Program"
+                                >
+                                    <Edit size={14} />
+                                    Edit Program
+                                </Link>
+                            )}
+                            <ShareButtons shareUrl={shareUrl} shareText={shareText} shareTitle={shareTitle} size={18} />
+                        </div>
                     </div>
                     
                     <div className="flex justify-between items-center mt-4 mb-6 border-t border-b border-slate-200 py-3">

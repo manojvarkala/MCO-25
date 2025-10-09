@@ -201,6 +201,7 @@
 .mco-gradient--practice-1 { background-image: linear-gradient(to bottom right, #38bdf8, #06b6d4); }
 .mco-gradient--cert-1 { background-image: linear-gradient(to bottom right, #6366f1, #8b5cf6); }
 .mco-gradient--bundle-1 { background-image: linear-gradient(to bottom right, #f59e0b, #ef4444); }
+.mco-gradient--sub-bundle-1 { background-image: linear-gradient(to bottom right, #2dd4bf, #06b6d4); }
 .mco-gradient--sub-monthly { background-image: linear-gradient(to bottom right, #38bdf8, #06b6d4); }
 .mco-gradient--sub-yearly { background-image: linear-gradient(to bottom right, #8b5cf6, #4f46e5); }
 
