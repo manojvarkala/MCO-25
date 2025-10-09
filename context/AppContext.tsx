@@ -109,7 +109,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [isInitializing, setIsInitializing] = useState(true);
   const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>([]);
   
-  const { user } = useAuth();
+  const { user, isEffectivelyAdmin } = useAuth();
   const [isWheelModalOpen, setWheelModalOpen] = useState(false);
   const [inProgressExam, setInProgressExam] = useState<InProgressExamInfo | null>(null);
   const [examPrices, setExamPrices] = useState<{ [key: string]: any } | null>(null);
@@ -220,12 +220,12 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     loadAppConfig();
   }, []);
 
-  // Effect to record a site hit once per session.
+  // Effect to record a site hit once per session, ignoring admins.
   useEffect(() => {
     const hitCountedInSession = sessionStorage.getItem('mco_hit_counted');
 
-    if (!hitCountedInSession) {
-        // If not counted yet for this session, call the API.
+    if (!hitCountedInSession && !isEffectivelyAdmin) {
+        // If not counted yet for this session and not an admin, call the API.
         const recordHit = async () => {
             try {
                 const data = await googleSheetsService.recordSiteHit();
@@ -242,7 +242,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         recordHit();
     }
-  }, []); // Empty dependency array ensures this runs only once per app load.
+  }, [isEffectivelyAdmin]);
 
 
   // Effect 2: Check for in-progress exams when user logs in or active org changes.

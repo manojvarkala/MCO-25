@@ -472,6 +472,15 @@ export const googleSheetsService = {
             throw error;
         }
     },
+    
+    adminClearAllResults: async (token: string): Promise<any> => {
+        try {
+            return await apiFetch('/admin/clear-all-results', 'POST', token);
+        } catch (error) {
+            console.error("Failed to clear all results:", error);
+            throw error;
+        }
+    },
 
     // --- EXAM STATS ---
     getExamStats: async (token: string): Promise<ExamStat[]> => {

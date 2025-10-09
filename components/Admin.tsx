@@ -1,5 +1,5 @@
 import React, { FC, useState, useCallback, ReactNode } from 'react';
-import { Settings, Award, Lightbulb, PlusCircle, Trash2, RefreshCw, FileText, Cpu, Loader, CheckCircle, XCircle, Trash, Bug, Paintbrush, FileSpreadsheet, DownloadCloud } from 'lucide-react';
+import { Settings, Award, Lightbulb, PlusCircle, Trash2, RefreshCw, FileText, Cpu, Loader, CheckCircle, XCircle, Trash, Bug, Paintbrush, FileSpreadsheet, DownloadCloud, DatabaseZap } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { SearchedUser } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -98,7 +98,7 @@ const Admin: FC = () => {
     const [sheetTestResult, setSheetTestResult] = useState<SheetTestResult>(null);
     
     // State for Cache Clearing
-    const [isClearingCache, setIsClearingCache] = useState<'config' | 'questions' | null>(null);
+    const [isClearingCache, setIsClearingCache] = useState<'config' | 'questions' | 'results' | null>(null);
 
     // State for sales notification toggle
     const [showNotifications, setShowNotifications] = useState(() => {
@@ -291,6 +291,19 @@ const Admin: FC = () => {
             setIsClearingCache(null);
         }
     };
+    
+    const handleClearAllResults = async () => {
+        if (!token || !window.confirm("ARE YOU ABSOLUTELY SURE?\n\nThis will permanently delete all exam results and history for ALL users from the server. This action cannot be undone and will reset all sales and performance analytics.")) return;
+        setIsClearingCache('results');
+        try {
+            const result = await googleSheetsService.adminClearAllResults(token);
+            toast.success(result.message || "All user exam results cleared!");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to clear results.");
+        } finally {
+            setIsClearingCache(null);
+        }
+    };
 
     return (
         <>
@@ -412,10 +425,10 @@ const Admin: FC = () => {
                 <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                     <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
                         <Trash className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                        Cache Management
+                        Cache & Data Management
                     </h2>
                     <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                        Force the server to reload data. Use these tools after making changes in WordPress that don't appear in the app.
+                        Force the server to reload data or reset user history. These are destructive actions and should be used with caution.
                     </p>
                     <div className="space-y-4">
                         <div>
@@ -429,7 +442,7 @@ const Admin: FC = () => {
                             </button>
                             <p className="text-xs text-slate-500 mt-1">Clears all exam programs, products, and settings cache.</p>
                         </div>
-                            <div>
+                        <div>
                             <button
                                 onClick={handleClearQuestionCache}
                                 disabled={!!isClearingCache}
@@ -439,6 +452,17 @@ const Admin: FC = () => {
                                 <span className="ml-2">{isClearingCache === 'questions' ? 'Clearing...' : 'Clear All Question Caches'}</span>
                             </button>
                             <p className="text-xs text-slate-500 mt-1">Forces the app to re-fetch questions from all Google Sheets.</p>
+                        </div>
+                        <div className="pt-4 border-t border-[rgb(var(--color-border-rgb))]">
+                            <button
+                                onClick={handleClearAllResults}
+                                disabled={!!isClearingCache}
+                                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-800 hover:bg-red-900 disabled:opacity-50"
+                            >
+                                {isClearingCache === 'results' ? <Spinner size="sm" /> : <DatabaseZap size={16} />}
+                                <span className="ml-2">{isClearingCache === 'results' ? 'Clearing...' : 'Clear All Exam Results'}</span>
+                            </button>
+                            <p className="text-xs text-red-500 mt-1"><strong>Warning:</strong> Deletes all exam results for all users from the database. This action cannot be undone and resets analytics.</p>
                         </div>
                     </div>
                 </div>

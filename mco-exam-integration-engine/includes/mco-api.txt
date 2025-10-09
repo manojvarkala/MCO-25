@@ -273,6 +273,7 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/admin/test-sheet-url', ['methods' => 'POST', 'callback' => 'mco_api_admin_test_sheet_url', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/clear-config-cache', ['methods' => 'POST', 'callback' => 'mco_api_clear_config_cache', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/clear-question-caches', ['methods' => 'POST', 'callback' => 'mco_api_clear_question_caches', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/clear-all-results', ['methods' => 'POST', 'callback' => 'mco_api_admin_clear_all_results', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/upsert-product', ['methods' => 'POST', 'callback' => 'mco_api_admin_upsert_product', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/create-exam-program', ['methods' => 'POST', 'callback' => 'mco_api_admin_create_exam_program', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/delete-post', ['methods' => 'POST', 'callback' => 'mco_api_admin_delete_post', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
@@ -1181,5 +1182,22 @@ function mco_api_get_exam_stats(WP_REST_Request $request) {
         ];
     }
     return new WP_REST_Response($stats, 200);
+}
+
+function mco_api_admin_clear_all_results(WP_REST_Request $request) {
+    $users = get_users(['fields' => 'ID']);
+    $cleared_count = 0;
+    foreach ($users as $user_id) {
+        // The meta key 'mco_exam_results' stores all results for a user. Deleting it clears their history.
+        if (delete_user_meta($user_id, 'mco_exam_results')) {
+            $cleared_count++;
+        }
+    }
+    
+    // Also clear the app config transient to ensure any aggregated data is refreshed on next load.
+    delete_transient('mco_app_config_data');
+    update_option('mco_config_version', current_time('YmdHis'));
+
+    return new WP_REST_Response(['success' => true, 'message' => "Cleared exam results for {$cleared_count} users."], 200);
 }
 ?>

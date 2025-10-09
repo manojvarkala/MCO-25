@@ -7,6 +7,19 @@ import toast from 'react-hot-toast';
 import Spinner from './Spinner.tsx';
 import { BarChart3 } from 'lucide-react';
 
+// Utility to strip HTML tags and decode entities.
+const stripHtml = (html: string): string => {
+    if (!html || typeof html !== 'string') return html || '';
+    try {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        return tempDiv.textContent || tempDiv.innerText || '';
+    } catch (e) {
+        console.error("Could not parse HTML string for stripping", e);
+        return html;
+    }
+};
+
 const SalesAnalytics: FC = () => {
     const { token } = useAuth();
     const { activeOrg } = useAppContext();
@@ -18,10 +31,15 @@ const SalesAnalytics: FC = () => {
             if (!token || !activeOrg) return;
             setIsLoadingStats(true);
             try {
-                const fetchedStats = await googleSheetsService.getExamStats(token);
+                const fetchedStats: ExamStat[] = await googleSheetsService.getExamStats(token);
                 // Filter stats to only include cert exams from the active org
                 const certExamIds = activeOrg.exams.filter(e => !e.isPractice).map(e => e.id);
-                const relevantStats = fetchedStats.filter(stat => certExamIds.includes(stat.id));
+                const relevantStats = fetchedStats
+                    .filter(stat => certExamIds.includes(stat.id))
+                    .map(stat => ({
+                        ...stat,
+                        name: stripHtml(stat.name) // Clean the name here
+                    }));
                 setStats(relevantStats);
             } catch (error: any) {
                 toast.error("Could not load exam analytics: " + error.message);
