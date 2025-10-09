@@ -1,7 +1,7 @@
-import React, { FC, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
-import { Settings, ExternalLink, Edit, Save, X, Book, FileSpreadsheet, Award, Type, Lightbulb, Users, Gift, PlusCircle, Trash2, RotateCcw, Search, UserCheck, Paintbrush, ShoppingCart, Code, BarChart3, RefreshCw, FileText, Percent, BadgeCheck, BadgeX, BarChart, TrendingUp, Cpu, Video, DownloadCloud, Loader, CheckCircle, XCircle, Trash, Bug } from 'lucide-react';
+import React, { FC, useState, useCallback, ReactNode } from 'react';
+import { Settings, Award, Lightbulb, PlusCircle, Trash2, RefreshCw, FileText, Cpu, Loader, CheckCircle, XCircle, Trash, Bug, Paintbrush, FileSpreadsheet, DownloadCloud } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
-import type { Exam, SearchedUser, ExamStat } from '../types.ts';
+import type { SearchedUser } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -77,7 +77,7 @@ const HealthCheckItem: FC<HealthCheckItemProps> = ({ status, title, message, tro
 };
 
 const Admin: FC = () => {
-    const { activeOrg, updateActiveOrg } = useAppContext();
+    const { activeOrg } = useAppContext();
     const { token } = useAuth();
     
     // State for health check
@@ -574,6 +574,7 @@ const Admin: FC = () => {
             </div>
         </>
     );
+    
 };
 
 export default Admin;

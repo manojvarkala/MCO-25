@@ -38,6 +38,7 @@ import ExamProgramCustomizer from './components/ExamProgramCustomizer.tsx';
 import AdminLayout from './components/AdminLayout.tsx';
 import FAQ from './components/FAQ.tsx';
 import DevelopmentHistory from './components/DevelopmentHistory.tsx';
+import SalesAnalytics from './components/SalesAnalytics.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -181,6 +182,7 @@ const AppContent: FC = () => {
                           }
                         >
                           <Route index element={<Admin />} />
+                          <Route path="analytics" element={<SalesAnalytics />} />
                           <Route path="products" element={<ProductCustomizer />} />
                           <Route path="programs" element={<ExamProgramCustomizer />} />
                           <Route path="integration" element={<Integration />} />
@@ -196,7 +198,6 @@ const AppContent: FC = () => {
         </div>
     );
 };
-
 
 const App: FC = () => {
   return (

@@ -1,6 +1,6 @@
 import React, { FC } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Settings, ShoppingCart, Code, ArrowLeft, History } from 'lucide-react';
+import { LayoutDashboard, Settings, ShoppingCart, Code, ArrowLeft, History, BarChart3 } from 'lucide-react';
 
 const AdminLayout: FC = () => {
     const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -17,6 +17,10 @@ const AdminLayout: FC = () => {
                     <NavLink to="/admin" end className={navLinkClass}>
                         <LayoutDashboard size={18} />
                         <span>Admin Dashboard</span>
+                    </NavLink>
+                    <NavLink to="/admin/analytics" className={navLinkClass}>
+                        <BarChart3 size={18} />
+                        <span>Sales Analytics</span>
                     </NavLink>
                     <NavLink to="/admin/programs" className={navLinkClass}>
                         <Settings size={18} />
@@ -47,5 +51,6 @@ const AdminLayout: FC = () => {
         </div>
     );
 };
+
 
 export default AdminLayout;
