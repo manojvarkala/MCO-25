@@ -64,13 +64,6 @@ const AppContent: FC = () => {
     const location = useLocation();
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
     
-    // This is the correct, idiomatic way to handle post-login redirects in React Router v6.
-    // It checks on every render. If the user is logged in and they are on the /auth page,
-    // it immediately navigates them to the dashboard, avoiding useEffect race conditions.
-    if (user && location.pathname === '/auth') {
-        return <Navigate to="/dashboard" replace />;
-    }
-
     const isTestPage = location.pathname.startsWith('/test/');
     const isAdminPage = location.pathname.startsWith('/admin');
 
@@ -140,7 +133,7 @@ const AppContent: FC = () => {
                     {/* Fix: Use <Routes> and v6 Route syntax */}
                     <Routes>
                         <Route path="/" element={<LandingPage />} />
-                        <Route path="/auth" element={<Login />} />
+                        <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
                         <Route path="/checkout/:productSlug" element={<Checkout />} />
                         <Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
                         <Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
@@ -198,6 +191,7 @@ const AppContent: FC = () => {
         </div>
     );
 };
+
 
 const App: FC = () => {
   return (
