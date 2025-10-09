@@ -149,7 +149,12 @@ const ContentEngine: FC = () => {
                         <label htmlFor="category" className="text-sm font-bold block mb-1">Category</label>
                         <select id="category" value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-full p-2 border rounded-md">
                             <option value="">Uncategorized</option>
-                            {postData?.categories && Object.entries(postData.categories).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                            {/* FIX: Correctly map over the array of category objects instead of using Object.entries, which caused a type error. */}
+                            {postData?.categories.map((category: WordpressCategory) => (
+                                <option key={category.term_id} value={category.term_id}>
+                                    {category.name}
+                                </option>
+                            ))}
                         </select>
                     </div>
                 </div>
