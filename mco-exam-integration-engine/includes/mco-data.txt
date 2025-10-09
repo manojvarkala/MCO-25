@@ -1,6 +1,68 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+// Moved from mco-admin.php to be accessible by other files if needed.
+if (!function_exists('mco_get_default_certificate_templates')) {
+    function mco_get_default_certificate_templates() { 
+        return [
+            'cert-practice' => [
+                'id' => 'cert-practice', 'name' => 'Default Practice Certificate', 'title' => 'Certificate of Proficiency', 
+                'body' => "For successfully completing the {examName} with a final score of <strong>{finalScore}%</strong>.", 
+                'signature1Name' => 'Manoj Balakrishnan', 'signature1Title' => 'CEO, Annapoorna Infotech', 'signature1ImageUrl' => '', 
+                'signature2Name' => '', 'signature2Title' => ''
+            ], 
+            'cert-completion' => [
+                'id' => 'cert-completion', 'name' => 'Default Completion Certificate', 'title' => 'Certificate of Achievement', 
+                'body' => "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", 
+                'signature1Name' => 'Manoj Balakrishnan', 'signature1Title' => 'CEO, Annapoorna Infotech', 'signature1ImageUrl' => '', 
+                'signature2Name' => 'Lead Instructor', 'signature2Title' => 'Education Department'
+            ]
+        ]; 
+    }
+}
+
+// NEW: Function to generate a clean, ready-to-use blueprint for a new tenant.
+function mco_get_tenant_blueprint_data() {
+    $site_name = get_bloginfo('name');
+    $site_url_parts = parse_url(home_url());
+    $site_host = $site_url_parts['host'] ?? 'default-site.com';
+    $custom_logo_url = get_option('mco_logo_url', '');
+    $logo_url = !empty($custom_logo_url) ? $custom_logo_url : (get_site_icon_url(512) ?: '');
+
+    $available_themes = [
+        [ 'id' => 'default', 'name' => 'Cyberpunk' ],
+        [ 'id' => 'professional', 'name' => 'Professional' ],
+        [ 'id' => 'serene', 'name' => 'Serene' ],
+        [ 'id' => 'academic', 'name' => 'Academic' ],
+        [ 'id' => 'noir', 'name' => 'Noir' ],
+    ];
+
+    // Use the actual configured templates, falling back to default if none are saved.
+    $configured_templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
+
+    $blueprint_object = [
+        "version" => current_time('YmdHis'),
+        "organizations" => [
+            [
+                "id" => "org-" . sanitize_title($site_name),
+                "name" => $site_name,
+                "website" => str_replace('www.', '', $site_host),
+                "logo" => $logo_url,
+                "availableThemes" => $available_themes,
+                "activeThemeId" => "default",
+                "exams" => [], // Empty for a new tenant
+                "examProductCategories" => [], // Empty for a new tenant
+                "certificateTemplates" => array_values($configured_templates), // Use configured templates
+                "suggestedBooks" => [] // Empty for a new tenant
+            ]
+        ],
+        "examPrices" => new stdClass() // Empty object for a new tenant
+    ];
+    
+    return $blueprint_object;
+}
+
+
 // This function is the single source of truth for all dynamic data passed to the React app.
 // It uses a transient for caching to improve performance on high-traffic sites.
 function mco_get_app_config_data() {
@@ -100,6 +162,7 @@ function mco_get_app_config_data() {
         
         // Certification Exam
         if ($cert_sku) {
+            $product_id = wc_get_product_id_by_sku($cert_sku);
             $product = $product_id ? wc_get_product($product_id) : null;
             if ($product) {
                  $all_exams[] = [

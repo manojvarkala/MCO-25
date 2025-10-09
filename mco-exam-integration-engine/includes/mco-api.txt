@@ -255,7 +255,6 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/submit-result', ['methods' => 'POST', 'callback' => 'mco_api_submit_result', 'permission_callback' => 'mco_api_permission_check']);
     register_rest_route($namespace, '/exam-stats', ['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/debug-details', ['methods' => 'GET', 'callback' => 'mco_api_get_debug_details', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
-    register_rest_route($namespace, '/download-config', ['methods' => 'GET', 'callback' => 'mco_api_download_config', 'permission_callback' => 'mco_api_admin_permission_check']);
     
     // NEW API ENDPOINTS
     register_rest_route($namespace, '/submit-feedback', ['methods' => 'POST', 'callback' => 'mco_api_submit_feedback', 'permission_callback' => 'mco_api_permission_check']);
@@ -588,17 +587,6 @@ function mco_api_get_debug_details(WP_REST_Request $request) {
     ], 200);
 }
 
-function mco_api_download_config() {
-    $config_object = mco_api_get_full_config(new WP_REST_Request())->get_data();
-    $site_url_parts = parse_url(home_url());
-    $site_host = $site_url_parts['host'] ?? 'default-site.com';
-    $filename = $site_host . '-config.json';
-    header('Content-Type: application/json; charset=utf-8');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    echo wp_json_encode($config_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-    exit;
-}
-
 // NEW ENDPOINTS
 function mco_api_submit_feedback(WP_REST_Request $request) {
     // This is a placeholder. In a real app, you would save this to the DB, email it, etc.
@@ -784,8 +772,9 @@ function mco_api_create_post_from_app(WP_REST_Request $request) {
         'post_title' => sanitize_text_field($params['post_title']),
         'post_content' => wp_kses_post($params['post_content']),
         'post_status' => 'future',
-        'post_date' => sanitize_text_field($params['post_date']),
-        'post_date_gmt' => get_gmt_from_date(sanitize_text_field($params['post_date'])),
+        // The date from the app is already in UTC Y-m-d H:i:s format.
+        // We provide it as post_date_gmt and let WordPress calculate the local post_date.
+        'post_date_gmt' => sanitize_text_field($params['post_date']),
         'post_author' => isset($params['post_author']) ? intval($params['post_author']) : get_current_user_id(),
         'post_category' => isset($params['post_category']) ? [intval($params['post_category'])] : [],
     ];
@@ -804,7 +793,8 @@ function mco_api_create_post_from_app(WP_REST_Request $request) {
     return new WP_REST_Response([
         'success' => true,
         'post_id' => $new_post_id,
-        'post_url' => get_edit_post_link($new_post_id, 'raw')
+        // Ensure the URL doesn't contain escaped HTML entities like &amp;
+        'post_url' => html_entity_decode(get_edit_post_link($new_post_id, 'raw'))
     ], 200);
 }
 

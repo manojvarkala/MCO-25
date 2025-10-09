@@ -23,6 +23,8 @@ if (!function_exists('mco_register_admin_hooks')) {
         add_action('admin_menu', 'mco_add_admin_menu');
         add_action('admin_enqueue_scripts', 'mco_admin_enqueue_scripts');
         add_action('admin_post_mco_bulk_import_csv', 'mco_handle_csv_upload');
+        // New hook for blueprint generation
+        add_action('admin_post_mco_generate_tenant_blueprint', 'mco_handle_generate_tenant_blueprint');
         add_action('add_meta_boxes', 'mco_add_exam_program_meta_boxes');
         add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta_data');
         
@@ -139,6 +141,7 @@ if (!function_exists('mco_admin_enqueue_scripts')) {
         ?>
         <style>
             .mco-admin-wrap { max-width: 960px; } .mco-admin-wrap h1 { margin-bottom: 20px; } .mco-admin-wrap .nav-tab { font-size: 14px; } .mco-admin-wrap .tab-content { margin-top: 20px; } .mco-admin-wrap .form-table th { width: 200px; } .mco-admin-wrap .form-table td input[type="text"], .mco-admin-wrap .form-table td input[type="password"], .mco-admin-wrap .form-table td textarea { width: 100%; max-width: 500px; } .mco-admin-wrap .form-table td .image-upload-wrapper { display: flex; align-items: center; gap: 10px; } .mco-admin-wrap .form-table td .image-upload-wrapper textarea { flex-grow: 1; } .mco-admin-wrap .form-table td textarea { height: 100px; } .mco-admin-wrap .notice-success { border-left-color: #4CAF50; } .mco-admin-wrap .notice-error { border-left-color: #F44336; } .mco-admin-wrap .notice-warning { border-left-color: #FFC107; } .mco-admin-wrap .mco-feedback-box { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin-top: 20px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 13px; } .mco-feedback-box.full-height { max-height: none; } .mco-feedback-box ul { margin: 0; padding-left: 20px; } .mco-feedback-box li.error { color: #dc3545; } .mco-feedback-box li.success { color: #28a745; }
+            .mco-req-list { list-style: none; margin: 0; padding: 0; } .mco-req-list li { display: flex; align-items: center; gap: 8px; font-weight: 500; } .mco-req-list .dashicons { font-size: 18px; } .mco-req-list .dashicons-yes-alt { color: #4CAF50; } .mco-req-list .dashicons-warning { color: #FFC107; }
         </style>
         <script>
         jQuery(document).ready(function($){
@@ -374,8 +377,6 @@ function mco_process_books_csv_import($file_path) {
     return $feedback . '</ul>';
 }
 
-function mco_get_default_certificate_templates() { return ['cert-practice' => ['id' => 'cert-practice', 'name' => 'Default Practice Certificate', 'title' => 'Certificate of Proficiency', 'body' => "For successfully completing the {examName} with a final score of <strong>{finalScore}%</strong>.", 'signature1Name' => 'Manoj Balakrishnan', 'signature1Title' => 'CEO, Annapoorna Infotech', 'signature1ImageUrl' => '', 'signature2Name' => '', 'signature2Title' => ''], 'cert-completion' => ['id' => 'cert-completion', 'name' => 'Default Completion Certificate', 'title' => 'Certificate of Achievement', 'body' => "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", 'signature1Name' => 'Manoj Balakrishnan', 'signature1Title' => 'CEO, Annapoorna Infotech', 'signature1ImageUrl' => '', 'signature2Name' => 'Lead Instructor', 'signature2Title' => 'Education Department']]; }
-
 function mco_render_certificate_templates_tab() {
     if (isset($_POST['mco_save_templates_nonce']) && wp_verify_nonce($_POST['mco_save_templates_nonce'], 'mco_save_templates')) {
         $templates_input = $_POST['certificate_templates']; $sanitized_templates = [];
@@ -420,9 +421,83 @@ function mco_render_tools_tab() {
     if (isset($_POST['mco_test_sheet_url_nonce']) && wp_verify_nonce($_POST['mco_test_sheet_url_nonce'], 'mco_test_sheet_url_action')) {
         $sheet_url_to_test = esc_url_raw($_POST['sheet_url_to_test']); $test_results_html = mco_run_sheet_url_test($sheet_url_to_test);
     }
+    
+    // --- New Prerequisites Check ---
+    $missing_requirements = [];
+    $app_url = get_option('mco_exam_app_url', '');
+    $logo_url = get_option('mco_logo_url', '');
+    $site_icon_url = get_site_icon_url();
+    $templates = get_option('mco_certificate_templates', []);
+    $signatures_configured = false;
+
+    if (empty($app_url)) {
+        $missing_requirements[] = 'Set the <strong>Exam Application URL</strong> in the <a href="?page=mco-exam-engine&tab=main_settings">Main Settings</a> tab.';
+    }
+    if (empty($logo_url) && empty($site_icon_url)) {
+        $missing_requirements[] = 'Set a <strong>Custom Logo URL</strong> or a default <strong>Site Icon</strong> in <a href="?page=mco-exam-engine&tab=main_settings">Main Settings</a> or the Customizer.';
+    }
+    if (!empty($templates)) {
+        foreach($templates as $template) {
+            if (!empty($template['signature1Name'])) {
+                $signatures_configured = true;
+                break;
+            }
+        }
+    }
+    if (!$signatures_configured) {
+        $missing_requirements[] = 'Configure at least one signature in the <a href="?page=mco-exam-engine&tab=certificate_templates">Certificate Templates</a> tab.';
+    }
+    
+    $all_requirements_met = empty($missing_requirements);
     ?>
-    <h2>Tools</h2><p>Use these tools for maintenance and troubleshooting.</p><table class="form-table"><tr valign="top"><th scope="row">Server Cache</th><td><form method="post" action=""><?php wp_nonce_field('mco_clear_cache', 'mco_clear_cache_nonce'); ?><p class="description" style="margin-bottom: 10px;">The plugin caches app configuration data for performance. Clear this cache if you've made changes and don't see them reflected in the app.</p><?php submit_button('Clear Server Config Cache', 'secondary', 'submit_clear_cache', false); ?></form></td></tr><tr valign="top"><th scope="row">Google Sheet URL Tester</th><td><form method="post" action=""><?php wp_nonce_field('mco_test_sheet_url_action', 'mco_test_sheet_url_nonce'); ?><p class="description" style="margin-bottom: 10px;">Test if a Google Sheet URL is accessible from your server. This helps diagnose "Question Sheet: Failure" errors.</p><input type="text" name="sheet_url_to_test" class="widefat" placeholder="Paste Google Sheet URL here..." value="<?php echo isset($_POST['sheet_url_to_test']) ? esc_attr($_POST['sheet_url_to_test']) : ''; ?>" /><?php submit_button('Test URL', 'secondary', 'submit_test_url', false); ?></form><?php if (!empty($test_results_html)) : ?><div class="mco-feedback-box" style="margin-top: 15px;"><?php echo $test_results_html; ?></div><?php endif; ?></td></tr></table>
+    <h2>Tools</h2><p>Use these tools for maintenance and troubleshooting.</p><table class="form-table">
+        <tr valign="top">
+            <th scope="row">New Tenant Blueprint</th>
+            <td>
+                <?php if ($all_requirements_met): ?>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="mco_generate_tenant_blueprint">
+                        <?php wp_nonce_field('mco_generate_blueprint_nonce'); ?>
+                        <p class="description" style="margin-bottom: 10px;">Generate a ready-to-use JSON configuration file for a new tenant. This file includes the basic structure, configured certificate templates, and themes, but with empty content arrays (exams, books, etc.).</p>
+                        <?php submit_button('Generate & Download Blueprint', 'primary', 'submit_generate_blueprint', false); ?>
+                    </form>
+                <?php else: ?>
+                    <div class="notice notice-warning inline-block" style="padding: 15px;">
+                        <h3 style="margin-top:0;">Prerequisites Missing</h3>
+                        <p>To ensure a complete and working configuration file, please complete the following steps:</p>
+                        <ul class="mco-req-list" style="margin-top: 10px; margin-left: 5px; space-y: 5px;">
+                            <?php foreach ($missing_requirements as $req): ?>
+                                <li><span class="dashicons dashicons-warning"></span> <?php echo wp_kses_post($req); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                    <?php submit_button('Generate & Download Blueprint', 'primary', 'submit_generate_blueprint_disabled', false, ['disabled' => 'disabled']); ?>
+                <?php endif; ?>
+            </td>
+        </tr>
+        <tr valign="top"><th scope="row">Server Cache</th><td><form method="post" action=""><?php wp_nonce_field('mco_clear_cache', 'mco_clear_cache_nonce'); ?><p class="description" style="margin-bottom: 10px;">The plugin caches app configuration data for performance. Clear this cache if you've made changes and don't see them reflected in the app.</p><?php submit_button('Clear Server Config Cache', 'secondary', 'submit_clear_cache', false); ?></form></td></tr>
+        <tr valign="top"><th scope="row">Google Sheet URL Tester</th><td><form method="post" action=""><?php wp_nonce_field('mco_test_sheet_url_action', 'mco_test_sheet_url_nonce'); ?><p class="description" style="margin-bottom: 10px;">Test if a Google Sheet URL is accessible from your server. This helps diagnose "Question Sheet: Failure" errors.</p><input type="text" name="sheet_url_to_test" class="widefat" placeholder="Paste Google Sheet URL here..." value="<?php echo isset($_POST['sheet_url_to_test']) ? esc_attr($_POST['sheet_url_to_test']) : ''; ?>" /><?php submit_button('Test URL', 'secondary', 'submit_test_url', false); ?></form><?php if (!empty($test_results_html)) : ?><div class="mco-feedback-box" style="margin-top: 15px;"><?php echo $test_results_html; ?></div><?php endif; ?></td></tr>
+    </table>
 <?php }
+
+// New handler for generating the tenant blueprint
+function mco_handle_generate_tenant_blueprint() {
+    if (!current_user_can('manage_options') || !isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_generate_blueprint_nonce')) {
+        wp_die('Security check failed.');
+    }
+
+    $blueprint_data = mco_get_tenant_blueprint_data();
+    
+    $site_url_parts = parse_url(home_url());
+    $site_host = $site_url_parts['host'] ?? 'default-site.com';
+    $filename = 'tenant-config-' . sanitize_title($site_host) . '.json';
+
+    header('Content-Type: application/json; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    
+    echo wp_json_encode($blueprint_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    exit;
+}
 
 function mco_run_sheet_url_test($sheet_url) {
     if (empty($sheet_url)) return '<p class="error">Please provide a URL to test.</p>';
