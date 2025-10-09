@@ -40,6 +40,7 @@ import FAQ from './components/FAQ.tsx';
 import DevelopmentHistory from './components/DevelopmentHistory.tsx';
 import SalesAnalytics from './components/SalesAnalytics.tsx';
 import ContentEngine from './components/ContentEngine.tsx';
+import Handbook from './components/Handbook.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -182,6 +183,7 @@ const AppContent: FC = () => {
                           <Route path="content-engine" element={<ContentEngine />} />
                           <Route path="integration" element={<Integration />} />
                           <Route path="history" element={<DevelopmentHistory />} />
+                          <Route path="handbook" element={<Handbook />} />
                         </Route>
                     
                         <Route path="*" element={<Navigate to="/" replace />} />
