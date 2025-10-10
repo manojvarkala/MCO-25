@@ -368,10 +368,13 @@ function mco_api_create_post_from_app(WP_REST_Request $request) {
         'post_content' => wp_kses_post($params['post_content']),
         'post_status' => sanitize_text_field($params['post_status']),
         'post_type' => 'post',
-        'post_date' => sanitize_text_field($params['post_date']),
-        'post_date_gmt' => sanitize_text_field($params['post_date']), // Use the app's UTC time directly for GMT
         'post_author' => isset($params['post_author']) ? intval($params['post_author']) : get_current_user_id(),
     ];
+
+    if (!empty($params['post_date'])) {
+        $post_args['post_date'] = sanitize_text_field($params['post_date']);
+        $post_args['post_date_gmt'] = get_gmt_from_date(sanitize_text_field($params['post_date']));
+    }
 
     if (isset($params['post_category'])) {
         $post_args['post_category'] = [intval($params['post_category'])];

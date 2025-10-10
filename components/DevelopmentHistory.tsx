@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import React, { FC, ReactNode } from 'react';
 import { GitCommit, Tag } from 'lucide-react';
 
 interface Version {
@@ -8,6 +8,16 @@ interface Version {
 }
 
 const history: Version[] = [
+  {
+    version: '2.2.0',
+    date: '2024-07-22',
+    changes: [
+      'Re-engineered Handbook PDF generation for professional book layout (margins, pagination, hyperlinked TOC).',
+      'Fixed broken "Edit Post" link in AI Content Engine.',
+      'Added "Full Content Snapshot" tool for creating backups and optimizing performance.',
+      'Documented the "Golden Workflow" for content management in the Handbook.',
+    ],
+  },
   {
     version: '2.1.0',
     date: '2024-07-15',
@@ -48,6 +58,25 @@ const history: Version[] = [
   },
 ];
 
+const TimelineItem: FC<{ version: Version, isLast: boolean }> = ({ version, isLast }) => (
+    <div className="relative mb-12">
+        <span className="absolute -left-5 flex items-center justify-center bg-white w-10 h-10 rounded-full ring-4 ring-slate-200">
+            <Tag className="h-5 w-5 text-cyan-600" />
+        </span>
+        <div className="ml-4">
+            <time className="block mb-1 text-sm font-normal leading-none text-slate-400">{version.date}</time>
+            <h3 className="text-2xl font-semibold text-slate-800">{`Version ${version.version}`}</h3>
+            <ul className="mt-2 space-y-2 list-disc pl-5 text-slate-600">
+                {version.changes.map((change, i) => (
+                    <li key={i}>{change}</li>
+                ))}
+            </ul>
+        </div>
+        {!isLast && <div className="absolute -left-2.5 top-10 h-full w-0.5 bg-slate-200"></div>}
+    </div>
+);
+
+
 const DevelopmentHistory: FC = () => {
     return (
         <div className="max-w-4xl mx-auto">
@@ -56,22 +85,9 @@ const DevelopmentHistory: FC = () => {
                 A timeline of major features and updates to the Examination Engine platform.
             </p>
 
-            <div className="relative border-l-2 border-slate-200 ml-4 pl-8">
-                {history.map((item) => (
-                    <div key={item.version} className="mb-12">
-                        <span className="absolute -left-5 flex items-center justify-center bg-white w-10 h-10 rounded-full ring-4 ring-slate-200">
-                            <Tag className="h-5 w-5 text-cyan-600" />
-                        </span>
-                        <div className="ml-4">
-                            <time className="block mb-1 text-sm font-normal leading-none text-slate-400">{item.date}</time>
-                            <h3 className="text-2xl font-semibold text-slate-800">{`Version ${item.version}`}</h3>
-                            <ul className="mt-2 space-y-2 list-disc pl-5 text-slate-600">
-                                {item.changes.map((change, i) => (
-                                    <li key={i}>{change}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
+            <div className="relative ml-4 pl-8">
+                 {history.map((item, index) => (
+                    <TimelineItem key={item.version} version={item} isLast={index === history.length - 1}/>
                 ))}
                 <span className="absolute -left-5 flex items-center justify-center bg-slate-800 w-10 h-10 rounded-full ring-4 ring-slate-200">
                     <GitCommit className="h-5 w-5 text-white" />

@@ -76,7 +76,7 @@ const ExamProgram: FC = () => {
     }, [user]);
 
     const programData = useMemo(() => {
-        if (!activeOrg || !activeOrg.examProductCategories || !Array.isArray(activeOrg.examProductCategories) || !activeOrg.exams || !Array.isArray(activeOrg.exams) || !programId) {
+        if (!activeOrg || !Array.isArray(activeOrg.examProductCategories) || !Array.isArray(activeOrg.exams) || !programId) {
             return null;
         }
 
@@ -126,9 +126,9 @@ const ExamProgram: FC = () => {
         };
     }, [programId, activeOrg]);
 
-
-    if (isInitializing || !activeOrg) {
-        return <div className="text-center py-10"><Spinner size="lg" /></div>;
+    // This is the critical guard to prevent rendering with incomplete data on a direct page load.
+    if (isInitializing || !activeOrg || !activeOrg.exams) {
+        return <div className="text-center py-10"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading program details...</p></div>;
     }
 
     if (!programData) {

@@ -1,20 +1,20 @@
-import { coverContent } from './content/cover';
-import { titlePageContent } from './content/titlePage';
-import { tocContent } from './content/toc';
-import { ch1Content } from './content/ch1';
-import { ch2Content } from './content/ch2';
-import { ch3Content } from './content/ch3';
-import { ch4Content } from './content/ch4';
-import { ch5Content } from './content/ch5';
-import { ch6Content } from './content/ch6';
-import { ch7Content } from './content/ch7';
-import { ch8Content } from './content/ch8';
-import { ch9Content } from './content/ch9';
-import { ch10Content } from './content/ch10';
-import { ch11Content } from './content/ch11';
-import { ch12Content } from './content/ch12';
-import { ch13Content } from './content/ch13';
-import { ch14Content } from './content/ch14';
+import { coverContent } from './content/cover.ts';
+import { titlePageContent } from './content/titlePage.ts';
+import { tocContent } from './content/toc.ts';
+import { ch1Content } from './content/ch1.ts';
+import { ch2Content } from './content/ch2.ts';
+import { ch3Content } from './content/ch3.ts';
+import { ch4Content } from './content/ch4.ts';
+import { ch5Content } from './content/ch5.ts';
+import { ch6Content } from './content/ch6.ts';
+import { ch7Content } from './content/ch7.ts';
+import { ch8Content } from './content/ch8.ts';
+import { ch9Content } from './content/ch9.ts';
+import { ch10Content } from './content/ch10.ts';
+import { ch11Content } from './content/ch11.ts';
+import { ch12Content } from './content/ch12.ts';
+import { ch13Content } from './content/ch13.ts';
+import { ch14Content } from './content/ch14.ts';
 
 export interface Chapter {
     title: string;
