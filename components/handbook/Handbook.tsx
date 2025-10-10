@@ -163,6 +163,7 @@ const Handbook: FC = () => {
                         )}
                     </div>
                     
+                    
                     <div className="mt-8 pt-6 border-t border-[rgb(var(--color-border-rgb))] flex justify-between">
                         <button
                             onClick={() => setActiveChapterIndex(prev => Math.max(0, prev - 1))}

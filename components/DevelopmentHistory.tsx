@@ -150,6 +150,7 @@ const TimelineItem: FC<{ item: HistoryItem; isLast: boolean }> = ({ item, isLast
     );
 };
 
+
 const DevelopmentHistory: FC = () => {
     return (
         <div className="space-y-8">
