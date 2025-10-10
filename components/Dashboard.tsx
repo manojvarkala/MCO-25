@@ -109,11 +109,7 @@ const Dashboard: FC = () => {
         };
     }, [examPrices, activeOrg]);
 
-    if (isInitializing || isLoading) {
-        return <div className="text-center py-10"><Spinner size="lg" /></div>;
-    }
-
-    if (!activeOrg || !Array.isArray(activeOrg.examProductCategories) || !Array.isArray(activeOrg.exams)) {
+    if (isInitializing || isLoading || !activeOrg || !Array.isArray(activeOrg.examProductCategories) || !Array.isArray(activeOrg.exams)) {
         return <div className="text-center py-10"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading dashboard data...</p></div>;
     }
 

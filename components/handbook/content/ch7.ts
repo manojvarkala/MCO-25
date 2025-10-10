@@ -10,22 +10,22 @@ export const ch7Content = `
     </ul>
 
     <h3 class="text-xl font-bold mt-6">7.2 The Tenant Blueprint Generator</h3>
-    <p>Located in the "Tools" tab, this is one of the most powerful features for scaling the platform. Its purpose is to generate a complete, error-free, ready-to-use JSON configuration file for launching a brand new tenant portal.</p>
-    <p>The tool intelligently guides the administrator through a setup process by enforcing prerequisites:</p>
+    <p>Located in the "Tools" tab, this tool is for <strong>launching a brand new tenant portal</strong>. It generates a complete, error-free JSON configuration file with all necessary branding and templates, but with <strong>empty content arrays</strong> (no exams, books, etc.). This gives the React app the basic "scaffolding" it needs to start up for a new, empty tenant without crashing.</p>
+    
+    <h3 class="text-xl font-bold mt-6">7.3 The Full Content Snapshot Generator</h3>
+    <p>Also in the "Tools" tab, this second tool is for <strong>backups and performance optimization of an existing, live tenant</strong>. It generates a JSON file containing a complete, point-in-time snapshot of <strong>all your current live content</strong>—exams, books, prices, and settings. This file is a perfect backup and serves a key performance role, as explained in the workflow below.</p>
+
+    <h3 class="text-xl font-bold mt-6">7.4 The "Golden Workflow" for Content Management and Optimization</h3>
+    <p>Understanding the interplay between WordPress, the API, and the static JSON files is key to managing the platform professionally. Here is the definitive workflow:</p>
     <ol>
-        <li><strong>Prerequisites Checklist:</strong> The "Generate & Download Blueprint" button is disabled by default. The UI displays a checklist of required actions:
-            <ul>
-                <li>Set the Exam Application URL.</li>
-                <li>Set a site logo (either via custom URL or the WordPress Site Icon).</li>
-                <li>Configure at least one signature in the Certificate Templates tab.</li>
+        <li><strong>Day-to-Day Content Management:</strong> ALL content updates (adding exams, changing prices, creating books) are done exclusively in the WordPress admin panel. The app will automatically fetch these changes via the live API, leveraging its caching system. <strong>You do not need to generate a new JSON file for daily updates.</strong></li>
+        <li class="mt-2"><strong>Periodic Performance Optimization:</strong> Periodically (e.g., once a month or after a major content addition), follow these steps to improve the initial load speed for new visitors:
+            <ul class="list-disc pl-5 mt-2">
+                <li>Go to <strong>Exam App Engine → Tools</strong> and click <strong>"Generate Full Content Snapshot"</strong>.</li>
+                <li>Download the fully populated JSON file.</li>
+                <li>During your next planned deployment of the React app, replace the old static fallback file in the <code>/public</code> directory (e.g., <code>medical-coding-config.json</code>) with this new one.</li>
             </ul>
         </li>
-        <li><strong>Generation:</strong> Once all prerequisites are met, the button becomes active. Clicking it generates a <code>tenant-config.json</code> file that is a complete blueprint. It contains the site's branding, all configured certificate templates, and crucially, the correct empty arrays for dynamic content like exams and books.</li>
-        <li><strong>Deployment:</strong> This generated file can be dropped directly into the React app's <code>/public</code> directory and added to the <code>tenantMap</code> to instantly launch the new tenant's portal.</li>
     </ol>
-    <p>This guided process prevents the deployment of incomplete configurations, which could cause the React app to crash on startup for a new tenant.</p>
-
-    <h3 class="text-xl font-bold mt-6">7.3 Certificate Template Management</h3>
-    <p>This tab provides a simple interface for editing the text and signatures on certificates. It supports dynamic placeholders like <code>{examName}</code> and <code>{finalScore}</code> which are replaced with the user's actual data upon generation.</p>
-    <p>For signature images, it is highly recommended to use a <strong>base64 data URI</strong> instead of a standard URL. This embeds the image directly into the certificate data, preventing potential CORS (Cross-Origin) errors when the React app generates the PDF for download.</p>
+    <p>By keeping the static fallback file reasonably up-to-date, you ensure that new users (or those with a cleared cache) have the fastest possible first-load experience, as the app can render the correct content instantly without waiting for the initial API call to complete.</p>
 `;
