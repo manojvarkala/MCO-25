@@ -40,7 +40,7 @@ import FAQ from './components/FAQ.tsx';
 import DevelopmentHistory from './components/DevelopmentHistory.tsx';
 import SalesAnalytics from './components/SalesAnalytics.tsx';
 import ContentEngine from './components/ContentEngine.tsx';
-import Handbook from './components/Handbook.tsx';
+import Handbook from './components/handbook/Handbook.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
