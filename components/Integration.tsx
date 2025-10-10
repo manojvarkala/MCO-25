@@ -13,6 +13,7 @@ import apiFile from '/mco-exam-integration-engine/includes/mco-api.txt?raw';
 import dataFile from '/mco-exam-integration-engine/includes/mco-data.txt?raw';
 import shortcodesFile from '/mco-exam-integration-engine/includes/mco-shortcodes.txt?raw';
 import stylesFile from '/mco-exam-integration-engine/assets/mco-styles.txt?raw';
+import templateExamPrograms from '/public/template-exam-programs.csv?raw';
 
 const Integration: FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
@@ -25,8 +26,6 @@ const Integration: FC = () => {
             const zip = new JSZip();
             const rootFolderName = 'mco-exam-integration-engine';
             
-            // This is the correct structure for WordPress: a single root folder in the zip.
-            // All files will be placed inside this folder.
             const rootFolder = zip.folder(rootFolderName);
             if (!rootFolder) throw new Error("Could not create root folder in zip.");
 
@@ -40,6 +39,7 @@ const Integration: FC = () => {
                 'includes/mco-data.php': dataFile,
                 'includes/mco-shortcodes.php': shortcodesFile,
                 'assets/mco-styles.css': stylesFile,
+                'public/template-exam-programs.csv': templateExamPrograms,
             };
 
             for (const path in filesToZip) {

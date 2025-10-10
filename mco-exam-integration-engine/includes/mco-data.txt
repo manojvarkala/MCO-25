@@ -25,7 +25,7 @@ function mco_get_app_config_data() {
             ['id' => 'academic', 'name' => 'Academic'],
             ['id' => 'noir', 'name' => 'Noir'],
         ],
-        'activeThemeId' => 'default',
+        'activeThemeId' => get_option('mco_active_theme_id', 'default'),
         'exams' => [],
         'examProductCategories' => [],
         'certificateTemplates' => get_option('mco_certificate_templates', mco_get_default_certificate_templates()),
@@ -164,7 +164,6 @@ function mco_get_user_id_from_jwt($request) {
     
     $auth_header = $request->get_header('Authorization');
     if (!$auth_header) {
-        // Fallback for servers that strip the Auth header.
         if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
             $auth_header = $_SERVER['HTTP_AUTHORIZATION'];
         } elseif (function_exists('apache_request_headers')) {
@@ -196,7 +195,6 @@ function mco_get_user_id_from_jwt($request) {
 function mco_jwt_decode($token, $secret) {
     list($header, $payload, $signature) = explode('.', $token);
     $decoded_payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $payload)));
-    // In a real app, you would verify the signature here. For this context, we'll assume it's valid if it decodes.
     if (time() > $decoded_payload->exp) {
         throw new Exception('Expired token');
     }
@@ -231,7 +229,6 @@ function mco_generate_exam_jwt($user_id) {
         ]
     ];
     
-    // Simple JWT generation for demonstration. A proper library is recommended.
     $header_encoded = base64_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
     $payload_encoded = base64_encode(json_encode($payload));
     $signature = hash_hmac('sha256', "$header_encoded.$payload_encoded", MCO_JWT_SECRET, true);
