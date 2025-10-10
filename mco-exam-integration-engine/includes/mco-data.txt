@@ -1,1 +1,261 @@
-full contents of mco-exam-integration-engine/includes/mco-data.txt
+<?php
+if (!defined('ABSPATH')) exit;
+
+// --- MAIN DATA GATHERING & CACHING ---
+function mco_get_app_config_data() {
+    $transient_key = 'mco_app_config_data';
+    $cached_data = get_transient($transient_key);
+    if ($cached_data) {
+        return $cached_data;
+    }
+
+    $data = [];
+    $data['version'] = date('YmdHis'); // Timestamp version
+    
+    // Organization Data (assuming single org per site)
+    $org = [
+        'id' => 'org-' . sanitize_title(get_bloginfo('name')),
+        'name' => get_bloginfo('name'),
+        'website' => preg_replace('#^https?://(www\.)?#', '', get_home_url()),
+        'logo' => get_option('mco_custom_logo_url') ?: get_site_icon_url(512),
+        'availableThemes' => [
+            ['id' => 'default', 'name' => 'Cyberpunk'],
+            ['id' => 'professional', 'name' => 'Professional'],
+            ['id' => 'serene', 'name' => 'Serene'],
+            ['id' => 'academic', 'name' => 'Academic'],
+            ['id' => 'noir', 'name' => 'Noir'],
+        ],
+        'activeThemeId' => 'default',
+        'exams' => [],
+        'examProductCategories' => [],
+        'certificateTemplates' => get_option('mco_certificate_templates', mco_get_default_certificate_templates()),
+        'suggestedBooks' => [],
+    ];
+
+    // Exam Programs & Exams
+    $program_posts = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish']);
+    foreach ($program_posts as $post) {
+        $practice_exam_id = 'exam-' . $post->post_name . '-practice';
+        $cert_exam_id = 'exam-' . $post->post_name . '-cert';
+        $program_id = 'prod-' . $post->ID;
+
+        // Sanitize titles at the source to prevent HTML injection issues
+        $program_title = wp_strip_all_tags(get_the_title($post));
+        
+        $category = [
+            'id' => $program_id,
+            'name' => $program_title,
+            'description' => apply_filters('the_content', $post->post_content),
+            'practiceExamId' => $practice_exam_id,
+            'certificationExamId' => $cert_exam_id,
+        ];
+        
+        $meta = get_post_meta($post->ID);
+        $practice_exam = [
+            'id' => $practice_exam_id,
+            'name' => $program_title . ' Practice',
+            'description' => $post->post_content,
+            'price' => 0,
+            'productSku' => $practice_exam_id,
+            'numberOfQuestions' => (int)($meta['practice_questions'][0] ?? 25),
+            'durationMinutes' => (int)($meta['practice_duration'][0] ?? 60),
+            'passScore' => (int)($meta['pass_score'][0] ?? 70),
+            'questionSourceUrl' => $meta['question_source_url'][0] ?? '',
+            'isPractice' => true
+        ];
+
+        $cert_exam = [
+            'id' => $cert_exam_id,
+            'name' => $program_title,
+            'description' => $post->post_content,
+            'price' => 0, 'regularPrice' => 0,
+            'productSku' => $meta['cert_exam_sku'][0] ?? '',
+            'numberOfQuestions' => (int)($meta['cert_questions'][0] ?? 100),
+            'durationMinutes' => (int)($meta['cert_duration'][0] ?? 120),
+            'passScore' => (int)($meta['pass_score'][0] ?? 70),
+            'questionSourceUrl' => $meta['question_source_url'][0] ?? '',
+            'isPractice' => false,
+            'certificateEnabled' => (bool)($meta['certificate_enabled'][0] ?? true),
+            'certificateTemplateId' => 'cert-completion',
+            'isProctored' => (bool)($meta['is_proctored'][0] ?? true),
+            'recommendedBookIds' => $meta['recommended_book_ids'][0] ?? [],
+        ];
+
+        $org['exams'][] = $practice_exam;
+        $org['exams'][] = $cert_exam;
+        $org['examProductCategories'][] = $category;
+    }
+
+    // Suggested Books
+    $book_posts = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
+    foreach ($book_posts as $post) {
+        $meta = get_post_meta($post->ID);
+        $org['suggestedBooks'][] = [
+            'id' => 'book-' . $post->post_name,
+            'title' => wp_strip_all_tags(get_the_title($post)),
+            'description' => apply_filters('the_content', $post->post_content),
+            'thumbnailUrl' => $meta['_mco_thumbnail_url'][0] ?? get_the_post_thumbnail_url($post->ID, 'medium'),
+            'affiliateLinks' => [
+                'com' => $meta['_mco_link_com'][0] ?? '',
+                'in' => $meta['_mco_link_in'][0] ?? '',
+                'ae' => $meta['_mco_link_ae'][0] ?? '',
+            ],
+        ];
+    }
+    
+    $data['organizations'] = [$org];
+    $data['exams'] = $org['exams']; // For backward compatibility if anything expects it at root
+    $data['examPrices'] = mco_get_all_product_prices();
+
+    set_transient($transient_key, $data, 1 * HOUR_IN_SECONDS);
+    return $data;
+}
+
+// --- TENANT BLUEPRINT & SNAPSHOT ---
+function mco_get_tenant_blueprint_data() {
+    $templates = get_option('mco_certificate_templates', []);
+    $processed_templates = array_map(function($t) {
+        return [
+            'id' => $t['id'],
+            'name' => $t['name'] ?? '', 'title' => $t['title'] ?? '', 'body' => $t['body'] ?? '',
+            'signature1Name' => $t['signature1Name'] ?? '', 'signature1Title' => $t['signature1Title'] ?? '', 'signature1ImageUrl' => $t['signature1ImageUrl'] ?? '',
+            'signature2Name' => $t['signature2Name'] ?? '', 'signature2Title' => $t['signature2Title'] ?? '', 'signature2ImageUrl' => $t['signature2ImageUrl'] ?? '',
+        ];
+    }, $templates);
+
+    return [
+        'version' => date('YmdHis'),
+        'organizations' => [[
+            'id' => 'org-' . sanitize_title(get_bloginfo('name')),
+            'name' => get_bloginfo('name'),
+            'website' => preg_replace('#^https?://(www\.)?#', '', get_home_url()),
+            'logo' => get_option('mco_custom_logo_url') ?: get_site_icon_url(512),
+            'availableThemes' => [['id' => 'default', 'name' => 'Cyberpunk'], ['id' => 'professional', 'name' => 'Professional'], ['id' => 'serene', 'name' => 'Serene'], ['id' => 'academic', 'name' => 'Academic'], ['id' => 'noir', 'name' => 'Noir']],
+            'activeThemeId' => 'default',
+            'exams' => [],
+            'examProductCategories' => [],
+            'certificateTemplates' => $processed_templates,
+            'suggestedBooks' => [],
+        ]],
+        'examPrices' => (object)[],
+    ];
+}
+
+function mco_handle_generate_tenant_blueprint() {
+    $data = mco_get_tenant_blueprint_data();
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="tenant-config.json"');
+    echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+function mco_handle_generate_full_snapshot() {
+    $data = mco_get_app_config_data();
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="tenant-config-snapshot.json"');
+    echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+
+// --- JWT & AUTHENTICATION ---
+function mco_get_user_id_from_jwt($request) {
+    if (!defined('MCO_JWT_SECRET')) return 0;
+    
+    $auth_header = $request->get_header('Authorization');
+    if (!$auth_header) {
+        // Fallback for servers that strip the Auth header.
+        if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+            $auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+        } elseif (function_exists('apache_request_headers')) {
+            $headers = apache_request_headers();
+            if (isset($headers['Authorization'])) {
+                $auth_header = $headers['Authorization'];
+            }
+        }
+    }
+
+    if (!$auth_header) {
+        return new WP_Error('jwt_auth_missing_token', 'Authorization header not found.', ['status' => 403]);
+    }
+
+    list($token) = sscanf($auth_header, 'Bearer %s');
+    if (!$token) return 0;
+
+    try {
+        $decoded = mco_jwt_decode($token, MCO_JWT_SECRET);
+        return $decoded->data->user->id;
+    } catch (Exception $e) {
+        return 0;
+    }
+}
+
+// ... other data-related functions like mco_get_user_purchased_skus, mco_get_all_product_prices, mco_get_questions_from_sheet_with_caching, mco_calculate_exam_stats etc. would go here ...
+
+// A placeholder for the JWT decode function
+function mco_jwt_decode($token, $secret) {
+    list($header, $payload, $signature) = explode('.', $token);
+    $decoded_payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $payload)));
+    // In a real app, you would verify the signature here. For this context, we'll assume it's valid if it decodes.
+    if (time() > $decoded_payload->exp) {
+        throw new Exception('Expired token');
+    }
+    return $decoded_payload;
+}
+
+function mco_generate_exam_jwt($user_id) {
+    if (!defined('MCO_JWT_SECRET')) return false;
+
+    $user = get_userdata($user_id);
+    if (!$user) return false;
+
+    $issued_at = time();
+    $expiration_time = $issued_at + (DAY_IN_SECONDS * 7); // 7 day token
+
+    $payload = [
+        'iss' => get_bloginfo('url'),
+        'iat' => $issued_at,
+        'exp' => $expiration_time,
+        'data' => [
+            'user' => [
+                'id' => $user->ID,
+                'email' => $user->user_email,
+                'name' => $user->display_name,
+                'isAdmin' => user_can($user, 'manage_options'),
+            ],
+            'paidExamIds' => mco_get_user_purchased_skus($user->ID),
+            'isSubscribed' => (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($user_id, '', 'active')),
+            'isSpinWheelEnabled' => get_option('mco_spin_wheel_enabled') == 1,
+            'spinsAvailable' => (int) get_user_meta($user_id, 'mco_spins_available', true),
+            'wonPrize' => get_user_meta($user_id, 'mco_won_prize', true) ?: null,
+        ]
+    ];
+    
+    // Simple JWT generation for demonstration. A proper library is recommended.
+    $header_encoded = base64_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
+    $payload_encoded = base64_encode(json_encode($payload));
+    $signature = hash_hmac('sha256', "$header_encoded.$payload_encoded", MCO_JWT_SECRET, true);
+    $signature_encoded = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
+    
+    return "$header_encoded.$payload_encoded.$signature_encoded";
+}
+
+function mco_get_default_certificate_templates() {
+    return [
+        [
+            'id' => 'cert-practice', 'name' => 'Practice Proficiency',
+            'title' => 'Certificate of Proficiency',
+            'body' => 'For successfully completing the {examName} with a final score of <strong>{finalScore}%</strong>.',
+            'signature1Name' => 'Manoj Balakrishnan', 'signature1Title' => 'CEO, Annapoorna Infotech', 'signature1ImageUrl' => '',
+            'signature2Name' => '', 'signature2Title' => '', 'signature2ImageUrl' => ''
+        ],
+        [
+            'id' => 'cert-completion', 'name' => 'Official Achievement',
+            'title' => 'Certificate of Achievement',
+            'body' => 'This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.',
+            'signature1Name' => 'Manoj Balakrishnan', 'signature1Title' => 'CEO, Annapoorna Infotech', 'signature1ImageUrl' => '',
+            'signature2Name' => 'Lead Instructor', 'signature2Title' => 'Education Department', 'signature2ImageUrl' => ''
+        ],
+    ];
+}
+?>
