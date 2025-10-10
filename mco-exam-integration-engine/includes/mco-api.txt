@@ -371,9 +371,8 @@ function mco_api_create_post_from_app(WP_REST_Request $request) {
         'post_author' => isset($params['post_author']) ? intval($params['post_author']) : get_current_user_id(),
     ];
 
-    if (!empty($params['post_date'])) {
-        $post_args['post_date'] = sanitize_text_field($params['post_date']);
-        $post_args['post_date_gmt'] = get_gmt_from_date(sanitize_text_field($params['post_date']));
+    if (!empty($params['post_date_gmt'])) {
+        $post_args['post_date_gmt'] = sanitize_text_field($params['post_date_gmt']);
     }
 
     if (isset($params['post_category'])) {
@@ -397,7 +396,7 @@ function mco_api_create_post_from_app(WP_REST_Request $request) {
     return new WP_REST_Response([
         'success' => true,
         'post_id' => $post_id,
-        'post_url' => $edit_url, // Return the reliable URL
+        'post_url' => html_entity_decode($edit_url), // Ensure URL is clean
     ], 200);
 }
 ?>

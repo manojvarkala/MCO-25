@@ -20,6 +20,7 @@ const LandingPage: FC = () => {
     }, [user, navigate]);
 
     const mainSiteBaseUrl = activeOrg ? `https://www.${activeOrg.website}` : '';
+    // Revert to the original slug
     const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
     const registerUrl = `${mainSiteBaseUrl}/wp-login.php?action=register`;
 

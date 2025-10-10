@@ -52,9 +52,12 @@ if (!function_exists('mco_simple_hash_to_color_index')) {
 
 /**
  * [mco_exam_login]
- * Handles the SSO login flow. Place this on a dedicated page (e.g., /exam-login/).
- * If a user is logged into WordPress, it generates a JWT and redirects them to the React app.
- * If they are logged out, it redirects them to the standard WordPress login page.
+ * Handles the SSO login flow. This shortcode should be placed on a dedicated page.
+ * It is recommended to use the slug '/exam-login/' for this page.
+ * A custom rewrite rule has been added to the plugin to ensure this slug works correctly.
+ * 
+ * - If a user is logged into WordPress, it generates a JWT and redirects them to the React app's auth route.
+ * - If they are logged out, it redirects them to the standard WordPress login page.
  */
 function mco_exam_login_shortcode() {
     if (is_user_logged_in()) {

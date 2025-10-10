@@ -101,6 +101,10 @@ if (!function_exists('mco_exam_engine_init')) {
             mco_register_admin_hooks();
         }
         mco_register_shortcode_hooks();
+
+        // FIX: Add a specific rewrite rule to resolve permalink conflicts with the /exam-login/ page.
+        // This forces WordPress to treat this slug as a page, preventing it from being caught by other rewrite rules.
+        add_rewrite_rule('^exam-login/?$', 'index.php?pagename=exam-login', 'top');
     }
     add_action('init', 'mco_exam_engine_init');
 }
@@ -109,6 +113,7 @@ if (!function_exists('mco_exam_engine_init')) {
 if (!function_exists('mco_exam_engine_activate')) {
     function mco_exam_engine_activate() {
         mco_register_custom_post_types();
+        // IMPORTANT: Flushing rewrite rules is critical for the new rewrite rule to take effect.
         flush_rewrite_rules();
         // Also clear the config transient to prevent issues with stale data after an update.
         delete_transient('mco_app_config_data');

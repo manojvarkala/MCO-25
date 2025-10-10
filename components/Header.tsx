@@ -30,7 +30,7 @@ const Header: FC = () => {
 
   const headerLink = user ? "/dashboard" : "/";
   
-  // Use /exam-login/ to ensure the token redirect flow is initiated correctly.
+  // Revert to the original slug
   const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
   const myAccountUrl = `${mainSiteBaseUrl}/my-account/`;
   const registerUrl = `${mainSiteBaseUrl}/wp-login.php?action=register`;

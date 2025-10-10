@@ -66,7 +66,7 @@ const Instructions: FC = () => {
 
                 <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">WordPress Integration for Admins</h2>
                 <p>
-                    For instructions on how to set up the SSO and results-sync functionality with your WordPress site, please see the <Link to="/admin/integration" className="text-cyan-600">Integration Guide</Link>.
+                    To set up the SSO functionality, create a page on your WordPress site with the slug <code>exam-login</code> and place the <code>[mco_exam_login]</code> shortcode on it. For more details, see the <Link to="/admin/integration" className="text-cyan-600">Integration Guide</Link>.
                 </p>
             </div>
         </div>
