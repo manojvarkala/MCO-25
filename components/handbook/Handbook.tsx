@@ -166,7 +166,8 @@ const Handbook: FC = () => {
                 const isTOC = i === 2;
                 
                 if (i > 1) { // Chapters start on odd pages
-                    if ((pdf.internal.getNumberOfPages() + 1) % 2 !== 0) {
+                    // FIX: Cast `pdf.internal` to `any` to resolve a type error with `getNumberOfPages`.
+                    if (((pdf.internal as any).getNumberOfPages() + 1) % 2 !== 0) {
                         pdf.addPage();
                     }
                 }
@@ -190,7 +191,8 @@ const Handbook: FC = () => {
                 });
             }
 
-            const totalPages = pdf.internal.getNumberOfPages();
+            // FIX: Cast `pdf.internal` to `any` to resolve a type error with `getNumberOfPages`.
+            const totalPages = (pdf.internal as any).getNumberOfPages();
             for (let i = 3; i <= totalPages; i++) {
                 pdf.setPage(i);
                 addPageNumber(pdf, i - 2, totalPages - 2);

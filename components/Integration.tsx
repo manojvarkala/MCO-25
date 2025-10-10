@@ -14,6 +14,7 @@ import dataFile from '/mco-exam-integration-engine/includes/mco-data.txt?raw';
 import shortcodesFile from '/mco-exam-integration-engine/includes/mco-shortcodes.txt?raw';
 import stylesFile from '/mco-exam-integration-engine/assets/mco-styles.txt?raw';
 import templateExamPrograms from '/public/template-exam-programs.csv?raw';
+import templateRecommendedBooks from '/public/template-recommended-books.csv?raw';
 
 const Integration: FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
@@ -40,6 +41,7 @@ const Integration: FC = () => {
                 'includes/mco-shortcodes.php': shortcodesFile,
                 'assets/mco-styles.css': stylesFile,
                 'public/template-exam-programs.csv': templateExamPrograms,
+                'public/template-recommended-books.csv': templateRecommendedBooks,
             };
 
             for (const path in filesToZip) {

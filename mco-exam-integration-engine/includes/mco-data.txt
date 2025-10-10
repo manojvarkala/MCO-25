@@ -157,6 +157,64 @@ function mco_handle_generate_full_snapshot() {
     exit;
 }
 
+// --- DYNAMIC CSV GENERATION ---
+function mco_generate_exam_programs_csv_content() {
+    $headers = ['program_title','program_description','question_source_url','certification_exam_sku','is_proctored','certificate_enabled','recommended_book_id','practice_questions','practice_duration','cert_questions','cert_duration','pass_score','status'];
+    $posts = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => ['publish', 'draft', 'pending']]);
+    
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="existing_exam_programs.csv"');
+    $output = fopen('php://output', 'w');
+    fputcsv($output, $headers);
+
+    foreach ($posts as $post) {
+        $meta = get_post_meta($post->ID);
+        $row = [
+            $post->post_title,
+            $post->post_content,
+            $meta['question_source_url'][0] ?? '',
+            $meta['cert_exam_sku'][0] ?? '',
+            (bool)($meta['is_proctored'][0] ?? false) ? '1' : '0',
+            (bool)($meta['certificate_enabled'][0] ?? true) ? '1' : '0',
+            implode(',', $meta['recommended_book_ids'][0] ?? []),
+            $meta['practice_questions'][0] ?? '',
+            $meta['practice_duration'][0] ?? '',
+            $meta['cert_questions'][0] ?? '',
+            $meta['cert_duration'][0] ?? '',
+            $meta['pass_score'][0] ?? '',
+            $post->post_status,
+        ];
+        fputcsv($output, $row);
+    }
+    fclose($output);
+    exit;
+}
+
+function mco_generate_recommended_books_csv_content() {
+    $headers = ['book_title','book_description','thumbnail_url','affiliate_link_com','affiliate_link_in','affiliate_link_ae'];
+    $posts = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => ['publish', 'draft', 'pending']]);
+    
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="existing_recommended_books.csv"');
+    $output = fopen('php://output', 'w');
+    fputcsv($output, $headers);
+
+    foreach ($posts as $post) {
+        $meta = get_post_meta($post->ID);
+        $row = [
+            $post->post_title,
+            $post->post_content,
+            $meta['_mco_thumbnail_url'][0] ?? get_the_post_thumbnail_url($post->ID),
+            $meta['_mco_link_com'][0] ?? '',
+            $meta['_mco_link_in'][0] ?? '',
+            $meta['_mco_link_ae'][0] ?? '',
+        ];
+        fputcsv($output, $row);
+    }
+    fclose($output);
+    exit;
+}
+
 
 // --- JWT & AUTHENTICATION ---
 function mco_get_user_id_from_jwt($request) {

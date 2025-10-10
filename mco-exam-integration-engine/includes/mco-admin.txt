@@ -92,7 +92,7 @@ function mco_render_main_settings_tab() {
             <th scope="row">Custom Logo URL</th>
             <td>
                 <input type="text" name="mco_custom_logo_url" value="<?php echo esc_attr(get_option('mco_custom_logo_url')); ?>" class="large-text" />
-                <p class="description">Optional. Enter a full URL to a custom logo. If left blank, the app will use the site's default icon.</p>
+                <p class="description">Optional. Enter the full URL to a custom logo (e.g., https://...). If empty, it will use the Site Icon from Appearance > Customize.</p>
             </td>
         </tr>
          <tr valign="top">
@@ -170,23 +170,46 @@ function mco_render_certificate_templates_tab() {
 
 function mco_render_bulk_import_tab() {
     ?>
-    <h3>Bulk Import Exam Programs</h3>
-    <p>Efficiently create or update exam programs by uploading a CSV file. This is the fastest way to add multiple programs at once.</p>
+    <h3>Bulk Import Content</h3>
+    <p>Efficiently create or update exam programs and recommended books by uploading a CSV file. Use the "Download Template" buttons to get a file pre-populated with your existing content, which is the easiest way to perform bulk edits.</p>
     
     <div class="mco-tool-card">
         <h4>Import Exam Programs</h4>
-        <p><strong>Step 1:</strong> Download the CSV template file. Do not change the column headers.</p>
-        <a href="<?php echo MCO_PLUGIN_URL . 'public/template-exam-programs.csv'; ?>" download class="button button-secondary">Download Exam Program CSV Template</a>
+        <p><strong>Step 1:</strong> Download the template, which will include all your existing exam programs. Do not change the column headers.</p>
+        <form method="post" action="" style="display: inline-block; margin-right: 1rem;">
+            <input type="hidden" name="mco_action" value="download_exam_programs_csv">
+            <?php wp_nonce_field('mco_download_exam_programs_csv_nonce', 'mco_nonce'); ?>
+            <button type="submit" class="button button-secondary">Download Template with Existing Data</button>
+        </form>
         
-        <p style="margin-top: 1rem;"><strong>Step 2:</strong> Fill the template with your program data. Each row represents one exam program.</p>
+        <p style="margin-top: 1rem;"><strong>Step 2:</strong> Fill or edit the template with your program data. Each row represents one exam program. Re-uploading will update existing programs based on "program_title" or create new ones.</p>
         
-        <p style="margin-top: 1rem;"><strong>Step 3:</strong> Upload the completed CSV file below. The system will create new programs or update existing ones based on the "program_title".</p>
         <form method="post" enctype="multipart/form-data" style="margin-top: 1rem; border-top: 1px solid #ddd; padding-top: 1rem;">
             <input type="hidden" name="mco_action" value="bulk_import_programs">
             <?php wp_nonce_field('mco_bulk_import_programs_nonce', 'mco_nonce'); ?>
-            <label for="programs_csv_file" style="font-weight: bold;">Upload your CSV File:</label><br/>
+            <label for="programs_csv_file" style="font-weight: bold;">Upload your Exam Programs CSV File:</label><br/>
             <input type="file" id="programs_csv_file" name="programs_csv_file" accept=".csv" required style="margin-top: 0.5rem;">
             <?php submit_button('Upload & Import Programs', 'primary'); ?>
+        </form>
+    </div>
+
+    <div class="mco-tool-card" style="margin-top: 2rem;">
+        <h4>Import Recommended Books</h4>
+        <p><strong>Step 1:</strong> Download the template, which will include all your existing recommended books.</p>
+        <form method="post" action="" style="display: inline-block; margin-right: 1rem;">
+            <input type="hidden" name="mco_action" value="download_recommended_books_csv">
+            <?php wp_nonce_field('mco_download_recommended_books_csv_nonce', 'mco_nonce'); ?>
+            <button type="submit" class="button button-secondary">Download Template with Existing Data</button>
+        </form>
+        
+        <p style="margin-top: 1rem;"><strong>Step 2:</strong> Fill or edit the template with your book data. Re-uploading will update existing books based on "book_title" or create new ones.</p>
+        
+        <form method="post" enctype="multipart/form-data" style="margin-top: 1rem; border-top: 1px solid #ddd; padding-top: 1rem;">
+            <input type="hidden" name="mco_action" value="bulk_import_books">
+            <?php wp_nonce_field('mco_bulk_import_books_nonce', 'mco_nonce'); ?>
+            <label for="books_csv_file" style="font-weight: bold;">Upload your Recommended Books CSV File:</label><br/>
+            <input type="file" id="books_csv_file" name="books_csv_file" accept=".csv" required style="margin-top: 0.5rem;">
+            <?php submit_button('Upload & Import Books', 'primary'); ?>
         </form>
     </div>
     <?php
@@ -298,12 +321,74 @@ function mco_handle_admin_actions() {
                 echo '<div class="notice notice-success is-dismissible"><p>Server configuration cache has been cleared.</p></div>';
             });
         }
+        if ($action === 'download_exam_programs_csv' && wp_verify_nonce($nonce, 'mco_download_exam_programs_csv_nonce')) {
+            mco_generate_exam_programs_csv_content();
+        }
+        if ($action === 'download_recommended_books_csv' && wp_verify_nonce($nonce, 'mco_download_recommended_books_csv_nonce')) {
+            mco_generate_recommended_books_csv_content();
+        }
     }
     
     if (isset($_POST['mco_action']) && $_POST['mco_action'] === 'bulk_import_programs' && isset($_POST['mco_nonce']) && wp_verify_nonce($_POST['mco_nonce'], 'mco_bulk_import_programs_nonce')) {
         mco_handle_bulk_import_programs();
     }
+    if (isset($_POST['mco_action']) && $_POST['mco_action'] === 'bulk_import_books' && isset($_POST['mco_nonce']) && wp_verify_nonce($_POST['mco_nonce'], 'mco_bulk_import_books_nonce')) {
+        mco_handle_bulk_import_books();
+    }
 }
+
+function mco_handle_bulk_import_books() {
+    if (!isset($_FILES['books_csv_file']) || $_FILES['books_csv_file']['error'] !== UPLOAD_ERR_OK) {
+        add_action('admin_notices', function() { echo '<div class="notice notice-error"><p>Error uploading file. Please try again.</p></div>'; });
+        return;
+    }
+
+    $file = fopen($_FILES['books_csv_file']['tmp_name'], 'r');
+    $header = fgetcsv($file);
+    if (!in_array('book_title', $header)) {
+        add_action('admin_notices', function() { echo '<div class="notice notice-error"><p>CSV file is missing required header column: book_title</p></div>'; });
+        fclose($file);
+        return;
+    }
+    
+    $created_count = 0; $updated_count = 0;
+    while (($row = fgetcsv($file)) !== false) {
+        $data = array_combine($header, $row);
+        $post_title = sanitize_text_field($data['book_title']);
+        if (empty($post_title)) continue;
+
+        $existing_post = get_page_by_title($post_title, OBJECT, 'mco_recommended_book');
+        $post_data = [
+            'post_title' => $post_title,
+            'post_content' => wp_kses_post($data['book_description'] ?? ''),
+            'post_type' => 'mco_recommended_book',
+            'post_status' => 'publish',
+        ];
+
+        if ($existing_post) {
+            $post_data['ID'] = $existing_post->ID;
+            wp_update_post($post_data);
+            $post_id = $existing_post->ID;
+            $updated_count++;
+        } else {
+            $post_id = wp_insert_post($post_data);
+            $created_count++;
+        }
+        
+        if ($post_id && !is_wp_error($post_id)) {
+            update_post_meta($post_id, '_mco_thumbnail_url', esc_url_raw($data['thumbnail_url'] ?? ''));
+            update_post_meta($post_id, '_mco_link_com', esc_url_raw($data['affiliate_link_com'] ?? ''));
+            update_post_meta($post_id, '_mco_link_in', esc_url_raw($data['affiliate_link_in'] ?? ''));
+            update_post_meta($post_id, '_mco_link_ae', esc_url_raw($data['affiliate_link_ae'] ?? ''));
+        }
+    }
+    fclose($file);
+    delete_transient('mco_app_config_data');
+    add_action('admin_notices', function() use ($created_count, $updated_count) {
+        echo '<div class="notice notice-success is-dismissible"><p>Bulk import complete! Created: ' . $created_count . ', Updated: ' . $updated_count . ' books. Cache cleared.</p></div>';
+    });
+}
+
 
 function mco_handle_bulk_import_programs() {
     if (!isset($_FILES['programs_csv_file']) || $_FILES['programs_csv_file']['error'] !== UPLOAD_ERR_OK) {
