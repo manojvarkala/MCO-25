@@ -793,8 +793,8 @@ function mco_api_create_post_from_app(WP_REST_Request $request) {
     return new WP_REST_Response([
         'success' => true,
         'post_id' => $new_post_id,
-        // Ensure the URL doesn't contain escaped HTML entities like &amp;
-        'post_url' => html_entity_decode(get_edit_post_link($new_post_id, 'raw'))
+        // FIX: Manually construct the edit URL. get_edit_post_link() can be unreliable in a REST context.
+        'post_url' => get_admin_url() . 'post.php?post=' . $new_post_id . '&action=edit'
     ], 200);
 }
 

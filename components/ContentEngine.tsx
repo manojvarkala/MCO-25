@@ -69,6 +69,11 @@ const ContentEngine: FC = () => {
         for (let i = 0; i < programsToPost.length; i++) {
             const program = programsToPost[i];
             setProgressMessage(`Generating post ${i + 1} of ${programsToPost.length} for "${program.name}"...`);
+            
+            if (!program || !program.appId) {
+                toast.error(`Skipping post for "${program.name}" due to missing program ID.`);
+                continue; // Skip this iteration
+            }
 
             try {
                 // 1. Generate content with AI
@@ -79,7 +84,7 @@ const ContentEngine: FC = () => {
                 scheduleDate.setDate(scheduleDate.getDate() + (i * parseInt(interval, 10)));
                 const postDate = scheduleDate.toISOString().slice(0, 19).replace('T', ' ');
 
-                // 3. Create the dynamic Call-To-Action block
+                // 3. Create the dynamic Call-To-Action block with the CORRECT URL
                 const programUrl = `${window.location.origin}/program/${program.appId}`;
                 const ctaBlock = `
 <!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|50","bottom":"var:preset|spacing|50","left":"var:preset|spacing|50","right":"var:preset|spacing|50"}},"border":{"radius":"8px"}},"backgroundColor":"vivid-cyan-blue","textColor":"white","layout":{"type":"constrained"}} -->
@@ -106,7 +111,7 @@ const ContentEngine: FC = () => {
                 const postPayload = {
                     program_id: program.id,
                     post_title: `How to Prepare for the ${program.name} Exam`,
-                    post_content: aiContent + '\n' + ctaBlock,
+                    post_content: aiContent.trim() + '\n\n' + ctaBlock.trim(),
                     post_status: 'future',
                     post_date: postDate,
                     post_author: authorId || undefined,

@@ -13,6 +13,13 @@ interface HistoryItem {
 
 const historyData: HistoryItem[] = [
     {
+        version: '1.0.3',
+        title: 'Modular Handbook Architecture & Content Expansion',
+        description: 'Refactored the entire handbook into a modular, multi-file architecture for better maintainability. All existing chapters were significantly expanded with more technical detail and practical examples to create a more comprehensive resource.',
+        type: 'workflow',
+        icon: <GitBranch size={18} />,
+    },
+    {
         version: '1.0.1',
         title: 'Enhanced Product Bulk Editor & Safer Plugin Architecture',
         description: 'Redesigned the Product Customizer with a tabbed interface for bulk-editing Simple vs. Subscription products. Re-implemented the safer two-file plugin structure to prevent installation errors.',

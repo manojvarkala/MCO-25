@@ -4,85 +4,93 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import toast from 'react-hot-toast';
 import { chapters as chapterData } from './chapters.ts';
+import Spinner from '../Spinner.tsx';
 
 const Handbook: FC = () => {
     const [activeChapterIndex, setActiveChapterIndex] = useState(0);
+    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
     const chapters = chapterData; // Use imported data
 
     const handleDownload = useCallback(async () => {
-        const toastId = toast.loading('Generating your handbook...');
+        setIsGeneratingPdf(true);
+        const toastId = toast.loading('Generating PDF... Step 1 of ' + chapters.length);
+        
         try {
             const doc = new jsPDF('p', 'mm', 'a4');
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
             const margin = 15;
+            const contentWidth = pageWidth - margin * 2;
+            const contentHeight = pageHeight - margin * 2;
 
-            // --- 1. RENDER COVER PAGE using html2canvas ---
-            const coverElement = document.createElement('div');
-            coverElement.style.position = 'fixed';
-            coverElement.style.left = '0';
-            coverElement.style.top = '0';
-            coverElement.style.zIndex = '-1';
-            coverElement.style.width = `${pageWidth}mm`;
-            coverElement.style.height = `${pageHeight}mm`;
-            coverElement.innerHTML = chapters[0].content; // Cover page content
-            document.body.appendChild(coverElement);
-            
-            const coverContentDiv = coverElement.querySelector('div');
-            if (!coverContentDiv) throw new Error("Could not find cover page content to render.");
-            
-            const coverCanvas = await html2canvas(coverContentDiv, { scale: 2, useCORS: true });
-            const coverImgData = coverCanvas.toDataURL('image/png');
-            doc.addImage(coverImgData, 'PNG', 0, 0, pageWidth, pageHeight);
-            document.body.removeChild(coverElement);
+            for (let i = 0; i < chapters.length; i++) {
+                toast.loading(`Generating PDF... Step ${i + 1} of ${chapters.length}`, { id: toastId });
+                
+                if (i > 0) {
+                    doc.addPage();
+                }
 
-            // --- 2. RENDER THE REST OF THE BOOK ---
-            const bookContentElement = document.createElement('div');
-            bookContentElement.style.fontFamily = 'Helvetica, sans-serif';
-            bookContentElement.style.fontSize = '10pt';
-            bookContentElement.style.lineHeight = '1.5';
-            bookContentElement.style.color = '#334155';
-            
-            let htmlContent = '';
-            for (let i = 1; i < chapters.length; i++) {
                 const chapter = chapters[i];
-                htmlContent += `
-                    <div style="page-break-before: always; margin-top: 15px;">
-                        <h2 style="font-size: 18pt; font-weight: bold; color: #0891b2; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">
-                            ${chapter.title}
-                        </h2>
-                        ${chapter.content.replace(/<a href="#"/g, '<span').replace(/<\/a>/g, '</span>')}
-                    </div>
-                `;
-            }
-            bookContentElement.innerHTML = htmlContent;
+                const isCover = chapter.id === 'cover';
 
-            await doc.html(bookContentElement, {
-                callback: function (doc) {
-                    // --- 3. ADD PAGE NUMBERS ---
-                    const pageCount = doc.getNumberOfPages();
-                    for (let i = 1; i <= pageCount; i++) {
-                        doc.setPage(i);
-                        doc.setFontSize(8);
-                        doc.setTextColor('#9ca3af');
-                        const text = `Page ${i} of ${pageCount}`;
-                        const textWidth = doc.getStringUnitWidth(text) * doc.getFontSize() / doc.internal.scaleFactor;
-                        doc.text(text, (pageWidth - textWidth) / 2, pageHeight - 10);
+                const renderContainer = document.createElement('div');
+                renderContainer.style.position = 'absolute';
+                renderContainer.style.left = '-9999px';
+                renderContainer.style.width = isCover ? `${pageWidth}mm` : `${contentWidth}mm`;
+                if (isCover) renderContainer.style.height = `${pageHeight}mm`;
+
+                const chapterHtml = chapter.content;
+                renderContainer.innerHTML = chapterHtml;
+                document.body.appendChild(renderContainer);
+
+                const elementToRender = isCover ? (renderContainer.querySelector('div') || renderContainer) : renderContainer;
+                
+                const canvas = await html2canvas(elementToRender, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: isCover ? null : '#ffffff',
+                });
+                
+                document.body.removeChild(renderContainer);
+
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = contentWidth;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                if (isCover) {
+                    doc.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight);
+                } else {
+                    let position = 0;
+                    let pageAdded = false;
+                    while (position < imgHeight) {
+                        if (pageAdded) {
+                            doc.addPage();
+                        }
+                        doc.addImage(imgData, 'PNG', margin, margin - position, imgWidth, imgHeight);
+                        position += contentHeight;
+                        pageAdded = true;
                     }
-                    
-                    doc.save('Annapoorna_Exam_Engine_Handbook.pdf');
-                    toast.success('Handbook downloaded successfully!', { id: toastId });
-                },
-                x: margin,
-                y: margin,
-                width: pageWidth - (margin * 2),
-                windowWidth: pageWidth - (margin * 2),
-                autoPaging: 'text',
-            });
+                }
+            }
+
+            const totalPages = doc.getNumberOfPages();
+            for (let i = 1; i <= totalPages; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor('#9ca3af');
+                const text = `Page ${i} of ${totalPages}`;
+                const textWidth = doc.getStringUnitWidth(text) * doc.getFontSize() / doc.internal.scaleFactor;
+                doc.text(text, (pageWidth - textWidth) / 2, pageHeight - 10);
+            }
+
+            doc.save('Annapoorna_Exam_Engine_Handbook.pdf');
+            toast.success('Handbook downloaded successfully!', { id: toastId });
         } catch (error) {
             console.error("PDF generation failed:", error);
             toast.error('Failed to download PDF.', { id: toastId });
+        } finally {
+            setIsGeneratingPdf(false);
         }
     }, [chapters]);
 
@@ -128,9 +136,11 @@ const Handbook: FC = () => {
                      <div className="mt-6 pt-6 border-t border-[rgb(var(--color-border-rgb))]">
                         <button 
                             onClick={handleDownload}
-                            className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg"
+                            disabled={isGeneratingPdf}
+                            className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg disabled:bg-slate-400"
                         >
-                            <Download size={16}/> Download as PDF
+                            {isGeneratingPdf ? <Spinner size="sm"/> : <Download size={16}/>}
+                            {isGeneratingPdf ? 'Generating...' : 'Download as PDF'}
                         </button>
                     </div>
                 </aside>
