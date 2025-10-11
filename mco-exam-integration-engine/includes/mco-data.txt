@@ -1,6 +1,41 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+if (!function_exists('mco_get_user_purchased_skus')) {
+    function mco_get_user_purchased_skus($user_id) {
+        if (!function_exists('wc_get_orders') || !$user_id) {
+            return [];
+        }
+
+        $skus = [];
+        try {
+            $orders = wc_get_orders([
+                'customer_id' => $user_id,
+                'status'      => ['wc-completed', 'wc-processing'], // 'processing' for immediate access after payment
+                'limit'       => -1,
+            ]);
+
+            foreach ($orders as $order) {
+                foreach ($order->get_items() as $item) {
+                    $product = $item->get_product();
+                    if ($product) {
+                        $sku = $product->get_sku();
+                        if (!empty($sku)) {
+                            $skus[] = $sku;
+                        }
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            // Silently fail to prevent breaking login if WooCommerce has issues.
+            error_log('MCO Plugin Error in mco_get_user_purchased_skus: ' . $e->getMessage());
+        }
+        
+        return array_unique($skus);
+    }
+}
+
+
 // --- MAIN DATA GATHERING & CACHING ---
 function mco_get_app_config_data() {
     $transient_key = 'mco_app_config_data';
