@@ -1,5 +1,5 @@
 import React, { FC, useState, useCallback, useMemo, ReactNode, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -307,7 +307,8 @@ const CreateProgramModal: FC<{
         if (!examPrices) return [];
         return Object.values(examPrices)
             .filter((p: any) => p.type === 'simple' && !linkedSkus.includes(p.sku))
-            .sort((a,b) => a.name.localeCompare(b.name));
+            // FIX: Explicitly type sort parameters to resolve 'name' property error on type 'unknown'.
+            .sort((a: { name: string }, b: { name: string }) => (a.name || '').localeCompare(b.name || ''));
     }, [examPrices, linkedSkus]);
 
     const handleSave = () => {

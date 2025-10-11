@@ -215,6 +215,20 @@ function mco_generate_recommended_books_csv_content() {
     exit;
 }
 
+// FIX: Added a helper function to reliably get the primary app URL for SSO redirects, resolving a fatal error on the exam-login page.
+if (!function_exists('mco_get_exam_app_url')) {
+    function mco_get_exam_app_url() {
+        $urls_string = get_option('mco_exam_app_url', '');
+        if (empty($urls_string)) {
+            return false;
+        }
+        // Get all URLs (in case multiple are listed) and return the first one as the primary redirect target.
+        $urls = preg_split('/\\r\\n|\\r|\\n/', $urls_string);
+        $first_url = isset($urls[0]) ? trim($urls[0]) : false;
+        // Ensure there's no trailing slash for consistent URL building.
+        return $first_url ? rtrim($first_url, '/') : false;
+    }
+}
 
 // --- JWT & AUTHENTICATION ---
 function mco_get_user_id_from_jwt($request) {

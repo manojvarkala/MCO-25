@@ -148,18 +148,19 @@ function mco_render_certificate_templates_tab() {
         <?php foreach ($templates as $index => $template) : ?>
             <div class="mco-template-card">
                 <table class="form-table">
-                    <tr valign="top"><th scope="row">Template ID</th><td><input type="text" readonly value="<?php echo esc_attr($template['id']); ?>" class="regular-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Template Name</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][name]" value="<?php echo esc_attr($template['name']); ?>" class="regular-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Certificate Title</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][title]" value="<?php echo esc_attr($template['title']); ?>" class="large-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Body Text</th><td><textarea name="mco_certificate_templates[<?php echo $index; ?>][body]" rows="3" class="large-text"><?php echo esc_textarea($template['body']); ?></textarea></td></tr>
-                    <tr valign="top"><th scope="row">Signature 1 Name</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name']); ?>" class="regular-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Signature 1 Title</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature1Title]" value="<?php echo esc_attr($template['signature1Title']); ?>" class="regular-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Signature 1 Image URL</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature1ImageUrl]" value="<?php echo esc_attr($template['signature1ImageUrl']); ?>" class="large-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Signature 2 Name</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature2Name]" value="<?php echo esc_attr($template['signature2Name']); ?>" class="regular-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Signature 2 Title</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature2Title]" value="<?php echo esc_attr($template['signature2Title']); ?>" class="regular-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Signature 2 Image URL</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature2ImageUrl]" value="<?php echo esc_attr($template['signature2ImageUrl']); ?>" class="large-text" /></td></tr>
+                    <?php // FIX: Added isset() checks to prevent PHP notices from breaking the page if template data is incomplete. ?>
+                    <tr valign="top"><th scope="row">Template ID</th><td><input type="text" readonly value="<?php echo isset($template['id']) ? esc_attr($template['id']) : ''; ?>" class="regular-text" /></td></tr>
+                    <tr valign="top"><th scope="row">Template Name</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][name]" value="<?php echo isset($template['name']) ? esc_attr($template['name']) : ''; ?>" class="regular-text" /></td></tr>
+                    <tr valign="top"><th scope="row">Certificate Title</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][title]" value="<?php echo isset($template['title']) ? esc_attr($template['title']) : ''; ?>" class="large-text" /></td></tr>
+                    <tr valign="top"><th scope="row">Body Text</th><td><textarea name="mco_certificate_templates[<?php echo $index; ?>][body]" rows="3" class="large-text"><?php echo isset($template['body']) ? esc_textarea($template['body']) : ''; ?></textarea></td></tr>
+                    <tr valign="top"><th scope="row">Signature 1 Name</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature1Name]" value="<?php echo isset($template['signature1Name']) ? esc_attr($template['signature1Name']) : ''; ?>" class="regular-text" /></td></tr>
+                    <tr valign="top"><th scope="row">Signature 1 Title</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature1Title]" value="<?php echo isset($template['signature1Title']) ? esc_attr($template['signature1Title']) : ''; ?>" class="regular-text" /></td></tr>
+                    <tr valign="top"><th scope="row">Signature 1 Image URL</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature1ImageUrl]" value="<?php echo isset($template['signature1ImageUrl']) ? esc_attr($template['signature1ImageUrl']) : ''; ?>" class="large-text" /></td></tr>
+                    <tr valign="top"><th scope="row">Signature 2 Name</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature2Name]" value="<?php echo isset($template['signature2Name']) ? esc_attr($template['signature2Name']) : ''; ?>" class="regular-text" /></td></tr>
+                    <tr valign="top"><th scope="row">Signature 2 Title</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature2Title]" value="<?php echo isset($template['signature2Title']) ? esc_attr($template['signature2Title']) : ''; ?>" class="regular-text" /></td></tr>
+                    <tr valign="top"><th scope="row">Signature 2 Image URL</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature2ImageUrl]" value="<?php echo isset($template['signature2ImageUrl']) ? esc_attr($template['signature2ImageUrl']) : ''; ?>" class="large-text" /></td></tr>
                 </table>
-                <input type="hidden" name="mco_certificate_templates[<?php echo $index; ?>][id]" value="<?php echo esc_attr($template['id']); ?>" />
+                <input type="hidden" name="mco_certificate_templates[<?php echo $index; ?>][id]" value="<?php echo isset($template['id']) ? esc_attr($template['id']) : ''; ?>" />
             </div>
         <?php endforeach; ?>
     </div>
@@ -264,11 +265,15 @@ function mco_render_tools_tab() {
     <div class="mco-tool-card">
         <h4>Clear Server Config Cache</h4>
         <p class="description">Force the server to rebuild its main configuration cache. Use this after making significant changes to exam programs or products to ensure the app reflects the latest data immediately.</p>
-        <form method="post" action="">
-            <input type="hidden" name="mco_action" value="clear_config_cache">
-            <?php wp_nonce_field('mco_clear_config_cache_nonce', 'mco_nonce'); ?>
-            <?php submit_button('Clear Server Config Cache', 'delete'); ?>
-        </form>
+        <?php
+            // FIX: Replaced form submission with a safer nonce link to prevent accidental clearing of WordPress options.
+            $nonce_url = wp_nonce_url(
+                admin_url('admin.php?page=mco-exam-engine&tab=tools&mco_action=clear_config_cache'),
+                'mco_clear_config_cache_nonce',
+                'mco_nonce'
+            );
+            echo '<a href="' . esc_url($nonce_url) . '" class="button button-delete">Clear Server Config Cache</a>';
+        ?>
     </div>
     
     <style>
@@ -305,9 +310,10 @@ function mco_save_meta_box_data($post_id) {
 
 // --- ACTION HANDLERS ---
 function mco_handle_admin_actions() {
-    if (isset($_POST['mco_action']) && isset($_POST['mco_nonce'])) {
-        $action = sanitize_key($_POST['mco_action']);
-        $nonce = sanitize_text_field($_POST['mco_nonce']);
+    // FIX: Use $_REQUEST to handle both POST and GET actions, accommodating the safer nonce link method for tools.
+    if (isset($_REQUEST['mco_action']) && isset($_REQUEST['mco_nonce'])) {
+        $action = sanitize_key($_REQUEST['mco_action']);
+        $nonce = sanitize_text_field($_REQUEST['mco_nonce']);
 
         if ($action === 'generate_tenant_blueprint' && wp_verify_nonce($nonce, 'mco_generate_tenant_blueprint_nonce')) {
             mco_handle_generate_tenant_blueprint();
@@ -329,6 +335,7 @@ function mco_handle_admin_actions() {
         }
     }
     
+    // Keep using $_POST specifically for bulk imports as they involve file uploads.
     if (isset($_POST['mco_action']) && $_POST['mco_action'] === 'bulk_import_programs' && isset($_POST['mco_nonce']) && wp_verify_nonce($_POST['mco_nonce'], 'mco_bulk_import_programs_nonce')) {
         mco_handle_bulk_import_programs();
     }
