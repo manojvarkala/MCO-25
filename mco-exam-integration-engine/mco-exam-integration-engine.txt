@@ -7,7 +7,7 @@ if (!function_exists('mco_is_plugin_already_active')) {
     function mco_is_plugin_already_active() {
         if (is_admin() && current_user_can('activate_plugins') && function_exists('is_plugin_active') && is_plugin_active(plugin_basename(__FILE__))) {
             
-            // FIX: Use the safer get_file_data() instead of the admin-only get_plugin_data() to prevent context-related fatal errors.
+            // This function is only called in a full admin context, so get_file_data is safe here.
             $plugins = get_option('active_plugins');
             $this_plugin_path = plugin_basename(__FILE__);
             $this_plugin_dir = dirname($this_plugin_path);
@@ -30,11 +30,8 @@ if (!function_exists('mco_is_plugin_already_active')) {
             }
             
             if (!empty($duplicates)) {
-                // A duplicate was found. Deactivate this (the newly activated) one.
                 deactivate_plugins($this_plugin_path);
-                // Set a transient to show an admin notice.
                 set_transient('mco_duplicate_plugin_error', true, 60);
-                // Prevent the "Plugin activated." message from appearing.
                 if (isset($_GET['activate'])) {
                     unset($_GET['activate']);
                 }
@@ -55,19 +52,22 @@ if (!function_exists('mco_is_plugin_already_active')) {
 
 // --- CONSTANTS & INCLUDES ---
 
-// Define core plugin constants
 define('MCO_PLUGIN_FILE', __FILE__);
 define('MCO_PLUGIN_PATH', plugin_dir_path(MCO_PLUGIN_FILE));
 define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
 
-// FIX: Define version constant safely. get_file_data() is an admin function, so we must ensure it's loaded before being called to prevent fatal errors on non-admin pages (like REST API calls).
+// FIX: This block is the source of the fatal error.
+// The get_file_data() function is only available in the admin context.
+// This code runs on EVERY page load, including non-admin REST API requests.
+// The fix is to ensure the required admin file is loaded before the function is called.
 if (!defined('MCO_PLUGIN_VERSION')) {
     if ( ! function_exists( 'get_file_data' ) ) {
         require_once ABSPATH . 'wp-admin/includes/plugin.php';
     }
     $plugin_data = get_file_data(MCO_PLUGIN_FILE, ['Version' => 'Version']);
-    define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
+    define('MCO_PLUGIN_VERSION', isset($plugin_data['Version']) ? $plugin_data['Version'] : '1.0.3');
 }
+
 
 // Include all the necessary logic files
 require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
@@ -79,37 +79,29 @@ require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
 
 // --- INITIALIZATION HOOKS ---
 
-// Main initialization function to register all hooks
 if (!function_exists('mco_exam_engine_init')) {
     function mco_exam_engine_init() {
         mco_register_custom_post_types();
         mco_register_api_hooks();
-        // FIX: Admin-specific hooks should only be registered in the admin context to prevent fatal errors on front-end and AJAX requests.
         if (is_admin()) {
             mco_register_admin_hooks();
         }
         mco_register_shortcode_hooks();
 
-        // FIX: Add a specific rewrite rule to resolve permalink conflicts with the /exam-login/ page.
-        // This forces WordPress to treat this slug as a page, preventing it from being caught by other rewrite rules.
         add_rewrite_rule('^exam-login/?$', 'index.php?pagename=exam-login', 'top');
     }
     add_action('init', 'mco_exam_engine_init');
 }
 
-// Activation hook for flushing rewrite rules
 if (!function_exists('mco_exam_engine_activate')) {
     function mco_exam_engine_activate() {
         mco_register_custom_post_types();
-        // IMPORTANT: Flushing rewrite rules is critical for the new rewrite rule to take effect.
         flush_rewrite_rules();
-        // Also clear the config transient to prevent issues with stale data after an update.
         delete_transient('mco_app_config_data');
     }
     register_activation_hook(MCO_PLUGIN_FILE, 'mco_exam_engine_activate');
 }
 
-// Deactivation hook
 if (!function_exists('mco_exam_engine_deactivate')) {
     function mco_exam_engine_deactivate() {
         flush_rewrite_rules();
