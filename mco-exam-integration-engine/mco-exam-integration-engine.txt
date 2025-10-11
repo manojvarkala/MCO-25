@@ -1,3 +1,4 @@
+<?php
 // This file contains the main plugin logic, hooks, and includes.
 // The plugin header is in plugin-header.txt and is prepended during the build process.
 
@@ -59,9 +60,11 @@ define('MCO_PLUGIN_FILE', __FILE__);
 define('MCO_PLUGIN_PATH', plugin_dir_path(MCO_PLUGIN_FILE));
 define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
 
-// FIX: Define version constant safely from the plugin header to prevent fatal errors on the front-end.
-// get_file_data() is available globally, unlike get_plugin_data().
+// FIX: Define version constant safely. get_file_data() is an admin function, so we must ensure it's loaded before being called to prevent fatal errors on non-admin pages (like REST API calls).
 if (!defined('MCO_PLUGIN_VERSION')) {
+    if ( ! function_exists( 'get_file_data' ) ) {
+        require_once ABSPATH . 'wp-admin/includes/plugin.php';
+    }
     $plugin_data = get_file_data(MCO_PLUGIN_FILE, ['Version' => 'Version']);
     define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 }
