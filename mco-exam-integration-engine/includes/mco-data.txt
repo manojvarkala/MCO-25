@@ -255,7 +255,7 @@ function mco_get_user_id_from_jwt($request) {
 
     try {
         $decoded = mco_jwt_decode($token, MCO_JWT_SECRET);
-        return $decoded->data->user->id;
+        return $decoded->user->id;
     } catch (Exception $e) {
         return 0;
     }
@@ -282,23 +282,22 @@ function mco_generate_exam_jwt($user_id) {
     $issued_at = time();
     $expiration_time = $issued_at + (DAY_IN_SECONDS * 7); // 7 day token
 
+    // FIX: Removed the 'data' wrapper to match the frontend's expected TokenPayload structure.
     $payload = [
         'iss' => get_bloginfo('url'),
         'iat' => $issued_at,
         'exp' => $expiration_time,
-        'data' => [
-            'user' => [
-                'id' => $user->ID,
-                'email' => $user->user_email,
-                'name' => $user->display_name,
-                'isAdmin' => user_can($user, 'manage_options'),
-            ],
-            'paidExamIds' => mco_get_user_purchased_skus($user->ID),
-            'isSubscribed' => (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($user_id, '', 'active')),
-            'isSpinWheelEnabled' => get_option('mco_spin_wheel_enabled') == 1,
-            'spinsAvailable' => (int) get_user_meta($user_id, 'mco_spins_available', true),
-            'wonPrize' => get_user_meta($user_id, 'mco_won_prize', true) ?: null,
-        ]
+        'user' => [
+            'id' => $user->ID,
+            'email' => $user->user_email,
+            'name' => $user->display_name,
+            'isAdmin' => user_can($user, 'manage_options'),
+        ],
+        'paidExamIds' => mco_get_user_purchased_skus($user->ID),
+        'isSubscribed' => (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($user_id, '', 'active')),
+        'isSpinWheelEnabled' => get_option('mco_spin_wheel_enabled') == 1,
+        'spinsAvailable' => (int) get_user_meta($user_id, 'mco_spins_available', true),
+        'wonPrize' => get_user_meta($user_id, 'mco_won_prize', true) ?: null,
     ];
     
     $header_encoded = base64_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));

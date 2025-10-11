@@ -307,7 +307,6 @@ const CreateProgramModal: FC<{
         if (!examPrices) return [];
         return Object.values(examPrices)
             .filter((p: any) => p.type === 'simple' && !linkedSkus.includes(p.sku))
-            // FIX: Explicitly type sort parameters to resolve 'name' property error on type 'unknown'.
             .sort((a: { name: string }, b: { name: string }) => (a.name || '').localeCompare(b.name || ''));
     }, [examPrices, linkedSkus]);
 
@@ -543,7 +542,7 @@ const ExamProgramCustomizer: FC = () => {
         if (!examPrices) return [];
         return Object.values(examPrices)
             .filter((p: any) => p.type === 'simple' && !linkedSkus.includes(p.sku))
-            .sort((a,b) => a.name.localeCompare(b.name));
+            .sort((a: { name: string }, b: { name: string }) => (a.name || '').localeCompare(b.name || ''));
     }, [examPrices, linkedSkus]);
 
     if (!activeOrg) return <Spinner />;
