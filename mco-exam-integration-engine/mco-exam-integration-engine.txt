@@ -1,4 +1,3 @@
-<?php
 // This file contains the main plugin logic, hooks, and includes.
 // The plugin header is in plugin-header.txt and is prepended during the build process.
 
@@ -108,4 +107,3 @@ if (!function_exists('mco_exam_engine_deactivate')) {
     }
     register_deactivation_hook(MCO_PLUGIN_FILE, 'mco_exam_engine_deactivate');
 }
-?>
