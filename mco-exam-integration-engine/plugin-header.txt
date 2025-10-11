@@ -15,4 +15,3 @@
 // This allows for safe and easy version number updates without touching core plugin logic.
 
 if (!defined('ABSPATH')) exit;
-?>

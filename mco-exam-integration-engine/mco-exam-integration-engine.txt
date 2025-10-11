@@ -1,20 +1,5 @@
-<?php
-/**
- * Plugin Name:       MCO Exam Integration Engine
- * Plugin URI:        https://annapoornainfo.com
- * Description:       Provides the backend API, user authentication (SSO), and content management for the React-based examination app.
- * Version:           1.0.3
- * Author:            Annapoorna Infotech
- * Author URI:        https://annapoornainfo.com
- * License:           GPL v2 or later
- * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       mco-exam-engine
- * Update URI:        false
- */
-// This file contains only the plugin header metadata.
-// This allows for safe and easy version number updates without touching core plugin logic.
-
-if (!defined('ABSPATH')) exit;
+// This file contains the main plugin logic, hooks, and includes.
+// The plugin header is in plugin-header.txt and is prepended during the build process.
 
 // Prevent duplicate plugin activation errors. This runs on every admin page load.
 if (!function_exists('mco_is_plugin_already_active')) {
