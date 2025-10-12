@@ -35,6 +35,47 @@ if (!function_exists('mco_get_user_purchased_skus')) {
     }
 }
 
+if (!function_exists('mco_get_all_product_prices')) {
+    function mco_get_all_product_prices() {
+        if (!function_exists('wc_get_products')) {
+            return [];
+        }
+
+        $products_data = [];
+        $products = wc_get_products(['limit' => -1, 'status' => 'publish']);
+
+        foreach ($products as $product) {
+            $sku = $product->get_sku();
+            if (empty($sku)) {
+                continue;
+            }
+
+            $sale_price = $product->get_sale_price();
+            $regular_price = $product->get_regular_price();
+            $price = $product->get_price();
+
+            $product_info = [
+                'productId'     => $product->get_id(),
+                'name'          => $product->get_name(),
+                'price'         => (float) ($sale_price ?: $price),
+                'regularPrice'  => (float) ($regular_price ?: $price),
+                'type'          => $product->get_type(),
+                'isBundle'      => $product->get_meta('_is_mco_bundle', true) === 'yes',
+                'bundledSkus'   => $product->get_meta('_mco_bundled_skus', true) ?: [],
+            ];
+            
+            if ($product->is_type('subscription') && class_exists('WC_Subscriptions_Product')) {
+                $product_info['subscriptionPeriod'] = WC_Subscriptions_Product::get_period($product);
+                $product_info['subscriptionPeriodInterval'] = WC_Subscriptions_Product::get_interval($product);
+                $product_info['subscriptionLength'] = WC_Subscriptions_Product::get_length($product);
+            }
+
+            $products_data[$sku] = $product_info;
+        }
+        return $products_data;
+    }
+}
+
 
 // --- MAIN DATA GATHERING & CACHING ---
 function mco_get_app_config_data() {

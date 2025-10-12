@@ -329,6 +329,71 @@ function mco_api_get_exam_stats(WP_REST_Request $request) {
     return new WP_REST_Response($stats, 200);
 }
 
+// ADMIN: Create or update a WooCommerce product
+function mco_api_admin_upsert_product(WP_REST_Request $request) {
+    if (!function_exists('wc_get_product_id_by_sku')) {
+        return new WP_Error('woocommerce_not_active', 'WooCommerce is not active.', ['status' => 500]);
+    }
+
+    $params = $request->get_json_params();
+    $sku = sanitize_text_field($params['sku']);
+
+    if (empty($sku)) {
+        return new WP_Error('bad_request', 'Product SKU is required.', ['status' => 400]);
+    }
+
+    $product_id = wc_get_product_id_by_sku($sku);
+    $product_type = 'simple';
+    if (isset($params['subscription_period'])) {
+        $product_type = 'subscription';
+    }
+
+    if ($product_id) {
+        $product = wc_get_product($product_id);
+    } else {
+        if ($product_type === 'subscription') {
+            if (!class_exists('WC_Product_Subscription')) {
+                return new WP_Error('subscription_plugin_missing', 'WooCommerce Subscriptions plugin is not active.', ['status' => 500]);
+            }
+            $product = new WC_Product_Subscription();
+        } else {
+            $product = new WC_Product_Simple();
+        }
+        $product->set_sku($sku);
+    }
+    
+    if (isset($params['name'])) $product->set_name(sanitize_text_field($params['name']));
+    if (isset($params['price'])) $product->set_sale_price($params['price']);
+    if (isset($params['regularPrice'])) $product->set_regular_price($params['regularPrice']);
+    if (isset($params['price']) && !isset($params['regularPrice'])) {
+        if (empty($product->get_regular_price()) || $product->get_regular_price() < $params['price']) {
+            $product->set_regular_price($params['price']);
+        }
+    }
+    
+    $product->set_virtual(true);
+
+    if (isset($params['isBundle'])) {
+        $product->update_meta_data('_is_mco_bundle', 'yes');
+        if (isset($params['bundled_skus'])) {
+            $product->update_meta_data('_mco_bundled_skus', $params['bundled_skus']);
+        }
+    }
+
+    if ($product_type === 'subscription' && class_exists('WC_Subscriptions_Product')) {
+        if (isset($params['subscription_period'])) WC_Subscriptions_Product::set_period($product, $params['subscription_period']);
+        if (isset($params['subscription_period_interval'])) WC_Subscriptions_Product::set_interval($product, $params['subscription_period_interval']);
+        if (isset($params['subscription_length'])) WC_Subscriptions_Product::set_length($product, $params['subscription_length']);
+    }
+
+    $product->save();
+    
+    delete_transient('mco_app_config_data');
+    $data = mco_get_app_config_data();
+    return new WP_REST_Response($data, 200);
+}
+
+
 // ADMIN: Get all debug details
 function mco_api_get_debug_details(WP_REST_Request $request) {
     $user_id = mco_get_user_id_from_jwt($request);

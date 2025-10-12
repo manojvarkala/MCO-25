@@ -140,7 +140,10 @@ function mco_render_themes_tab() {
 }
 
 function mco_render_certificate_templates_tab() {
-    $templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
+    $templates = get_option('mco_certificate_templates');
+    if (empty($templates) || !is_array($templates)) {
+        $templates = mco_get_default_certificate_templates();
+    }
     ?>
     <h3>Certificate Templates</h3>
     <p>Manage the templates used for generating PDF certificates. Use placeholders like <code>{candidateName}</code>, <code>{examName}</code>, and <code>{finalScore}</code>.</p>
