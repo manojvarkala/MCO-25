@@ -41,6 +41,38 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 // Throw the raw text as it might contain useful debug info.
                 throw new Error(responseText || response.statusText || `Server error: ${response.status}`);
             }
+
+            // Check for critical authentication errors that require a logout.
+            const authErrorCodes = ['jwt_auth_invalid_token', 'jwt_auth_expired_token', 'rest_forbidden', 'jwt_auth_invalid_secret_key'];
+            if (errorData?.code && authErrorCodes.includes(errorData.code)) {
+                // This is a critical auth error. Log the user out by clearing all stored data.
+                // This mimics the behavior of the AuthContext logout function for a "hard" refresh.
+                localStorage.removeItem('examUser');
+                localStorage.removeItem('paidExamIds');
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('isSubscribed');
+                localStorage.removeItem('spinsAvailable');
+                localStorage.removeItem('wonPrize');
+                localStorage.removeItem('activeOrg');
+                localStorage.removeItem('isSpinWheelEnabled');
+                sessionStorage.removeItem('wheelModalDismissed');
+                
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('exam_timer_') || key.startsWith('exam_results_') || key.startsWith('exam_progress_')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                
+                toast.error("Your session has expired or is invalid. Please log in again.", { id: 'auth-error-toast' });
+                
+                // Redirect to home page after a short delay to allow toast to be seen.
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1500);
+
+                // Throw a specific error to stop further processing in the current call stack.
+                throw new Error("Authentication failed. Redirecting to login.");
+            }
             
             if (errorData?.code === 'jwt_auth_missing_token') {
                 throw new Error("Authorization header missing. This is a server configuration issue. Please check the Admin Debug Sidebar for the solution.");
