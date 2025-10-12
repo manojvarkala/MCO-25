@@ -10,6 +10,35 @@ if (!function_exists('mco_register_api_hooks')) {
 }
 
 // --- CORS HANDLING ---
+
+// FIX: Added the missing helper function to get allowed origins for CORS.
+// This function was referenced but not defined, causing CORS to fail and resulting in "Failed to fetch" errors.
+if (!function_exists('mco_get_allowed_origins')) {
+    function mco_get_allowed_origins() {
+        $urls_string = get_option('mco_exam_app_url', '');
+        if (empty($urls_string)) {
+            return [];
+        }
+        $urls = preg_split('/\\r\\n|\\r|\\n/', $urls_string);
+        $origins = [];
+        foreach ($urls as $url) {
+            $trimmed_url = trim($url);
+            if (!empty($trimmed_url)) {
+                // Parse the URL to get scheme and host, then reconstruct the origin
+                $parsed_url = parse_url($trimmed_url);
+                if (isset($parsed_url['scheme']) && isset($parsed_url['host'])) {
+                    $origin = $parsed_url['scheme'] . '://' . $parsed_url['host'];
+                    if (isset($parsed_url['port'])) {
+                        $origin .= ':' . $parsed_url['port'];
+                    }
+                    $origins[] = $origin;
+                }
+            }
+        }
+        return array_unique($origins);
+    }
+}
+
 if (!function_exists('mco_handle_cors_headers')) {
     function mco_handle_cors_headers($served, $result, $request) {
         $allowed_origins = mco_get_allowed_origins();
