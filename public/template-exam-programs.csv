@@ -1,2 +1,1 @@
 program_title,program_description,question_source_url,certification_exam_sku,is_proctored,certificate_enabled,recommended_book_id,practice_questions,practice_duration,cert_questions,cert_duration,pass_score,status
-Sample Program Title,"A brief description of the program.",https://docs.google.com/spreadsheets/d/your-sheet-id/edit?usp=sharing,sample-cert-sku,1,1,sample-book-id,25,60,100,120,70,publish

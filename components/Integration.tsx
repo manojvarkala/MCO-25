@@ -5,16 +5,16 @@ import { DownloadCloud, Code } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 // Import file contents as raw strings using Vite's ?raw feature
-import pluginHeaderFile from '/mco-exam-integration-engine/plugin-header.txt?raw';
-import mainPluginFile from '/mco-exam-integration-engine/mco-exam-integration-engine.txt?raw';
-import cptsFile from '/mco-exam-integration-engine/includes/mco-cpts.txt?raw';
-import adminFile from '/mco-exam-integration-engine/includes/mco-admin.txt?raw';
-import apiFile from '/mco-exam-integration-engine/includes/mco-api.txt?raw';
-import dataFile from '/mco-exam-integration-engine/includes/mco-data.txt?raw';
-import shortcodesFile from '/mco-exam-integration-engine/includes/mco-shortcodes.txt?raw';
-import stylesFile from '/mco-exam-integration-engine/assets/mco-styles.txt?raw';
-import templateExamPrograms from '/public/template-exam-programs.csv?raw';
-import templateRecommendedBooks from '/public/template-recommended-books.csv?raw';
+import pluginHeaderFile from '../mco-exam-integration-engine/plugin-header.txt?raw';
+import mainPluginFile from '../mco-exam-integration-engine/mco-exam-integration-engine.txt?raw';
+import cptsFile from '../mco-exam-integration-engine/includes/mco-cpts.txt?raw';
+import adminFile from '../mco-exam-integration-engine/includes/mco-admin.txt?raw';
+import apiFile from '../mco-exam-integration-engine/includes/mco-api.txt?raw';
+import dataFile from '../mco-exam-integration-engine/includes/mco-data.txt?raw';
+import shortcodesFile from '../mco-exam-integration-engine/includes/mco-shortcodes.txt?raw';
+import stylesFile from '../mco-exam-integration-engine/assets/mco-styles.txt?raw';
+import templateExamPrograms from '../public/template-exam-programs.csv?raw';
+import templateRecommendedBooks from '../public/template-recommended-books.csv?raw';
 
 const Integration: FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
@@ -40,8 +40,6 @@ const Integration: FC = () => {
                 'includes/mco-data.php': dataFile,
                 'includes/mco-shortcodes.php': shortcodesFile,
                 'assets/mco-styles.css': stylesFile,
-                'public/template-exam-programs.csv': templateExamPrograms,
-                'public/template-recommended-books.csv': templateRecommendedBooks,
             };
 
             for (const path in filesToZip) {
