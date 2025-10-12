@@ -6,7 +6,11 @@ if (!function_exists('mco_is_plugin_already_active')) {
     function mco_is_plugin_already_active() {
         if (is_admin() && current_user_can('activate_plugins') && function_exists('is_plugin_active') && is_plugin_active(plugin_basename(__FILE__))) {
             
-            // This function is only called in a full admin context, so get_file_data is safe here.
+            // FIX: Ensure plugin.php is loaded before using get_file_data(), as its availability is not guaranteed on admin_init.
+            if ( ! function_exists( 'get_file_data' ) ) {
+                require_once ABSPATH . 'wp-admin/includes/plugin.php';
+            }
+            
             $plugins = get_option('active_plugins');
             $this_plugin_path = plugin_basename(__FILE__);
             $this_plugin_dir = dirname($this_plugin_path);

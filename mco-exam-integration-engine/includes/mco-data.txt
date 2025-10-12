@@ -298,13 +298,32 @@ function mco_get_user_id_from_jwt($request) {
 
 // ... other data-related functions like mco_get_user_purchased_skus, mco_get_all_product_prices, mco_get_questions_from_sheet_with_caching, mco_calculate_exam_stats etc. would go here ...
 
-// A placeholder for the JWT decode function
+// FIX: Replaced placeholder JWT functions with secure, standard-compliant implementations.
 function mco_jwt_decode($token, $secret) {
-    list($header, $payload, $signature) = explode('.', $token);
-    $decoded_payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $payload)));
-    if (time() > $decoded_payload->exp) {
-        throw new Exception('Expired token');
+    $parts = explode('.', $token);
+    if (count($parts) !== 3) {
+        throw new Exception('Invalid token format.');
     }
+    list($header_encoded, $payload_encoded, $signature_encoded) = $parts;
+
+    // Verify signature
+    $signature = base64_decode(str_replace(['-', '_'], ['+', '/'], $signature_encoded));
+    $expected_signature = hash_hmac('sha256', "$header_encoded.$payload_encoded", $secret, true);
+    
+    if (!hash_equals($expected_signature, $signature)) {
+        throw new Exception('Signature verification failed.');
+    }
+    
+    $decoded_payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $payload_encoded)));
+    
+    if ($decoded_payload === null) {
+        throw new Exception('Invalid payload.');
+    }
+
+    if (isset($decoded_payload->exp) && time() > $decoded_payload->exp) {
+        throw new Exception('Expired token.');
+    }
+
     return $decoded_payload;
 }
 
@@ -335,10 +354,15 @@ function mco_generate_exam_jwt($user_id) {
         'wonPrize' => get_user_meta($user_id, 'mco_won_prize', true) ?: null,
     ];
     
-    $header_encoded = base64_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
-    $payload_encoded = base64_encode(json_encode($payload));
+    // Helper for URL-safe base64 encoding
+    $base64_url_encode = function($data) {
+        return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($data));
+    };
+
+    $header_encoded = $base64_url_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
+    $payload_encoded = $base64_url_encode(json_encode($payload));
     $signature = hash_hmac('sha256', "$header_encoded.$payload_encoded", MCO_JWT_SECRET, true);
-    $signature_encoded = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
+    $signature_encoded = $base64_url_encode($signature);
     
     return "$header_encoded.$payload_encoded.$signature_encoded";
 }
