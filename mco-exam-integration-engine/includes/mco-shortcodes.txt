@@ -102,6 +102,11 @@ function mco_exam_login_shortcode() {
  * - If no `id`, it shows all published programs.
  */
 function mco_exam_showcase_shortcode($atts) {
+    // FIX: Add a guard clause to prevent fatal errors if WooCommerce is not active.
+    if (!function_exists('wc_get_product_id_by_sku')) {
+        return '<div style="border:2px solid red; padding: 1rem; background: #fff0f0; color: #7f1d1d;"><strong>Error:</strong> The "Exam Showcase" shortcode requires the WooCommerce plugin to be active.</div>';
+    }
+
     $atts = shortcode_atts(['id' => ''], $atts, 'exam_program');
     $program_id_str = sanitize_text_field($atts['id']);
     
