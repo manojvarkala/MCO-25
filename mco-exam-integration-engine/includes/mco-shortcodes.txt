@@ -52,15 +52,19 @@ if (!function_exists('mco_simple_hash_to_color_index')) {
 
 /**
  * [mco_exam_login]
- * Handles the SSO login flow. This shortcode should be placed on a dedicated page.
- * It is recommended to use the slug '/exam-login/' for this page.
- * A custom rewrite rule has been added to the plugin to ensure this slug works correctly.
- * 
- * - If a user is logged into WordPress, it generates a JWT and redirects them to the React app's auth route.
- * - If they are logged out, it redirects them to the standard WordPress login page.
+ * Handles the SSO login flow. Place this on a dedicated page (e.g., /exam-login/).
+ * If a user is logged into WordPress, it generates a JWT and redirects them to the React app.
+ * If they are logged out, it redirects them to the standard WordPress login page.
  */
 function mco_exam_login_shortcode() {
     if (is_user_logged_in()) {
+        if (!function_exists('wc_get_orders')) {
+            if (current_user_can('manage_options')) {
+                return '<p style="color: red; border: 1px solid red; padding: 1rem;"><strong>Admin Error:</strong> The login shortcode requires WooCommerce to be active to check for user purchases. Please activate WooCommerce.</p>';
+            }
+            return '<p>Login is currently unavailable. Please try again later.</p>';
+        }
+
         $app_url = mco_get_exam_app_url();
         if (!$app_url) {
             return '<p>Exam application URL is not configured. Please contact an administrator.</p>';
@@ -102,9 +106,11 @@ function mco_exam_login_shortcode() {
  * - If no `id`, it shows all published programs.
  */
 function mco_exam_showcase_shortcode($atts) {
-    // FIX: Add a guard clause to prevent fatal errors if WooCommerce is not active.
     if (!function_exists('wc_get_product_id_by_sku')) {
-        return '<div style="border:2px solid red; padding: 1rem; background: #fff0f0; color: #7f1d1d;"><strong>Error:</strong> The "Exam Showcase" shortcode requires the WooCommerce plugin to be active.</div>';
+        if (current_user_can('manage_options')) {
+            return '<p style="color: red; border: 1px solid red; padding: 1rem;"><strong>Admin Error:</strong> The exam showcase requires WooCommerce to be active to display product information and purchase links. Please activate WooCommerce.</p>';
+        }
+        return '<p>Exam programs are currently unavailable.</p>';
     }
 
     $atts = shortcode_atts(['id' => ''], $atts, 'exam_program');
@@ -364,51 +370,47 @@ function mco_book_showcase_shortcode() {
 
     ob_start();
     echo '<div class="mco-grid">';
-    
-    foreach ($books as $book) {
-        $meta = get_post_meta($book->ID);
-        $links = [
-            'com' => $meta['_mco_link_com'][0] ?? '',
-            'in' => $meta['_mco_link_in'][0] ?? '',
-            'ae' => $meta['_mco_link_ae'][0] ?? '',
+    foreach ($books as $index => $book_post) {
+        $book = [
+            'title' => wp_strip_all_tags(get_the_title($book_post)),
+            'description' => has_excerpt($book_post->ID) ? wp_strip_all_tags(get_the_excerpt($book_post->ID)) : wp_strip_all_tags(wp_trim_words($book_post->post_content, 30, '...')),
+            'thumbnailUrl' => get_post_meta($book_post->ID, '_mco_thumbnail_url', true) ?: get_the_post_thumbnail_url($book_post->ID, 'medium_large'),
+            'links' => [
+                'com' => get_post_meta($book_post->ID, '_mco_link_com', true),
+                'in' => get_post_meta($book_post->ID, '_mco_link_in', true),
+                'ae' => get_post_meta($book_post->ID, '_mco_link_ae', true),
+            ]
         ];
-        
-        echo '<div class="mco-card mco-card--book">';
 
-        // Book Cover
-        $thumbnail_url = $meta['_mco_thumbnail_url'][0] ?? get_the_post_thumbnail_url($book->ID, 'medium');
-        if ($thumbnail_url) {
-            echo '<div class="mco-book-cover mco-book-cover--image"><img src="' . esc_url($thumbnail_url) . '" alt="' . esc_attr($book->post_title) . '"></div>';
+        echo '<div class="mco-card mco-card--book">';
+        
+        if ($book['thumbnailUrl']) {
+            echo '<div class="mco-book-cover mco-book-cover--image"><img src="' . esc_url($book['thumbnailUrl']) . '" alt="' . esc_attr($book['title']) . '"/></div>';
         } else {
-            $colors = ['red', 'yellow', 'green', 'blue', 'indigo', 'purple', 'pink', 'teal', 'orange'];
-            $color_index = mco_simple_hash_to_color_index($book->post_title, count($colors));
+            $title_words = explode(' ', $book['title']);
+            $color_index = mco_simple_hash_to_color_index($book['title'], 9); // Use 9 colors
             echo '<div class="mco-book-cover mco-book-cover--procedural mco-book-cover--color-' . $color_index . '">';
-            echo '<div><h4 class="mco-book-cover__title">' . esc_html($book->post_title) . '</h4></div>';
+            echo '<h4 class="mco-book-cover__title">' . esc_html(implode(' ', array_slice($title_words, 0, 4))) . '</h4>';
+            if (count($title_words) > 4) echo '<p class="mco-book-cover__subtitle">' . esc_html(implode(' ', array_slice($title_words, 4))) . '</p>';
             echo '<div class="mco-book-cover__accent"></div>';
             echo '</div>';
         }
         
         echo '<div class="mco-card__body">';
-        echo '<h3 class="mco-card__title">' . esc_html($book->post_title) . '</h3>';
-        echo '<p class="mco-card__description">' . wp_kses_post($book->post_content) . '</p>';
+        echo '<h3 class="mco-card__title">' . esc_html($book['title']) . '</h3>';
+        echo '<p class="mco-card__description">' . esc_html($book['description']) . '</p>';
         echo '</div>';
         
         echo '<div class="mco-card__footer">';
-        $has_links = false;
-        foreach ($links as $key => $url) {
-            if (!empty($url)) {
-                $has_links = true;
-                $domain = 'Amazon.' . $key;
-                echo '<a href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer" class="mco-card__button ' . ($key === 'com' ? 'mco-card__button--purchase' : 'mco-card__button--secondary') . '">' . $icons['cart'] . ' Buy on ' . $domain . '</a>';
-            }
-        }
-        if (!$has_links) {
-            echo '<p class="mco-card__no-links">Purchase links unavailable.</p>';
-        }
+        $link_found = false;
+        if (!empty($book['links']['com'])) { echo '<a href="' . esc_url($book['links']['com']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--purchase">' . $icons['cart'] . ' Buy on Amazon.com</a>'; $link_found = true; }
+        if (!empty($book['links']['in'])) { echo '<a href="' . esc_url($book['links']['in']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary">Buy on Amazon.in</a>'; $link_found = true; }
+        if (!empty($book['links']['ae'])) { echo '<a href="' . esc_url($book['links']['ae']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary">Buy on Amazon.ae</a>'; $link_found = true; }
+        if (!$link_found) { echo '<p class="mco-card__no-links">Purchase links unavailable.</p>'; }
         echo '</div>';
+        
         echo '</div>';
     }
-    
     echo '</div>';
     return ob_get_clean();
 }

@@ -59,16 +59,10 @@ define('MCO_PLUGIN_FILE', __FILE__);
 define('MCO_PLUGIN_PATH', plugin_dir_path(MCO_PLUGIN_FILE));
 define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
 
-// FIX: This block is the source of the fatal error.
-// The get_file_data() function is only available in the admin context.
-// This code runs on EVERY page load, including non-admin REST API requests.
-// The fix is to ensure the required admin file is loaded before the function is called.
+// FIX: Replaced the fragile, admin-only get_file_data() call with a static definition.
+// This was causing a fatal PHP error on all frontend and API requests.
 if (!defined('MCO_PLUGIN_VERSION')) {
-    if ( ! function_exists( 'get_file_data' ) ) {
-        require_once ABSPATH . 'wp-admin/includes/plugin.php';
-    }
-    $plugin_data = get_file_data(MCO_PLUGIN_FILE, ['Version' => 'Version']);
-    define('MCO_PLUGIN_VERSION', isset($plugin_data['Version']) ? $plugin_data['Version'] : '1.0.3');
+    define('MCO_PLUGIN_VERSION', '1.0.3');
 }
 
 
