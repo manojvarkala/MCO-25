@@ -24,6 +24,24 @@ if (!function_exists('mco_add_admin_menu')) {
             'dashicons-analytics',
             25
         );
+        
+        // Add submenu for Exam Programs
+        add_submenu_page(
+            'mco-exam-engine',
+            'Exam Programs',
+            'Exam Programs',
+            'manage_options',
+            'edit.php?post_type=mco_exam_program'
+        );
+
+        // Add submenu for Recommended Books
+        add_submenu_page(
+            'mco-exam-engine',
+            'Recommended Books',
+            'Recommended Books',
+            'manage_options',
+            'edit.php?post_type=mco_recommended_book'
+        );
     }
 }
 

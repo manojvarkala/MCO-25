@@ -10,9 +10,6 @@ if (!function_exists('mco_register_api_hooks')) {
 }
 
 // --- CORS HANDLING ---
-
-// FIX: Added the missing helper function to get allowed origins for CORS.
-// This function was referenced but not defined, causing CORS to fail and resulting in "Failed to fetch" errors.
 if (!function_exists('mco_get_allowed_origins')) {
     function mco_get_allowed_origins() {
         $urls_string = get_option('mco_exam_app_url', '');
@@ -24,7 +21,6 @@ if (!function_exists('mco_get_allowed_origins')) {
         foreach ($urls as $url) {
             $trimmed_url = trim($url);
             if (!empty($trimmed_url)) {
-                // Parse the URL to get scheme and host, then reconstruct the origin
                 $parsed_url = parse_url($trimmed_url);
                 if (isset($parsed_url['scheme']) && isset($parsed_url['host'])) {
                     $origin = $parsed_url['scheme'] . '://' . $parsed_url['host'];
@@ -59,6 +55,144 @@ if (!function_exists('mco_handle_cors_headers')) {
         return $served;
     }
 }
+
+// --- API HELPER FUNCTIONS ---
+
+// Helper function to perform the actual remote get and validation of a sheet URL
+function mco_perform_sheet_url_test($sheet_url) {
+    $response = wp_remote_get($sheet_url, ['timeout' => 15]);
+    
+    if (is_wp_error($response)) {
+        return [
+            'success' => false,
+            'statusCode' => $response->get_error_code(),
+            'message' => $response->get_error_message(),
+            'dataPreview' => null
+        ];
+    }
+    
+    $status_code = wp_remote_retrieve_response_code($response);
+    $body = wp_remote_retrieve_body($response);
+    
+    if ($status_code !== 200) {
+        return [
+            'success' => false,
+            'statusCode' => $status_code,
+            'message' => 'The server returned a non-200 status code. Ensure the sheet is "Published to the web" as a CSV.',
+            'dataPreview' => substr($body, 0, 300)
+        ];
+    }
+    
+    $lines = explode("\n", trim($body));
+    if (count($lines) < 1 || strpos($lines[0], ',') === false) {
+        return [
+            'success' => false,
+            'statusCode' => $status_code,
+            'message' => 'The URL was accessible, but the content does not appear to be a valid CSV file. Ensure you have selected "Comma-separated values (.csv)" when publishing.',
+            'dataPreview' => substr($body, 0, 300)
+        ];
+    }
+    
+    return [
+        'success' => true,
+        'statusCode' => $status_code,
+        'message' => 'The Google Sheet URL is accessible and returns valid CSV data.',
+        'dataPreview' => implode("\n", array_slice($lines, 0, 5))
+    ];
+}
+
+// Helper function for the debug endpoint to test the first available sheet URL
+function mco_test_first_sheet_url() {
+    $args = [
+        'post_type' => 'mco_exam_program',
+        'posts_per_page' => 1,
+        'post_status' => 'publish',
+        'meta_query' => [
+            [
+                'key' => 'question_source_url',
+                'value' => '',
+                'compare' => '!='
+            ]
+        ]
+    ];
+    $query = new WP_Query($args);
+
+    if (!$query->have_posts()) {
+        return ['success' => true, 'message' => 'No exam programs with a question source URL found to test.'];
+    }
+
+    wp_reset_postdata();
+
+    $post_id = $query->posts[0]->ID;
+    $sheet_url = get_post_meta($post_id, 'question_source_url', true);
+
+    if (empty($sheet_url)) {
+         return ['success' => true, 'message' => 'First found exam program has an empty question source URL.'];
+    }
+
+    return mco_perform_sheet_url_test($sheet_url);
+}
+
+// Helper function for fetching and caching questions from Google Sheets
+function mco_get_questions_from_sheet_with_caching($sheet_url, $count) {
+    $transient_key = 'mco_questions_' . md5($sheet_url);
+    $cached_questions = get_transient($transient_key);
+
+    if ($cached_questions !== false && is_array($cached_questions)) {
+        shuffle($cached_questions);
+        return array_slice($cached_questions, 0, $count);
+    }
+
+    $response = wp_remote_get($sheet_url, ['timeout' => 15]);
+
+    if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+        $error_message = is_wp_error($response) ? $response->get_error_message() : 'HTTP Error: ' . wp_remote_retrieve_response_code($response);
+        return new WP_Error('sheet_fetch_failed', 'Failed to fetch questions from Google Sheet. ' . $error_message, ['status' => 500]);
+    }
+
+    $body = wp_remote_retrieve_body($response);
+    $lines = explode("\n", trim($body));
+    $header = str_getcsv(array_shift($lines));
+
+    $questions = [];
+    foreach ($lines as $line) {
+        if (empty(trim($line))) continue;
+        $row = str_getcsv($line);
+        if (count($row) < count($header)) {
+            $row = array_pad($row, count($header), '');
+        }
+        $data = array_combine($header, $row);
+
+        $question_text = $data['question'] ?? '';
+        $options_str = $data['options'] ?? '';
+        $correct_answer_index = (int)($data['correctAnswer'] ?? 1);
+
+        if (empty($question_text) || empty($options_str)) continue;
+
+        $options = array_map('trim', explode('|', $options_str));
+
+        if (count($options) < 2 || $correct_answer_index < 1 || $correct_answer_index > count($options)) {
+            continue;
+        }
+
+        $questions[] = [
+            'id' => crc32($question_text),
+            'question' => $question_text,
+            'options' => $options,
+            'correctAnswer' => $correct_answer_index,
+        ];
+    }
+    
+    if (empty($questions)) {
+        return new WP_Error('no_questions_parsed', 'No valid questions could be parsed from the Google Sheet.', ['status' => 500]);
+    }
+
+    set_transient($transient_key, $questions, 15 * MINUTE_IN_SECONDS);
+
+    shuffle($questions);
+    return array_slice($questions, 0, $count);
+}
+
 
 // --- ROUTE REGISTRATION ---
 if (!function_exists('mco_register_rest_routes')) {
@@ -167,7 +301,6 @@ function mco_api_submit_result(WP_REST_Request $request) {
     $user_id = mco_get_user_id_from_jwt($request);
     $result_data = $request->get_json_params();
     
-    // Server-side validation
     if (!$result_data || !isset($result_data['testId'], $result_data['examId'], $result_data['score'])) {
         return new WP_Error('bad_request', 'Invalid result data.', ['status' => 400]);
     }
@@ -207,7 +340,6 @@ function mco_api_get_certificate_data(WP_REST_Request $request) {
         return new WP_Error('not_found', 'User not found.', ['status' => 404]);
     }
     
-    // Ensure all exam data is fetched from the central config to reflect latest changes.
     $config_data = mco_get_app_config_data();
     $exam = current(array_filter($config_data['exams'], function($e) use ($result) {
         return $e['id'] === $result['examId'];
@@ -221,7 +353,6 @@ function mco_api_get_certificate_data(WP_REST_Request $request) {
         return new WP_Error('forbidden', 'You did not pass this exam.', ['status' => 403]);
     }
 
-    // New provisional pass logic
     if ($exam['isProctored'] && isset($result['proctoringViolations']) && $result['proctoringViolations'] > 0) {
         return new WP_Error('forbidden', 'Your certificate is pending review due to proctoring flags.', ['status' => 403]);
     }
@@ -301,7 +432,6 @@ function mco_api_submit_review(WP_REST_Request $request) {
             $comment_id = wp_insert_comment($comment_data);
             if ($comment_id) {
                 update_comment_meta($comment_id, 'rating', $rating);
-                // Clear WC transients to see the review immediately
                 wc_delete_product_transients($product_id);
             }
         }
@@ -318,7 +448,6 @@ function mco_api_spin_wheel(WP_REST_Request $request) {
         return new WP_Error('forbidden', 'You have no spins left.', ['status' => 403]);
     }
     
-    // Decrement spin count for non-admins
     if (!user_can($user_id, 'manage_options')) {
         update_user_meta($user_id, 'mco_spins_available', $spins_available - 1);
     }
@@ -330,7 +459,6 @@ function mco_api_spin_wheel(WP_REST_Request $request) {
         mco_grant_prize_to_user($user_id, $prize['id'], $prize_label);
     }
     
-    // Generate a new token with updated spin count and prize info
     $new_token = mco_generate_exam_jwt($user_id);
 
     return new WP_REST_Response([
@@ -484,13 +612,26 @@ function mco_api_create_post_from_app(WP_REST_Request $request) {
         update_post_meta(sanitize_text_field($params['program_id']), '_mco_has_generated_post', $post_id);
     }
     
-    // FIX: Manually construct the edit URL, as get_edit_post_link() is not reliable in a REST context.
     $edit_url = admin_url('post.php?post=' . $post_id . '&action=edit');
 
     return new WP_REST_Response([
         'success' => true,
         'post_id' => $post_id,
-        'post_url' => html_entity_decode($edit_url), // Ensure URL is clean
+        'post_url' => html_entity_decode($edit_url),
     ], 200);
+}
+
+// ADMIN: Test a Google Sheet URL
+function mco_api_admin_test_sheet_url(WP_REST_Request $request) {
+    $params = $request->get_json_params();
+    $sheet_url = isset($params['sheetUrl']) ? esc_url_raw($params['sheetUrl']) : '';
+
+    if (empty($sheet_url)) {
+        return new WP_Error('bad_request', 'Sheet URL is required.', ['status' => 400]);
+    }
+    
+    $result = mco_perform_sheet_url_test($sheet_url);
+    
+    return new WP_REST_Response($result, 200);
 }
 ?>
