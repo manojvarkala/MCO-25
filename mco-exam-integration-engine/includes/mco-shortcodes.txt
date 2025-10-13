@@ -6,7 +6,7 @@ if (!function_exists('mco_register_shortcode_hooks')) {
     function mco_register_shortcode_hooks() {
         add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
         add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
-        add_shortcode('exam_program', 'mco_exam_showcase_shortcode'); // Alias
+        add_shortcode('mco-exam-program', 'mco_exam_showcase_shortcode'); // Alias
         add_shortcode('mco_book_showcase', 'mco_book_showcase_shortcode');
         
         add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles');
@@ -20,7 +20,7 @@ if (!function_exists('mco_prevent_caching_on_shortcode_pages')) {
         global $post;
         if (is_a($post, 'WP_Post') && (
             has_shortcode($post->post_content, 'mco_exam_showcase') ||
-            has_shortcode($post->post_content, 'exam_program') ||
+            has_shortcode($post->post_content, 'mco-exam-program') ||
             has_shortcode($post->post_content, 'mco_book_showcase') ||
             has_shortcode($post->post_content, 'mco_exam_login')
         )) {
@@ -113,7 +113,7 @@ function mco_exam_showcase_shortcode($atts) {
         return '<p>Exam programs are currently unavailable.</p>';
     }
 
-    $atts = shortcode_atts(['id' => ''], $atts, 'exam_program');
+    $atts = shortcode_atts(['id' => ''], $atts, 'mco-exam-program');
     $program_id_str = sanitize_text_field($atts['id']);
     
     $query_args = [
@@ -287,7 +287,7 @@ function mco_exam_showcase_shortcode($atts) {
             echo '</div>';
             echo '</div>';
 
-            // --- Bundle Card Logic (Prioritizing Subscription Bundle) ---
+            // --- Bundle Card Logic (Now safely inside the cert_exam check) ---
             $subscription_bundle_sku = $cert_exam['productSku'] . '-1mo-addon';
             $practice_bundle_sku = $cert_exam['productSku'] . '-1';
 
