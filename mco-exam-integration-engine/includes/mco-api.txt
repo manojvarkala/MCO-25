@@ -248,11 +248,17 @@ if (!function_exists('mco_register_rest_routes')) {
 // --- PERMISSION CALLBACKS ---
 function mco_api_check_user_permission(WP_REST_Request $request) {
     $user_id = mco_get_user_id_from_jwt($request);
-    return $user_id ? true : new WP_Error('rest_forbidden', 'You are not logged in.', ['status' => 401]);
+    if (is_wp_error($user_id)) {
+        return $user_id;
+    }
+    return $user_id > 0 ? true : new WP_Error('rest_forbidden', 'You are not logged in.', ['status' => 401]);
 }
 
 function mco_api_check_admin_permission(WP_REST_Request $request) {
     $user_id = mco_get_user_id_from_jwt($request);
+    if (is_wp_error($user_id)) {
+        return $user_id;
+    }
     if (!$user_id) {
         return new WP_Error('rest_forbidden', 'You are not logged in.', ['status' => 401]);
     }
