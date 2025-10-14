@@ -287,6 +287,7 @@ function mco_exam_showcase_shortcode($atts) {
             echo '</div>';
             echo '</div>';
 
+            // *** FIX STARTS HERE: MOVED BUNDLE LOGIC INSIDE THE IF BLOCK ***
             $subscription_bundle_sku = $cert_exam['productSku'] . '-1mo-addon';
             $practice_bundle_sku = $cert_exam['productSku'] . '-1';
 
@@ -348,6 +349,7 @@ function mco_exam_showcase_shortcode($atts) {
                 echo '</div>';
                 echo '</div>';
             }
+             // *** FIX ENDS HERE ***
         }
 
         echo '</div></div>'; // Close cards and group
