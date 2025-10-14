@@ -272,8 +272,8 @@ function mco_exam_showcase_shortcode($atts) {
             echo '<a href="' . esc_url($button_url) . '" class="mco-card__button ' . $button_class . '">' . $button_icon . ' ' . $button_text . '</a>';
             echo '</div>';
             echo '</div>';
-
-            // --- Bundle Card Logic (Prioritizing Subscription Bundle) ---
+            
+            // --- FIX: Moved Bundle Card Logic INSIDE the 'if ($cert_exam)' block ---
             $subscription_bundle_sku = $cert_exam['productSku'] . '-1mo-addon';
             $practice_bundle_sku = $cert_exam['productSku'] . '-1';
 
