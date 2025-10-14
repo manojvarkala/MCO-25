@@ -126,7 +126,7 @@ if (!function_exists('mco_generate_exam_jwt')) {
             'isSubscribed' => (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($user_id, '', 'active')),
             'spinsAvailable' => (int) get_user_meta($user_id, 'mco_spins_available', true),
             'wonPrize' => get_user_meta($user_id, 'mco_won_prize', true) ?: null,
-            'isSpinWheelEnabled' => (bool) get_option('mco_spin_wheel_enabled', false),
+            'isSpinWheelEnabled' => (bool) get_option('mco_is_spin_wheel_enabled', false),
         ];
 
         $header = mco_base64url_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
@@ -296,11 +296,13 @@ function mco_api_permission_check(WP_REST_Request $request) {
 }
 
 function mco_api_jwt_admin_permission_check(WP_REST_Request $request) {
+    // First, validate the JWT token itself.
     $is_valid_token = mco_api_permission_check($request);
     if (is_wp_error($is_valid_token)) {
         return $is_valid_token;
     }
 
+    // Now, check for admin privileges within the validated token payload.
     $payload = $request->get_param('jwt_payload');
     if (empty($payload['user']['isAdmin'])) {
         return new WP_Error('jwt_auth_admin_required', 'Administrator access required.', ['status' => 403]);
