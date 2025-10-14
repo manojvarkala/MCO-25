@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) exit;
  * If the exam application cannot connect to the API (CORS errors, fetch errors, or "Authorization
  * header missing" messages), it's almost always a server configuration issue. Many shared hosting
  * environments (like Apache/LiteSpeed) strip the necessary 'Authorization' header from requests by default.
- *01 Oct 8.53
+ *
  * THE FIX:
  * Add the following code to the VERY TOP of your WordPress root .htaccess file, before the
  * # BEGIN WordPress block.
@@ -126,7 +126,7 @@ if (!function_exists('mco_generate_exam_jwt')) {
             'isSubscribed' => (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($user_id, '', 'active')),
             'spinsAvailable' => (int) get_user_meta($user_id, 'mco_spins_available', true),
             'wonPrize' => get_user_meta($user_id, 'mco_won_prize', true) ?: null,
-            'isSpinWheelEnabled' => (bool) get_option('mco_is_spin_wheel_enabled', false),
+            'isSpinWheelEnabled' => (bool) get_option('mco_spin_wheel_enabled', false),
         ];
 
         $header = mco_base64url_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
@@ -282,27 +282,30 @@ function mco_register_rest_routes() {
 
 function mco_api_permission_check(WP_REST_Request $request) {
     $auth_header = $request->get_header('authorization');
-    if (empty($auth_header) || !preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) return new WP_Error('jwt_auth_missing_token', 'Authorization header missing. Check server configuration (e.g., .htaccess).', ['status' => 401]);
+    if (empty($auth_header) || !preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
+        return new WP_Error('jwt_auth_missing_token', 'Authorization header missing. Check server configuration (e.g., .htaccess).', ['status' => 401]);
+    }
+    
     $payload = mco_verify_exam_jwt($matches[1]);
-    if (!$payload || !isset($payload['user']['id'])) return new WP_Error('jwt_auth_invalid_token', 'Invalid or expired token.', ['status' => 403]);
+    if (!$payload || !isset($payload['user']['id'])) {
+        return new WP_Error('jwt_auth_invalid_token', 'Invalid or expired token.', ['status' => 403]);
+    }
     
     $request->set_param('jwt_payload', $payload);
     return true;
 }
 
-function mco_api_admin_permission_check(WP_REST_Request $request) { return is_user_logged_in() && current_user_can('manage_options'); }
-
 function mco_api_jwt_admin_permission_check(WP_REST_Request $request) {
-    // First, validate the JWT token itself.
     $is_valid_token = mco_api_permission_check($request);
     if (is_wp_error($is_valid_token)) {
         return $is_valid_token;
     }
-    // Now, check for admin privileges within the validated token payload.
+
     $payload = $request->get_param('jwt_payload');
     if (empty($payload['user']['isAdmin'])) {
         return new WP_Error('jwt_auth_admin_required', 'Administrator access required.', ['status' => 403]);
     }
+
     return true;
 }
 
@@ -332,7 +335,7 @@ function mco_api_get_full_config(WP_REST_Request $request) {
                 "website" => str_replace('www.', '', $site_host),
                 "logo" => $logo_url,
                 "availableThemes" => $available_themes,
-                "activeThemeId" => get_option('mco_active_theme', 'default'),
+                "activeThemeId" => get_option('mco_active_theme_id', 'default'),
                 "exams" => $dynamic_data['exams'],
                 "examProductCategories" => $dynamic_data['examProductCategories'],
                 "certificateTemplates" => array_values($templates),
@@ -793,7 +796,6 @@ function mco_api_create_post_from_app(WP_REST_Request $request) {
     return new WP_REST_Response([
         'success' => true,
         'post_id' => $new_post_id,
-        // FIX: Manually construct the edit URL. get_edit_post_link() can be unreliable in a REST context.
         'post_url' => get_admin_url() . 'post.php?post=' . $new_post_id . '&action=edit'
     ], 200);
 }

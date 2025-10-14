@@ -336,7 +336,7 @@ function mco_exam_showcase_shortcode($atts) {
                 echo '</div>';
             }
         }
-        
+
         echo '</div></div>'; // Close cards and group
     }
     echo '</div>'; // Close grid
