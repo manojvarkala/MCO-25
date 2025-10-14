@@ -6,7 +6,7 @@ if (!function_exists('mco_register_shortcode_hooks')) {
     function mco_register_shortcode_hooks() {
         add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
         add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
-        add_shortcode('mco-exam-program', 'mco_exam_showcase_shortcode'); // Alias
+        add_shortcode('exam_program', 'mco_exam_showcase_shortcode'); // Alias
         add_shortcode('mco_book_showcase', 'mco_book_showcase_shortcode');
         
         add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles');
@@ -20,7 +20,7 @@ if (!function_exists('mco_prevent_caching_on_shortcode_pages')) {
         global $post;
         if (is_a($post, 'WP_Post') && (
             has_shortcode($post->post_content, 'mco_exam_showcase') ||
-            has_shortcode($post->post_content, 'mco-exam-program') ||
+            has_shortcode($post->post_content, 'exam_program') ||
             has_shortcode($post->post_content, 'mco_book_showcase') ||
             has_shortcode($post->post_content, 'mco_exam_login')
         )) {
@@ -58,13 +58,6 @@ if (!function_exists('mco_simple_hash_to_color_index')) {
  */
 function mco_exam_login_shortcode() {
     if (is_user_logged_in()) {
-        if (!function_exists('wc_get_orders')) {
-            if (current_user_can('manage_options')) {
-                return '<p style="color: red; border: 1px solid red; padding: 1rem;"><strong>Admin Error:</strong> The login shortcode requires WooCommerce to be active to check for user purchases. Please activate WooCommerce.</p>';
-            }
-            return '<p>Login is currently unavailable. Please try again later.</p>';
-        }
-
         $app_url = mco_get_exam_app_url();
         if (!$app_url) {
             return '<p>Exam application URL is not configured. Please contact an administrator.</p>';
@@ -106,14 +99,7 @@ function mco_exam_login_shortcode() {
  * - If no `id`, it shows all published programs.
  */
 function mco_exam_showcase_shortcode($atts) {
-    if (!function_exists('wc_get_product_id_by_sku')) {
-        if (current_user_can('manage_options')) {
-            return '<p style="color: red; border: 1px solid red; padding: 1rem;"><strong>Admin Error:</strong> The exam showcase requires WooCommerce to be active to display product information and purchase links. Please activate WooCommerce.</p>';
-        }
-        return '<p>Exam programs are currently unavailable.</p>';
-    }
-
-    $atts = shortcode_atts(['id' => ''], $atts, 'mco-exam-program');
+    $atts = shortcode_atts(['id' => ''], $atts, 'exam_program');
     $program_id_str = sanitize_text_field($atts['id']);
     
     $query_args = [
@@ -287,7 +273,7 @@ function mco_exam_showcase_shortcode($atts) {
             echo '</div>';
             echo '</div>';
 
-            // *** FIX STARTS HERE: MOVED BUNDLE LOGIC INSIDE THE IF BLOCK ***
+            // --- Bundle Card Logic (Prioritizing Subscription Bundle) ---
             $subscription_bundle_sku = $cert_exam['productSku'] . '-1mo-addon';
             $practice_bundle_sku = $cert_exam['productSku'] . '-1';
 
@@ -349,7 +335,6 @@ function mco_exam_showcase_shortcode($atts) {
                 echo '</div>';
                 echo '</div>';
             }
-             // *** FIX ENDS HERE ***
         }
 
         echo '</div></div>'; // Close cards and group
