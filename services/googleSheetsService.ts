@@ -414,12 +414,12 @@ export const googleSheetsService = {
         }
     },
 
-    // FIX: Add missing spinWheel method for the "Spin & Win" feature.
+    // FIX: Added the missing 'spinWheel' API service function for the "Spin & Win" feature.
     spinWheel: async (token: string): Promise<{ prizeId: string; prizeLabel: string; newToken: string; }> => {
         try {
             return await apiFetch('/spin-wheel', 'POST', token);
         } catch (error) {
-            console.error("Failed to spin the wheel:", error);
+            console.error("Failed to spin wheel:", error);
             throw error;
         }
     },

@@ -14,8 +14,6 @@ interface AppContextType {
   updateActiveOrg: (updatedOrg: Organization) => void;
   updateConfigData: (organizations: Organization[], examPrices: any) => void;
   updateExamInOrg: (examId: string, updatedExamData: Partial<Exam>) => void;
-  isWheelModalOpen: boolean;
-  setWheelModalOpen: (isOpen: boolean) => void;
   inProgressExam: InProgressExamInfo | null;
   examPrices: { [key: string]: any } | null;
   suggestedBooks: RecommendedBook[];
@@ -109,8 +107,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [isInitializing, setIsInitializing] = useState(true);
   const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>([]);
   
-  const { user, isEffectivelyAdmin } = useAuth();
-  const [isWheelModalOpen, setWheelModalOpen] = useState(false);
+  const { user } = useAuth();
   const [inProgressExam, setInProgressExam] = useState<InProgressExamInfo | null>(null);
   const [examPrices, setExamPrices] = useState<{ [key: string]: any } | null>(null);
   
@@ -321,8 +318,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     updateActiveOrg,
     updateConfigData,
     updateExamInOrg,
-    isWheelModalOpen,
-    setWheelModalOpen,
     inProgressExam,
     examPrices,
     suggestedBooks,
@@ -332,7 +327,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     hitCount
   }), [
     organizations, activeOrg, isInitializing, setActiveOrgById,
-    updateActiveOrg, updateConfigData, updateExamInOrg, isWheelModalOpen, setWheelModalOpen, inProgressExam, examPrices, suggestedBooks,
+    updateActiveOrg, updateConfigData, updateExamInOrg, inProgressExam, examPrices, suggestedBooks,
     availableThemes, activeTheme, setActiveTheme, hitCount
   ]);
 

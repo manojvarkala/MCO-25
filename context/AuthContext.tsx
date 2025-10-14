@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect, useCallback, useMemo, useContext, createContext, FC, ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import type { User, TokenPayload } from '../types.ts';
@@ -13,7 +10,7 @@ interface AuthState {
     token: string | null;
     paidExamIds: string[];
     isSubscribed: boolean;
-    // FIX: Add spinsAvailable to the auth state for the "Spin & Win" feature.
+    // FIX: Added spinsAvailable to track user's "Spin & Win" attempts.
     spinsAvailable: number;
 }
 
@@ -73,11 +70,12 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         return false;
     }
   });
-  // FIX: Add state for spinsAvailable and initialize from localStorage.
+  
+  // FIX: Added state management for 'spinsAvailable' from localStorage.
   const [spinsAvailable, setSpinsAvailable] = useState<number>(() => {
     try {
         const storedSpins = localStorage.getItem('spinsAvailable');
-        return storedSpins ? parseInt(storedSpins, 10) : 0;
+        return storedSpins ? JSON.parse(storedSpins) : 0;
     } catch (error) {
         console.error("Failed to parse spinsAvailable from localStorage", error);
         return 0;
@@ -106,6 +104,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
     localStorage.removeItem('isSubscribed');
+    // FIX: Clear spinsAvailable from localStorage on logout.
     localStorage.removeItem('spinsAvailable');
     localStorage.removeItem('wonPrize');
     localStorage.removeItem('activeOrg');
@@ -186,10 +185,10 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('isSubscribed');
             }
 
-            // FIX: Handle spinsAvailable from the token payload.
-            if (typeof payload.spinsAvailable === 'number') {
+            // FIX: Handle 'spinsAvailable' from the JWT payload.
+            if (payload.spinsAvailable !== undefined) {
                 setSpinsAvailable(payload.spinsAvailable);
-                localStorage.setItem('spinsAvailable', payload.spinsAvailable.toString());
+                localStorage.setItem('spinsAvailable', JSON.stringify(payload.spinsAvailable));
             } else {
                 setSpinsAvailable(0);
                 localStorage.removeItem('spinsAvailable');
@@ -220,7 +219,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const startMasquerade = (as: 'user' | 'visitor') => {
         if (masqueradeAs !== 'none' || !user?.isAdmin) return;
     
-        // FIX: Include spinsAvailable in the original auth state to restore it later.
+        // FIX: Include spinsAvailable in the original auth state for masquerading.
         setOriginalAuthState({ user, token, paidExamIds, isSubscribed, spinsAvailable });
         setMasqueradeAs(as);
 
@@ -231,8 +230,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setToken(null);
             setPaidExamIds([]);
             setIsSubscribed(false);
-            // FIX: Reset spinsAvailable when masquerading as a visitor.
-            setSpinsAvailable(0);
             toast('Masquerade mode enabled. Viewing as a visitor.', { icon: '👻' });
         }
     };
@@ -244,7 +241,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setToken(originalAuthState.token);
         setPaidExamIds(originalAuthState.paidExamIds);
         setIsSubscribed(originalAuthState.isSubscribed);
-        // FIX: Restore spinsAvailable when stopping masquerade.
+        // FIX: Restore spinsAvailable when stopping masquerade mode.
         setSpinsAvailable(originalAuthState.spinsAvailable);
 
         setOriginalAuthState(null);
@@ -267,7 +264,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     token,
     paidExamIds,
     isSubscribed,
-    // FIX: Expose spinsAvailable through the context.
+    // FIX: Provide spinsAvailable in the context value.
     spinsAvailable,
     isEffectivelyAdmin,
     isMasquerading,
@@ -278,6 +275,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     startMasquerade,
     stopMasquerade,
   }), [
+    // FIX: Add spinsAvailable to the dependency array.
     user, token, paidExamIds, isSubscribed, spinsAvailable,
     isEffectivelyAdmin, isMasquerading, masqueradeAs, loginWithToken,
     logout, updateUserName, startMasquerade, stopMasquerade
@@ -286,7 +284,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   return (
     <AuthContext.Provider value={value}>
       {children}
-    {/* FIX: Corrected the closing tag for AuthContext.Provider. */}
     </AuthContext.Provider>
   );
 };

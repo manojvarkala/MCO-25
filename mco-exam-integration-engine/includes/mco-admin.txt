@@ -49,7 +49,7 @@ function mco_create_admin_page() {
     $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'main_settings';
     ?>
     <div class="wrap">
-        <h1>MCO Exam Integration Engine</h1>
+        <h1>MCO Exam Integration Engine <span class="title-count"><?php echo 'v' . MCO_PLUGIN_VERSION; ?></span></h1>
         <h2 class="nav-tab-wrapper">
             <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
             <a href="?page=mco-exam-engine&tab=themes" class="nav-tab <?php echo $active_tab == 'themes' ? 'nav-tab-active' : ''; ?>">Themes</a>
@@ -451,7 +451,7 @@ function mco_handle_bulk_import_programs() {
         return;
     }
 
-    $header = fgetcsv($file); // Read header row
+    $header = fgetcsv($file);
     $required_headers = ['program_title', 'certification_exam_sku'];
     foreach ($required_headers as $required) {
         if (!in_array($required, $header)) {
@@ -461,12 +461,10 @@ function mco_handle_bulk_import_programs() {
         }
     }
 
-    $created_count = 0;
-    $updated_count = 0;
+    $created_count = 0; $updated_count = 0;
 
     while (($row = fgetcsv($file)) !== false) {
         $data = array_combine($header, $row);
-
         $post_title = sanitize_text_field($data['program_title']);
         $post_content = wp_kses_post($data['program_description'] ?? '');
         $post_status = sanitize_text_field($data['status'] ?? 'publish');
@@ -489,23 +487,84 @@ function mco_handle_bulk_import_programs() {
         }
         
         if ($post_id && !is_wp_error($post_id)) {
-            $meta_fields = [
-                'cert_exam_sku' => $sku, 'question_source_url' => esc_url_raw($data['question_source_url'] ?? ''),
-                'is_proctored' => !empty($data['is_proctored']), 'certificate_enabled' => !empty($data['certificate_enabled']),
-                'recommended_book_ids' => array_map('sanitize_text_field', explode(',', $data['recommended_book_id'] ?? '')),
-                'practice_questions' => intval($data['practice_questions'] ?? 25), 'practice_duration' => intval($data['practice_duration'] ?? 60),
-                'cert_questions' => intval($data['cert_questions'] ?? 100), 'cert_duration' => intval($data['cert_duration'] ?? 120),
-                'pass_score' => intval($data['pass_score'] ?? 70)
-            ];
-            foreach ($meta_fields as $key => $value) { update_post_meta($post_id, $key, $value); }
+            update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($data['question_source_url'] ?? ''));
+            update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($data['certification_exam_sku'] ?? ''));
+            update_post_meta($post_id, '_mco_is_proctored', !empty($data['is_proctored']) ? '1' : '0');
+            update_post_meta($post_id, '_mco_certificate_enabled', !empty($data['certificate_enabled']) ? '1' : '0');
+
+            $custom_book_ids = array_map('sanitize_text_field', explode(',', $data['recommended_book_id'] ?? ''));
+            $book_post_ids = [];
+            if (!empty($custom_book_ids) && !empty($custom_book_ids[0])) {
+                 $book_query = new WP_Query([
+                    'post_type' => 'mco_recommended_book',
+                    'meta_query' => [ [ 'key' => '_mco_book_id', 'value' => $custom_book_ids, 'compare' => 'IN' ] ],
+                    'posts_per_page' => -1, 'fields' => 'ids'
+                ]);
+                $book_post_ids = $book_query->posts;
+            }
+            update_post_meta($post_id, '_mco_recommended_book_ids', $book_post_ids);
+
+            wp_set_post_terms($post_id, sanitize_text_field($data['practice_questions'] ?? ''), 'exam_practice_questions', false);
+            wp_set_post_terms($post_id, sanitize_text_field($data['practice_duration'] ?? ''), 'exam_practice_duration', false);
+            wp_set_post_terms($post_id, sanitize_text_field($data['cert_questions'] ?? ''), 'exam_cert_questions', false);
+            wp_set_post_terms($post_id, sanitize_text_field($data['cert_duration'] ?? ''), 'exam_cert_duration', false);
+            wp_set_post_terms($post_id, sanitize_text_field($data['pass_score'] ?? ''), 'exam_pass_score', false);
         }
     }
     fclose($file);
-
     delete_transient('mco_app_config_data');
 
     add_action('admin_notices', function() use ($created_count, $updated_count) {
         echo '<div class="notice notice-success is-dismissible"><p>Bulk import complete! Created: ' . $created_count . ', Updated: ' . $updated_count . ' programs. Cache cleared.</p></div>';
     });
+}
+
+function mco_generate_exam_programs_csv_content() {
+    $headers = ['program_title','program_description','question_source_url','certification_exam_sku','is_proctored','certificate_enabled','recommended_book_id','practice_questions','practice_duration','cert_questions','cert_duration','pass_score','status'];
+    $posts = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => ['publish', 'draft', 'pending']]);
+    
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="existing_exam_programs.csv"');
+    $output = fopen('php://output', 'w');
+    fputcsv($output, $headers);
+
+    foreach ($posts as $post) {
+        $get_term_value = function($post_id, $taxonomy) {
+            $terms = wp_get_post_terms($post_id, $taxonomy);
+            return !is_wp_error($terms) && !empty($terms) ? $terms[0]->name : '';
+        };
+
+        $book_post_ids = get_post_meta($post->ID, '_mco_recommended_book_ids', true);
+        $recommended_book_ids_str = '';
+        if (!empty($book_post_ids) && is_array($book_post_ids)) {
+            $custom_book_ids = [];
+            foreach ($book_post_ids as $book_post_id) {
+                $custom_id = get_post_meta($book_post_id, '_mco_book_id', true);
+                if ($custom_id) {
+                    $custom_book_ids[] = $custom_id;
+                }
+            }
+            $recommended_book_ids_str = implode(',', $custom_book_ids);
+        }
+
+        $row = [
+            $post->post_title,
+            $post->post_content,
+            get_post_meta($post->ID, '_mco_question_source_url', true),
+            get_post_meta($post->ID, '_mco_certification_exam_sku', true),
+            get_post_meta($post->ID, '_mco_is_proctored', true) ? '1' : '0',
+            get_post_meta($post->ID, '_mco_certificate_enabled', true) ? '1' : '0',
+            $recommended_book_ids_str,
+            $get_term_value($post->ID, 'exam_practice_questions'),
+            $get_term_value($post->ID, 'exam_practice_duration'),
+            $get_term_value($post->ID, 'exam_cert_questions'),
+            $get_term_value($post->ID, 'exam_cert_duration'),
+            $get_term_value($post->ID, 'exam_pass_score'),
+            $post->post_status,
+        ];
+        fputcsv($output, $row);
+    }
+    fclose($output);
+    exit;
 }
 ?>
