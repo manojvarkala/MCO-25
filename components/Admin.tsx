@@ -575,7 +575,6 @@ const Admin: FC = () => {
                         </ol>
                     </div>
                 </div>
-
                 <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                     <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
                         <Award className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
@@ -599,7 +598,5 @@ const Admin: FC = () => {
             </div>
         </>
     );
-    
-};
-
+    };
 export default Admin;
