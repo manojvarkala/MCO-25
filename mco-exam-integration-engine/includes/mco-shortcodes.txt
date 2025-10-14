@@ -342,8 +342,6 @@ function mco_exam_showcase_shortcode($atts) {
     echo '</div>'; // Close grid
     return ob_get_clean();
 }
-
-
 /**
  * [mco_book_showcase]
  * Displays all recommended books in a styled grid.
