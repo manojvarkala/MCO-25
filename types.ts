@@ -10,9 +10,9 @@ export interface TokenPayload {
   user: User;
   paidExamIds: string[];
   isSubscribed: boolean;
-  exp?: number;
-  // FIX: Added the 'spinsAvailable' property to support the "Spin & Win" feature.
+  // FIX: Added spinsAvailable to support Spin & Win feature.
   spinsAvailable?: number;
+  exp?: number;
 }
 
 export interface Question {

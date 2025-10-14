@@ -10,7 +10,7 @@ interface AuthState {
     token: string | null;
     paidExamIds: string[];
     isSubscribed: boolean;
-    // FIX: Added spinsAvailable to track user's "Spin & Win" attempts.
+    // FIX: Add spinsAvailable to auth state for Spin & Win feature.
     spinsAvailable: number;
 }
 
@@ -71,7 +71,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   });
   
-  // FIX: Added state management for 'spinsAvailable' from localStorage.
+  // FIX: Add spinsAvailable state for Spin & Win feature.
   const [spinsAvailable, setSpinsAvailable] = useState<number>(() => {
     try {
         const storedSpins = localStorage.getItem('spinsAvailable');
@@ -81,7 +81,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         return 0;
     }
   });
-  
   const [masqueradeAs, setMasqueradeAs] = useState<MasqueradeMode>('none');
   const [originalAuthState, setOriginalAuthState] = useState<AuthState | null>(null);
 
@@ -104,7 +103,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
     localStorage.removeItem('isSubscribed');
-    // FIX: Clear spinsAvailable from localStorage on logout.
     localStorage.removeItem('spinsAvailable');
     localStorage.removeItem('wonPrize');
     localStorage.removeItem('activeOrg');
@@ -185,8 +183,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('isSubscribed');
             }
 
-            // FIX: Handle 'spinsAvailable' from the JWT payload.
-            if (payload.spinsAvailable !== undefined) {
+            // FIX: Handle spinsAvailable from token payload.
+            if (typeof payload.spinsAvailable === 'number') {
                 setSpinsAvailable(payload.spinsAvailable);
                 localStorage.setItem('spinsAvailable', JSON.stringify(payload.spinsAvailable));
             } else {
@@ -219,7 +217,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const startMasquerade = (as: 'user' | 'visitor') => {
         if (masqueradeAs !== 'none' || !user?.isAdmin) return;
     
-        // FIX: Include spinsAvailable in the original auth state for masquerading.
+        // FIX: Include spinsAvailable in original auth state for masquerade mode.
         setOriginalAuthState({ user, token, paidExamIds, isSubscribed, spinsAvailable });
         setMasqueradeAs(as);
 
@@ -230,6 +228,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setToken(null);
             setPaidExamIds([]);
             setIsSubscribed(false);
+            // FIX: Reset spinsAvailable for visitor masquerade mode.
+            setSpinsAvailable(0);
             toast('Masquerade mode enabled. Viewing as a visitor.', { icon: '👻' });
         }
     };
@@ -264,7 +264,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     token,
     paidExamIds,
     isSubscribed,
-    // FIX: Provide spinsAvailable in the context value.
+    // FIX: Expose spinsAvailable through auth context.
     spinsAvailable,
     isEffectivelyAdmin,
     isMasquerading,
@@ -275,7 +275,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     startMasquerade,
     stopMasquerade,
   }), [
-    // FIX: Add spinsAvailable to the dependency array.
+    // FIX: Add spinsAvailable to dependency array.
     user, token, paidExamIds, isSubscribed, spinsAvailable,
     isEffectivelyAdmin, isMasquerading, masqueradeAs, loginWithToken,
     logout, updateUserName, startMasquerade, stopMasquerade
