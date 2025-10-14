@@ -1,7 +1,8 @@
 import React, { FC, useState, useCallback, ReactNode } from 'react';
 import { Settings, Award, Lightbulb, PlusCircle, Trash2, RefreshCw, FileText, Cpu, Loader, CheckCircle, XCircle, Trash, Bug, Paintbrush, FileSpreadsheet, DownloadCloud, DatabaseZap } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
-import type { SearchedUser } from '../types.ts';
+// FIX: Removed unused 'SearchedUser' import that was causing a compilation error.
+import type { DebugData } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';

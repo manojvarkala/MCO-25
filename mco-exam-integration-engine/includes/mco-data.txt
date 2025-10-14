@@ -390,9 +390,6 @@ function mco_generate_exam_jwt($user_id) {
         ],
         'paidExamIds' => mco_get_user_purchased_skus($user->ID),
         'isSubscribed' => (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($user_id, '', 'active')),
-        'isSpinWheelEnabled' => get_option('mco_spin_wheel_enabled') == 1,
-        'spinsAvailable' => (int) get_user_meta($user_id, 'mco_spins_available', true),
-        'wonPrize' => get_user_meta($user_id, 'mco_won_prize', true) ?: null,
     ];
     
     // Helper for URL-safe base64 encoding

@@ -5,8 +5,8 @@ import { useAppContext } from '../context/AppContext.tsx';
 import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, Tag, Users, Gift, Star, List, BookOpen, Menu } from 'lucide-react';
 
 const Header: FC = () => {
-  const { user, logout, canSpinWheel, isSubscribed, isEffectivelyAdmin } = useAuth();
-  const { activeOrg, setWheelModalOpen } = useAppContext();
+  const { user, logout, isSubscribed, isEffectivelyAdmin } = useAuth();
+  const { activeOrg } = useAppContext();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isCategoriesMenuOpen, setIsCategoriesMenuOpen] = useState(false);
   const [logoError, setLogoError] = useState(false);
@@ -90,16 +90,6 @@ const Header: FC = () => {
         </Link>
        
         <nav className="flex items-center space-x-4">
-            {canSpinWheel && (
-                <button
-                    onClick={() => setWheelModalOpen(true)}
-                    className="flex items-center gap-2 bg-black text-yellow-400 font-bold py-2 px-4 rounded-full border-2 border-yellow-500 shadow-lg hover:bg-gray-800 transition-all transform hover:scale-105"
-                    title="You have a free spin!"
-                >
-                    <Gift size={16} className="animate-pulse-gift" />
-                    <span className="hidden sm:inline">Spin & Win</span>
-                </button>
-            )}
             <Link 
                 to="/pricing"
                 className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}

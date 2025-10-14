@@ -84,13 +84,42 @@ function mco_create_admin_page() {
     <?php
 }
 
-// --- SETTINGS REGISTRATION ---
+// --- SETTINGS REGISTRATION & SANITIZATION ---
 function mco_register_settings() {
-    register_setting('mco_settings_group', 'mco_exam_app_url');
-    register_setting('mco_settings_group', 'mco_custom_logo_url');
-    register_setting('mco_settings_group', 'mco_active_theme_id');
-    register_setting('mco_settings_group', 'mco_spin_wheel_enabled');
-    register_setting('mco_settings_group', 'mco_certificate_templates');
+    register_setting('mco_settings_group', 'mco_exam_app_url', ['sanitize_callback' => 'esc_textarea']);
+    register_setting('mco_settings_group', 'mco_custom_logo_url', ['sanitize_callback' => 'esc_url_raw']);
+    register_setting('mco_settings_group', 'mco_active_theme_id', ['sanitize_callback' => 'sanitize_key']);
+    register_setting('mco_settings_group', 'mco_certificate_templates', [
+        'type' => 'array',
+        'sanitize_callback' => 'mco_sanitize_certificate_templates'
+    ]);
+}
+
+if (!function_exists('mco_sanitize_certificate_templates')) {
+    function mco_sanitize_certificate_templates($input) {
+        if (!is_array($input)) {
+            return [];
+        }
+        $output = [];
+        foreach ($input as $index => $template) {
+            if (!is_array($template)) {
+                continue;
+            }
+            $sanitized_template = [];
+            $sanitized_template['id'] = isset($template['id']) ? sanitize_text_field($template['id']) : 'cert-' . time() . $index;
+            $sanitized_template['name'] = isset($template['name']) ? sanitize_text_field($template['name']) : '';
+            $sanitized_template['title'] = isset($template['title']) ? sanitize_text_field($template['title']) : '';
+            $sanitized_template['body'] = isset($template['body']) ? wp_kses_post($template['body']) : '';
+            $sanitized_template['signature1Name'] = isset($template['signature1Name']) ? sanitize_text_field($template['signature1Name']) : '';
+            $sanitized_template['signature1Title'] = isset($template['signature1Title']) ? sanitize_text_field($template['signature1Title']) : '';
+            $sanitized_template['signature1ImageUrl'] = isset($template['signature1ImageUrl']) ? esc_url_raw($template['signature1ImageUrl']) : '';
+            $sanitized_template['signature2Name'] = isset($template['signature2Name']) ? sanitize_text_field($template['signature2Name']) : '';
+            $sanitized_template['signature2Title'] = isset($template['signature2Title']) ? sanitize_text_field($template['signature2Title']) : '';
+            $sanitized_template['signature2ImageUrl'] = isset($template['signature2ImageUrl']) ? esc_url_raw($template['signature2ImageUrl']) : '';
+            $output[] = $sanitized_template;
+        }
+        return $output;
+    }
 }
 
 
@@ -111,15 +140,6 @@ function mco_render_main_settings_tab() {
             <td>
                 <input type="text" name="mco_custom_logo_url" value="<?php echo esc_attr(get_option('mco_custom_logo_url')); ?>" class="large-text" />
                 <p class="description">Optional. Enter the full URL to a custom logo (e.g., https://...). If empty, it will use the Site Icon from Appearance > Customize.</p>
-            </td>
-        </tr>
-         <tr valign="top">
-            <th scope="row">Enable "Spin & Win"</th>
-            <td>
-                <label>
-                    <input type="checkbox" name="mco_spin_wheel_enabled" value="1" <?php checked(1, get_option('mco_spin_wheel_enabled'), true); ?> />
-                    Enable the gamified "Spin & Win" feature for users.
-                </label>
             </td>
         </tr>
     </table>

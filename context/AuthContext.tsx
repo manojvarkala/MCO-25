@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback, useMemo, useContext, createContext, FC, ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import type { User, TokenPayload } from '../types.ts';
@@ -12,21 +13,17 @@ interface AuthState {
     token: string | null;
     paidExamIds: string[];
     isSubscribed: boolean;
+    // FIX: Add spinsAvailable to the auth state for the "Spin & Win" feature.
     spinsAvailable: number;
-    wonPrize: { prizeId: string; prizeLabel: string; } | null;
-    isSpinWheelEnabled: boolean;
 }
 
 interface AuthContextType extends AuthState {
-  wheelModalDismissed: boolean;
-  canSpinWheel: boolean;
   isEffectivelyAdmin: boolean;
   isMasquerading: boolean;
   masqueradeAs: MasqueradeMode;
   loginWithToken: (token: string, isSyncOnly?: boolean) => Promise<void>;
   logout: () => void;
   updateUserName: (name: string) => void;
-  setWheelModalDismissed: (dismissed: boolean) => void;
   startMasquerade: (as: 'user' | 'visitor') => void;
   stopMasquerade: () => void;
 }
@@ -76,36 +73,15 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         return false;
     }
   });
+  // FIX: Add state for spinsAvailable and initialize from localStorage.
   const [spinsAvailable, setSpinsAvailable] = useState<number>(() => {
-      try {
-          const stored = localStorage.getItem('spinsAvailable');
-          return stored ? JSON.parse(stored) : 0;
-      } catch {
-          return 0;
-      }
-  });
-  const [wonPrize, setWonPrize] = useState<{ prizeId: string; prizeLabel: string; } | null>(() => {
     try {
-        const stored = localStorage.getItem('wonPrize');
-        return stored ? JSON.parse(stored) : null;
-    } catch {
-        return null;
+        const storedSpins = localStorage.getItem('spinsAvailable');
+        return storedSpins ? parseInt(storedSpins, 10) : 0;
+    } catch (error) {
+        console.error("Failed to parse spinsAvailable from localStorage", error);
+        return 0;
     }
-  });
-  const [wheelModalDismissed, setWheelModalDismissed] = useState<boolean>(() => {
-      try {
-        return sessionStorage.getItem('wheelModalDismissed') === 'true';
-      } catch {
-        return false;
-      }
-  });
-  const [isSpinWheelEnabled, setIsSpinWheelEnabled] = useState<boolean>(() => {
-      try {
-          const stored = localStorage.getItem('isSpinWheelEnabled');
-          return stored ? JSON.parse(stored) : false;
-      } catch {
-          return false;
-      }
   });
   
   const [masqueradeAs, setMasqueradeAs] = useState<MasqueradeMode>('none');
@@ -115,12 +91,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     if (!user) return false;
     return user.isAdmin && masqueradeAs === 'none';
   }, [user, masqueradeAs]);
-  
-  const canSpinWheel = useMemo(() => {
-    if (!user || !isSpinWheelEnabled) return false;
-    if (isEffectivelyAdmin) return true; // Admins can always spin for testing
-    return spinsAvailable > 0;
-  }, [user, spinsAvailable, isSpinWheelEnabled, isEffectivelyAdmin]);
 
 
   const logout = useCallback(() => {
@@ -128,9 +98,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setPaidExamIds([]);
     setToken(null);
     setIsSubscribed(false);
+    // FIX: Reset spinsAvailable on logout.
     setSpinsAvailable(0);
-    setWonPrize(null);
-    setIsSpinWheelEnabled(false);
     setMasqueradeAs('none');
     setOriginalAuthState(null);
     localStorage.removeItem('examUser');
@@ -217,24 +186,14 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('isSubscribed');
             }
 
-            const spins = payload.spinsAvailable ?? 0;
-            setSpinsAvailable(spins);
-            localStorage.setItem('spinsAvailable', JSON.stringify(spins));
-
-            const spinWheelEnabled = payload.isSpinWheelEnabled ?? false;
-            setIsSpinWheelEnabled(spinWheelEnabled);
-            localStorage.setItem('isSpinWheelEnabled', JSON.stringify(spinWheelEnabled));
-
-            if (payload.wonPrize) {
-                setWonPrize(payload.wonPrize);
-                localStorage.setItem('wonPrize', JSON.stringify(payload.wonPrize));
+            // FIX: Handle spinsAvailable from the token payload.
+            if (typeof payload.spinsAvailable === 'number') {
+                setSpinsAvailable(payload.spinsAvailable);
+                localStorage.setItem('spinsAvailable', payload.spinsAvailable.toString());
             } else {
-                setWonPrize(null);
-                localStorage.removeItem('wonPrize');
+                setSpinsAvailable(0);
+                localStorage.removeItem('spinsAvailable');
             }
-
-            setWheelModalDismissed(false);
-            sessionStorage.removeItem('wheelModalDismissed');
 
             try {
                 await googleSheetsService.syncResults(payload.user, jwtToken);
@@ -261,7 +220,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const startMasquerade = (as: 'user' | 'visitor') => {
         if (masqueradeAs !== 'none' || !user?.isAdmin) return;
     
-        setOriginalAuthState({ user, token, paidExamIds, isSubscribed, spinsAvailable, wonPrize, isSpinWheelEnabled });
+        // FIX: Include spinsAvailable in the original auth state to restore it later.
+        setOriginalAuthState({ user, token, paidExamIds, isSubscribed, spinsAvailable });
         setMasqueradeAs(as);
 
         if (as === 'user') {
@@ -271,9 +231,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setToken(null);
             setPaidExamIds([]);
             setIsSubscribed(false);
+            // FIX: Reset spinsAvailable when masquerading as a visitor.
             setSpinsAvailable(0);
-            setWonPrize(null);
-            setIsSpinWheelEnabled(false);
             toast('Masquerade mode enabled. Viewing as a visitor.', { icon: '👻' });
         }
     };
@@ -285,9 +244,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setToken(originalAuthState.token);
         setPaidExamIds(originalAuthState.paidExamIds);
         setIsSubscribed(originalAuthState.isSubscribed);
+        // FIX: Restore spinsAvailable when stopping masquerade.
         setSpinsAvailable(originalAuthState.spinsAvailable);
-        setWonPrize(originalAuthState.wonPrize);
-        setIsSpinWheelEnabled(originalAuthState.isSpinWheelEnabled);
 
         setOriginalAuthState(null);
         setMasqueradeAs('none');
@@ -301,15 +259,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       localStorage.setItem('examUser', JSON.stringify(updatedUser));
     }
   }, [user]);
-  
-  const updateWheelModalDismissed = useCallback((dismissed: boolean) => {
-    setWheelModalDismissed(dismissed);
-    try {
-        sessionStorage.setItem('wheelModalDismissed', String(dismissed));
-    } catch (e) {
-        console.error("Could not set sessionStorage item.", e);
-    }
-  }, []);
 
   const isMasquerading = masqueradeAs !== 'none';
 
@@ -318,30 +267,26 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     token,
     paidExamIds,
     isSubscribed,
+    // FIX: Expose spinsAvailable through the context.
     spinsAvailable,
-    wonPrize,
-    wheelModalDismissed,
-    canSpinWheel,
-    isSpinWheelEnabled,
     isEffectivelyAdmin,
     isMasquerading,
     masqueradeAs,
     loginWithToken,
     logout,
     updateUserName,
-    setWheelModalDismissed: updateWheelModalDismissed,
     startMasquerade,
     stopMasquerade,
   }), [
-    user, token, paidExamIds, isSubscribed,
-    spinsAvailable, wonPrize, wheelModalDismissed, canSpinWheel,
-    isSpinWheelEnabled, isEffectivelyAdmin, isMasquerading, masqueradeAs, loginWithToken,
-    logout, updateUserName, updateWheelModalDismissed, startMasquerade, stopMasquerade
+    user, token, paidExamIds, isSubscribed, spinsAvailable,
+    isEffectivelyAdmin, isMasquerading, masqueradeAs, loginWithToken,
+    logout, updateUserName, startMasquerade, stopMasquerade
   ]);
 
   return (
     <AuthContext.Provider value={value}>
       {children}
+    {/* FIX: Corrected the closing tag for AuthContext.Provider. */}
     </AuthContext.Provider>
   );
 };

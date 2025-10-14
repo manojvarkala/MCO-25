@@ -10,9 +10,8 @@ export interface TokenPayload {
   user: User;
   paidExamIds: string[];
   isSubscribed: boolean;
+  // FIX: Added optional spinsAvailable to token payload for "Spin & Win" feature.
   spinsAvailable?: number;
-  isSpinWheelEnabled?: boolean;
-  wonPrize?: { prizeId: string; prizeLabel: string; };
   exp?: number;
 }
 
@@ -150,20 +149,6 @@ export interface DebugData {
     message: string;
     data: any;
   };
-}
-
-export interface SpinWheelResult {
-  prizeId: string;
-  prizeLabel: string;
-  newToken: string;
-}
-
-export interface SearchedUser {
-    id: string;
-    name: string;
-    email: string;
-    spins: number;
-    prize: string;
 }
 
 export interface WordpressAuthor {

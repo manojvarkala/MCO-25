@@ -10,7 +10,7 @@ import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight
 import Spinner from './Spinner.tsx';
 
 const Profile: FC = () => {
-    const { user, token, updateUserName, wonPrize, isSubscribed, isEffectivelyAdmin } = useAuth();
+    const { user, token, updateUserName, isSubscribed, isEffectivelyAdmin } = useAuth();
     const { activeOrg, availableThemes, activeTheme, setActiveTheme } = useAppContext();
     // Fix: Use useNavigate for navigation in v6
     const navigate = useNavigate();
@@ -106,12 +106,6 @@ const Profile: FC = () => {
 
                 {user ? (
                     <div className="space-y-4">
-                         {wonPrize && wonPrize.prizeId !== 'NEXT_TIME' && (
-                            <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
-                                <h3 className="text-sm font-medium text-amber-700 flex items-center gap-2"><Gift size={16}/> Spin & Win Prize</h3>
-                                <p className="text-lg font-semibold text-amber-900 mt-1">You won: <strong>{wonPrize.prizeLabel}</strong></p>
-                            </div>
-                        )}
                         <div className="bg-slate-50 p-4 rounded-lg">
                             <label className="text-sm font-medium text-slate-500">Full Name (for Certificates)</label>
                             {isEditingName ? (

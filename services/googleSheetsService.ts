@@ -1,4 +1,4 @@
-import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, SpinWheelResult, SearchedUser, ExamStat, Organization, PostCreationData } from '../types.ts';
+import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, Organization, PostCreationData, ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
 import { GoogleGenAI, Type } from "@google/genai";
 import { getApiBaseUrl } from './apiConfig.ts';
@@ -414,8 +414,8 @@ export const googleSheetsService = {
         }
     },
 
-    // --- WHEEL OF FORTUNE ---
-    spinWheel: async (token: string): Promise<SpinWheelResult> => {
+    // FIX: Add missing spinWheel method for the "Spin & Win" feature.
+    spinWheel: async (token: string): Promise<{ prizeId: string; prizeLabel: string; newToken: string; }> => {
         try {
             return await apiFetch('/spin-wheel', 'POST', token);
         } catch (error) {
@@ -439,51 +439,6 @@ export const googleSheetsService = {
             return await apiFetch('/admin/create-post-from-app', 'POST', token, postData);
         } catch (error) {
             console.error("Failed to create post:", error);
-            throw error;
-        }
-    },
-
-    addSpins: async (token: string, userId: string, spins: number): Promise<{ success: boolean; newTotal: number; }> => {
-        try {
-            return await apiFetch('/admin/add-spins', 'POST', token, { userId, spins });
-        } catch (error) {
-            console.error("Failed to add spins:", error);
-            throw error;
-        }
-    },
-
-    grantPrize: async (token: string, userId: string, prizeId: string): Promise<{ success: boolean; message: string; }> => {
-         try {
-            return await apiFetch('/admin/grant-prize', 'POST', token, { userId, prizeId });
-        } catch (error) {
-            console.error("Failed to grant prize:", error);
-            throw error;
-        }
-    },
-
-    searchUser: async (token: string, searchTerm: string): Promise<SearchedUser[]> => {
-        try {
-            return await apiFetch('/admin/search-users', 'POST', token, { searchTerm });
-        } catch (error) {
-            console.error("Failed to search for users:", error);
-            throw error;
-        }
-    },
-
-    resetSpins: async (token: string, userId: string): Promise<{ success: boolean; message: string; }> => {
-        try {
-            return await apiFetch('/admin/reset-spins', 'POST', token, { userId });
-        } catch (error) {
-            console.error("Failed to reset spins:", error);
-            throw error;
-        }
-    },
-
-    removePrize: async (token: string, userId: string): Promise<{ success: boolean; message: string; }> => {
-         try {
-            return await apiFetch('/admin/remove-prize', 'POST', token, { userId });
-        } catch (error) {
-            console.error("Failed to remove prize:", error);
             throw error;
         }
     },

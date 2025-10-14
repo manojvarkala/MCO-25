@@ -24,7 +24,6 @@ import UserGuide from './components/UserGuide.tsx';
 import AboutUs from './components/AboutUs.tsx';
 import PrivacyPolicy from './components/PrivacyPolicy.tsx';
 import RefundPolicy from './components/RefundPolicy.tsx';
-import WheelOfFortune from './components/WheelOfFortune.tsx';
 import TermsOfService from './components/TermsOfService.tsx';
 import LivePurchaseNotification from './components/LivePurchaseNotification.tsx';
 import SidebarLayout from './components/SidebarLayout.tsx';
@@ -61,8 +60,8 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }
 };
 
 const AppContent: FC = () => {
-    const { user, canSpinWheel, wheelModalDismissed, setWheelModalDismissed, isMasquerading } = useAuth();
-    const { isWheelModalOpen, setWheelModalOpen, activeOrg, activeTheme } = useAppContext();
+    const { user, isMasquerading } = useAuth();
+    const { activeOrg, activeTheme } = useAppContext();
     const location = useLocation();
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
     
@@ -94,14 +93,6 @@ const AppContent: FC = () => {
     }, [activeOrg]);
 
     useEffect(() => {
-        // Show the wheel modal only for eligible users who haven't already dismissed it this session.
-        if (canSpinWheel && !wheelModalDismissed) {
-            const timer = setTimeout(() => setWheelModalOpen(true), 1500);
-            return () => clearTimeout(timer);
-        }
-    }, [canSpinWheel, wheelModalDismissed, setWheelModalOpen]);
-
-    useEffect(() => {
         // Show the modal to update name if it looks like a username and hasn't been shown this session
         if (user && user.name && !user.name.includes(' ') && !sessionStorage.getItem('nameUpdateModalShown')) {
             const timer = setTimeout(() => {
@@ -120,15 +111,6 @@ const AppContent: FC = () => {
         <div className={`flex flex-col min-h-screen bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-default-rgb))] font-main ${isMasquerading ? 'pt-10' : ''}`}>
             {isMasquerading && <MasqueradeBanner />}
             {user && <UpdateNameModal isOpen={isNameModalOpen} onClose={() => setIsNameModalOpen(false)} />}
-            {canSpinWheel && isWheelModalOpen && (
-              <WheelOfFortune 
-                isOpen={isWheelModalOpen} 
-                onClose={() => {
-                  setWheelModalOpen(false);
-                  setWheelModalDismissed(true); // User has now interacted with it this session
-                }} 
-              />
-            )}
             {!isTestPage && <Header />}
             <div className="flex-grow w-full relative">
                 <main className={mainClasses}>
