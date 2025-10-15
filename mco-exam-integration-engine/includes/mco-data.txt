@@ -251,4 +251,3 @@ if (!function_exists('mco_get_single_term')) {
         return '';
     }
 }
-?>

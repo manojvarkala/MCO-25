@@ -5,31 +5,15 @@ if (!defined('ABSPATH')) exit;
 
 if (!function_exists('mco_add_admin_menu')) {
     function mco_add_admin_menu() {
-        add_menu_page(
-            'Exam App Engine', // Page Title
-            'Exam App Engine', // Menu Title
-            'manage_options', // Capability
-            'mco-exam-engine', // Menu Slug
-            'mco_exam_engine_admin_page', // Callback function to render the page
-            'dashicons-welcome-learn-more', // Icon
-            25 // Position
-        );
-        
-        // FIX: Manually add submenu pages for the CPTs. This runs on the 'admin_menu' hook,
-        // which is after 'init' where the CPTs are registered, thus avoiding the fatal error.
+        // The main menu page is now created automatically by the 'mco_exam_program' CPT.
+        // We only need to add our custom settings page as a submenu to it.
         add_submenu_page(
-            'mco-exam-engine',
-            'Exam Programs',
-            'Exam Programs',
-            'manage_options',
-            'edit.php?post_type=mco_exam_program'
-        );
-        add_submenu_page(
-            'mco-exam-engine',
-            'Recommended Books',
-            'Recommended Books',
-            'manage_options',
-            'edit.php?post_type=mco_recommended_book'
+            'edit.php?post_type=mco_exam_program', // Parent slug
+            'Settings & Tools',                    // Page Title
+            'Settings & Tools',                    // Menu Title
+            'manage_options',                      // Capability
+            'mco-exam-engine',                     // Menu Slug (for the settings page)
+            'mco_exam_engine_admin_page'           // Callback function
         );
     }
 }
@@ -150,7 +134,10 @@ if (!function_exists('mco_save_exam_program_meta_data')) {
 
 if (!function_exists('mco_admin_enqueue_scripts')) {
     function mco_admin_enqueue_scripts($hook) {
-        if (strpos($hook, 'mco-exam-engine') === false) {
+        // The settings page slug is now 'exam-app-engine_page_mco-exam-engine'.
+        // We check for the CPT list view ('edit.php') and our custom page.
+        $screen = get_current_screen();
+        if (!$screen || ($screen->post_type !== 'mco_exam_program' && $screen->base !== 'mco_exam_program_page_mco-exam-engine')) {
             return;
         }
         
@@ -208,14 +195,14 @@ if (!function_exists('mco_exam_engine_admin_page')) {
         $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'main_settings';
         ?>
         <div class="wrap mco-admin-wrap">
-            <h1>Exam App Engine - Settings & Tools</h1>
+            <h1>Settings & Tools</h1>
             <?php settings_errors('mco_settings'); ?>
             <nav class="nav-tab-wrapper">
-                <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
-                <a href="?page=mco-exam-engine&tab=theme_selector" class="nav-tab <?php echo $active_tab == 'theme_selector' ? 'nav-tab-active' : ''; ?>">Theme Selector</a>
-                <a href="?page=mco-exam-engine&tab=bulk_import" class="nav-tab <?php echo $active_tab == 'bulk_import' ? 'nav-tab-active' : ''; ?>">Bulk Import</a>
-                <a href="?page=mco-exam-engine&tab=certificate_templates" class="nav-tab <?php echo $active_tab == 'certificate_templates' ? 'nav-tab-active' : ''; ?>">Certificate Templates</a>
-                <a href="?page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
+                <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
+                <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=theme_selector" class="nav-tab <?php echo $active_tab == 'theme_selector' ? 'nav-tab-active' : ''; ?>">Theme Selector</a>
+                <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=bulk_import" class="nav-tab <?php echo $active_tab == 'bulk_import' ? 'nav-tab-active' : ''; ?>">Bulk Import</a>
+                <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=certificate_templates" class="nav-tab <?php echo $active_tab == 'certificate_templates' ? 'nav-tab-active' : ''; ?>">Certificate Templates</a>
+                <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
             </nav>
             <div class="tab-content">
                 <?php
@@ -232,7 +219,7 @@ if (!function_exists('mco_exam_engine_admin_page')) {
 }
 
 function mco_render_main_settings_tab() { ?>
-    <form method="post" action="?page=mco-exam-engine&tab=main_settings">
+    <form method="post" action="?post_type=mco_exam_program&page=mco-exam-engine&tab=main_settings">
         <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
         <input type="hidden" name="mco_form_action" value="save_main_settings">
         <table class="form-table">
@@ -258,7 +245,7 @@ function mco_render_main_settings_tab() { ?>
 <?php }
 
 function mco_render_theme_selector_tab() { ?>
-    <form method="post" action="?page=mco-exam-engine&tab=theme_selector">
+    <form method="post" action="?post_type=mco_exam_program&page=mco-exam-engine&tab=theme_selector">
         <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
         <input type="hidden" name="mco_form_action" value="save_theme_settings">
         <h2>Application Theme</h2><p>Select the default visual theme for the exam application. Users can override this choice in their own profile.</p>
@@ -310,12 +297,12 @@ function mco_render_bulk_import_tab() { ?>
 
 function mco_handle_csv_upload() {
     if (!isset($_POST['mco_bulk_import_csv_nonce']) || !wp_verify_nonce($_POST['mco_bulk_import_csv_nonce'], 'mco_bulk_import_csv_nonce')) wp_die('Security check failed');
-    if (empty($_FILES['csv_file']['tmp_name'])) { set_transient('mco_import_feedback', '<p class="error">No file uploaded.</p>', 60); wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=bulk_import&import_status=error')); exit; }
+    if (empty($_FILES['csv_file']['tmp_name'])) { set_transient('mco_import_feedback', '<p class="error">No file uploaded.</p>', 60); wp_redirect(admin_url('admin.php?post_type=mco_exam_program&page=mco-exam-engine&tab=bulk_import&import_status=error')); exit; }
     $import_type = sanitize_text_field($_POST['import_type']);
     $file_path = $_FILES['csv_file']['tmp_name'];
     $feedback = ($import_type === 'exam_programs') ? mco_process_csv_import($file_path) : (($import_type === 'recommended_books') ? mco_process_books_csv_import($file_path) : '<p class="error">Invalid import type specified.</p>');
     set_transient('mco_import_feedback', $feedback, 60);
-    wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=bulk_import&import_status=success'));
+    wp_redirect(admin_url('admin.php?post_type=mco_exam_program&page=mco-exam-engine&tab=bulk_import&import_status=success'));
     exit;
 }
 
@@ -422,7 +409,7 @@ function mco_render_certificate_templates_tab() {
         <tr><th>Body</th><td><textarea name="certificate_templates[<?php echo esc_attr($template['id']); ?>][body]"><?php echo esc_textarea($template['body']); ?></textarea></td></tr>
         <tr><th>Signature 1 Name</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name']); ?>"></td></tr>
         <tr><th>Signature 1 Title</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature1Title]" value="<?php echo esc_attr($template['signature1Title']); ?>"></td></tr>
-        <tr><th>Signature 1 Image</th><td><div class="image-upload-wrapper"><textarea name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature1ImageUrl]" rows="3"><?php echo esc_textarea($template['signature1ImageUrl']); ?></textarea><button type="button" class="button mco-upload-image-button">Upload Image</button></div><p class="description"><strong>Recommended for PDF Downloads:</strong> Paste a <code>base64</code> data URI (e.g., <code>data:image/png;base64,...</code>). Use an online "Image to Base64" converter. Using a standard URL may cause CORS errors during PDF generation.</p></td></tr>
+        <tr><th>Signature 1 Image</th><td><div class="image-upload-wrapper"><textarea name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature1ImageUrl]" rows="3"><?php echo esc_textarea($template['signature1ImageUrl']); ?></textarea><button type="button" class="button mco-upload-image-button">Upload Image</button></div><p class="description"><strong>Recommended for PDF Downloads:</strong> Paste a <code>base64</code> data URI (e.g., <code>data:image/png;base64,...</code>). Using a standard URL may cause CORS errors during PDF generation.</p></td></tr>
         <tr><th>Signature 2 Name</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature2Name]" value="<?php echo esc_attr($template['signature2Name']); ?>"></td></tr>
         <tr><th>Signature 2 Title</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature2Title]" value="<?php echo esc_attr($template['signature2Title']); ?>"></td></tr>
         <tr><th>Signature 2 Image</th><td><div class="image-upload-wrapper"><textarea name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature2ImageUrl]" rows="3"><?php echo esc_textarea($template['signature2ImageUrl']); ?></textarea><button type="button" class="button mco-upload-image-button">Upload Image</button></div><p class="description"><strong>Recommended for PDF Downloads:</strong> Paste a <code>base64</code> data URI (e.g., <code>data:image/png;base64,...</code>). Using a standard URL may cause CORS errors during PDF generation.</p></td></tr>
@@ -444,14 +431,15 @@ function mco_render_tools_tab() {
     $app_url = get_option('mco_exam_app_url', '');
     $logo_url = get_option('mco_logo_url', '');
     $site_icon_url = get_site_icon_url();
-    $templates = get_option('mco_certificate_templates', []);
+    // FIX: Correctly load default templates to prevent a false positive error on new installs.
+    $templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
     $signatures_configured = false;
 
     if (empty($app_url)) {
-        $missing_requirements[] = 'Set the <strong>Exam Application URL</strong> in the <a href="?page=mco-exam-engine&tab=main_settings">Main Settings</a> tab.';
+        $missing_requirements[] = 'Set the <strong>Exam Application URL</strong> in the <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=main_settings">Main Settings</a> tab.';
     }
     if (empty($logo_url) && empty($site_icon_url)) {
-        $missing_requirements[] = 'Set a <strong>Custom Logo URL</strong> or a default <strong>Site Icon</strong> in <a href="?page=mco-exam-engine&tab=main_settings">Main Settings</a> or the Customizer.';
+        $missing_requirements[] = 'Set a <strong>Custom Logo URL</strong> or a default <strong>Site Icon</strong> in <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=main_settings">Main Settings</a> or the Customizer.';
     }
     if (!empty($templates)) {
         foreach($templates as $template) {
@@ -462,7 +450,7 @@ function mco_render_tools_tab() {
         }
     }
     if (!$signatures_configured) {
-        $missing_requirements[] = 'Configure at least one signature in the <a href="?page=mco-exam-engine&tab=certificate_templates">Certificate Templates</a> tab.';
+        $missing_requirements[] = 'Configure at least one signature in the <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=certificate_templates">Certificate Templates</a> tab.';
     }
     
     $all_requirements_met = empty($missing_requirements);
@@ -582,4 +570,3 @@ if (!function_exists('mco_display_exam_program_columns')) {
         }
     }
 }
-?>

@@ -5,16 +5,17 @@ import { DownloadCloud, Code } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 // Import file contents as raw strings using Vite's ?raw feature
-import pluginHeaderFile from '../mco-exam-integration-engine/plugin-header.txt?raw';
-import mainPluginFile from '../mco-exam-integration-engine/mco-exam-integration-engine.txt?raw';
-import cptsFile from '../mco-exam-integration-engine/includes/mco-cpts.txt?raw';
-import adminFile from '../mco-exam-integration-engine/includes/mco-admin.txt?raw';
-import apiFile from '../mco-exam-integration-engine/includes/mco-api.txt?raw';
-import dataFile from '../mco-exam-integration-engine/includes/mco-data.txt?raw';
-import shortcodesFile from '../mco-exam-integration-engine/includes/mco-shortcodes.txt?raw';
-import stylesFile from '../mco-exam-integration-engine/assets/mco-styles.txt?raw';
-import templateExamPrograms from '../public/template-exam-programs.csv?raw';
-import templateRecommendedBooks from '../public/template-recommended-books.csv?raw';
+// FIX: The plugin-header.txt file is redundant and was causing issues. It's no longer used in the zip generation.
+// import pluginHeaderFile from '/mco-exam-integration-engine/plugin-header.txt?raw';
+import mainPluginFile from '/mco-exam-integration-engine/mco-exam-integration-engine.txt?raw';
+import cptsFile from '/mco-exam-integration-engine/includes/mco-cpts.txt?raw';
+import adminFile from '/mco-exam-integration-engine/includes/mco-admin.txt?raw';
+import apiFile from '/mco-exam-integration-engine/includes/mco-api.txt?raw';
+import dataFile from '/mco-exam-integration-engine/includes/mco-data.txt?raw';
+import shortcodesFile from '/mco-exam-integration-engine/includes/mco-shortcodes.txt?raw';
+import stylesFile from '/mco-exam-integration-engine/assets/mco-styles.txt?raw';
+import templateExamPrograms from '/public/template-exam-programs.csv?raw';
+import templateRecommendedBooks from '/public/template-recommended-books.csv?raw';
 
 const Integration: FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
@@ -30,10 +31,12 @@ const Integration: FC = () => {
             const rootFolder = zip.folder(rootFolderName);
             if (!rootFolder) throw new Error("Could not create root folder in zip.");
 
-            const combinedPhpContent = `${pluginHeaderFile}\n${mainPluginFile}`;
+            // FIX: The main plugin file is now correctly sourced from the single, complete mainPluginFile.
+            // The previous logic of combining two files was flawed and has been removed.
+            const mainPhpContent = mainPluginFile;
 
             const filesToZip = {
-                'mco-exam-integration-engine.php': combinedPhpContent,
+                'mco-exam-integration-engine.php': mainPhpContent,
                 'includes/mco-cpts.php': cptsFile,
                 'includes/mco-admin.php': adminFile,
                 'includes/mco-api.php': apiFile,
