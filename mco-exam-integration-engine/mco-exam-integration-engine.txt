@@ -92,7 +92,12 @@ if (!function_exists('mco_exam_engine_init')) {
 
 if (!function_exists('mco_exam_engine_activate')) {
     function mco_exam_engine_activate() {
-        mco_register_custom_post_types();
+        // FIX: Removed mco_register_custom_post_types() from the activation hook.
+        // Calling register_post_type() or register_taxonomy() before the 'init' action
+        // is incorrect and causes a fatal error on plugin activation.
+        // The CPTs are correctly registered on the 'init' hook via mco_exam_engine_init(),
+        // so we only need to flush the rewrite rules here to ensure the new CPT permalinks
+        // are recognized by WordPress after activation.
         flush_rewrite_rules();
         delete_transient('mco_app_config_data');
     }
