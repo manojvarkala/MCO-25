@@ -12,7 +12,7 @@ export const ch14_onboarding_workflow = `
     <ol class="list-decimal pl-5 space-y-2">
         <li>Set up a fresh, separate WordPress installation for the new tenant. Activate the WooCommerce plugin.</li>
         <li>From the in-app admin panel of your <strong>primary</strong> tenant (or any live tenant), go to <strong>Admin → Integration</strong>.</li>
-        <li>Click <strong>"Generate & Download Plugin"</strong> to get the latest <code>mco-exam-integration-engine.zip</code> file.</li>
+        <li>Click <strong>"Generate &amp; Download Plugin"</strong> to get the latest <code>mco-exam-integration-engine.zip</code> file.</li>
         <li>On the <strong>new</strong> WordPress site, go to <strong>Plugins → Add New → Upload Plugin</strong>, install the ZIP file, and activate it.</li>
     </ol>
     
@@ -32,7 +32,7 @@ export const ch14_onboarding_workflow = `
 
     <h3 class="text-xl font-bold mt-6">Step 4: Generate and Deploy the Tenant Blueprint</h3>
     <ol class="list-decimal pl-5 space-y-2">
-        <li>In the new WordPress admin, navigate to <strong>Exam App Engine → Tools</strong>. The "Generate & Download Blueprint" button will now be active. Click it to download the tenant's unique blueprint JSON file.</li>
+        <li>In the new WordPress admin, navigate to <strong>Exam App Engine → Tools</strong>. The "Generate &amp; Download Blueprint" button will now be active. Click it to download the tenant's unique blueprint JSON file.</li>
         <li>Rename the downloaded file to something descriptive (e.g., <code>new-client-config.json</code>) and place it inside the <code>/public</code> directory of your React app's source code.</li>
         <li>Open the <code>services/apiConfig.ts</code> file in your React app and add a new entry to the <code>tenantMap</code> that points the new tenant's domain to their new config file and WordPress API URL.</li>
         <pre class="text-xs bg-slate-100 p-2 rounded my-1"><code>// In services/apiConfig.ts
@@ -47,7 +47,7 @@ const tenantMap = {
     'newclient.com': newClientConfig,
 };
 </code></pre>
-        <li>Commit these two file changes (the new JSON and the updated `apiConfig.ts`) and push them to your Git repository. Your hosting provider will automatically build and deploy the update.</li>
+        <li>Commit these two file changes (the new JSON and the updated <code>apiConfig.ts</code>) and push them to your Git repository. Your hosting provider will automatically build and deploy the update.</li>
     </ol>
     
     <h3 class="text-xl font-bold mt-6">Step 5: You're Live!</h3>
