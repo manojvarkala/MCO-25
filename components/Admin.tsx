@@ -1,5 +1,5 @@
 import React, { FC, useState, useCallback, ReactNode } from 'react';
-import { Settings, Award, Lightbulb, PlusCircle, Trash2, RefreshCw, FileText, Cpu, Loader, CheckCircle, XCircle, Trash, Bug, Paintbrush, FileSpreadsheet, DownloadCloud, DatabaseZap } from 'lucide-react';
+import { Settings, Award, Lightbulb, PlusCircle, Trash2, RefreshCw, FileText, Cpu, Loader, CheckCircle, XCircle, Trash, Bug, Paintbrush, FileSpreadsheet, DownloadCloud, DatabaseZap, Check } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 // FIX: Removed unused 'SearchedUser' import that was causing a compilation error.
 import type { DebugData } from '../types.ts';
@@ -78,7 +78,7 @@ const HealthCheckItem: FC<HealthCheckItemProps> = ({ status, title, message, tro
 };
 
 const Admin: FC = () => {
-    const { activeOrg } = useAppContext();
+    const { activeOrg, availableThemes, activeTheme, setActiveTheme } = useAppContext();
     const { token } = useAuth();
     
     // State for health check
@@ -416,6 +416,35 @@ const Admin: FC = () => {
                                                 }`}
                                             />
                                         </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Application Theme</th>
+                                <td>
+                                    <p className="text-sm text-[rgb(var(--color-text-muted-rgb))] mb-4">Select a theme to change the application's appearance. Your choice is saved on this browser.</p>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                        {(availableThemes || []).map(theme => (
+                                            <button
+                                                type="button"
+                                                key={theme.id}
+                                                onClick={() => setActiveTheme(theme.id)}
+                                                className={`relative p-4 rounded-lg border-2 cursor-pointer transition text-left ${activeTheme === theme.id ? 'border-[rgb(var(--color-primary-rgb))] ring-2 ring-[rgba(var(--color-primary-rgb),0.2)]' : 'border-[rgb(var(--color-border-rgb))] hover:border-[rgba(var(--color-primary-rgb),0.5)]'}`}
+                                            >
+                                                {activeTheme === theme.id && (
+                                                    <div className="absolute -top-2 -right-2 bg-[rgb(var(--color-primary-rgb))] text-white rounded-full p-1 shadow-md">
+                                                        <Check size={14} />
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-center space-x-1 h-8 pointer-events-none">
+                                                    <div className={`w-1/4 rounded theme-swatch-${theme.id}-primary`}></div>
+                                                    <div className={`w-1/4 rounded theme-swatch-${theme.id}-secondary`}></div>
+                                                    <div className={`w-1/4 rounded theme-swatch-${theme.id}-accent`}></div>
+                                                    <div className={`w-1/4 rounded theme-swatch-${theme.id}-background`}></div>
+                                                </div>
+                                                <p className="font-semibold text-center mt-2 text-[rgb(var(--color-text-default-rgb))] pointer-events-none">{theme.name}</p>
+                                            </button>
+                                        ))}
                                     </div>
                                 </td>
                             </tr>
