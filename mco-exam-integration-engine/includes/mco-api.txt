@@ -329,9 +329,13 @@ function mco_api_get_full_config(WP_REST_Request $request) {
     $site_name = get_bloginfo('name');
     $site_url_parts = parse_url(home_url());
     $site_host = $site_url_parts['host'] ?? 'default-site.com';
-    // FIX: Always provide the default templates as a fallback to get_option. This ensures that on a fresh install,
-    // the $templates variable is populated and sent to the app, preventing errors.
-    $templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
+    
+    // FIX: More robust fallback. Explicitly check if the option is empty.
+    $templates = get_option('mco_certificate_templates');
+    if (empty($templates) || !is_array($templates)) {
+        $templates = mco_get_default_certificate_templates();
+    }
+    
     $custom_logo_url = get_option('mco_logo_url', '');
     $logo_url = !empty($custom_logo_url) ? $custom_logo_url : (get_site_icon_url(512) ?: '');
 
@@ -996,3 +1000,4 @@ function mco_api_admin_clear_all_results(WP_REST_Request $request) {
     delete_transient('mco_app_config_data'); update_option('mco_config_version', current_time('YmdHis'));
     return new WP_REST_Response(['success' => true, 'message' => "Cleared exam results for {$cleared_count} users."], 200);
 }
+?>

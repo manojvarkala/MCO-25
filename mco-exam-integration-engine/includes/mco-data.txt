@@ -49,7 +49,11 @@ function mco_get_full_snapshot_data($is_blueprint = false) {
         [ 'id' => 'noir', 'name' => 'Noir' ],
     ];
 
-    $configured_templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
+    $configured_templates = get_option('mco_certificate_templates');
+    if (empty($configured_templates) || !is_array($configured_templates)) {
+        $configured_templates = mco_get_default_certificate_templates();
+    }
+
 
     // If it's just a blueprint, we return empty arrays for content.
     if ($is_blueprint) {
@@ -284,3 +288,4 @@ if (!function_exists('mco_get_single_term')) {
         return '';
     }
 }
+?>

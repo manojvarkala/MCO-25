@@ -427,9 +427,12 @@ function mco_render_certificate_templates_tab() {
         delete_transient('mco_app_config_data'); update_option('mco_config_version', current_time('YmdHis'));
         echo '<div class="notice notice-success is-dismissible"><p>Certificate templates saved.</p></div>';
     }
-    // FIX: Always provide the default templates as a fallback to get_option. This ensures that on a fresh install,
-    // the $templates variable is populated, preventing the empty tab and prerequisite errors.
-    $templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
+    
+    // FIX: More robust fallback. Explicitly check if the option is empty.
+    $templates = get_option('mco_certificate_templates');
+    if (empty($templates) || !is_array($templates)) {
+        $templates = mco_get_default_certificate_templates();
+    }
     ?>
     <h2>Certificate Templates</h2><p>Manage the templates used for generating certificates. Use placeholders like <code>{candidateName}</code>, <code>{examName}</code>, and <code>{finalScore}</code>.</p>
     <form method="post"><?php wp_nonce_field('mco_save_templates', 'mco_save_templates_nonce'); ?><div id="mco-templates-container">
@@ -462,23 +465,26 @@ function mco_render_tools_tab() {
     $app_url = get_option('mco_exam_app_url', '');
     $logo_url = get_option('mco_logo_url', '');
     $site_icon_url = get_site_icon_url();
-    // FIX: Correctly load default templates to prevent a false positive error on new installs.
-    $templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
+    
+    // FIX: Explicitly check for empty templates to fix prerequisite error.
+    $templates = get_option('mco_certificate_templates');
+    if (empty($templates) || !is_array($templates)) {
+        $templates = mco_get_default_certificate_templates();
+    }
+
     $signatures_configured = false;
+    foreach($templates as $template) {
+        if (!empty($template['signature1Name'])) {
+            $signatures_configured = true;
+            break;
+        }
+    }
 
     if (empty($app_url)) {
         $missing_requirements[] = 'Set the <strong>Exam Application URL</strong> in the <a href="?page=mco-exam-engine&tab=main_settings">Main Settings</a> tab.';
     }
     if (empty($logo_url) && empty($site_icon_url)) {
         $missing_requirements[] = 'Set a <strong>Custom Logo URL</strong> or a default <strong>Site Icon</strong> in <a href="?page=mco-exam-engine&tab=main_settings">Main Settings</a> or the Customizer.';
-    }
-    if (!empty($templates)) {
-        foreach($templates as $template) {
-            if (!empty($template['signature1Name'])) {
-                $signatures_configured = true;
-                break;
-            }
-        }
     }
     if (!$signatures_configured) {
         $missing_requirements[] = 'Configure at least one signature in the <a href="?page=mco-exam-engine&tab=certificate_templates">Certificate Templates</a> tab.';
@@ -638,3 +644,4 @@ if (!function_exists('mco_display_exam_program_columns')) {
         }
     }
 }
+?>
