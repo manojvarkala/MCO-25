@@ -427,7 +427,8 @@ function mco_render_certificate_templates_tab() {
         delete_transient('mco_app_config_data'); update_option('mco_config_version', current_time('YmdHis'));
         echo '<div class="notice notice-success is-dismissible"><p>Certificate templates saved.</p></div>';
     }
-    // FIX: Use default templates if none are saved in the database.
+    // FIX: Always provide the default templates as a fallback to get_option. This ensures that on a fresh install,
+    // the $templates variable is populated, preventing the empty tab and prerequisite errors.
     $templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
     ?>
     <h2>Certificate Templates</h2><p>Manage the templates used for generating certificates. Use placeholders like <code>{candidateName}</code>, <code>{examName}</code>, and <code>{finalScore}</code>.</p>

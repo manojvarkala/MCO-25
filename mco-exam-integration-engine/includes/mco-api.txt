@@ -121,12 +121,14 @@ if (!function_exists('mco_generate_exam_jwt')) {
                 $paid_exam_ids[] = 'subscription_active';
             }
         }
-        $customer_orders = wc_get_orders(['customer_id' => $user_id, 'status' => ['wc-completed', 'wc-processing']]);
-        foreach ($customer_orders as $order) {
-            foreach ($order->get_items() as $item) {
-                $product = $item->get_product();
-                if ($product && $product->get_sku()) {
-                    $paid_exam_ids[] = $product->get_sku();
+        if (class_exists('WooCommerce')) {
+            $customer_orders = wc_get_orders(['customer_id' => $user_id, 'status' => ['wc-completed', 'wc-processing']]);
+            foreach ($customer_orders as $order) {
+                foreach ($order->get_items() as $item) {
+                    $product = $item->get_product();
+                    if ($product && $product->get_sku()) {
+                        $paid_exam_ids[] = $product->get_sku();
+                    }
                 }
             }
         }
@@ -327,7 +329,8 @@ function mco_api_get_full_config(WP_REST_Request $request) {
     $site_name = get_bloginfo('name');
     $site_url_parts = parse_url(home_url());
     $site_host = $site_url_parts['host'] ?? 'default-site.com';
-    // FIX: Correctly load default templates if none are saved in the database.
+    // FIX: Always provide the default templates as a fallback to get_option. This ensures that on a fresh install,
+    // the $templates variable is populated and sent to the app, preventing errors.
     $templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
     $custom_logo_url = get_option('mco_logo_url', '');
     $logo_url = !empty($custom_logo_url) ? $custom_logo_url : (get_site_icon_url(512) ?: '');
