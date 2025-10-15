@@ -564,41 +564,34 @@ const Handbook: FC = () => {
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
-            const margin = 50;
+            const margin = 40;
             const contentWidth = pageWidth - margin * 2;
-            const contentHeight = pageHeight - margin * 2;
     
-            // 1. Render Cover Page
-            const coverElement = document.createElement('div');
-            coverElement.innerHTML = chapters[0].content;
-            coverElement.style.width = `${pageWidth}px`;
-            coverElement.style.height = `${pageHeight}px`;
-            coverElement.style.position = 'absolute';
-            coverElement.style.left = '-9999px';
-            document.body.appendChild(coverElement);
-            
-            const coverCanvas = await html2canvas(coverElement, { scale: 2, useCORS: true });
-            document.body.removeChild(coverElement);
-            const coverImgData = coverCanvas.toDataURL('image/png');
-            pdf.addImage(coverImgData, 'PNG', 0, 0, pageWidth, pageHeight);
-    
-            // 2. Combine all other chapters into one long element for rendering
+            // Function to add header and footer
+            const addHeaderFooter = (pdfInstance: jsPDF, pageNum: number, totalPages: number) => {
+                pdfInstance.setFontSize(8);
+                pdfInstance.setTextColor(150);
+                pdfInstance.text('Annapoorna Examination Engine Handbook', margin, margin / 2);
+                pdfInstance.text(`Page ${pageNum} of ${totalPages}`, pageWidth - margin, pageHeight - margin / 2, { align: 'right' });
+            };
+
+            // 1. Render all content into one super-long, padded container
             const contentContainer = document.createElement('div');
             contentContainer.style.width = `${contentWidth}px`;
             contentContainer.style.position = 'absolute';
             contentContainer.style.left = '-9999px';
             contentContainer.style.backgroundColor = 'white';
-            contentContainer.style.fontFamily = 'sans-serif';
-    
+            contentContainer.style.padding = `${margin}px`; // Add padding here
+            contentContainer.style.boxSizing = 'border-box';
+
             let allContentHtml = '';
-            // Start from index 1 to skip the cover
+            // Start from index 1 to skip the cover page for this rendering pass
             for (let i = 1; i < chapters.length; i++) {
-                allContentHtml += `<div class="prose max-w-none prose-slate p-4" style="page-break-after: always; min-height: ${contentHeight}px;">${chapters[i].content}</div>`;
+                allContentHtml += `<div class="prose max-w-none prose-slate" style="page-break-inside: avoid;">${chapters[i].content}</div><div style="height: 40px;"></div>`;
             }
             contentContainer.innerHTML = allContentHtml;
             document.body.appendChild(contentContainer);
-    
-            // 3. Render the entire content block to a single tall canvas
+
             const contentCanvas = await html2canvas(contentContainer, {
                 scale: 2,
                 useCORS: true,
@@ -606,27 +599,41 @@ const Handbook: FC = () => {
                 windowHeight: contentContainer.scrollHeight,
             });
             document.body.removeChild(contentContainer);
-            
+
+            // 2. Add Cover Page separately
+            const coverElement = document.createElement('div');
+            coverElement.innerHTML = chapters[0].content;
+            coverElement.style.width = `${pageWidth}px`;
+            coverElement.style.height = `${pageHeight}px`;
+            coverElement.style.position = 'absolute';
+            coverElement.style.left = '-9999px';
+            document.body.appendChild(coverElement);
+            const coverCanvas = await html2canvas(coverElement, { scale: 2, useCORS: true });
+            document.body.removeChild(coverElement);
+            const coverImgData = coverCanvas.toDataURL('image/png');
+            pdf.addImage(coverImgData, 'PNG', 0, 0, pageWidth, pageHeight);
+
+            // 3. Paginate the main content canvas
             const imgData = contentCanvas.toDataURL('image/png');
-            const canvasHeightInPdfPoints = contentCanvas.height / (contentCanvas.width / contentWidth);
-            
-            // 4. Paginate the canvas image into the PDF
-            let yPosition = 0;
-            let pageCount = 1; // Cover is page 1
-    
-            while (yPosition < canvasHeightInPdfPoints) {
+            const contentImgHeight = contentCanvas.height * (pageWidth / contentCanvas.width);
+            const pageContentHeight = pageHeight;
+            let heightLeft = contentImgHeight;
+            let position = 0;
+            let pageCount = 1;
+
+            while (heightLeft > 0) {
                 pdf.addPage();
                 pageCount++;
-                
-                // Add the slice of the canvas to the new page
-                pdf.addImage(imgData, 'PNG', margin, -yPosition + margin, contentWidth, canvasHeightInPdfPoints, undefined, 'FAST');
-                
-                // Add Footer with Page Number
-                pdf.setFontSize(9);
-                pdf.setTextColor(150);
-                pdf.text(`Page ${pageCount}`, pageWidth - margin, pageHeight - margin / 2, { align: 'right' });
-                
-                yPosition += contentHeight;
+                pdf.addImage(imgData, 'PNG', 0, -position, pageWidth, contentImgHeight);
+                heightLeft -= pageContentHeight;
+                position += pageContentHeight;
+            }
+
+            // 4. Add headers and footers to all pages except the cover
+            const totalPages = pdf.internal.pages.length - 1; // page array is 1-based
+            for (let i = 2; i <= totalPages + 1; i++) {
+                pdf.setPage(i);
+                addHeaderFooter(pdf, i - 1, totalPages);
             }
     
             pdf.save('Annapoorna-Examination-Engine-Handbook.pdf');
@@ -638,6 +645,7 @@ const Handbook: FC = () => {
             setIsDownloading(false);
         }
     };
+
 
     const leftPageClass = isAnimating === 'backward' ? 'animate-page-flip-backward' : '';
     const rightPageClass = isAnimating === 'forward' ? 'animate-page-flip-forward' : '';
@@ -661,10 +669,10 @@ const Handbook: FC = () => {
             <div className="w-full max-w-7xl mx-auto aspect-[1.5/1] perspective">
                 <div className="w-full h-full grid grid-cols-2 gap-4 transform-style-3d">
                     <div className={`shadow-lg rounded-l-lg border-r border-slate-200 overflow-hidden relative ${leftPageClass} backface-hidden ${chapters[currentPage]?.isCover ? 'p-0' : 'bg-white'}`}>
-                        <div className="p-8 sm:p-12 h-full overflow-auto prose max-w-none prose-slate break-words" dangerouslySetInnerHTML={{ __html: chapters[currentPage]?.content || '' }} />
+                        <div className="p-8 sm:p-12 h-full overflow-auto prose max-w-none prose-slate prose-pre:whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: chapters[currentPage]?.content || '' }} />
                     </div>
                     <div className={`shadow-lg rounded-r-lg border-l border-slate-200 overflow-hidden relative ${rightPageClass} backface-hidden bg-white`}>
-                        <div className="p-8 sm:p-12 h-full overflow-auto prose max-w-none prose-slate break-words" dangerouslySetInnerHTML={{ __html: chapters[currentPage + 1]?.content || '' }} />
+                        <div className="p-8 sm:p-12 h-full overflow-auto prose max-w-none prose-slate prose-pre:whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: chapters[currentPage + 1]?.content || '' }} />
                     </div>
                 </div>
             </div>
