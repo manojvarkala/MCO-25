@@ -465,41 +465,45 @@ const ch13Content = `
 
 const ch14Content = `
     <h3 class="text-xl font-bold">14.1 The Complete Onboarding Workflow</h3>
-    <p>This chapter provides the definitive workflow for launching a new examination portal for a client or brand using the Annapoorna Examination Engine.</p>
+    <p>This chapter provides the definitive, step-by-step workflow for launching a new examination portal for a client or brand using the Annapoorna Examination Engine.</p>
+
     <h4 class="font-semibold mt-4">Step 1: Prepare the React App Hosting (e.g., Vercel)</h4>
     <ol>
         <li>Navigate to your hosting provider where the React app is deployed.</li>
         <li>Add the new tenant's subdomain to your project's domain list (e.g., <code>exams.newclient.com</code>).</li>
     </ol>
+
     <h4 class="font-semibold mt-4">Step 2: Set Up the New Tenant's WordPress Backend</h4>
     <ol>
         <li>Start with a fresh WordPress installation and activate the WooCommerce plugin.</li>
         <li>In the React app's admin panel, go to the "Integration" page and generate the <code>mco-exam-integration-engine.zip</code> file.</li>
         <li>On the new WordPress site, go to <strong>Plugins → Add New → Upload Plugin</strong> and install the ZIP file. Activate it.</li>
-        <li><strong>CRITICAL:</strong> Edit the <code>wp-config.php</code> file and add a unique, secure <code>MCO_JWT_SECRET</code>.</li>
     </ol>
-    <h4 class="font-semibold mt-4">Step 3: Create the SSO Handler Page</h4>
-    <ol>
-        <li>In the WordPress admin, go to <strong>Pages → Add New</strong>.</li>
-        <li>Title the page "Exam Login" (or similar).</li>
-        <li>In the content editor, add a Shortcode block with the following content: <code>[mco_exam_login]</code></li>
-        <li>Publish the page and ensure its slug/permalink is <code>exam-login</code>. The plugin contains a special rule to ensure this specific slug always works.</li>
-        <li><strong>Crucial Step:</strong> Go to <strong>Settings → Permalinks</strong> and click "Save Changes" to flush the rewrite rules.</li>
-    </ol>
-    <h4 class="font-semibold mt-4">Step 4: Run the Initial Plugin Configuration</h4>
+    
+    <div class="bg-red-50 border-l-4 border-red-500 p-4 my-4">
+        <p class="font-bold text-red-800">CRITICAL SECURITY STEP</p>
+        <p class="text-red-700">You must now edit the <code>wp-config.php</code> file at the root of your WordPress installation. Add the following line with a unique, long, and random string. You can use an online "password generator" to create one. This key is essential for securing user authentication.</p>
+        <pre class="text-xs bg-slate-100 p-2 rounded my-1 whitespace-pre-wrap font-mono"><code>define('MCO_JWT_SECRET', 'your-super-long-and-secret-random-string-goes-here');</code></pre>
+    </div>
+
+    <h4 class="font-semibold mt-4">Step 3: Run the Initial Plugin Configuration</h4>
     <p>The "Tenant Blueprint Generator" in the plugin's "Tools" tab includes a checklist to guide you through the minimum required setup.</p>
     <ol>
         <li>In the WordPress admin, navigate to <strong>Exam App Engine → Main Settings</strong> and enter the full URL of the subdomain you configured in Step 1.</li>
         <li>Navigate to <strong>Exam App Engine → Certificate Templates</strong> and configure at least one signature with a name and title.</li>
         <li>Ensure a site logo is present by setting a <strong>Custom Logo URL</strong> in Main Settings or a default <strong>Site Icon</strong> under <strong>Appearance → Customize</strong>.</li>
     </ol>
-    <h4 class="font-semibold mt-4">Step 5: Generate and Deploy the Tenant Blueprint</h4>
+
+    <h4 class="font-semibold mt-4">Step 4: Generate and Deploy the Tenant Blueprint</h4>
     <ol>
         <li>Navigate to <strong>Exam App Engine → Tools</strong>. The "Generate & Download Blueprint" button will now be active. Click it to download the <code>tenant-config.json</code> file.</li>
         <li>Rename the downloaded file to something descriptive (e.g., <code>new-client-config.json</code>) and place it inside the <code>/public</code> directory of your React app's source code.</li>
         <li>Open the <code>services/apiConfig.ts</code> file in your React app and add a new entry to the <code>tenantMap</code> that points the new tenant's domain to their new config file and WordPress API URL.</li>
         <li>Commit these two changes and push them to your Git repository. Your hosting provider will automatically build and deploy the update.</li>
     </ol>
+    
+    <h4 class="font-semibold mt-4">Step 5: You're Live!</h4>
+    <p>The new tenant portal is now live. You can begin creating WooCommerce products and Exam Programs in the tenant's WordPress backend, and they will automatically appear in their dedicated app instance.</p>
 `;
 // ... other chapter content would be here...
 
@@ -554,37 +558,85 @@ const Handbook: FC = () => {
 
     const handleDownloadPdf = async () => {
         setIsDownloading(true);
-        toast.loading('Generating PDF...');
-        
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-        
-        for (let i = 0; i < chapters.length; i++) {
-            const chapter = chapters[i];
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = chapter.content;
-            tempDiv.className = 'prose max-w-none prose-slate bg-white p-8';
-            tempDiv.style.width = `${pdf.internal.pageSize.getWidth() - 80}px`;
-            tempDiv.style.position = 'absolute';
-            tempDiv.style.left = '-9999px';
-            document.body.appendChild(tempDiv);
+        const toastId = toast.loading('Generating professional handbook PDF...', { duration: Infinity });
+    
+        try {
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margin = 50;
+            const contentWidth = pageWidth - margin * 2;
+            const contentHeight = pageHeight - margin * 2;
+    
+            // 1. Render Cover Page
+            const coverElement = document.createElement('div');
+            coverElement.innerHTML = chapters[0].content;
+            coverElement.style.width = `${pageWidth}px`;
+            coverElement.style.height = `${pageHeight}px`;
+            coverElement.style.position = 'absolute';
+            coverElement.style.left = '-9999px';
+            document.body.appendChild(coverElement);
             
-            if (i > 0) pdf.addPage();
-            
-            await pdf.html(tempDiv, {
-                callback: (doc) => {},
-                x: 40,
-                y: 40,
-                autoPaging: 'text',
-                margin: [40, 40, 40, 40],
+            const coverCanvas = await html2canvas(coverElement, { scale: 2, useCORS: true });
+            document.body.removeChild(coverElement);
+            const coverImgData = coverCanvas.toDataURL('image/png');
+            pdf.addImage(coverImgData, 'PNG', 0, 0, pageWidth, pageHeight);
+    
+            // 2. Combine all other chapters into one long element for rendering
+            const contentContainer = document.createElement('div');
+            contentContainer.style.width = `${contentWidth}px`;
+            contentContainer.style.position = 'absolute';
+            contentContainer.style.left = '-9999px';
+            contentContainer.style.backgroundColor = 'white';
+            contentContainer.style.fontFamily = 'sans-serif';
+    
+            let allContentHtml = '';
+            // Start from index 1 to skip the cover
+            for (let i = 1; i < chapters.length; i++) {
+                allContentHtml += `<div class="prose max-w-none prose-slate p-4" style="page-break-after: always; min-height: ${contentHeight}px;">${chapters[i].content}</div>`;
+            }
+            contentContainer.innerHTML = allContentHtml;
+            document.body.appendChild(contentContainer);
+    
+            // 3. Render the entire content block to a single tall canvas
+            const contentCanvas = await html2canvas(contentContainer, {
+                scale: 2,
+                useCORS: true,
+                windowWidth: contentContainer.scrollWidth,
+                windowHeight: contentContainer.scrollHeight,
             });
+            document.body.removeChild(contentContainer);
             
-            document.body.removeChild(tempDiv);
+            const imgData = contentCanvas.toDataURL('image/png');
+            const canvasHeightInPdfPoints = contentCanvas.height / (contentCanvas.width / contentWidth);
+            
+            // 4. Paginate the canvas image into the PDF
+            let yPosition = 0;
+            let pageCount = 1; // Cover is page 1
+    
+            while (yPosition < canvasHeightInPdfPoints) {
+                pdf.addPage();
+                pageCount++;
+                
+                // Add the slice of the canvas to the new page
+                pdf.addImage(imgData, 'PNG', margin, -yPosition + margin, contentWidth, canvasHeightInPdfPoints, undefined, 'FAST');
+                
+                // Add Footer with Page Number
+                pdf.setFontSize(9);
+                pdf.setTextColor(150);
+                pdf.text(`Page ${pageCount}`, pageWidth - margin, pageHeight - margin / 2, { align: 'right' });
+                
+                yPosition += contentHeight;
+            }
+    
+            pdf.save('Annapoorna-Examination-Engine-Handbook.pdf');
+            toast.success('Handbook downloaded!', { id: toastId });
+        } catch (error) {
+            console.error("PDF generation failed:", error);
+            toast.error('Failed to generate PDF.', { id: toastId });
+        } finally {
+            setIsDownloading(false);
         }
-        
-        pdf.save('Handbook.pdf');
-        toast.dismiss();
-        toast.success('Handbook downloaded!');
-        setIsDownloading(false);
     };
 
     const leftPageClass = isAnimating === 'backward' ? 'animate-page-flip-backward' : '';
@@ -606,7 +658,7 @@ const Handbook: FC = () => {
                     <button onClick={() => handleNavigate('forward')} disabled={!!isAnimating || currentPage >= chapters.length - 2} className="p-2 rounded-md bg-white border border-slate-300 disabled:opacity-50 hover:bg-slate-50"><ChevronRight size={20} /></button>
                 </div>
             </div>
-            <div className="w-full max-w-6xl mx-auto aspect-[17/11] perspective">
+            <div className="w-full max-w-6xl mx-auto aspect-[4/3] perspective">
                 <div className="w-full h-full grid grid-cols-2 gap-4 transform-style-3d">
                     <div className={`shadow-lg rounded-l-lg border-r border-slate-200 overflow-hidden relative ${leftPageClass} backface-hidden ${chapters[currentPage]?.isCover ? 'p-0' : 'bg-white'}`}>
                         <div className="p-8 sm:p-12 h-full overflow-auto prose max-w-none prose-slate" dangerouslySetInnerHTML={{ __html: chapters[currentPage]?.content || '' }} />
