@@ -658,13 +658,13 @@ const Handbook: FC = () => {
                     <button onClick={() => handleNavigate('forward')} disabled={!!isAnimating || currentPage >= chapters.length - 2} className="p-2 rounded-md bg-white border border-slate-300 disabled:opacity-50 hover:bg-slate-50"><ChevronRight size={20} /></button>
                 </div>
             </div>
-            <div className="w-full max-w-6xl mx-auto aspect-[4/3] perspective">
+            <div className="w-full max-w-7xl mx-auto aspect-[1.5/1] perspective">
                 <div className="w-full h-full grid grid-cols-2 gap-4 transform-style-3d">
                     <div className={`shadow-lg rounded-l-lg border-r border-slate-200 overflow-hidden relative ${leftPageClass} backface-hidden ${chapters[currentPage]?.isCover ? 'p-0' : 'bg-white'}`}>
-                        <div className="p-8 sm:p-12 h-full overflow-auto prose max-w-none prose-slate" dangerouslySetInnerHTML={{ __html: chapters[currentPage]?.content || '' }} />
+                        <div className="p-8 sm:p-12 h-full overflow-auto prose max-w-none prose-slate break-words" dangerouslySetInnerHTML={{ __html: chapters[currentPage]?.content || '' }} />
                     </div>
                     <div className={`shadow-lg rounded-r-lg border-l border-slate-200 overflow-hidden relative ${rightPageClass} backface-hidden bg-white`}>
-                        <div className="p-8 sm:p-12 h-full overflow-auto prose max-w-none prose-slate" dangerouslySetInnerHTML={{ __html: chapters[currentPage + 1]?.content || '' }} />
+                        <div className="p-8 sm:p-12 h-full overflow-auto prose max-w-none prose-slate break-words" dangerouslySetInnerHTML={{ __html: chapters[currentPage + 1]?.content || '' }} />
                     </div>
                 </div>
             </div>

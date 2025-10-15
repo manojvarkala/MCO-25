@@ -62,7 +62,7 @@ define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
 // FIX: Replaced the fragile, admin-only get_file_data() call with a static definition.
 // This was causing a fatal PHP error on all frontend and API requests.
 if (!defined('MCO_PLUGIN_VERSION')) {
-    define('MCO_PLUGIN_VERSION', '1.0.3');
+    define('MCO_PLUGIN_VERSION', '1.0.0');
 }
 
 
