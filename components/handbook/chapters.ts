@@ -1,20 +1,22 @@
 import { coverContent } from './content/cover.ts';
 import { titlePageContent } from './content/titlePage.ts';
 import { tocContent } from './content/toc.ts';
-import { ch1Content } from './content/ch1.ts';
-import { ch2Content } from './content/ch2.ts';
-import { ch3Content } from './content/ch3.ts';
-import { ch4Content } from './content/ch4.ts';
-import { ch5Content } from './content/ch5.ts';
-import { ch6Content } from './content/ch6.ts';
-import { ch7Content } from './content/ch7.ts';
-import { ch8Content } from './content/ch8.ts';
-import { ch9Content } from './content/ch9.ts';
-import { ch10Content } from './content/ch10.ts';
-import { ch11Content } from './content/ch11.ts';
-import { ch12Content } from './content/ch12.ts';
-import { ch13Content } from './content/ch13.ts';
-import { ch14Content } from './content/ch14.ts';
+import { ch1_introduction } from './content/ch1_introduction.ts';
+import { ch2_architecture } from './content/ch2_architecture.ts';
+import { ch3_golden_workflow } from './content/ch3_golden_workflow.ts';
+import { ch4_user_guide_dashboard } from './content/ch4_user_guide_dashboard.ts';
+import { ch5_user_guide_exams } from './content/ch5_user_guide_exams.ts';
+import { ch6_wp_admin_setup } from './content/ch6_wp_admin_setup.ts';
+import { ch7_wp_admin_content } from './content/ch7_wp_admin_content.ts';
+import { ch8_wp_admin_tools } from './content/ch8_wp_admin_tools.ts';
+import { ch9_in_app_admin_overview } from './content/ch9_in_app_admin_overview.ts';
+import { ch10_in_app_admin_analytics } from './content/ch10_in_app_admin_analytics.ts';
+import { ch11_in_app_admin_programs } from './content/ch11_in_app_admin_programs.ts';
+import { ch12_in_app_admin_products } from './content/ch12_in_app_admin_products.ts';
+import { ch13_in_app_admin_content_engine } from './content/ch13_in_app_admin_content_engine.ts';
+import { ch14_onboarding_workflow } from './content/ch14_onboarding_workflow.ts';
+import { ch15_plugin_integration } from './content/ch15_plugin_integration.ts';
+
 
 export interface Chapter {
     title: string;
@@ -26,18 +28,19 @@ export const chapters: Chapter[] = [
     { title: "Cover", content: coverContent, isCover: true },
     { title: "Title Page", content: titlePageContent },
     { title: "Table of Contents", content: tocContent },
-    { title: "Chapter 1: Introduction", content: ch1Content },
-    { title: "Chapter 2: High-Level Architecture", content: ch2Content },
-    { title: "Chapter 3: Core Application Flow", content: ch3Content },
-    { title: "Chapter 4: WordPress Backend (Part 1)", content: ch4Content },
-    { title: "Chapter 5: WordPress Backend (Part 2)", content: ch5Content },
-    { title: "Chapter 6: E-Commerce Integration", content: ch6Content },
-    { title: "Chapter 7: Admin Panel", content: ch7Content },
-    { title: "Chapter 8: AI & Automation", content: ch8Content },
-    { title: "Chapter 9: Frontend Tech Stack", content: ch9Content },
-    { title: "Chapter 10: Frontend Architecture", content: ch10Content },
-    { title: "Chapter 11: Global State Management", content: ch11Content },
-    { title: "Chapter 12: Multi-Tenancy in Practice", content: ch12Content },
-    { title: "Chapter 13: Performance & Caching", content: ch13Content },
-    { title: "Chapter 14: Onboarding a New Tenant", content: ch14Content },
+    { title: "Part I: Core Concepts", content: ch1_introduction },
+    { title: "Chapter 2: Architecture & Multi-Tenancy", content: ch2_architecture },
+    { title: "Chapter 3: The Golden Workflow", content: ch3_golden_workflow },
+    { title: "Part II: User Guide", content: ch4_user_guide_dashboard },
+    { title: "Chapter 5: Taking Exams & Understanding Results", content: ch5_user_guide_exams },
+    { title: "Part III: Administrator's Guide (WordPress)", content: ch6_wp_admin_setup },
+    { title: "Chapter 7: Managing Content (CPTs & Bulk Import)", content: ch7_wp_admin_content },
+    { title: "Chapter 8: Plugin Settings & Tools", content: ch8_wp_admin_tools },
+    { title: "Part IV: Administrator's Guide (In-App)", content: ch9_in_app_admin_overview },
+    { title: "Chapter 10: Sales Analytics", content: ch10_in_app_admin_analytics },
+    { title: "Chapter 11: Exam Program Customizer", content: ch11_in_app_admin_programs },
+    { title: "Chapter 12: Product Customizer", content: ch12_in_app_admin_products },
+    { title: "Chapter 13: AI Content Engine", content: ch13_in_app_admin_content_engine },
+    { title: "Part V: Onboarding & Development", content: ch14_onboarding_workflow },
+    { title: "Chapter 15: Plugin Integration & Shortcodes", content: ch15_plugin_integration },
 ];

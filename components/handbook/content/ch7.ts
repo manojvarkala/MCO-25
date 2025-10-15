@@ -13,19 +13,13 @@ export const ch7Content = `
     <p>Located in the "Tools" tab, this tool is for <strong>launching a brand new tenant portal</strong>. It generates a complete, error-free JSON configuration file with all necessary branding and templates, but with <strong>empty content arrays</strong> (no exams, books, etc.). This gives the React app the basic "scaffolding" it needs to start up for a new, empty tenant without crashing.</p>
     
     <h3 class="text-xl font-bold mt-6">7.3 The Full Content Snapshot Generator</h3>
-    <p>Also in the "Tools" tab, this second tool is for <strong>backups and performance optimization of an existing, live tenant</strong>. It generates a JSON file containing a complete, point-in-time snapshot of <strong>all your current live content</strong>—exams, books, prices, and settings. This file is a perfect backup and serves a key performance role, as explained in the workflow below.</p>
+    <p>Also in the "Tools" tab, this second tool is for <strong>backups and performance optimization of an existing, live tenant</strong>. It generates a JSON file containing a complete, point-in-time snapshot of <strong>all your current live content</strong>—exams, books, prices, and settings. This file is a perfect backup and serves a key performance role.</p>
 
-    <h3 class="text-xl font-bold mt-6">7.4 The "Golden Workflow" for Content Management and Optimization</h3>
-    <p>Understanding the interplay between WordPress, the API, and the static JSON files is key to managing the platform professionally. Here is the definitive workflow:</p>
-    <ol>
-        <li><strong>Day-to-Day Content Management:</strong> ALL content updates (adding exams, changing prices, creating books) are done exclusively in the WordPress admin panel. The app will automatically fetch these changes via the live API, leveraging its caching system. <strong>You do not need to generate a new JSON file for daily updates.</strong></li>
-        <li class="mt-2"><strong>Periodic Performance Optimization:</strong> Periodically (e.g., once a month or after a major content addition), follow these steps to improve the initial load speed for new visitors:
-            <ul class="list-disc pl-5 mt-2">
-                <li>Go to <strong>Exam App Engine → Tools</strong> and click <strong>"Generate Full Content Snapshot"</strong>.</li>
-                <li>Download the fully populated JSON file.</li>
-                <li>During your next planned deployment of the React app, replace the old static fallback file in the <code>/public</code> directory (e.g., <code>medical-coding-config.json</code>) with this new one.</li>
-            </ul>
-        </li>
-    </ol>
-    <p>By keeping the static fallback file reasonably up-to-date, you ensure that new users (or those with a cleared cache) have the fastest possible first-load experience, as the app can render the correct content instantly without waiting for the initial API call to complete.</p>
+    <h3 class="text-xl font-bold mt-6">7.4 The "Golden Workflow": A Brief Overview</h3>
+    <p>Understanding the interplay between WordPress, the live API, and the static JSON files is key to managing the platform professionally. In short:</p>
+    <ul>
+        <li><strong>Daily content changes</strong> are made in WordPress and are reflected <strong>live in the app via the API</strong> for logged-in users.</li>
+        <li>The <strong>Full Content Snapshot</strong> is used periodically to update the app's static fallback file, ensuring the <strong>fastest possible initial load time</strong> for new visitors.</li>
+    </ul>
+    <p>For a complete, detailed explanation of this crucial workflow, please refer to <strong><a href="#chapter-16">Chapter 14: The Golden Workflow: Performance & Content Management</a></strong>.</p>
 `;

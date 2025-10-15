@@ -1,19 +1,46 @@
 export const tocContent = `
-    <h2 class="text-3xl font-bold font-display text-slate-800 mb-6" id="chapter-2">Table of Contents</h2>
-    <ol class="list-decimal list-inside space-y-3 text-lg handbook-toc">
-        <li><a href="#chapter-3"><strong>Introduction:</strong> The Vision & Core Capabilities</a></li>
-        <li><a href="#chapter-4"><strong>High-Level Architecture:</strong> Multi-Tenancy & Data Flow</a></li>
-        <li><a href="#chapter-5"><strong>Core Application Flow:</strong> Authentication & Caching</a></li>
-        <li><a href="#chapter-6"><strong>WordPress Backend:</strong> The Integration Plugin (Part 1)</a></li>
-        <li><a href="#chapter-7"><strong>WordPress Backend:</strong> The Integration Plugin (Part 2)</a></li>
-        <li><a href="#chapter-8"><strong>E-Commerce Integration:</strong> WooCommerce & Monetization</a></li>
-        <li><a href="#chapter-9"><strong>Admin Panel:</strong> Tenant Blueprint Generator</a></li>
-        <li><a href="#chapter-10"><strong>AI & Automation:</strong> Content Engine & Prompts</a></li>
-        <li><a href="#chapter-11"><strong>Frontend Tech Stack:</strong> Vite, React & TypeScript</a></li>
-        <li><a href="#chapter-12"><strong>Frontend Architecture:</strong> Directory Structure & Key Components</a></li>
-        <li><a href="#chapter-13"><strong>Global State Management:</strong> AuthContext & AppContext</a></li>
-        <li><a href="#chapter-14"><strong>Multi-Tenancy in Practice:</strong> Configuration & Theming</a></li>
-        <li><a href="#chapter-15"><strong>Performance & Caching:</strong> Client & Server Strategies</a></li>
-        <li><a href="#chapter-16"><strong>Onboarding a New Tenant:</strong> The Complete Workflow</a></li>
-    </ol>
+    <h2 class="text-3xl font-bold font-display text-slate-800" style="page-break-before: always;">Table of Contents</h2>
+    
+    <div class="space-y-4 mt-6 text-base handbook-toc">
+        <div>
+            <h3 class="text-lg font-semibold text-slate-700">Part I: Core Concepts</h3>
+            <ol class="list-decimal list-inside space-y-1 pl-4 mt-1">
+                <li><a href="#ch1">Introduction & The Headless Advantage</a></li>
+                <li><a href="#ch2">Architecture & Multi-Tenancy</a></li>
+                <li><a href="#ch3">The Golden Workflow: Performance & Content</a></li>
+            </ol>
+        </div>
+        <div>
+            <h3 class="text-lg font-semibold text-slate-700">Part II: User Guide</h3>
+            <ol class="list-decimal list-inside space-y-1 pl-4 mt-1" start="4">
+                <li><a href="#ch4">The Dashboard & Subscription Management</a></li>
+                <li><a href="#ch5">Taking Exams & Understanding Results</a></li>
+            </ol>
+        </div>
+        <div>
+            <h3 class="text-lg font-semibold text-slate-700">Part III: Administrator's Guide (WordPress Backend)</h3>
+            <ol class="list-decimal list-inside space-y-1 pl-4 mt-1" start="6">
+                <li><a href="#ch6">Plugin Setup & Admin Menu Overview</a></li>
+                <li><a href="#ch7">Managing Content: CPTs & Bulk Import</a></li>
+                <li><a href="#ch8">Configuring Settings & Using Tools</a></li>
+            </ol>
+        </div>
+        <div>
+            <h3 class="text-lg font-semibold text-slate-700">Part IV: Administrator's Guide (In-App Tools)</h3>
+            <ol class="list-decimal list-inside space-y-1 pl-4 mt-1" start="9">
+                <li><a href="#ch9">In-App Admin Panel & Debug Sidebar</a></li>
+                <li><a href="#ch10">Sales Analytics Dashboard</a></li>
+                <li><a href="#ch11">Exam Program Customizer</a></li>
+                <li><a href="#ch12">Product Customizer (Simple, Subscriptions, Bundles)</a></li>
+                <li><a href="#ch13">AI Content Engine</a></li>
+            </ol>
+        </div>
+        <div>
+            <h3 class="text-lg font-semibold text-slate-700">Part V: Onboarding & Development</h3>
+            <ol class="list-decimal list-inside space-y-1 pl-4 mt-1" start="14">
+                <li><a href="#ch14">The Complete Onboarding Workflow</a></li>
+                <li><a href="#ch15">Plugin Integration & Shortcodes</a></li>
+            </ol>
+        </div>
+    </div>
 `;

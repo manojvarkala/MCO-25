@@ -21,8 +21,8 @@ if (!function_exists('mco_get_default_certificate_templates')) {
     }
 }
 
-// NEW: Function to generate a clean, ready-to-use blueprint for a new tenant.
-function mco_get_tenant_blueprint_data() {
+// NEW: A unified function to generate either an empty blueprint or a full content snapshot.
+function mco_get_full_snapshot_data($is_blueprint = false) {
     $site_name = get_bloginfo('name');
     $site_url_parts = parse_url(home_url());
     $site_host = $site_url_parts['host'] ?? 'default-site.com';
@@ -37,10 +37,22 @@ function mco_get_tenant_blueprint_data() {
         [ 'id' => 'noir', 'name' => 'Noir' ],
     ];
 
-    // Use the actual configured templates, falling back to default if none are saved.
     $configured_templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
 
-    $blueprint_object = [
+    // If it's just a blueprint, we return empty arrays for content.
+    if ($is_blueprint) {
+        $dynamic_data = [
+            'exams' => [],
+            'examProductCategories' => [],
+            'suggestedBooks' => [],
+            'examPrices' => new stdClass()
+        ];
+    } else {
+        // Otherwise, we fetch all live data.
+        $dynamic_data = mco_get_app_config_data();
+    }
+
+    $snapshot_object = [
         "version" => current_time('YmdHis'),
         "organizations" => [
             [
@@ -50,16 +62,16 @@ function mco_get_tenant_blueprint_data() {
                 "logo" => $logo_url,
                 "availableThemes" => $available_themes,
                 "activeThemeId" => "default",
-                "exams" => [], // Empty for a new tenant
-                "examProductCategories" => [], // Empty for a new tenant
-                "certificateTemplates" => array_values($configured_templates), // Use configured templates
-                "suggestedBooks" => [] // Empty for a new tenant
+                "exams" => $dynamic_data['exams'],
+                "examProductCategories" => $dynamic_data['examProductCategories'],
+                "certificateTemplates" => array_values($configured_templates),
+                "suggestedBooks" => $dynamic_data['suggestedBooks']
             ]
         ],
-        "examPrices" => new stdClass() // Empty object for a new tenant
+        "examPrices" => $dynamic_data['examPrices'] ?? new stdClass()
     ];
     
-    return $blueprint_object;
+    return $snapshot_object;
 }
 
 

@@ -828,6 +828,33 @@
           "thumbnailUrl": false,
           "affiliateLinks": {
             "com": "https://www.amazon.com/s?k=Revenue+Cycle+Handbook&tag=mykada-20",
-            "in": "https://www.amazon.in/s?k=Revenue+Cycle+Handbook--- START OF FILE public/template-recommended-books.csv ---
-
-book_id,title,description,thumbnail_url,link_com,link_in,link_ae
+            "in": "https://www.amazon.in/s?k=Revenue+Cycle+Handbook",
+            "ae": ""
+          }
+        }
+      ],
+      "examPrices": {
+        "exam-mcf-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "medical-coding-fundamentals-certification", "productId": 1241612 },
+        "exam-hi-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "health-informatics-certification-exam", "productId": 1241611 },
+        "exam-rcm-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "revenue-cycle-management-certification-exam", "productId": 1241610 },
+        "exam-em-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "e-m-coding-certification-exam", "productId": 1241609 },
+        "exam-ap-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "anatomy-physiology-certification-exam", "productId": 1241608 },
+        "exam-mta-cert": { "price": 1, "regularPrice": 80, "productSlug": "exam-mta-cert", "productId": 1241607 },
+        "exam-cic-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "exam-cic-cert", "productId": 1241606 },
+        "exam-coc-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "exam-coc-cert", "productId": 1241605 },
+        "exam-cpma-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "exam-cpma-cert", "productId": 1241604 },
+        "exam-crc-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "exam-crc-cert", "productId": 1241603 },
+        "exam-cpb-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "exam-cpb-cert", "productId": 1241602 },
+        "exam-icd-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "exam-icd-cert", "productId": 1241601 },
+        "exam-risk-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "exam-risk-cert", "productId": 1241600 },
+        "exam-ccs-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "exam-ccs-cert", "productId": 1241599 },
+        "exam-billing-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "exam-billing-cert", "productId": 1241598 },
+        "exam-cca-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "exam-cca-cert", "productId": 1241597 },
+        "exam-cpc-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "exam-cpc-cert", "productId": 1241596 },
+        "sub-monthly": { "price": 19.99, "regularPrice": 29.99, "productId": 1241613 },
+        "sub-yearly": { "price": 149.99, "regularPrice": 239.88, "productId": 1241614 },
+        "exam-cpc-cert-1": { "price": 59.99, "regularPrice": 79.98, "productId": 1241615 }
+      }
+    }
+  ]
+}

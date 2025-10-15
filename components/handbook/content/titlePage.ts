@@ -6,7 +6,7 @@ export const titlePageContent = `
         <div class="mt-auto pt-8 text-sm text-slate-500">
             <p class="font-semibold text-slate-600 text-base">Manoj Balakrishnan</p>
             <p class="text-xs text-slate-400">Lead Architect & Visionary</p>
-            <p class="mt-8">Version 1.0.3</p>
+            <p class="mt-8">Version 2.2.0</p>
             <p>&copy; ${new Date().getFullYear()} Annapoorna Infotech. All Rights Reserved.</p>
         </div>
     </div>

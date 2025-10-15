@@ -16,7 +16,7 @@ if (!function_exists('mco_add_admin_menu')) {
             25                          // Position
         );
 
-        // Step 2: Add the CPTs as submenu items. WordPress will handle the links correctly.
+        // Step 2: Add the CPTs as submenu items under the new parent.
         add_submenu_page(
             'mco-exam-engine',                  // Parent slug
             'Exam Programs',                    // Page Title
@@ -53,6 +53,8 @@ if (!function_exists('mco_register_admin_hooks')) {
         add_action('admin_post_mco_bulk_import_csv', 'mco_handle_csv_upload');
         // New hook for blueprint generation
         add_action('admin_post_mco_generate_tenant_blueprint', 'mco_handle_generate_tenant_blueprint');
+        // New hook for full content snapshot generation
+        add_action('admin_post_mco_generate_full_snapshot', 'mco_handle_generate_full_snapshot');
         add_action('add_meta_boxes', 'mco_add_exam_program_meta_boxes');
         add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta_data');
         
@@ -164,7 +166,7 @@ if (!function_exists('mco_admin_enqueue_scripts')) {
         // The settings page slug is now 'exam-app-engine_page_mco-exam-engine'.
         // We check for the CPT list view ('edit.php') and our custom page.
         $screen = get_current_screen();
-        if (!$screen || ($screen->post_type !== 'mco_exam_program' && $screen->base !== 'toplevel_page_mco-exam-engine')) {
+        if (!$screen || ($screen->post_type !== 'mco_exam_program' && $screen->base !== 'toplevel_page_mco-exam-engine' && $screen->base !== 'exam-app-engine_page_mco-exam-engine')) {
             return;
         }
         
@@ -483,15 +485,19 @@ function mco_render_tools_tab() {
     
     $all_requirements_met = empty($missing_requirements);
     ?>
-    <h2>Tools</h2><p>Use these tools for maintenance and troubleshooting.</p><table class="form-table">
-        <tr valign="top">
-            <th scope="row">New Tenant Blueprint</th>
+    <h2>Tools</h2><p>Use these tools for maintenance and onboarding new clients.</p>
+    <table class="form-table">
+         <tr valign="top">
+            <th scope="row">Tenant Blueprint Generator</th>
             <td>
                 <?php if ($all_requirements_met): ?>
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <input type="hidden" name="action" value="mco_generate_tenant_blueprint">
                         <?php wp_nonce_field('mco_generate_blueprint_nonce'); ?>
-                        <p class="description" style="margin-bottom: 10px;">Generate a ready-to-use JSON configuration file for a new tenant. This file includes the basic structure, configured certificate templates, and themes, but with empty content arrays (exams, books, etc.).</p>
+                        <p class="description" style="margin-bottom: 10px;">
+                            <strong>Use Case: Onboarding a New Tenant.</strong><br/>
+                            This generates a minimal JSON "scaffold" with branding and templates, but with empty content arrays (exams, books, etc.). This is the file you deploy with the React app for a new, empty tenant site to prevent startup errors.
+                        </p>
                         <?php submit_button('Generate & Download Blueprint', 'primary', 'submit_generate_blueprint', false); ?>
                     </form>
                 <?php else: ?>
@@ -508,6 +514,20 @@ function mco_render_tools_tab() {
                 <?php endif; ?>
             </td>
         </tr>
+         <tr valign="top">
+            <th scope="row">Full Content Snapshot</th>
+            <td>
+                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input type="hidden" name="action" value="mco_generate_full_snapshot">
+                    <?php wp_nonce_field('mco_generate_full_snapshot_nonce'); ?>
+                    <p class="description" style="margin-bottom: 10px;">
+                        <strong>Use Case: Backing Up or Optimizing a Live Tenant.</strong><br/>
+                        This generates a complete JSON file of <strong>all your current live content</strong> (exams, books, prices, etc.). Use this file as a backup, or to periodically update the static fallback file in your React app to improve initial load times for new visitors.
+                    </p>
+                    <?php submit_button('Generate & Download Snapshot', 'primary', 'submit_generate_snapshot', false); ?>
+                </form>
+            </td>
+        </tr>
         <tr valign="top"><th scope="row">Server Cache</th><td><form method="post" action=""><?php wp_nonce_field('mco_clear_cache', 'mco_clear_cache_nonce'); ?><p class="description" style="margin-bottom: 10px;">The plugin caches app configuration data for performance. Clear this cache if you've made changes and don't see them reflected in the app.</p><?php submit_button('Clear Server Config Cache', 'secondary', 'submit_clear_cache', false); ?></form></td></tr>
         <tr valign="top"><th scope="row">Google Sheet URL Tester</th><td><form method="post" action=""><?php wp_nonce_field('mco_test_sheet_url_action', 'mco_test_sheet_url_nonce'); ?><p class="description" style="margin-bottom: 10px;">Test if a Google Sheet URL is accessible from your server. This helps diagnose "Question Sheet: Failure" errors.</p><input type="text" name="sheet_url_to_test" class="widefat" placeholder="Paste Google Sheet URL here..." value="<?php echo isset($_POST['sheet_url_to_test']) ? esc_attr($_POST['sheet_url_to_test']) : ''; ?>" /><?php submit_button('Test URL', 'secondary', 'submit_test_url', false); ?></form><?php if (!empty($test_results_html)) : ?><div class="mco-feedback-box" style="margin-top: 15px;"><?php echo $test_results_html; ?></div><?php endif; ?></td></tr>
     </table>
@@ -519,16 +539,35 @@ function mco_handle_generate_tenant_blueprint() {
         wp_die('Security check failed.');
     }
 
-    $blueprint_data = mco_get_tenant_blueprint_data();
+    $blueprint_data = mco_get_full_snapshot_data(true); // true for empty blueprint
     
     $site_url_parts = parse_url(home_url());
     $site_host = $site_url_parts['host'] ?? 'default-site.com';
-    $filename = 'tenant-config-' . sanitize_title($site_host) . '.json';
+    $filename = 'tenant-blueprint-' . sanitize_title($site_host) . '.json';
 
     header('Content-Type: application/json; charset=utf-8');
     header('Content-Disposition: attachment; filename="' . $filename . '"');
     
     echo wp_json_encode($blueprint_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+// New handler for generating the full content snapshot
+function mco_handle_generate_full_snapshot() {
+    if (!current_user_can('manage_options') || !isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_generate_full_snapshot_nonce')) {
+        wp_die('Security check failed.');
+    }
+
+    $snapshot_data = mco_get_full_snapshot_data(false); // false for full content
+    
+    $site_url_parts = parse_url(home_url());
+    $site_host = $site_url_parts['host'] ?? 'default-site.com';
+    $filename = 'content-snapshot-' . sanitize_title($site_host) . '-' . current_time('Y-m-d') . '.json';
+
+    header('Content-Type: application/json; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    
+    echo wp_json_encode($snapshot_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     exit;
 }
 

@@ -1,5 +1,5 @@
 export const coverContent = `
-    <div class="h-full flex flex-col items-center justify-center text-center text-white bg-gradient-to-br from-slate-800 via-cyan-900 to-slate-900 p-8 rounded-lg">
+    <div class="h-full flex flex-col items-center justify-center text-center text-white bg-gradient-to-br from-slate-800 via-cyan-900 to-slate-900 p-8">
         <div class="mb-4">
             <svg class="mx-auto h-20 w-20 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -12,7 +12,7 @@ export const coverContent = `
         <div class="mt-auto pt-8 text-sm text-slate-400">
             <p class="font-semibold text-slate-300 text-base">Manoj Balakrishnan</p>
             <p class="text-xs text-slate-400">Lead Architect & Visionary</p>
-            <p class="mt-6">Version 1.0.3</p>
+            <p class="mt-6">Version 2.2.0</p>
         </div>
     </div>
 `;

@@ -1,5 +1,4 @@
 import React, { FC, useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -11,119 +10,157 @@ import { chapters } from './chapters.ts';
 
 const Handbook: FC = () => {
     const [isDownloading, setIsDownloading] = useState(false);
-    const [currentPage, setCurrentPage] = useState(0);
-    const [isAnimating, setIsAnimating] = useState<false | 'forward' | 'backward'>(false);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [pageInfo, setPageInfo] = useState({ currentPage: 1, totalPages: 1 });
+
+    const calculatePages = useCallback(() => {
+        const container = scrollContainerRef.current;
+        if (container) {
+            // A page spread is the visible width of the container
+            const pageSpreadWidth = container.clientWidth;
+            // The total width includes all the columns
+            const totalWidth = container.scrollWidth;
+            if (pageSpreadWidth > 0) {
+                const totalPageSpreads = Math.ceil(totalWidth / pageSpreadWidth);
+                const currentPageSpread = Math.round(container.scrollLeft / pageSpreadWidth) + 1;
+                setPageInfo({ currentPage: currentPageSpread, totalPages: totalPageSpreads });
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(calculatePages, 150); // Give a bit more time for rendering
+        const resizeObserver = new ResizeObserver(calculatePages);
+        if (scrollContainerRef.current) {
+            resizeObserver.observe(scrollContainerRef.current);
+        }
+        return () => {
+            clearTimeout(timer);
+            resizeObserver.disconnect();
+        };
+    }, [calculatePages]);
+
+    const handleNavigate = (direction: 'forward' | 'backward') => {
+        const container = scrollContainerRef.current;
+        if (container) {
+            const pageSpreadWidth = container.clientWidth;
+            const newScrollLeft = direction === 'forward'
+                ? container.scrollLeft + pageSpreadWidth
+                : container.scrollLeft - pageSpreadWidth;
+            container.scrollTo({ left: newScrollLeft, behavior: 'smooth' });
+        }
+    };
     
-    const handleNavigate = useCallback((direction: 'forward' | 'backward') => {
-        if (isAnimating) return;
-
-        let newPage = currentPage;
-        if (direction === 'forward') {
-            newPage = Math.min(chapters.length - 2, currentPage + 2);
-        } else {
-            newPage = Math.max(0, currentPage - 2);
-        }
-
-        if (newPage !== currentPage) {
-            setIsAnimating(direction);
-            setTimeout(() => {
-                setCurrentPage(newPage);
-                setIsAnimating(false);
-            }, 500);
-        }
-    }, [isAnimating, currentPage]);
-
+    useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        
+        let scrollTimeout: number;
+        const handleScroll = () => {
+           window.clearTimeout(scrollTimeout);
+           scrollTimeout = window.setTimeout(() => {
+                calculatePages();
+           }, 100);
+        };
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [calculatePages]);
+    
     const handleDownloadPdf = async () => {
         setIsDownloading(true);
         const toastId = toast.loading('Generating professional handbook PDF...', { duration: Infinity });
-    
+
         try {
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-            const pageWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = pdf.internal.pageSize.getHeight();
-            const margin = 40;
-            const contentWidth = pageWidth - margin * 2;
-    
-            // Function to add header and footer
-            const addHeaderFooter = (pdfInstance: jsPDF, pageNum: number, totalPages: number) => {
-                pdfInstance.setFontSize(8);
-                pdfInstance.setTextColor(150);
-                pdfInstance.text('Annapoorna Examination Engine Handbook', margin, margin / 2);
-                pdfInstance.text(`Page ${pageNum} of ${totalPages}`, pageWidth - margin, pageHeight - margin / 2, { align: 'right' });
+            const A4_WIDTH = 595.28;
+            const A4_HEIGHT = 841.89;
+            const MARGIN = 40;
+            const CONTENT_WIDTH = A4_WIDTH - MARGIN * 2;
+            const CONTENT_HEIGHT = A4_HEIGHT - MARGIN * 2 - 30; // 30 for header/footer
+
+            const addHeaderAndFooter = (pageNumber: number, totalPages: number) => {
+                pdf.setFontSize(8);
+                pdf.setTextColor(150);
+                pdf.text('Annapoorna Examination Engine Handbook', MARGIN, MARGIN / 2);
+                pdf.text(`Page ${pageNumber} of ${totalPages}`, A4_WIDTH - MARGIN - 50, A4_HEIGHT - MARGIN / 2);
             };
 
-            // 1. Render all content into one super-long container (without padding)
-            const contentContainer = document.createElement('div');
-            contentContainer.style.width = `${contentWidth}px`;
-            contentContainer.style.position = 'absolute';
-            contentContainer.style.left = '-9999px';
-            contentContainer.style.backgroundColor = 'white';
+            const renderContainer = document.createElement('div');
+            renderContainer.style.position = 'absolute';
+            renderContainer.style.left = '-9999px';
+            renderContainer.style.width = `${CONTENT_WIDTH}px`;
+            renderContainer.style.fontFamily = 'sans-serif';
+            renderContainer.style.color = '#334155';
+            document.body.appendChild(renderContainer);
 
-            let allContentHtml = '';
-            for (let i = 1; i < chapters.length; i++) {
-                // Wrap each chapter in a padded div for html2canvas to render spacing
-                allContentHtml += `<div class="prose max-w-none prose-slate" style="padding: ${margin}px; page-break-inside: avoid;">${chapters[i].content}</div><div style="height: 1px;"></div>`;
-            }
-            contentContainer.innerHTML = allContentHtml;
-            document.body.appendChild(contentContainer);
-
-            const contentCanvas = await html2canvas(contentContainer, {
-                scale: 2,
-                useCORS: true,
-                windowWidth: contentContainer.scrollWidth,
-                windowHeight: contentContainer.scrollHeight,
-            });
-            document.body.removeChild(contentContainer);
-
-            // 2. Add Cover Page separately
+            // 1. Render Cover
             const coverElement = document.createElement('div');
+            coverElement.style.width = `${A4_WIDTH}px`;
+            coverElement.style.height = `${A4_HEIGHT}px`;
             coverElement.innerHTML = chapters[0].content;
-            coverElement.style.width = `${pageWidth}px`;
-            coverElement.style.height = `${pageHeight}px`;
-            coverElement.style.position = 'absolute';
-            coverElement.style.left = '-9999px';
             document.body.appendChild(coverElement);
             const coverCanvas = await html2canvas(coverElement, { scale: 2, useCORS: true });
+            pdf.addImage(coverCanvas.toDataURL('image/png'), 'PNG', 0, 0, A4_WIDTH, A4_HEIGHT);
             document.body.removeChild(coverElement);
-            const coverImgData = coverCanvas.toDataURL('image/png');
-            pdf.addImage(coverImgData, 'PNG', 0, 0, pageWidth, pageHeight);
+            
+            let pdfPageCount = 1;
 
-            // 3. Paginate the main content canvas
-            const imgData = contentCanvas.toDataURL('image/png');
-            const contentImgHeight = contentCanvas.height * (pageWidth / contentCanvas.width);
-            const pageContentHeight = pageHeight;
-            let heightLeft = contentImgHeight;
-            let position = 0;
-            let pageCount = 1;
-
-            while (heightLeft > 0) {
+            // 2. Render all other chapters
+            for (let i = 1; i < chapters.length; i++) {
+                toast.loading(`Processing Chapter ${i} of ${chapters.length - 1}...`, { id: toastId });
                 pdf.addPage();
-                pageCount++;
-                pdf.addImage(imgData, 'PNG', 0, -position, pageWidth, contentImgHeight);
-                heightLeft -= pageContentHeight;
-                position += pageContentHeight;
+                pdfPageCount++;
+
+                const chapterDiv = document.createElement('div');
+                chapterDiv.className = 'prose max-w-none prose-slate';
+                chapterDiv.innerHTML = chapters[i].content;
+                renderContainer.appendChild(chapterDiv);
+
+                const canvas = await html2canvas(chapterDiv, {
+                    scale: 2,
+                    useCORS: true,
+                    windowWidth: chapterDiv.scrollWidth,
+                    windowHeight: chapterDiv.scrollHeight
+                });
+                
+                const imgData = canvas.toDataURL('image/png');
+                const imgHeight = (canvas.height * CONTENT_WIDTH) / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 0;
+
+                // First page of the chapter
+                pdf.addImage(imgData, 'PNG', MARGIN, MARGIN, CONTENT_WIDTH, imgHeight);
+                heightLeft -= CONTENT_HEIGHT;
+                
+                // Add new pages if content overflows
+                while (heightLeft > 0) {
+                    position += CONTENT_HEIGHT;
+                    pdf.addPage();
+                    pdfPageCount++;
+                    pdf.addImage(imgData, 'PNG', MARGIN, MARGIN - position, CONTENT_WIDTH, imgHeight);
+                    heightLeft -= CONTENT_HEIGHT;
+                }
+                renderContainer.removeChild(chapterDiv);
+            }
+            
+            // 3. Add Headers and Footers to all but the cover page
+            for(let i = 2; i <= pdfPageCount; i++) {
+                pdf.setPage(i);
+                addHeaderAndFooter(i-1, pdfPageCount - 1);
             }
 
-            // 4. Add headers and footers to all pages except the cover
-            const totalPages = pdf.internal.pages.length - 1;
-            for (let i = 2; i <= totalPages + 1; i++) {
-                pdf.setPage(i);
-                addHeaderFooter(pdf, i - 1, totalPages);
-            }
-    
+            document.body.removeChild(renderContainer);
+
             pdf.save('Annapoorna-Examination-Engine-Handbook.pdf');
-            toast.success('Handbook downloaded!', { id: toastId });
+            toast.success('Handbook downloaded!', { id: toastId, duration: 4000 });
         } catch (error) {
             console.error("PDF generation failed:", error);
-            toast.error('Failed to generate PDF.', { id: toastId });
+            toast.error('Failed to generate PDF.', { id: toastId, duration: 4000 });
         } finally {
             setIsDownloading(false);
         }
     };
 
-
-    const leftPageClass = isAnimating === 'backward' ? 'animate-page-flip-backward' : '';
-    const rightPageClass = isAnimating === 'forward' ? 'animate-page-flip-forward' : '';
 
     return (
         <div className="bg-[rgb(var(--color-muted-rgb))] p-2 sm:p-4 rounded-xl shadow-inner">
@@ -136,19 +173,24 @@ const Handbook: FC = () => {
                         {isDownloading ? <Spinner size="sm"/> : <Download size={16} />}
                         {isDownloading ? 'Generating...' : 'Download as PDF'}
                     </button>
-                    <button onClick={() => handleNavigate('backward')} disabled={!!isAnimating || currentPage === 0} className="p-2 rounded-md bg-white border border-slate-300 disabled:opacity-50 hover:bg-slate-50"><ChevronLeft size={20} /></button>
-                    <span className="text-sm font-semibold text-slate-600">{Math.floor(currentPage / 2) + 1} / {Math.ceil(chapters.length / 2)}</span>
-                    <button onClick={() => handleNavigate('forward')} disabled={!!isAnimating || currentPage >= chapters.length - 2} className="p-2 rounded-md bg-white border border-slate-300 disabled:opacity-50 hover:bg-slate-50"><ChevronRight size={20} /></button>
+                    <button onClick={() => handleNavigate('backward')} disabled={pageInfo.currentPage <= 1} className="p-2 rounded-md bg-white border border-slate-300 disabled:opacity-50 hover:bg-slate-50"><ChevronLeft size={20} /></button>
+                    <span className="text-sm font-semibold text-slate-600 w-16 text-center">{pageInfo.currentPage} / {pageInfo.totalPages}</span>
+                    <button onClick={() => handleNavigate('forward')} disabled={pageInfo.currentPage >= pageInfo.totalPages} className="p-2 rounded-md bg-white border border-slate-300 disabled:opacity-50 hover:bg-slate-50"><ChevronRight size={20} /></button>
                 </div>
             </div>
-            <div className="w-full max-w-7xl mx-auto aspect-[4/3] perspective">
-                <div className="w-full h-full grid grid-cols-2 gap-4 transform-style-3d">
-                    <div className={`shadow-lg rounded-l-lg border-r border-slate-200 overflow-hidden relative ${leftPageClass} backface-hidden ${chapters[currentPage]?.isCover ? 'p-0' : 'bg-white'}`}>
-                        <div className="p-4 sm:p-8 h-full overflow-y-auto prose max-w-none prose-slate prose-pre:whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: chapters[currentPage]?.content || '' }} />
-                    </div>
-                    <div className={`shadow-lg rounded-r-lg border-l border-slate-200 overflow-hidden relative ${rightPageClass} backface-hidden bg-white`}>
-                        <div className="p-4 sm:p-8 h-full overflow-y-auto prose max-w-none prose-slate prose-pre:whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: chapters[currentPage + 1]?.content || '' }} />
-                    </div>
+            <div 
+                ref={scrollContainerRef}
+                className="w-full max-w-7xl mx-auto aspect-[4/3] overflow-x-scroll overflow-y-hidden scroll-smooth snap-x snap-mandatory shadow-2xl bg-slate-400"
+                style={{ scrollbarWidth: 'thin' }}
+            >
+                <div className="h-full w-fit prose max-w-none prose-slate" style={{ columnWidth: 'calc(50% - 3rem)', columnGap: '6rem', columnFill: 'auto', padding: '0 3rem' }}>
+                    {chapters.map((chapter, index) => (
+                        <div
+                            key={index}
+                            className={`py-8 bg-white break-inside-avoid-column ${chapter.isCover ? 'h-full !p-0' : ''}`}
+                            dangerouslySetInnerHTML={{ __html: chapter.content }}
+                        />
+                    ))}
                 </div>
             </div>
         </div>
