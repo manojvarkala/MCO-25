@@ -10,7 +10,7 @@ interface AuthState {
     token: string | null;
     paidExamIds: string[];
     isSubscribed: boolean;
-    // FIX: Add spinsAvailable to auth state for Spin & Win feature.
+    // FIX: Add spinsAvailable to AuthState for Wheel of Fortune feature.
     spinsAvailable: number;
 }
 
@@ -70,8 +70,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         return false;
     }
   });
-  
-  // FIX: Add spinsAvailable state for Spin & Win feature.
+  // FIX: Add spinsAvailable state for Wheel of Fortune feature.
   const [spinsAvailable, setSpinsAvailable] = useState<number>(() => {
     try {
         const storedSpins = localStorage.getItem('spinsAvailable');
@@ -81,6 +80,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         return 0;
     }
   });
+  
   const [masqueradeAs, setMasqueradeAs] = useState<MasqueradeMode>('none');
   const [originalAuthState, setOriginalAuthState] = useState<AuthState | null>(null);
 
@@ -183,7 +183,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('isSubscribed');
             }
 
-            // FIX: Handle spinsAvailable from token payload.
+            // FIX: Handle spinsAvailable from token payload for Wheel of Fortune feature.
             if (typeof payload.spinsAvailable === 'number') {
                 setSpinsAvailable(payload.spinsAvailable);
                 localStorage.setItem('spinsAvailable', JSON.stringify(payload.spinsAvailable));
@@ -228,7 +228,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setToken(null);
             setPaidExamIds([]);
             setIsSubscribed(false);
-            // FIX: Reset spinsAvailable for visitor masquerade mode.
+            // FIX: Reset spinsAvailable when masquerading as a visitor.
             setSpinsAvailable(0);
             toast('Masquerade mode enabled. Viewing as a visitor.', { icon: '👻' });
         }
@@ -264,7 +264,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     token,
     paidExamIds,
     isSubscribed,
-    // FIX: Expose spinsAvailable through auth context.
+    // FIX: Expose spinsAvailable through the AuthContext.
     spinsAvailable,
     isEffectivelyAdmin,
     isMasquerading,
@@ -275,7 +275,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     startMasquerade,
     stopMasquerade,
   }), [
-    // FIX: Add spinsAvailable to dependency array.
     user, token, paidExamIds, isSubscribed, spinsAvailable,
     isEffectivelyAdmin, isMasquerading, masqueradeAs, loginWithToken,
     logout, updateUserName, startMasquerade, stopMasquerade

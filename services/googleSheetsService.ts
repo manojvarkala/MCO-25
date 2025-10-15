@@ -414,12 +414,13 @@ export const googleSheetsService = {
         }
     },
 
-    // FIX: Add spinWheel function to handle API call for the Spin & Win feature.
+    // FIX: Add spinWheel method for Wheel of Fortune feature.
+    // --- GAMIFICATION ---
     spinWheel: async (token: string): Promise<{ prizeId: string; prizeLabel: string; newToken: string; }> => {
         try {
             return await apiFetch('/spin-wheel', 'POST', token);
         } catch (error) {
-            console.error("Failed to spin the wheel:", error);
+            console.error("Failed to spin wheel:", error);
             throw error;
         }
     },
