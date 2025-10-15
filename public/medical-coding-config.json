@@ -634,6 +634,7 @@
       "certificateTemplates": [
         {
           "id": "cert-practice",
+          "name": "Default Practice Certificate",
           "title": "Certificate of Proficiency",
           "body": "This certifies that <strong>{candidateName}</strong> has successfully demonstrated proficiency in the <strong>{examName}</strong> practice exam, achieving a score of <strong>{finalScore}%</strong>.",
           "signature1Name": "Amelia Reed",
@@ -645,6 +646,7 @@
         },
         {
           "id": "cert-completion",
+          "name": "Default Completion Certificate",
           "title": "Certificate of Achievement",
           "body": "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.",
           "signature1Name": "Amelia Reed",
