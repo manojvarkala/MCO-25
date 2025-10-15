@@ -25,6 +25,8 @@ if (!function_exists('mco_register_custom_post_types')) {
 
         register_post_type('mco_exam_program', [
             'labels' => ['name' => 'Exam Programs', 'singular_name' => 'Exam Program'],
+            // FIX: Set show_in_menu to false. The menu item will be added manually in mco-admin.php.
+            // This prevents a race condition during activation that causes a fatal error.
             'public' => true, 'has_archive' => true, 'show_in_menu' => false, 'show_in_rest' => true,
             'supports' => ['title', 'editor', 'thumbnail'], 
             'taxonomies' => array_keys($taxonomies),
@@ -33,6 +35,7 @@ if (!function_exists('mco_register_custom_post_types')) {
 
         register_post_type('mco_recommended_book', [ 
             'labels' => ['name' => 'Recommended Books', 'singular_name' => 'Book'], 
+            // FIX: Set show_in_menu to false to prevent fatal activation error.
             'public' => true, 'has_archive' => false, 'show_in_menu' => false, 'show_in_rest' => true,
             'supports' => ['title', 'editor', 'thumbnail'] 
         ]);

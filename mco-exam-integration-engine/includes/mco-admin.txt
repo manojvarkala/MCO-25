@@ -1,31 +1,22 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-// --- HOOKS ---
-if (!function_exists('mco_register_admin_hooks')) {
-    function mco_register_admin_hooks() {
-        add_action('admin_menu', 'mco_add_admin_menu');
-        add_action('admin_init', 'mco_register_settings');
-        add_action('admin_init', 'mco_handle_admin_actions');
-        add_action('add_meta_boxes', 'mco_add_meta_boxes');
-        add_action('save_post', 'mco_save_meta_box_data');
-    }
-}
+// --- ADMIN MENU & PAGE ---
 
-// --- MENU & PAGE SETUP ---
 if (!function_exists('mco_add_admin_menu')) {
     function mco_add_admin_menu() {
         add_menu_page(
-            'Exam App Engine',
-            'Exam App Engine',
-            'manage_options',
-            'mco-exam-engine',
-            'mco_create_admin_page',
-            'dashicons-analytics',
-            25
+            'Exam App Engine', // Page Title
+            'Exam App Engine', // Menu Title
+            'manage_options', // Capability
+            'mco-exam-engine', // Menu Slug
+            'mco_exam_engine_admin_page', // Callback function to render the page
+            'dashicons-welcome-learn-more', // Icon
+            25 // Position
         );
         
-        // Manually add CPTs as sub-menu items
+        // FIX: Manually add submenu pages for the CPTs. This runs on the 'admin_menu' hook,
+        // which is after 'init' where the CPTs are registered, thus avoiding the fatal error.
         add_submenu_page(
             'mco-exam-engine',
             'Exam Programs',
@@ -43,526 +34,552 @@ if (!function_exists('mco_add_admin_menu')) {
     }
 }
 
-function mco_create_admin_page() {
-    $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'main_settings';
-    ?>
-    <div class="wrap">
-        <h1>MCO Exam Integration Engine <span class="title-count"><?php echo 'v' . MCO_PLUGIN_VERSION; ?></span></h1>
-        <h2 class="nav-tab-wrapper">
-            <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
-            <a href="?page=mco-exam-engine&tab=themes" class="nav-tab <?php echo $active_tab == 'themes' ? 'nav-tab-active' : ''; ?>">Themes</a>
-            <a href="?page=mco-exam-engine&tab=certificate_templates" class="nav-tab <?php echo $active_tab == 'certificate_templates' ? 'nav-tab-active' : ''; ?>">Certificate Templates</a>
-            <a href="?page=mco-exam-engine&tab=bulk_import" class="nav-tab <?php echo $active_tab == 'bulk_import' ? 'nav-tab-active' : ''; ?>">Bulk Import</a>
-            <a href="?page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
-        </h2>
 
-        <form method="post" action="options.php">
-            <?php
-            settings_fields('mco_settings_group');
-            do_settings_sections('mco-exam-engine');
-
-            if ($active_tab == 'main_settings') {
-                mco_render_main_settings_tab();
-            } elseif ($active_tab == 'themes') {
-                mco_render_themes_tab();
-            } elseif ($active_tab == 'certificate_templates') {
-                mco_render_certificate_templates_tab();
-            }
-            ?>
-        </form>
+if (!function_exists('mco_register_admin_hooks')) {
+    function mco_register_admin_hooks() {
+        add_action('admin_menu', 'mco_add_admin_menu');
+        add_action('admin_enqueue_scripts', 'mco_admin_enqueue_scripts');
+        add_action('admin_post_mco_bulk_import_csv', 'mco_handle_csv_upload');
+        // New hook for blueprint generation
+        add_action('admin_post_mco_generate_tenant_blueprint', 'mco_handle_generate_tenant_blueprint');
+        add_action('add_meta_boxes', 'mco_add_exam_program_meta_boxes');
+        add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta_data');
         
-        <?php
-        if ($active_tab == 'bulk_import') {
-            mco_render_bulk_import_tab();
-        } elseif ($active_tab == 'tools') {
-            mco_render_tools_tab();
-        }
-        ?>
-    </div>
-    <?php
+        // Actions for custom admin columns
+        add_filter('manage_mco_exam_program_posts_columns', 'mco_add_exam_program_columns');
+        add_action('manage_mco_exam_program_posts_custom_column', 'mco_display_exam_program_columns', 10, 2);
+        // Filter to clean up the title in the admin list view
+        add_filter('the_title', 'mco_strip_tags_from_admin_title', 10, 2);
+    }
 }
 
-// --- SETTINGS REGISTRATION & SANITIZATION ---
-function mco_register_settings() {
-    register_setting('mco_settings_group', 'mco_exam_app_url', ['sanitize_callback' => 'esc_textarea']);
-    register_setting('mco_settings_group', 'mco_custom_logo_url', ['sanitize_callback' => 'esc_url_raw']);
-    register_setting('mco_settings_group', 'mco_active_theme_id', ['sanitize_callback' => 'sanitize_key']);
-    register_setting('mco_settings_group', 'mco_certificate_templates', [
-        'type' => 'array',
-        'sanitize_callback' => 'mco_sanitize_certificate_templates'
-    ]);
-}
-
-if (!function_exists('mco_sanitize_certificate_templates')) {
-    function mco_sanitize_certificate_templates($input) {
-        if (!is_array($input)) {
-            return [];
-        }
-        $output = [];
-        foreach ($input as $index => $template) {
-            if (!is_array($template)) {
-                continue;
+// New function to strip tags from the title on the exam program admin list page
+if (!function_exists('mco_strip_tags_from_admin_title')) {
+    function mco_strip_tags_from_admin_title($title, $id = null) {
+        // Only run on the admin edit list page for our specific post type.
+        if (is_admin() && function_exists('get_current_screen')) {
+            $screen = get_current_screen();
+            if ($screen && $screen->id === 'edit-mco_exam_program' && $screen->post_type === 'mco_exam_program') {
+                return wp_strip_all_tags($title);
             }
-            $sanitized_template = [];
-            $sanitized_template['id'] = isset($template['id']) ? sanitize_text_field($template['id']) : 'cert-' . time() . $index;
-            $sanitized_template['name'] = isset($template['name']) ? sanitize_text_field($template['name']) : '';
-            $sanitized_template['title'] = isset($template['title']) ? sanitize_text_field($template['title']) : '';
-            $sanitized_template['body'] = isset($template['body']) ? wp_kses_post($template['body']) : '';
-            $sanitized_template['signature1Name'] = isset($template['signature1Name']) ? sanitize_text_field($template['signature1Name']) : '';
-            $sanitized_template['signature1Title'] = isset($template['signature1Title']) ? sanitize_text_field($template['signature1Title']) : '';
-            $sanitized_template['signature1ImageUrl'] = isset($template['signature1ImageUrl']) ? esc_url_raw($template['signature1ImageUrl']) : '';
-            $sanitized_template['signature2Name'] = isset($template['signature2Name']) ? sanitize_text_field($template['signature2Name']) : '';
-            $sanitized_template['signature2Title'] = isset($template['signature2Title']) ? sanitize_text_field($template['signature2Title']) : '';
-            $sanitized_template['signature2ImageUrl'] = isset($template['signature2ImageUrl']) ? esc_url_raw($template['signature2ImageUrl']) : '';
-            $output[] = $sanitized_template;
         }
-        return $output;
+        return $title;
     }
 }
 
 
-// --- TAB RENDERING FUNCTIONS ---
+// --- EXAM PROGRAM CPT META BOX ---
 
-function mco_render_main_settings_tab() {
-    ?>
-    <table class="form-table">
-        <tr valign="top">
-            <th scope="row">Exam Application URL(s)</th>
-            <td>
-                <textarea name="mco_exam_app_url" rows="3" class="large-text"><?php echo esc_attr(get_option('mco_exam_app_url')); ?></textarea>
-                <p class="description">Enter the full URL of your React application. For multiple domains (e.g., production and staging), enter each on a new line. This is required for CORS and SSO to function correctly.</p>
-            </td>
-        </tr>
-        <tr valign="top">
-            <th scope="row">Custom Logo URL</th>
-            <td>
-                <input type="text" name="mco_custom_logo_url" value="<?php echo esc_attr(get_option('mco_custom_logo_url')); ?>" class="large-text" />
-                <p class="description">Optional. Enter the full URL to a custom logo (e.g., https://...). If empty, it will use the Site Icon from Appearance > Customize.</p>
-            </td>
-        </tr>
-    </table>
-    <?php submit_button(); ?>
-    <?php
+if (!function_exists('mco_add_exam_program_meta_boxes')) {
+    function mco_add_exam_program_meta_boxes() {
+        add_meta_box(
+            'mco_exam_program_settings',
+            'Exam Program Settings',
+            'mco_render_exam_program_meta_box',
+            'mco_exam_program',
+            'normal',
+            'high'
+        );
+    }
 }
 
-function mco_render_themes_tab() {
-    $themes = [
-        ['id' => 'default', 'name' => 'Cyberpunk'],
-        ['id' => 'professional', 'name' => 'Professional'],
-        ['id' => 'serene', 'name' => 'Serene'],
-        ['id' => 'academic', 'name' => 'Academic'],
-        ['id' => 'noir', 'name' => 'Noir'],
-    ];
-    $active_theme = get_option('mco_active_theme_id', 'default');
-    ?>
-    <h3>Theme Selector</h3>
-    <p>Select the default visual theme for the examination application. Users can override this choice in their profile.</p>
-    <table class="form-table">
-        <tr valign="top">
-            <th scope="row">Active Default Theme</th>
-            <td>
-                <select name="mco_active_theme_id">
-                    <?php foreach ($themes as $theme) : ?>
-                        <option value="<?php echo esc_attr($theme['id']); ?>" <?php selected($active_theme, $theme['id']); ?>>
-                            <?php echo esc_html($theme['name']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </td>
-        </tr>
-    </table>
-    <?php submit_button('Save Theme'); ?>
+if (!function_exists('mco_render_exam_program_meta_box')) {
+    function mco_render_exam_program_meta_box($post) {
+        wp_nonce_field('mco_save_exam_program_meta_data', 'mco_exam_program_meta_nonce');
+        
+        $certificate_enabled = get_post_meta($post->ID, '_mco_certificate_enabled', true);
+        if ($certificate_enabled === '') $certificate_enabled = '1';
+
+        $practice_title_override = get_post_meta($post->ID, '_mco_practice_exam_title_override', true);
+        $cert_title_override = get_post_meta($post->ID, '_mco_cert_exam_title_override', true);
+        ?>
+        <table class="form-table">
+            <tbody>
+                <tr>
+                    <th scope="row"><label for="mco_practice_exam_title_override">Practice Exam Title Override</label></th>
+                    <td><input type="text" id="mco_practice_exam_title_override" name="mco_practice_exam_title_override" value="<?php echo esc_attr($practice_title_override); ?>" class="widefat" />
+                    <p class="description">Optional. If empty, defaults to "[Program Title] Practice".</p></td>
+                </tr>
+                 <tr>
+                    <th scope="row"><label for="mco_cert_exam_title_override">Certification Exam Title Override</label></th>
+                    <td><input type="text" id="mco_cert_exam_title_override" name="mco_cert_exam_title_override" value="<?php echo esc_attr($cert_title_override); ?>" class="widefat" />
+                     <p class="description">Optional. If empty, defaults to the main program title.</p></td>
+                </tr>
+                <tr>
+                    <th scope="row">Certificate</th>
+                    <td>
+                        <label for="mco_certificate_enabled">
+                            <input type="checkbox" name="mco_certificate_enabled" id="mco_certificate_enabled" value="1" <?php checked($certificate_enabled, '1'); ?> />
+                            <strong>Enable Certificate on Pass</strong>
+                        </label>
+                        <p class="description">
+                            If checked, a certificate will be issued for the main "Certification Exam". If unchecked, it will be treated as a "Proficiency Exam" with no certificate.
+                        </p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <?php
+    }
+}
+
+if (!function_exists('mco_save_exam_program_meta_data')) {
+    function mco_save_exam_program_meta_data($post_id) {
+        if (!isset($_POST['mco_exam_program_meta_nonce']) || !wp_verify_nonce($_POST['mco_exam_program_meta_nonce'], 'mco_save_exam_program_meta_data')) {
+            return;
+        }
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+            return;
+        }
+        if (!current_user_can('edit_post', $post_id)) {
+            return;
+        }
+
+        $cert_enabled_value = isset($_POST['mco_certificate_enabled']) && $_POST['mco_certificate_enabled'] === '1' ? '1' : '0';
+        update_post_meta($post_id, '_mco_certificate_enabled', $cert_enabled_value);
+
+        if (isset($_POST['mco_practice_exam_title_override'])) {
+            update_post_meta($post_id, '_mco_practice_exam_title_override', sanitize_text_field($_POST['mco_practice_exam_title_override']));
+        }
+        if (isset($_POST['mco_cert_exam_title_override'])) {
+            update_post_meta($post_id, '_mco_cert_exam_title_override', sanitize_text_field($_POST['mco_cert_exam_title_override']));
+        }
+    }
+}
+
+
+if (!function_exists('mco_admin_enqueue_scripts')) {
+    function mco_admin_enqueue_scripts($hook) {
+        if (strpos($hook, 'mco-exam-engine') === false) {
+            return;
+        }
+        
+        wp_enqueue_media();
+        ?>
+        <style>
+            .mco-admin-wrap { max-width: 960px; } .mco-admin-wrap h1 { margin-bottom: 20px; } .mco-admin-wrap .nav-tab { font-size: 14px; } .mco-admin-wrap .tab-content { margin-top: 20px; } .mco-admin-wrap .form-table th { width: 200px; } .mco-admin-wrap .form-table td input[type="text"], .mco-admin-wrap .form-table td input[type="password"], .mco-admin-wrap .form-table td textarea { width: 100%; max-width: 500px; } .mco-admin-wrap .form-table td .image-upload-wrapper { display: flex; align-items: center; gap: 10px; } .mco-admin-wrap .form-table td .image-upload-wrapper textarea { flex-grow: 1; } .mco-admin-wrap .form-table td textarea { height: 100px; } .mco-admin-wrap .notice-success { border-left-color: #4CAF50; } .mco-admin-wrap .notice-error { border-left-color: #F44336; } .mco-admin-wrap .notice-warning { border-left-color: #FFC107; } .mco-admin-wrap .mco-feedback-box { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin-top: 20px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 13px; } .mco-feedback-box.full-height { max-height: none; } .mco-feedback-box ul { margin: 0; padding-left: 20px; } .mco-feedback-box li.error { color: #dc3545; } .mco-feedback-box li.success { color: #28a745; }
+            .mco-req-list { list-style: none; margin: 0; padding: 0; } .mco-req-list li { display: flex; align-items: center; gap: 8px; font-weight: 500; } .mco-req-list .dashicons { font-size: 18px; } .mco-req-list .dashicons-yes-alt { color: #4CAF50; } .mco-req-list .dashicons-warning { color: #FFC107; }
+        </style>
+        <script>
+        jQuery(document).ready(function($){
+            $('body').on('click', '.mco-upload-image-button', function(e) {
+                e.preventDefault();
+                var button = $(this);
+                var targetInput = button.siblings('textarea');
+                var mediaUploader = wp.media({ title: 'Select or Upload Signature Image', button: { text: 'Use this image URL' }, multiple: false });
+                mediaUploader.on('select', function() {
+                    var attachment = mediaUploader.state().get('selection').first().toJSON();
+                    targetInput.val(attachment.url);
+                });
+                mediaUploader.open();
+            });
+        });
+        </script>
+        <?php
+    }
+}
+
+if (!function_exists('mco_exam_engine_admin_page')) {
+    function mco_exam_engine_admin_page() {
+        if (isset($_POST['mco_save_settings_nonce']) && wp_verify_nonce($_POST['mco_save_settings_nonce'], 'mco_save_settings')) {
+            $form_action = isset($_POST['mco_form_action']) ? sanitize_text_field($_POST['mco_form_action']) : '';
+
+            if ($form_action === 'save_main_settings') {
+                update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
+                update_option('mco_is_spin_wheel_enabled', isset($_POST['mco_is_spin_wheel_enabled']) ? 1 : 0);
+                $logo_url_input = isset($_POST['mco_logo_url']) ? trim(wp_unslash($_POST['mco_logo_url'])) : '';
+                $url_to_save = (strpos($logo_url_input, 'data:image') === 0) ? $logo_url_input : esc_url_raw($logo_url_input);
+                update_option('mco_logo_url', $url_to_save);
+                if (!empty($logo_url_input) && empty(get_option('mco_logo_url'))) {
+                    add_settings_error('mco_settings', 'logo_save_failed', 'The provided logo data URI could not be saved. This often happens if the base64 code is too long for your server\'s database configuration. <strong>Recommended solution:</strong> Upload the logo to your WordPress Media Library and paste the file URL here instead.', 'error');
+                }
+                delete_transient('mco_app_config_data');
+                update_option('mco_config_version', current_time('YmdHis'));
+                echo '<div class="notice notice-success is-dismissible"><p>Settings saved and cache cleared.</p></div>';
+
+            } elseif ($form_action === 'save_theme_settings') {
+                update_option('mco_active_theme', sanitize_text_field($_POST['mco_active_theme']));
+                delete_transient('mco_app_config_data');
+                update_option('mco_config_version', current_time('YmdHis'));
+                echo '<div class="notice notice-success is-dismissible"><p>Theme settings saved.</p></div>';
+            }
+        }
+
+        $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'main_settings';
+        ?>
+        <div class="wrap mco-admin-wrap">
+            <h1>Exam App Engine - Settings & Tools</h1>
+            <?php settings_errors('mco_settings'); ?>
+            <nav class="nav-tab-wrapper">
+                <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
+                <a href="?page=mco-exam-engine&tab=theme_selector" class="nav-tab <?php echo $active_tab == 'theme_selector' ? 'nav-tab-active' : ''; ?>">Theme Selector</a>
+                <a href="?page=mco-exam-engine&tab=bulk_import" class="nav-tab <?php echo $active_tab == 'bulk_import' ? 'nav-tab-active' : ''; ?>">Bulk Import</a>
+                <a href="?page=mco-exam-engine&tab=certificate_templates" class="nav-tab <?php echo $active_tab == 'certificate_templates' ? 'nav-tab-active' : ''; ?>">Certificate Templates</a>
+                <a href="?page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
+            </nav>
+            <div class="tab-content">
+                <?php
+                if ($active_tab == 'main_settings') mco_render_main_settings_tab();
+                elseif ($active_tab == 'theme_selector') mco_render_theme_selector_tab();
+                elseif ($active_tab == 'bulk_import') mco_render_bulk_import_tab();
+                elseif ($active_tab == 'certificate_templates') mco_render_certificate_templates_tab();
+                elseif ($active_tab == 'tools') mco_render_tools_tab();
+                ?>
+            </div>
+        </div>
+        <?php
+    }
+}
+
+function mco_render_main_settings_tab() { ?>
+    <form method="post" action="?page=mco-exam-engine&tab=main_settings">
+        <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
+        <input type="hidden" name="mco_form_action" value="save_main_settings">
+        <table class="form-table">
+            <tr valign="top">
+                <th scope="row">Exam Application URL(s)</th>
+                <td><textarea name="mco_exam_app_url"><?php echo esc_textarea(get_option('mco_exam_app_url')); ?></textarea><p class="description">Enter the full URL of your React exam app. Add multiple URLs on new lines if needed (e.g., for different environments like Vercel previews).</p></td>
+            </tr>
+             <tr valign="top">
+                <th scope="row">Custom Logo URL</th>
+                <td><textarea name="mco_logo_url" rows="4"><?php echo esc_textarea(get_option('mco_logo_url')); ?></textarea><p class="description">Optional. Enter the full URL to a custom logo (e.g., https://...) or paste a base64 data URI (e.g., data:image/png;base64,...). If empty, it will use the Site Icon from Customizer.</p></td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">Enable "Spin & Win"</th>
+                <td><input type="checkbox" name="mco_is_spin_wheel_enabled" value="1" <?php checked(1, get_option('mco_is_spin_wheel_enabled', 0)); ?> /><label for="mco_is_spin_wheel_enabled">Enable the gamified prize wheel for users.</label></td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">JWT Secret Key</th>
+                <td><code><?php echo defined('MCO_JWT_SECRET') ? 'Defined in wp-config.php' : '<strong>Not Defined!</strong>'; ?></code><p class="description">For security, you must define <code>MCO_JWT_SECRET</code> in your <code>wp-config.php</code> file. e.g., <code>define('MCO_JWT_SECRET', 'your-long-random-secret-key');</code></p></td>
+            </tr>
+        </table>
+        <?php submit_button(); ?>
+    </form>
+<?php }
+
+function mco_render_theme_selector_tab() { ?>
+    <form method="post" action="?page=mco-exam-engine&tab=theme_selector">
+        <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
+        <input type="hidden" name="mco_form_action" value="save_theme_settings">
+        <h2>Application Theme</h2><p>Select the default visual theme for the exam application. Users can override this choice in their own profile.</p>
+        <table class="form-table">
+            <tr valign="top">
+                <th scope="row">Default Theme</th>
+                <td>
+                    <select name="mco_active_theme" style="min-width: 200px;">
+                        <option value="default" <?php selected(get_option('mco_active_theme', 'default'), 'default'); ?>>Cyberpunk (Default)</option>
+                        <option value="professional" <?php selected(get_option('mco_active_theme'), 'professional'); ?>>Professional (Blue)</option>
+                        <option value="serene" <?php selected(get_option('mco_active_theme'), 'serene'); ?>>Serene (Green)</option>
+                        <option value="academic" <?php selected(get_option('mco_active_theme'), 'academic'); ?>>Academic (Crimson)</option>
+                        <option value="noir" <?php selected(get_option('mco_active_theme'), 'noir'); ?>>Noir (Dark)</option>
+                    </select>
+                </td>
+            </tr>
+        </table>
+        <?php submit_button(); ?>
+    </form>
+<?php }
+
+function mco_render_bulk_import_tab() { ?>
+    <h2>Bulk Import via CSV</h2><p>Upload a CSV file to create or update multiple Exam Programs or Recommended Books at once. Ensure your file matches the required format.</p>
     <?php
+    if (isset($_GET['import_status'])) {
+        $status = sanitize_text_field($_GET['import_status']);
+        $feedback_html = get_transient('mco_import_feedback');
+        delete_transient('mco_import_feedback');
+        if ($status === 'success' && $feedback_html) {
+            echo '<div class="notice notice-success is-dismissible"><p>CSV import processed.</p></div><div class="mco-feedback-box full-height">' . wp_kses_post($feedback_html) . '</div>';
+        } elseif ($status === 'error' && $feedback_html) {
+            echo '<div class="notice notice-error is-dismissible"><p>CSV import failed.</p></div><div class="mco-feedback-box full-height">' . wp_kses_post($feedback_html) . '</div>';
+        }
+    } ?>
+    <h3>Import Exam Programs</h3><p>Required columns: <code>program_title, program_description, question_source_url, certification_exam_sku, is_proctored, certificate_enabled, recommended_book_id, practice_questions, practice_duration, cert_questions, cert_duration, pass_score, status</code></p>
+    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+        <input type="hidden" name="action" value="mco_bulk_import_csv"><input type="hidden" name="import_type" value="exam_programs"><?php wp_nonce_field('mco_bulk_import_csv_nonce', 'mco_bulk_import_csv_nonce'); ?>
+        <table class="form-table"><tr valign="top"><th scope="row">Exam Programs CSV File</th><td><input type="file" name="csv_file" accept=".csv" required></td></tr></table>
+        <?php submit_button('Import Exam Programs'); ?>
+    </form>
+    <hr>
+    <h3>Import Recommended Books</h3><p>Required columns: <code>book_id, title, description, thumbnail_url, link_com, link_in, link_ae, status</code></p>
+    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+        <input type="hidden" name="action" value="mco_bulk_import_csv"><input type="hidden" name="import_type" value="recommended_books"><?php wp_nonce_field('mco_bulk_import_csv_nonce', 'mco_bulk_import_csv_nonce'); ?>
+        <table class="form-table"><tr valign="top"><th scope="row">Recommended Books CSV File</th><td><input type="file" name="csv_file" accept=".csv" required></td></tr></table>
+        <?php submit_button('Import Recommended Books'); ?>
+    </form>
+<?php }
+
+function mco_handle_csv_upload() {
+    if (!isset($_POST['mco_bulk_import_csv_nonce']) || !wp_verify_nonce($_POST['mco_bulk_import_csv_nonce'], 'mco_bulk_import_csv_nonce')) wp_die('Security check failed');
+    if (empty($_FILES['csv_file']['tmp_name'])) { set_transient('mco_import_feedback', '<p class="error">No file uploaded.</p>', 60); wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=bulk_import&import_status=error')); exit; }
+    $import_type = sanitize_text_field($_POST['import_type']);
+    $file_path = $_FILES['csv_file']['tmp_name'];
+    $feedback = ($import_type === 'exam_programs') ? mco_process_csv_import($file_path) : (($import_type === 'recommended_books') ? mco_process_books_csv_import($file_path) : '<p class="error">Invalid import type specified.</p>');
+    set_transient('mco_import_feedback', $feedback, 60);
+    wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=bulk_import&import_status=success'));
+    exit;
+}
+
+function mco_process_csv_import($file_path) {
+    if (!is_file($file_path)) return '<p class="error">File not found.</p>';
+    $handle = fopen($file_path, "r");
+    if ($handle === FALSE) return '<p class="error">Could not open file.</p>';
+    $headers = array_map('trim', fgetcsv($handle, 1000, ","));
+    $required_headers = ['program_title', 'program_description', 'question_source_url', 'certification_exam_sku', 'is_proctored', 'certificate_enabled', 'recommended_book_id', 'practice_questions', 'practice_duration', 'cert_questions', 'cert_duration', 'pass_score', 'status'];
+    if (count(array_intersect($required_headers, $headers)) !== count($required_headers)) return '<p class="error">CSV headers do not match the required format. Missing: ' . implode(', ', array_diff($required_headers, $headers)) . '</p>';
+    $created_count = 0; $updated_count = 0; $skipped_count = 0; $errors = [];
+    while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+        $row = array_combine($headers, $data);
+        $program_title = sanitize_text_field($row['program_title']);
+        if (empty($program_title)) { $skipped_count++; continue; }
+        $post_data = ['post_title' => $program_title, 'post_content' => wp_kses_post($row['program_description']), 'post_type' => 'mco_exam_program', 'post_status' => sanitize_text_field($row['status'])];
+        $existing_post = get_page_by_title($program_title, OBJECT, 'mco_exam_program');
+        if ($existing_post) {
+            $post_id = $existing_post->ID; $post_data['ID'] = $post_id;
+            $result = wp_update_post($post_data, true);
+            if (is_wp_error($result)) $errors[] = "Failed to process '{$program_title}': " . $result->get_error_message(); else $updated_count++;
+        } else {
+            $result = wp_insert_post($post_data, true);
+            if (is_wp_error($result)) $errors[] = "Failed to create '{$program_title}': " . $result->get_error_message(); else { $post_id = $result; $created_count++; }
+        }
+        if ($post_id > 0 && !is_wp_error($result)) {
+            $taxonomies = ['exam_practice_questions' => 'practice_questions', 'exam_practice_duration'  => 'practice_duration', 'exam_cert_questions' => 'cert_questions', 'exam_cert_duration' => 'cert_duration', 'exam_pass_score' => 'pass_score'];
+            foreach($taxonomies as $tax_slug => $csv_key) wp_set_post_terms($post_id, sanitize_text_field($row[$csv_key]), $tax_slug, false);
+            update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($row['certification_exam_sku']));
+            update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($row['question_source_url']));
+            update_post_meta($post_id, '_mco_is_proctored', intval($row['is_proctored']));
+            update_post_meta($post_id, '_mco_certificate_enabled', intval($row['certificate_enabled']));
+            $book_slugs = array_map('trim', explode(',', $row['recommended_book_id'])); $book_post_ids = [];
+            foreach($book_slugs as $slug) { if (empty($slug)) continue; $book_query = new WP_Query(['post_type' => 'mco_recommended_book', 'meta_key' => '_mco_book_id', 'meta_value' => $slug, 'posts_per_page' => 1, 'fields' => 'ids']); if ($book_query->have_posts()) $book_post_ids[] = $book_query->posts[0]; }
+            update_post_meta($post_id, '_mco_recommended_book_ids', $book_post_ids);
+        }
+    }
+    fclose($handle);
+    delete_transient('mco_app_config_data'); update_option('mco_config_version', current_time('YmdHis'));
+    $feedback = '<ul><li class="success">Import complete.</li><li class="success">Created: ' . $created_count . '</li><li class="success">Updated: ' . $updated_count . '</li><li class="success">Skipped: ' . $skipped_count . '</li><li class="error">Failed: ' . count($errors) . '</li>';
+    foreach($errors as $error) $feedback .= '<li class="error">' . esc_html($error) . '</li>';
+    return $feedback . '</ul>';
+}
+
+function mco_process_books_csv_import($file_path) {
+    if (!is_file($file_path)) return '<p class="error">File not found.</p>';
+    $handle = fopen($file_path, "r");
+    if ($handle === FALSE) return '<p class="error">Could not open file.</p>';
+    $headers = array_map('trim', fgetcsv($handle, 1000, ","));
+    $required_headers = ['book_id', 'title', 'description', 'thumbnail_url', 'link_com', 'link_in', 'link_ae', 'status'];
+    if (count(array_intersect($required_headers, $headers)) !== count($required_headers)) return '<p class="error">CSV headers do not match the required format for books.</p>';
+    $created_count = 0; $updated_count = 0; $skipped_count = 0; $errors = [];
+    while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+        $row = array_combine($headers, $data);
+        $book_id_slug = sanitize_text_field($row['book_id']);
+        if (empty($book_id_slug)) { $skipped_count++; continue; }
+        $post_data = ['post_title' => sanitize_text_field($row['title']), 'post_content' => wp_kses_post($row['description']), 'post_type' => 'mco_recommended_book', 'post_status' => sanitize_text_field($row['status'])];
+        $existing_post_query = new WP_Query(['post_type' => 'mco_recommended_book', 'meta_key' => '_mco_book_id', 'meta_value' => $book_id_slug, 'posts_per_page' => 1, 'fields' => 'ids']);
+        $existing_post_id = !empty($existing_post_query->posts) ? $existing_post_query->posts[0] : null;
+        if ($existing_post_id) {
+            $post_id = $existing_post_id; $post_data['ID'] = $post_id;
+            $result = wp_update_post($post_data, true);
+            if (is_wp_error($result)) $errors[] = "Failed to update book '{$post_data['post_title']}': " . $result->get_error_message(); else $updated_count++;
+        } else {
+            $result = wp_insert_post($post_data, true);
+            if (is_wp_error($result)) $errors[] = "Failed to create book '{$post_data['post_title']}': " . $result->get_error_message(); else { $post_id = $result; $created_count++; }
+        }
+        if ($post_id > 0 && !is_wp_error($result)) {
+            update_post_meta($post_id, '_mco_book_id', $book_id_slug); update_post_meta($post_id, '_mco_thumbnail_url', esc_url_raw($row['thumbnail_url'])); update_post_meta($post_id, '_mco_link_com', esc_url_raw($row['link_com'])); update_post_meta($post_id, '_mco_link_in', esc_url_raw($row['link_in'])); update_post_meta($post_id, '_mco_link_ae', esc_url_raw($row['link_ae']));
+        }
+    }
+    fclose($handle);
+    delete_transient('mco_app_config_data'); update_option('mco_config_version', current_time('YmdHis'));
+    $feedback = '<ul><li class="success">Book import complete.</li><li class="success">Created: ' . $created_count . '</li><li class="success">Updated: ' . $updated_count . '</li><li class="success">Skipped: ' . $skipped_count . '</li><li class="error">Failed: ' . count($errors) . '</li>';
+    foreach($errors as $error) $feedback .= '<li class="error">' . esc_html($error) . '</li>';
+    return $feedback . '</ul>';
 }
 
 function mco_render_certificate_templates_tab() {
-    $templates = get_option('mco_certificate_templates');
-    if (empty($templates) || !is_array($templates)) {
-        $templates = mco_get_default_certificate_templates();
+    if (isset($_POST['mco_save_templates_nonce']) && wp_verify_nonce($_POST['mco_save_templates_nonce'], 'mco_save_templates')) {
+        $templates_input = $_POST['certificate_templates']; $sanitized_templates = [];
+        if (is_array($templates_input)) {
+            foreach ($templates_input as $template) {
+                $id = sanitize_text_field($template['id']); if (empty($id)) continue;
+                $sig1_url_input = isset($template['signature1ImageUrl']) ? trim(wp_unslash($template['signature1ImageUrl'])) : '';
+                $sig1_url_to_save = strpos($sig1_url_input, 'data:image') === 0 ? $sig1_url_input : esc_url_raw($sig1_url_input);
+                $sig2_url_input = isset($template['signature2ImageUrl']) ? trim(wp_unslash($template['signature2ImageUrl'])) : '';
+                $sig2_url_to_save = strpos($sig2_url_input, 'data:image') === 0 ? $sig2_url_input : esc_url_raw($sig2_url_input);
+                $sanitized_templates[$id] = ['id' => $id, 'name' => sanitize_text_field($template['name']), 'title' => sanitize_text_field($template['title']), 'body' => wp_kses_post($template['body']), 'signature1Name' => sanitize_text_field($template['signature1Name']), 'signature1Title' => sanitize_text_field($template['signature1Title']), 'signature1ImageUrl' => $sig1_url_to_save, 'signature2Name' => sanitize_text_field($template['signature2Name']), 'signature2Title' => sanitize_text_field($template['signature2Title']), 'signature2ImageUrl' => $sig2_url_to_save, ];
+            }
+        }
+        update_option('mco_certificate_templates', $sanitized_templates);
+        delete_transient('mco_app_config_data'); update_option('mco_config_version', current_time('YmdHis'));
+        echo '<div class="notice notice-success is-dismissible"><p>Certificate templates saved.</p></div>';
     }
+    $templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
     ?>
-    <h3>Certificate Templates</h3>
-    <p>Manage the templates used for generating PDF certificates. Use placeholders like <code>{candidateName}</code>, <code>{examName}</code>, and <code>{finalScore}</code>.</p>
-    <div id="mco-templates-wrapper">
-        <?php foreach ($templates as $index => $template) : ?>
-            <div class="mco-template-card">
-                <table class="form-table">
-                    <?php // FIX: Added isset() checks to prevent PHP notices from breaking the page if template data is incomplete. ?>
-                    <tr valign="top"><th scope="row">Template ID</th><td><input type="text" readonly value="<?php echo isset($template['id']) ? esc_attr($template['id']) : ''; ?>" class="regular-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Template Name</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][name]" value="<?php echo isset($template['name']) ? esc_attr($template['name']) : ''; ?>" class="regular-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Certificate Title</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][title]" value="<?php echo isset($template['title']) ? esc_attr($template['title']) : ''; ?>" class="large-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Body Text</th><td><textarea name="mco_certificate_templates[<?php echo $index; ?>][body]" rows="3" class="large-text"><?php echo isset($template['body']) ? esc_textarea($template['body']) : ''; ?></textarea></td></tr>
-                    <tr valign="top"><th scope="row">Signature 1 Name</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature1Name]" value="<?php echo isset($template['signature1Name']) ? esc_attr($template['signature1Name']) : ''; ?>" class="regular-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Signature 1 Title</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature1Title]" value="<?php echo isset($template['signature1Title']) ? esc_attr($template['signature1Title']) : ''; ?>" class="regular-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Signature 1 Image URL</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature1ImageUrl]" value="<?php echo isset($template['signature1ImageUrl']) ? esc_attr($template['signature1ImageUrl']) : ''; ?>" class="large-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Signature 2 Name</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature2Name]" value="<?php echo isset($template['signature2Name']) ? esc_attr($template['signature2Name']) : ''; ?>" class="regular-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Signature 2 Title</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature2Title]" value="<?php echo isset($template['signature2Title']) ? esc_attr($template['signature2Title']) : ''; ?>" class="regular-text" /></td></tr>
-                    <tr valign="top"><th scope="row">Signature 2 Image URL</th><td><input type="text" name="mco_certificate_templates[<?php echo $index; ?>][signature2ImageUrl]" value="<?php echo isset($template['signature2ImageUrl']) ? esc_attr($template['signature2ImageUrl']) : ''; ?>" class="large-text" /></td></tr>
-                </table>
-                <input type="hidden" name="mco_certificate_templates[<?php echo $index; ?>][id]" value="<?php echo isset($template['id']) ? esc_attr($template['id']) : ''; ?>" />
-            </div>
-        <?php endforeach; ?>
-    </div>
-    <style>.mco-template-card { border: 1px solid #ccd0d4; padding: 1rem; margin-bottom: 1rem; background: #fff; border-radius: 4px; }</style>
-    <?php submit_button('Save Templates'); ?>
-    <?php
-}
-
-function mco_render_bulk_import_tab() {
-    ?>
-    <h3>Bulk Import Content</h3>
-    <p>Efficiently create or update exam programs and recommended books by uploading a CSV file. Use the "Download Template" buttons to get a file pre-populated with your existing content, which is the easiest way to perform bulk edits.</p>
-    
-    <div class="mco-tool-card">
-        <h4>Import Exam Programs</h4>
-        <p><strong>Step 1:</strong> Download the template, which will include all your existing exam programs. Do not change the column headers.</p>
-        <form method="post" action="" style="display: inline-block; margin-right: 1rem;">
-            <input type="hidden" name="mco_action" value="download_exam_programs_csv">
-            <?php wp_nonce_field('mco_download_exam_programs_csv_nonce', 'mco_nonce'); ?>
-            <button type="submit" class="button button-secondary">Download Template with Existing Data</button>
-        </form>
-        
-        <p style="margin-top: 1rem;"><strong>Step 2:</strong> Fill or edit the template with your program data. Each row represents one exam program. Re-uploading will update existing programs based on "program_title" or create new ones.</p>
-        
-        <form method="post" enctype="multipart/form-data" style="margin-top: 1rem; border-top: 1px solid #ddd; padding-top: 1rem;">
-            <input type="hidden" name="mco_action" value="bulk_import_programs">
-            <?php wp_nonce_field('mco_bulk_import_programs_nonce', 'mco_nonce'); ?>
-            <label for="programs_csv_file" style="font-weight: bold;">Upload your Exam Programs CSV File:</label><br/>
-            <input type="file" id="programs_csv_file" name="programs_csv_file" accept=".csv" required style="margin-top: 0.5rem;">
-            <?php submit_button('Upload & Import Programs', 'primary'); ?>
-        </form>
-    </div>
-
-    <div class="mco-tool-card" style="margin-top: 2rem;">
-        <h4>Import Recommended Books</h4>
-        <p><strong>Step 1:</strong> Download the template, which will include all your existing recommended books.</p>
-        <form method="post" action="" style="display: inline-block; margin-right: 1rem;">
-            <input type="hidden" name="mco_action" value="download_recommended_books_csv">
-            <?php wp_nonce_field('mco_download_recommended_books_csv_nonce', 'mco_nonce'); ?>
-            <button type="submit" class="button button-secondary">Download Template with Existing Data</button>
-        </form>
-        
-        <p style="margin-top: 1rem;"><strong>Step 2:</strong> Fill or edit the template with your book data. Re-uploading will update existing books based on "book_title" or create new ones.</p>
-        
-        <form method="post" enctype="multipart/form-data" style="margin-top: 1rem; border-top: 1px solid #ddd; padding-top: 1rem;">
-            <input type="hidden" name="mco_action" value="bulk_import_books">
-            <?php wp_nonce_field('mco_bulk_import_books_nonce', 'mco_nonce'); ?>
-            <label for="books_csv_file" style="font-weight: bold;">Upload your Recommended Books CSV File:</label><br/>
-            <input type="file" id="books_csv_file" name="books_csv_file" accept=".csv" required style="margin-top: 0.5rem;">
-            <?php submit_button('Upload & Import Books', 'primary'); ?>
-        </form>
-    </div>
-    <?php
-}
+    <h2>Certificate Templates</h2><p>Manage the templates used for generating certificates. Use placeholders like <code>{candidateName}</code>, <code>{examName}</code>, and <code>{finalScore}</code>.</p>
+    <form method="post"><?php wp_nonce_field('mco_save_templates', 'mco_save_templates_nonce'); ?><div id="mco-templates-container">
+    <?php foreach ($templates as $template) : ?><div class="template-item" style="border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; border-radius: 4px;"><table class="form-table">
+        <tr><th>Template ID</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][id]" value="<?php echo esc_attr($template['id']); ?>" readonly style="background:#eee;"></td></tr>
+        <tr><th>Template Name</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][name]" value="<?php echo esc_attr($template['name']); ?>"></td></tr>
+        <tr><th>Title</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][title]" value="<?php echo esc_attr($template['title']); ?>"></td></tr>
+        <tr><th>Body</th><td><textarea name="certificate_templates[<?php echo esc_attr($template['id']); ?>][body]"><?php echo esc_textarea($template['body']); ?></textarea></td></tr>
+        <tr><th>Signature 1 Name</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name']); ?>"></td></tr>
+        <tr><th>Signature 1 Title</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature1Title]" value="<?php echo esc_attr($template['signature1Title']); ?>"></td></tr>
+        <tr><th>Signature 1 Image</th><td><div class="image-upload-wrapper"><textarea name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature1ImageUrl]" rows="3"><?php echo esc_textarea($template['signature1ImageUrl']); ?></textarea><button type="button" class="button mco-upload-image-button">Upload Image</button></div><p class="description"><strong>Recommended for PDF Downloads:</strong> Paste a <code>base64</code> data URI (e.g., <code>data:image/png;base64,...</code>). Use an online "Image to Base64" converter. Using a standard URL may cause CORS errors during PDF generation.</p></td></tr>
+        <tr><th>Signature 2 Name</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature2Name]" value="<?php echo esc_attr($template['signature2Name']); ?>"></td></tr>
+        <tr><th>Signature 2 Title</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature2Title]" value="<?php echo esc_attr($template['signature2Title']); ?>"></td></tr>
+        <tr><th>Signature 2 Image</th><td><div class="image-upload-wrapper"><textarea name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature2ImageUrl]" rows="3"><?php echo esc_textarea($template['signature2ImageUrl']); ?></textarea><button type="button" class="button mco-upload-image-button">Upload Image</button></div><p class="description"><strong>Recommended for PDF Downloads:</strong> Paste a <code>base64</code> data URI (e.g., <code>data:image/png;base64,...</code>). Using a standard URL may cause CORS errors during PDF generation.</p></td></tr>
+    </table></div><?php endforeach; ?></div><?php submit_button('Save Templates'); ?></form>
+<?php }
 
 function mco_render_tools_tab() {
-    $app_url = get_option('mco_exam_app_url');
-    $logo_url = get_option('mco_custom_logo_url') ?: get_site_icon_url();
+    if (isset($_POST['mco_clear_cache_nonce']) && wp_verify_nonce($_POST['mco_clear_cache_nonce'], 'mco_clear_cache')) {
+        delete_transient('mco_app_config_data'); update_option('mco_config_version', current_time('YmdHis'));
+        echo '<div class="notice notice-success is-dismissible"><p>Server-side application config cache has been cleared.</p></div>';
+    }
+    $test_results_html = '';
+    if (isset($_POST['mco_test_sheet_url_nonce']) && wp_verify_nonce($_POST['mco_test_sheet_url_nonce'], 'mco_test_sheet_url_action')) {
+        $sheet_url_to_test = esc_url_raw($_POST['sheet_url_to_test']); $test_results_html = mco_run_sheet_url_test($sheet_url_to_test);
+    }
+    
+    // --- New Prerequisites Check ---
+    $missing_requirements = [];
+    $app_url = get_option('mco_exam_app_url', '');
+    $logo_url = get_option('mco_logo_url', '');
+    $site_icon_url = get_site_icon_url();
     $templates = get_option('mco_certificate_templates', []);
-    $has_signatures = false;
-    foreach ($templates as $template) {
-        if (!empty($template['signature1Name'])) {
-            $has_signatures = true;
-            break;
+    $signatures_configured = false;
+
+    if (empty($app_url)) {
+        $missing_requirements[] = 'Set the <strong>Exam Application URL</strong> in the <a href="?page=mco-exam-engine&tab=main_settings">Main Settings</a> tab.';
+    }
+    if (empty($logo_url) && empty($site_icon_url)) {
+        $missing_requirements[] = 'Set a <strong>Custom Logo URL</strong> or a default <strong>Site Icon</strong> in <a href="?page=mco-exam-engine&tab=main_settings">Main Settings</a> or the Customizer.';
+    }
+    if (!empty($templates)) {
+        foreach($templates as $template) {
+            if (!empty($template['signature1Name'])) {
+                $signatures_configured = true;
+                break;
+            }
         }
     }
-    $prerequisites_met = !empty($app_url) && !empty($logo_url) && $has_signatures;
-
+    if (!$signatures_configured) {
+        $missing_requirements[] = 'Configure at least one signature in the <a href="?page=mco-exam-engine&tab=certificate_templates">Certificate Templates</a> tab.';
+    }
+    
+    $all_requirements_met = empty($missing_requirements);
     ?>
-    <h3>Developer & Maintenance Tools</h3>
+    <h2>Tools</h2><p>Use these tools for maintenance and troubleshooting.</p><table class="form-table">
+        <tr valign="top">
+            <th scope="row">New Tenant Blueprint</th>
+            <td>
+                <?php if ($all_requirements_met): ?>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="mco_generate_tenant_blueprint">
+                        <?php wp_nonce_field('mco_generate_blueprint_nonce'); ?>
+                        <p class="description" style="margin-bottom: 10px;">Generate a ready-to-use JSON configuration file for a new tenant. This file includes the basic structure, configured certificate templates, and themes, but with empty content arrays (exams, books, etc.).</p>
+                        <?php submit_button('Generate & Download Blueprint', 'primary', 'submit_generate_blueprint', false); ?>
+                    </form>
+                <?php else: ?>
+                    <div class="notice notice-warning inline-block" style="padding: 15px;">
+                        <h3 style="margin-top:0;">Prerequisites Missing</h3>
+                        <p>To ensure a complete and working configuration file, please complete the following steps:</p>
+                        <ul class="mco-req-list" style="margin-top: 10px; margin-left: 5px; space-y: 5px;">
+                            <?php foreach ($missing_requirements as $req): ?>
+                                <li><span class="dashicons dashicons-warning"></span> <?php echo wp_kses_post($req); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                    <?php submit_button('Generate & Download Blueprint', 'primary', 'submit_generate_blueprint_disabled', false, ['disabled' => 'disabled']); ?>
+                <?php endif; ?>
+            </td>
+        </tr>
+        <tr valign="top"><th scope="row">Server Cache</th><td><form method="post" action=""><?php wp_nonce_field('mco_clear_cache', 'mco_clear_cache_nonce'); ?><p class="description" style="margin-bottom: 10px;">The plugin caches app configuration data for performance. Clear this cache if you've made changes and don't see them reflected in the app.</p><?php submit_button('Clear Server Config Cache', 'secondary', 'submit_clear_cache', false); ?></form></td></tr>
+        <tr valign="top"><th scope="row">Google Sheet URL Tester</th><td><form method="post" action=""><?php wp_nonce_field('mco_test_sheet_url_action', 'mco_test_sheet_url_nonce'); ?><p class="description" style="margin-bottom: 10px;">Test if a Google Sheet URL is accessible from your server. This helps diagnose "Question Sheet: Failure" errors.</p><input type="text" name="sheet_url_to_test" class="widefat" placeholder="Paste Google Sheet URL here..." value="<?php echo isset($_POST['sheet_url_to_test']) ? esc_attr($_POST['sheet_url_to_test']) : ''; ?>" /><?php submit_button('Test URL', 'secondary', 'submit_test_url', false); ?></form><?php if (!empty($test_results_html)) : ?><div class="mco-feedback-box" style="margin-top: 15px;"><?php echo $test_results_html; ?></div><?php endif; ?></td></tr>
+    </table>
+<?php }
+
+// New handler for generating the tenant blueprint
+function mco_handle_generate_tenant_blueprint() {
+    if (!current_user_can('manage_options') || !isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_generate_blueprint_nonce')) {
+        wp_die('Security check failed.');
+    }
+
+    $blueprint_data = mco_get_tenant_blueprint_data();
     
-    <div class="mco-tool-card">
-        <h4>Generate Tenant Blueprint</h4>
-        <p class="description">Generate a starter <code>tenant-config.json</code> file for launching a new tenant. This file contains branding and empty content structures. You must configure the prerequisites before you can generate the file.</p>
-        
-        <div id="mco-prerequisites">
-            <p><strong>Prerequisites Checklist:</strong></p>
-            <ul>
-                <li class="<?php echo !empty($app_url) ? 'complete' : ''; ?>">Set the Exam Application URL in Main Settings.</li>
-                <li class="<?php echo !empty($logo_url) ? 'complete' : ''; ?>">Set a Custom Logo URL or a Site Icon.</li>
-                <li class="<?php echo $has_signatures ? 'complete' : ''; ?>">Configure at least one Signature in Certificate Templates.</li>
-            </ul>
-        </div>
-        
-        <form method="post" action="">
-            <input type="hidden" name="mco_action" value="generate_tenant_blueprint">
-            <?php wp_nonce_field('mco_generate_tenant_blueprint_nonce', 'mco_nonce'); ?>
-            <?php submit_button('Generate & Download Blueprint', 'primary', 'submit', true, !$prerequisites_met ? ['disabled' => 'disabled'] : []); ?>
-        </form>
-    </div>
+    $site_url_parts = parse_url(home_url());
+    $site_host = $site_url_parts['host'] ?? 'default-site.com';
+    $filename = 'tenant-config-' . sanitize_title($site_host) . '.json';
 
-    <div class="mco-tool-card">
-        <h4>Generate Full Content Snapshot</h4>
-        <p class="description">Generate a complete, fully-populated JSON file containing all current exams, books, prices, and settings. Use this to create a point-in-time backup or to update the static fallback file in your React app for faster initial loads.</p>
-        <form method="post" action="">
-            <input type="hidden" name="mco_action" value="generate_full_snapshot">
-            <?php wp_nonce_field('mco_generate_full_snapshot_nonce', 'mco_nonce'); ?>
-            <?php submit_button('Generate & Download Full Snapshot', 'secondary'); ?>
-        </form>
-    </div>
-
-    <div class="mco-tool-card">
-        <h4>Clear Server Config Cache</h4>
-        <p class="description">Force the server to rebuild its main configuration cache. Use this after making significant changes to exam programs or products to ensure the app reflects the latest data immediately.</p>
-        <?php
-            // FIX: Replaced form submission with a safer nonce link to prevent accidental clearing of WordPress options.
-            $nonce_url = wp_nonce_url(
-                admin_url('admin.php?page=mco-exam-engine&tab=tools&mco_action=clear_config_cache'),
-                'mco_clear_config_cache_nonce',
-                'mco_nonce'
-            );
-            echo '<a href="' . esc_url($nonce_url) . '" class="button button-delete">Clear Server Config Cache</a>';
-        ?>
-    </div>
+    header('Content-Type: application/json; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
     
-    <style>
-        .mco-tool-card { border: 1px solid #ccd0d4; padding: 1rem; margin-top: 1rem; background: #fff; border-radius: 4px; }
-        #mco-prerequisites ul { list-style: none; margin-left: 0; }
-        #mco-prerequisites li::before { content: '❌'; margin-right: 8px; color: #dc3232; }
-        #mco-prerequisites li.complete::before { content: '✅'; color: #46b450; }
-    </style>
-    <?php
-}
-
-// --- META BOXES for CPTs ---
-function mco_add_meta_boxes() {
-    add_meta_box('mco_exam_program_details', 'Exam Program Details', 'mco_exam_program_metabox_html', 'mco_exam_program', 'normal', 'high');
-    add_meta_box('mco_recommended_book_details', 'Book Details', 'mco_book_metabox_html', 'mco_recommended_book', 'normal', 'high');
-}
-
-function mco_exam_program_metabox_html($post) {
-    wp_nonce_field('mco_save_meta_box_data', 'mco_meta_box_nonce');
-    // ... HTML for exam program meta box fields ...
-}
-
-function mco_book_metabox_html($post) {
-     wp_nonce_field('mco_save_meta_box_data', 'mco_meta_box_nonce');
-    // ... HTML for book meta box fields ...
-}
-
-function mco_save_meta_box_data($post_id) {
-    if (!isset($_POST['mco_meta_box_nonce']) || !wp_verify_nonce($_POST['mco_meta_box_nonce'], 'mco_save_meta_box_data')) return;
-    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
-    if (!current_user_can('edit_post', $post_id)) return;
-    // ... Logic to save meta box data ...
-}
-
-// --- ACTION HANDLERS ---
-function mco_handle_admin_actions() {
-    // FIX: Use $_REQUEST to handle both POST and GET actions, accommodating the safer nonce link method for tools.
-    if (isset($_REQUEST['mco_action']) && isset($_REQUEST['mco_nonce'])) {
-        $action = sanitize_key($_REQUEST['mco_action']);
-        $nonce = sanitize_text_field($_REQUEST['mco_nonce']);
-
-        if ($action === 'generate_tenant_blueprint' && wp_verify_nonce($nonce, 'mco_generate_tenant_blueprint_nonce')) {
-            mco_handle_generate_tenant_blueprint();
-        }
-        if ($action === 'generate_full_snapshot' && wp_verify_nonce($nonce, 'mco_generate_full_snapshot_nonce')) {
-            mco_handle_generate_full_snapshot();
-        }
-        if ($action === 'clear_config_cache' && wp_verify_nonce($nonce, 'mco_clear_config_cache_nonce')) {
-            delete_transient('mco_app_config_data');
-            add_action('admin_notices', function() {
-                echo '<div class="notice notice-success is-dismissible"><p>Server configuration cache has been cleared.</p></div>';
-            });
-        }
-        if ($action === 'download_exam_programs_csv' && wp_verify_nonce($nonce, 'mco_download_exam_programs_csv_nonce')) {
-            mco_generate_exam_programs_csv_content();
-        }
-        if ($action === 'download_recommended_books_csv' && wp_verify_nonce($nonce, 'mco_download_recommended_books_csv_nonce')) {
-            mco_generate_recommended_books_csv_content();
-        }
-    }
-    
-    // Keep using $_POST specifically for bulk imports as they involve file uploads.
-    if (isset($_POST['mco_action']) && $_POST['mco_action'] === 'bulk_import_programs' && isset($_POST['mco_nonce']) && wp_verify_nonce($_POST['mco_nonce'], 'mco_bulk_import_programs_nonce')) {
-        mco_handle_bulk_import_programs();
-    }
-    if (isset($_POST['mco_action']) && $_POST['mco_action'] === 'bulk_import_books' && isset($_POST['mco_nonce']) && wp_verify_nonce($_POST['mco_nonce'], 'mco_bulk_import_books_nonce')) {
-        mco_handle_bulk_import_books();
-    }
-}
-
-function mco_handle_bulk_import_books() {
-    if (!isset($_FILES['books_csv_file']) || $_FILES['books_csv_file']['error'] !== UPLOAD_ERR_OK) {
-        add_action('admin_notices', function() { echo '<div class="notice notice-error"><p>Error uploading file. Please try again.</p></div>'; });
-        return;
-    }
-
-    $file = fopen($_FILES['books_csv_file']['tmp_name'], 'r');
-    $header = fgetcsv($file);
-    if (!in_array('book_title', $header)) {
-        add_action('admin_notices', function() { echo '<div class="notice notice-error"><p>CSV file is missing required header column: book_title</p></div>'; });
-        fclose($file);
-        return;
-    }
-    
-    $created_count = 0; $updated_count = 0;
-    while (($row = fgetcsv($file)) !== false) {
-        $data = array_combine($header, $row);
-        $post_title = sanitize_text_field($data['book_title']);
-        if (empty($post_title)) continue;
-
-        $existing_post = get_page_by_title($post_title, OBJECT, 'mco_recommended_book');
-        $post_data = [
-            'post_title' => $post_title,
-            'post_content' => wp_kses_post($data['book_description'] ?? ''),
-            'post_type' => 'mco_recommended_book',
-            'post_status' => 'publish',
-        ];
-
-        if ($existing_post) {
-            $post_data['ID'] = $existing_post->ID;
-            wp_update_post($post_data);
-            $post_id = $existing_post->ID;
-            $updated_count++;
-        } else {
-            $post_id = wp_insert_post($post_data);
-            $created_count++;
-        }
-        
-        if ($post_id && !is_wp_error($post_id)) {
-            update_post_meta($post_id, '_mco_thumbnail_url', esc_url_raw($data['thumbnail_url'] ?? ''));
-            update_post_meta($post_id, '_mco_link_com', esc_url_raw($data['affiliate_link_com'] ?? ''));
-            update_post_meta($post_id, '_mco_link_in', esc_url_raw($data['affiliate_link_in'] ?? ''));
-            update_post_meta($post_id, '_mco_link_ae', esc_url_raw($data['affiliate_link_ae'] ?? ''));
-        }
-    }
-    fclose($file);
-    delete_transient('mco_app_config_data');
-    add_action('admin_notices', function() use ($created_count, $updated_count) {
-        echo '<div class="notice notice-success is-dismissible"><p>Bulk import complete! Created: ' . $created_count . ', Updated: ' . $updated_count . ' books. Cache cleared.</p></div>';
-    });
-}
-
-
-function mco_handle_bulk_import_programs() {
-    if (!isset($_FILES['programs_csv_file']) || $_FILES['programs_csv_file']['error'] !== UPLOAD_ERR_OK) {
-        add_action('admin_notices', function() { echo '<div class="notice notice-error"><p>Error uploading file. Please try again.</p></div>'; });
-        return;
-    }
-
-    $csv_file_path = $_FILES['programs_csv_file']['tmp_name'];
-    $file = fopen($csv_file_path, 'r');
-    if ($file === false) {
-        add_action('admin_notices', function() { echo '<div class="notice notice-error"><p>Could not open the uploaded file.</p></div>'; });
-        return;
-    }
-
-    $header = fgetcsv($file);
-    $required_headers = ['program_title', 'certification_exam_sku'];
-    foreach ($required_headers as $required) {
-        if (!in_array($required, $header)) {
-             add_action('admin_notices', function() use ($required) { echo '<div class="notice notice-error"><p>CSV file is missing required header column: ' . esc_html($required) . '</p></div>'; });
-             fclose($file);
-             return;
-        }
-    }
-
-    $created_count = 0; $updated_count = 0;
-
-    while (($row = fgetcsv($file)) !== false) {
-        $data = array_combine($header, $row);
-        $post_title = sanitize_text_field($data['program_title']);
-        $post_content = wp_kses_post($data['program_description'] ?? '');
-        $post_status = sanitize_text_field($data['status'] ?? 'publish');
-        $sku = sanitize_text_field($data['certification_exam_sku']);
-        
-        if (empty($post_title) || empty($sku)) continue;
-
-        $existing_post = get_page_by_title($post_title, OBJECT, 'mco_exam_program');
-        
-        $post_data = [ 'post_title' => $post_title, 'post_content' => $post_content, 'post_type' => 'mco_exam_program', 'post_status' => $post_status ];
-
-        if ($existing_post) {
-            $post_data['ID'] = $existing_post->ID;
-            wp_update_post($post_data);
-            $post_id = $existing_post->ID;
-            $updated_count++;
-        } else {
-            $post_id = wp_insert_post($post_data);
-            $created_count++;
-        }
-        
-        if ($post_id && !is_wp_error($post_id)) {
-            update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($data['question_source_url'] ?? ''));
-            update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($data['certification_exam_sku'] ?? ''));
-            update_post_meta($post_id, '_mco_is_proctored', !empty($data['is_proctored']) ? '1' : '0');
-            update_post_meta($post_id, '_mco_certificate_enabled', !empty($data['certificate_enabled']) ? '1' : '0');
-
-            $custom_book_ids = array_map('sanitize_text_field', explode(',', $data['recommended_book_id'] ?? ''));
-            $book_post_ids = [];
-            if (!empty($custom_book_ids) && !empty($custom_book_ids[0])) {
-                 $book_query = new WP_Query([
-                    'post_type' => 'mco_recommended_book',
-                    'meta_query' => [ [ 'key' => '_mco_book_id', 'value' => $custom_book_ids, 'compare' => 'IN' ] ],
-                    'posts_per_page' => -1, 'fields' => 'ids'
-                ]);
-                $book_post_ids = $book_query->posts;
-            }
-            update_post_meta($post_id, '_mco_recommended_book_ids', $book_post_ids);
-
-            wp_set_post_terms($post_id, sanitize_text_field($data['practice_questions'] ?? ''), 'exam_practice_questions', false);
-            wp_set_post_terms($post_id, sanitize_text_field($data['practice_duration'] ?? ''), 'exam_practice_duration', false);
-            wp_set_post_terms($post_id, sanitize_text_field($data['cert_questions'] ?? ''), 'exam_cert_questions', false);
-            wp_set_post_terms($post_id, sanitize_text_field($data['cert_duration'] ?? ''), 'exam_cert_duration', false);
-            wp_set_post_terms($post_id, sanitize_text_field($data['pass_score'] ?? ''), 'exam_pass_score', false);
-        }
-    }
-    fclose($file);
-    delete_transient('mco_app_config_data');
-
-    add_action('admin_notices', function() use ($created_count, $updated_count) {
-        echo '<div class="notice notice-success is-dismissible"><p>Bulk import complete! Created: ' . $created_count . ', Updated: ' . $updated_count . ' programs. Cache cleared.</p></div>';
-    });
-}
-
-function mco_generate_exam_programs_csv_content() {
-    $headers = ['program_title','program_description','question_source_url','certification_exam_sku','is_proctored','certificate_enabled','recommended_book_id','practice_questions','practice_duration','cert_questions','cert_duration','pass_score','status'];
-    $posts = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => ['publish', 'draft', 'pending']]);
-    
-    header('Content-Type: text/csv');
-    header('Content-Disposition: attachment; filename="existing_exam_programs.csv"');
-    $output = fopen('php://output', 'w');
-    fputcsv($output, $headers);
-
-    foreach ($posts as $post) {
-        $get_term_value = function($post_id, $taxonomy) {
-            $terms = wp_get_post_terms($post_id, $taxonomy);
-            return !is_wp_error($terms) && !empty($terms) ? $terms[0]->name : '';
-        };
-
-        $book_post_ids = get_post_meta($post->ID, '_mco_recommended_book_ids', true);
-        $recommended_book_ids_str = '';
-        if (!empty($book_post_ids) && is_array($book_post_ids)) {
-            $custom_book_ids = [];
-            foreach ($book_post_ids as $book_post_id) {
-                $custom_id = get_post_meta($book_post_id, '_mco_book_id', true);
-                if ($custom_id) {
-                    $custom_book_ids[] = $custom_id;
-                }
-            }
-            $recommended_book_ids_str = implode(',', $custom_book_ids);
-        }
-
-        $row = [
-            $post->post_title,
-            $post->post_content,
-            get_post_meta($post->ID, '_mco_question_source_url', true),
-            get_post_meta($post->ID, '_mco_certification_exam_sku', true),
-            get_post_meta($post->ID, '_mco_is_proctored', true) ? '1' : '0',
-            get_post_meta($post->ID, '_mco_certificate_enabled', true) ? '1' : '0',
-            $recommended_book_ids_str,
-            $get_term_value($post->ID, 'exam_practice_questions'),
-            $get_term_value($post->ID, 'exam_practice_duration'),
-            $get_term_value($post->ID, 'exam_cert_questions'),
-            $get_term_value($post->ID, 'exam_cert_duration'),
-            $get_term_value($post->ID, 'exam_pass_score'),
-            $post->post_status,
-        ];
-        fputcsv($output, $row);
-    }
-    fclose($output);
+    echo wp_json_encode($blueprint_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     exit;
+}
+
+function mco_run_sheet_url_test($sheet_url) {
+    if (empty($sheet_url)) return '<p class="error">Please provide a URL to test.</p>';
+    $csv_url = '';
+    if (strpos($sheet_url, '/pub?output=csv') !== false) $csv_url = $sheet_url;
+    elseif (preg_match('/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) $csv_url = "https://docs.google.com/spreadsheets/d/{$matches[1]}/export?format=csv&gid=0";
+    if (empty($csv_url)) return '<p class="error">Invalid Google Sheet URL format.</p>';
+    $response = wp_remote_get($csv_url, ['timeout' => 20, 'sslverify' => false]);
+    if (is_wp_error($response)) return '<p class="error">Connection Error: ' . esc_html($response->get_error_message()) . '</p>';
+    $status_code = wp_remote_retrieve_response_code($response);
+    $body = wp_remote_retrieve_body($response);
+    $output = '<ul>';
+    if ($status_code != 200) {
+        $output .= '<li class="error"><strong>Test Failed.</strong> HTTP Status: ' . esc_html($status_code) . '</li>';
+        if ($status_code == 404) $output .= '<li class="error">This means the sheet was "Not Found". Please ensure its sharing setting is "Anyone with the link can view".</li>';
+        else $output .= '<li class="error">Raw Response Body (first 200 chars): <br><code>' . esc_html(substr(strip_tags($body), 0, 200)) . '</code></li>';
+    } else {
+        $rows = preg_split('/\r\n|\r|\n/', $body);
+        $output .= '<li class="success"><strong>Test Succeeded!</strong> HTTP Status: 200 OK.</li><li class="success">Found ' . (count($rows) - 1) . ' data rows.</li><li><strong>Data Preview (first 5 rows):</strong><br><pre>' . esc_html(implode("\n", array_slice($rows, 0, 5))) . '</pre></li>';
+    }
+    return $output . '</ul>';
+}
+
+
+// --- EXAM PROGRAM CPT ADMIN COLUMNS ---
+
+if (!function_exists('mco_add_exam_program_columns')) {
+    function mco_add_exam_program_columns($columns) {
+        $new_columns = [];
+        foreach ($columns as $key => $title) {
+            $new_columns[$key] = $title;
+            if ($key === 'title') {
+                $new_columns['_mco_certification_exam_sku'] = 'Certification SKU';
+                $new_columns['exam_practice_questions'] = 'Practice Qs';
+                $new_columns['exam_cert_questions'] = 'Cert Qs';
+                $new_columns['exam_pass_score'] = 'Pass Score';
+                $new_columns['_mco_is_proctored'] = 'Proctored';
+            }
+        }
+        return $new_columns;
+    }
+}
+
+if (!function_exists('mco_display_exam_program_columns')) {
+    function mco_display_exam_program_columns($column_name, $post_id) {
+        switch ($column_name) {
+            case '_mco_certification_exam_sku':
+                $sku = get_post_meta($post_id, '_mco_certification_exam_sku', true);
+                echo $sku ? esc_html($sku) : '—';
+                break;
+            case 'exam_practice_questions':
+            case 'exam_cert_questions':
+            case 'exam_pass_score':
+                $terms = get_the_terms($post_id, $column_name);
+                if (!empty($terms) && !is_wp_error($terms)) {
+                    echo esc_html($terms[0]->name);
+                } else {
+                    echo '—';
+                }
+                break;
+            case '_mco_is_proctored':
+                $is_proctored = get_post_meta($post_id, '_mco_is_proctored', true);
+                echo $is_proctored ? 'Yes' : 'No';
+                break;
+        }
+    }
 }
 ?>
