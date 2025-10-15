@@ -125,7 +125,6 @@ function mco_get_app_config_data() {
             }
         }
 
-        // FIX: Strip HTML from title to prevent injection from other plugins.
         $clean_title = wp_strip_all_tags(get_the_title($post));
         
         $exam_product_categories[] = [
@@ -194,9 +193,8 @@ function mco_get_app_config_data() {
     
     foreach ($all_wc_products as $product) {
         $sku = $product->get_sku();
-        // Only include products with a SKU, as it's the primary identifier in the app
         if ($sku) {
-            $all_prices[$sku] = [
+            $product_data = [
                 'price' => (float)$product->get_price(), 
                 'regularPrice' => (float)$product->get_regular_price(),
                 'productId' => $product->get_id(),
@@ -207,6 +205,15 @@ function mco_get_app_config_data() {
                 'avgRating' => (float)$product->get_average_rating(),
                 'reviewCount' => (int)$product->get_review_count()
             ];
+
+            // If it's a subscription product, get subscription-specific data
+            if (class_exists('WC_Product_Subscription') && $product->is_type('subscription')) {
+                $product_data['subscription_period'] = $product->get_subscription_period();
+                $product_data['subscription_period_interval'] = $product->get_subscription_period_interval();
+                $product_data['subscription_length'] = $product->get_subscription_length();
+            }
+
+            $all_prices[$sku] = $product_data;
         }
     }
 

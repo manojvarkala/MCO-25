@@ -2,7 +2,7 @@ import React, { FC, useState, useMemo, useCallback, ReactNode, useEffect } from 
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { ProductVariation, ProductVariationType } from '../types.ts';
+import type { ProductVariation, ProductVariationType, BillingPeriod } from '../types.ts';
 import toast from 'react-hot-toast';
 import { Edit, Save, X, ShoppingCart, RefreshCw, Trash2, PlusCircle } from 'lucide-react';
 import Spinner from './Spinner.tsx';
@@ -281,7 +281,7 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
     const [sku, setSku] = useState('');
     const [price, setPrice] = useState('');
     const [regularPrice, setRegularPrice] = useState('');
-    const [period, setPeriod] = useState('month');
+    const [period, setPeriod] = useState<BillingPeriod>('month');
     const [interval, setInterval] = useState('1');
     const [length, setLength] = useState('0');
 
@@ -352,7 +352,7 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                     <div className="grid grid-cols-3 gap-4">
                         <div>
                             <label className="text-sm font-medium">Billing Period</label>
-                            <select value={period} onChange={e => setPeriod(e.target.value)} className="w-full p-2 mt-1 border rounded bg-white">
+                            <select value={period} onChange={e => setPeriod(e.target.value as BillingPeriod)} className="w-full p-2 mt-1 border rounded bg-white">
                                 <option value="day">Day</option>
                                 <option value="week">Week</option>
                                 <option value="month">Month</option>
@@ -451,7 +451,6 @@ const ProductCustomizer: FC = () => {
         const subs: ProductVariation[] = [];
         const bundles: ProductVariation[] = [];
 
-        // FIX: Iterate over Object.entries to get both the SKU (key) and the product data (value).
         Object.entries(examPrices).forEach(([sku, priceData]: [string, any]) => {
             if (!priceData || typeof priceData !== 'object') {
                 console.warn('Skipping invalid product data entry for SKU:', sku);
@@ -460,16 +459,16 @@ const ProductCustomizer: FC = () => {
 
             const product: ProductVariation = {
                 id: priceData.productId?.toString() || sku,
-                sku: sku, // Use the key as the SKU
+                sku: sku,
                 name: priceData.name || 'Unknown Product',
-                type: 'simple', // Default type, will be updated below
+                type: 'simple',
                 salePrice: priceData.price?.toString() || '0',
                 regularPrice: priceData.regularPrice?.toString() || '0',
                 isBundle: priceData.isBundle,
                 bundledSkus: priceData.bundledSkus,
-                subscriptionPeriod: priceData.subscriptionPeriod,
-                subscriptionPeriodInterval: priceData.subscriptionPeriodInterval?.toString(),
-                subscriptionLength: priceData.subscriptionLength?.toString(),
+                subscriptionPeriod: priceData.subscription_period,
+                subscriptionPeriodInterval: priceData.subscription_period_interval?.toString(),
+                subscriptionLength: priceData.subscription_length?.toString(),
             };
             
             all.push(product);
