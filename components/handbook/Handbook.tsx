@@ -183,7 +183,7 @@ const Handbook: FC = () => {
                 className="w-full max-w-7xl mx-auto aspect-[4/3] overflow-x-scroll overflow-y-hidden scroll-smooth snap-x snap-mandatory shadow-2xl bg-slate-400"
                 style={{ scrollbarWidth: 'thin' }}
             >
-                <div className="h-full w-fit prose max-w-none prose-slate" style={{ columnWidth: 'calc(50% - 3rem)', columnGap: '6rem', columnFill: 'auto', padding: '0 3rem' }}>
+                <div className="h-full prose max-w-none prose-slate" style={{ columnWidth: 'calc(50% - 3rem)', columnGap: '6rem', columnFill: 'auto', padding: '0 3rem' }}>
                     {chapters.map((chapter, index) => (
                         <div
                             key={index}
