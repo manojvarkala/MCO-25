@@ -1,0 +1,47 @@
+
+{
+    "version": "20240725000000",
+    "organizations": [
+        {
+            "id": "org-indian-certs",
+            "name": "Bharat Certifications",
+            "website": "bharatcerts.in",
+            "logo": "/logo.png",
+            "availableThemes": [
+                { "id": "default", "name": "Cyberpunk" },
+                { "id": "professional", "name": "Professional" },
+                { "id": "serene", "name": "Serene" },
+                { "id": "academic", "name": "Academic" },
+                { "id": "noir", "name": "Noir" }
+            ],
+            "activeThemeId": "professional",
+            "exams": [
+                { "id": "exam-ca-practice", "name": "CA Foundation Practice Exam", "description": "A practice test covering the core concepts of the Chartered Accountancy Foundation course.", "price": 0, "productSku": "exam-ca-practice", "numberOfQuestions": 50, "passScore": 50, "certificateTemplateId": "cert-practice", "isPractice": true, "durationMinutes": 90, "recommendedBookIds": ["book-ca-foundation"]},
+                { "id": "exam-ca-cert", "name": "CA Foundation Certification", "description": "Certify your knowledge of the fundamentals required for the Chartered Accountancy course.", "price": 25, "regularPrice": 49.99, "productSku": "exam-ca-cert", "productSlug": "ca-foundation-certification", "numberOfQuestions": 100, "passScore": 50, "certificateTemplateId": "cert-completion", "isPractice": false, "isProctored": true, "durationMinutes": 180, "recommendedBookIds": ["book-ca-foundation"]},
+                { "id": "exam-cs-practice", "name": "CS Executive Practice Exam", "description": "Test your knowledge of company law, tax laws, and securities laws for the CS Executive programme.", "price": 0, "productSku": "exam-cs-practice", "numberOfQuestions": 50, "passScore": 50, "certificateTemplateId": "cert-practice", "isPractice": true, "durationMinutes": 90, "recommendedBookIds": ["book-cs-scanner"]},
+                { "id": "exam-cs-cert", "name": "CS Executive Certification", "description": "Certify your expertise in corporate and management accounting as per the ICSI CS Executive syllabus.", "price": 25, "regularPrice": 49.99, "productSku": "exam-cs-cert", "productSlug": "cs-executive-certification", "numberOfQuestions": 100, "passScore": 50, "certificateTemplateId": "cert-completion", "isPractice": false, "isProctored": true, "durationMinutes": 180, "recommendedBookIds": ["book-cs-scanner"]},
+                { "id": "exam-cma-practice", "name": "CMA Intermediate Practice Exam", "description": "A practice exam covering financial accounting, laws, and ethics for the CMA Intermediate course.", "price": 0, "productSku": "exam-cma-practice", "numberOfQuestions": 50, "passScore": 50, "certificateTemplateId": "cert-practice", "isPractice": true, "durationMinutes": 90, "recommendedBookIds": ["book-cma-handbook"]},
+                { "id": "exam-cma-cert", "name": "CMA Intermediate Certification", "description": "Validate your skills in cost and management accountancy with this comprehensive certification exam.", "price": 25, "regularPrice": 49.99, "productSku": "exam-cma-cert", "productSlug": "cma-intermediate-certification", "numberOfQuestions": 100, "passScore": 50, "certificateTemplateId": "cert-completion", "isPractice": false, "isProctored": true, "durationMinutes": 180, "recommendedBookIds": ["book-cma-handbook"]}
+            ],
+            "examProductCategories": [
+                { "id": "prod-ca", "name": "Chartered Accountancy (CA)", "description": "Prepare for the rigorous Chartered Accountancy exams conducted by the ICAI. This program focuses on the Foundation level.", "practiceExamId": "exam-ca-practice", "certificationExamId": "exam-ca-cert", "questionSourceUrl": "https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing"},
+                { "id": "prod-cs", "name": "Company Secretary (CS)", "description": "Master corporate law, governance, and compliance for the ICSI's Company Secretary examinations (Executive Programme).", "practiceExamId": "exam-cs-practice", "certificationExamId": "exam-cs-cert", "questionSourceUrl": "https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing"},
+                { "id": "prod-cma", "name": "Cost & Management Accountancy (CMA)", "description": "Excel in cost and management accounting principles for the CMA examinations by the ICMAI (Intermediate Course).", "practiceExamId": "exam-cma-practice", "certificationExamId": "exam-cma-cert", "questionSourceUrl": "https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing"}
+            ],
+            "certificateTemplates": [
+                { "id": "cert-practice", "title": "Certificate of Proficiency", "body": "This certifies that <strong>{candidateName}</strong> has successfully demonstrated proficiency in the <strong>{examName}</strong> practice exam, achieving a score of <strong>{finalScore}%</strong>.", "signature1Name": "Priya Sharma", "signature1Title": "Director of Examinations", "signature1ImageUrl": "", "signature2Name": "", "signature2Title": ""},
+                { "id": "cert-completion", "title": "Certificate of Achievement", "body": "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", "signature1Name": "Priya Sharma", "signature1Title": "Director of Examinations", "signature1ImageUrl": "", "signature2Name": "Arjun Mehta", "signature2Title": "Chairman, Accreditation Board", "signature2ImageUrl": ""}
+            ],
+            "suggestedBooks": [
+                { "id": "book-ca-foundation", "title": "Taxmann's CRACKER for Principles and Practice of Accounting (CA-Foundation)", "description": "A comprehensive book with past exam questions and detailed answers for the CA-Foundation exam.", "thumbnailUrl": "", "affiliateLinks": { "com": "", "in": "https://www.amazon.in/dp/935778216X?tag=httpcodingonl-21", "ae": ""}},
+                { "id": "book-cs-scanner", "title": "Shuchita Prakashan Scanner CS Executive Programme (New Syllabus)", "description": "An essential exam guide with chapter-wise questions and solutions from past ICSI exams.", "thumbnailUrl": "", "affiliateLinks": { "com": "", "in": "https://www.amazon.in/dp/8195482305?tag=httpcodingonl-21", "ae": ""}},
+                { "id": "book-cma-handbook", "title": "Padhuka's Students' Handbook on Cost and Management Accounting", "description": "A student-friendly handbook covering the entire syllabus for the CMA Intermediate course with practical problems.", "thumbnailUrl": "", "affiliateLinks": { "com": "", "in": "https://www.amazon.in/dp/939221657X?tag=httpcodingonl-21", "ae": ""}}
+            ]
+        }
+    ],
+    "examPrices": {
+        "exam-ca-cert": { "price": 25, "regularPrice": 49.99, "productSlug": "ca-foundation-certification" },
+        "exam-cs-cert": { "price": 25, "regularPrice": 49.99, "productSlug": "cs-executive-certification" },
+        "exam-cma-cert": { "price": 25, "regularPrice": 49.99, "productSlug": "cma-intermediate-certification" }
+    }
+}
