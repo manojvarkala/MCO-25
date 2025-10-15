@@ -97,8 +97,27 @@ if (!function_exists('mco_generate_exam_jwt')) {
         if (!$user) return false;
 
         $paid_exam_ids = [];
+        $subscription_info = null;
         if (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription')) {
-            if (wcs_user_has_subscription($user_id, '', 'active')) {
+            $subscriptions = wcs_get_users_subscriptions($user_id);
+            $is_subscribed_active = false;
+            
+            foreach ($subscriptions as $subscription) {
+                if ($subscription->has_status(['active'])) {
+                    $is_subscribed_active = true;
+                    $next_payment_timestamp = $subscription->get_time('next_payment');
+                    $subscription_info = [
+                        'status' => 'active',
+                        'nextPaymentDate' => $next_payment_timestamp ? date('F j, Y', $next_payment_timestamp) : null,
+                    ];
+                    break;
+                } elseif ($subscription->has_status(['on-hold', 'cancelled', 'expired'])) {
+                    if (!$subscription_info) { // Prioritize active status
+                        $subscription_info = ['status' => $subscription->get_status()];
+                    }
+                }
+            }
+            if ($is_subscribed_active) {
                 $paid_exam_ids[] = 'subscription_active';
             }
         }
@@ -124,6 +143,7 @@ if (!function_exists('mco_generate_exam_jwt')) {
             ],
             'paidExamIds' => array_unique($paid_exam_ids),
             'isSubscribed' => (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($user_id, '', 'active')),
+            'subscriptionInfo' => $subscription_info,
             'spinsAvailable' => (int) get_user_meta($user_id, 'mco_spins_available', true),
             'wonPrize' => get_user_meta($user_id, 'mco_won_prize', true) ?: null,
             'isSpinWheelEnabled' => (bool) get_option('mco_is_spin_wheel_enabled', false),

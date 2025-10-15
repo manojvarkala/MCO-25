@@ -23,7 +23,7 @@ if (!function_exists('mco_register_custom_post_types')) {
             'labels' => ['name' => 'Exam Programs', 'singular_name' => 'Exam Program'],
             'public' => true, 
             'has_archive' => true, 
-            'show_in_menu' => true, // Make this the top-level menu
+            'show_in_menu' => false, // Handled manually in mco-admin.php to prevent fatal error
             'menu_icon' => 'dashicons-welcome-learn-more',
             'show_in_rest' => true,
             'supports' => ['title', 'editor', 'thumbnail'], 
@@ -35,7 +35,7 @@ if (!function_exists('mco_register_custom_post_types')) {
             'labels' => ['name' => 'Recommended Books', 'singular_name' => 'Book'], 
             'public' => true, 
             'has_archive' => false, 
-            'show_in_menu' => 'edit.php?post_type=mco_exam_program', // Nest under Exam Programs
+            'show_in_menu' => false, // Handled manually in mco-admin.php
             'show_in_rest' => true,
             'supports' => ['title', 'editor', 'thumbnail'] 
         ]);

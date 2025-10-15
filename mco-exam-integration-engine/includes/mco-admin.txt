@@ -5,15 +5,42 @@ if (!defined('ABSPATH')) exit;
 
 if (!function_exists('mco_add_admin_menu')) {
     function mco_add_admin_menu() {
-        // The main menu page is now created automatically by the 'mco_exam_program' CPT.
-        // We only need to add our custom settings page as a submenu to it.
+        // Step 1: Create the top-level menu page. This is the parent for all other items.
+        add_menu_page(
+            'Exam App Engine',          // Page Title
+            'Exam App Engine',          // Menu Title
+            'manage_options',           // Capability
+            'mco-exam-engine',          // Menu Slug (this will be the slug for the first submenu item)
+            'mco_exam_engine_admin_page', // Callback function for the default page
+            'dashicons-welcome-learn-more', // Icon
+            25                          // Position
+        );
+
+        // Step 2: Add the CPTs as submenu items. WordPress will handle the links correctly.
         add_submenu_page(
-            'edit.php?post_type=mco_exam_program', // Parent slug
-            'Settings & Tools',                    // Page Title
-            'Settings & Tools',                    // Menu Title
-            'manage_options',                      // Capability
-            'mco-exam-engine',                     // Menu Slug (for the settings page)
-            'mco_exam_engine_admin_page'           // Callback function
+            'mco-exam-engine',                  // Parent slug
+            'Exam Programs',                    // Page Title
+            'Exam Programs',                    // Menu Title
+            'manage_options',                   // Capability
+            'edit.php?post_type=mco_exam_program' // The link to the CPT list view
+        );
+        add_submenu_page(
+            'mco-exam-engine',                  // Parent slug
+            'Recommended Books',                // Page Title
+            'Recommended Books',                // Menu Title
+            'manage_options',                   // Capability
+            'edit.php?post_type=mco_recommended_book' // The link to the CPT list view
+        );
+        
+        // Step 3: Add the custom Settings & Tools page as another submenu.
+        // We make its slug the same as the parent to make it the default page when clicking the top-level menu.
+        add_submenu_page(
+            'mco-exam-engine',              // Parent slug
+            'Settings & Tools',             // Page Title
+            'Settings & Tools',             // Menu Title
+            'manage_options',               // Capability
+            'mco-exam-engine',              // Menu Slug (matches parent to become the default)
+            'mco_exam_engine_admin_page'    // Callback function
         );
     }
 }
@@ -137,7 +164,7 @@ if (!function_exists('mco_admin_enqueue_scripts')) {
         // The settings page slug is now 'exam-app-engine_page_mco-exam-engine'.
         // We check for the CPT list view ('edit.php') and our custom page.
         $screen = get_current_screen();
-        if (!$screen || ($screen->post_type !== 'mco_exam_program' && $screen->base !== 'mco_exam_program_page_mco-exam-engine')) {
+        if (!$screen || ($screen->post_type !== 'mco_exam_program' && $screen->base !== 'toplevel_page_mco-exam-engine')) {
             return;
         }
         
@@ -198,11 +225,11 @@ if (!function_exists('mco_exam_engine_admin_page')) {
             <h1>Settings & Tools</h1>
             <?php settings_errors('mco_settings'); ?>
             <nav class="nav-tab-wrapper">
-                <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
-                <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=theme_selector" class="nav-tab <?php echo $active_tab == 'theme_selector' ? 'nav-tab-active' : ''; ?>">Theme Selector</a>
-                <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=bulk_import" class="nav-tab <?php echo $active_tab == 'bulk_import' ? 'nav-tab-active' : ''; ?>">Bulk Import</a>
-                <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=certificate_templates" class="nav-tab <?php echo $active_tab == 'certificate_templates' ? 'nav-tab-active' : ''; ?>">Certificate Templates</a>
-                <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
+                <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
+                <a href="?page=mco-exam-engine&tab=theme_selector" class="nav-tab <?php echo $active_tab == 'theme_selector' ? 'nav-tab-active' : ''; ?>">Theme Selector</a>
+                <a href="?page=mco-exam-engine&tab=bulk_import" class="nav-tab <?php echo $active_tab == 'bulk_import' ? 'nav-tab-active' : ''; ?>">Bulk Import</a>
+                <a href="?page=mco-exam-engine&tab=certificate_templates" class="nav-tab <?php echo $active_tab == 'certificate_templates' ? 'nav-tab-active' : ''; ?>">Certificate Templates</a>
+                <a href="?page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
             </nav>
             <div class="tab-content">
                 <?php
@@ -219,7 +246,7 @@ if (!function_exists('mco_exam_engine_admin_page')) {
 }
 
 function mco_render_main_settings_tab() { ?>
-    <form method="post" action="?post_type=mco_exam_program&page=mco-exam-engine&tab=main_settings">
+    <form method="post" action="?page=mco-exam-engine&tab=main_settings">
         <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
         <input type="hidden" name="mco_form_action" value="save_main_settings">
         <table class="form-table">
@@ -245,7 +272,7 @@ function mco_render_main_settings_tab() { ?>
 <?php }
 
 function mco_render_theme_selector_tab() { ?>
-    <form method="post" action="?post_type=mco_exam_program&page=mco-exam-engine&tab=theme_selector">
+    <form method="post" action="?page=mco-exam-engine&tab=theme_selector">
         <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
         <input type="hidden" name="mco_form_action" value="save_theme_settings">
         <h2>Application Theme</h2><p>Select the default visual theme for the exam application. Users can override this choice in their own profile.</p>
@@ -297,12 +324,12 @@ function mco_render_bulk_import_tab() { ?>
 
 function mco_handle_csv_upload() {
     if (!isset($_POST['mco_bulk_import_csv_nonce']) || !wp_verify_nonce($_POST['mco_bulk_import_csv_nonce'], 'mco_bulk_import_csv_nonce')) wp_die('Security check failed');
-    if (empty($_FILES['csv_file']['tmp_name'])) { set_transient('mco_import_feedback', '<p class="error">No file uploaded.</p>', 60); wp_redirect(admin_url('admin.php?post_type=mco_exam_program&page=mco-exam-engine&tab=bulk_import&import_status=error')); exit; }
+    if (empty($_FILES['csv_file']['tmp_name'])) { set_transient('mco_import_feedback', '<p class="error">No file uploaded.</p>', 60); wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=bulk_import&import_status=error')); exit; }
     $import_type = sanitize_text_field($_POST['import_type']);
     $file_path = $_FILES['csv_file']['tmp_name'];
     $feedback = ($import_type === 'exam_programs') ? mco_process_csv_import($file_path) : (($import_type === 'recommended_books') ? mco_process_books_csv_import($file_path) : '<p class="error">Invalid import type specified.</p>');
     set_transient('mco_import_feedback', $feedback, 60);
-    wp_redirect(admin_url('admin.php?post_type=mco_exam_program&page=mco-exam-engine&tab=bulk_import&import_status=success'));
+    wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=bulk_import&import_status=success'));
     exit;
 }
 
@@ -437,10 +464,10 @@ function mco_render_tools_tab() {
     $signatures_configured = false;
 
     if (empty($app_url)) {
-        $missing_requirements[] = 'Set the <strong>Exam Application URL</strong> in the <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=main_settings">Main Settings</a> tab.';
+        $missing_requirements[] = 'Set the <strong>Exam Application URL</strong> in the <a href="?page=mco-exam-engine&tab=main_settings">Main Settings</a> tab.';
     }
     if (empty($logo_url) && empty($site_icon_url)) {
-        $missing_requirements[] = 'Set a <strong>Custom Logo URL</strong> or a default <strong>Site Icon</strong> in <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=main_settings">Main Settings</a> or the Customizer.';
+        $missing_requirements[] = 'Set a <strong>Custom Logo URL</strong> or a default <strong>Site Icon</strong> in <a href="?page=mco-exam-engine&tab=main_settings">Main Settings</a> or the Customizer.';
     }
     if (!empty($templates)) {
         foreach($templates as $template) {
@@ -451,7 +478,7 @@ function mco_render_tools_tab() {
         }
     }
     if (!$signatures_configured) {
-        $missing_requirements[] = 'Configure at least one signature in the <a href="?post_type=mco_exam_program&page=mco-exam-engine&tab=certificate_templates">Certificate Templates</a> tab.';
+        $missing_requirements[] = 'Configure at least one signature in the <a href="?page=mco-exam-engine&tab=certificate_templates">Certificate Templates</a> tab.';
     }
     
     $all_requirements_met = empty($missing_requirements);
