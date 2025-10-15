@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useContext, createContext, FC, ReactNode } from 'react';
 import toast from 'react-hot-toast';
-import type { User, TokenPayload } from '../types.ts';
+import type { User, TokenPayload, SubscriptionInfo } from '../types.ts';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 
 type MasqueradeMode = 'none' | 'user' | 'visitor';
@@ -10,6 +10,7 @@ interface AuthState {
     token: string | null;
     paidExamIds: string[];
     isSubscribed: boolean;
+    subscriptionInfo: SubscriptionInfo | null;
     // FIX: Add spinsAvailable to AuthState for Wheel of Fortune feature.
     spinsAvailable: number;
 }
@@ -70,6 +71,16 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         return false;
     }
   });
+  const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(() => {
+    try {
+        const storedInfo = localStorage.getItem('subscriptionInfo');
+        return storedInfo ? JSON.parse(storedInfo) : null;
+    } catch (error) {
+        console.error("Failed to parse subscriptionInfo from localStorage", error);
+        return null;
+    }
+  });
+
   // FIX: Add spinsAvailable state for Wheel of Fortune feature.
   const [spinsAvailable, setSpinsAvailable] = useState<number>(() => {
     try {
@@ -95,6 +106,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setPaidExamIds([]);
     setToken(null);
     setIsSubscribed(false);
+    setSubscriptionInfo(null);
     // FIX: Reset spinsAvailable on logout.
     setSpinsAvailable(0);
     setMasqueradeAs('none');
@@ -103,6 +115,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     localStorage.removeItem('paidExamIds');
     localStorage.removeItem('authToken');
     localStorage.removeItem('isSubscribed');
+    localStorage.removeItem('subscriptionInfo');
     localStorage.removeItem('spinsAvailable');
     localStorage.removeItem('wonPrize');
     localStorage.removeItem('activeOrg');
@@ -183,6 +196,15 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('isSubscribed');
             }
 
+            if (payload.subscriptionInfo) {
+                setSubscriptionInfo(payload.subscriptionInfo);
+                localStorage.setItem('subscriptionInfo', JSON.stringify(payload.subscriptionInfo));
+            } else {
+                setSubscriptionInfo(null);
+                localStorage.removeItem('subscriptionInfo');
+            }
+
+
             // FIX: Handle spinsAvailable from token payload for Wheel of Fortune feature.
             if (typeof payload.spinsAvailable === 'number') {
                 setSpinsAvailable(payload.spinsAvailable);
@@ -218,7 +240,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (masqueradeAs !== 'none' || !user?.isAdmin) return;
     
         // FIX: Include spinsAvailable in original auth state for masquerade mode.
-        setOriginalAuthState({ user, token, paidExamIds, isSubscribed, spinsAvailable });
+        setOriginalAuthState({ user, token, paidExamIds, isSubscribed, subscriptionInfo, spinsAvailable });
         setMasqueradeAs(as);
 
         if (as === 'user') {
@@ -228,6 +250,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setToken(null);
             setPaidExamIds([]);
             setIsSubscribed(false);
+            setSubscriptionInfo(null);
             // FIX: Reset spinsAvailable when masquerading as a visitor.
             setSpinsAvailable(0);
             toast('Masquerade mode enabled. Viewing as a visitor.', { icon: '👻' });
@@ -241,6 +264,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setToken(originalAuthState.token);
         setPaidExamIds(originalAuthState.paidExamIds);
         setIsSubscribed(originalAuthState.isSubscribed);
+        setSubscriptionInfo(originalAuthState.subscriptionInfo);
         // FIX: Restore spinsAvailable when stopping masquerade mode.
         setSpinsAvailable(originalAuthState.spinsAvailable);
 
@@ -264,6 +288,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     token,
     paidExamIds,
     isSubscribed,
+    subscriptionInfo,
     // FIX: Expose spinsAvailable through the AuthContext.
     spinsAvailable,
     isEffectivelyAdmin,
@@ -275,7 +300,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     startMasquerade,
     stopMasquerade,
   }), [
-    user, token, paidExamIds, isSubscribed, spinsAvailable,
+    user, token, paidExamIds, isSubscribed, subscriptionInfo, spinsAvailable,
     isEffectivelyAdmin, isMasquerading, masqueradeAs, loginWithToken,
     logout, updateUserName, startMasquerade, stopMasquerade
   ]);

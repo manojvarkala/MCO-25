@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam } from '../types.ts';
-import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit } from 'lucide-react';
+import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit, CreditCard } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';
@@ -35,7 +35,7 @@ const stripHtml = (html: string): string => {
 };
 
 const Dashboard: FC = () => {
-    const { user, token, paidExamIds, isSubscribed, loginWithToken, isEffectivelyAdmin } = useAuth();
+    const { user, token, paidExamIds, isSubscribed, subscriptionInfo, loginWithToken, isEffectivelyAdmin } = useAuth();
     const { activeOrg, isInitializing, inProgressExam, examPrices } = useAppContext();
     const navigate = useNavigate();
 
@@ -113,6 +113,8 @@ const Dashboard: FC = () => {
         return <div className="text-center py-10"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading dashboard data...</p></div>;
     }
 
+    const myAccountUrl = activeOrg ? `https://www.${activeOrg.website}/my-account/` : '#';
+
     return (
         <div className="space-y-8">
             <div className="flex flex-wrap justify-between items-center gap-4">
@@ -148,7 +150,39 @@ const Dashboard: FC = () => {
                 </div>
             )}
             
-            {!isSubscribed && (
+            {user && subscriptionInfo && (
+                 <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
+                     <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4 flex items-center gap-2"><CreditCard className="text-[rgb(var(--color-primary-rgb))]" /> Subscription Status</h2>
+                     {isSubscribed ? (
+                        <div className="flex flex-wrap justify-between items-center gap-4">
+                            <div>
+                                <p className="text-sm text-green-400 font-semibold">STATUS: ACTIVE</p>
+                                <p className="text-lg font-bold">You have full access to all practice exams.</p>
+                                {subscriptionInfo.nextPaymentDate && (
+                                    <p className="text-sm text-[rgb(var(--color-text-muted-rgb))]">Your subscription will renew on {subscriptionInfo.nextPaymentDate}.</p>
+                                )}
+                            </div>
+                            <a href={myAccountUrl} target="_blank" rel="noopener noreferrer" className="bg-slate-200 text-slate-800 font-semibold py-2 px-4 rounded-lg text-sm hover:bg-slate-300 transition">
+                                Manage Subscription
+                            </a>
+                        </div>
+                     ) : (
+                        <div className="flex flex-wrap justify-between items-center gap-4">
+                            <div>
+                                <p className="text-sm text-yellow-400 font-semibold">STATUS: INACTIVE</p>
+                                <p className="text-lg font-bold">Your subscription has expired or is on hold.</p>
+                                <p className="text-sm text-[rgb(var(--color-text-muted-rgb))]">Renew now to regain access to all premium features.</p>
+                            </div>
+                            <Link to="/pricing" className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition">
+                                Renew Now
+                            </Link>
+                        </div>
+                     )}
+                 </div>
+            )}
+
+
+            {!isSubscribed && !subscriptionInfo && (
                 <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
                     <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2 flex items-center gap-2"><Star className="text-yellow-400" /> Unlock Your Full Potential</h2>
                     <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">Get unlimited access to all practice exams and AI study guides with a subscription.</p>

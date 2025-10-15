@@ -6,10 +6,16 @@ export interface User {
   isAdmin: boolean;
 }
 
+export interface SubscriptionInfo {
+    status: 'active' | 'on-hold' | 'cancelled' | 'expired';
+    nextPaymentDate?: string;
+}
+
 export interface TokenPayload {
   user: User;
   paidExamIds: string[];
   isSubscribed: boolean;
+  subscriptionInfo?: SubscriptionInfo | null;
   exp?: number;
   // FIX: Add spinsAvailable to token payload for Wheel of Fortune feature.
   spinsAvailable?: number;

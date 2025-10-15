@@ -530,13 +530,10 @@ const chapters = [
 // --- MAIN COMPONENT ---
 
 const Handbook: FC = () => {
-    // This is a simplified restoration of the handbook component.
-    // The full, expanded content of all chapters would be included here.
     const [isDownloading, setIsDownloading] = useState(false);
     const [currentPage, setCurrentPage] = useState(0);
     const [isAnimating, setIsAnimating] = useState<false | 'forward' | 'backward'>(false);
-    const navigate = useNavigate();
-
+    
     const handleNavigate = useCallback((direction: 'forward' | 'backward') => {
         if (isAnimating) return;
 
@@ -575,19 +572,17 @@ const Handbook: FC = () => {
                 pdfInstance.text(`Page ${pageNum} of ${totalPages}`, pageWidth - margin, pageHeight - margin / 2, { align: 'right' });
             };
 
-            // 1. Render all content into one super-long, padded container
+            // 1. Render all content into one super-long container (without padding)
             const contentContainer = document.createElement('div');
             contentContainer.style.width = `${contentWidth}px`;
             contentContainer.style.position = 'absolute';
             contentContainer.style.left = '-9999px';
             contentContainer.style.backgroundColor = 'white';
-            contentContainer.style.padding = `${margin}px`; // Add padding here
-            contentContainer.style.boxSizing = 'border-box';
 
             let allContentHtml = '';
-            // Start from index 1 to skip the cover page for this rendering pass
             for (let i = 1; i < chapters.length; i++) {
-                allContentHtml += `<div class="prose max-w-none prose-slate" style="page-break-inside: avoid;">${chapters[i].content}</div><div style="height: 40px;"></div>`;
+                // Wrap each chapter in a padded div for html2canvas to render spacing
+                allContentHtml += `<div class="prose max-w-none prose-slate" style="padding: ${margin}px; page-break-inside: avoid;">${chapters[i].content}</div><div style="height: 1px;"></div>`;
             }
             contentContainer.innerHTML = allContentHtml;
             document.body.appendChild(contentContainer);
@@ -630,7 +625,7 @@ const Handbook: FC = () => {
             }
 
             // 4. Add headers and footers to all pages except the cover
-            const totalPages = pdf.internal.pages.length - 1; // page array is 1-based
+            const totalPages = pdf.internal.pages.length - 1;
             for (let i = 2; i <= totalPages + 1; i++) {
                 pdf.setPage(i);
                 addHeaderFooter(pdf, i - 1, totalPages);
@@ -666,13 +661,13 @@ const Handbook: FC = () => {
                     <button onClick={() => handleNavigate('forward')} disabled={!!isAnimating || currentPage >= chapters.length - 2} className="p-2 rounded-md bg-white border border-slate-300 disabled:opacity-50 hover:bg-slate-50"><ChevronRight size={20} /></button>
                 </div>
             </div>
-            <div className="w-full max-w-7xl mx-auto aspect-[1.5/1] perspective">
+            <div className="w-full max-w-7xl mx-auto aspect-[4/3] perspective">
                 <div className="w-full h-full grid grid-cols-2 gap-4 transform-style-3d">
                     <div className={`shadow-lg rounded-l-lg border-r border-slate-200 overflow-hidden relative ${leftPageClass} backface-hidden ${chapters[currentPage]?.isCover ? 'p-0' : 'bg-white'}`}>
-                        <div className="p-8 sm:p-12 h-full overflow-auto prose max-w-none prose-slate prose-pre:whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: chapters[currentPage]?.content || '' }} />
+                        <div className="p-6 sm:p-10 h-full overflow-y-auto prose max-w-none prose-slate prose-pre:whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: chapters[currentPage]?.content || '' }} />
                     </div>
                     <div className={`shadow-lg rounded-r-lg border-l border-slate-200 overflow-hidden relative ${rightPageClass} backface-hidden bg-white`}>
-                        <div className="p-8 sm:p-12 h-full overflow-auto prose max-w-none prose-slate prose-pre:whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: chapters[currentPage + 1]?.content || '' }} />
+                        <div className="p-6 sm:p-10 h-full overflow-y-auto prose max-w-none prose-slate prose-pre:whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: chapters[currentPage + 1]?.content || '' }} />
                     </div>
                 </div>
             </div>
