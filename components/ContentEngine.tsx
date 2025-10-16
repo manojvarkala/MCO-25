@@ -1,6 +1,6 @@
 import React, { FC, useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
-import { Sparkles, Send, Calendar, Clock, User, List, CheckCircle, ExternalLink } from 'lucide-react';
+import { Sparkles, Send, Calendar, Clock, User, List, CheckCircle, ExternalLink, Key, Hash } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -25,7 +25,11 @@ const ContentEngine: FC = () => {
     // Form state
     const [numPosts, setNumPosts] = useState('3');
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+    const [startTime, setStartTime] = useState('09:00');
     const [interval, setInterval] = useState('1'); // in days
+    const [intervalUnit, setIntervalUnit] = useState<'hours' | 'days' | 'weeks'>('days');
+    const [keywords, setKeywords] = useState('');
+    const [hashtags, setHashtags] = useState('');
     const [authorId, setAuthorId] = useState('');
     const [categoryId, setCategoryId] = useState('');
 
@@ -77,11 +81,21 @@ const ContentEngine: FC = () => {
 
             try {
                 // 1. Generate content with AI
-                const aiContent = await googleSheetsService.generateAIPostContent(program.name, program.description);
+                const aiContent = await googleSheetsService.generateAIPostContent(program.name, program.description, keywords, hashtags);
                 
                 // 2. Prepare post data for WordPress
-                const scheduleDate = new Date(startDate);
-                scheduleDate.setDate(scheduleDate.getDate() + (i * parseInt(interval, 10)));
+                const baseScheduleDate = new Date(`${startDate}T${startTime}`);
+                const scheduleDate = new Date(baseScheduleDate);
+
+                const intervalValue = parseInt(interval, 10);
+                if (intervalUnit === 'days') {
+                    scheduleDate.setDate(scheduleDate.getDate() + (i * intervalValue));
+                } else if (intervalUnit === 'hours') {
+                    scheduleDate.setHours(scheduleDate.getHours() + (i * intervalValue));
+                } else if (intervalUnit === 'weeks') {
+                    scheduleDate.setDate(scheduleDate.getDate() + (i * intervalValue * 7));
+                }
+                
                 const postDate = scheduleDate.toISOString().slice(0, 19).replace('T', ' ');
 
                 // 3. Create the dynamic Call-To-Action block with the CORRECT URL
@@ -115,7 +129,9 @@ const ContentEngine: FC = () => {
                     post_status: 'future',
                     post_date: postDate,
                     post_author: authorId || undefined,
-                    post_category: categoryId ? parseInt(categoryId, 10) : undefined
+                    post_category: categoryId ? parseInt(categoryId, 10) : undefined,
+                    keywords: keywords,
+                    hashtags: hashtags
                 };
 
                 // 4. Send to WordPress to create the post
@@ -155,37 +171,68 @@ const ContentEngine: FC = () => {
             </p>
 
             <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div>
-                        <label htmlFor="num_posts" className="text-sm font-bold block mb-1">Posts to Create</label>
-                        <input type="number" id="num_posts" value={numPosts} onChange={e => setNumPosts(e.target.value)} min="1" max="10" className="w-full p-2 border rounded-md" />
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    {/* Column 1: Scheduling */}
+                    <div className="space-y-4">
+                        <h3 className="font-bold text-lg flex items-center gap-2"><Calendar /> Scheduling</h3>
+                        <div>
+                            <label htmlFor="num_posts" className="text-sm font-bold block mb-1">Posts to Create</label>
+                            <input type="number" id="num_posts" value={numPosts} onChange={e => setNumPosts(e.target.value)} min="1" max={eligiblePrograms.length} className="w-full p-2 border rounded-md" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <label htmlFor="start_date" className="text-sm font-bold block mb-1">Start Date</label>
+                                <input type="date" id="start_date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full p-2 border rounded-md" />
+                            </div>
+                            <div>
+                                <label htmlFor="start_time" className="text-sm font-bold block mb-1">Start Time</label>
+                                <input type="time" id="start_time" value={startTime} onChange={e => setStartTime(e.target.value)} className="w-full p-2 border rounded-md" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-sm font-bold block mb-1">Frequency</label>
+                            <div className="flex gap-2">
+                                <input type="number" id="interval" value={interval} onChange={e => setInterval(e.target.value)} min="1" className="w-1/2 p-2 border rounded-md" />
+                                <select id="interval_unit" value={intervalUnit} onChange={e => setIntervalUnit(e.target.value as any)} className="w-1/2 p-2 border rounded-md">
+                                    <option value="hours">Hours</option>
+                                    <option value="days">Days</option>
+                                    <option value="weeks">Weeks</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label htmlFor="start_date" className="text-sm font-bold block mb-1">Start Date</label>
-                        <input type="date" id="start_date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full p-2 border rounded-md" />
-                    </div>
-                    <div>
-                        <label htmlFor="interval" className="text-sm font-bold block mb-1">Interval (Days)</label>
-                        <input type="number" id="interval" value={interval} onChange={e => setInterval(e.target.value)} min="1" className="w-full p-2 border rounded-md" />
-                    </div>
-                    <div>
-                        <label htmlFor="author" className="text-sm font-bold block mb-1">Author</label>
-                        <select id="author" value={authorId} onChange={e => setAuthorId(e.target.value)} className="w-full p-2 border rounded-md">
-                            <option value="">Default (You)</option>
-                            {postData?.authors.map(author => <option key={author.ID} value={author.ID}>{author.display_name}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label htmlFor="category" className="text-sm font-bold block mb-1">Category</label>
-                        <select id="category" value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-full p-2 border rounded-md">
-                            <option value="">Uncategorized</option>
-                            {/* FIX: Correctly map over the array of category objects instead of using Object.entries, which caused a type error. */}
-                            {postData?.categories.map((category: WordpressCategory) => (
-                                <option key={category.term_id} value={category.term_id}>
-                                    {category.name}
-                                </option>
-                            ))}
-                        </select>
+
+                    {/* Column 2: Content & SEO */}
+                    <div className="space-y-4">
+                        <h3 className="font-bold text-lg flex items-center gap-2"><Sparkles /> Content & SEO</h3>
+                        <div>
+                            <label htmlFor="keywords" className="text-sm font-bold block mb-1 flex items-center gap-1"><Key size={14}/> Keywords</label>
+                            <input type="text" id="keywords" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="e.g. medical coding, cpc exam, certification" className="w-full p-2 border rounded-md" />
+                            <p className="text-xs text-[rgb(var(--color-text-muted-rgb))] mt-1">Comma-separated. AI will try to include these in the post.</p>
+                        </div>
+                        <div>
+                            <label htmlFor="hashtags" className="text-sm font-bold block mb-1 flex items-center gap-1"><Hash size={14}/> Hashtags</label>
+                            <input type="text" id="hashtags" value={hashtags} onChange={e => setHashtags(e.target.value)} placeholder="e.g. MedicalCoding, HealthIT, CPCPrep" className="w-full p-2 border rounded-md" />
+                            <p className="text-xs text-[rgb(var(--color-text-muted-rgb))] mt-1">Comma-separated, without the '#'. AI will add these to the post.</p>
+                        </div>
+                        <div>
+                            <label htmlFor="author" className="text-sm font-bold block mb-1">Author</label>
+                            <select id="author" value={authorId} onChange={e => setAuthorId(e.target.value)} className="w-full p-2 border rounded-md">
+                                <option value="">Default (You)</option>
+                                {postData?.authors.map(author => <option key={author.ID} value={author.ID}>{author.display_name}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label htmlFor="category" className="text-sm font-bold block mb-1">Category</label>
+                            <select id="category" value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-full p-2 border rounded-md">
+                                <option value="">Uncategorized</option>
+                                {postData?.categories.map((category: WordpressCategory) => (
+                                    <option key={category.term_id} value={category.term_id}>
+                                        {category.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div className="mt-6 text-right">
@@ -200,7 +247,7 @@ const ContentEngine: FC = () => {
                 <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                     <h2 className="text-xl font-bold mb-4">Generation Log</h2>
                     {isGenerating && (
-                        <div className="flex items-center gap-3 text-lg font-semibold text-blue-600">
+                        <div className="flex items-center gap-3 text-lg font-semibold text-blue-400">
                             <Spinner />
                             <p>{progressMessage}</p>
                         </div>

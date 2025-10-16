@@ -761,21 +761,35 @@ function mco_api_create_post_from_app(WP_REST_Request $request) {
     $program_post_id = isset($params['program_id']) ? intval($params['program_id']) : 0;
     if (get_post_type($program_post_id) !== 'mco_exam_program') return new WP_Error('bad_request', 'Invalid source program ID.', ['status' => 400]);
 
+    $tags = [];
+    if (!empty($params['keywords'])) {
+        $tags = array_merge($tags, array_map('trim', explode(',', sanitize_text_field($params['keywords']))));
+    }
+    if (!empty($params['hashtags'])) {
+        $tags = array_merge($tags, array_map('trim', explode(',', sanitize_text_field($params['hashtags']))));
+    }
+
     $new_post_args = [
         'post_title' => sanitize_text_field($params['post_title']),
         'post_content' => wp_kses_post($params['post_content']),
         'post_status' => 'future',
         'post_date_gmt' => sanitize_text_field($params['post_date']),
+        'post_date' => get_date_from_gmt(sanitize_text_field($params['post_date'])),
         'post_author' => isset($params['post_author']) ? intval($params['post_author']) : get_current_user_id(),
         'post_category' => isset($params['post_category']) ? [intval($params['post_category'])] : [],
     ];
+
+    if (!empty($tags)) {
+        $new_post_args['tags_input'] = array_unique(array_filter($tags));
+    }
+
     $new_post_id = wp_insert_post($new_post_args, true);
 
     if (is_wp_error($new_post_id)) return $new_post_id;
     update_post_meta($program_post_id, '_mco_last_posted_timestamp', time());
     add_post_meta($new_post_id, '_mco_source_program_id', $program_post_id);
     add_post_meta($new_post_id, '_mco_ai_generated', '1');
-    return new WP_REST_Response(['success' => true, 'post_id' => $new_post_id, 'post_url' => get_admin_url() . 'post.php?post=' . $new_post_id . '&action=edit'], 200);
+    return new WP_REST_Response(['success' => true, 'post_id' => $new_post_id, 'post_url' => get_edit_post_link($new_post_id, 'raw')], 200);
 }
 
 function mco_api_admin_search_users(WP_REST_Request $request) {

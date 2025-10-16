@@ -155,12 +155,13 @@ export const googleSheetsService = {
         }
     },
 
-    generateAIPostContent: async (programTitle: string, programDescription: string): Promise<string> => {
+    generateAIPostContent: async (programTitle: string, programDescription: string, keywords: string, hashtags: string): Promise<string> => {
         if (!process.env.API_KEY) {
             throw new Error("Gemini API key is not configured in the application's environment.");
         }
         
         const system_instruction = "You are an expert SEO content writer specializing in educational and certification-based websites. Your task is to generate an engaging, well-structured, and SEO-friendly blog post. The output must be formatted using WordPress block editor syntax (Gutenberg blocks like `<!-- wp:paragraph -->` and `<!-- wp:heading -->`). The content should be informative and persuasive, encouraging readers to explore the certification program.";
+        
         const user_prompt = `
             Generate a blog post based on the following details:
 
@@ -173,6 +174,10 @@ export const googleSheetsService = {
             3. "What You'll Learn" - expanding on the provided description to detail the key knowledge areas and skills covered.
             4. "Career Opportunities" - outlining potential job roles and career advancement for certified professionals.
             5. A strong concluding paragraph that summarizes the benefits and encourages the reader to take the next step.
+            
+            SEO GUIDELINES:
+            - **Keywords:** Naturally weave the following keywords into the article content: ${keywords || 'Please generate 3-5 relevant keywords yourself'}.
+            - **Hashtags:** At the end of the post, add a paragraph block with a list of relevant hashtags. Include these hashtags: ${hashtags ? '#' + hashtags.replace(/, /g, ', #').replace(/,/g, ' #') : 'Please generate 5-7 relevant hashtags yourself'}.
 
             Ensure all text is wrapped in \`<!-- wp:paragraph --><p>...</p><!-- /wp:paragraph -->\` blocks. Do not include a main title for the post itself.
         `;
