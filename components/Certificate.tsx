@@ -138,7 +138,7 @@ const Certificate: FC = () => {
             const pdfHeight = pdf.internal.pageSize.getHeight();
             
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-// Fix: Corrected the regular expression to properly replace whitespace characters in the filename.
+            // Fix: Corrected the regular expression to properly replace whitespace characters in the filename.
             pdf.save(`Certificate-of-Completion-${certData.candidateName.replace(/\s+/g, '_')}.pdf`);
             toast.dismiss(toastId);
             toast.success("Certificate downloaded!");
@@ -161,17 +161,19 @@ const Certificate: FC = () => {
 
     const { organization, template, examName } = certData;
     
-    const titleText = template.title.replace('{examName}', examName);
+    const titleText = template.title.replace(/{examName}/g, examName);
+    
+    // This new logic correctly replaces all placeholders from the template without injecting extra HTML,
+    // which was causing the issue with the candidate name and the double percentage sign.
     const bodyText = template.body
-        .replace('{candidateName}', `<strong class="text-5xl md:text-6xl font-script text-slate-800 my-4 py-2 block">${certData.candidateName}</strong>`)
-        .replace('{finalScore}', `<strong>${certData.finalScore}</strong>`) // FIX: Remove extra '%' to prevent double '%%'
-        .replace('{examName}', `<strong>${examName}</strong>`);
+        .replace(/{candidateName}/g, certData.candidateName)
+        .replace(/{finalScore}/g, String(certData.finalScore))
+        .replace(/{examName}/g, examName);
 
     const hasTwoSignatures = !!(template.signature2Name && template.signature2Title);
 
     const isSig1Base64 = template.signature1ImageUrl && template.signature1ImageUrl.startsWith('data:image');
     const isSig2Base64 = template.signature2ImageUrl && template.signature2ImageUrl.startsWith('data:image');
-
 
     return (
         <>
