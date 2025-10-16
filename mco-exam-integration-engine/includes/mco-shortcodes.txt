@@ -397,3 +397,4 @@ function mco_book_showcase_shortcode() {
     echo '</div>';
     return ob_get_clean();
 }
+?>
