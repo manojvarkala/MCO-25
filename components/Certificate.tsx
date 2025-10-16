@@ -1,3 +1,4 @@
+
 import React, { FC, useState, useEffect, useRef } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useParams, useNavigate } from 'react-router-dom';
@@ -11,7 +12,6 @@ import { Download, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppContext } from '../context/AppContext.tsx';
-import Seal from '../assets/Seal.tsx';
 
 const decodeHtmlEntities = (text: string | undefined): string => {
     if (!text || typeof text !== 'string') return text || '';
@@ -226,17 +226,14 @@ const Certificate: FC = () => {
                             {examName}
                         </h3>
                         <p className="mt-4 text-base sm:text-lg text-slate-600">
-                            achieving a passing score of <strong>{certData.finalScore}%</strong> on {certData.date}.
+                            having achieved a passing score of <strong>{certData.finalScore}%</strong>.
                         </p>
                     </main>
 
                     {/* Footer */}
                     <footer className="mt-auto pt-4 relative">
-                        <div className="absolute bottom-16 left-1/2 -translate-x-1/2">
-                            <Seal className="w-24 h-24" />
-                        </div>
-                        <div className="flex justify-between items-end">
-                            <div className="text-center w-2/5">
+                        <div className="flex justify-between items-end pt-12">
+                            <div className="text-center w-1/3">
                                 <div className="h-12 flex items-center justify-center">
                                     {template.signature1ImageUrl ? (
                                         <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="h-10 mx-auto" />
@@ -249,10 +246,15 @@ const Certificate: FC = () => {
                                 <p className="text-xs text-slate-500">{template.signature1Title}</p>
                             </div>
 
-                            <div className="w-1/5"></div>
+                            <div className="text-center w-1/3">
+                                <p className="font-serif-display text-lg text-slate-700 h-12 flex items-end justify-center pb-1">{certData.date}</p>
+                                <hr className="border-t-2 border-slate-400 mt-2" />
+                                <p className="font-semibold text-sm mt-2">Date</p>
+                                <p className="text-xs text-slate-500">&nbsp;</p>
+                            </div>
                             
                             {hasTwoSignatures ? (
-                                <div className="text-center w-2/5">
+                                <div className="text-center w-1/3">
                                     <div className="h-12 flex items-center justify-center">
                                         {template.signature2ImageUrl ? (
                                             <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} className="h-10 mx-auto" />
@@ -264,7 +266,7 @@ const Certificate: FC = () => {
                                     <p className="font-semibold text-sm mt-2">{template.signature2Name}</p>
                                     <p className="text-xs text-slate-500">{template.signature2Title}</p>
                                 </div>
-                            ) : <div className="w-2/5"></div>}
+                            ) : <div className="w-1/3"></div>}
                         </div>
                         <div className="text-center mt-6 flex justify-between items-center border-t border-slate-200 pt-2">
                             <div className="text-left">

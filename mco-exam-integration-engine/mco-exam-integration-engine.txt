@@ -85,7 +85,6 @@ if (!defined('MCO_PLUGIN_VERSION')) {
 require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-data.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-api.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
 
 
@@ -96,10 +95,13 @@ if (!function_exists('mco_exam_engine_init')) {
     function mco_exam_engine_init() {
         mco_register_custom_post_types();
         mco_register_api_hooks();
-        // FIX: Admin-specific hooks should only be registered in the admin context to prevent fatal errors on front-end and AJAX requests.
+        
+        // FIX: Admin-specific code should only be loaded in the admin context to prevent fatal errors on the front-end.
         if (is_admin()) {
+            require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php';
             mco_register_admin_hooks();
         }
+        
         mco_register_shortcode_hooks();
     }
     add_action('init', 'mco_exam_engine_init');
