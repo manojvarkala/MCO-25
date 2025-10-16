@@ -211,3 +211,10 @@ export interface ProductVariation {
     isBundle?: boolean;
     bundledSkus?: string[];
 }
+
+export interface VerificationData {
+    candidateName: string;
+    examName: string;
+    finalScore: number;
+    date: string;
+}

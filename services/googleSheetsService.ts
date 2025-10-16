@@ -1,4 +1,4 @@
-import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, Organization, PostCreationData, ExamStat } from '../types.ts';
+import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, Organization, PostCreationData, ExamStat, VerificationData } from '../types.ts';
 import toast from 'react-hot-toast';
 import { GoogleGenAI, Type } from "@google/genai";
 import { getApiBaseUrl } from './apiConfig.ts';
@@ -270,6 +270,16 @@ export const googleSheetsService = {
         }
     },
     
+    verifyCertificate: async (certId: string): Promise<VerificationData> => {
+        try {
+            // Public endpoint, so token is null.
+            return await apiFetch(`/verify-certificate/${encodeURIComponent(certId)}`, 'GET', null);
+        } catch (error) {
+            console.error("Failed to verify certificate:", error);
+            throw error;
+        }
+    },
+
     getDebugDetails: async (token: string): Promise<DebugData> => {
         try {
             return await apiFetch(`/debug-details`, 'GET', token);

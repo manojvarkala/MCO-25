@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useEffect, useRef } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useParams, useNavigate } from 'react-router-dom';
@@ -175,6 +176,9 @@ const Certificate: FC = () => {
     const isSig1Base64 = template.signature1ImageUrl && template.signature1ImageUrl.startsWith('data:image');
     const isSig2Base64 = template.signature2ImageUrl && template.signature2ImageUrl.startsWith('data:image');
 
+    const verificationUrl = `${window.location.origin}/verify/${certData.certificateNumber}`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(verificationUrl)}`;
+
     return (
         <>
         <div className="max-w-5xl mx-auto bg-slate-100 p-4 sm:p-6 rounded-lg">
@@ -258,7 +262,13 @@ const Certificate: FC = () => {
                                 </div>
                             ) : <div className="w-2/5"></div>}
                         </div>
-                        <p className="text-xs text-slate-400 mt-6 text-center">Verify at: https://www.{organization.website}</p>
+                        <div className="text-center mt-6 flex justify-between items-center border-t border-slate-200 pt-3">
+                            <div className="text-left">
+                                <p className="text-xs text-slate-500">Verify authenticity at:</p>
+                                <a href={verificationUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-600 hover:underline break-all">{verificationUrl}</a>
+                            </div>
+                            <img src={qrCodeUrl} alt="Verification QR Code" className="w-16 h-16" />
+                        </div>
                     </footer>
                 </div>
             </div>
