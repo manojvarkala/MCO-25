@@ -146,15 +146,17 @@ function mco_exam_showcase_shortcode($atts) {
 
     ob_start();
     
+    $is_wc_active = class_exists('WooCommerce');
+    $is_user_logged_in = is_user_logged_in();
+    $current_user_id = $is_user_logged_in ? get_current_user_id() : 0;
+    $is_subscribed = $is_wc_active && $is_user_logged_in && class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($current_user_id, '', 'active');
+
     // --- Subscription Offers Section ---
-    $is_subscribed = (is_user_logged_in() && class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription(get_current_user_id(), '', 'active'));
-    
-    // Only show subscription offers on the main showcase page, not when a single program is displayed.
     if (!$is_subscribed && empty($program_id_str)) {
         $monthly_sub = $config_data['examPrices']['sub-monthly'] ?? null;
         $yearly_sub = $config_data['examPrices']['sub-yearly'] ?? null;
         
-        if (($monthly_sub && isset($monthly_sub['productId'])) || ($yearly_sub && isset($yearly_sub['productId']))) {
+        if ($is_wc_active && (($monthly_sub && isset($monthly_sub['productId'])) || ($yearly_sub && isset($yearly_sub['productId'])))) {
             echo '<div class="mco-subscription-grid">';
             
             if ($monthly_sub && isset($monthly_sub['productId'])) {
@@ -240,15 +242,10 @@ function mco_exam_showcase_shortcode($atts) {
         }
 
         // Certification Exam Card
-        if ($cert_exam) {
-            $is_purchased = false;
+        if ($cert_exam && $is_wc_active) {
             $product_id = wc_get_product_id_by_sku($cert_exam['productSku']);
+            $is_purchased = $is_subscribed || ($is_user_logged_in && $product_id ? wc_customer_bought_product('', $current_user_id, $product_id) : false);
 
-            if (is_user_logged_in()) {
-                $user_id = get_current_user_id();
-                $is_subscribed = (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($user_id, '', 'active'));
-                $is_purchased = $is_subscribed || ($product_id ? wc_customer_bought_product('', $user_id, $product_id) : false);
-            }
             $button_text = $is_purchased ? 'Start Exam' : 'Add to Cart';
             $button_icon = $is_purchased ? $icons['practice'] : $icons['cart'];
             $button_url = $is_purchased ? mco_get_exam_app_url() . '/test/' . $cert_exam['id'] : ($product_id ? get_site_url() . '/cart/?add-to-cart=' . $product_id : '#');

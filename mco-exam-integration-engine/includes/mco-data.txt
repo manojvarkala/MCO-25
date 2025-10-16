@@ -104,6 +104,7 @@ function mco_get_app_config_data() {
     $all_prices = array();
     $all_suggested_books = array();
     $exam_product_categories = array();
+    $is_wc_active = class_exists('WooCommerce');
 
     // --- Step 1: Process Exam Programs to build the app's core exam structure ---
     $exam_program_posts = get_posts(array(
@@ -149,7 +150,7 @@ function mco_get_app_config_data() {
         $practice_exam_id_for_app = 'exam-' . $program_id_for_app . '-practice';
         
         $image_url = '';
-        if ($cert_sku) {
+        if ($is_wc_active && $cert_sku) {
             $product_id = wc_get_product_id_by_sku($cert_sku);
             if ($product_id) {
                 $image_url = get_the_post_thumbnail_url($product_id, 'medium_large') ?: '';
@@ -191,7 +192,7 @@ function mco_get_app_config_data() {
         );
         
         // Certification Exam
-        if ($cert_sku) {
+        if ($is_wc_active && $cert_sku) {
             $product_id = wc_get_product_id_by_sku($cert_sku);
             $product = $product_id ? wc_get_product($product_id) : null;
             if ($product) {
@@ -220,7 +221,7 @@ function mco_get_app_config_data() {
     }
 
     // --- Step 2: Get ALL products from WooCommerce and build the price list ---
-    if (class_exists('WooCommerce')) {
+    if ($is_wc_active) {
         $all_wc_products = wc_get_products(array('limit' => -1));
         foreach ($all_wc_products as $product) {
             $sku = $product->get_sku();
