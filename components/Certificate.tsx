@@ -1,5 +1,3 @@
-
-
 import React, { FC, useState, useEffect, useRef } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useParams, useNavigate } from 'react-router-dom';
@@ -13,6 +11,7 @@ import { Download, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppContext } from '../context/AppContext.tsx';
+import Seal from '../assets/Seal.tsx';
 
 const decodeHtmlEntities = (text: string | undefined): string => {
     if (!text || typeof text !== 'string') return text || '';
@@ -161,21 +160,9 @@ const Certificate: FC = () => {
     }
 
     const { organization, template, examName } = certData;
-    
-    const titleText = template.title.replace(/{examName}/g, examName);
-    
-    // This new logic correctly replaces all placeholders from the template without injecting extra HTML,
-    // which was causing the issue with the candidate name and the double percentage sign.
-    const bodyText = template.body
-        .replace(/{candidateName}/g, certData.candidateName)
-        .replace(/{finalScore}/g, String(certData.finalScore))
-        .replace(/{examName}/g, examName);
-
     const hasTwoSignatures = !!(template.signature2Name && template.signature2Title);
-
     const isSig1Base64 = template.signature1ImageUrl && template.signature1ImageUrl.startsWith('data:image');
     const isSig2Base64 = template.signature2ImageUrl && template.signature2ImageUrl.startsWith('data:image');
-
     const verificationUrl = `${window.location.origin}/verify/${certData.certificateNumber}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(verificationUrl)}`;
 
@@ -200,20 +187,21 @@ const Certificate: FC = () => {
                 </button>
             </div>
             
-            <div ref={certificatePrintRef} className="bg-slate-50 p-2 relative aspect-[1.414/1] w-full shadow-2xl font-serif text-slate-800">
-                {/* Ornate Borders & Background */}
+            <div ref={certificatePrintRef} className="bg-white p-2 relative aspect-[1.414/1] w-full shadow-2xl font-serif-display text-slate-800">
+                {/* Ornate Borders */}
                 <div className="absolute inset-2 border-2 border-amber-500"></div>
-                <div className="absolute inset-3 border border-amber-300"></div>
-                <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-transparent to-white/80"></div>
+                <div className="absolute inset-4 border border-slate-400"></div>
+                <div className="absolute inset-5 border-2 border-amber-300"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-slate-50 to-white/80"></div>
 
-                <div className="relative z-10 flex flex-col h-full p-4 md:p-8">
+                <div className="relative z-10 flex flex-col h-full p-4 md:p-8 text-center">
                     {/* Header */}
                     <header className="flex justify-between items-start gap-4 mb-4">
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 text-left">
                             {organization.logo && <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="h-16 w-16 object-contain" />}
                              <div>
-                                <h1 className="text-2xl md:text-3xl font-bold text-slate-900 font-serif-display text-left">{organization.name}</h1>
-                                <p className="text-sm text-slate-500 text-left">www.{organization.website}</p>
+                                <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{organization.name}</h1>
+                                <p className="text-sm text-slate-500">www.{organization.website}</p>
                             </div>
                         </div>
                         <div className="text-right flex-shrink-0">
@@ -223,46 +211,62 @@ const Certificate: FC = () => {
                     </header>
 
                     {/* Main Content */}
-                    <main className="flex-grow flex flex-col items-center justify-center text-center my-4">
-                        <p className="text-sm tracking-[0.2em] uppercase text-slate-500 mb-4">{titleText}</p>
-                        <div className="text-md text-slate-600 max-w-2xl mx-auto" dangerouslySetInnerHTML={{ __html: bodyText.replace(/\n/g, '<br />') }}></div>
+                    <main className="flex-grow flex flex-col items-center justify-center my-4">
+                        <p className="text-xl sm:text-2xl tracking-[0.2em] uppercase text-slate-600 font-semibold">{template.title}</p>
+                        <p className="mt-8 text-base sm:text-lg text-slate-500">This certificate is proudly presented to</p>
+                        
+                        <h2 className="font-script text-5xl sm:text-6xl text-slate-800 my-2 sm:my-4 px-8 border-b-2 border-amber-400">
+                            {certData.candidateName}
+                        </h2>
+
+                        <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto">
+                            For successfully completing the rigorous requirements of the
+                        </p>
+                        <h3 className="text-2xl sm:text-3xl font-bold text-cyan-700 mt-2">
+                            {examName}
+                        </h3>
+                        <p className="mt-4 text-base sm:text-lg text-slate-600">
+                            achieving a passing score of <strong>{certData.finalScore}%</strong> on {certData.date}.
+                        </p>
                     </main>
 
                     {/* Footer */}
-                    <footer className="mt-auto pt-8">
+                    <footer className="mt-auto pt-4 relative">
+                        <div className="absolute bottom-16 left-1/2 -translate-x-1/2">
+                            <Seal className="w-24 h-24" />
+                        </div>
                         <div className="flex justify-between items-end">
                             <div className="text-center w-2/5">
-                                <div className="h-16 flex items-center justify-center">
+                                <div className="h-12 flex items-center justify-center">
                                     {template.signature1ImageUrl ? (
-                                        <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="h-12 mx-auto" />
+                                        <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="h-10 mx-auto" />
                                     ) : (
                                         <p className="font-script text-3xl text-slate-700">{template.signature1Name}</p>
                                     )}
                                 </div>
-                                <p className="border-t-2 border-slate-400 mt-2 pt-2 font-semibold text-sm">{template.signature1Name}</p>
+                                <hr className="border-t-2 border-slate-400 mt-2" />
+                                <p className="font-semibold text-sm mt-2">{template.signature1Name}</p>
                                 <p className="text-xs text-slate-500">{template.signature1Title}</p>
                             </div>
 
-                            <div className="text-center w-1/5">
-                                <p className="text-xs text-slate-500">Issued On</p>
-                                <p className="font-semibold border-t-2 border-slate-400 mt-2 pt-2 text-sm">{certData.date}</p>
-                            </div>
+                            <div className="w-1/5"></div>
                             
                             {hasTwoSignatures ? (
                                 <div className="text-center w-2/5">
-                                    <div className="h-16 flex items-center justify-center">
+                                    <div className="h-12 flex items-center justify-center">
                                         {template.signature2ImageUrl ? (
-                                            <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} className="h-12 mx-auto" />
+                                            <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} className="h-10 mx-auto" />
                                         ) : (
                                             <p className="font-script text-3xl text-slate-700">{template.signature2Name}</p>
                                         )}
                                     </div>
-                                    <p className="border-t-2 border-slate-400 mt-2 pt-2 font-semibold text-sm">{template.signature2Name}</p>
+                                    <hr className="border-t-2 border-slate-400 mt-2" />
+                                    <p className="font-semibold text-sm mt-2">{template.signature2Name}</p>
                                     <p className="text-xs text-slate-500">{template.signature2Title}</p>
                                 </div>
                             ) : <div className="w-2/5"></div>}
                         </div>
-                        <div className="text-center mt-6 flex justify-between items-center border-t border-slate-200 pt-3">
+                        <div className="text-center mt-6 flex justify-between items-center border-t border-slate-200 pt-2">
                             <div className="text-left">
                                 <p className="text-xs text-slate-500">Verify authenticity at:</p>
                                 <a href={verificationUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-600 hover:underline break-all">{verificationUrl}</a>
@@ -276,5 +280,4 @@ const Certificate: FC = () => {
         </>
     );
 };
-// FIX: Added default export to resolve module import error.
 export default Certificate;
