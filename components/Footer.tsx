@@ -29,6 +29,8 @@ const Footer: FC = () => {
             <span className="text-slate-300">|</span>
             <Link to="/faq" className="text-[rgb(var(--color-primary-rgb))] hover:underline">FAQ</Link>
             <span className="text-slate-300">|</span>
+            <Link to="/verify" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Verify Certificate</Link>
+            <span className="text-slate-300">|</span>
             <Link to="/user-guide" className="text-[rgb(var(--color-primary-rgb))] hover:underline">User Guide</Link>
             <span className="text-slate-300">|</span>
             <Link to="/about-us" className="text-[rgb(var(--color-primary-rgb))] hover:underline">About Us</Link>

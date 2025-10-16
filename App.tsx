@@ -41,6 +41,7 @@ import SalesAnalytics from './components/SalesAnalytics.tsx';
 import ContentEngine from './components/ContentEngine.tsx';
 import Handbook from './components/handbook/Handbook.tsx';
 import VerifyCertificate from './components/VerifyCertificate.tsx';
+import VerifyPage from './components/VerifyPage.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -120,6 +121,7 @@ const AppContent: FC = () => {
                         <Route path="/" element={<LandingPage />} />
                         <Route path="/auth" element={<Login />} />
                         <Route path="/checkout/:productSlug" element={<Checkout />} />
+                        <Route path="/verify" element={<VerifyPage />} />
                         <Route path="/verify/:certId" element={<VerifyCertificate />} />
                         <Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
                         <Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
