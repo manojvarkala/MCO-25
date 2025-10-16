@@ -1,3 +1,4 @@
+
 import React, { FC, useState, useEffect, useRef } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useParams, useNavigate } from 'react-router-dom';
@@ -162,7 +163,8 @@ const Certificate: FC = () => {
     
     const titleText = template.title.replace('{examName}', examName);
     const bodyText = template.body
-        .replace('{finalScore}', `<strong>${certData.finalScore}%</strong>`)
+        .replace('{candidateName}', `<strong class="text-5xl md:text-6xl font-script text-slate-800 my-4 py-2 block">${certData.candidateName}</strong>`)
+        .replace('{finalScore}', `<strong>${certData.finalScore}</strong>`) // FIX: Remove extra '%' to prevent double '%%'
         .replace('{examName}', `<strong>${examName}</strong>`);
 
     const hasTwoSignatures = !!(template.signature2Name && template.signature2Title);
@@ -217,8 +219,6 @@ const Certificate: FC = () => {
                     {/* Main Content */}
                     <main className="flex-grow flex flex-col items-center justify-center text-center my-4">
                         <p className="text-sm tracking-[0.2em] uppercase text-slate-500 mb-4">{titleText}</p>
-                        <p className="text-lg text-slate-600">This certificate is proudly presented to</p>
-                        <h2 className="text-5xl md:text-6xl font-script text-slate-800 my-4 py-2">{certData.candidateName}</h2>
                         <div className="text-md text-slate-600 max-w-2xl mx-auto" dangerouslySetInnerHTML={{ __html: bodyText.replace(/\n/g, '<br />') }}></div>
                     </main>
 
