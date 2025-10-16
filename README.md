@@ -26,14 +26,12 @@ The platform's strength lies in its headless architecture, which separates the a
 -   **Practice & Certification Exams**: A robust exam player with timers, question navigation, and proctoring features (fullscreen and focus monitoring).
 -   **AI-Powered Feedback**: Utilizes the Gemini API to generate personalized study guides based on a user's incorrect answers.
 -   **Downloadable Certificates**: Generates official PDF certificates upon passing a certification exam.
--   **Gamification (Spin & Win)**: An engaging wheel-of-fortune feature to win prizes like free exams or subscriptions.
 -   **Social Proof**: A live purchase notification pop-up to create a sense of activity on the site.
 -   **Profile Management**: Users can update their full name to ensure it is correct for their certificate.
 
 ### For Administrators
 -   **In-App Admin Panel**: A powerful interface within the React app for:
     -   Viewing detailed exam statistics (sales, attempts, pass rates).
-    -   Managing user prizes and "Spin & Win" attempts.
     -   Temporarily customizing exam settings (e.g., number of questions, duration) for the current session.
 -   **WordPress CPTs**: Easy content management for Exam Programs and Recommended Books within the familiar WordPress environment.
 -   **Debug Sidebar**: A real-time tool for inspecting user data, purchases, and API connectivity.

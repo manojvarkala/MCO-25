@@ -100,8 +100,10 @@ if (!function_exists('mco_render_exam_program_meta_box')) {
     function mco_render_exam_program_meta_box($post) {
         wp_nonce_field('mco_save_exam_program_meta_data', 'mco_exam_program_meta_nonce');
         
-        $certificate_enabled = get_post_meta($post->ID, '_mco_certificate_enabled', true);
-        if ($certificate_enabled === '') $certificate_enabled = '1';
+        $cert_enabled = get_post_meta($post->ID, '_mco_certificate_enabled', true);
+        if ($cert_enabled === '') $cert_enabled = '1';
+
+        $practice_cert_enabled = get_post_meta($post->ID, '_mco_practice_certificate_enabled', true);
 
         $practice_title_override = get_post_meta($post->ID, '_mco_practice_exam_title_override', true);
         $cert_title_override = get_post_meta($post->ID, '_mco_cert_exam_title_override', true);
@@ -119,15 +121,19 @@ if (!function_exists('mco_render_exam_program_meta_box')) {
                      <p class="description">Optional. If empty, defaults to the main program title.</p></td>
                 </tr>
                 <tr>
-                    <th scope="row">Certificate</th>
+                    <th scope="row">Certificates</th>
                     <td>
-                        <label for="mco_certificate_enabled">
-                            <input type="checkbox" name="mco_certificate_enabled" id="mco_certificate_enabled" value="1" <?php checked($certificate_enabled, '1'); ?> />
-                            <strong>Enable Certificate on Pass</strong>
-                        </label>
-                        <p class="description">
-                            If checked, a certificate will be issued for the main "Certification Exam". If unchecked, it will be treated as a "Proficiency Exam" with no certificate.
-                        </p>
+                        <fieldset>
+                            <label for="mco_certificate_enabled" style="display: block; margin-bottom: 10px;">
+                                <input type="checkbox" name="mco_certificate_enabled" id="mco_certificate_enabled" value="1" <?php checked($cert_enabled, '1'); ?> />
+                                <strong>Enable Certificate for Certification Exam</strong>
+                            </label>
+                             <label for="mco_practice_certificate_enabled" style="display: block; margin-bottom: 10px;">
+                                <input type="checkbox" name="mco_practice_certificate_enabled" id="mco_practice_certificate_enabled" value="1" <?php checked($practice_cert_enabled, '1'); ?> />
+                                <strong>Enable Certificate for Practice Exam</strong>
+                                <p class="description">Issues a "Certificate of Proficiency" for passing the practice test.</p>
+                            </label>
+                        </fieldset>
                     </td>
                 </tr>
             </tbody>
@@ -150,6 +156,9 @@ if (!function_exists('mco_save_exam_program_meta_data')) {
 
         $cert_enabled_value = isset($_POST['mco_certificate_enabled']) && $_POST['mco_certificate_enabled'] === '1' ? '1' : '0';
         update_post_meta($post_id, '_mco_certificate_enabled', $cert_enabled_value);
+        
+        $practice_cert_enabled_value = isset($_POST['mco_practice_certificate_enabled']) && $_POST['mco_practice_certificate_enabled'] === '1' ? '1' : '0';
+        update_post_meta($post_id, '_mco_practice_certificate_enabled', $practice_cert_enabled_value);
 
         if (isset($_POST['mco_practice_exam_title_override'])) {
             update_post_meta($post_id, '_mco_practice_exam_title_override', sanitize_text_field($_POST['mco_practice_exam_title_override']));
@@ -202,7 +211,6 @@ if (!function_exists('mco_exam_engine_admin_page')) {
 
             if ($form_action === 'save_main_settings') {
                 update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
-                update_option('mco_is_spin_wheel_enabled', isset($_POST['mco_is_spin_wheel_enabled']) ? 1 : 0);
                 $logo_url_input = isset($_POST['mco_logo_url']) ? trim(wp_unslash($_POST['mco_logo_url'])) : '';
                 $url_to_save = (strpos($logo_url_input, 'data:image') === 0) ? $logo_url_input : esc_url_raw($logo_url_input);
                 update_option('mco_logo_url', $url_to_save);
@@ -219,6 +227,27 @@ if (!function_exists('mco_exam_engine_admin_page')) {
                 update_option('mco_config_version', current_time('YmdHis'));
                 echo '<div class="notice notice-success is-dismissible"><p>Theme settings saved.</p></div>';
             }
+        }
+
+        if (isset($_POST['mco_save_templates_nonce']) && wp_verify_nonce($_POST['mco_save_templates_nonce'], 'mco_save_templates')) {
+            if (isset($_POST['mco_certificate_theme'])) {
+                update_option('mco_certificate_theme', sanitize_text_field($_POST['mco_certificate_theme']));
+            }
+
+            $templates_input = $_POST['certificate_templates']; $sanitized_templates = array();
+            if (is_array($templates_input)) {
+                foreach ($templates_input as $template) {
+                    $id = sanitize_text_field($template['id']); if (empty($id)) continue;
+                    $sig1_url_input = isset($template['signature1ImageUrl']) ? trim(wp_unslash($template['signature1ImageUrl'])) : '';
+                    $sig1_url_to_save = strpos($sig1_url_input, 'data:image') === 0 ? $sig1_url_input : esc_url_raw($sig1_url_input);
+                    $sig2_url_input = isset($template['signature2ImageUrl']) ? trim(wp_unslash($template['signature2ImageUrl'])) : '';
+                    $sig2_url_to_save = strpos($sig2_url_input, 'data:image') === 0 ? $sig2_url_input : esc_url_raw($sig2_url_input);
+                    $sanitized_templates[$id] = array('id' => $id, 'name' => sanitize_text_field($template['name']), 'title' => sanitize_text_field($template['title']), 'body' => wp_kses_post($template['body']), 'signature1Name' => sanitize_text_field($template['signature1Name']), 'signature1Title' => sanitize_text_field($template['signature1Title']), 'signature1ImageUrl' => $sig1_url_to_save, 'signature2Name' => sanitize_text_field($template['signature2Name']), 'signature2Title' => sanitize_text_field($template['signature2Title']), 'signature2ImageUrl' => $sig2_url_to_save, );
+                }
+            }
+            update_option('mco_certificate_templates', $sanitized_templates);
+            delete_transient('mco_app_config_data'); update_option('mco_config_version', current_time('YmdHis'));
+            echo '<div class="notice notice-success is-dismissible"><p>Certificate templates saved.</p></div>';
         }
 
         $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'main_settings';
@@ -259,10 +288,6 @@ function mco_render_main_settings_tab() { ?>
              <tr valign="top">
                 <th scope="row">Custom Logo URL</th>
                 <td><textarea name="mco_logo_url" rows="4"><?php echo esc_textarea(get_option('mco_logo_url')); ?></textarea><p class="description">Optional. Enter the full URL to a custom logo (e.g., https://...) or paste a base64 data URI (e.g., data:image/png;base64,...). If empty, it will use the Site Icon from Customizer.</p></td>
-            </tr>
-            <tr valign="top">
-                <th scope="row">Enable "Spin & Win"</th>
-                <td><input type="checkbox" name="mco_is_spin_wheel_enabled" value="1" <?php checked(1, get_option('mco_is_spin_wheel_enabled', 0)); ?> /><label for="mco_is_spin_wheel_enabled">Enable the gamified prize wheel for users.</label></td>
             </tr>
             <tr valign="top">
                 <th scope="row">JWT Secret Key</th>
@@ -411,31 +436,32 @@ function mco_process_books_csv_import($file_path) {
 }
 
 function mco_render_certificate_templates_tab() {
-    if (isset($_POST['mco_save_templates_nonce']) && wp_verify_nonce($_POST['mco_save_templates_nonce'], 'mco_save_templates')) {
-        $templates_input = $_POST['certificate_templates']; $sanitized_templates = [];
-        if (is_array($templates_input)) {
-            foreach ($templates_input as $template) {
-                $id = sanitize_text_field($template['id']); if (empty($id)) continue;
-                $sig1_url_input = isset($template['signature1ImageUrl']) ? trim(wp_unslash($template['signature1ImageUrl'])) : '';
-                $sig1_url_to_save = strpos($sig1_url_input, 'data:image') === 0 ? $sig1_url_input : esc_url_raw($sig1_url_input);
-                $sig2_url_input = isset($template['signature2ImageUrl']) ? trim(wp_unslash($template['signature2ImageUrl'])) : '';
-                $sig2_url_to_save = strpos($sig2_url_input, 'data:image') === 0 ? $sig2_url_input : esc_url_raw($sig2_url_input);
-                $sanitized_templates[$id] = ['id' => $id, 'name' => sanitize_text_field($template['name']), 'title' => sanitize_text_field($template['title']), 'body' => wp_kses_post($template['body']), 'signature1Name' => sanitize_text_field($template['signature1Name']), 'signature1Title' => sanitize_text_field($template['signature1Title']), 'signature1ImageUrl' => $sig1_url_to_save, 'signature2Name' => sanitize_text_field($template['signature2Name']), 'signature2Title' => sanitize_text_field($template['signature2Title']), 'signature2ImageUrl' => $sig2_url_to_save, ];
-            }
-        }
-        update_option('mco_certificate_templates', $sanitized_templates);
-        delete_transient('mco_app_config_data'); update_option('mco_config_version', current_time('YmdHis'));
-        echo '<div class="notice notice-success is-dismissible"><p>Certificate templates saved.</p></div>';
-    }
-    
     // FIX: More robust fallback. Explicitly check if the option is empty.
     $templates = get_option('mco_certificate_templates');
     if (empty($templates) || !is_array($templates)) {
         $templates = mco_get_default_certificate_templates();
     }
     ?>
-    <h2>Certificate Templates</h2><p>Manage the templates used for generating certificates. Use placeholders like <code>{candidateName}</code>, <code>{examName}</code>, and <code>{finalScore}</code>.</p>
-    <form method="post"><?php wp_nonce_field('mco_save_templates', 'mco_save_templates_nonce'); ?><div id="mco-templates-container">
+    <form method="post">
+        <?php wp_nonce_field('mco_save_templates', 'mco_save_templates_nonce'); ?>
+        
+        <h2>Global Certificate Settings</h2>
+        <table class="form-table">
+            <tr>
+                <th scope="row">Default Certificate Theme</th>
+                <td>
+                    <select name="mco_certificate_theme" style="min-width: 200px;">
+                        <option value="classic" <?php selected(get_option('mco_certificate_theme', 'classic'), 'classic'); ?>>Classic (Ornate, Serif)</option>
+                        <option value="modern" <?php selected(get_option('mco_certificate_theme'), 'modern'); ?>>Modern (Clean, Sans-Serif)</option>
+                    </select>
+                    <p class="description">Select the default visual style for all certificates generated by the app.</p>
+                </td>
+            </tr>
+        </table>
+        <hr>
+
+        <h2>Certificate Templates</h2><p>Manage the templates used for generating certificates. Use placeholders like <code>{candidateName}</code>, <code>{examName}</code>, and <code>{finalScore}</code>.</p>
+        <div id="mco-templates-container">
     <?php foreach ($templates as $template) : ?><div class="template-item" style="border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; border-radius: 4px;"><table class="form-table">
         <tr><th>Template ID</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][id]" value="<?php echo esc_attr($template['id']); ?>" readonly style="background:#eee;"></td></tr>
         <tr><th>Template Name</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][name]" value="<?php echo esc_attr($template['name']); ?>"></td></tr>
@@ -447,7 +473,7 @@ function mco_render_certificate_templates_tab() {
         <tr><th>Signature 2 Name</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature2Name]" value="<?php echo esc_attr($template['signature2Name']); ?>"></td></tr>
         <tr><th>Signature 2 Title</th><td><input type="text" name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature2Title]" value="<?php echo esc_attr($template['signature2Title']); ?>"></td></tr>
         <tr><th>Signature 2 Image</th><td><div class="image-upload-wrapper"><textarea name="certificate_templates[<?php echo esc_attr($template['id']); ?>][signature2ImageUrl]" rows="3"><?php echo esc_textarea($template['signature2ImageUrl']); ?></textarea><button type="button" class="button mco-upload-image-button">Upload Image</button></div><p class="description"><strong>Recommended for PDF Downloads:</strong> Paste a <code>base64</code> data URI (e.g., <code>data:image/png;base64,...</code>). Using a standard URL may cause CORS errors during PDF generation.</p></td></tr>
-    </table></div><?php endforeach; ?></div><?php submit_button('Save Templates'); ?></form>
+    </table></div><?php endforeach; ?></div><?php submit_button('Save Templates & Settings'); ?></form>
 <?php }
 
 function mco_render_tools_tab() {

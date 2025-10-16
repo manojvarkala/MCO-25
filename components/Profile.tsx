@@ -144,38 +144,38 @@ const Profile: FC = () => {
                 )}
             </div>
             
-            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
-                    <Paintbrush className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    Theme & Appearance
-                </h2>
-                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                    Select a theme to change the application's appearance. Your choice is saved on this browser.
-                </p>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {availableThemes.map(theme => (
-                        <button
-                            type="button"
-                            key={theme.id}
-                            onClick={() => setActiveTheme(theme.id)}
-                            className={`relative p-4 rounded-lg border-2 cursor-pointer transition text-left ${activeTheme === theme.id ? 'border-[rgb(var(--color-primary-rgb))] ring-2 ring-[rgba(var(--color-primary-rgb),0.2)]' : 'border-[rgb(var(--color-border-rgb))] hover:border-[rgba(var(--color-primary-rgb),0.5)]'}`}
-                        >
-                            {activeTheme === theme.id && (
-                                <div className="absolute -top-2 -right-2 bg-[rgb(var(--color-primary-rgb))] text-white rounded-full p-1 shadow-md">
-                                    <Check size={14} />
+            {(availableThemes || []).length > 0 && (
+                <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                    <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
+                        <Paintbrush className="mr-3 text-cyan-500" />
+                        Theme &amp; Appearance
+                    </h2>
+                    <p className="text-slate-500 mb-6">Select a theme to change the application's appearance. Your choice is saved on this browser.</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        {(availableThemes || []).map(theme => (
+                            <button
+                                type="button"
+                                key={theme.id}
+                                onClick={() => setActiveTheme(theme.id)}
+                                className={`relative p-4 rounded-lg border-2 cursor-pointer transition text-left ${activeTheme === theme.id ? 'border-cyan-500 ring-2 ring-cyan-500/20' : 'border-slate-200 hover:border-cyan-400'}`}
+                            >
+                                {activeTheme === theme.id && (
+                                    <div className="absolute -top-2 -right-2 bg-cyan-500 text-white rounded-full p-1 shadow-md">
+                                        <Check size={14} />
+                                    </div>
+                                )}
+                                <div className="flex justify-center space-x-1 h-8 pointer-events-none">
+                                    <div className={`w-1/4 rounded theme-swatch-${theme.id}-primary`}></div>
+                                    <div className={`w-1/4 rounded theme-swatch-${theme.id}-secondary`}></div>
+                                    <div className={`w-1/4 rounded theme-swatch-${theme.id}-accent`}></div>
+                                    <div className={`w-1/4 rounded theme-swatch-${theme.id}-background`}></div>
                                 </div>
-                            )}
-                            <div className="flex justify-center space-x-1 h-8 pointer-events-none">
-                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-primary`}></div>
-                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-secondary`}></div>
-                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-accent`}></div>
-                                <div className={`w-1/4 rounded theme-swatch-${theme.id}-background`}></div>
-                            </div>
-                            <p className="font-semibold text-center mt-2 text-[rgb(var(--color-text-default-rgb))] pointer-events-none">{theme.name}</p>
-                        </button>
-                    ))}
+                                <p className="font-semibold text-center mt-2 text-slate-700 pointer-events-none">{theme.name}</p>
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
 
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                 <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
@@ -191,7 +191,7 @@ const Profile: FC = () => {
                             if (!exam) return null;
                             const isPass = result.score >= exam.passScore;
                             const scoreColor = isPass ? 'text-green-600' : 'text-red-500';
-                            const canGetCertificate = !exam.isPractice && isPass;
+                            const canGetCertificate = isPass && exam.certificateEnabled;
 
                             return (
                                 <div key={result.testId} className="bg-slate-50 p-4 rounded-lg border border-slate-200">
@@ -223,8 +223,12 @@ const Profile: FC = () => {
                                             <button onClick={() => navigate(`/results/${result.testId}`)} className="text-sm font-semibold text-cyan-600 hover:text-cyan-800 flex items-center gap-1">
                                                 View Details <ChevronRight size={16} />
                                             </button>
-                                            {canGetCertificate && (
-                                                <button onClick={() => navigate(`/certificate/${result.testId}`)} className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+                                            {(canGetCertificate || isEffectivelyAdmin) && (
+                                                <button 
+                                                    onClick={() => navigate(`/certificate/${result.testId}`)} 
+                                                    className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                                                    title={isEffectivelyAdmin && !canGetCertificate ? "View Certificate (Admin Override)" : "View Certificate"}
+                                                >
                                                     <Award size={16} className="mr-2" /> Certificate
                                                 </button>
                                             )}

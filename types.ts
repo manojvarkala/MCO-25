@@ -16,9 +16,9 @@ export interface TokenPayload {
   paidExamIds: string[];
   isSubscribed: boolean;
   subscriptionInfo?: SubscriptionInfo | null;
-  exp?: number;
-  // FIX: Add spinsAvailable to token payload for Wheel of Fortune feature.
+  // FIX: Added spinsAvailable to the token payload for the Wheel of Fortune feature.
   spinsAvailable?: number;
+  exp?: number;
 }
 
 export interface Question {
@@ -114,8 +114,8 @@ export interface RecommendedBook {
 }
 
 export interface Theme {
-  id: string;
-  name: string;
+    id: string;
+    name: string;
 }
 
 export interface Organization {
@@ -129,6 +129,7 @@ export interface Organization {
   suggestedBooks: RecommendedBook[];
   availableThemes: Theme[];
   activeThemeId: string;
+  certificateThemeId: string;
 }
 
 export interface ApiCertificateData {

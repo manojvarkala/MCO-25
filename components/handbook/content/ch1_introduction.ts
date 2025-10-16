@@ -18,7 +18,6 @@ export const ch1_introduction = `
     <ul>
         <li><strong>Monetization-Ready:</strong> Seamlessly integrated with WooCommerce to handle everything from single exam purchases to recurring subscriptions and complex product bundles.</li>
         <li><strong>AI-Powered Learning:</strong> Leverage Google's Gemini API to provide users with personalized study guides, transforming a simple test result into a valuable learning opportunity.</li>
-        <li><strong>Gamified Engagement:</strong> Boost user retention and excitement with the "Spin & Win" feature, offering tangible rewards and a fun, interactive experience.</li>
         <li><strong>Automated SEO Content Marketing:</strong> The built-in AI Content Engine turns your exam programs into a stream of SEO-friendly blog posts, driving organic traffic and building your site's authority automatically.</li>
         <li><strong>Professional Certification:</strong> Generate and issue beautiful, verifiable PDF certificates upon exam completion, complete with custom branding and signatures.</li>
         <li><strong>Effortless Administration:</strong> Manage everything from a centralized, intuitive admin panel built directly into the app—from creating exam programs to analyzing sales data.</li>

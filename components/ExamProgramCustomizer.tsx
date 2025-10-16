@@ -210,6 +210,16 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
                             <input type="number" value={practiceExam.durationMinutes || ''} onChange={e => handleExamChange('practiceExam', 'durationMinutes', parseInt(e.target.value))} className="w-full p-2 border rounded bg-white" />
                         </div>
                     </div>
+                    <div className="flex items-center gap-4 pt-2">
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                checked={practiceExam.certificateEnabled || false}
+                                onChange={e => handleExamChange('practiceExam', 'certificateEnabled', e.target.checked)}
+                            />
+                            Enable Certificate
+                        </label>
+                    </div>
                 </div>
             )}
 
@@ -428,6 +438,7 @@ const ExamProgramCustomizer: FC = () => {
         if (data.practiceExam?.questionSourceUrl) payload.questionSourceUrl = data.practiceExam.questionSourceUrl;
         if (data.practiceExam?.numberOfQuestions) payload.practice_numberOfQuestions = data.practiceExam.numberOfQuestions;
         if (data.practiceExam?.durationMinutes) payload.practice_durationMinutes = data.practiceExam.durationMinutes;
+        if (typeof data.practiceExam?.certificateEnabled === 'boolean') payload.practice_certificateEnabled = data.practiceExam.certificateEnabled;
 
         if (data.certExam?.name) payload.cert_name_override = data.certExam.name;
         if (data.certExam?.productSku) payload.cert_productSku = data.certExam.productSku;

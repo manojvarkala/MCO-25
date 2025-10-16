@@ -34,7 +34,6 @@ const history: Version[] = [
     changes: [
       'Major UI overhaul with a new, cleaner design system.',
       'Introduced the in-app Admin Panel for managing content.',
-      'Added the "Spin & Win" gamification feature.',
       'Integrated Google Gemini for AI-powered feedback.',
     ],
   },

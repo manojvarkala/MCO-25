@@ -11,7 +11,7 @@ interface AuthState {
     paidExamIds: string[];
     isSubscribed: boolean;
     subscriptionInfo: SubscriptionInfo | null;
-    // FIX: Add spinsAvailable to AuthState for Wheel of Fortune feature.
+    // FIX: Add spinsAvailable to the AuthState for the Wheel of Fortune feature.
     spinsAvailable: number;
 }
 
@@ -81,7 +81,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   });
 
-  // FIX: Add spinsAvailable state for Wheel of Fortune feature.
+  // FIX: Add state for spinsAvailable.
   const [spinsAvailable, setSpinsAvailable] = useState<number>(() => {
     try {
         const storedSpins = localStorage.getItem('spinsAvailable');
@@ -91,7 +91,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         return 0;
     }
   });
-  
+
   const [masqueradeAs, setMasqueradeAs] = useState<MasqueradeMode>('none');
   const [originalAuthState, setOriginalAuthState] = useState<AuthState | null>(null);
 
@@ -116,11 +116,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('isSubscribed');
     localStorage.removeItem('subscriptionInfo');
+    // FIX: Remove spinsAvailable from localStorage on logout.
     localStorage.removeItem('spinsAvailable');
-    localStorage.removeItem('wonPrize');
     localStorage.removeItem('activeOrg');
-    localStorage.removeItem('isSpinWheelEnabled');
-    sessionStorage.removeItem('wheelModalDismissed');
     Object.keys(localStorage).forEach(key => {
         if (key.startsWith('exam_timer_') || key.startsWith('exam_results_')) {
             localStorage.removeItem(key);
@@ -204,8 +202,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('subscriptionInfo');
             }
 
-
-            // FIX: Handle spinsAvailable from token payload for Wheel of Fortune feature.
+            // FIX: Set spinsAvailable from the token payload.
             if (typeof payload.spinsAvailable === 'number') {
                 setSpinsAvailable(payload.spinsAvailable);
                 localStorage.setItem('spinsAvailable', JSON.stringify(payload.spinsAvailable));
@@ -239,7 +236,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const startMasquerade = (as: 'user' | 'visitor') => {
         if (masqueradeAs !== 'none' || !user?.isAdmin) return;
     
-        // FIX: Include spinsAvailable in original auth state for masquerade mode.
+        // FIX: Include spinsAvailable in the original auth state.
         setOriginalAuthState({ user, token, paidExamIds, isSubscribed, subscriptionInfo, spinsAvailable });
         setMasqueradeAs(as);
 
@@ -265,9 +262,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setPaidExamIds(originalAuthState.paidExamIds);
         setIsSubscribed(originalAuthState.isSubscribed);
         setSubscriptionInfo(originalAuthState.subscriptionInfo);
-        // FIX: Restore spinsAvailable when stopping masquerade mode.
+        // FIX: Restore spinsAvailable when stopping masquerade.
         setSpinsAvailable(originalAuthState.spinsAvailable);
-
         setOriginalAuthState(null);
         setMasqueradeAs('none');
         toast.success('Returned to Admin view.');
@@ -283,13 +279,13 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const isMasquerading = masqueradeAs !== 'none';
 
+  // FIX: Add spinsAvailable to the context value and dependency array.
   const value = useMemo(() => ({
     user,
     token,
     paidExamIds,
     isSubscribed,
     subscriptionInfo,
-    // FIX: Expose spinsAvailable through the AuthContext.
     spinsAvailable,
     isEffectivelyAdmin,
     isMasquerading,

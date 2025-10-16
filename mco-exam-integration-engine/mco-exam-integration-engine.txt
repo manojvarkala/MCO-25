@@ -20,14 +20,14 @@ if (!function_exists('mco_is_plugin_already_active')) {
             $plugins = get_option('active_plugins');
             $this_plugin_path = plugin_basename(__FILE__);
             $this_plugin_dir = dirname($this_plugin_path);
-            $duplicates = [];
-            $current_plugin_data = get_file_data(__FILE__, ['Name' => 'Plugin Name']);
+            $duplicates = array();
+            $current_plugin_data = get_file_data(__FILE__, array('Name' => 'Plugin Name'));
             $current_plugin_name = $current_plugin_data['Name'];
 
             foreach ($plugins as $plugin_path) {
                 if ($plugin_path === $this_plugin_path) continue;
                 if (file_exists(WP_PLUGIN_DIR . '/' . $plugin_path)) {
-                    $plugin_data = get_file_data(WP_PLUGIN_DIR . '/' . $plugin_path, ['Name' => 'Plugin Name']);
+                    $plugin_data = get_file_data(WP_PLUGIN_DIR . '/' . $plugin_path, array('Name' => 'Plugin Name'));
                     if (isset($plugin_data['Name']) && $plugin_data['Name'] === $current_plugin_name && dirname($plugin_path) !== $this_plugin_dir) {
                         $duplicates[] = $plugin_path;
                     }
@@ -56,7 +56,7 @@ define('MCO_PLUGIN_FILE', __FILE__);
 define('MCO_PLUGIN_PATH', plugin_dir_path(MCO_PLUGIN_FILE));
 define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
 if (!defined('MCO_PLUGIN_VERSION')) {
-    $plugin_data = get_file_data(MCO_PLUGIN_FILE, ['Version' => 'Version']);
+    $plugin_data = get_file_data(MCO_PLUGIN_FILE, array('Version' => 'Version'));
     define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 }
 
@@ -86,7 +86,11 @@ if (!function_exists('mco_exam_engine_init')) {
 // Activation hook for flushing rewrite rules
 if (!function_exists('mco_exam_engine_activate')) {
     function mco_exam_engine_activate() {
+        // First, register the custom post types so they are recognized by flush_rewrite_rules
+        mco_register_custom_post_types();
+        // Then, flush the rewrite rules with the new CPTs
         flush_rewrite_rules();
+        // Clear any old config data
         delete_transient('mco_app_config_data');
     }
     register_activation_hook(MCO_PLUGIN_FILE, 'mco_exam_engine_activate');

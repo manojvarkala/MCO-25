@@ -72,10 +72,8 @@ const AppContent: FC = () => {
 
     const mainLayoutComponent = isAdminPage ? <Outlet /> : <SidebarLayout><Outlet /></SidebarLayout>;
 
-    useEffect(() => {
-        if (activeTheme) {
-            document.documentElement.setAttribute('data-theme', activeTheme);
-        }
+    const themeClass = useMemo(() => {
+        return activeTheme ? `theme-${activeTheme}` : 'theme-default';
     }, [activeTheme]);
 
     useEffect(() => {
@@ -110,7 +108,7 @@ const AppContent: FC = () => {
         : "container mx-auto px-4 py-8";
 
     return (
-        <div className={`flex flex-col min-h-screen bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-default-rgb))] font-main ${isMasquerading ? 'pt-10' : ''}`}>
+        <div data-theme={activeTheme} className={`flex flex-col min-h-screen bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-default-rgb))] font-main ${isMasquerading ? 'pt-10' : ''}`}>
             {isMasquerading && <MasqueradeBanner />}
             {user && <UpdateNameModal isOpen={isNameModalOpen} onClose={() => setIsNameModalOpen(false)} />}
             {!isTestPage && <Header />}

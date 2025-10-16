@@ -1,46 +1,39 @@
 export const ch3_golden_workflow = `
     <h2 class="text-3xl font-bold font-display text-slate-800" id="ch3">Chapter 3: The Golden Workflow: Performance & Content</h2>
 
-    <h3 class="text-xl font-bold mt-6">3.1 The Dual Imperative: Live Content & Instant Performance</h3>
-    <p>The Annapoorna Examination Engine is designed to achieve two seemingly contradictory goals: ensure that content is always up-to-date for active users, and deliver an instantaneous loading experience for new visitors. Understanding how the system balances these two priorities is key to managing it effectively. This is the "Golden Workflow."</p>
-    <p>The platform operates in two distinct modes depending on the user's context.</p>
-
-    <h3 class="text-xl font-bold mt-6">3.2 Mode 1: Live API Updates (For Your Logged-In, Active Users)</h3>
-    <p>This is the "live mode" and represents the primary, day-to-day operation of the platform. It leverages the core power of the headless architecture.</p>
-    <ul>
-        <li><strong>How it works:</strong> When a user is logged into the React app, all configuration and content (exams, books, prices) are fetched directly from your WordPress API. If you make a change in the WordPress admin—like updating an exam's price or adding a new book—the server's cache for the API is cleared. The next time a user loads the app, it will fetch this new, updated information.</li>
-        <li><strong>The Benefit:</strong> Your content is always live and up-to-date for your active user base. You can make changes on the fly, and they will be reflected in the app without requiring a redeployment. This is the core "headless" advantage.</li>
-    </ul>
-
-    <h3 class="text-xl font-bold mt-6">3.3 Mode 2: Static Fallback & The "Full Content Snapshot" (For New Visitors & Performance)</h3>
-    <p>This is the "performance optimization mode." The main challenge with any API-driven app is the <strong>initial loading delay</strong> for a brand new visitor. Their browser has to load the app, make an API call, wait for the response, and then render the content. To eliminate this delay, we use a "static fallback" strategy.</p>
-    <ul>
-        <li><strong>How it works:</strong>
-            <ol>
-                <li>A brand new visitor arrives. The React app <strong>instantly</strong> loads a static JSON file (like <code>medical-coding-config.json</code>) that is bundled with the app itself.</li>
-                <li>The app immediately renders the entire UI using this static, pre-loaded data. The site appears to load instantly.</li>
-                <li><strong>In the background</strong>, the app then makes the live API call to your WordPress server to get the absolute latest content. If it finds any differences, it seamlessly updates the UI.</li>
-            </ol>
-        </li>
-        <li><strong>The Role of the "Full Content Snapshot" Tool:</strong> The <strong>"Generate & Download Snapshot"</strong> button in your WordPress admin is your tool for keeping this static fallback file fresh. It allows you to take a complete snapshot of all your current live content and bundle it with the app for the next deployment.</li>
-        <li><strong>The Benefit:</strong> This gives you the instant-loading feel of a static website with the dynamic power of a live backend.</li>
-    </ul>
-
-    <h3 class="text-xl font-bold mt-6">3.4 The Golden Workflow: The Definitive Process</h3>
-    <p>Your content and performance management process is now simple and clear:</p>
-    <ol class="list-decimal pl-5 space-y-3">
-        <li>
-            <strong>For Daily Work:</strong> Make all your content changes (add exams, books, change prices) in <strong>WordPress</strong>. Logged-in users will see these updates automatically via the API. <strong>You do not need to generate a new JSON file for these daily changes.</strong>
-        </li>
-        <li>
-            <strong>For Periodic Performance Optimization:</strong> Periodically (e.g., once a week, or after a major content update), you will:
-            <ul class="list-disc pl-5 mt-2 space-y-1">
-                <li>Go to <strong>Exam App Engine → Tools</strong> in your WordPress admin.</li>
-                <li>Click the <strong>"Generate & Download Snapshot"</strong> button.</li>
-                <li>Replace the old static JSON file in your React app's <code>/public</code> directory with this new, complete snapshot file.</li>
-                <li>Redeploy your React app.</li>
-            </ul>
-        </li>
+    <h3 class="text-xl font-bold mt-6">3.1 User Authentication & SSO Journey</h3>
+    <p>The platform uses a secure Single Sign-On (SSO) model with WordPress as the central authentication authority. This ensures a seamless user experience and leverages WordPress's robust user management capabilities.</p>
+    <ol>
+        <li>A user clicks "Login" in the React app. They are redirected to a special <code>/exam-login/</code> page on the main WordPress site.</li>
+        <li>If not already logged in, the user enters their standard WordPress credentials.</li>
+        <li>Upon successful login, the <code>[mco_exam_login]</code> shortcode on that page generates a secure JSON Web Token (JWT).</li>
+        <li>The user is immediately redirected back to the <code>/auth</code> route in the React app with the JWT included as a URL parameter.</li>
+        <li>The React app's <code>AuthContext</code> validates the JWT's signature against the server's secret, decodes the user's details and permissions from the payload, saves the token to local storage, and establishes the user's session within the app.</li>
     </ol>
-    <p>In summary: The API provides live updates by default. The snapshot tool is an additional optimization feature to make your site faster for new visitors by keeping the initial fallback data fresh.</p>
+
+    <h3 class="text-xl font-bold mt-6">3.2 The JWT Payload</h3>
+    <p>The JWT is the core of the user's session. It's a self-contained, digitally signed package of information that tells the app everything it needs to know about the user's identity and entitlements without needing to query the database on every action. A typical payload includes:</p>
+    <ul>
+        <li><strong>User Info:</strong> User ID, Display Name, Email, and an <code>isAdmin</code> flag.</li>
+        <li><strong>Entitlements:</strong> An array of WooCommerce product SKUs the user has purchased (<code>paidExamIds</code>) and a boolean flag (<code>isSubscribed</code>) for active subscriptions.</li>
+        <li><strong>Security Info:</strong> Standard JWT claims like expiration time (<code>exp</code>) and issuer (<code>iss</code>).</li>
+    </ul>
+
+    <h3 class="text-xl font-bold mt-6">3.3 Initial App Load & Caching</h3>
+    <p>The app uses a "Cache-First, Then Validate" strategy for lightning-fast load times.</p>
+    <ol>
+        <li><strong>Instant Load:</strong> On first visit, the app immediately tries to load the main configuration object from the browser's <code>localStorage</code>. If found, the UI renders instantly using this cached data.</li>
+        <li><strong>Background Fetch:</strong> Simultaneously, the app makes an API call to the public <code>/config</code> endpoint on the WordPress backend.</li>
+        <li><strong>Version Check & Update:</strong> The app compares the version timestamp of the cached data with the live data from the API. If the live version is newer, the app seamlessly updates its state, saves the new configuration to <code>localStorage</code>, and displays a subtle toast notification to the user that "Content and features have been updated."</li>
+    </ol>
+    <p>This ensures users always have an instant-loading experience while still receiving the latest content as soon as it's available.</p>
+
+    <h3 class="text-xl font-bold mt-6">3.4 Exam Lifecycle: Start to Sync</h3>
+    <p>The exam process is designed to be resilient and secure.</p>
+    <ul>
+        <li><strong>Start:</strong> When a user starts an exam, the app fetches the questions from the linked Google Sheet via a secure, cached backend proxy. Progress, answers, and the timer's end-time are saved to <code>localStorage</code>.</li>
+        <li><strong>Progress:</strong> Every answer is immediately saved to <code>localStorage</code>, allowing a user to refresh the page or lose connection and resume exactly where they left off.</li>
+        <li><strong>Submission:</strong> Upon submission, the result is first calculated and saved to the user's local results cache for immediate feedback.</li>
+        <li><strong>Background Sync:</strong> The result is then sent to the WordPress backend in a background API call to be stored permanently in the user's meta fields. This dual-save approach ensures a fast UI while guaranteeing data integrity.</li>
+    </ul>
 `;

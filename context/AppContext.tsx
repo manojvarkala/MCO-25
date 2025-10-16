@@ -17,10 +17,10 @@ interface AppContextType {
   inProgressExam: InProgressExamInfo | null;
   examPrices: { [key: string]: any } | null;
   suggestedBooks: RecommendedBook[];
+  hitCount: number | null;
   availableThemes: Theme[];
   activeTheme: string;
   setActiveTheme: (themeId: string) => void;
-  hitCount: number | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -111,6 +111,17 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [inProgressExam, setInProgressExam] = useState<InProgressExamInfo | null>(null);
   const [examPrices, setExamPrices] = useState<{ [key: string]: any } | null>(null);
   
+  const [availableThemes, setAvailableThemes] = useState<Theme[]>([]);
+  const [activeTheme, setActiveThemeState] = useState<string>('default');
+
+  const setActiveTheme = (themeId: string) => {
+      setActiveThemeState(themeId);
+      try {
+          localStorage.setItem('mco_active_theme', themeId);
+      } catch(e) { console.error("Could not save theme to local storage", e); }
+  };
+
+  
   const [hitCount, setHitCount] = useState<number | null>(() => {
     try {
         const storedCount = sessionStorage.getItem('mco_site_hit_count');
@@ -119,21 +130,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         return null;
     }
   });
-
-  // Theme state
-  const [availableThemes, setAvailableThemes] = useState<Theme[]>([]);
-  const [activeTheme, _setActiveTheme] = useState<string>('default');
-
-  const setActiveTheme = useCallback((themeId: string) => {
-    const themeName = availableThemes.find(t => t.id === themeId)?.name || 'Theme';
-    _setActiveTheme(themeId);
-    try {
-        localStorage.setItem('user-theme', themeId);
-        toast.success(`${themeName} theme applied!`);
-    } catch(e) {
-        console.warn("Could not save theme preference to localStorage.", e);
-    }
-  }, [availableThemes]);
 
   const setProcessedConfig = (config: any, processedData: any) => {
     if (processedData) {
@@ -147,8 +143,10 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       if (newActiveOrg) {
           localStorage.setItem('activeOrgId', newActiveOrg.id);
           setAvailableThemes(newActiveOrg.availableThemes || []);
-          const initialTheme = localStorage.getItem('user-theme') || newActiveOrg.activeThemeId || 'default';
-          _setActiveTheme(initialTheme);
+
+          const savedTheme = localStorage.getItem('mco_active_theme');
+          const defaultTheme = newActiveOrg.activeThemeId || 'default';
+          setActiveThemeState(savedTheme || defaultTheme);
       }
     }
   };
@@ -321,14 +319,14 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     inProgressExam,
     examPrices,
     suggestedBooks,
+    hitCount,
     availableThemes,
     activeTheme,
-    setActiveTheme,
-    hitCount
+    setActiveTheme
   }), [
     organizations, activeOrg, isInitializing, setActiveOrgById,
     updateActiveOrg, updateConfigData, updateExamInOrg, inProgressExam, examPrices, suggestedBooks,
-    availableThemes, activeTheme, setActiveTheme, hitCount
+    hitCount, availableThemes, activeTheme, setActiveTheme
   ]);
 
   return (

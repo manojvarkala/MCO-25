@@ -51,11 +51,7 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 localStorage.removeItem('paidExamIds');
                 localStorage.removeItem('authToken');
                 localStorage.removeItem('isSubscribed');
-                localStorage.removeItem('spinsAvailable');
-                localStorage.removeItem('wonPrize');
                 localStorage.removeItem('activeOrg');
-                localStorage.removeItem('isSpinWheelEnabled');
-                sessionStorage.removeItem('wheelModalDismissed');
                 
                 Object.keys(localStorage).forEach(key => {
                     if (key.startsWith('exam_timer_') || key.startsWith('exam_results_') || key.startsWith('exam_progress_')) {
@@ -90,7 +86,6 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
             console.error(`API Call to ${endpoint} returned OK but with invalid JSON:`, responseText);
             throw new Error('The server returned an invalid response. This is often caused by a PHP error from your theme or another plugin. Check your browser\'s developer console for the full server output.');
         }
-
     } catch (error: any) {
         console.error(`API Fetch Error to ${endpoint}:`, error);
 
@@ -103,7 +98,6 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         throw error;
     }
 };
-
 export const googleSheetsService = {
     // --- SITE HIT COUNTER ---
     recordSiteHit: async (): Promise<{ count: number }> => {
@@ -198,6 +192,18 @@ export const googleSheetsService = {
         }
     },
     
+    // FIX: Add the missing spinWheel method for the "Spin & Win" feature.
+    // --- SPIN WHEEL ---
+    spinWheel: async (token: string): Promise<{ prizeId: string; prizeLabel: string; newToken: string; }> => {
+        try {
+            // This is a user action that modifies state, so it should be a POST request.
+            return await apiFetch('/spin-wheel', 'POST', token);
+        } catch (error) {
+            console.error("Failed to spin the wheel:", error);
+            throw error;
+        }
+    },
+
     // --- RESULTS HANDLING (CACHE-FIRST APPROACH) ---
     syncResults: async (user: User, token: string): Promise<void> => {
         // This lock prevents a race condition where multiple sync requests (e.g., from a button
@@ -261,9 +267,13 @@ export const googleSheetsService = {
     },
 
     // --- DIRECT API CALLS (NOT CACHED LOCALLY) ---
-    getCertificateData: async (token: string, testId: string): Promise<ApiCertificateData> => {
+    getCertificateData: async (token: string, testId: string, adminView: boolean = false): Promise<ApiCertificateData> => {
         try {
-            return await apiFetch(`/certificate-data/${testId}`, 'GET', token);
+            let endpoint = `/certificate-data/${testId}`;
+            if (adminView) {
+                endpoint += '?admin_view=true';
+            }
+            return await apiFetch(endpoint, 'GET', token);
         } catch (error) {
             console.error("Failed to get certificate data from server:", error);
             throw error;
@@ -425,17 +435,6 @@ export const googleSheetsService = {
             await apiFetch('/submit-review', 'POST', token, { examId, rating, reviewText });
         } catch (error) {
             console.error("Failed to submit review:", error);
-            throw error;
-        }
-    },
-
-    // FIX: Add spinWheel method for Wheel of Fortune feature.
-    // --- GAMIFICATION ---
-    spinWheel: async (token: string): Promise<{ prizeId: string; prizeLabel: string; newToken: string; }> => {
-        try {
-            return await apiFetch('/spin-wheel', 'POST', token);
-        } catch (error) {
-            console.error("Failed to spin wheel:", error);
             throw error;
         }
     },

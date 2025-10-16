@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useEffect, useRef } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useParams, useNavigate } from 'react-router-dom';
@@ -29,7 +30,7 @@ const Certificate: FC = () => {
     const { testId = 'sample' } = useParams<{ testId?: string }>();
     // Fix: Use useNavigate for navigation in v6
     const navigate = useNavigate();
-    const { user, token } = useAuth();
+    const { user, token, isEffectivelyAdmin } = useAuth();
     const { activeOrg } = useAppContext();
     const [certData, setCertData] = useState<CertificateData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -78,7 +79,7 @@ const Certificate: FC = () => {
             setIsLoading(true);
             try {
                 // The user object is no longer needed here; it's derived from the token on the backend.
-                const partialData = await googleSheetsService.getCertificateData(token, testId);
+                const partialData = await googleSheetsService.getCertificateData(token, testId, isEffectivelyAdmin);
 
                 if (partialData) {
                     partialData.candidateName = decodeHtmlEntities(partialData.candidateName);
@@ -88,13 +89,14 @@ const Certificate: FC = () => {
                 if (partialData && partialData.examId) {
                     const exam = activeOrg.exams.find(e => e.id === partialData.examId);
                     
-                    if (exam && !exam.certificateEnabled) {
+                    if (exam && !exam.certificateEnabled && !isEffectivelyAdmin) {
                         toast.error("A certificate is not available for this exam.");
                         navigate(`/results/${testId}`, { replace: true });
                         return;
                     }
 
-                    const template = activeOrg.certificateTemplates.find(t => t.id === exam?.certificateTemplateId);
+                    const templateId = exam?.certificateTemplateId || (exam?.isPractice ? 'cert-practice' : 'cert-completion');
+                    const template = activeOrg.certificateTemplates.find(t => t.id === templateId);
 
                     if (exam && template) {
                         const fullCertData: CertificateData = {
@@ -121,7 +123,7 @@ const Certificate: FC = () => {
         };
 
         fetchCertificateData();
-    }, [testId, user, token, navigate, activeOrg]);
+    }, [testId, user, token, navigate, activeOrg, isEffectivelyAdmin]);
 
     const handleDownload = async () => {
         if (!certificatePrintRef.current || !certData) return;
@@ -165,6 +167,7 @@ const Certificate: FC = () => {
     const isSig2Base64 = template.signature2ImageUrl && template.signature2ImageUrl.startsWith('data:image');
     const verificationUrl = `${window.location.origin}/verify/${certData.certificateNumber}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(verificationUrl)}`;
+    const certificateTheme = organization.certificateThemeId || 'classic';
 
     return (
         <>
@@ -187,11 +190,15 @@ const Certificate: FC = () => {
                 </button>
             </div>
             
-            <div ref={certificatePrintRef} className="bg-white p-2 relative aspect-[1.414/1] w-full shadow-2xl font-serif-display text-slate-800">
-                {/* Ornate Borders */}
-                <div className="absolute inset-2 border-2 border-amber-500"></div>
-                <div className="absolute inset-4 border border-slate-400"></div>
-                <div className="absolute inset-5 border-2 border-amber-300"></div>
+            <div
+                ref={certificatePrintRef}
+                data-cert-theme={certificateTheme}
+                className="cert-container bg-[var(--cert-bg-color)] p-2 relative aspect-[1.414/1] w-full shadow-2xl text-[var(--cert-text-color)]"
+            >
+                {/* Borders */}
+                <div className="cert-border cert-border--outer"></div>
+                <div className="cert-border cert-border--middle"></div>
+                <div className="cert-border cert-border--inner"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-slate-50 to-white/80"></div>
 
                 <div className="relative z-10 flex flex-col h-full p-4 md:p-8 text-center">
@@ -200,32 +207,32 @@ const Certificate: FC = () => {
                         <div className="flex items-center gap-4 text-left">
                             {organization.logo && <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="h-16 w-16 object-contain" />}
                              <div>
-                                <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{organization.name}</h1>
-                                <p className="text-sm text-slate-500">www.{organization.website}</p>
+                                <h1 className="text-2xl md:text-3xl font-bold text-[var(--cert-header-color)] font-[var(--cert-font-display)]">{organization.name}</h1>
+                                <p className="text-sm text-[var(--cert-text-muted-color)]">www.{organization.website}</p>
                             </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                             <p className="text-xs text-slate-500">Certificate ID</p>
-                             <p className="text-sm font-semibold text-slate-700 whitespace-nowrap">{certData.certificateNumber}</p>
+                             <p className="text-xs text-[var(--cert-text-muted-color)]">Certificate ID</p>
+                             <p className="text-sm font-semibold text-[var(--cert-text-color)] whitespace-nowrap">{certData.certificateNumber}</p>
                         </div>
                     </header>
 
                     {/* Main Content */}
                     <main className="flex-grow flex flex-col items-center justify-center my-4">
-                        <p className="text-xl sm:text-2xl tracking-[0.2em] uppercase text-slate-600 font-semibold">{template.title}</p>
-                        <p className="mt-8 text-base sm:text-lg text-slate-500">This certificate is proudly presented to</p>
+                        <p className="text-xl sm:text-2xl tracking-[0.2em] uppercase text-[var(--cert-text-muted-color)] font-semibold font-[var(--cert-font-display)]">{template.title}</p>
+                        <p className="mt-8 text-base sm:text-lg text-[var(--cert-text-muted-color)] font-[var(--cert-font-body)]">This certificate is proudly presented to</p>
                         
-                        <h2 className="font-script text-5xl sm:text-6xl text-slate-800 my-2 sm:my-4 px-8 border-b-2 border-amber-400">
+                        <h2 className="font-[var(--cert-font-script)] text-5xl sm:text-6xl text-[var(--cert-header-color)] my-2 sm:my-4 px-8 border-b-2 border-[var(--cert-accent-color)]">
                             {certData.candidateName}
                         </h2>
 
-                        <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto">
+                        <p className="text-base sm:text-lg text-[var(--cert-text-color)] max-w-2xl mx-auto font-[var(--cert-font-body)]">
                             For successfully completing the rigorous requirements of the
                         </p>
-                        <h3 className="text-2xl sm:text-3xl font-bold text-cyan-700 mt-2">
+                        <h3 className="text-2xl sm:text-3xl font-bold text-[var(--cert-primary-color)] mt-2 font-[var(--cert-font-display)]">
                             {examName}
                         </h3>
-                        <p className="mt-4 text-base sm:text-lg text-slate-600">
+                        <p className="mt-4 text-base sm:text-lg text-[var(--cert-text-color)] font-[var(--cert-font-body)]">
                             having achieved a passing score of <strong>{certData.finalScore}%</strong>.
                         </p>
                     </main>
@@ -238,19 +245,18 @@ const Certificate: FC = () => {
                                     {template.signature1ImageUrl ? (
                                         <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="h-10 mx-auto" />
                                     ) : (
-                                        <p className="font-script text-3xl text-slate-700">{template.signature1Name}</p>
+                                        <p className="font-[var(--cert-font-script)] text-3xl text-[var(--cert-text-color)]">{template.signature1Name}</p>
                                     )}
                                 </div>
-                                <hr className="border-t-2 border-slate-400 mt-2" />
+                                <hr className="cert-hr" />
                                 <p className="font-semibold text-sm mt-2">{template.signature1Name}</p>
-                                <p className="text-xs text-slate-500">{template.signature1Title}</p>
+                                <p className="text-xs text-[var(--cert-text-muted-color)]">{template.signature1Title}</p>
                             </div>
 
                             <div className="text-center w-1/3">
-                                <p className="font-serif-display text-lg text-slate-700 h-12 flex items-end justify-center pb-1">{certData.date}</p>
-                                <hr className="border-t-2 border-slate-400 mt-2" />
+                                <p className="font-[var(--cert-font-display)] text-lg text-[var(--cert-text-color)] h-12 flex items-end justify-center pb-1">{certData.date}</p>
+                                <hr className="cert-hr" />
                                 <p className="font-semibold text-sm mt-2">Date</p>
-                                <p className="text-xs text-slate-500">&nbsp;</p>
                             </div>
                             
                             {hasTwoSignatures ? (
@@ -259,12 +265,12 @@ const Certificate: FC = () => {
                                         {template.signature2ImageUrl ? (
                                             <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} className="h-10 mx-auto" />
                                         ) : (
-                                            <p className="font-script text-3xl text-slate-700">{template.signature2Name}</p>
+                                            <p className="font-[var(--cert-font-script)] text-3xl text-[var(--cert-text-color)]">{template.signature2Name}</p>
                                         )}
                                     </div>
-                                    <hr className="border-t-2 border-slate-400 mt-2" />
+                                    <hr className="cert-hr" />
                                     <p className="font-semibold text-sm mt-2">{template.signature2Name}</p>
-                                    <p className="text-xs text-slate-500">{template.signature2Title}</p>
+                                    <p className="text-xs text-[var(--cert-text-muted-color)]">{template.signature2Title}</p>
                                 </div>
                             ) : <div className="w-1/3"></div>}
                         </div>

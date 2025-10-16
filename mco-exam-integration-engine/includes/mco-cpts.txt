@@ -3,41 +3,42 @@ if (!defined('ABSPATH')) exit;
 
 if (!function_exists('mco_register_custom_post_types')) {
     function mco_register_custom_post_types() {
-        $taxonomies = [
+        $taxonomies = array(
             'exam_practice_questions'  => 'Practice Questions',
             'exam_practice_duration'   => 'Practice Duration',
             'exam_cert_questions'      => 'Certification Questions',
             'exam_cert_duration'       => 'Certification Duration',
             'exam_pass_score'          => 'Pass Score'
-        ];
+        );
         foreach ($taxonomies as $slug => $name) {
-            register_taxonomy($slug, 'mco_exam_program', [
-                'labels' => ['name' => $name], 
+            register_taxonomy($slug, 'mco_exam_program', array(
+                'labels' => array('name' => $name), 
                 'public' => true, 
                 'hierarchical' => false, 
                 'show_in_rest' => true
-            ]);
+            ));
         }
 
-        register_post_type('mco_exam_program', [
-            'labels' => ['name' => 'Exam Programs', 'singular_name' => 'Exam Program'],
+        register_post_type('mco_exam_program', array(
+            'labels' => array('name' => 'Exam Programs', 'singular_name' => 'Exam Program'),
             'public' => true, 
             'has_archive' => true, 
             'show_in_menu' => false, // Set to false. Handled manually in mco-admin.php to prevent fatal errors.
             'menu_icon' => 'dashicons-welcome-learn-more',
             'show_in_rest' => true,
-            'supports' => ['title', 'editor', 'thumbnail'], 
+            'supports' => array('title', 'editor', 'thumbnail'), 
             'taxonomies' => array_keys($taxonomies),
-            'rewrite' => ['slug' => 'exam-programs'],
-        ]);
+            'rewrite' => array('slug' => 'exam-programs'),
+        ));
 
-        register_post_type('mco_recommended_book', [ 
-            'labels' => ['name' => 'Recommended Books', 'singular_name' => 'Book'], 
+        register_post_type('mco_recommended_book', array( 
+            'labels' => array('name' => 'Recommended Books', 'singular_name' => 'Book'), 
             'public' => true, 
             'has_archive' => false, 
             'show_in_menu' => false, // Set to false. Handled manually in mco-admin.php.
             'show_in_rest' => true,
-            'supports' => ['title', 'editor', 'thumbnail'] 
-        ]);
+            'supports' => array('title', 'editor', 'thumbnail') 
+        ));
     }
 }
+?>
