@@ -93,7 +93,38 @@ if (!function_exists('mco_register_api_hooks')) {
         register_rest_route('mco-app/v1', '/admin/create-post-from-app', array('methods' => 'POST', 'callback' => 'mco_api_create_post_from_app', 'permission_callback' => 'mco_api_permission_check_admin'));
     }
 }
-// ... [rest of the file content from previous correct version]
+
+function mco_api_submit_review(WP_REST_Request $request) {
+    if (!class_exists('WooCommerce')) {
+        return new WP_Error('woocommerce_not_active', 'WooCommerce is not active.', array('status' => 503));
+    }
+    
+    $user_id = get_current_user_id();
+    $params = $request->get_json_params();
+
+    $exam_id = sanitize_text_field($params['examId']);
+    $rating = intval($params['rating']);
+    $review_text = sanitize_textarea_field($params['reviewText']);
+    $product_id = wc_get_product_id_by_sku($exam_id);
+    if (!$product_id) {
+        return new WP_Error('not_found', 'Product associated with this exam not found.', array('status' => 404));
+    }
+    $comment_id = wp_insert_comment(array(
+        'comment_post_ID' => $product_id,
+        'comment_author' => wp_get_current_user()->display_name,
+        'comment_author_email' => wp_get_current_user()->user_email,
+        'comment_content' => $review_text,
+        'comment_type' => 'review',
+        'user_id' => $user_id,
+        'comment_approved' => 1,
+    ));
+    if ($comment_id && !is_wp_error($comment_id)) {
+        update_comment_meta($comment_id, 'rating', $rating);
+        return new WP_REST_Response(array('success' => true, 'message' => 'Review submitted successfully.'), 200);
+    }
+    return new WP_Error('submit_failed', 'Failed to submit review.', array('status' => 500));
+}
+
 // ... I will now insert the MODIFIED certificate data function
 
 function mco_api_get_certificate_data(WP_REST_Request $request) {
