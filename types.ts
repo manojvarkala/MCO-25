@@ -16,8 +16,6 @@ export interface TokenPayload {
   paidExamIds: string[];
   isSubscribed: boolean;
   subscriptionInfo?: SubscriptionInfo | null;
-  // FIX: Added spinsAvailable to the token payload for the Wheel of Fortune feature.
-  spinsAvailable?: number;
   exp?: number;
 }
 

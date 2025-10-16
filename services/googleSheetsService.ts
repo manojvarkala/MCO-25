@@ -192,18 +192,6 @@ export const googleSheetsService = {
         }
     },
     
-    // FIX: Add the missing spinWheel method for the "Spin & Win" feature.
-    // --- SPIN WHEEL ---
-    spinWheel: async (token: string): Promise<{ prizeId: string; prizeLabel: string; newToken: string; }> => {
-        try {
-            // This is a user action that modifies state, so it should be a POST request.
-            return await apiFetch('/spin-wheel', 'POST', token);
-        } catch (error) {
-            console.error("Failed to spin the wheel:", error);
-            throw error;
-        }
-    },
-
     // --- RESULTS HANDLING (CACHE-FIRST APPROACH) ---
     syncResults: async (user: User, token: string): Promise<void> => {
         // This lock prevents a race condition where multiple sync requests (e.g., from a button
