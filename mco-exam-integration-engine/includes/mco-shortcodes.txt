@@ -149,7 +149,10 @@ function mco_exam_showcase_shortcode($atts) {
     $is_wc_active = class_exists('WooCommerce');
     $is_user_logged_in = is_user_logged_in();
     $current_user_id = $is_user_logged_in ? get_current_user_id() : 0;
-    $is_subscribed = $is_wc_active && $is_user_logged_in && class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($current_user_id, '', 'active');
+    $is_subscribed = false;
+    if ($is_wc_active && $is_user_logged_in && class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription')) {
+        $is_subscribed = wcs_user_has_subscription($current_user_id, '', 'active');
+    }
 
     // --- Subscription Offers Section ---
     if (!$is_subscribed && empty($program_id_str)) {
@@ -243,8 +246,15 @@ function mco_exam_showcase_shortcode($atts) {
 
         // Certification Exam Card
         if ($cert_exam && $is_wc_active) {
-            $product_id = function_exists('wc_get_product_id_by_sku') ? wc_get_product_id_by_sku($cert_exam['productSku']) : 0;
-            $is_purchased = $is_subscribed || ($is_user_logged_in && $product_id && function_exists('wc_customer_bought_product') ? wc_customer_bought_product('', $current_user_id, $product_id) : false);
+            $product_id = 0;
+            if (function_exists('wc_get_product_id_by_sku')) {
+                $product_id = wc_get_product_id_by_sku($cert_exam['productSku']);
+            }
+            
+            $is_purchased = $is_subscribed;
+            if (!$is_purchased && $is_user_logged_in && $product_id && function_exists('wc_customer_bought_product')) {
+                $is_purchased = wc_customer_bought_product('', $current_user_id, $product_id);
+            }
 
             $button_text = $is_purchased ? 'Start Exam' : 'Add to Cart';
             $button_icon = $is_purchased ? $icons['practice'] : $icons['cart'];
