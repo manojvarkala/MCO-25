@@ -11,30 +11,21 @@
  * Text Domain:       mco-exam-engine
  * Update URI:        false
  */
-// This file contains only the plugin header metadata.
-// This allows for safe and easy version number updates without touching core plugin logic.
-
 if (!defined('ABSPATH')) exit;
 
-// Prevent duplicate plugin activation errors. This runs on every admin page load.
+// Prevent duplicate plugin activation errors.
 if (!function_exists('mco_is_plugin_already_active')) {
     function mco_is_plugin_already_active() {
         if (is_admin() && current_user_can('activate_plugins') && function_exists('is_plugin_active') && is_plugin_active(plugin_basename(__FILE__))) {
-            
-            // FIX: Use the safer get_file_data() instead of the admin-only get_plugin_data() to prevent context-related fatal errors.
             $plugins = get_option('active_plugins');
             $this_plugin_path = plugin_basename(__FILE__);
             $this_plugin_dir = dirname($this_plugin_path);
             $duplicates = [];
-
-            // Get data for the current plugin to compare against others
             $current_plugin_data = get_file_data(__FILE__, ['Name' => 'Plugin Name']);
             $current_plugin_name = $current_plugin_data['Name'];
 
             foreach ($plugins as $plugin_path) {
-                if ($plugin_path === $this_plugin_path) continue; // Skip itself
-
-                // Check if another plugin with the same name exists in a different folder
+                if ($plugin_path === $this_plugin_path) continue;
                 if (file_exists(WP_PLUGIN_DIR . '/' . $plugin_path)) {
                     $plugin_data = get_file_data(WP_PLUGIN_DIR . '/' . $plugin_path, ['Name' => 'Plugin Name']);
                     if (isset($plugin_data['Name']) && $plugin_data['Name'] === $current_plugin_name && dirname($plugin_path) !== $this_plugin_dir) {
@@ -42,16 +33,10 @@ if (!function_exists('mco_is_plugin_already_active')) {
                     }
                 }
             }
-            
             if (!empty($duplicates)) {
-                // A duplicate was found. Deactivate this (the newly activated) one.
                 deactivate_plugins($this_plugin_path);
-                // Set a transient to show an admin notice.
                 set_transient('mco_duplicate_plugin_error', true, 60);
-                // Prevent the "Plugin activated." message from appearing.
-                if (isset($_GET['activate'])) {
-                    unset($_GET['activate']);
-                }
+                if (isset($_GET['activate'])) unset($_GET['activate']);
             }
         }
     }
@@ -66,43 +51,34 @@ if (!function_exists('mco_is_plugin_already_active')) {
     add_action('admin_notices', 'mco_show_duplicate_plugin_notice');
 }
 
-
 // --- CONSTANTS & INCLUDES ---
-
-// Define core plugin constants
 define('MCO_PLUGIN_FILE', __FILE__);
 define('MCO_PLUGIN_PATH', plugin_dir_path(MCO_PLUGIN_FILE));
 define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
-
-// FIX: Define version constant safely from the plugin header to prevent fatal errors on the front-end.
-// get_file_data() is available globally, unlike get_plugin_data().
 if (!defined('MCO_PLUGIN_VERSION')) {
     $plugin_data = get_file_data(MCO_PLUGIN_FILE, ['Version' => 'Version']);
     define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 }
 
-// Include all the necessary logic files
+// Include all files to define functions first.
 require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-data.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-api.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
-
+require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; // This file only defines functions, so it's safe to include globally.
 
 // --- INITIALIZATION HOOKS ---
-
-// Main initialization function to register all hooks
 if (!function_exists('mco_exam_engine_init')) {
     function mco_exam_engine_init() {
+        // Register public components on every load
         mco_register_custom_post_types();
         mco_register_api_hooks();
+        mco_register_shortcode_hooks();
         
-        // FIX: Admin-specific code should only be loaded in the admin context to prevent fatal errors on the front-end.
+        // Only REGISTER the admin-specific hooks if we are in an admin context.
         if (is_admin()) {
-            require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php';
             mco_register_admin_hooks();
         }
-        
-        mco_register_shortcode_hooks();
     }
     add_action('init', 'mco_exam_engine_init');
 }
@@ -110,12 +86,7 @@ if (!function_exists('mco_exam_engine_init')) {
 // Activation hook for flushing rewrite rules
 if (!function_exists('mco_exam_engine_activate')) {
     function mco_exam_engine_activate() {
-        // DO NOT call mco_register_custom_post_types() here. It causes a fatal error.
-        // CPTs must be registered on 'init', which this hook runs before.
-        // The init hook above handles registration correctly.
         flush_rewrite_rules();
-        
-        // Also clear the config transient to prevent issues with stale data after an update.
         delete_transient('mco_app_config_data');
     }
     register_activation_hook(MCO_PLUGIN_FILE, 'mco_exam_engine_activate');
@@ -128,3 +99,4 @@ if (!function_exists('mco_exam_engine_deactivate')) {
     }
     register_deactivation_hook(MCO_PLUGIN_FILE, 'mco_exam_engine_deactivate');
 }
+?>
