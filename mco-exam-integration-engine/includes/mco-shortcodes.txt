@@ -243,8 +243,8 @@ function mco_exam_showcase_shortcode($atts) {
 
         // Certification Exam Card
         if ($cert_exam && $is_wc_active) {
-            $product_id = wc_get_product_id_by_sku($cert_exam['productSku']);
-            $is_purchased = $is_subscribed || ($is_user_logged_in && $product_id ? wc_customer_bought_product('', $current_user_id, $product_id) : false);
+            $product_id = function_exists('wc_get_product_id_by_sku') ? wc_get_product_id_by_sku($cert_exam['productSku']) : 0;
+            $is_purchased = $is_subscribed || ($is_user_logged_in && $product_id && function_exists('wc_customer_bought_product') ? wc_customer_bought_product('', $current_user_id, $product_id) : false);
 
             $button_text = $is_purchased ? 'Start Exam' : 'Add to Cart';
             $button_icon = $is_purchased ? $icons['practice'] : $icons['cart'];
