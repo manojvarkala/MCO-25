@@ -174,13 +174,22 @@ if (!function_exists('mco_api_get_certificate_data')) {
             return new WP_Error('config_error', 'Exam configuration associated with this result was not found.', array('status' => 500));
         }
         
-        if (!$is_admin_view || !$is_admin_user) {
-            if ($result['score'] < $exam['passScore']) {
-                return new WP_Error('not_earned', 'A passing score was not achieved for this exam.', array('status' => 403));
+        $can_generate = false;
+        if ($is_admin_view && $is_admin_user) {
+            $can_generate = true; // Admins can always generate
+        } else {
+            $is_pass = $result['score'] >= $exam['passScore'];
+            $cert_enabled = $exam['isPractice'] 
+                ? ($exam['certificateEnabled'] ?? false) // Practice exam cert flag
+                : ($exam['certificateEnabled'] ?? false); // Cert exam cert flag
+
+            if ($is_pass && $cert_enabled) {
+                $can_generate = true;
             }
-            if (empty($exam['certificateEnabled'])) {
-                return new WP_Error('not_available', 'A certificate is not available for this exam type.', array('status' => 403));
-            }
+        }
+        
+        if (!$can_generate) {
+            return new WP_Error('not_earned', 'A certificate is not available or has not been earned for this exam.', array('status' => 403));
         }
     
         $user_info = get_userdata($target_user_id);

@@ -51,14 +51,13 @@ if (!function_exists('mco_register_admin_hooks')) {
         add_action('admin_menu', 'mco_add_admin_menu');
         add_action('admin_enqueue_scripts', 'mco_admin_enqueue_scripts');
         add_action('admin_post_mco_bulk_import_csv', 'mco_handle_csv_upload');
-        // New hook for blueprint generation
         add_action('admin_post_mco_generate_tenant_blueprint', 'mco_handle_generate_tenant_blueprint');
-        // New hook for full content snapshot generation
         add_action('admin_post_mco_generate_full_snapshot', 'mco_handle_generate_full_snapshot');
         add_action('add_meta_boxes', 'mco_add_exam_program_meta_boxes');
         add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta_data');
         add_action('admin_init', 'mco_register_certificate_settings'); 
         add_action('admin_init', 'mco_register_main_settings');
+        add_action('admin_notices', 'mco_display_admin_notices');
     }
 }
 
@@ -364,5 +363,213 @@ if (!function_exists('mco_render_bulk_import_tab')) {
     }
 }
 
-// ... the rest of the file
+
+if (!function_exists('mco_render_tools_tab')) {
+    function mco_render_tools_tab() {
+        ?>
+        <h3>Data Tools</h3>
+        <p>Use these tools to generate configuration files for the React app. This is an advanced feature for developers and administrators.</p>
+        
+        <h4>Tenant Blueprint Generator</h4>
+        <p>Generates a minimal JSON "scaffold" for a new tenant. It includes branding and certificate templates but no content. This is the <strong>first step</strong> in setting up a new portal.</p>
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+            <input type="hidden" name="action" value="mco_generate_tenant_blueprint">
+            <?php wp_nonce_field('mco_generate_tenant_blueprint_nonce'); ?>
+            <?php submit_button('Generate & Download Blueprint'); ?>
+        </form>
+
+        <hr>
+
+        <h4>Full Content Snapshot Generator</h4>
+        <p>Generates a complete JSON snapshot of all your current live content (exams, books, prices, settings). Use this to create backups or to update the static fallback file in the React app for performance optimization (see handbook for the "Golden Workflow").</p>
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+            <input type="hidden" name="action" value="mco_generate_full_snapshot">
+            <?php wp_nonce_field('mco_generate_full_snapshot_nonce'); ?>
+            <?php submit_button('Generate & Download Snapshot'); ?>
+        </form>
+        <?php
+    }
+}
+
+// --- BULK IMPORT & EXPORT HANDLERS ---
+
+if (!function_exists('mco_handle_generate_tenant_blueprint')) {
+    function mco_handle_generate_tenant_blueprint() {
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_generate_tenant_blueprint_nonce')) {
+            wp_die('Security check failed.');
+        }
+        if (!current_user_can('manage_options')) {
+            wp_die('You do not have permission to perform this action.');
+        }
+        $blueprint_data = mco_get_full_snapshot_data(true);
+        header('Content-Type: application/json');
+        header('Content-Disposition: attachment; filename="tenant-blueprint.json"');
+        echo wp_json_encode($blueprint_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+}
+
+if (!function_exists('mco_handle_generate_full_snapshot')) {
+    function mco_handle_generate_full_snapshot() {
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_generate_full_snapshot_nonce')) {
+            wp_die('Security check failed.');
+        }
+        if (!current_user_can('manage_options')) {
+            wp_die('You do not have permission to perform this action.');
+        }
+        $snapshot_data = mco_get_full_snapshot_data(false);
+        header('Content-Type: application/json');
+        header('Content-Disposition: attachment; filename="full-content-snapshot.json"');
+        echo wp_json_encode($snapshot_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+}
+
+if (!function_exists('mco_handle_csv_upload')) {
+    function mco_handle_csv_upload() {
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_bulk_import_nonce')) {
+            wp_die('Security check failed.');
+        }
+        if (!current_user_can('manage_options')) {
+            wp_die('You do not have permission to perform this action.');
+        }
+        if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+            mco_add_admin_notice('error', 'File upload error. Please try again.');
+            wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=bulk_import'));
+            exit;
+        }
+
+        $import_type = sanitize_key($_POST['import_type']);
+        $file_path = $_FILES['csv_file']['tmp_name'];
+        $file = fopen($file_path, 'r');
+        if ($file === false) {
+            mco_add_admin_notice('error', 'Could not open the uploaded CSV file.');
+            wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=bulk_import'));
+            exit;
+        }
+
+        $headers = fgetcsv($file);
+        $created_count = 0;
+        $updated_count = 0;
+        $skipped_count = 0;
+
+        while (($row = fgetcsv($file)) !== false) {
+            if (count($headers) !== count($row)) {
+                $skipped_count++;
+                continue;
+            }
+            $data = array_combine($headers, $row);
+
+            if ($import_type === 'exam_program') {
+                $title = sanitize_text_field($data['program_title']);
+                if (empty($title)) {
+                    $skipped_count++;
+                    continue;
+                }
+                
+                $post_id = post_exists($title, '', '', 'mco_exam_program');
+                
+                $post_data = array(
+                    'post_title' => $title,
+                    'post_content' => wp_kses_post($data['program_description']),
+                    'post_type' => 'mco_exam_program',
+                    'post_status' => 'publish'
+                );
+                
+                if ($post_id) {
+                    $post_data['ID'] = $post_id;
+                    wp_update_post($post_data);
+                    $updated_count++;
+                } else {
+                    $post_id = wp_insert_post($post_data);
+                    $created_count++;
+                }
+                
+                if ($post_id && !is_wp_error($post_id)) {
+                    $tax_map = array(
+                        'practice_questions' => 'exam_practice_questions',
+                        'practice_duration' => 'exam_practice_duration',
+                        'cert_questions' => 'exam_cert_questions',
+                        'cert_duration' => 'exam_cert_duration',
+                        'pass_score' => 'exam_pass_score'
+                    );
+                    foreach ($tax_map as $csv_key => $tax_slug) {
+                        if (isset($data[$csv_key]) && is_numeric($data[$csv_key])) {
+                            wp_set_post_terms($post_id, (string)$data[$csv_key], $tax_slug, false);
+                        }
+                    }
+                    
+                    update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($data['question_source_url']));
+                    update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($data['certification_exam_sku']));
+                    update_post_meta($post_id, '_mco_is_proctored', ($data['is_proctored'] == '1' || strtolower($data['is_proctored']) == 'true') ? '1' : '0');
+                    update_post_meta($post_id, '_mco_certificate_enabled', ($data['certificate_enabled'] == '1' || strtolower($data['certificate_enabled']) == 'true') ? '1' : '0');
+                }
+
+            } elseif ($import_type === 'recommended_book') {
+                $title = sanitize_text_field($data['book_title']);
+                $book_id_slug = sanitize_title($title);
+                
+                if (empty($title)) {
+                    $skipped_count++;
+                    continue;
+                }
+                
+                $post_id = post_exists($title, '', '', 'mco_recommended_book');
+
+                $post_data = array(
+                    'post_title' => $title,
+                    'post_content' => wp_kses_post($data['book_description']),
+                    'post_type' => 'mco_recommended_book',
+                    'post_status' => 'publish'
+                );
+
+                if ($post_id) {
+                    $post_data['ID'] = $post_id;
+                    wp_update_post($post_data);
+                    $updated_count++;
+                } else {
+                    $post_id = wp_insert_post($post_data);
+                    $created_count++;
+                }
+                
+                if ($post_id && !is_wp_error($post_id)) {
+                    update_post_meta($post_id, '_mco_book_id', $book_id_slug);
+                    update_post_meta($post_id, '_mco_thumbnail_url', esc_url_raw($data['thumbnail_url']));
+                    update_post_meta($post_id, '_mco_link_com', esc_url_raw($data['affiliate_link_com']));
+                    update_post_meta($post_id, '_mco_link_in', esc_url_raw($data['affiliate_link_in']));
+                    update_post_meta($post_id, '_mco_link_ae', esc_url_raw($data['affiliate_link_ae']));
+                }
+            }
+        }
+        fclose($file);
+
+        delete_transient('mco_app_config_data');
+        update_option('mco_config_version', current_time('YmdHis'));
+
+        mco_add_admin_notice('success', "Import complete. Created: {$created_count}, Updated: {$updated_count}, Skipped: {$skipped_count}.");
+        wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=bulk_import'));
+        exit;
+    }
+}
+
+
+if (!function_exists('mco_add_admin_notice')) {
+    function mco_add_admin_notice($type, $message) {
+        $notices = get_option('mco_admin_notices', array());
+        $notices[] = array('type' => $type, 'message' => $message);
+        update_option('mco_admin_notices', $notices);
+    }
+}
+
+if (!function_exists('mco_display_admin_notices')) {
+    function mco_display_admin_notices() {
+        $notices = get_option('mco_admin_notices', array());
+        if (!empty($notices)) {
+            foreach ($notices as $notice) {
+                echo '<div class="notice notice-' . esc_attr($notice['type']) . ' is-dismissible"><p>' . esc_html($notice['message']) . '</p></div>';
+            }
+            delete_option('mco_admin_notices');
+        }
+    }
+}
 ?>
