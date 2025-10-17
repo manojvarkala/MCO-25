@@ -3,12 +3,21 @@ import toast from 'react-hot-toast';
 import { GoogleGenAI, Type } from "@google/genai";
 import { getApiBaseUrl } from './apiConfig.ts';
 
+// FIX: Declare a global constant for development mode, defined in vite.config.ts.
+declare const __DEV__: boolean;
+
 // A simple module-level lock to prevent concurrent sync operations.
 let isSyncing = false;
 
 const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string | null, data: Record<string, any> = {}) => {
+    // FIX: Use relative paths for API calls to avoid CORS issues.
+    // In dev mode, all requests go to the proxy at /api.
+    // In production, requests are relative to the current origin (e.g., '/wp-json/...').
+    const API_PREFIX = __DEV__ ? '/api' : '';
+    const fullUrl = `${API_PREFIX}/wp-json/mco-app/v1${endpoint}`;
+    
+    // We still get the full base URL for constructing user-facing error messages.
     const API_BASE_URL = getApiBaseUrl();
-    const fullUrl = `${API_BASE_URL}/wp-json/mco-app/v1${endpoint}`;
 
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
