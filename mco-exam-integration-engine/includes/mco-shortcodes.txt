@@ -126,10 +126,14 @@ function mco_exam_showcase_shortcode($atts) {
     }
     
     $config_data = mco_get_app_config_data();
-    if (!$config_data) {
+    // FIX: Check for the organizations array and get the first org's data to prevent fatal errors.
+    if (!$config_data || !isset($config_data['organizations']) || empty($config_data['organizations'])) {
         return '<p>Error loading exam configuration data.</p>';
     }
-    
+    $active_org_data = $config_data['organizations'][0];
+    $org_exams = isset($active_org_data['exams']) && is_array($active_org_data['exams']) ? $active_org_data['exams'] : [];
+    $org_exam_categories = isset($active_org_data['examProductCategories']) && is_array($active_org_data['examProductCategories']) ? $active_org_data['examProductCategories'] : [];
+
     $app_url = mco_get_exam_app_url();
     if (!$app_url) {
         return '<p>Exam application URL is not configured. Please contact an administrator.</p>';
@@ -217,11 +221,12 @@ function mco_exam_showcase_shortcode($atts) {
     foreach ($programs as $program_post) {
         $app_program_id = 'prod-' . $program_post->ID;
         
-        $program_category = current(array_filter($config_data['examProductCategories'], function($c) use ($app_program_id) { return $c['id'] === $app_program_id; }));
+        // FIX: Use the extracted org data and add checks for existence to prevent errors.
+        $program_category = current(array_filter($org_exam_categories, function($c) use ($app_program_id) { return isset($c['id']) && $c['id'] === $app_program_id; }));
         if (!$program_category) continue;
         
-        $practice_exam = current(array_filter($config_data['exams'], function($e) use ($program_category) { return $e['id'] === $program_category['practiceExamId']; }));
-        $cert_exam = current(array_filter($config_data['exams'], function($e) use ($program_category) { return $e['id'] === $program_category['certificationExamId']; }));
+        $practice_exam = current(array_filter($org_exams, function($e) use ($program_category) { return isset($e['id'], $program_category['practiceExamId']) && $e['id'] === $program_category['practiceExamId']; }));
+        $cert_exam = current(array_filter($org_exams, function($e) use ($program_category) { return isset($e['id'], $program_category['certificationExamId']) && $e['id'] === $program_category['certificationExamId']; }));
 
         $program_link_url = rtrim($app_url, '/') . '/program/' . $app_program_id;
 
