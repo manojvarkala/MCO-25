@@ -14,6 +14,7 @@ if (!function_exists('mco_get_exam_app_url')) {
     }
 }
 
+
 // --- DEFAULT DATA & FALLBACKS ---
 
 if (!function_exists('mco_get_default_certificate_templates')) {
