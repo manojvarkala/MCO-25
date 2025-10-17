@@ -107,6 +107,21 @@ if (!function_exists('mco_get_full_snapshot_data')) {
         if (empty($templates_option) || !is_array($templates_option)) {
             $templates_option = mco_get_default_certificate_templates();
         }
+        
+        // Fetch signatures from options and merge them into the templates
+        $signature1_base64 = get_option('mco_signature1_base64', '');
+        $signature2_base64 = get_option('mco_signature2_base64', '');
+
+        foreach($templates_option as &$template) {
+            if (isset($template['signature1ImageUrl'])) {
+                $template['signature1ImageUrl'] = $signature1_base64;
+            }
+            if (isset($template['signature2ImageUrl'])) {
+                $template['signature2ImageUrl'] = $signature2_base64;
+            }
+        }
+        unset($template); // Unset the reference
+
         $certificate_templates = array_values($templates_option);
         
         $suggested_books = array();
