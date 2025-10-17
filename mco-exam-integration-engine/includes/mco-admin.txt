@@ -57,15 +57,312 @@ if (!function_exists('mco_register_admin_hooks')) {
         add_action('admin_post_mco_generate_full_snapshot', 'mco_handle_generate_full_snapshot');
         add_action('add_meta_boxes', 'mco_add_exam_program_meta_boxes');
         add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta_data');
-        add_action('admin_init', 'mco_register_certificate_settings'); // New hook for signature settings
+        add_action('admin_init', 'mco_register_certificate_settings'); 
+        add_action('admin_init', 'mco_register_main_settings');
     }
 }
 
-// New function to register certificate signature settings
+if (!function_exists('mco_register_main_settings')) {
+    function mco_register_main_settings() {
+        register_setting('mco_main_options_group', 'mco_exam_app_url');
+        register_setting('mco_main_options_group', 'mco_logo_url');
+        register_setting('mco_main_options_group', 'mco_active_theme');
+        register_setting('mco_main_options_group', 'mco_config_version');
+    }
+}
+
+
 if (!function_exists('mco_register_certificate_settings')) {
     function mco_register_certificate_settings() {
         register_setting('mco_certificate_options_group', 'mco_certificate_templates');
         register_setting('mco_certificate_options_group', 'mco_signature1_base64');
         register_setting('mco_certificate_options_group', 'mco_signature2_base64');
+        register_setting('mco_certificate_options_group', 'mco_certificate_theme');
     }
 }
+
+if (!function_exists('mco_admin_enqueue_scripts')) {
+    function mco_admin_enqueue_scripts($hook) {
+        // Only load on our specific admin page
+        if ($hook === 'exam-app-engine_page_mco-exam-engine' || $hook === 'toplevel_page_mco-exam-engine') {
+            wp_enqueue_style('mco-admin-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', array(), MCO_PLUGIN_VERSION);
+        }
+    }
+}
+
+
+if (!function_exists('mco_exam_engine_admin_page')) {
+    function mco_exam_engine_admin_page() {
+        $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'main_settings';
+        ?>
+        <div class="wrap mco-admin-wrap">
+            <h1>MCO Exam Integration Engine</h1>
+            <h2 class="nav-tab-wrapper">
+                <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
+                <a href="?page=mco-exam-engine&tab=certificate_templates" class="nav-tab <?php echo $active_tab == 'certificate_templates' ? 'nav-tab-active' : ''; ?>">Certificate Templates</a>
+                <a href="?page=mco-exam-engine&tab=theme_selector" class="nav-tab <?php echo $active_tab == 'theme_selector' ? 'nav-tab-active' : ''; ?>">Theme Selector</a>
+                <a href="?page=mco-exam-engine&tab=bulk_import" class="nav-tab <?php echo $active_tab == 'bulk_import' ? 'nav-tab-active' : ''; ?>">Bulk Import</a>
+                <a href="?page=mco-exam-engine&tab=tools" class="nav-tab <?php echo $active_tab == 'tools' ? 'nav-tab-active' : ''; ?>">Tools</a>
+            </h2>
+
+            <?php
+            if ($active_tab == 'main_settings') {
+                mco_render_main_settings_tab();
+            } elseif ($active_tab == 'certificate_templates') {
+                mco_render_certificate_templates_tab();
+            } elseif ($active_tab == 'theme_selector') {
+                mco_render_theme_selector_tab();
+            } elseif ($active_tab == 'bulk_import') {
+                mco_render_bulk_import_tab();
+            } else { // Tools tab
+                mco_render_tools_tab();
+            }
+            ?>
+        </div>
+        <?php
+    }
+}
+
+if (!function_exists('mco_render_main_settings_tab')) {
+    function mco_render_main_settings_tab() {
+        ?>
+        <form method="post" action="options.php">
+            <?php
+            settings_fields('mco_main_options_group');
+            do_settings_sections('mco_main_options_group');
+            ?>
+            <table class="form-table">
+                <tr valign="top">
+                    <th scope="row">Exam Application URL(s)</th>
+                    <td>
+                        <textarea name="mco_exam_app_url" rows="4" cols="50" class="large-text" placeholder="https://yourapp.com&#x0a;https://staging.yourapp.com"><?php echo esc_attr(get_option('mco_exam_app_url')); ?></textarea>
+                        <p class="description">Enter the full URL of your React application. This is required for security (CORS) and for generating correct SSO links. Add one URL per line for multi-domain setups (e.g., production and Vercel previews).</p>
+                    </td>
+                </tr>
+                 <tr valign="top">
+                    <th scope="row">Custom Logo URL</th>
+                    <td>
+                        <input type="text" name="mco_logo_url" value="<?php echo esc_attr(get_option('mco_logo_url')); ?>" class="large-text" placeholder="https://your-site.com/path/to/logo.png" />
+                        <p class="description">Optional. Provide a direct URL to a logo file (PNG or SVG). If left blank, the app will use the "Site Icon" from <strong>Appearance &rarr; Customize</strong>. Using a direct URL here is recommended for best results on PDF certificates.</p>
+                    </td>
+                </tr>
+                 <tr valign="top">
+                    <th scope="row">JWT Secret Key</th>
+                    <td>
+                        <?php
+                        if (defined('MCO_JWT_SECRET') && !empty(MCO_JWT_SECRET)) {
+                            echo '<span style="color: green; font-weight: bold;">&#10004; Defined in wp-config.php</span>';
+                        } else {
+                            echo '<span style="color: red; font-weight: bold;">&#10008; Not Defined.</span> <p class="description">Please add <code>define(\'MCO_JWT_SECRET\', \'your-long-random-string\');</code> to your <code>wp-config.php</code> file.</p>';
+                        }
+                        ?>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button(); ?>
+        </form>
+        <?php
+    }
+}
+
+if (!function_exists('mco_render_certificate_templates_tab')) {
+    function mco_render_certificate_templates_tab() {
+        if (isset($_POST['mco_certificate_templates']) && check_admin_referer('mco_save_cert_templates_nonce')) {
+            $updated_templates = array();
+            foreach ($_POST['mco_certificate_templates'] as $id => $template_data) {
+                $updated_templates[sanitize_key($id)] = array(
+                    'id'    => sanitize_key($id),
+                    'name'  => sanitize_text_field($template_data['name']),
+                    'title' => sanitize_text_field($template_data['title']),
+                    'body'  => wp_kses_post($template_data['body']),
+                    'signature1Name' => sanitize_text_field($template_data['signature1Name']),
+                    'signature1Title' => sanitize_text_field($template_data['signature1Title']),
+                    'signature2Name' => sanitize_text_field($template_data['signature2Name']),
+                    'signature2Title' => sanitize_text_field($template_data['signature2Title']),
+                );
+            }
+            update_option('mco_certificate_templates', $updated_templates);
+            echo '<div class="notice notice-success is-dismissible"><p>Certificate templates saved.</p></div>';
+        }
+        
+        $templates = get_option('mco_certificate_templates');
+        if (empty($templates) || !is_array($templates)) {
+            $templates = mco_get_default_certificate_templates();
+        }
+        ?>
+         <form method="post" action="options.php">
+            <?php
+            settings_fields('mco_certificate_options_group');
+            do_settings_sections('mco_certificate_options_group');
+            ?>
+            <h3>Signature Management</h3>
+            <p>Directly input the Base64 data URI for your signature images. This ensures they are embedded correctly in downloaded PDFs.</p>
+            <table class="form-table">
+                 <tr valign="top">
+                    <th scope="row">Default Certificate Theme</th>
+                    <td>
+                        <select name="mco_certificate_theme">
+                            <option value="classic" <?php selected(get_option('mco_certificate_theme'), 'classic'); ?>>Classic (Serif)</option>
+                            <option value="modern" <?php selected(get_option('mco_certificate_theme'), 'modern'); ?>>Modern (Sans-Serif)</option>
+                        </select>
+                         <p class="description">Select the default visual style for all certificates.</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Signature 1 (Base64 Data)</th>
+                    <td>
+                        <textarea name="mco_signature1_base64" rows="5" class="large-text" placeholder="data:image/png;base64,..."><?php echo esc_textarea(get_option('mco_signature1_base64')); ?></textarea>
+                        <p class="description">Paste the full data URI for the primary signature (e.g., Program Director).</p>
+                    </td>
+                </tr>
+                 <tr valign="top">
+                    <th scope="row">Signature 2 (Base64 Data)</th>
+                    <td>
+                         <textarea name="mco_signature2_base64" rows="5" class="large-text" placeholder="data:image/png;base64,..."><?php echo esc_textarea(get_option('mco_signature2_base64')); ?></textarea>
+                        <p class="description">Paste the full data URI for the secondary signature (e.g., Lead Instructor).</p>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button('Save Signatures'); ?>
+        </form>
+
+        <hr>
+
+        <form method="post" action="">
+            <?php wp_nonce_field('mco_save_cert_templates_nonce'); ?>
+            <h3>Certificate Content</h3>
+            <p>Customize the text content for your certificates. You can use these placeholders: <code>{candidateName}</code>, <code>{examName}</code>, <code>{finalScore}</code>.</p>
+            <div id="mco-certificate-accordion">
+                <?php foreach ($templates as $id => $template): ?>
+                    <div class="mco-accordion-item">
+                        <h4 class="mco-accordion-title"><?php echo esc_html($template['name']); ?></h4>
+                        <div class="mco-accordion-content">
+                            <table class="form-table">
+                                <tr valign="top">
+                                    <th scope="row">Template Name</th>
+                                    <td><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][name]" value="<?php echo esc_attr($template['name']); ?>" class="regular-text"/></td>
+                                </tr>
+                                <tr valign="top">
+                                    <th scope="row">Certificate Title</th>
+                                    <td><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][title]" value="<?php echo esc_attr($template['title']); ?>" class="regular-text"/></td>
+                                </tr>
+                                <tr valign="top">
+                                    <th scope="row">Certificate Body</th>
+                                    <td><textarea name="mco_certificate_templates[<?php echo esc_attr($id); ?>][body]" rows="4" class="large-text"><?php echo esc_textarea($template['body']); ?></textarea></td>
+                                </tr>
+                                 <tr valign="top">
+                                    <th scope="row">Signature 1 Name</th>
+                                    <td><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name']); ?>" class="regular-text"/></td>
+                                </tr>
+                                <tr valign="top">
+                                    <th scope="row">Signature 1 Title</th>
+                                    <td><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature1Title]" value="<?php echo esc_attr($template['signature1Title']); ?>" class="regular-text"/></td>
+                                </tr>
+                                <tr valign="top">
+                                    <th scope="row">Signature 2 Name</th>
+                                    <td><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature2Name]" value="<?php echo esc_attr($template['signature2Name'] ?? ''); ?>" class="regular-text"/></td>
+                                </tr>
+                                <tr valign="top">
+                                    <th scope="row">Signature 2 Title</th>
+                                    <td><input type="text" name="mco_certificate_templates[<?php echo esc_attr($id); ?>][signature2Title]" value="<?php echo esc_attr($template['signature2Title'] ?? ''); ?>" class="regular-text"/></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <?php submit_button('Save Templates'); ?>
+        </form>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var titles = document.querySelectorAll('.mco-accordion-title');
+                titles.forEach(function(title) {
+                    title.addEventListener('click', function() {
+                        this.classList.toggle('active');
+                        var content = this.nextElementSibling;
+                        if (content.style.maxHeight) {
+                            content.style.maxHeight = null;
+                        } else {
+                            content.style.maxHeight = content.scrollHeight + "px";
+                        } 
+                    });
+                });
+            });
+        </script>
+        <?php
+    }
+}
+
+if (!function_exists('mco_render_theme_selector_tab')) {
+    function mco_render_theme_selector_tab() {
+        ?>
+        <form method="post" action="options.php">
+            <?php
+            settings_fields('mco_main_options_group');
+            do_settings_sections('mco_main_options_group');
+            $active_theme = get_option('mco_active_theme', 'default');
+            $themes = array(
+                'default' => 'Cyberpunk',
+                'professional' => 'Professional',
+                'serene' => 'Serene',
+                'academic' => 'Academic',
+                'noir' => 'Noir',
+            );
+            ?>
+            <h3>Default Application Theme</h3>
+            <p>Select the default theme for the examination app. Individual users can override this choice in their profile.</p>
+            <div class="mco-theme-selector-grid">
+                <?php foreach ($themes as $id => $name): ?>
+                    <label class="mco-theme-card <?php echo $active_theme === $id ? 'mco-theme-card--selected' : ''; ?>">
+                        <input type="radio" name="mco_active_theme" value="<?php echo esc_attr($id); ?>" <?php checked($active_theme, $id); ?> class="mco-theme-radio">
+                        <div class="mco-theme-swatches">
+                            <div class="mco-theme-swatch mco-theme-swatch--<?php echo esc_attr($id); ?>-primary"></div>
+                            <div class="mco-theme-swatch mco-theme-swatch--<?php echo esc_attr($id); ?>-secondary"></div>
+                            <div class="mco-theme-swatch mco-theme-swatch--<?php echo esc_attr($id); ?>-accent"></div>
+                            <div class="mco-theme-swatch mco-theme-swatch--<?php echo esc_attr($id); ?>-background"></div>
+                        </div>
+                        <p class="mco-theme-name"><?php echo esc_html($name); ?></p>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+            <?php submit_button('Save Theme'); ?>
+        </form>
+        <?php
+    }
+}
+
+if (!function_exists('mco_render_bulk_import_tab')) {
+    function mco_render_bulk_import_tab() {
+        ?>
+        <h3>Bulk Import Content</h3>
+        <p>Use a CSV file to create or update multiple Exam Programs or Recommended Books at once. This is the most efficient way to manage a large amount of content.</p>
+        
+        <h4>Exam Programs</h4>
+        <p>Download the template, fill it with your program data, and upload it below. The system will create new programs or update existing ones based on the <code>program_title</code>.</p>
+        <a href="<?php echo esc_url(MCO_PLUGIN_URL . 'public/template-exam-programs.csv'); ?>" class="button button-secondary" download>Download Exam Program Template</a>
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data" style="margin-top: 1rem;">
+            <input type="hidden" name="action" value="mco_bulk_import_csv">
+            <input type="hidden" name="import_type" value="exam_program">
+            <?php wp_nonce_field('mco_bulk_import_nonce'); ?>
+            <input type="file" name="csv_file" accept=".csv">
+            <?php submit_button('Upload Exam Programs CSV'); ?>
+        </form>
+
+        <hr>
+
+        <h4>Recommended Books</h4>
+        <p>Download the template, fill it with your book data, and upload it. The system will create new books or update existing ones based on the <code>book_title</code>.</p>
+        <a href="<?php echo esc_url(MCO_PLUGIN_URL . 'public/template-recommended-books.csv'); ?>" class="button button-secondary" download>Download Recommended Books Template</a>
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data" style="margin-top: 1rem;">
+            <input type="hidden" name="action" value="mco_bulk_import_csv">
+            <input type="hidden" name="import_type" value="recommended_book">
+            <?php wp_nonce_field('mco_bulk_import_nonce'); ?>
+            <input type="file" name="csv_file" accept=".csv">
+            <?php submit_button('Upload Recommended Books CSV'); ?>
+        </form>
+        <?php
+    }
+}
+
+// ... the rest of the file
+?>
