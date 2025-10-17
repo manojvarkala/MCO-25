@@ -273,7 +273,7 @@ if (!function_exists('mco_api_get_certificate_data')) {
             return new WP_Error('not_found', 'No test results found for this user.', array('status' => 404));
         }
     
-        $result = $results[$test_id] ?? null;
+        $result = isset($results[$test_id]) ? $results[$test_id] : null;
     
         if (!$result) {
             return new WP_Error('not_found', 'Test result not found in user data.', array('status' => 404));
@@ -289,9 +289,10 @@ if (!function_exists('mco_api_get_certificate_data')) {
             $can_generate = true; // Admins can always generate
         } else {
             $is_pass = $result['score'] >= $exam['passScore'];
-            $cert_enabled = $exam['isPractice'] 
-                ? ($exam['certificateEnabled'] ?? false) // Practice exam cert flag
-                : ($exam['certificateEnabled'] ?? false); // Cert exam cert flag
+            $cert_enabled_practice = isset($exam['certificateEnabled']) ? $exam['certificateEnabled'] : false;
+            $cert_enabled_cert = isset($exam['certificateEnabled']) ? $exam['certificateEnabled'] : false;
+            
+            $cert_enabled = $exam['isPractice'] ? $cert_enabled_practice : $cert_enabled_cert;
 
             if ($is_pass && $cert_enabled) {
                 $can_generate = true;
@@ -326,14 +327,14 @@ if (!function_exists('mco_api_get_certificate_data')) {
 if (!function_exists('mco_api_admin_update_exam_program')) {
     function mco_api_admin_update_exam_program(WP_REST_Request $request) {
         $params = $request->get_json_params();
-        $program_id_str = $params['programId'] ?? '';
+        $program_id_str = isset($params['programId']) ? $params['programId'] : '';
         $post_id = (int) str_replace('prod-', '', $program_id_str);
     
         if (!$post_id || get_post_type($post_id) !== 'mco_exam_program') {
             return new WP_Error('bad_request', 'Invalid program ID.', array('status' => 400));
         }
     
-        $update_data = $params['updateData'] ?? array();
+        $update_data = isset($params['updateData']) ? $params['updateData'] : array();
         
         $post_update_args = array('ID' => $post_id);
         if (isset($update_data['programName'])) $post_update_args['post_title'] = sanitize_text_field($update_data['programName']);

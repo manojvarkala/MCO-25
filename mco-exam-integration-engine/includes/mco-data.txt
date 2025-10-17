@@ -73,7 +73,7 @@ if (!function_exists('mco_get_full_snapshot_data')) {
         $app_urls = explode("\n", get_option('mco_exam_app_url', ''));
         $app_urls = array_map('trim', array_filter($app_urls));
         $first_app_url_parts = !empty($app_urls) ? parse_url($app_urls[0]) : null;
-        $host = $first_app_url_parts['host'] ?? str_replace(array('https://', 'http://'), '', $site_url);
+        $host = isset($first_app_url_parts['host']) ? $first_app_url_parts['host'] : str_replace(array('https://', 'http://'), '', $site_url);
         $org_id = 'org-' . sanitize_title(get_bloginfo('name'));
 
         $available_themes = array(
@@ -189,7 +189,7 @@ if (!function_exists('mco_get_full_snapshot_data')) {
                     if (is_array($bundled_items_meta) && !empty($bundled_items_meta)) {
                          $price_data['isBundle'] = true;
                          foreach ($bundled_items_meta as $item_data) {
-                             $bundled_product_id = $item_data['product_id'] ?? null;
+                             $bundled_product_id = isset($item_data['product_id']) ? $item_data['product_id'] : null;
                              if ($bundled_product_id && function_exists('wc_get_product')) {
                                  $bundled_product = wc_get_product($bundled_product_id);
                                  if ($bundled_product && $bundled_product->get_sku()) {
