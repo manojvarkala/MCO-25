@@ -24,6 +24,116 @@ if (!defined('ABSPATH')) exit;
  * =================================================================================================
  */
 
+// --- JWT GENERATION AND HELPER FUNCTIONS ---
+
+if (!function_exists('mco_base64_url_encode')) {
+    function mco_base64_url_encode($text) {
+        return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($text));
+    }
+}
+
+if (!function_exists('mco_get_user_subscription_info')) {
+    function mco_get_user_subscription_info($user_id) {
+        if (!class_exists('WC_Subscriptions') || !function_exists('wcs_get_users_subscriptions')) {
+            return array('isSubscribed' => false, 'subscriptionInfo' => null);
+        }
+
+        $subscriptions = wcs_get_users_subscriptions($user_id);
+        $active_subscription = null;
+
+        foreach ($subscriptions as $subscription) {
+            if ($subscription->has_status(array('active', 'on-hold'))) {
+                $active_subscription = $subscription;
+                break;
+            }
+        }
+
+        if ($active_subscription) {
+            $next_payment_date = $active_subscription->get_date('next_payment');
+            return array(
+                'isSubscribed' => true,
+                'subscriptionInfo' => array(
+                    'status' => $active_subscription->get_status(),
+                    'nextPaymentDate' => $next_payment_date ? date('F j, Y', strtotime($next_payment_date)) : null
+                )
+            );
+        }
+
+        return array('isSubscribed' => false, 'subscriptionInfo' => null);
+    }
+}
+
+
+if (!function_exists('mco_get_user_purchased_skus')) {
+    function mco_get_user_purchased_skus($user_id) {
+        if (!class_exists('WooCommerce') || !$user_id) {
+            return array();
+        }
+
+        $user = get_user_by('id', $user_id);
+        if (!$user) {
+            return array();
+        }
+
+        $paid_skus = array();
+        // Get customer orders with 'completed' or 'processing' status
+        $customer_orders = wc_get_orders(array(
+            'customer_id' => $user_id,
+            'status' => array('wc-completed', 'wc-processing'),
+            'limit' => -1,
+        ));
+
+        foreach ($customer_orders as $order) {
+            foreach ($order->get_items() as $item) {
+                $product = $item->get_product();
+                if ($product && $product->get_sku()) {
+                    $paid_skus[] = $product->get_sku();
+                }
+            }
+        }
+        return array_unique($paid_skus);
+    }
+}
+
+if (!function_exists('mco_generate_exam_jwt')) {
+    function mco_generate_exam_jwt($user_id) {
+        if (!defined('MCO_JWT_SECRET')) {
+            error_log('MCO Exam Engine: MCO_JWT_SECRET is not defined in wp-config.php. Cannot generate token.');
+            return false;
+        }
+
+        $user = get_user_by('id', $user_id);
+        if (!$user) {
+            return false;
+        }
+
+        $header = mco_base64_url_encode(json_encode(array('alg' => 'HS256', 'typ' => 'JWT')));
+        
+        $subscription_data = mco_get_user_subscription_info($user_id);
+
+        $payload_data = array(
+            'iss' => get_bloginfo('url'),
+            'iat' => time(),
+            'exp' => time() + (DAY_IN_SECONDS), // Token valid for 1 day
+            'user' => array(
+                'id' => (string) $user->ID,
+                'name' => $user->display_name,
+                'email' => $user->user_email,
+                'isAdmin' => user_can($user_id, 'manage_options')
+            ),
+            'paidExamIds' => mco_get_user_purchased_skus($user_id),
+            'isSubscribed' => $subscription_data['isSubscribed'],
+            'subscriptionInfo' => $subscription_data['subscriptionInfo']
+        );
+        $payload = mco_base64_url_encode(json_encode($payload_data));
+
+        $signature = hash_hmac('sha256', "$header.$payload", MCO_JWT_SECRET, true);
+        $signature_encoded = mco_base64_url_encode($signature);
+
+        return "$header.$payload.$signature_encoded";
+    }
+}
+
 // --- New Universal Fetcher Function ---
 if (!function_exists('mco_fetch_remote_csv_content')) {
     function mco_fetch_remote_csv_content($url) {

@@ -63,6 +63,54 @@ if (!function_exists('mco_register_admin_hooks')) {
     }
 }
 
+if (!function_exists('mco_handle_clear_config_cache')) {
+    function mco_handle_clear_config_cache() {
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_clear_config_cache_nonce')) {
+            wp_die('Security check failed.');
+        }
+        if (!current_user_can('manage_options')) {
+            wp_die('You do not have permission to perform this action.');
+        }
+
+        delete_transient('mco_app_config_data');
+        update_option('mco_config_version', current_time('YmdHis'));
+        
+        mco_add_admin_notice('success', 'Application configuration cache has been cleared successfully.');
+        wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=tools'));
+        exit;
+    }
+}
+
+if (!function_exists('mco_handle_clear_question_caches')) {
+    function mco_handle_clear_question_caches() {
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_clear_question_caches_nonce')) {
+            wp_die('Security check failed.');
+        }
+        if (!current_user_can('manage_options')) {
+            wp_die('You do not have permission to perform this action.');
+        }
+
+        global $wpdb;
+        $prefix = '_transient_mco_questions_';
+        $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+                $wpdb->esc_like($prefix) . '%'
+            )
+        );
+         $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+                $wpdb->esc_like('_transient_timeout_mco_questions_') . '%'
+            )
+        );
+        
+        mco_add_admin_notice('success', 'All question caches have been cleared.');
+        wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=tools'));
+        exit;
+    }
+}
+
 if (!function_exists('mco_register_main_settings')) {
     function mco_register_main_settings() {
         register_setting('mco_main_options_group', 'mco_exam_app_url');
@@ -463,55 +511,6 @@ if (!function_exists('mco_handle_generate_full_snapshot')) {
         exit;
     }
 }
-
-if (!function_exists('mco_handle_clear_config_cache')) {
-    function mco_handle_clear_config_cache() {
-        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_clear_config_cache_nonce')) {
-            wp_die('Security check failed.');
-        }
-        if (!current_user_can('manage_options')) {
-            wp_die('You do not have permission to perform this action.');
-        }
-
-        delete_transient('mco_app_config_data');
-        update_option('mco_config_version', current_time('YmdHis'));
-        
-        mco_add_admin_notice('success', 'Application configuration cache has been cleared successfully.');
-        wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=tools'));
-        exit;
-    }
-}
-
-if (!function_exists('mco_handle_clear_question_caches')) {
-    function mco_handle_clear_question_caches() {
-        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_clear_question_caches_nonce')) {
-            wp_die('Security check failed.');
-        }
-        if (!current_user_can('manage_options')) {
-            wp_die('You do not have permission to perform this action.');
-        }
-
-        global $wpdb;
-        $prefix = '_transient_mco_questions_';
-        $wpdb->query(
-            $wpdb->prepare(
-                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-                $wpdb->esc_like($prefix) . '%'
-            )
-        );
-         $wpdb->query(
-            $wpdb->prepare(
-                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-                $wpdb->esc_like('_transient_timeout_mco_questions_') . '%'
-            )
-        );
-        
-        mco_add_admin_notice('success', 'All question caches have been cleared.');
-        wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=tools'));
-        exit;
-    }
-}
-
 
 if (!function_exists('mco_handle_csv_upload')) {
     function mco_handle_csv_upload() {
