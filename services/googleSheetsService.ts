@@ -10,14 +10,12 @@ declare const __DEV__: boolean;
 let isSyncing = false;
 
 const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string | null, data: Record<string, any> = {}) => {
-    // FIX: Use relative paths for API calls to avoid CORS issues.
-    // In dev mode, all requests go to the proxy at /api.
-    // In production, requests are relative to the current origin (e.g., '/wp-json/...').
-    const API_PREFIX = __DEV__ ? '/api' : '';
-    const fullUrl = `${API_PREFIX}/wp-json/mco-app/v1${endpoint}`;
-    
-    // We still get the full base URL for constructing user-facing error messages.
+    // The API base URL is determined by the tenant configuration.
+    // In dev mode, this points to '/api' to use the Vite proxy.
+    // In production, it's the full URL of the WordPress backend (e.g., 'https://www.coding-online.net').
+    // Using the full, absolute URL is necessary for cross-subdomain API calls and relies on correct server-side CORS configuration.
     const API_BASE_URL = getApiBaseUrl();
+    const fullUrl = `${API_BASE_URL}/wp-json/mco-app/v1${endpoint}`;
 
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
