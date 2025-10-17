@@ -126,7 +126,6 @@ function mco_exam_showcase_shortcode($atts) {
     }
     
     $config_data = mco_get_app_config_data();
-    // FIX: Add comprehensive validation to prevent fatal errors from malformed config data.
     if (!$config_data || !is_array($config_data) || !isset($config_data['organizations']) || !is_array($config_data['organizations']) || empty($config_data['organizations'])) {
         return '<p>Error: Could not load exam configuration data. Please contact an administrator.</p>';
     }
@@ -177,7 +176,7 @@ function mco_exam_showcase_shortcode($atts) {
                 echo '<h3 class="mco-sub-card__title">Monthly Subscription</h3>';
                 echo '<p class="mco-sub-card__description">Perfect for focused, short-term preparation.</p>';
                 echo '<div class="mco-sub-card__price">';
-                if (isset($monthly_sub['regularPrice']) && $monthly_sub['regularPrice'] > $monthly_sub['price']) {
+                if (isset($monthly_sub['regularPrice']) && is_numeric($monthly_sub['regularPrice']) && $monthly_sub['regularPrice'] > $monthly_sub['price']) {
                     echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($monthly_sub['regularPrice'], 2) . '</span> ';
                 }
                 echo '<span class="mco-sub-card__price-value">$' . number_format_i18n($monthly_sub['price'], 2) . '</span>';
@@ -200,7 +199,7 @@ function mco_exam_showcase_shortcode($atts) {
                 echo '<h3 class="mco-sub-card__title">Yearly Subscription</h3>';
                 echo '<p class="mco-sub-card__description">For continuous learning and preparing for multiple certifications.</p>';
                 echo '<div class="mco-sub-card__price">';
-                if (isset($yearly_sub['regularPrice']) && $yearly_sub['regularPrice'] > $yearly_sub['price']) {
+                if (isset($yearly_sub['regularPrice']) && is_numeric($yearly_sub['regularPrice']) && $yearly_sub['regularPrice'] > $yearly_sub['price']) {
                     echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($yearly_sub['regularPrice'], 2) . '</span> ';
                 }
                 echo '<span class="mco-sub-card__price-value">$' . number_format_i18n($yearly_sub['price'], 2) . '</span>';
@@ -285,7 +284,7 @@ function mco_exam_showcase_shortcode($atts) {
             echo '<h3 class="mco-card__subtitle">' . esc_html($cert_exam['name']) . '</h3>';
             if (!$is_purchased && isset($cert_exam['price']) && $cert_exam['price'] > 0) {
                 echo '<div style="text-align: center; margin-bottom: 1rem;">';
-                if (isset($cert_exam['regularPrice']) && $cert_exam['regularPrice'] > $cert_exam['price']) {
+                if (isset($cert_exam['regularPrice']) && is_numeric($cert_exam['regularPrice']) && $cert_exam['regularPrice'] > $cert_exam['price']) {
                     echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($cert_exam['regularPrice'], 2) . '</span>';
                 }
                 echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($cert_exam['price'], 2) . '</span>';
@@ -297,73 +296,67 @@ function mco_exam_showcase_shortcode($atts) {
             echo '<a href="' . esc_url($button_url) . '" class="mco-card__button ' . $button_class . '">' . $button_icon . ' ' . $button_text . '</a>';
             echo '</div>';
             echo '</div>';
-
-            // --- Bundle Card Logic (Prioritizing Subscription Bundle) ---
-            if (isset($cert_exam['productSku'])) {
-                $subscription_bundle_sku = $cert_exam['productSku'] . '-1mo-addon';
-                $practice_bundle_sku = $cert_exam['productSku'] . '-1';
-    
-                if (isset($exam_prices[$subscription_bundle_sku])) {
-                    // Render Subscription Bundle Card
-                    $bundle_data = $exam_prices[$subscription_bundle_sku];
-                    $bundle_product_id = isset($bundle_data['productId']) ? $bundle_data['productId'] : null;
-                    $bundle_url = $bundle_product_id ? get_site_url() . '/cart/?add-to-cart=' . $bundle_product_id : '#';
-    
-                    echo '<div class="mco-card mco-gradient--sub-bundle-1">';
-                    echo '<div class="mco-card__header"><span>' . $icons['bundle'] . '</span> Exam + Subscription</div>';
-                    echo '<div class="mco-card__body">';
-                    echo '<h3 class="mco-card__subtitle">Get the certification exam plus one month of full subscription benefits.</h3>';
-                    if (isset($bundle_data['price']) && $bundle_data['price'] > 0) {
-                        echo '<div style="text-align: center; margin-bottom: 1rem;">';
-                        if (isset($bundle_data['regularPrice']) && $bundle_data['regularPrice'] > $bundle_data['price']) {
-                            echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($bundle_data['regularPrice'], 2) . '</span>';
-                        }
-                        echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($bundle_data['price'], 2) . '</span>';
-                        echo '</div>';
-                    }
-                    echo '<ul class="mco-sub-card__features">';
-                    echo '<li>' . $icons['check'] . '<span>One Certification Exam</span></li>';
-                    echo '<li>' . $icons['check'] . '<span>1-Month Full Subscription</span></li>';
-                    echo '<li style="padding-left: 28px; font-size: 0.8rem; opacity: 0.8;"><span>Incl. Unlimited Practice & AI Feedback</span></li>';
-                    echo '</ul>';
-                    echo '</div>';
-                    echo '<div class="mco-card__footer">';
-                    echo '<a href="' . esc_url($bundle_url) . '" class="mco-card__button mco-card__button--purchase">' . $icons['cart'] . ' Purchase Bundle</a>';
-                    echo '</div>';
-                    echo '</div>';
-    
-                } elseif (isset($exam_prices[$practice_bundle_sku])) {
-                    // Render Practice Bundle Card (existing logic)
-                    $bundle_data = $exam_prices[$practice_bundle_sku];
-                    $bundle_product_id = isset($bundle_data['productId']) ? $bundle_data['productId'] : null;
-                    $bundle_url = $bundle_product_id ? get_site_url() . '/cart/?add-to-cart=' . $bundle_product_id : '#';
-    
-                    echo '<div class="mco-card mco-gradient--bundle-1">';
-                    echo '<div class="mco-card__header"><span>' . $icons['bundle'] . '</span> Exam Bundle</div>';
-                    echo '<div class="mco-card__body">';
-                    echo '<h3 class="mco-card__subtitle">The complete package for your certification.</h3>';
-                    if (isset($bundle_data['price']) && $bundle_data['price'] > 0) {
-                        echo '<div style="text-align: center; margin-bottom: 1rem;">';
-                        if (isset($bundle_data['regularPrice']) && $bundle_data['regularPrice'] > $bundle_data['price']) {
-                            echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($bundle_data['regularPrice'], 2) . '</span>';
-                        }
-                        echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($bundle_data['price'], 2) . '</span>';
-                        echo '</div>';
-                    }
-                    echo '<ul class="mco-sub-card__features">';
-                    echo '<li>' . $icons['check'] . '<span>One Certification Exam</span></li>';
-                    echo '<li>' . $icons['check'] . '<span>1-Month Unlimited Practice</span></li>';
-                    echo '<li>' . $icons['check'] . '<span>1-Month Unlimited AI Feedback</span></li>';
-                    echo '</ul>';
-                    echo '</div>';
-                    echo '<div class="mco-card__footer">';
-                    echo '<a href="' . esc_url($bundle_url) . '" class="mco-card__button mco-card__button--purchase">' . $icons['cart'] . ' Purchase Bundle</a>';
-                    echo '</div>';
-                    echo '</div>';
-                }
-            }
         }
 
+        // --- Refactored & Resilient Bundle Card Logic ---
+        if ($cert_exam && isset($cert_exam['productSku'])) {
+            $subscription_bundle_sku = $cert_exam['productSku'] . '-1mo-addon';
+            $practice_bundle_sku = $cert_exam['productSku'] . '-1';
+        
+            $bundle_to_render = null;
+            $bundle_type = '';
+        
+            if (isset($exam_prices[$subscription_bundle_sku]) && is_array($exam_prices[$subscription_bundle_sku])) {
+                $bundle_to_render = $exam_prices[$subscription_bundle_sku];
+                $bundle_type = 'subscription';
+            } elseif (isset($exam_prices[$practice_bundle_sku]) && is_array($exam_prices[$practice_bundle_sku])) {
+                $bundle_to_render = $exam_prices[$practice_bundle_sku];
+                $bundle_type = 'practice';
+            }
+        
+            if ($bundle_to_render) {
+                $bundle_product_id = isset($bundle_to_render['productId']) ? $bundle_to_render['productId'] : null;
+                $bundle_url = $bundle_product_id ? get_site_url() . '/cart/?add-to-cart=' . $bundle_product_id : '#';
+        
+                $gradient_class = $bundle_type === 'subscription' ? 'mco-gradient--sub-bundle-1' : 'mco-gradient--bundle-1';
+                $header_title = $bundle_type === 'subscription' ? 'Exam + Subscription' : 'Exam Bundle';
+                $subtitle = $bundle_type === 'subscription' ? 'Get the certification exam plus one month of full subscription benefits.' : 'The complete package for your certification.';
+                $features = $bundle_type === 'subscription' 
+                    ? ['One Certification Exam', '1-Month Full Subscription', '<span style="padding-left: 28px; font-size: 0.8rem; opacity: 0.8;">Incl. Unlimited Practice & AI Feedback</span>']
+                    : ['One Certification Exam', '1-Month Unlimited Practice', '1-Month Unlimited AI Feedback'];
+        
+                echo '<div class="mco-card ' . esc_attr($gradient_class) . '">';
+                echo '<div class="mco-card__header"><span>' . $icons['bundle'] . '</span> ' . esc_html($header_title) . '</div>';
+                echo '<div class="mco-card__body">';
+                echo '<h3 class="mco-card__subtitle">' . esc_html($subtitle) . '</h3>';
+        
+                if (isset($bundle_to_render['price']) && is_numeric($bundle_to_render['price']) && $bundle_to_render['price'] > 0) {
+                    echo '<div style="text-align: center; margin-bottom: 1rem;">';
+                    if (isset($bundle_to_render['regularPrice']) && is_numeric($bundle_to_render['regularPrice']) && $bundle_to_render['regularPrice'] > $bundle_to_render['price']) {
+                        echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($bundle_to_render['regularPrice'], 2) . '</span>';
+                    }
+                    echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($bundle_to_render['price'], 2) . '</span>';
+                    echo '</div>';
+                }
+        
+                echo '<ul class="mco-sub-card__features">';
+                foreach ($features as $feature) {
+                     $is_sub_feature = strpos($feature, '<span') === 0;
+                     if ($is_sub_feature) {
+                         echo '<li>' . $feature . '</li>'; // Not escaping because it contains intentional HTML
+                     } else {
+                         echo '<li>' . $icons['check'] . '<span>' . esc_html($feature) . '</span></li>';
+                     }
+                }
+                echo '</ul>';
+        
+                echo '</div>';
+                echo '<div class="mco-card__footer">';
+                echo '<a href="' . esc_url($bundle_url) . '" class="mco-card__button mco-card__button--purchase">' . $icons['cart'] . ' Purchase Bundle</a>';
+                echo '</div>';
+                echo '</div>';
+            }
+        }
         echo '</div></div>'; // Close cards and group
     }
     echo '</div>'; // Close grid

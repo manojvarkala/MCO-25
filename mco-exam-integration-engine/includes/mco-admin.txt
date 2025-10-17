@@ -53,6 +53,8 @@ if (!function_exists('mco_register_admin_hooks')) {
         add_action('admin_post_mco_bulk_import_csv', 'mco_handle_csv_upload');
         add_action('admin_post_mco_generate_tenant_blueprint', 'mco_handle_generate_tenant_blueprint');
         add_action('admin_post_mco_generate_full_snapshot', 'mco_handle_generate_full_snapshot');
+        add_action('admin_post_mco_clear_config_cache_action', 'mco_handle_clear_config_cache');
+        add_action('admin_post_mco_clear_question_caches_action', 'mco_handle_clear_question_caches');
         add_action('add_meta_boxes', 'mco_add_exam_program_meta_boxes');
         add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta_data');
         add_action('admin_init', 'mco_register_certificate_settings'); 
@@ -368,25 +370,62 @@ if (!function_exists('mco_render_tools_tab')) {
     function mco_render_tools_tab() {
         ?>
         <h3>Data Tools</h3>
-        <p>Use these tools to generate configuration files for the React app. This is an advanced feature for developers and administrators.</p>
+        <p>Use these tools to generate configuration files for the React app or manage server caches. These are advanced features for developers and administrators.</p>
         
-        <h4>Tenant Blueprint Generator</h4>
-        <p>Generates a minimal JSON "scaffold" for a new tenant. It includes branding and certificate templates but no content. This is the <strong>first step</strong> in setting up a new portal.</p>
-        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-            <input type="hidden" name="action" value="mco_generate_tenant_blueprint">
-            <?php wp_nonce_field('mco_generate_tenant_blueprint_nonce'); ?>
-            <?php submit_button('Generate & Download Blueprint'); ?>
-        </form>
-
+        <h4>Data Generators</h4>
+        <table class="form-table">
+            <tr valign="top">
+                <th scope="row">Tenant Blueprint</th>
+                <td>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="mco_generate_tenant_blueprint">
+                        <?php wp_nonce_field('mco_generate_tenant_blueprint_nonce'); ?>
+                        <?php submit_button('Generate & Download Blueprint', 'secondary', 'submit', false); ?>
+                    </form>
+                    <p class="description">Generates a minimal JSON "scaffold" for a new tenant. This is the <strong>first step</strong> in setting up a new portal.</p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">Full Content Snapshot</th>
+                <td>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="mco_generate_full_snapshot">
+                        <?php wp_nonce_field('mco_generate_full_snapshot_nonce'); ?>
+                        <?php submit_button('Generate & Download Snapshot', 'secondary', 'submit', false); ?>
+                    </form>
+                     <p class="description">Generates a complete JSON snapshot of all current content. Use this for backups or to update the app's static fallback file.</p>
+                </td>
+            </tr>
+        </table>
+        
         <hr>
 
-        <h4>Full Content Snapshot Generator</h4>
-        <p>Generates a complete JSON snapshot of all your current live content (exams, books, prices, settings). Use this to create backups or to update the static fallback file in the React app for performance optimization (see handbook for the "Golden Workflow").</p>
-        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-            <input type="hidden" name="action" value="mco_generate_full_snapshot">
-            <?php wp_nonce_field('mco_generate_full_snapshot_nonce'); ?>
-            <?php submit_button('Generate & Download Snapshot'); ?>
-        </form>
+        <h4>Cache Management</h4>
+        <p>If your app is showing outdated content after you've made changes, you can use these buttons to force the server to clear its caches.</p>
+        <table class="form-table">
+            <tr valign="top">
+                <th scope="row">Application Config Cache</th>
+                <td>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" onsubmit="return confirm('Are you sure you want to clear the main application configuration cache?');">
+                        <input type="hidden" name="action" value="mco_clear_config_cache_action">
+                        <?php wp_nonce_field('mco_clear_config_cache_nonce'); ?>
+                        <?php submit_button('Clear Config Cache', 'delete', 'submit', false); ?>
+                    </form>
+                    <p class="description">Clears the main server cache for all exam programs, products, and settings. The app will fetch fresh data on its next load.</p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">All Question Caches</th>
+                <td>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" onsubmit="return confirm('Are you sure you want to clear ALL question caches? This will force the app to re-fetch questions from every Google Sheet on the next attempt.');">
+                        <input type="hidden" name="action" value="mco_clear_question_caches_action">
+                        <?php wp_nonce_field('mco_clear_question_caches_nonce'); ?>
+                        <?php submit_button('Clear All Question Caches', 'delete', 'submit', false); ?>
+                    </form>
+                    <p class="description">Use this if you have updated a Google Sheet but the exam is still showing old questions.</p>
+                </td>
+            </tr>
+        </table>
         <?php
     }
 }
@@ -424,6 +463,55 @@ if (!function_exists('mco_handle_generate_full_snapshot')) {
         exit;
     }
 }
+
+if (!function_exists('mco_handle_clear_config_cache')) {
+    function mco_handle_clear_config_cache() {
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_clear_config_cache_nonce')) {
+            wp_die('Security check failed.');
+        }
+        if (!current_user_can('manage_options')) {
+            wp_die('You do not have permission to perform this action.');
+        }
+
+        delete_transient('mco_app_config_data');
+        update_option('mco_config_version', current_time('YmdHis'));
+        
+        mco_add_admin_notice('success', 'Application configuration cache has been cleared successfully.');
+        wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=tools'));
+        exit;
+    }
+}
+
+if (!function_exists('mco_handle_clear_question_caches')) {
+    function mco_handle_clear_question_caches() {
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_clear_question_caches_nonce')) {
+            wp_die('Security check failed.');
+        }
+        if (!current_user_can('manage_options')) {
+            wp_die('You do not have permission to perform this action.');
+        }
+
+        global $wpdb;
+        $prefix = '_transient_mco_questions_';
+        $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+                $wpdb->esc_like($prefix) . '%'
+            )
+        );
+         $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+                $wpdb->esc_like('_transient_timeout_mco_questions_') . '%'
+            )
+        );
+        
+        mco_add_admin_notice('success', 'All question caches have been cleared.');
+        wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=tools'));
+        exit;
+    }
+}
+
 
 if (!function_exists('mco_handle_csv_upload')) {
     function mco_handle_csv_upload() {
