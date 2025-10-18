@@ -18,7 +18,7 @@ const Header: FC = () => {
 
   // Updated URL generation with fallback
   const mainSiteBaseUrl = useMemo(() => {
-    return activeOrg ? `https://www.${activeOrg.website}` : '';
+    return activeOrg ? `https://${activeOrg.website}` : '';
   }, [activeOrg]);
   
   const handleLogout = () => {

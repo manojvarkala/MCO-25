@@ -13,7 +13,7 @@ const Feedback: FC = () => {
     const [message, setMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    const loginUrl = activeOrg ? `https://www.${activeOrg.website}/exam-login/` : '#';
+    const loginUrl = activeOrg ? `https://${activeOrg.website}/exam-login/` : '#';
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

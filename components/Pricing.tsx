@@ -1,13 +1,17 @@
-import React, { FC } from 'react';
+import React, { FC, useMemo } from 'react';
 import { Check, Star, ShoppingBag } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 
 const Pricing: FC = () => {
     const { activeOrg, examPrices } = useAppContext();
+
+    const mainSiteBaseUrl = useMemo(() => {
+        return activeOrg ? `https://${activeOrg.website}` : '';
+    }, [activeOrg]);
     
-    const monthlySubUrl = 'https://www.coding-online.net/product/monthly-subscription/';
-    const yearlySubUrl = 'https://www.coding-online.net/product/yearly-subscription/';
-    const browseExamsUrl = 'https://www.coding-online.net/exam-programs/';
+    const monthlySubUrl = `${mainSiteBaseUrl}/product/monthly-subscription/`;
+    const yearlySubUrl = `${mainSiteBaseUrl}/product/yearly-subscription/`;
+    const browseExamsUrl = `${mainSiteBaseUrl}/exam-programs/`;
 
     const cpcExam = activeOrg?.exams.find(e => e.productSku === 'exam-cpc-cert');
     const singleExamPrice = cpcExam?.price;

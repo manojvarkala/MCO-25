@@ -19,7 +19,7 @@ const LandingPage: FC = () => {
         }
     }, [user, navigate]);
 
-    const mainSiteBaseUrl = activeOrg ? `https://www.${activeOrg.website}` : '';
+    const mainSiteBaseUrl = activeOrg ? `https://${activeOrg.website}` : '';
     // Revert to the original slug
     const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
     const registerUrl = `${mainSiteBaseUrl}/wp-login.php?action=register`;
@@ -33,7 +33,7 @@ const LandingPage: FC = () => {
         );
     }
     
-    const isMedicalCodingTenant = activeOrg?.website === 'coding-online.net';
+    const isMedicalCodingTenant = activeOrg?.website.includes('coding-online.net');
 
     return (
         <div className="min-h-[75vh] flex flex-col lg:flex-row items-center justify-center gap-12 p-4">
