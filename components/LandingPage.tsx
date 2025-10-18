@@ -3,7 +3,7 @@ import React, { FC, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
-import { LogIn, UserPlus, CheckCircle, Sparkles, Award } from 'lucide-react';
+import { LogIn, UserPlus } from 'lucide-react';
 import LogoSpinner from './LogoSpinner.tsx';
 
 const LandingPage: FC = () => {
@@ -35,29 +35,31 @@ const LandingPage: FC = () => {
     
     return (
         <div className="min-h-[75vh] flex flex-col lg:flex-row items-center justify-center gap-12 p-4">
-            {/* Left Side: Feature Highlights */}
-            <div className="lg:w-1/2 max-w-lg text-center lg:text-left">
+            {/* Left Side: Intro Video & Text */}
+            <div className="lg:w-1/2 max-w-xl text-center lg:text-left">
                 <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 mb-4 leading-tight">
                     Welcome to the <br/>
                     <span className="text-cyan-600">{activeOrg.name}</span><br/>
                     Examination Portal
                 </h1>
                 <p className="text-lg text-slate-600 mb-8">
-                    Your central hub for practice tests, certification exams, and AI-powered study guides.
+                    Your central hub for practice tests, certification exams, and AI-powered study guides. Watch our short intro to see what's inside!
                 </p>
-                <div className="space-y-4">
-                    <div className="flex items-center gap-3 justify-center lg:justify-start">
-                        <CheckCircle className="h-6 w-6 text-green-500" />
-                        <span className="font-semibold text-slate-700">Unlimited Practice Exams</span>
-                    </div>
-                    <div className="flex items-center gap-3 justify-center lg:justify-start">
-                        <Sparkles className="h-6 w-6 text-amber-500" />
-                        <span className="font-semibold text-slate-700">AI-Powered Feedback & Study Guides</span>
-                    </div>
-                    <div className="flex items-center gap-3 justify-center lg:justify-start">
-                        <Award className="h-6 w-6 text-blue-500" />
-                        <span className="font-semibold text-slate-700">Official Certificates of Completion</span>
-                    </div>
+
+                {/* Video Player */}
+                <div className="aspect-video w-full bg-slate-800 rounded-lg shadow-xl overflow-hidden border-4 border-slate-200">
+                    <video
+                        className="w-full h-full object-cover"
+                        src="/intro-video.mp4" // NOTE: This is a placeholder for the generated video URL
+                        controls
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        poster="https://i.imgur.com/kYk3b2n.png" // A generic placeholder image
+                    >
+                        Your browser does not support the video tag.
+                    </video>
                 </div>
             </div>
 
