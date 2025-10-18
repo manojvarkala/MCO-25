@@ -69,9 +69,9 @@ const Dashboard: FC = () => {
     }, [user, token]); // Re-run if token changes (after sync)
 
     const stats = useMemo(() => {
-        // FIX: Added a guard for !activeOrg to prevent a crash when the component renders
-        // before the app context is fully loaded. This was the cause of the white screen error.
-        if (!user || results.length === 0 || !activeOrg) {
+        // FIX: Added a more robust guard for !activeOrg and !activeOrg.exams to prevent a crash when the component renders
+        // before the app context is fully loaded. This was the cause of the persistent white screen error.
+        if (!user || results.length === 0 || !activeOrg || !activeOrg.exams) {
             return { totalAttempts: 0, averageScore: 'N/A', bestScore: 'N/A', examsPassed: 0 };
         }
         const totalScore = results.reduce((acc, r) => acc + r.score, 0);
