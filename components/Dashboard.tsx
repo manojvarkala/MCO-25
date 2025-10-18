@@ -69,16 +69,14 @@ const Dashboard: FC = () => {
     }, [user, token]); // Re-run if token changes (after sync)
 
     const stats = useMemo(() => {
-        // FIX: Added a more robust guard for !activeOrg and !activeOrg.exams to prevent a crash when the component renders
-        // before the app context is fully loaded. This was the cause of the persistent white screen error.
-        if (!user || results.length === 0 || !activeOrg || !activeOrg.exams) {
+        if (!user || results.length === 0) {
             return { totalAttempts: 0, averageScore: 'N/A', bestScore: 'N/A', examsPassed: 0 };
         }
         const totalScore = results.reduce((acc, r) => acc + r.score, 0);
         const averageScore = (totalScore / results.length).toFixed(1) + '%';
         const bestScore = Math.max(...results.map(r => r.score)).toFixed(1) + '%';
         const examsPassed = results.filter(r => {
-            const exam = activeOrg.exams.find(e => e.id === r.examId);
+            const exam = activeOrg?.exams.find(e => e.id === r.examId);
             return exam && r.score >= exam.passScore;
         }).length;
 
@@ -101,7 +99,7 @@ const Dashboard: FC = () => {
     const { monthlyPrice, yearlyPrice, monthlySubUrl, yearlySubUrl } = useMemo(() => {
         const monthlyData = examPrices?.['sub-monthly'];
         const yearlyData = examPrices?.['sub-yearly'];
-        const website = activeOrg ? `https://${activeOrg.website}` : '';
+        const website = activeOrg ? `https://www.${activeOrg.website}` : '';
 
         return {
             monthlyPrice: monthlyData?.price ?? 19.99,
@@ -115,7 +113,7 @@ const Dashboard: FC = () => {
         return <div className="text-center py-10"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading dashboard data...</p></div>;
     }
 
-    const myAccountUrl = activeOrg ? `https://${activeOrg.website}/my-account/` : '#';
+    const myAccountUrl = activeOrg ? `https://www.${activeOrg.website}/my-account/` : '#';
 
     return (
         <div className="space-y-8">
