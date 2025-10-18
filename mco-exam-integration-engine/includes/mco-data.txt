@@ -214,6 +214,7 @@ if (!function_exists('mco_get_full_snapshot_data')) {
             'name' => get_bloginfo('name'),
             'website' => $host,
             'logo' => $logo_url,
+            'introVideoUrl' => get_option('mco_intro_video_url', ''), // Add the new video URL
             'availableThemes' => $available_themes,
             'activeThemeId' => get_option('mco_active_theme', 'default'),
             'certificateThemeId' => get_option('mco_certificate_theme', 'classic'),

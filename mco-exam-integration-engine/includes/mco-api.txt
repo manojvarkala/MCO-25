@@ -232,54 +232,6 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
 }
 
 
-// --- NEW CORS & PREFLIGHT HANDLING ---
-
-/**
- * Handles OPTIONS preflight requests early in the WP lifecycle.
- * This is crucial for authenticated requests from the React app.
- */
-if (!function_exists('mco_handle_preflight_request')) {
-    function mco_handle_preflight_request() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'OPTIONS') {
-            return;
-        }
-
-        $origin = get_http_origin();
-        $allowed_urls_option = get_option('mco_exam_app_url', '');
-        if (empty($allowed_urls_option)) {
-            return;
-        }
-        $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
-
-        if ($origin && in_array($origin, $allowed_origins)) {
-            header("Access-Control-Allow-Origin: {$origin}");
-            header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
-            header('Access-Control-Allow-Credentials: true');
-            header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type, X-Requested-With');
-            status_header(200);
-            exit();
-        }
-    }
-}
-
-/**
- * Adds CORS headers to actual API responses.
- */
-if (!function_exists('mco_add_cors_to_response')) {
-    function mco_add_cors_to_response($served, $result, $request, $server) {
-        $origin = get_http_origin();
-        $allowed_urls_option = get_option('mco_exam_app_url', '');
-        $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
-    
-        if ($origin && in_array($origin, $allowed_origins)) {
-            $server->send_header('Access-Control-Allow-Origin', $origin);
-            $server->send_header('Access-Control-Allow-Credentials', 'true');
-        }
-        return $served;
-    }
-}
-
-
 // --- HOOKS ---
 if (!function_exists('mco_register_api_hooks')) {
     function mco_register_api_hooks() {
@@ -310,29 +262,7 @@ if (!function_exists('mco_register_api_hooks')) {
         register_rest_route('mco-app/v1', '/admin/delete-post', array('methods' => 'POST', 'callback' => 'mco_api_admin_delete_post', 'permission_callback' => 'mco_api_permission_check_admin'));
         register_rest_route('mco-app/v1', '/admin/post-creation-data', array('methods' => 'GET', 'callback' => 'mco_api_get_post_creation_data', 'permission_callback' => 'mco_api_permission_check_admin'));
         register_rest_route('mco-app/v1', '/admin/create-post-from-app', array('methods' => 'POST', 'callback' => 'mco_api_create_post_from_app', 'permission_callback' => 'mco_api_permission_check_admin'));
-
-        // --- NEW CORS & PREFLIGHT HANDLING ---
-        // Handle OPTIONS preflight requests early. Priority 9 to run before most other hooks.
-        add_action('init', 'mco_handle_preflight_request', 9);
-        
-        // Add CORS headers to actual responses.
-        add_filter('rest_pre_serve_request', 'mco_add_cors_to_response', 10, 4);
-
-        // Add CORS headers to authentication error responses, which don't always trigger rest_pre_serve_request.
-        add_filter('rest_authentication_errors', function($result) {
-            if (is_wp_error($result)) {
-                $origin = get_http_origin();
-                $allowed_urls_option = get_option('mco_exam_app_url', '');
-                $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
-                if ($origin && in_array($origin, $allowed_origins)) {
-                    if (!headers_sent()) {
-                        header('Access-Control-Allow-Origin: ' . esc_url_raw($origin));
-                        header('Access-Control-Allow-Credentials: true');
-                    }
-                }
-            }
-            return $result;
-        });
+        register_rest_route('mco-app/v1', '/admin/set-intro-video', array('methods' => 'POST', 'callback' => 'mco_api_admin_set_intro_video', 'permission_callback' => 'mco_api_permission_check_admin'));
     }
 }
 
@@ -807,6 +737,33 @@ if (!function_exists('mco_api_get_exam_stats')) {
 }
 
 // --- ADMIN API ENDPOINTS ---
+
+if (!function_exists('mco_api_admin_set_intro_video')) {
+    function mco_api_admin_set_intro_video(WP_REST_Request $request) {
+        if (!function_exists('wp_handle_upload')) {
+            require_once(ABSPATH . 'wp-admin/includes/file.php');
+        }
+
+        $file = $request->get_file_params()['video'];
+        if (empty($file)) {
+            return new WP_Error('bad_request', 'No video file provided.', array('status' => 400));
+        }
+
+        $upload_overrides = array('test_form' => false);
+        $movefile = wp_handle_upload($file, $upload_overrides);
+
+        if ($movefile && !isset($movefile['error'])) {
+            update_option('mco_intro_video_url', $movefile['url']);
+            delete_transient('mco_app_config_data');
+            update_option('mco_config_version', current_time('YmdHis'));
+            $config_data = mco_get_full_snapshot_data(false);
+            return new WP_REST_Response($config_data, 200);
+        } else {
+            return new WP_Error('upload_error', $movefile['error'], array('status' => 500));
+        }
+    }
+}
+
 
 if (!function_exists('mco_api_admin_test_sheet_url')) {
     function mco_api_admin_test_sheet_url(WP_REST_Request $request) {

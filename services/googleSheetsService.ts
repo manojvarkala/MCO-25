@@ -9,19 +9,16 @@ declare const __DEV__: boolean;
 // A module-level promise to prevent concurrent sync operations and handle race conditions.
 let syncPromise: Promise<TestResult[]> | null = null;
 
-const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string | null, data: Record<string, any> = {}) => {
-    // The API base URL is determined by the tenant configuration.
-    // In dev mode, this points to '/api' to use the Vite proxy.
-    // In production, it's the full URL of the WordPress backend (e.g., 'https://www.coding-online.net').
-    // Using the full, absolute URL is necessary for cross-subdomain API calls and relies on correct server-side CORS configuration.
+const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string | null, data: Record<string, any> = {}, isFormData: boolean = false) => {
     const API_BASE_URL = getApiBaseUrl();
     const fullUrl = `${API_BASE_URL}/wp-json/mco-app/v1${endpoint}`;
 
-    const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-    };
+    const headers: HeadersInit = {};
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
     }
 
     const config: RequestInit = {
@@ -30,30 +27,23 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     };
     
     if (method === 'POST') {
-        config.body = JSON.stringify(data);
+        config.body = isFormData ? (data as unknown as FormData) : JSON.stringify(data);
     }
 
     try {
         const response = await fetch(fullUrl, config);
-        // Get response as text to handle potential non-JSON responses gracefully.
         const responseText = await response.text();
 
         if (!response.ok) {
             let errorData;
             try {
-                // An error response from the WP REST API should be JSON.
                 errorData = JSON.parse(responseText);
             } catch (e) {
-                // If it's not JSON, it's likely an HTML error page from the server.
-                // Throw the raw text as it might contain useful debug info.
                 throw new Error(responseText || response.statusText || `Server error: ${response.status}`);
             }
 
-            // Check for critical authentication errors that require a logout.
             const authErrorCodes = ['jwt_auth_invalid_token', 'jwt_auth_expired_token', 'rest_forbidden', 'jwt_auth_invalid_secret_key'];
             if (errorData?.code && authErrorCodes.includes(errorData.code)) {
-                // This is a critical auth error. Log the user out by clearing all stored data.
-                // This mimics the behavior of the AuthContext logout function for a "hard" refresh.
                 localStorage.removeItem('examUser');
                 localStorage.removeItem('paidExamIds');
                 localStorage.removeItem('authToken');
@@ -68,12 +58,10 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 
                 toast.error("Your session has expired or is invalid. Please log in again.", { id: 'auth-error-toast' });
                 
-                // Redirect to home page after a short delay to allow toast to be seen.
                 setTimeout(() => {
                     window.location.href = '/';
                 }, 1500);
 
-                // Throw a specific error to stop further processing in the current call stack.
                 throw new Error("Authentication failed. Redirecting to login.");
             }
             
@@ -84,24 +72,19 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
             throw new Error(errorMessage);
         }
         
-        // If the response was successful (2xx status), try to parse the body as JSON.
         try {
-            // Handle empty successful responses (e.g. 204 No Content) which would have an empty body.
             return responseText ? JSON.parse(responseText) : {};
         } catch (error) {
-            // This catches cases where the server returns a 200 OK but the body is not valid JSON (e.g., PHP notices).
             console.error(`API Call to ${endpoint} returned OK but with invalid JSON:`, responseText);
             throw new Error('The server returned an invalid response. This is often caused by a PHP error from your theme or another plugin. Check your browser\'s developer console for the full server output.');
         }
     } catch (error: any) {
         console.error(`API Fetch Error to ${endpoint}:`, error);
 
-        // Handle network errors specifically.
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
             throw new Error(`Could not connect to the API server at ${API_BASE_URL}. Please check your internet connection.`);
         }
         
-        // Re-throw any other errors, which will be our custom, more informative errors from the blocks above.
         throw error;
     }
 };
@@ -452,6 +435,17 @@ export const googleSheetsService = {
     },
 
     // --- ADMIN ACTIONS ---
+    adminUploadIntroVideo: async (token: string, videoBlob: Blob): Promise<{ organizations: Organization[], examPrices: any }> => {
+        const formData = new FormData();
+        formData.append('video', videoBlob, 'intro-video.mp4');
+        try {
+            return await apiFetch('/admin/set-intro-video', 'POST', token, formData as any, true);
+        } catch (error) {
+            console.error("Failed to upload intro video:", error);
+            throw error;
+        }
+    },
+    
     getPostCreationData: async (token: string): Promise<PostCreationData> => {
         try {
             return await apiFetch('/admin/post-creation-data', 'GET', token);

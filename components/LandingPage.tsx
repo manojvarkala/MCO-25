@@ -54,14 +54,15 @@ const LandingPage: FC = () => {
                         </p>
                         <div className="aspect-video w-full bg-slate-800 rounded-lg shadow-xl overflow-hidden border-4 border-slate-200">
                             <video
+                                key={activeOrg.introVideoUrl || '/intro-video.mp4'}
                                 className="w-full h-full object-cover"
-                                src="/intro-video.mp4" // NOTE: This is a placeholder for the generated video URL
+                                src={activeOrg.introVideoUrl || '/intro-video.mp4'}
                                 controls
                                 autoPlay
                                 muted
                                 loop
                                 playsInline
-                                poster="https://i.imgur.com/kYk3b2n.png" // A generic placeholder image
+                                poster="https://i.imgur.com/kYk3b2n.png"
                             >
                                 Your browser does not support the video tag.
                             </video>

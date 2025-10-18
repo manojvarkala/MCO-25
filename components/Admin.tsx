@@ -1,5 +1,6 @@
 import React, { FC, useState, useCallback, ReactNode } from 'react';
-import { Settings, Award, Lightbulb, PlusCircle, Trash2, RefreshCw, FileText, Cpu, Loader, CheckCircle, XCircle, Trash, Bug, Paintbrush, FileSpreadsheet, DownloadCloud, DatabaseZap, Check } from 'lucide-react';
+// FIX: Add missing 'Sparkles' import from lucide-react.
+import { Settings, Award, Lightbulb, PlusCircle, Trash2, RefreshCw, FileText, Cpu, Loader, CheckCircle, XCircle, Trash, Bug, Paintbrush, FileSpreadsheet, DownloadCloud, DatabaseZap, Check, Video, UploadCloud, Sparkles } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 // FIX: Removed unused 'SearchedUser' import that was causing a compilation error.
 import type { DebugData } from '../types.ts';
@@ -9,6 +10,7 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
 import DebugSidebar from './DebugSidebar.tsx';
+import { GoogleGenAI } from "@google/genai";
 
 type HealthStatus = 'idle' | 'success' | 'failed' | 'loading';
 
@@ -43,6 +45,140 @@ const decodeHtmlEntities = (text: string | undefined): string => {
         console.error("Could not decode HTML entities", e);
         return text;
     }
+};
+
+const TenantVideoGenerator: FC = () => {
+    const { activeOrg, updateConfigData } = useAppContext();
+    const { token } = useAuth();
+
+    const defaultPrompt = `An engaging, short, silent video for the ${activeOrg?.name || 'certification'} website. Show abstract visuals of data, code, and symbols related to our core topics like ${activeOrg?.examProductCategories.slice(0, 2).map(p => p.name).join(', ') || 'our certifications'}. Use a professional blue, white, and teal color palette. The video should feel modern, clean, and motivating.`;
+
+    const [prompt, setPrompt] = useState(defaultPrompt);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [status, setStatus] = useState('');
+    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+
+    const getAiStudio = (): { openSelectKey: () => Promise<void>; hasSelectedApiKey: () => Promise<boolean>; } | undefined => {
+        try {
+            // @ts-ignore
+            if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') return window.aistudio;
+            // @ts-ignore
+            if (window.parent && window.parent.aistudio && typeof window.parent.aistudio.openSelectKey === 'function') return window.parent.aistudio;
+        } catch (e) { console.warn("Could not access AI Studio context.", e); }
+        return undefined;
+    }
+
+    const handleGenerateVideo = async () => {
+        setIsGenerating(true);
+        setVideoUrl(null);
+        setVideoBlob(null);
+        setStatus('Checking for API Key...');
+
+        try {
+            const aistudio = getAiStudio();
+            if (!aistudio) throw new Error("API Key selection feature is unavailable in this environment.");
+            if (!(await aistudio.hasSelectedApiKey())) {
+                setStatus('Please select an API key to proceed.');
+                await aistudio.openSelectKey();
+            }
+            
+            setStatus('Initializing video generation...');
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            
+            let operation = await ai.models.generateVideos({
+                model: 'veo-3.1-fast-generate-preview',
+                prompt,
+                config: { numberOfVideos: 1, resolution: '720p', aspectRatio: '16:9' }
+            });
+
+            setStatus('Video generation started. This may take a few minutes...');
+            while (!operation.done) {
+                await new Promise(resolve => setTimeout(resolve, 10000));
+                operation = await ai.operations.getVideosOperation({ operation });
+            }
+
+            setStatus('Generation complete! Retrieving video...');
+            const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+            if (!downloadLink) throw new Error('Video generation finished, but no download link was found.');
+
+            const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+            if (!response.ok) {
+                 const errorText = await response.text();
+                 if (errorText.includes("Requested entity was not found.")) throw new Error("API Key error. Please try selecting your key again.");
+                 throw new Error(`Failed to download the generated video. Status: ${response.status}`);
+            }
+            
+            const blob = await response.blob();
+            setVideoBlob(blob);
+            setVideoUrl(URL.createObjectURL(blob));
+            setStatus('Video successfully generated and is ready to be set as the intro.');
+            toast.success('Video generated!');
+
+        } catch (error: any) {
+            const errorMessage = error.message || 'An unknown error occurred.';
+            setStatus(`Error: ${errorMessage}`);
+            toast.error(`Error: ${errorMessage}`);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleSetAsIntro = async () => {
+        if (!videoBlob || !token) {
+            toast.error("No video has been generated or user is not authenticated.");
+            return;
+        }
+
+        const toastId = toast.loading('Uploading video to your server...');
+        try {
+            const result = await googleSheetsService.adminUploadIntroVideo(token, videoBlob);
+             if (result.organizations && result.examPrices) {
+                updateConfigData(result.organizations, result.examPrices);
+            }
+            toast.success('Intro video has been set!', { id: toastId });
+        } catch (error: any) {
+            toast.error(`Upload failed: ${error.message}`, { id: toastId });
+        }
+    };
+    
+    return (
+        <div className="space-y-4">
+            <p className="text-[rgb(var(--color-text-muted-rgb))] text-sm">
+                Use this tool to generate a unique intro video for your landing page. After generation, you can set it as the site's intro video, which will upload it to your WordPress media library and link it to the app.
+            </p>
+            <div>
+                <label className="text-sm font-bold block mb-1">Video Prompt</label>
+                <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={3} className="w-full p-2 border rounded-md" />
+            </div>
+            <button
+                onClick={handleGenerateVideo}
+                disabled={isGenerating}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-400"
+            >
+                {isGenerating ? <Spinner /> : <Sparkles size={16} />}
+                {isGenerating ? 'Generating...' : 'Generate Video'}
+            </button>
+            
+            {(isGenerating || status) && (
+                 <div className="mt-4 p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg text-sm">
+                    <p className="font-semibold">Status: <span className="font-normal">{status}</span></p>
+                </div>
+            )}
+             {videoUrl && (
+                <div className="mt-4 space-y-3">
+                    <h3 className="font-bold">Preview:</h3>
+                    <video src={videoUrl} controls className="w-full rounded-lg" />
+                    <button
+                        onClick={handleSetAsIntro}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700"
+                    >
+                        <UploadCloud size={16} /> Set as Intro Video
+                    </button>
+                </div>
+            )}
+        </div>
+    );
 };
 
 const HealthCheckItem: FC<HealthCheckItemProps> = ({ status, title, message, troubleshooting }) => {
@@ -328,6 +464,15 @@ const Admin: FC = () => {
                         Launch Debug Sidebar
                     </button>
                 </div>
+                
+                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                        <Video className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Branding & Media
+                    </h2>
+                    <TenantVideoGenerator />
+                </div>
+
 
                 <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                     <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
