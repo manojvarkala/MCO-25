@@ -99,7 +99,7 @@ const Dashboard: FC = () => {
     const { monthlyPrice, yearlyPrice, monthlySubUrl, yearlySubUrl } = useMemo(() => {
         const monthlyData = examPrices?.['sub-monthly'];
         const yearlyData = examPrices?.['sub-yearly'];
-        const website = activeOrg ? `https://www.${activeOrg.website}` : '';
+        const website = activeOrg ? `https://${activeOrg.website}` : '';
 
         return {
             monthlyPrice: monthlyData?.price ?? 19.99,
@@ -113,7 +113,7 @@ const Dashboard: FC = () => {
         return <div className="text-center py-10"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading dashboard data...</p></div>;
     }
 
-    const myAccountUrl = activeOrg ? `https://www.${activeOrg.website}/my-account/` : '#';
+    const myAccountUrl = activeOrg ? `https://${activeOrg.website}/my-account/` : '#';
 
     return (
         <div className="space-y-8">

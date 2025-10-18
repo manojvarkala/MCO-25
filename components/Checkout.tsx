@@ -11,7 +11,7 @@ const Checkout: FC = () => {
     const { activeOrg } = useAppContext();
 
     const mainSiteBaseUrl = useMemo(() => {
-        return activeOrg ? `https://www.${activeOrg.website}` : '';
+        return activeOrg ? `https://${activeOrg.website}` : '';
     }, [activeOrg]);
 
     useEffect(() => {

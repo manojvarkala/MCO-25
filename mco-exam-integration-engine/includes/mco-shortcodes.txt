@@ -70,7 +70,7 @@ function mco_exam_login_shortcode() {
             return '<p>Could not generate a secure authentication token. Please contact an administrator.</p>';
         }
         
-        $redirect_url = add_query_arg('token', $token, $app_url . '/auth');
+        $redirect_url = add_query_arg('token', $token, rtrim($app_url, '/') . '/auth');
 
         if (!headers_sent()) {
             wp_redirect($redirect_url);
@@ -320,7 +320,9 @@ function mco_exam_showcase_shortcode($atts) {
         
                 $gradient_class = $bundle_type === 'subscription' ? 'mco-gradient--sub-bundle-1' : 'mco-gradient--bundle-1';
                 $header_title = $bundle_type === 'subscription' ? 'Exam + Subscription' : 'Exam Bundle';
-                $subtitle = $bundle_type === 'subscription' ? 'Get the certification exam plus one month of full subscription benefits.' : 'The complete package for your certification.';
+                $subtitle = $bundle_type === 'subscription' 
+                    ? 'Get the certification exam plus one month of full subscription benefits.'
+                    : 'The complete package for your certification.';
                 $features = $bundle_type === 'subscription' 
                     ? ['One Certification Exam', '1-Month Full Subscription', '<span style="padding-left: 28px; font-size: 0.8rem; opacity: 0.8;">Incl. Unlimited Practice & AI Feedback</span>']
                     : ['One Certification Exam', '1-Month Unlimited Practice', '1-Month Unlimited AI Feedback'];

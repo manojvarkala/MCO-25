@@ -4,7 +4,7 @@
     {
       "id": "org-medical-coding-online",
       "name": "Medical Coding Online",
-      "website": "www.exams.coding-online.net",
+      "website": "www.coding-online.net",
       "logo": "https://www.coding-online.net/wp-content/uploads/2025/09/coding-logo-vectorised-Copy.png",
       "availableThemes": [
           { "id": "default", "name": "Cyberpunk" },

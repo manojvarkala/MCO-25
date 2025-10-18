@@ -1,4 +1,5 @@
 
+
 import type { Organization } from '../types.ts';
 
 // FIX: Declare a global constant for development mode, defined in vite.config.ts, to avoid issues with vite/client types.
@@ -16,7 +17,7 @@ const annapoornaConfig: TenantConfig = {
 };
 
 const medicalCodingConfig: TenantConfig = {
-    apiBaseUrl: 'https://www.exams.coding-online.net',
+    apiBaseUrl: 'https://www.coding-online.net',
     staticConfigPath: '/medical-coding-config.json'
 };
 
