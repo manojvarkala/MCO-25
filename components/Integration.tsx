@@ -18,7 +18,7 @@ import templateQuestions from '/public/template-questions.csv?raw';
 
 const Integration: FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
-    const pluginVersion = "1.0.3";
+    const pluginVersion = "1.0.0";
 
     const generateZip = async () => {
         setIsGenerating(true);

@@ -5,12 +5,10 @@ if (!defined('ABSPATH')) exit;
  * =================================================================================================
  * TROUBLESHOOTING: API CONNECTION FAILED or AUTHORIZATION HEADER MISSING
  * =================================================================================================
- * The plugin now includes a robust CORS handling system in the main plugin file.
- * However, if issues persist, it's almost always a server configuration issue. Many shared
- * hosting environments (like Apache/LiteSpeed) can strip the necessary 'Authorization'
- * header from requests by default.
+ * The plugin now includes a robust CORS handling system. However, if issues persist, it's almost
+ * always a server configuration issue where the 'Authorization' header is stripped.
  *
- * THE FIX (if the plugin's handler isn't working):
+ * THE FIX (if issues persist):
  * Add the following code to the VERY TOP of your WordPress root .htaccess file, before the
  * # BEGIN WordPress block.
  *
@@ -20,13 +18,34 @@ if (!defined('ABSPATH')) exit;
  *   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
  * </IfModule>
  * 
- * After adding this, you MUST clear all server and plugin caches (e.g., LiteSpeed Cache).
- * Caching plugins can interfere with API routes and CORS headers.
+ * After adding this, you MUST clear all server and plugin caches.
  * =================================================================================================
  */
 
-// NOTE: All CORS handling has been moved to the main plugin file for reliability.
-// This file now only contains API endpoint definitions.
+if (!function_exists('mco_add_cors_to_api_response')) {
+    /**
+     * Adds CORS headers to the actual API response just before it's sent.
+     * This is the second part of the layered CORS solution.
+     */
+    function mco_add_cors_to_api_response($result) {
+        $origin = get_http_origin();
+        $allowed_urls_option = get_option('mco_exam_app_url', '');
+        
+        if (empty($allowed_urls_option)) {
+            return $result;
+        }
+        
+        $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
+        
+        if ($origin && in_array($origin, $allowed_origins)) {
+            $response = rest_get_server()->get_response();
+            $response->header('Access-Control-Allow-Origin', $origin);
+            $response->header('Access-Control-Allow-Credentials', 'true');
+        }
+        
+        return $result;
+    }
+}
 
 
 // --- JWT GENERATION AND HELPER FUNCTIONS ---
@@ -240,6 +259,9 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
 // --- HOOKS ---
 if (!function_exists('mco_register_api_hooks')) {
     function mco_register_api_hooks() {
+        // This filter is the second, crucial part of the CORS solution. It adds headers to every valid API response.
+        add_filter('rest_pre_serve_request', 'mco_add_cors_to_api_response', 15, 4);
+
         register_rest_route('mco-app/v1', '/config', array('methods' => 'GET', 'callback' => 'mco_api_get_config', 'permission_callback' => '__return_true'));
         register_rest_route('mco-app/v1', '/questions-from-sheet', array('methods' => 'POST', 'callback' => 'mco_api_get_questions_from_sheet', 'permission_callback' => 'mco_api_permission_check_user'));
         register_rest_route('mco-app/v1', '/submit-result', array('methods' => 'POST', 'callback' => 'mco_api_submit_result', 'permission_callback' => 'mco_api_permission_check_user'));

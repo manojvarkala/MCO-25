@@ -68,23 +68,18 @@ const TenantVideoGenerator: FC = () => {
         .slice(0, 3)
         .join(', ');
 
-    const defaultPrompt = `Create a short, silent, 10-second corporate intro video for a professional certification website called "${activeOrg?.name || 'Certification Portal'}".
+    const defaultPrompt = `A 10-second, silent, corporate intro video for a professional certification website called "${activeOrg?.name || 'Certification Portal'}". The tone is modern, clean, and motivational.
 
-**IMPORTANT: Do NOT generate any text, letters, or words in the video.** The visuals should be purely abstract and conceptual.
+**Strict instruction: The video must contain absolutely NO text, words, letters, or numbers.** All visuals must be abstract and conceptual.
 
-The video should have a modern, clean, and motivational tone.
-
-Visual Style:
-- Use an abstract, high-tech aesthetic.
-- Feature visuals like flowing data streams, glowing network nodes, and abstract representations of knowledge.
-- The primary color palette should be professional and sophisticated, using shades of blue, teal, and white.
+Visual Style: High-tech, sophisticated aesthetic. Primary colors are professional shades of blue, teal, and white with subtle glowing effects.
 
 Scene Flow:
-1. Start with abstract concepts related to our core topics, such as: ${examProgramNames || 'professional development and online learning'}.
-2. Transition to visuals representing success and achievement, like glowing checkmarks, award icons, or abstract representations of a person confidently looking towards the future.
-3. End on a clean, inspiring shot, perhaps with a subtle lens flare.
+- (0-3s) Start with an abstract visualization of flowing data streams and interconnected, glowing network nodes, representing knowledge and learning for topics like: ${examProgramNames || 'professional development'}.
+- (3-7s) Transition to visuals that symbolize success and achievement. Instead of concrete icons, show abstract shapes morphing into elegant, symmetrical patterns, and light particles converging into a bright, central point, representing successful certification.
+- (7-10s) Conclude with a clean, inspiring shot of an expanding, intricate geometric pattern of light, ending with a subtle, cinematic lens flare.
 
-The final video should be suitable for a website's hero section, creating a feeling of professionalism, innovation, and career growth.`;
+**Final check: Ensure there is no text in the final output.**`;
 
     const [prompt, setPrompt] = useState(defaultPrompt);
     const [isGenerating, setIsGenerating] = useState(false);

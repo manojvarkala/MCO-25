@@ -3,7 +3,7 @@
  * Plugin Name:       MCO Exam Integration Engine
  * Plugin URI:        https://annapoornainfo.com
  * Description:       Provides the backend API, user authentication (SSO), and content management for the React-based examination app.
- * Version:           1.0.3
+ * Version:           1.0.0
  * Author:            Annapoorna Infotech
  * Author URI:        https://annapoornainfo.com
  * License:           GPL v2 or later
@@ -70,38 +70,31 @@ require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; // This file only defin
 
 
 // --- DEFINITIVE CORS PREFLIGHT HANDLER ---
-if (!function_exists('mco_add_cors_headers_globally')) {
-    /**
-     * Handles both OPTIONS preflight requests and adds CORS headers to all responses.
-     * Hooks into 'send_headers', which is a late action, ensuring our headers
-     * override any others set by plugins or caching mechanisms.
-     */
-    function mco_add_cors_headers_globally() {
-        $origin = get_http_origin();
-        $allowed_urls_option = get_option('mco_exam_app_url', '');
+if (!function_exists('mco_handle_preflight_request')) {
+    function mco_handle_preflight_request() {
+        // Only run this for REST API requests to avoid interfering with the main site.
+        if (defined('REST_REQUEST') && REST_REQUEST && isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+            $origin = get_http_origin();
+            $allowed_urls_option = get_option('mco_exam_app_url', '');
 
-        if (empty($allowed_urls_option)) {
-            return;
-        }
+            if (empty($allowed_urls_option)) {
+                return; // No allowed origins configured, so do nothing.
+            }
 
-        $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
-        
-        if ($origin && in_array($origin, $allowed_origins)) {
-            header("Access-Control-Allow-Origin: {$origin}");
-            header("Access-Control-Allow-Credentials: true");
-            header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
-            header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type, X-Requested-With');
-
-            if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-                status_header(200);
-                exit(); // Immediately terminate the script for OPTIONS requests
+            $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
+            
+            if ($origin && in_array($origin, $allowed_origins)) {
+                header("Access-Control-Allow-Origin: {$origin}");
+                header("Access-Control-Allow-Credentials: true");
+                header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
+                header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type, X-Requested-With');
+                exit(0); // Immediately terminate the script for OPTIONS requests
             }
         }
     }
 }
-// Using send_headers action to ensure these headers are sent late and override others.
-add_action('send_headers', 'mco_add_cors_headers_globally');
-
+// Use 'init' with a high priority to catch the request early before other plugins can interfere.
+add_action('init', 'mco_handle_preflight_request', 4);
 
 
 // --- INITIALIZATION HOOKS ---
