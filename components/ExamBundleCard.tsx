@@ -1,6 +1,11 @@
-import React, { FC, useMemo } from 'react';
-import { ShoppingBag, Check } from 'lucide-react';
+import React, { FC, useMemo, useState } from 'react';
+// FIX: Added 'ShoppingCart' to lucide-react imports to resolve missing component error.
+import { ShoppingBag, Check, ShoppingCart } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext.tsx';
+import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, Organization } from '../types.ts';
+import Spinner from './Spinner.tsx';
 
 interface ExamBundleCardProps {
     certExam: Exam;
@@ -10,16 +15,16 @@ interface ExamBundleCardProps {
 }
 
 const ExamBundleCard: FC<ExamBundleCardProps> = ({ certExam, activeOrg, examPrices, type }) => {
+    const { user, token } = useAuth();
+    const [isRedirecting, setIsRedirecting] = useState(false);
+
     const bundleData = useMemo(() => {
         if (!activeOrg || !examPrices || !certExam?.productSku) {
             return null;
         }
 
-        const website = `https://www.${activeOrg.website}`;
-
         const isPracticeBundle = type === 'practice';
-        
-        const specificBundleSku = isPracticeBundle 
+        const specificBundleSku = isPracticeBundle
             ? `${certExam.productSku}-1`
             : `${certExam.productSku}-1mo-addon`;
             
@@ -29,39 +34,26 @@ const ExamBundleCard: FC<ExamBundleCardProps> = ({ certExam, activeOrg, examPric
             return null;
         }
 
-        const bundleUrl = priceData.productId
-            ? `${website}/cart/?add-to-cart=${priceData.productId}`
-            : `${website}/product/${certExam.productSlug}/`;
-
         const title = isPracticeBundle ? 'Exam Bundle' : 'Exam + Subscription';
-        const description = isPracticeBundle 
+        const description = isPracticeBundle
             ? 'The complete package for your certification.'
             : 'Get the certification exam plus one month of full subscription benefits.';
         const gradientClass = isPracticeBundle
             ? 'bg-gradient-to-br from-amber-400 to-orange-500'
             : 'bg-gradient-to-br from-teal-400 to-cyan-500';
-        const buttonClass = isPracticeBundle 
+        const buttonClass = isPracticeBundle
             ? 'text-orange-600 hover:bg-orange-50'
             : 'text-cyan-600 hover:bg-cyan-50';
             
         const features = isPracticeBundle
-            ? [
-                'One Certification Exam',
-                '1-Month Unlimited Practice',
-                '1-Month Unlimited AI Feedback'
-              ]
-            : [
-                'One Certification Exam',
-                '1-Month Full Subscription',
-                'Incl. Unlimited Practice & AI Feedback'
-              ];
+            ? ['One Certification Exam', '1-Month Unlimited Practice', '1-Month Unlimited AI Feedback']
+            : ['One Certification Exam', '1-Month Full Subscription', 'Incl. Unlimited Practice & AI Feedback'];
 
         return {
             title,
-            buttonText: 'Purchase Bundle',
+            sku: specificBundleSku,
             price: priceData.price,
             regularPrice: priceData.regularPrice,
-            url: bundleUrl,
             description,
             gradientClass,
             buttonClass,
@@ -69,9 +61,29 @@ const ExamBundleCard: FC<ExamBundleCardProps> = ({ certExam, activeOrg, examPric
         };
     }, [certExam, examPrices, activeOrg, type]);
 
+    const handlePurchase = async () => {
+        if (!bundleData?.sku) return;
+        if (!user || !token) {
+            toast.error("Please log in to make a purchase.");
+            const loginUrl = `https://www.${activeOrg.website}/exam-login/`;
+            window.location.href = loginUrl;
+            return;
+        }
+        setIsRedirecting(true);
+        try {
+            const { checkoutUrl } = await googleSheetsService.createCheckoutSession(token, bundleData.sku);
+            window.location.href = checkoutUrl;
+        } catch (error: any) {
+            toast.error(`Could not prepare checkout: ${error.message}`);
+            setIsRedirecting(false);
+        }
+    };
+
     if (!bundleData) {
         return null;
     }
+
+    const buttonText = isRedirecting ? 'Preparing...' : 'Purchase Bundle';
 
     return (
         <div className={`${bundleData.gradientClass} text-white rounded-xl shadow-lg p-6 flex flex-col`}>
@@ -100,14 +112,13 @@ const ExamBundleCard: FC<ExamBundleCardProps> = ({ certExam, activeOrg, examPric
                 ))}
             </ul>
 
-            <a 
-                href={bundleData.url} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className={`mt-auto block w-full bg-white font-bold py-3 text-center rounded-lg transition ${bundleData.buttonClass}`}
+            <button
+                onClick={handlePurchase}
+                disabled={isRedirecting}
+                className={`mt-auto w-full flex items-center justify-center gap-2 bg-white font-bold py-3 text-center rounded-lg transition disabled:opacity-75 ${bundleData.buttonClass}`}
             >
-                {bundleData.buttonText}
-            </a>
+                {isRedirecting ? <Spinner /> : <ShoppingCart size={18} />} {buttonText}
+            </button>
         </div>
     );
 };

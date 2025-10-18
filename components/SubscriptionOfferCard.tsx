@@ -1,11 +1,16 @@
-import React, { FC } from 'react';
-import { Check, Star } from 'lucide-react';
+import React, { FC, useState, useMemo } from 'react';
+import { Check, Star, ShoppingCart } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext.tsx';
+import { useAppContext } from '../context/AppContext.tsx';
+import { googleSheetsService } from '../services/googleSheetsService.ts';
+import Spinner from './Spinner.tsx';
 
 interface SubscriptionOfferCardProps {
     planName: string;
     price: number;
     priceUnit: string;
-    url: string;
+    url: string; // This will now be used as a fallback.
     features: string[];
     isBestValue?: boolean;
     gradientClass: string;
@@ -20,6 +25,43 @@ const SubscriptionOfferCard: FC<SubscriptionOfferCardProps> = ({
     isBestValue = false,
     gradientClass,
 }) => {
+    const { user, token } = useAuth();
+    const { activeOrg } = useAppContext();
+    const [isRedirecting, setIsRedirecting] = useState(false);
+
+    const sku = useMemo(() => {
+        if (planName.toLowerCase().includes('monthly')) return 'sub-monthly';
+        if (planName.toLowerCase().includes('yearly')) return 'sub-yearly';
+        return null;
+    }, [planName]);
+
+    const handleSubscribe = async () => {
+        if (!sku) {
+            toast.error("Could not determine subscription type.");
+            // Fallback to old method if SKU is not found
+            window.location.href = url;
+            return;
+        }
+
+        if (!user || !token || !activeOrg) {
+            toast.error("Please log in to subscribe.");
+            const loginUrl = activeOrg ? `https://www.${activeOrg.website}/exam-login/` : '#';
+            window.location.href = loginUrl;
+            return;
+        }
+
+        setIsRedirecting(true);
+        try {
+            const { checkoutUrl } = await googleSheetsService.createCheckoutSession(token, sku);
+            window.location.href = checkoutUrl;
+        } catch (error: any) {
+            toast.error(`Could not prepare checkout: ${error.message}`);
+            setIsRedirecting(false);
+        }
+    };
+    
+    const buttonText = isRedirecting ? 'Preparing...' : 'Subscribe Now';
+
     return (
         <div className={`rounded-xl shadow-lg p-6 flex flex-col text-white relative ${gradientClass}`}>
             {isBestValue && (
@@ -40,14 +82,13 @@ const SubscriptionOfferCard: FC<SubscriptionOfferCardProps> = ({
                     </li>
                 ))}
             </ul>
-            <a 
-                href={url} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="mt-auto block w-full bg-white text-slate-800 font-bold py-3 text-center rounded-lg hover:bg-slate-200 transition"
+            <button
+                onClick={handleSubscribe}
+                disabled={isRedirecting}
+                className="mt-auto w-full flex items-center justify-center gap-2 bg-white text-slate-800 font-bold py-3 text-center rounded-lg hover:bg-slate-200 transition disabled:opacity-75"
             >
-                Subscribe Now
-            </a>
+                {isRedirecting ? <Spinner /> : <ShoppingCart size={18} />} {buttonText}
+            </button>
         </div>
     );
 };

@@ -106,6 +106,16 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     }
 };
 export const googleSheetsService = {
+    // --- CHECKOUT SESSION ---
+    createCheckoutSession: async (token: string, sku: string): Promise<{ checkoutUrl: string }> => {
+        try {
+            return await apiFetch('/create-checkout-session', 'POST', token, { sku });
+        } catch (error) {
+            console.error("Failed to create checkout session:", error);
+            throw error;
+        }
+    },
+    
     // --- SITE HIT COUNTER ---
     recordSiteHit: async (): Promise<{ count: number }> => {
         try {

@@ -307,6 +307,8 @@ if (!function_exists('mco_register_api_hooks')) {
         register_rest_route('mco-app/v1', '/notify-admin', array('methods' => 'POST', 'callback' => 'mco_api_notify_admin_endpoint', 'permission_callback' => 'mco_api_permission_check_user'));
         register_rest_route('mco-app/v1', '/exam-stats', array('methods' => 'GET', 'callback' => 'mco_api_get_exam_stats', 'permission_callback' => 'mco_api_permission_check_admin'));
         register_rest_route('mco-app/v1', '/verify-certificate/(?P<certId>.+)', array('methods' => 'GET', 'callback' => 'mco_api_verify_certificate', 'permission_callback' => '__return_true'));
+        register_rest_route('mco-app/v1', '/create-checkout-session', array('methods' => 'POST', 'callback' => 'mco_api_create_checkout_session', 'permission_callback' => 'mco_api_permission_check_user'));
+
         
         // Admin-only endpoints
         register_rest_route('mco-app/v1', '/admin/test-sheet-url', array('methods' => 'POST', 'callback' => 'mco_api_admin_test_sheet_url', 'permission_callback' => 'mco_api_permission_check_admin'));
@@ -328,6 +330,44 @@ if (!function_exists('mco_register_api_hooks')) {
 }
 
 // --- API CALLBACKS ---
+
+if (!function_exists('mco_api_create_checkout_session')) {
+    function mco_api_create_checkout_session(WP_REST_Request $request) {
+        if (!class_exists('WooCommerce') || !function_exists('wc_get_product_id_by_sku')) {
+            return new WP_Error('woocommerce_inactive', 'WooCommerce is not active.', array('status' => 500));
+        }
+
+        $params = $request->get_json_params();
+        $sku = sanitize_text_field($params['sku']);
+        if (empty($sku)) {
+            return new WP_Error('bad_request', 'Product SKU is required.', array('status' => 400));
+        }
+        
+        $product_id = wc_get_product_id_by_sku($sku);
+        if (!$product_id) {
+            return new WP_Error('not_found', 'Product with the specified SKU was not found.', array('status' => 404));
+        }
+
+        // Ensure the cart is ready.
+        if (is_null(WC()->cart)) {
+            wc_load_cart();
+        }
+
+        // Clear the cart to ensure only this item is purchased.
+        WC()->cart->empty_cart();
+        
+        // Add the product to the cart.
+        $cart_item_key = WC()->cart->add_to_cart($product_id);
+
+        if (!$cart_item_key) {
+             return new WP_Error('cart_error', 'Could not add the product to the cart.', array('status' => 500));
+        }
+
+        // Return the direct checkout URL.
+        $checkout_url = wc_get_checkout_url();
+        return new WP_REST_Response(array('checkoutUrl' => $checkout_url), 200);
+    }
+}
 
 if (!function_exists('mco_api_get_config')) {
     function mco_api_get_config() {
