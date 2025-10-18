@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { Navigate, useLocation, Routes, Route, BrowserRouter, Outlet } from 'react-router-dom';
@@ -190,9 +191,20 @@ const ApiKeySelector: FC<{ onKeySelected: () => void }> = ({ onKeySelected }) =>
                 <p className="text-slate-600 mb-6">To use the Veo video generation feature, you must select an API key. Please note that generating videos may incur billing charges.</p>
                 <button
                     onClick={async () => {
-                        // @ts-ignore
-                        await window.aistudio.openSelectKey();
-                        onKeySelected();
+                        try {
+                            // @ts-ignore
+                            if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+                                // @ts-ignore
+                                await window.aistudio.openSelectKey();
+                                onKeySelected();
+                            } else {
+                                toast.error("API Key selection feature is unavailable in this environment.");
+                                console.error("window.aistudio.openSelectKey is not available.");
+                            }
+                        } catch (e) {
+                            console.error("Error opening API key selector:", e);
+                            toast.error("An error occurred while trying to open the API key selector.");
+                        }
                     }}
                     className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition"
                 >
@@ -214,8 +226,11 @@ const App: FC = () => {
     const checkKey = async () => {
         try {
             // @ts-ignore
-            if (await window.aistudio.hasSelectedApiKey()) {
-                setHasVeoKey(true);
+            if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
+                // @ts-ignore
+                if (await window.aistudio.hasSelectedApiKey()) {
+                    setHasVeoKey(true);
+                }
             }
         } catch (e) {
             console.error("AI Studio context not available.", e);
