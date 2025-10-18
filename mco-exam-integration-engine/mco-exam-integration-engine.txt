@@ -3,7 +3,7 @@
  * Plugin Name:       MCO Exam Integration Engine
  * Plugin URI:        https://annapoornainfo.com
  * Description:       Provides the backend API, user authentication (SSO), and content management for the React-based examination app.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Author:            Annapoorna Infotech
  * Author URI:        https://annapoornainfo.com
  * License:           GPL v2 or later
@@ -59,6 +59,7 @@ if (!defined('MCO_PLUGIN_VERSION')) {
     $plugin_data = get_file_data(MCO_PLUGIN_FILE, array('Version' => 'Version'));
     define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 }
+define('MCO_DB_VERSION_OPTION', 'mco_plugin_version_db');
 
 // Include all files to define functions first.
 require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
@@ -67,15 +68,16 @@ require_once MCO_PLUGIN_PATH . 'includes/mco-api.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; // This file only defines functions, so it's safe to include globally.
 
+
 // --- INITIALIZATION HOOKS ---
 if (!function_exists('mco_exam_engine_init')) {
     function mco_exam_engine_init() {
-        // Register public components on every load
+        if (is_admin()) {
+            mco_check_for_updates();
+        }
         mco_register_custom_post_types();
         mco_register_api_hooks();
         mco_register_shortcode_hooks();
-        
-        // Only REGISTER the admin-specific hooks if we are in an admin context.
         if (is_admin()) {
             mco_register_admin_hooks();
         }
@@ -83,15 +85,26 @@ if (!function_exists('mco_exam_engine_init')) {
     add_action('init', 'mco_exam_engine_init');
 }
 
+if (!function_exists('mco_check_for_updates')) {
+    function mco_check_for_updates() {
+        $current_db_version = get_option(MCO_DB_VERSION_OPTION, '0.0.0');
+        if (version_compare($current_db_version, MCO_PLUGIN_VERSION, '<')) {
+            // This is an update. Run the activation logic, which is safe.
+            mco_exam_engine_activate(); 
+            // Update the DB version to match the plugin version.
+            update_option(MCO_DB_VERSION_OPTION, MCO_PLUGIN_VERSION);
+        }
+    }
+}
+
 // Activation hook for flushing rewrite rules
 if (!function_exists('mco_exam_engine_activate')) {
     function mco_exam_engine_activate() {
-        // First, register the custom post types so they are recognized by flush_rewrite_rules
         mco_register_custom_post_types();
-        // Then, flush the rewrite rules with the new CPTs
         flush_rewrite_rules();
-        // Clear any old config data
         delete_transient('mco_app_config_data');
+        // Set the version on activation/update
+        update_option(MCO_DB_VERSION_OPTION, MCO_PLUGIN_VERSION);
     }
     register_activation_hook(MCO_PLUGIN_FILE, 'mco_exam_engine_activate');
 }

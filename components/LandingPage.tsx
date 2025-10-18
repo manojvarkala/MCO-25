@@ -3,7 +3,7 @@ import React, { FC, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
-import { LogIn, UserPlus } from 'lucide-react';
+import { LogIn, UserPlus, FileText, Award, Sparkles } from 'lucide-react';
 import LogoSpinner from './LogoSpinner.tsx';
 
 const LandingPage: FC = () => {
@@ -33,34 +33,68 @@ const LandingPage: FC = () => {
         );
     }
     
+    const isMedicalCodingTenant = activeOrg?.website === 'coding-online.net';
+
     return (
         <div className="min-h-[75vh] flex flex-col lg:flex-row items-center justify-center gap-12 p-4">
-            {/* Left Side: Intro Video & Text */}
+            {/* Left Side: Intro */}
             <div className="lg:w-1/2 max-w-xl text-center lg:text-left">
                 <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 mb-4 leading-tight">
                     Welcome to the <br/>
                     <span className="text-cyan-600">{activeOrg.name}</span><br/>
                     Examination Portal
                 </h1>
-                <p className="text-lg text-slate-600 mb-8">
-                    Your central hub for practice tests, certification exams, and AI-powered study guides. Watch our short intro to see what's inside!
-                </p>
-
-                {/* Video Player */}
-                <div className="aspect-video w-full bg-slate-800 rounded-lg shadow-xl overflow-hidden border-4 border-slate-200">
-                    <video
-                        className="w-full h-full object-cover"
-                        src="/intro-video.mp4" // NOTE: This is a placeholder for the generated video URL
-                        controls
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        poster="https://i.imgur.com/kYk3b2n.png" // A generic placeholder image
-                    >
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
+                
+                {isMedicalCodingTenant ? (
+                    <>
+                        <p className="text-lg text-slate-600 mb-8">
+                            Your central hub for practice tests, certification exams, and AI-powered study guides. Watch our short intro to see what's inside!
+                        </p>
+                        <div className="aspect-video w-full bg-slate-800 rounded-lg shadow-xl overflow-hidden border-4 border-slate-200">
+                            <video
+                                className="w-full h-full object-cover"
+                                src="/intro-video.mp4" // NOTE: This is a placeholder for the generated video URL
+                                controls
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                                poster="https://i.imgur.com/kYk3b2n.png" // A generic placeholder image
+                            >
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                         <p className="text-lg text-slate-600 mb-8">
+                            Your central hub for practice tests, certification exams, and AI-powered study guides to accelerate your career.
+                        </p>
+                        <div className="space-y-4 text-left">
+                            <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-slate-200">
+                                <FileText className="h-8 w-8 text-cyan-600 flex-shrink-0" />
+                                <div>
+                                    <h3 className="font-bold text-slate-800">Practice Exams</h3>
+                                    <p className="text-sm text-slate-500">Hone your skills with a wide range of practice tests.</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-slate-200">
+                                <Award className="h-8 w-8 text-cyan-600 flex-shrink-0" />
+                                <div>
+                                    <h3 className="font-bold text-slate-800">Official Certifications</h3>
+                                    <p className="text-sm text-slate-500">Earn verifiable certificates to advance your career.</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-slate-200">
+                                <Sparkles className="h-8 w-8 text-cyan-600 flex-shrink-0" />
+                                <div>
+                                    <h3 className="font-bold text-slate-800">AI-Powered Study Guides</h3>
+                                    <p className="text-sm text-slate-500">Get personalized feedback to focus your studies.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* Right Side: Login Box */}
