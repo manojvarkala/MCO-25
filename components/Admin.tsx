@@ -120,7 +120,7 @@ The final video should be suitable for a website's hero section, creating a feel
 
             setStatus('Generation complete! Retrieving video...');
             const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-            if (!downloadLink) throw new Error('Video generation finished, but no download link was found.');
+            if (!downloadLink) throw new Error('Video generation finished, but no download link was found in the API response.');
 
             const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
             if (!response.ok) {
