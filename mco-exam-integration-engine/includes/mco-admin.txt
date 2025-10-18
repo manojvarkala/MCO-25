@@ -365,10 +365,10 @@ if (!function_exists('mco_render_theme_selector_tab')) {
                     <label class="mco-theme-card <?php echo $active_theme === $id ? 'mco-theme-card--selected' : ''; ?>">
                         <input type="radio" name="mco_active_theme" value="<?php echo esc_attr($id); ?>" <?php checked($active_theme, $id); ?> class="mco-theme-radio">
                         <div class="mco-theme-swatches">
-                            <div class="mco-theme-swatch mco-theme-swatch--<?php echo esc_attr($id); ?>-primary"></div>
-                            <div class="mco-theme-swatch mco-theme-swatch--<?php echo esc_attr($id); ?>-secondary"></div>
-                            <div class="mco-theme-swatch mco-theme-swatch--<?php echo esc_attr($id); ?>-accent"></div>
-                            <div class="mco-theme-swatch mco-theme-swatch--<?php echo esc_attr($id); ?>-background"></div>
+                            <div class="mco-theme-swatch theme-swatch-<?php echo esc_attr($id); ?>-primary"></div>
+                            <div class="mco-theme-swatch theme-swatch-<?php echo esc_attr($id); ?>-secondary"></div>
+                            <div class="mco-theme-swatch theme-swatch-<?php echo esc_attr($id); ?>-accent"></div>
+                            <div class="mco-theme-swatch theme-swatch-<?php echo esc_attr($id); ?>-background"></div>
                         </div>
                         <p class="mco-theme-name"><?php echo esc_html($name); ?></p>
                     </label>

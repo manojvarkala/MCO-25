@@ -130,35 +130,4 @@ if (!function_exists('mco_exam_engine_deactivate')) {
     }
     register_deactivation_hook(MCO_PLUGIN_FILE, 'mco_exam_engine_deactivate');
 }
-
-if (!function_exists('mco_handle_preflight_requests')) {
-    /**
-     * Handles CORS preflight OPTIONS requests for the custom API namespace.
-     * This is crucial for allowing authenticated requests (with Authorization headers) from the frontend app.
-     * It intercepts the OPTIONS request early, sends the appropriate CORS headers, and exits with a 200 OK status.
-     */
-    function mco_handle_preflight_requests() {
-        if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-            // Check if the request is for our API namespace to avoid interfering with other requests.
-            if (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], '/wp-json/mco-app/v1/') !== false) {
-                $origin = get_http_origin();
-                $allowed_urls = get_option('mco_exam_app_url', '');
-                if (!empty($allowed_urls)) {
-                    $allowed_origins = array_map('trim', explode("\n", $allowed_urls));
-                    if ($origin && in_array($origin, $allowed_origins)) {
-                        header('Access-Control-Allow-Origin: ' . $origin);
-                        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-                        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-WP-Nonce');
-                        header('Access-Control-Allow-Credentials: true');
-                        status_header(200);
-                        exit();
-                    }
-                }
-            }
-        }
-    }
-}
-// Add the new hook for handling preflight requests. This should run on every request.
-add_action('init', 'mco_handle_preflight_requests', 1);
-
 ?>

@@ -232,20 +232,20 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
 }
 
 
-// --- CORS HEADERS ---
+// --- CORS HANDLING ---
 if (!function_exists('mco_api_add_cors_headers')) {
-    function mco_api_add_cors_headers($value) {
+    function mco_api_add_cors_headers($served, $result, $request, $server) {
         $origin = get_http_origin();
         $allowed_urls = get_option('mco_exam_app_url', '');
         $allowed_origins = array_map('trim', explode("\n", $allowed_urls));
     
         if ($origin && in_array($origin, $allowed_origins)) {
-            header('Access-Control-Allow-Origin: ' . $origin);
-            header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-            header('Access-Control-Allow-Headers: Content-Type, Authorization, X-WP-Nonce');
-            header('Access-Control-Allow-Credentials: true');
+            $server->send_header('Access-Control-Allow-Origin', $origin);
+            $server->send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            $server->send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-WP-Nonce');
+            $server->send_header('Access-Control-Allow-Credentials', 'true');
         }
-        return $value;
+        return $served;
     }
 }
 
@@ -265,6 +265,27 @@ if (!function_exists('mco_add_cors_to_auth_errors')) {
                 }
             }
         }
+        return $result;
+    }
+}
+
+if (!function_exists('mco_rest_pre_dispatch_handler')) {
+    function mco_rest_pre_dispatch_handler($result, $server, $request) {
+        // Handle OPTIONS (preflight) requests specifically for our namespace
+        if ($request->get_method() === 'OPTIONS' && strpos($request->get_route(), '/mco-app/v1/') !== false) {
+            $origin = get_http_origin();
+            $allowed_urls = get_option('mco_exam_app_url', '');
+            if (!empty($allowed_urls)) {
+                $allowed_origins = array_map('trim', explode("\n", $allowed_urls));
+                if ($origin && in_array($origin, $allowed_origins)) {
+                    // For OPTIONS, we just want to send headers and a 200 OK.
+                    // We set $result to true to tell the REST server we've handled the request.
+                    // The `rest_pre_serve_request` filter will then add the necessary headers to this empty, successful response.
+                    return true;
+                }
+            }
+        }
+        // For non-OPTIONS requests, or requests to other namespaces, we do nothing and let them proceed.
         return $result;
     }
 }
@@ -299,7 +320,9 @@ if (!function_exists('mco_register_api_hooks')) {
         register_rest_route('mco-app/v1', '/admin/post-creation-data', array('methods' => 'GET', 'callback' => 'mco_api_get_post_creation_data', 'permission_callback' => 'mco_api_permission_check_admin'));
         register_rest_route('mco-app/v1', '/admin/create-post-from-app', array('methods' => 'POST', 'callback' => 'mco_api_create_post_from_app', 'permission_callback' => 'mco_api_permission_check_admin'));
 
-        add_filter('rest_pre_serve_request', 'mco_api_add_cors_headers', 10, 1);
+        // New, more robust CORS handling
+        add_filter('rest_pre_dispatch', 'mco_rest_pre_dispatch_handler', 10, 3);
+        add_filter('rest_pre_serve_request', 'mco_api_add_cors_headers', 10, 4);
         add_filter('rest_authentication_errors', 'mco_add_cors_to_auth_errors');
     }
 }

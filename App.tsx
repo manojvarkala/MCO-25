@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { Navigate, useLocation, Routes, Route, BrowserRouter, Outlet } from "react-router-dom";
@@ -45,31 +46,6 @@ import Handbook from './components/handbook/Handbook.tsx';
 import VerifyCertificate from './components/VerifyCertificate.tsx';
 import VerifyPage from './components/VerifyPage.tsx';
 import LogoSpinner from './components/LogoSpinner.tsx';
-
-// Helper to safely access the aistudio object, which might be in a parent frame.
-function getAiStudio(): { openSelectKey: () => Promise<void>; hasSelectedApiKey: () => Promise<boolean>; } | undefined {
-    try {
-        // @ts-ignore
-        if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
-            // @ts-ignore
-            return window.aistudio;
-        }
-        // @ts-ignore
-        if (window.parent && window.parent.aistudio && typeof window.parent.aistudio.openSelectKey === 'function') {
-            // @ts-ignore
-            return window.parent.aistudio;
-        }
-    } catch (e) {
-        // A cross-origin error may be thrown when accessing window.parent.
-        console.warn("Could not access window.parent to check for AI Studio context.", e);
-        // @ts-ignore
-        if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
-             // @ts-ignore
-            return window.aistudio;
-        }
-    }
-    return undefined;
-}
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -208,73 +184,11 @@ const AppContent: FC = () => {
     );
 };
 
-const ApiKeySelector: FC<{ onKeySelected: () => void }> = ({ onKeySelected }) => {
-    return (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-            <div className="bg-white p-8 rounded-lg shadow-xl text-center">
-                <h2 className="text-2xl font-bold text-slate-800 mb-4">API Key Required for Video Generation</h2>
-                <p className="text-slate-600 mb-6">To use the Veo video generation feature, you must select an API key. Please note that generating videos may incur billing charges.</p>
-                <button
-                    onClick={async () => {
-                        try {
-                            const aistudio = getAiStudio();
-                            if (aistudio) {
-                                await aistudio.openSelectKey();
-                                onKeySelected(); // Assume success to mitigate race conditions
-                            } else {
-                                toast.error("API Key selection feature is unavailable in this environment.");
-                                console.error("AI Studio context (window.aistudio) was not found.");
-                            }
-                        } catch (e) {
-                            console.error("Error opening API key selector:", e);
-                            toast.error("An error occurred while trying to open the API key selector.");
-                        }
-                    }}
-                    className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition"
-                >
-                    Select API Key
-                </button>
-                <p className="text-xs text-slate-500 mt-4">
-                    For more information, please see the <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">billing documentation</a>.
-                </p>
-            </div>
-        </div>
-    );
-};
-
 const App: FC = () => {
-  const [hasVeoKey, setHasVeoKey] = useState(false);
-  const [isCheckingKey, setIsCheckingKey] = useState(true);
-
-  useEffect(() => {
-    const checkKey = async () => {
-        try {
-            const aistudio = getAiStudio();
-            if (aistudio && typeof aistudio.hasSelectedApiKey === 'function') {
-                if (await aistudio.hasSelectedApiKey()) {
-                    setHasVeoKey(true);
-                }
-            }
-        } catch (e) {
-            console.error("Error checking for selected API key:", e);
-        } finally {
-            setIsCheckingKey(false);
-        }
-    };
-    checkKey();
-  }, []);
-
-  const requiresVeo = new URLSearchParams(window.location.search).get('gen_video') === 'true';
-
-  if(isCheckingKey) {
-      return null; // Don't render anything until the key check is complete
-  }
-
   return (
     <AuthProvider>
       <AppProvider>
         <BrowserRouter>
-            {requiresVeo && !hasVeoKey && <ApiKeySelector onKeySelected={() => setHasVeoKey(true)} />}
             <AppContent />
             <Toaster position="top-right" reverseOrder={false}>
               {(t) => (
