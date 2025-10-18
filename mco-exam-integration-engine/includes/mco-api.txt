@@ -204,7 +204,6 @@ if (!function_exists('mco_register_api_hooks')) {
     }
 }
 
-// FIX: Added the missing handler function for the main /config endpoint.
 if (!function_exists('mco_api_get_config')) {
     function mco_api_get_config() {
         $config_data = mco_get_app_config_data();
@@ -215,6 +214,103 @@ if (!function_exists('mco_api_get_config')) {
     }
 }
 
+
+if (!function_exists('mco_api_get_questions_from_sheet')) {
+    function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
+        $params = $request->get_json_params();
+        if (!isset($params['sheetUrl']) || !isset($params['count'])) {
+            return new WP_Error('bad_request', 'Missing required parameters.', array('status' => 400));
+        }
+
+        $sheet_url = esc_url_raw($params['sheetUrl']);
+        $count = intval($params['count']);
+
+        // Use a hash of the URL as part of the transient key for uniqueness and security
+        $transient_key = 'mco_questions_' . md5($sheet_url);
+        $cached_questions = get_transient($transient_key);
+
+        if ($cached_questions !== false) {
+            shuffle($cached_questions);
+            $questions_to_return = array_slice($cached_questions, 0, $count);
+            return new WP_REST_Response($questions_to_return, 200);
+        }
+
+        $result = mco_fetch_remote_csv_content($sheet_url);
+        if (!$result['success'] || empty($result['data'])) {
+            return new WP_Error('fetch_failed', 'Could not retrieve the question sheet. Please check the URL and ensure the sheet is public.', array('status' => 500, 'details' => $result));
+        }
+        
+        $csv_content = $result['data'];
+        $lines = explode("\n", str_replace("\r", "", $csv_content));
+        $headers = str_getcsv(array_shift($lines));
+        $column_count = count($headers);
+
+        $questions = array();
+        $id_counter = 1;
+
+        if ($column_count === 3) {
+            foreach ($lines as $line) {
+                if (empty(trim($line))) continue;
+                $data = str_getcsv($line);
+                if (count($data) !== 3) continue;
+
+                $question_text = trim($data[0]);
+                $options_str = trim($data[1]);
+                $correct_answer_1_based = (int)trim($data[2]);
+
+                if (empty($question_text) || empty($options_str) || $correct_answer_1_based <= 0) continue;
+
+                $options = array_map('trim', explode('|', $options_str));
+                if (count($options) < 2 || $correct_answer_1_based > count($options)) continue;
+
+                $questions[] = array(
+                    'id' => $id_counter++,
+                    'question' => $question_text,
+                    'options' => $options,
+                    'correctAnswer' => $correct_answer_1_based
+                );
+            }
+        } elseif ($column_count === 6) {
+            foreach ($lines as $line) {
+                if (empty(trim($line))) continue;
+                $data = str_getcsv($line);
+                if (count($data) !== 6) continue;
+
+                $question_text = trim($data[0]);
+                $option1 = trim($data[1]);
+                $option2 = trim($data[2]);
+                $option3 = trim($data[3]);
+                $option4 = trim($data[4]);
+                $correct_answer_1_based = (int)trim($data[5]);
+
+                if (empty($question_text) || empty($option1) || empty($option2) || empty($option3) || empty($option4) || $correct_answer_1_based <= 0 || $correct_answer_1_based > 4) {
+                    continue;
+                }
+
+                $options = [$option1, $option2, $option3, $option4];
+
+                $questions[] = array(
+                    'id' => $id_counter++,
+                    'question' => $question_text,
+                    'options' => $options,
+                    'correctAnswer' => $correct_answer_1_based
+                );
+            }
+        } else {
+            return new WP_Error('invalid_csv_format', 'Invalid CSV format. The file must have either 3 or 6 columns.', array('status' => 400));
+        }
+
+        if (empty($questions)) {
+            return new WP_Error('no_questions', 'No valid questions could be parsed from the provided sheet.', array('status' => 500));
+        }
+
+        set_transient($transient_key, $questions, 15 * MINUTE_IN_SECONDS);
+        shuffle($questions);
+        $questions_to_return = array_slice($questions, 0, $count);
+
+        return new WP_REST_Response($questions_to_return, 200);
+    }
+}
 
 if (!function_exists('mco_api_submit_review')) {
     function mco_api_submit_review(WP_REST_Request $request) {
