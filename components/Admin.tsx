@@ -569,23 +569,30 @@ const Admin: FC = () => {
                         Bulk Data Management
                     </h2>
                     <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                        Streamline your content creation with this three-step workflow for bulk importing exam programs and their corresponding WooCommerce products.
+                        Streamline your content creation with this workflow for bulk importing exam programs and their corresponding WooCommerce products.
                     </p>
 
                     <div className="space-y-4 p-4 bg-[rgb(var(--color-muted-rgb))] rounded-lg border border-[rgb(var(--color-border-rgb))]">
                         <ol className="list-decimal list-inside space-y-4 text-[rgb(var(--color-text-muted-rgb))]">
-                            <li>
-                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 1: Upload Exam Programs CSV</strong><br />
-                                Download the template, fill it with your exam program data, then upload it in your WordPress admin under <a href={`${getApiBaseUrl()}/wp-admin/admin.php?page=mco-exam-engine&tab=bulk_import`} target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] font-semibold hover:underline">Exam App Engine &rarr; Bulk Import</a>.
+                             <li>
+                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Download Templates</strong><br />
+                                Get the CSV templates for your content. The "Question Sheet Template" is new and supports both 3-column and the recommended 6-column formats.
                                 <div className="flex flex-wrap gap-2 mt-2">
-                                    <a href="/template-exam-programs.csv" download className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-border-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]">
+                                     <a href="/template-exam-programs.csv" download className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-border-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]">
                                         <DownloadCloud size={16} className="mr-2"/> Download Exam Program Template
+                                    </a>
+                                    <a href="/template-questions.csv" download className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-border-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]">
+                                        <DownloadCloud size={16} className="mr-2"/> Download Question Sheet Template
                                     </a>
                                 </div>
                             </li>
                             <li>
-                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 2: Generate WooCommerce Products CSV</strong><br />
-                                Once your programs are uploaded, click the button below. This will generate a new CSV file, pre-filled with the product details for each of your new certification exams.
+                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Upload Exam Programs CSV</strong><br />
+                                Fill the template with your program data, then upload it in your WordPress admin under <a href={`${getApiBaseUrl()}/wp-admin/admin.php?page=mco-exam-engine&tab=bulk_import`} target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] font-semibold hover:underline">Exam App Engine &rarr; Bulk Import</a>.
+                            </li>
+                            <li>
+                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Generate & Upload WooCommerce Products CSV</strong><br />
+                                After uploading programs, click the button below to generate a new CSV pre-filled with product details for each new exam. Then, upload it in WooCommerce under <a href={`${getApiBaseUrl()}/wp-admin/edit.php?post_type=product&page=product_importer`} target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] font-semibold hover:underline">Products &rarr; Import</a>.
                                  <div className="flex flex-wrap gap-2 mt-2">
                                     <button
                                         onClick={handleGenerateWooCsv}
@@ -596,10 +603,6 @@ const Admin: FC = () => {
                                         {isGeneratingWooCsv ? 'Generating...' : 'Generate & Download WooCommerce Products CSV'}
                                     </button>
                                 </div>
-                            </li>
-                            <li>
-                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 3: Upload WooCommerce Products CSV</strong><br />
-                                Review the generated CSV (you can adjust pricing here). Then, upload it in your WordPress admin under <a href={`${getApiBaseUrl()}/wp-admin/edit.php?post_type=product&page=product_importer`} target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] font-semibold hover:underline">WooCommerce &rarr; Products &rarr; Import</a>.
                             </li>
                         </ol>
                     </div>

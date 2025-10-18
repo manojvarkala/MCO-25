@@ -201,6 +201,9 @@ if (!function_exists('mco_register_api_hooks')) {
         register_rest_route('mco-app/v1', '/admin/delete-post', array('methods' => 'POST', 'callback' => 'mco_api_admin_delete_post', 'permission_callback' => 'mco_api_permission_check_admin'));
         register_rest_route('mco-app/v1', '/admin/post-creation-data', array('methods' => 'GET', 'callback' => 'mco_api_get_post_creation_data', 'permission_callback' => 'mco_api_permission_check_admin'));
         register_rest_route('mco-app/v1', '/admin/create-post-from-app', array('methods' => 'POST', 'callback' => 'mco_api_create_post_from_app', 'permission_callback' => 'mco_api_permission_check_admin'));
+
+        add_filter('rest_pre_serve_request', 'mco_api_add_cors_headers', 10, 1);
+        add_filter('rest_authentication_errors', 'mco_add_cors_to_auth_errors');
     }
 }
 
@@ -428,6 +431,40 @@ if (!function_exists('mco_api_get_certificate_data')) {
         );
     
         return new WP_REST_Response($response_data, 200);
+    }
+}
+
+if (!function_exists('mco_add_cors_to_auth_errors')) {
+    /**
+     * Adds CORS headers to authentication error responses.
+     *
+     * This is a crucial fallback for when a server strips the Authorization header.
+     * In that case, the standard permission check fails early, and the normal CORS
+     * header hook might not run. This ensures the error response itself is readable
+     * by the frontend app, allowing it to display a specific troubleshooting message.
+     *
+     * @param WP_Error|null|true $result WP_Error if authentication failed, null if authentication method wasn't used, true if authentication succeeded.
+     * @return WP_Error|null|true
+     */
+    function mco_add_cors_to_auth_errors($result) {
+        // Only act if an authentication error has occurred.
+        if (is_wp_error($result)) {
+            $origin = get_http_origin();
+            $allowed_urls = get_option('mco_exam_app_url', '');
+            $allowed_origins = array_map('trim', explode("\n", $allowed_urls));
+            
+            if ($origin && in_array($origin, $allowed_origins)) {
+                // It's safe to add the header because an error is already being returned.
+                // We are just making the error readable by the client.
+                if (!headers_sent()) {
+                    header('Access-Control-Allow-Origin: ' . $origin);
+                    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+                    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-WP-Nonce');
+                    header('Access-Control-Allow-Credentials: true');
+                }
+            }
+        }
+        return $result;
     }
 }
 

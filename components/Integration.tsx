@@ -12,8 +12,9 @@ import apiFile from '/mco-exam-integration-engine/includes/mco-api.txt?raw';
 import dataFile from '/mco-exam-integration-engine/includes/mco-data.txt?raw';
 import shortcodesFile from '/mco-exam-integration-engine/includes/mco-shortcodes.txt?raw';
 import stylesFile from '/mco-exam-integration-engine/assets/mco-styles.txt?raw';
-import templateExamPrograms from '/template-exam-programs.csv?raw';
-import templateRecommendedBooks from '/template-recommended-books.csv?raw';
+import templateExamPrograms from '/public/template-exam-programs.csv?raw';
+import templateRecommendedBooks from '/public/template-recommended-books.csv?raw';
+import templateQuestions from '/public/template-questions.csv?raw';
 
 const Integration: FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
@@ -40,6 +41,9 @@ const Integration: FC = () => {
                 'includes/mco-data.php': dataFile,
                 'includes/mco-shortcodes.php': shortcodesFile,
                 'assets/mco-styles.css': stylesFile,
+                'public/template-exam-programs.csv': templateExamPrograms,
+                'public/template-recommended-books.csv': templateRecommendedBooks,
+                'public/template-questions.csv': templateQuestions,
             };
 
             for (const path in filesToZip) {

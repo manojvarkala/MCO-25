@@ -182,12 +182,61 @@ const AppContent: FC = () => {
     );
 };
 
+const ApiKeySelector: FC<{ onKeySelected: () => void }> = ({ onKeySelected }) => {
+    return (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-white p-8 rounded-lg shadow-xl text-center">
+                <h2 className="text-2xl font-bold text-slate-800 mb-4">API Key Required for Video Generation</h2>
+                <p className="text-slate-600 mb-6">To use the Veo video generation feature, you must select an API key. Please note that generating videos may incur billing charges.</p>
+                <button
+                    onClick={async () => {
+                        // @ts-ignore
+                        await window.aistudio.openSelectKey();
+                        onKeySelected();
+                    }}
+                    className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition"
+                >
+                    Select API Key
+                </button>
+                <p className="text-xs text-slate-500 mt-4">
+                    For more information, please see the <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">billing documentation</a>.
+                </p>
+            </div>
+        </div>
+    );
+};
 
 const App: FC = () => {
+  const [hasVeoKey, setHasVeoKey] = useState(false);
+  const [isCheckingKey, setIsCheckingKey] = useState(true);
+
+  useEffect(() => {
+    const checkKey = async () => {
+        try {
+            // @ts-ignore
+            if (await window.aistudio.hasSelectedApiKey()) {
+                setHasVeoKey(true);
+            }
+        } catch (e) {
+            console.error("AI Studio context not available.", e);
+        } finally {
+            setIsCheckingKey(false);
+        }
+    };
+    checkKey();
+  }, []);
+
+  const requiresVeo = new URLSearchParams(window.location.search).get('gen_video') === 'true';
+
+  if(isCheckingKey) {
+      return null; // Don't render anything until the key check is complete
+  }
+
   return (
     <AuthProvider>
       <AppProvider>
         <BrowserRouter>
+            {requiresVeo && !hasVeoKey && <ApiKeySelector onKeySelected={() => setHasVeoKey(true)} />}
             <AppContent />
             <Toaster position="top-right" reverseOrder={false}>
               {(t) => (

@@ -398,6 +398,12 @@ if (!function_exists('mco_render_bulk_import_tab')) {
         </form>
 
         <hr>
+        
+        <h4>Question Sheets</h4>
+        <p>Download this template to format your questions for an exam. Once filled, publish the sheet to the web as a CSV and paste the URL into the "Question Source URL" field of an Exam Program.</p>
+        <a href="<?php echo esc_url(MCO_PLUGIN_URL . 'public/template-questions.csv'); ?>" class="button button-secondary" download>Download Question Sheet Template</a>
+
+        <hr>
 
         <h4>Recommended Books</h4>
         <p>Download the template, fill it with your book data, and upload it. The system will create new books or update existing ones based on the <code>book_title</code>.</p>

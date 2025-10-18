@@ -1,0 +1,5 @@
+question,option 1,option 2,option 3,option 4,correct answer
+"What is the capital of France?","Paris","London","Berlin","Rome",1
+"Which planet is known as the Red Planet?","Earth","Mars","Jupiter","Saturn",2
+"# NOTE: This 6-column format is recommended for clarity.","# You can also use the legacy 3-column format: question,\"options (separated by |)\",correct_answer_index",,,
+"# Example for 3-column format: ""What is 2+2?"",""3|4|5|6"",2",,,
