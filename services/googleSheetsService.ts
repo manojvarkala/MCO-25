@@ -6,8 +6,8 @@ import { getApiBaseUrl } from './apiConfig.ts';
 // FIX: Declare a global constant for development mode, defined in vite.config.ts.
 declare const __DEV__: boolean;
 
-// A simple module-level lock to prevent concurrent sync operations.
-let isSyncing = false;
+// A module-level promise to prevent concurrent sync operations and handle race conditions.
+let syncPromise: Promise<TestResult[]> | null = null;
 
 const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string | null, data: Record<string, any> = {}) => {
     // The API base URL is determined by the tenant configuration.
@@ -210,39 +210,46 @@ export const googleSheetsService = {
     },
     
     // --- RESULTS HANDLING (CACHE-FIRST APPROACH) ---
-    syncResults: async (user: User, token: string): Promise<void> => {
-        // This lock prevents a race condition where multiple sync requests (e.g., from a button
-        // click and a component mount) could be fired simultaneously. The second request will be
-        // safely ignored, preventing a spurious error notification from a cancelled network request.
-        if (isSyncing) {
-            console.warn("Synchronization already in progress. Skipping this request.");
-            return;
+    syncResults: (user: User, token: string): Promise<TestResult[]> => {
+        // If a sync is already in progress, return the existing promise to the caller.
+        // This prevents a race condition where a component mounts and requests data
+        // while a background sync from login is still running.
+        if (syncPromise) {
+            console.warn("Synchronization already in progress. Awaiting existing operation.");
+            return syncPromise;
         }
-        isSyncing = true;
 
-        try {
-            const serverResults: TestResult[] = await apiFetch('/user-results', 'GET', token) || [];
+        // Create a new promise for this sync operation.
+        syncPromise = (async () => {
+            try {
+                const serverResults: TestResult[] = await apiFetch('/user-results', 'GET', token) || [];
 
-            const resultsObject: { [testId: string]: TestResult } = {};
-            serverResults.forEach(result => {
-                resultsObject[result.testId] = result;
-            });
+                const resultsObject: { [testId: string]: TestResult } = {};
+                serverResults.forEach(result => {
+                    resultsObject[result.testId] = result;
+                });
 
-            const key = `exam_results_${user.id}`;
-            const storedResults = localStorage.getItem(key);
-            const localResults = storedResults ? JSON.parse(storedResults) : {};
+                const key = `exam_results_${user.id}`;
+                const storedResults = localStorage.getItem(key);
+                const localResults = storedResults ? JSON.parse(storedResults) : {};
 
-            const mergedResults = { ...localResults, ...resultsObject };
-            
-            localStorage.setItem(key, JSON.stringify(mergedResults));
-            console.log('Results successfully synced with the server.');
-        } catch (error) {
-            console.error("Failed to sync results with server:", error);
-            throw error;
-        } finally {
-            isSyncing = false;
-        }
+                const mergedResults = { ...localResults, ...resultsObject };
+                
+                localStorage.setItem(key, JSON.stringify(mergedResults));
+                console.log('Results successfully synced with the server.');
+                return Object.values(mergedResults);
+            } catch (error) {
+                console.error("Failed to sync results with server:", error);
+                throw error;
+            } finally {
+                // Clear the promise once the operation is complete (success or failure).
+                syncPromise = null;
+            }
+        })();
+        
+        return syncPromise;
     },
+
 
     getLocalTestResultsForUser: (userId: string): TestResult[] => {
         try {

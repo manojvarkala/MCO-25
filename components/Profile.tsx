@@ -25,23 +25,21 @@ const Profile: FC = () => {
         if (user && token) {
             setIsLoadingResults(true);
     
-            // Immediately load and display any cached results
+            // Immediately load and display any cached results for a better UX
             const cachedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
             cachedResults.sort((a, b) => b.timestamp - a.timestamp);
             setResults(cachedResults);
     
-            // Sync with the server to get the latest data
+            // Sync with the server to get the latest data. The new syncResults handles race conditions.
             const performSync = async () => {
                 try {
-                    await googleSheetsService.syncResults(user, token);
-                    // After syncing, re-read from local storage which is now up-to-date
-                    const updatedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
+                    // syncResults now returns the up-to-date results array.
+                    const updatedResults = await googleSheetsService.syncResults(user, token);
                     updatedResults.sort((a, b) => b.timestamp - a.timestamp);
-                    setResults(updatedResults);
+                    setResults(updatedResults); // This single update ensures the UI reflects the latest synced data.
                 } catch (error: any) {
                     toast.error(error.message || "Could not sync exam history.");
                 } finally {
-                    // Sync is complete (or failed), so stop loading spinner
                     setIsLoadingResults(false);
                 }
             };
