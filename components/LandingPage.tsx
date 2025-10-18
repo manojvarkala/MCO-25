@@ -60,57 +60,51 @@ const LandingPage: FC = () => {
                     Examination Portal
                 </h1>
                 
-                {hasIntroVideo ? (
-                    <>
-                        <p className="text-lg text-slate-600 mb-8">
-                            Your central hub for practice tests, certification exams, and AI-powered study guides. Watch our short intro to see what's inside!
-                        </p>
-                        <div className="aspect-video w-full bg-slate-800 rounded-lg shadow-xl overflow-hidden border-4 border-slate-200">
-                            <video
-                                ref={videoRef}
-                                key={activeOrg.introVideoUrl}
-                                className="w-full h-full object-cover"
-                                src={activeOrg.introVideoUrl}
-                                controls
-                                autoPlay
-                                muted
-                                loop
-                                playsInline
-                            >
-                                Your browser does not support the video tag.
-                            </video>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                         <p className="text-lg text-slate-600 mb-8">
-                            Your central hub for practice tests, certification exams, and AI-powered study guides to accelerate your career.
-                        </p>
-                        <div className="space-y-4 text-left">
-                            <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-slate-200">
-                                <FileText className="h-8 w-8 text-cyan-600 flex-shrink-0" />
-                                <div>
-                                    <h3 className="font-bold text-slate-800">Practice Exams</h3>
-                                    <p className="text-sm text-slate-500">Hone your skills with a wide range of practice tests.</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-slate-200">
-                                <Award className="h-8 w-8 text-cyan-600 flex-shrink-0" />
-                                <div>
-                                    <h3 className="font-bold text-slate-800">Official Certifications</h3>
-                                    <p className="text-sm text-slate-500">Earn verifiable certificates to advance your career.</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-slate-200">
-                                <Sparkles className="h-8 w-8 text-cyan-600 flex-shrink-0" />
-                                <div>
-                                    <h3 className="font-bold text-slate-800">AI-Powered Study Guides</h3>
-                                    <p className="text-sm text-slate-500">Get personalized feedback to focus your studies.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </>
+                <p className="text-lg text-slate-600 mb-8">
+                    Your central hub for practice tests, certification exams, and AI-powered study guides to accelerate your career.
+                </p>
+
+                {hasIntroVideo && (
+                    <div className="aspect-video w-full bg-slate-800 rounded-lg shadow-xl overflow-hidden border-4 border-slate-200 mb-8">
+                        <video
+                            ref={videoRef}
+                            key={activeOrg.introVideoUrl}
+                            className="w-full h-full object-cover"
+                            src={activeOrg.introVideoUrl}
+                            controls
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                        >
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
                 )}
+
+                <div className="space-y-4 text-left">
+                    <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-slate-200">
+                        <FileText className="h-8 w-8 text-cyan-600 flex-shrink-0" />
+                        <div>
+                            <h3 className="font-bold text-slate-800">Practice Exams</h3>
+                            <p className="text-sm text-slate-500">Hone your skills with a wide range of practice tests.</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-slate-200">
+                        <Award className="h-8 w-8 text-cyan-600 flex-shrink-0" />
+                        <div>
+                            <h3 className="font-bold text-slate-800">Official Certifications</h3>
+                            <p className="text-sm text-slate-500">Earn verifiable certificates to advance your career.</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-slate-200">
+                        <Sparkles className="h-8 w-8 text-cyan-600 flex-shrink-0" />
+                        <div>
+                            <h3 className="font-bold text-slate-800">AI-Powered Study Guides</h3>
+                            <p className="text-sm text-slate-500">Get personalized feedback to focus your studies.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Right Side: Login Box */}
