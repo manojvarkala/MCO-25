@@ -70,6 +70,8 @@ const TenantVideoGenerator: FC = () => {
 
     const defaultPrompt = `Create a short, silent, 10-second corporate intro video for a professional certification website called "${activeOrg?.name || 'Certification Portal'}".
 
+**IMPORTANT: Do NOT generate any text, letters, or words in the video.** The visuals should be purely abstract and conceptual.
+
 The video should have a modern, clean, and motivational tone.
 
 Visual Style:
@@ -79,7 +81,7 @@ Visual Style:
 
 Scene Flow:
 1. Start with abstract concepts related to our core topics, such as: ${examProgramNames || 'professional development and online learning'}.
-2. Transition to visuals representing success and achievement, like glowing checkmarks, award icons, or a person confidently looking towards the future.
+2. Transition to visuals representing success and achievement, like glowing checkmarks, award icons, or abstract representations of a person confidently looking towards the future.
 3. End on a clean, inspiring shot, perhaps with a subtle lens flare.
 
 The final video should be suitable for a website's hero section, creating a feeling of professionalism, innovation, and career growth.`;
