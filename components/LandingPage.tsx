@@ -10,7 +10,8 @@ const LandingPage: FC = () => {
     // Fix: Use useNavigate for v6 compatibility.
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { activeOrg, isInitializing } = useAppContext();
+    // The main loading guard is now handled globally in App.tsx. We can safely assume activeOrg exists here.
+    const { activeOrg } = useAppContext();
     
     useEffect(() => {
         if (user) {
@@ -19,21 +20,12 @@ const LandingPage: FC = () => {
         }
     }, [user, navigate]);
 
-    const mainSiteBaseUrl = activeOrg ? `https://${activeOrg.website}` : '';
-    // Revert to the original slug
+    // This component now only renders if activeOrg is available, due to the global guard in App.tsx.
+    const mainSiteBaseUrl = `https://${activeOrg.website}`;
     const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
     const registerUrl = `${mainSiteBaseUrl}/wp-login.php?action=register`;
-
-    if ((isInitializing && !activeOrg) || user) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-                <LogoSpinner />
-                <p className="mt-4 text-slate-500">Loading Application...</p>
-            </div>
-        );
-    }
     
-    const isMedicalCodingTenant = activeOrg?.website.includes('coding-online.net');
+    const isMedicalCodingTenant = activeOrg.website.includes('coding-online.net');
 
     return (
         <div className="min-h-[75vh] flex flex-col lg:flex-row items-center justify-center gap-12 p-4">

@@ -1,6 +1,7 @@
 
 
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { Navigate, useLocation, Routes, Route, BrowserRouter, Outlet } from 'react-router-dom';
@@ -97,10 +98,10 @@ const AppContent: FC = () => {
     const location = useLocation();
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
     
-    // FIX: Add a global loading guard. This prevents a race condition on direct URL
-    // navigation where components try to render before the async app config is loaded,
-    // which was causing a white screen that required a hard refresh.
-    if (isInitializing) {
+    // FIX: The global loading guard must handle both the initializing state AND
+    // the post-initialization state where no org data could be loaded.
+    // Otherwise, components downstream will crash when trying to access `activeOrg.name`, etc.
+    if (isInitializing || !activeOrg) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-slate-100">
                 <LogoSpinner />
