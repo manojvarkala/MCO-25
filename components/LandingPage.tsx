@@ -1,4 +1,4 @@
-import React, { FC, useEffect } from 'react';
+import React, { FC, useEffect, useRef } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from '../context/AppContext.tsx';
@@ -11,6 +11,7 @@ const LandingPage: FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { activeOrg } = useAppContext();
+    const videoRef = useRef<HTMLVideoElement>(null);
     
     useEffect(() => {
         if (user) {
@@ -18,6 +19,18 @@ const LandingPage: FC = () => {
             navigate('/dashboard');
         }
     }, [user, navigate]);
+
+    useEffect(() => {
+        if (videoRef.current) {
+            // Mute is essential for autoplay in modern browsers.
+            videoRef.current.muted = true;
+            // Attempt to play the video programmatically.
+            videoRef.current.play().catch(error => {
+                console.warn("Video autoplay was prevented by the browser:", error);
+                // The user will have to manually click play via the controls.
+            });
+        }
+    }, [activeOrg?.introVideoUrl]);
 
     // FIX: Re-instated a local loading guard. This provides a crucial safety net to prevent
     // the component from crashing if it ever renders before the global configuration is loaded,
@@ -54,6 +67,7 @@ const LandingPage: FC = () => {
                         </p>
                         <div className="aspect-video w-full bg-slate-800 rounded-lg shadow-xl overflow-hidden border-4 border-slate-200">
                             <video
+                                ref={videoRef}
                                 key={activeOrg.introVideoUrl}
                                 className="w-full h-full object-cover"
                                 src={activeOrg.introVideoUrl}

@@ -45,11 +45,44 @@ const decodeHtmlEntities = (text: string | undefined): string => {
     }
 };
 
+// Utility to strip HTML tags, needed for clean AI prompts.
+const stripHtml = (html: string): string => {
+    if (!html || typeof html !== 'string') return html || '';
+    try {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        return tempDiv.textContent || tempDiv.innerText || '';
+    } catch (e) {
+        console.error("Could not parse HTML string for stripping", e);
+        return html;
+    }
+};
+
+
 const TenantVideoGenerator: FC = () => {
     const { activeOrg, updateConfigData } = useAppContext();
     const { token } = useAuth();
 
-    const defaultPrompt = `An engaging, short, silent video for the "${activeOrg?.name || 'certification'}" website. Show abstract visuals of data, code, and symbols related to our core topics like ${activeOrg?.examProductCategories.slice(0, 2).map(p => `"${p.name}"`).join(', ') || 'our certifications'}. Use a professional blue, white, and teal color palette. The video should feel modern, clean, and motivating.`;
+    const examProgramNames = activeOrg?.examProductCategories
+        .map(p => stripHtml(p.name))
+        .slice(0, 3)
+        .join(', ');
+
+    const defaultPrompt = `Create a short, silent, 10-second corporate intro video for a professional certification website called "${activeOrg?.name || 'Certification Portal'}".
+
+The video should have a modern, clean, and motivational tone.
+
+Visual Style:
+- Use an abstract, high-tech aesthetic.
+- Feature visuals like flowing data streams, glowing network nodes, and abstract representations of knowledge.
+- The primary color palette should be professional and sophisticated, using shades of blue, teal, and white.
+
+Scene Flow:
+1. Start with abstract concepts related to our core topics, such as: ${examProgramNames || 'professional development and online learning'}.
+2. Transition to visuals representing success and achievement, like glowing checkmarks, award icons, or a person confidently looking towards the future.
+3. End on a clean, inspiring shot, perhaps with a subtle lens flare.
+
+The final video should be suitable for a website's hero section, creating a feeling of professionalism, innovation, and career growth.`;
 
     const [prompt, setPrompt] = useState(defaultPrompt);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -748,7 +781,7 @@ const Admin: FC = () => {
                         {certificateTemplates.map(template => (
                             <div key={template.id} className="bg-[rgb(var(--color-muted-rgb))] p-3 rounded-md border border-[rgb(var(--color-border-rgb))]">
                                 <p className="font-semibold text-[rgb(var(--color-text-strong-rgb))]">{template.name || `ID: ${template.id}`}</p>
-                                <p className="text-xs text-[rgb(var(--color-text-muted-rgb))] truncate" title={template.title}>Title: "{template.title}"</p>
+                                <p className="text-xs text-slate-500 truncate" title={template.title}>Title: "{template.title}"</p>
                             </div>
                         ))}
                         {certificateTemplates.length === 0 && (

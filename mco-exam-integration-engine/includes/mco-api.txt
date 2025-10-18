@@ -5,11 +5,11 @@ if (!defined('ABSPATH')) exit;
  * =================================================================================================
  * TROUBLESHOOTING: API CONNECTION FAILED or AUTHORIZATION HEADER MISSING
  * =================================================================================================
- * If the exam application cannot connect to the API (CORS errors, fetch errors, or "Authorization
- * header missing" messages), it's almost always a server configuration issue. Many shared hosting
- * environments (like Apache/LiteSpeed) strip the necessary 'Authorization' header from requests by default.
+ * The plugin now includes a robust, layered CORS handling system. However, if issues persist,
+ * it's almost always a server configuration issue. Many shared hosting environments (like Apache/LiteSpeed)
+ * can strip the necessary 'Authorization' header from requests by default.
  *
- * THE FIX:
+ * THE FIX (if our plugin's handler isn't working):
  * Add the following code to the VERY TOP of your WordPress root .htaccess file, before the
  * # BEGIN WordPress block.
  *
@@ -23,6 +23,29 @@ if (!defined('ABSPATH')) exit;
  * Caching plugins can interfere with API routes and CORS headers.
  * =================================================================================================
  */
+
+// --- ROBUST CORS RESPONSE HEADER HANDLER ---
+if (!function_exists('mco_add_cors_headers_to_response')) {
+    /**
+     * Adds the necessary CORS headers to every actual REST API response.
+     * This works in conjunction with the preflight handler in the main plugin file
+     * to ensure that even cached responses have the correct headers.
+     */
+    function mco_add_cors_headers_to_response($result) {
+        $origin = get_http_origin();
+        $allowed_urls_option = get_option('mco_exam_app_url', '');
+        if (!empty($allowed_urls_option)) {
+            $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
+            if ($origin && in_array($origin, $allowed_origins)) {
+                $result->header('Access-Control-Allow-Origin', $origin);
+                $result->header('Access-Control-Allow-Credentials', 'true');
+            }
+        }
+        return $result;
+    }
+}
+add_filter('rest_pre_serve_request', 'mco_add_cors_headers_to_response');
+
 
 // --- JWT GENERATION AND HELPER FUNCTIONS ---
 

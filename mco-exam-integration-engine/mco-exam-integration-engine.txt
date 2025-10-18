@@ -61,39 +61,39 @@ if (!defined('MCO_PLUGIN_VERSION')) {
 }
 define('MCO_DB_VERSION_OPTION', 'mco_plugin_version_db');
 
-// --- NEW CORS HANDLING (HIGH PRIORITY) ---
-if (!function_exists('mco_handle_cors_headers')) {
-    function mco_handle_cors_headers() {
-        $origin = get_http_origin();
-        $allowed_urls_option = get_option('mco_exam_app_url', '');
-        if (empty($allowed_urls_option)) {
-            return;
-        }
-        $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
-
-        if ($origin && in_array($origin, $allowed_origins)) {
-            header("Access-Control-Allow-Origin: {$origin}");
-            header('Access-Control-Allow-Credentials: true');
-            header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
-            header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type, X-Requested-With');
-
-            if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-                status_header(200);
-                exit();
-            }
-        }
-    }
-}
-// Run this action very early, before the REST API initializes, to ensure our headers are respected.
-add_action('init', 'mco_handle_cors_headers', 1);
-
-
 // Include all files to define functions first.
 require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-data.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-api.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; // This file only defines functions, so it's safe to include globally.
+
+
+// --- DEFINITIVE CORS PREFLIGHT HANDLER ---
+if (!function_exists('mco_handle_preflight_request')) {
+    /**
+     * Handles the OPTIONS preflight request for CORS.
+     * This runs with high priority on 'init' to prevent conflicts and immediately sends a 200 OK response.
+     */
+    function mco_handle_preflight_request() {
+        if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+            $origin = get_http_origin();
+            $allowed_urls_option = get_option('mco_exam_app_url', '');
+            if (!empty($allowed_urls_option)) {
+                $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
+                if ($origin && in_array($origin, $allowed_origins)) {
+                    header("Access-Control-Allow-Origin: {$origin}");
+                    header("Access-Control-Allow-Credentials: true");
+                    header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
+                    header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type, X-Requested-With');
+                    status_header(200);
+                    exit(); // Immediately terminate the script
+                }
+            }
+        }
+    }
+}
+add_action('init', 'mco_handle_preflight_request', 1); // Priority 1 to run before almost everything else.
 
 
 // --- INITIALIZATION HOOKS ---
