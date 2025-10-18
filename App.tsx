@@ -1,5 +1,6 @@
 
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { Navigate, useLocation, Routes, Route, BrowserRouter, Outlet } from 'react-router-dom';
@@ -45,6 +46,7 @@ import ContentEngine from './components/ContentEngine.tsx';
 import Handbook from './components/handbook/Handbook.tsx';
 import VerifyCertificate from './components/VerifyCertificate.tsx';
 import VerifyPage from './components/VerifyPage.tsx';
+import LogoSpinner from './components/LogoSpinner.tsx';
 
 // Helper to safely access the aistudio object, which might be in a parent frame.
 function getAiStudio(): { openSelectKey: () => Promise<void>; hasSelectedApiKey: () => Promise<boolean>; } | undefined {
@@ -91,10 +93,22 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }
 
 const AppContent: FC = () => {
     const { user, isMasquerading } = useAuth();
-    const { activeOrg, activeTheme } = useAppContext();
+    const { activeOrg, activeTheme, isInitializing } = useAppContext();
     const location = useLocation();
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
     
+    // FIX: Add a global loading guard. This prevents a race condition on direct URL
+    // navigation where components try to render before the async app config is loaded,
+    // which was causing a white screen that required a hard refresh.
+    if (isInitializing) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-100">
+                <LogoSpinner />
+                <p className="mt-4 text-slate-500">Loading Application...</p>
+            </div>
+        );
+    }
+
     const isTestPage = location.pathname.startsWith('/test/');
     const isAdminPage = location.pathname.startsWith('/admin');
 

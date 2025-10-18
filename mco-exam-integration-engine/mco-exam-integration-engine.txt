@@ -70,20 +70,34 @@ require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; // This file only defin
 
 
 // --- INITIALIZATION HOOKS ---
-if (!function_exists('mco_exam_engine_init')) {
-    function mco_exam_engine_init() {
+if (!function_exists('mco_init_base_and_admin')) {
+    /**
+     * Initializes core components like CPTs, shortcodes, and admin hooks on the 'init' action.
+     */
+    function mco_init_base_and_admin() {
+        mco_register_custom_post_types();
+        mco_register_shortcode_hooks();
+        
         if (is_admin()) {
             mco_check_for_updates();
-        }
-        mco_register_custom_post_types();
-        mco_register_api_hooks();
-        mco_register_shortcode_hooks();
-        if (is_admin()) {
             mco_register_admin_hooks();
         }
     }
-    add_action('init', 'mco_exam_engine_init');
+    add_action('init', 'mco_init_base_and_admin');
 }
+
+if (!function_exists('mco_init_rest_api')) {
+    /**
+     * Initializes all REST API components on the 'rest_api_init' action, which is best practice.
+     * This ensures the REST API environment is ready before our routes are registered, preventing
+     * intermittent state and CORS issues between requests.
+     */
+    function mco_init_rest_api() {
+        mco_register_api_hooks();
+    }
+    add_action('rest_api_init', 'mco_init_rest_api');
+}
+
 
 if (!function_exists('mco_check_for_updates')) {
     function mco_check_for_updates() {
