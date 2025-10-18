@@ -185,17 +185,21 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('subscriptionInfo');
             }
 
-            try {
-                await googleSheetsService.syncResults(payload.user, jwtToken);
-                toast.success(isSyncOnly ? 'Exams synchronized successfully!' : 'Logged in successfully!');
-            } catch (syncError: any) {
-                console.error("Background sync on login failed:", syncError.message);
-                const successPart = isSyncOnly ? 'Exams synchronized.' : 'Login successful.';
-                toast.error(
-                    `${successPart} Could not sync your exam history. Locally saved results will be shown. Error: ${syncError.message}`,
-                    { duration: 10000 }
-                );
-            }
+            // FIX: The sync operation is now non-blocking. It runs in the background
+            // without holding up the login process, allowing for immediate navigation to the dashboard.
+            (async () => {
+                try {
+                    await googleSheetsService.syncResults(payload.user, jwtToken);
+                    toast.success(isSyncOnly ? 'Exams synchronized successfully!' : 'Logged in successfully!');
+                } catch (syncError: any) {
+                    console.error("Background sync on login failed:", syncError.message);
+                    const successPart = isSyncOnly ? 'Exams synchronized.' : 'Login successful.';
+                    toast.error(
+                        `${successPart} Could not sync your exam history. Locally saved results will be shown. Error: ${syncError.message}`,
+                        { duration: 10000 }
+                    );
+                }
+            })();
 
         } else {
             throw new Error("Invalid token payload structure.");
