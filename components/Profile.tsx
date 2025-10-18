@@ -1,6 +1,6 @@
 import React, { FC, useState, useEffect } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';

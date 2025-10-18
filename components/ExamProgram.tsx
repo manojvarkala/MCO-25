@@ -1,5 +1,5 @@
 import React, { FC, useMemo, useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -282,23 +282,4 @@ const ExamProgram: FC = () => {
                             gradientClass="bg-gradient-to-br from-cyan-500 to-sky-600"
                         />
                         <SubscriptionOfferCard
-                            planName="Yearly Subscription"
-                            price={yearlyPrice}
-                            priceUnit="year"
-                            url={yearlySubUrl}
-                            features={[
-                                'All Monthly features',
-                                'Access All Exam Programs',
-                                'Saves over 35%!',
-                            ]}
-                            isBestValue={true}
-                            gradientClass="bg-gradient-to-br from-purple-600 to-indigo-700"
-                        />
-                    </>
-                )}
-            </aside>
-        </div>
-    );
-};
-
-export default ExamProgram;
+                            planName="Yearly Subscription

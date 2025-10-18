@@ -1,5 +1,5 @@
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from "react-router-dom";
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -69,14 +69,16 @@ const Dashboard: FC = () => {
     }, [user, token]); // Re-run if token changes (after sync)
 
     const stats = useMemo(() => {
-        if (!user || results.length === 0) {
+        // FIX: Added a guard for !activeOrg to prevent a crash when the component renders
+        // before the app context is fully loaded. This was the cause of the white screen error.
+        if (!user || results.length === 0 || !activeOrg) {
             return { totalAttempts: 0, averageScore: 'N/A', bestScore: 'N/A', examsPassed: 0 };
         }
         const totalScore = results.reduce((acc, r) => acc + r.score, 0);
         const averageScore = (totalScore / results.length).toFixed(1) + '%';
         const bestScore = Math.max(...results.map(r => r.score)).toFixed(1) + '%';
         const examsPassed = results.filter(r => {
-            const exam = activeOrg?.exams.find(e => e.id === r.examId);
+            const exam = activeOrg.exams.find(e => e.id === r.examId);
             return exam && r.score >= exam.passScore;
         }).length;
 
