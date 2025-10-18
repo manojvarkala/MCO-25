@@ -8,6 +8,7 @@ if (!function_exists('mco_register_shortcode_hooks')) {
         add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
         add_shortcode('exam_program', 'mco_exam_showcase_shortcode'); // Alias
         add_shortcode('mco_book_showcase', 'mco_book_showcase_shortcode');
+        add_shortcode('mco_intro_video', 'mco_intro_video_shortcode');
         
         add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles');
         add_action('wp', 'mco_prevent_caching_on_shortcode_pages');
@@ -22,6 +23,7 @@ if (!function_exists('mco_prevent_caching_on_shortcode_pages')) {
             has_shortcode($post->post_content, 'mco_exam_showcase') ||
             has_shortcode($post->post_content, 'exam_program') ||
             has_shortcode($post->post_content, 'mco_book_showcase') ||
+            has_shortcode($post->post_content, 'mco_intro_video') ||
             has_shortcode($post->post_content, 'mco_exam_login')
         )) {
             if (!defined('DONOTCACHEPAGE')) define('DONOTCACHEPAGE', true);
@@ -49,6 +51,41 @@ if (!function_exists('mco_simple_hash_to_color_index')) {
 }
 
 // --- SHORTCODE IMPLEMENTATIONS ---
+
+/**
+ * [mco_intro_video]
+ * Renders the tenant-specific intro video in a responsive container.
+ * The video URL is managed from the in-app admin panel.
+ */
+function mco_intro_video_shortcode() {
+    $video_url = get_option('mco_intro_video_url', '');
+
+    if (empty($video_url)) {
+        if (current_user_can('manage_options')) {
+            return '<p style="padding: 1rem; background-color: #fffbe5; color: #7a4a01; border: 1px solid #fde086; border-radius: 0.5rem;">[MCO Intro Video Shortcode: No video URL is set. Please generate and set a video in the in-app Admin Dashboard → Branding & Media.]</p>';
+        }
+        return ''; // Return nothing for non-admins if the video is not set
+    }
+
+    ob_start();
+    ?>
+    <div class="mco-video-container">
+        <video
+            src="<?php echo esc_url($video_url); ?>"
+            controls
+            autoplay
+            muted
+            loop
+            playsinline
+            preload="metadata"
+        >
+            Your browser does not support the video tag.
+        </video>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
 
 /**
  * [mco_exam_login]
@@ -200,7 +237,7 @@ function mco_exam_showcase_shortcode($atts) {
                 echo '<p class="mco-sub-card__description">For continuous learning and preparing for multiple certifications.</p>';
                 echo '<div class="mco-sub-card__price">';
                 if (isset($yearly_sub['regularPrice']) && is_numeric($yearly_sub['regularPrice']) && $yearly_sub['regularPrice'] > $yearly_sub['price']) {
-                    echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($yearly_sub['regularPrice'], 2) . '</span> ';
+                     echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($yearly_sub['regularPrice'], 2) . '</span> ';
                 }
                 echo '<span class="mco-sub-card__price-value">$' . number_format_i18n($yearly_sub['price'], 2) . '</span>';
                 echo '<span class="mco-sub-card__price-unit">/year</span>';

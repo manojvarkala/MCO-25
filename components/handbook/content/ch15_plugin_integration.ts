@@ -10,7 +10,15 @@ export const ch15_plugin_integration = `
         <li><strong>Functionality:</strong> When a user visits this page, the shortcode checks if they are logged into WordPress. If they are, it generates a JWT and redirects them to the React app with the token. If they are not, it redirects them to the standard WordPress login screen.</li>
     </ul>
 
-    <h3 class="text-xl font-bold mt-6">15.2 The Showcase Shortcode: <code>[mco_exam_showcase]</code></h3>
+    <h3 class="text-xl font-bold mt-6">15.2 The Intro Video Shortcode: <code>[mco_intro_video]</code></h3>
+    <p>This shortcode allows you to embed the dynamic, tenant-specific intro video directly into any hero section, page, or post on your WordPress site.</p>
+    <ul>
+        <li><strong>Purpose:</strong> To create a visually engaging hero section on your main site using the video generated in the app.</li>
+        <li><strong>Usage:</strong> Simply place <code>[mco_intro_video]</code> where you want the video player to appear. The video will be fully responsive and styled to fit its container.</li>
+        <li><strong>Functionality:</strong> The shortcode fetches the video URL that was set in the <strong>Admin → Branding &amp; Media</strong> section of the React app. If no video is set, nothing will be displayed (except for a notice visible only to administrators).</li>
+    </ul>
+
+    <h3 class="text-xl font-bold mt-6">15.3 The Showcase Shortcode: <code>[mco_exam_showcase]</code></h3>
     <p>This shortcode allows you to embed beautifully styled, dynamic "exam cards" directly into any page or post on your WordPress site.</p>
     <ul>
         <li><strong>Purpose:</strong> To create a sales or information page on your main site that links directly to the exam programs in the React app or adds products to the WooCommerce cart.</li>
@@ -23,14 +31,14 @@ export const ch15_plugin_integration = `
         <li><strong>Functionality:</strong> The shortcode fetches live data from your Exam Programs and WooCommerce products to display up-to-date titles, descriptions, pricing, and "Add to Cart" links.</li>
     </ul>
 
-    <h3 class="text-xl font-bold mt-6">15.3 The Book Showcase Shortcode: <code>[mco_book_showcase]</code></h3>
+    <h3 class="text-xl font-bold mt-6">15.4 The Book Showcase Shortcode: <code>[mco_book_showcase]</code></h3>
     <p>Similar to the exam showcase, this shortcode embeds a grid of your recommended books onto any page.</p>
     <ul>
         <li><strong>Purpose:</strong> To create a "Book Store" or "Resources" page on your main website.</li>
         <li><strong>Functionality:</strong> It displays each book with its cover (either from a URL or procedurally generated), description, and geo-targeted affiliate links for Amazon.</li>
     </ul>
 
-    <h3 class="text-xl font-bold mt-6">15.4 Standalone Purchase Notifier Script</h3>
+    <h3 class="text-xl font-bold mt-6">15.5 Standalone Purchase Notifier Script</h3>
     <p>For added social proof on your main sales pages, the in-app admin panel provides a standalone HTML/JavaScript snippet for the "Live Purchase Notifier."</p>
     <ul>
         <li><strong>Location:</strong> In the React app, navigate to <strong>Admin → Integration → WooCommerce Styling & Scripts</strong>.</li>

@@ -55,8 +55,6 @@ if (!function_exists('mco_register_admin_hooks')) {
         add_action('admin_post_mco_generate_full_snapshot', 'mco_handle_generate_full_snapshot');
         add_action('admin_post_mco_clear_config_cache_action', 'mco_handle_clear_config_cache');
         add_action('admin_post_mco_clear_question_caches_action', 'mco_handle_clear_question_caches');
-        add_action('add_meta_boxes', 'mco_add_exam_program_meta_boxes');
-        add_action('save_post_mco_exam_program', 'mco_save_exam_program_meta_data');
         add_action('admin_init', 'mco_register_certificate_settings'); 
         add_action('admin_init', 'mco_register_main_settings');
         add_action('admin_notices', 'mco_display_admin_notices');

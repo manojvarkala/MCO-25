@@ -1,9 +1,7 @@
 import React, { FC, useState, useCallback, ReactNode } from 'react';
-// FIX: Add missing 'Sparkles' import from lucide-react.
 import { Settings, Award, Lightbulb, PlusCircle, Trash2, RefreshCw, FileText, Cpu, Loader, CheckCircle, XCircle, Trash, Bug, Paintbrush, FileSpreadsheet, DownloadCloud, DatabaseZap, Check, Video, UploadCloud, Sparkles } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
-// FIX: Removed unused 'SearchedUser' import that was causing a compilation error.
-import type { DebugData } from '../types.ts';
+import type { DebugData, Organization } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -51,7 +49,7 @@ const TenantVideoGenerator: FC = () => {
     const { activeOrg, updateConfigData } = useAppContext();
     const { token } = useAuth();
 
-    const defaultPrompt = `An engaging, short, silent video for the ${activeOrg?.name || 'certification'} website. Show abstract visuals of data, code, and symbols related to our core topics like ${activeOrg?.examProductCategories.slice(0, 2).map(p => p.name).join(', ') || 'our certifications'}. Use a professional blue, white, and teal color palette. The video should feel modern, clean, and motivating.`;
+    const defaultPrompt = `An engaging, short, silent video for the "${activeOrg?.name || 'certification'}" website. Show abstract visuals of data, code, and symbols related to our core topics like ${activeOrg?.examProductCategories.slice(0, 2).map(p => `"${p.name}"`).join(', ') || 'our certifications'}. Use a professional blue, white, and teal color palette. The video should feel modern, clean, and motivating.`;
 
     const [prompt, setPrompt] = useState(defaultPrompt);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -59,31 +57,18 @@ const TenantVideoGenerator: FC = () => {
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
 
-    const getAiStudio = (): { openSelectKey: () => Promise<void>; hasSelectedApiKey: () => Promise<boolean>; } | undefined => {
-        try {
-            // @ts-ignore
-            if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') return window.aistudio;
-            // @ts-ignore
-            if (window.parent && window.parent.aistudio && typeof window.parent.aistudio.openSelectKey === 'function') return window.parent.aistudio;
-        } catch (e) { console.warn("Could not access AI Studio context.", e); }
-        return undefined;
-    }
-
     const handleGenerateVideo = async () => {
+        if (!process.env.API_KEY) {
+            toast.error("Gemini API key is not configured for this application.");
+            return;
+        }
+
         setIsGenerating(true);
         setVideoUrl(null);
         setVideoBlob(null);
-        setStatus('Checking for API Key...');
+        setStatus('Initializing video generation with secure API key...');
 
         try {
-            const aistudio = getAiStudio();
-            if (!aistudio) throw new Error("API Key selection feature is unavailable in this environment.");
-            if (!(await aistudio.hasSelectedApiKey())) {
-                setStatus('Please select an API key to proceed.');
-                await aistudio.openSelectKey();
-            }
-            
-            setStatus('Initializing video generation...');
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             
             let operation = await ai.models.generateVideos({
@@ -105,8 +90,7 @@ const TenantVideoGenerator: FC = () => {
             const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
             if (!response.ok) {
                  const errorText = await response.text();
-                 if (errorText.includes("Requested entity was not found.")) throw new Error("API Key error. Please try selecting your key again.");
-                 throw new Error(`Failed to download the generated video. Status: ${response.status}`);
+                 throw new Error(`Failed to download the generated video. Status: ${response.status}. Message: ${errorText}`);
             }
             
             const blob = await response.blob();
@@ -149,7 +133,7 @@ const TenantVideoGenerator: FC = () => {
             </p>
             <div>
                 <label className="text-sm font-bold block mb-1">Video Prompt</label>
-                <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={3} className="w-full p-2 border rounded-md" />
+                <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={4} className="w-full p-2 border rounded-md" />
             </div>
             <button
                 onClick={handleGenerateVideo}

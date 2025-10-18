@@ -6,7 +6,6 @@ import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { PostCreationData, WordpressAuthor, WordpressCategory } from '../types.ts';
 import Spinner from './Spinner.tsx';
-import { GoogleGenAI } from "@google/genai";
 
 interface GeneratedPost {
     title: string;

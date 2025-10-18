@@ -35,7 +35,7 @@ const LandingPage: FC = () => {
     const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
     const registerUrl = `${mainSiteBaseUrl}/wp-login.php?action=register`;
     
-    const isMedicalCodingTenant = activeOrg.website.includes('coding-online.net');
+    const hasIntroVideo = !!activeOrg.introVideoUrl;
 
     return (
         <div className="min-h-[75vh] flex flex-col lg:flex-row items-center justify-center gap-12 p-4">
@@ -47,22 +47,21 @@ const LandingPage: FC = () => {
                     Examination Portal
                 </h1>
                 
-                {isMedicalCodingTenant ? (
+                {hasIntroVideo ? (
                     <>
                         <p className="text-lg text-slate-600 mb-8">
                             Your central hub for practice tests, certification exams, and AI-powered study guides. Watch our short intro to see what's inside!
                         </p>
                         <div className="aspect-video w-full bg-slate-800 rounded-lg shadow-xl overflow-hidden border-4 border-slate-200">
                             <video
-                                key={activeOrg.introVideoUrl || '/intro-video.mp4'}
+                                key={activeOrg.introVideoUrl}
                                 className="w-full h-full object-cover"
-                                src={activeOrg.introVideoUrl || '/intro-video.mp4'}
+                                src={activeOrg.introVideoUrl}
                                 controls
                                 autoPlay
                                 muted
                                 loop
                                 playsInline
-                                poster="https://i.imgur.com/kYk3b2n.png"
                             >
                                 Your browser does not support the video tag.
                             </video>
