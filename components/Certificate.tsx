@@ -1,5 +1,6 @@
 
 
+
 import React, { FC, useState, useEffect, useRef } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { useParams, useNavigate } from 'react-router-dom';
@@ -208,7 +209,7 @@ const Certificate: FC = () => {
                             {organization.logo && <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="h-16 w-16 object-contain" />}
                              <div>
                                 <h1 className="text-2xl md:text-3xl font-bold text-[var(--cert-header-color)] font-[var(--cert-font-display)]">{organization.name}</h1>
-                                <p className="text-sm text-[var(--cert-text-muted-color)]">www.{organization.website}</p>
+                                <p className="text-sm text-[var(--cert-text-muted-color)]">{organization.website}</p>
                             </div>
                         </div>
                         <div className="text-right flex-shrink-0">

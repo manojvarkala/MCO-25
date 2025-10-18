@@ -68,12 +68,12 @@ if (!function_exists('mco_get_full_snapshot_data')) {
     function mco_get_full_snapshot_data($is_blueprint = false) {
         $organizations_data = array();
         $is_wc_active = class_exists('WooCommerce');
-        $site_url = home_url();
-
-        $app_urls = explode("\n", get_option('mco_exam_app_url', ''));
-        $app_urls = array_map('trim', array_filter($app_urls));
-        $first_app_url_parts = !empty($app_urls) ? parse_url($app_urls[0]) : null;
-        $host = isset($first_app_url_parts['host']) ? $first_app_url_parts['host'] : str_replace(array('https://', 'http://'), '', $site_url);
+        
+        // FIX: The host for the 'website' field should be derived from the WordPress installation's URL (home_url),
+        // not the Exam App URL from the settings. This was the root cause of incorrect login links.
+        $site_url_parts = parse_url(home_url());
+        $host = isset($site_url_parts['host']) ? $site_url_parts['host'] : str_replace(array('https://', 'http://'), '', home_url());
+        
         $org_id = 'org-' . sanitize_title(get_bloginfo('name'));
 
         $available_themes = array(

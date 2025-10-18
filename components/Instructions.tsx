@@ -5,7 +5,7 @@ import { useAppContext } from '../context/AppContext.tsx';
 const Instructions: FC = () => {
     const { activeOrg } = useAppContext();
 
-    const websiteUrl = activeOrg ? `https://www.${activeOrg.website}` : '#';
+    const websiteUrl = activeOrg ? `https://${activeOrg.website}` : '#';
     const websiteName = activeOrg ? activeOrg.website : 'our main site';
 
     return (
