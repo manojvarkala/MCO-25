@@ -94,18 +94,6 @@ const AppContent: FC = () => {
     const { activeOrg, activeTheme } = useAppContext();
     const location = useLocation();
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
-    
-    // FIX: The global loading guard is simplified to depend on a single source of truth: `activeOrg`.
-    // This prevents race conditions between `isInitializing` and `activeOrg` states that led to a white screen crash.
-    // The application will now reliably show a loading screen until the configuration is successfully loaded.
-    if (!activeOrg) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-100">
-                <LogoSpinner />
-                <p className="mt-4 text-slate-500">Loading Application...</p>
-            </div>
-        );
-    }
 
     const isTestPage = location.pathname.startsWith('/test/');
     const isAdminPage = location.pathname.startsWith('/admin');
