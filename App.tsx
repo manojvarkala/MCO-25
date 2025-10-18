@@ -46,6 +46,31 @@ import Handbook from './components/handbook/Handbook.tsx';
 import VerifyCertificate from './components/VerifyCertificate.tsx';
 import VerifyPage from './components/VerifyPage.tsx';
 
+// Helper to safely access the aistudio object, which might be in a parent frame.
+function getAiStudio(): { openSelectKey: () => Promise<void>; hasSelectedApiKey: () => Promise<boolean>; } | undefined {
+    try {
+        // @ts-ignore
+        if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+            // @ts-ignore
+            return window.aistudio;
+        }
+        // @ts-ignore
+        if (window.parent && window.parent.aistudio && typeof window.parent.aistudio.openSelectKey === 'function') {
+            // @ts-ignore
+            return window.parent.aistudio;
+        }
+    } catch (e) {
+        // A cross-origin error may be thrown when accessing window.parent.
+        console.warn("Could not access window.parent to check for AI Studio context.", e);
+        // @ts-ignore
+        if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+             // @ts-ignore
+            return window.aistudio;
+        }
+    }
+    return undefined;
+}
+
 interface ProtectedRouteProps {
   children: ReactNode;
   adminOnly?: boolean;
@@ -192,14 +217,13 @@ const ApiKeySelector: FC<{ onKeySelected: () => void }> = ({ onKeySelected }) =>
                 <button
                     onClick={async () => {
                         try {
-                            // @ts-ignore
-                            if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
-                                // @ts-ignore
-                                await window.aistudio.openSelectKey();
-                                onKeySelected();
+                            const aistudio = getAiStudio();
+                            if (aistudio) {
+                                await aistudio.openSelectKey();
+                                onKeySelected(); // Assume success to mitigate race conditions
                             } else {
                                 toast.error("API Key selection feature is unavailable in this environment.");
-                                console.error("window.aistudio.openSelectKey is not available.");
+                                console.error("AI Studio context (window.aistudio) was not found.");
                             }
                         } catch (e) {
                             console.error("Error opening API key selector:", e);
@@ -225,15 +249,14 @@ const App: FC = () => {
   useEffect(() => {
     const checkKey = async () => {
         try {
-            // @ts-ignore
-            if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
-                // @ts-ignore
-                if (await window.aistudio.hasSelectedApiKey()) {
+            const aistudio = getAiStudio();
+            if (aistudio && typeof aistudio.hasSelectedApiKey === 'function') {
+                if (await aistudio.hasSelectedApiKey()) {
                     setHasVeoKey(true);
                 }
             }
         } catch (e) {
-            console.error("AI Studio context not available.", e);
+            console.error("Error checking for selected API key:", e);
         } finally {
             setIsCheckingKey(false);
         }
