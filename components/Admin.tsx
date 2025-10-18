@@ -74,7 +74,7 @@ const TenantVideoGenerator: FC = () => {
             let operation = await ai.models.generateVideos({
                 model: 'veo-3.1-fast-generate-preview',
                 prompt,
-                config: { numberOfVideos: 1, resolution: '720p', aspectRatio: '16:9' }
+                config: { numberOfVideos: 1, aspectRatio: '16:9' }
             });
 
             setStatus('Video generation started. This may take a few minutes...');

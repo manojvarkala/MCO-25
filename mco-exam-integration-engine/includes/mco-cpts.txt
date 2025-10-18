@@ -168,7 +168,8 @@ if (!function_exists('mco_save_exam_program_meta_data')) {
         if (!isset($_POST['mco_exam_meta_box_nonce']) || !wp_verify_nonce($_POST['mco_exam_meta_box_nonce'], 'mco_save_exam_meta_box_data')) return;
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
         if (!current_user_can('edit_post', $post_id)) return;
-        if (!isset($_POST['post_type']) || $_POST['post_type'] !== 'mco_exam_program') return;
+        // CRITICAL FIX: Use get_post_type() for a reliable check, preventing this from running on other post types.
+        if (get_post_type($post_id) !== 'mco_exam_program') return;
 
         $fields = [
             '_mco_practice_exam_title_override' => 'sanitize_text_field',
