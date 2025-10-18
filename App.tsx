@@ -1,7 +1,9 @@
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { Navigate, useLocation, Routes, Route, BrowserRouter, Outlet } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, ToastBar, toast } from 'react-hot-toast';
+import { X } from 'lucide-react';
 
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
 import { AppProvider, useAppContext } from './context/AppContext.tsx';
@@ -187,7 +189,27 @@ const App: FC = () => {
       <AppProvider>
         <BrowserRouter>
             <AppContent />
-            <Toaster position="top-right" reverseOrder={false} />
+            <Toaster position="top-right" reverseOrder={false}>
+              {(t) => (
+                <ToastBar toast={t}>
+                  {({ icon, message }) => (
+                    <>
+                      {icon}
+                      {message}
+                      {t.type !== 'loading' && (
+                        <button
+                          className="ml-4 p-1 rounded-full hover:bg-black/10 transition-colors"
+                          onClick={() => toast.dismiss(t.id)}
+                          aria-label="Dismiss"
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
+                    </>
+                  )}
+                </ToastBar>
+              )}
+            </Toaster>
         </BrowserRouter>
       </AppProvider>
     </AuthProvider>
