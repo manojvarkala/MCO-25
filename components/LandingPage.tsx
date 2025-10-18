@@ -10,7 +10,6 @@ const LandingPage: FC = () => {
     // Fix: Use useNavigate for v6 compatibility.
     const navigate = useNavigate();
     const { user } = useAuth();
-    // The main loading guard is now handled globally in App.tsx. We can safely assume activeOrg exists here.
     const { activeOrg } = useAppContext();
     
     useEffect(() => {
@@ -20,7 +19,18 @@ const LandingPage: FC = () => {
         }
     }, [user, navigate]);
 
-    // This component now only renders if activeOrg is available, due to the global guard in App.tsx.
+    // FIX: Re-instated a local loading guard. This provides a crucial safety net to prevent
+    // the component from crashing if it ever renders before the global configuration is loaded,
+    // which was the direct cause of the white screen issue.
+    if (!activeOrg) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh]">
+                <LogoSpinner />
+                <p className="mt-4 text-slate-500">Loading Portal...</p>
+            </div>
+        );
+    }
+    
     const mainSiteBaseUrl = `https://${activeOrg.website}`;
     const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
     const registerUrl = `${mainSiteBaseUrl}/wp-login.php?action=register`;

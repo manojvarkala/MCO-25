@@ -2,6 +2,8 @@
 
 
 
+
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected import for react-router-dom to resolve module export errors.
 import { Navigate, useLocation, Routes, Route, BrowserRouter, Outlet } from 'react-router-dom';
@@ -94,14 +96,14 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }
 
 const AppContent: FC = () => {
     const { user, isMasquerading } = useAuth();
-    const { activeOrg, activeTheme, isInitializing } = useAppContext();
+    const { activeOrg, activeTheme } = useAppContext();
     const location = useLocation();
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
     
-    // FIX: The global loading guard must handle both the initializing state AND
-    // the post-initialization state where no org data could be loaded.
-    // Otherwise, components downstream will crash when trying to access `activeOrg.name`, etc.
-    if (isInitializing || !activeOrg) {
+    // FIX: The global loading guard is simplified to depend on a single source of truth: `activeOrg`.
+    // This prevents race conditions between `isInitializing` and `activeOrg` states that led to a white screen crash.
+    // The application will now reliably show a loading screen until the configuration is successfully loaded.
+    if (!activeOrg) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-slate-100">
                 <LogoSpinner />
