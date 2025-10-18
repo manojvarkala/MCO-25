@@ -204,6 +204,18 @@ if (!function_exists('mco_register_api_hooks')) {
     }
 }
 
+// FIX: Added the missing handler function for the main /config endpoint.
+if (!function_exists('mco_api_get_config')) {
+    function mco_api_get_config() {
+        $config_data = mco_get_app_config_data();
+        if (empty($config_data)) {
+            return new WP_Error('config_error', 'Could not load application configuration.', array('status' => 500));
+        }
+        return new WP_REST_Response($config_data, 200);
+    }
+}
+
+
 if (!function_exists('mco_api_submit_review')) {
     function mco_api_submit_review(WP_REST_Request $request) {
         if (!class_exists('WooCommerce') || !function_exists('wc_get_product_id_by_sku')) {
