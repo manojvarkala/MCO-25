@@ -185,12 +185,17 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('subscriptionInfo');
             }
 
-            // FIX: The sync operation is now non-blocking. It runs in the background
+            // The sync operation is now non-blocking. It runs in the background
             // without holding up the login process, allowing for immediate navigation to the dashboard.
             (async () => {
                 try {
                     await googleSheetsService.syncResults(payload.user, jwtToken);
-                    toast.success(isSyncOnly ? 'Exams synchronized successfully!' : 'Logged in successfully!');
+                    // Provide clearer feedback: login happens instantly, sync happens in the background.
+                    if (isSyncOnly) {
+                        toast.success('Exams synchronized successfully!');
+                    } else {
+                        toast.success('Logged in successfully! Syncing exam history in the background.');
+                    }
                 } catch (syncError: any) {
                     console.error("Background sync on login failed:", syncError.message);
                     const successPart = isSyncOnly ? 'Exams synchronized.' : 'Login successful.';
