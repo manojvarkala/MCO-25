@@ -37,8 +37,13 @@ if (!function_exists('mco_get_default_certificate_templates')) {
 function mco_get_full_snapshot_data($is_blueprint = false) {
     $site_name = get_bloginfo('name');
     $site_url_parts = parse_url(home_url());
-    // FIX: Removed str_replace to ensure 'www.' is preserved in the website URL.
     $site_host = $site_url_parts['host'] ?? 'default-site.com';
+    
+    // FIX: Force 'www.' for coding-online.net to fix naked URL bug on landing page.
+    if ($site_host === 'coding-online.net') {
+        $site_host = 'www.coding-online.net';
+    }
+
     $custom_logo_url = get_option('mco_custom_logo_url', '');
     $logo_url = !empty($custom_logo_url) ? $custom_logo_url : (get_site_icon_url(512) ?: '');
 
