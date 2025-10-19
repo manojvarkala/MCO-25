@@ -205,7 +205,7 @@ export const googleSheetsService = {
         // Create a new promise for this sync operation.
         syncPromise = (async () => {
             try {
-                const serverResults: TestResult[] = await apiFetch('/user-results', 'POST', token) || [];
+                const serverResults: TestResult[] = await apiFetch('/user-results', 'GET', token) || [];
 
                 const resultsObject: { [testId: string]: TestResult } = {};
                 serverResults.forEach(result => {

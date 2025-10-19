@@ -69,11 +69,37 @@ require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; // This file only defines functions, so it's safe to include globally.
 
 
-// --- NEW BULLETPROOF, AGGRESSIVE CORS HANDLING ---
-if (!function_exists('mco_handle_cors_and_preflight')) {
-    function mco_handle_cors_and_preflight() {
-        // Only run for REST API requests.
-        if (!mco_is_api_request() || headers_sent()) {
+// --- FRESH, BULLETPROOF CORS HANDLING (WordPress Native) ---
+if (!function_exists('mco_rest_api_cors_init')) {
+    function mco_rest_api_cors_init() {
+        // Remove WordPress's default CORS handling so we can implement our own more robust one.
+        remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
+
+        // Add our custom headers to ALL REST API responses.
+        add_filter('rest_pre_serve_request', function($value) {
+            mco_add_cors_headers_to_response();
+            // This is the critical part: if it's a preflight OPTIONS request,
+            // we send the headers and terminate immediately with a 200 OK status.
+            if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+                status_header(200);
+                exit();
+            }
+            return $value;
+        });
+
+        // Also add headers to authentication error responses. This ensures that if the token is
+        // invalid, the frontend can read the error message instead of getting a generic CORS error.
+        add_filter('rest_authentication_errors', function($result) {
+            mco_add_cors_headers_to_response();
+            return $result;
+        });
+    }
+    add_action('rest_api_init', 'mco_rest_api_cors_init', 15);
+}
+
+if (!function_exists('mco_add_cors_headers_to_response')) {
+    function mco_add_cors_headers_to_response() {
+        if (headers_sent()) {
             return;
         }
 
@@ -86,35 +112,14 @@ if (!function_exists('mco_handle_cors_and_preflight')) {
 
         $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
 
-        // If the request origin is in our allowed list, handle CORS.
         if (in_array($origin, $allowed_origins)) {
-            header("Access-Control-Allow-Origin: {$origin}");
+            header("Access-Control-Allow-Origin: " . $origin);
             header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
             header("Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type, X-Requested-With");
             header("Access-Control-Allow-Credentials: true");
-
-            // For preflight (OPTIONS) requests, we send the headers and terminate with 200 OK.
-            // This is the CRITICAL part for authenticated cross-origin requests.
-            if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-                status_header(200);
-                exit();
-            }
         }
     }
 }
-
-// Helper function to detect if the current request is for the REST API.
-if (!function_exists('mco_is_api_request')) {
-    function mco_is_api_request() {
-        if (empty($_SERVER['REQUEST_URI'])) {
-            return false;
-        }
-        return strpos($_SERVER['REQUEST_URI'], '/wp-json/') !== false;
-    }
-}
-
-// Hook into 'init' to handle the preflight request before WordPress does anything else.
-add_action('init', 'mco_handle_cors_and_preflight', 1);
 
 
 // --- INITIALIZATION HOOKS ---
