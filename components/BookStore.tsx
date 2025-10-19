@@ -7,6 +7,9 @@ import BookCover from '../assets/BookCover.tsx';
 
 const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
     const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
+        if (!book.affiliateLinks) {
+            return null;
+        }
         const links = book.affiliateLinks;
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         
@@ -42,9 +45,9 @@ const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
 
     const primaryLink = getGeoAffiliateLink(book);
     const allStores = [
-        { key: 'com' as const, name: 'Amazon.com', url: book.affiliateLinks.com },
-        { key: 'in' as const, name: 'Amazon.in', url: book.affiliateLinks.in },
-        { key: 'ae' as const, name: 'Amazon.ae', url: book.affiliateLinks.ae }
+        { key: 'com' as const, name: 'Amazon.com', url: book.affiliateLinks?.com },
+        { key: 'in' as const, name: 'Amazon.in', url: book.affiliateLinks?.in },
+        { key: 'ae' as const, name: 'Amazon.ae', url: book.affiliateLinks?.ae }
     ];
     const secondaryStores = primaryLink 
         ? allStores.filter(store => store.key !== primaryLink.key && store.url && store.url.trim() !== '')

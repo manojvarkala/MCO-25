@@ -13,172 +13,129 @@
  */
 if (!defined('ABSPATH')) exit;
 
-// Prevent duplicate plugin activation errors.
-if (!function_exists('mco_is_plugin_already_active')) {
-    function mco_is_plugin_already_active() {
-        if (is_admin() && current_user_can('activate_plugins') && function_exists('is_plugin_active') && is_plugin_active(plugin_basename(__FILE__))) {
-            $plugins = get_option('active_plugins');
-            $this_plugin_path = plugin_basename(__FILE__);
-            $this_plugin_dir = dirname($this_plugin_path);
-            $duplicates = array();
-            $current_plugin_data = get_file_data(__FILE__, array('Name' => 'Plugin Name'));
-            $current_plugin_name = $current_plugin_data['Name'];
-
-            foreach ($plugins as $plugin_path) {
-                if ($plugin_path === $this_plugin_path) continue;
-                if (file_exists(WP_PLUGIN_DIR . '/' . $plugin_path)) {
-                    $plugin_data = get_file_data(WP_PLUGIN_DIR . '/' . $plugin_path, array('Name' => 'Plugin Name'));
-                    if (isset($plugin_data['Name']) && $plugin_data['Name'] === $current_plugin_name && dirname($plugin_path) !== $this_plugin_dir) {
-                        $duplicates[] = $plugin_path;
-                    }
-                }
-            }
-            if (!empty($duplicates)) {
-                deactivate_plugins($this_plugin_path);
-                set_transient('mco_duplicate_plugin_error', true, 60);
-                if (isset($_GET['activate'])) unset($_GET['activate']);
-            }
-        }
-    }
-    add_action('admin_init', 'mco_is_plugin_already_active');
-
-    function mco_show_duplicate_plugin_notice() {
-        if (get_transient('mco_duplicate_plugin_error')) {
-            echo '<div class="notice notice-error is-dismissible"><p><strong>Warning:</strong> A duplicate "MCO Exam Integration Engine" plugin was detected and has been deactivated to prevent site errors. Please go to your Plugins page and delete the older version before re-activating.</p></div>';
-            delete_transient('mco_duplicate_plugin_error');
-        }
-    }
-    add_action('admin_notices', 'mco_show_duplicate_plugin_notice');
-}
-
 // --- CONSTANTS & INCLUDES ---
 define('MCO_PLUGIN_FILE', __FILE__);
 define('MCO_PLUGIN_PATH', plugin_dir_path(MCO_PLUGIN_FILE));
 define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
-if (!defined('MCO_PLUGIN_VERSION')) {
-    $plugin_data = get_file_data(MCO_PLUGIN_FILE, array('Version' => 'Version'));
-    define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
-}
-define('MCO_DB_VERSION_OPTION', 'mco_plugin_version_db');
+$plugin_data = get_file_data(MCO_PLUGIN_FILE, array('Version' => 'Version'));
+define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 
-// Include all files to define functions first.
 require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-data.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-api.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; // This file only defines functions, so it's safe to include globally.
-
-
-// --- FRESH, BULLETPROOF CORS HANDLING (WordPress Native) ---
-if (!function_exists('mco_rest_api_cors_init')) {
-    function mco_rest_api_cors_init() {
-        // Remove WordPress's default CORS handling so we can implement our own more robust one.
-        remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
-
-        // Add our custom headers to ALL REST API responses.
-        add_filter('rest_pre_serve_request', function($value) {
-            mco_add_cors_headers_to_response();
-            // This is the critical part: if it's a preflight OPTIONS request,
-            // we send the headers and terminate immediately with a 200 OK status.
-            if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-                status_header(200);
-                exit();
-            }
-            return $value;
-        });
-
-        // Also add headers to authentication error responses. This ensures that if the token is
-        // invalid, the frontend can read the error message instead of getting a generic CORS error.
-        add_filter('rest_authentication_errors', function($result) {
-            mco_add_cors_headers_to_response();
-            return $result;
-        });
-    }
-    add_action('rest_api_init', 'mco_rest_api_cors_init', 15);
-}
-
-if (!function_exists('mco_add_cors_headers_to_response')) {
-    function mco_add_cors_headers_to_response() {
-        if (headers_sent()) {
-            return;
-        }
-
-        $origin = get_http_origin();
-        $allowed_urls_option = get_option('mco_exam_app_url', '');
-
-        if (empty($allowed_urls_option) || empty($origin)) {
-            return;
-        }
-
-        $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
-
-        if (in_array($origin, $allowed_origins)) {
-            header("Access-Control-Allow-Origin: " . $origin);
-            header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-            header("Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type, X-Requested-With");
-            header("Access-Control-Allow-Credentials: true");
-        }
-    }
-}
-
+require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php';
 
 // --- INITIALIZATION HOOKS ---
-if (!function_exists('mco_init_base_and_admin')) {
-    /**
-     * Initializes core components like CPTs, shortcodes, and admin hooks on the 'init' action.
-     */
-    function mco_init_base_and_admin() {
-        mco_register_custom_post_types();
-        mco_register_shortcode_hooks();
+
+// Handles CPTs, shortcodes, and admin-specific hooks.
+add_action('init', function() {
+    mco_register_custom_post_types();
+    mco_register_shortcode_hooks();
+    if (is_admin()) {
+        mco_register_admin_hooks();
+    }
+});
+
+// Handles all REST API related setup, including routes and CORS.
+add_action('rest_api_init', function() {
+    mco_register_api_hooks(); // From mco-api.php
+
+    // This is our new, robust CORS handler.
+    add_filter('rest_pre_serve_request', 'mco_handle_cors_and_preflight', 15, 4);
+    
+    // This ensures auth errors also get correct CORS headers.
+    add_filter('rest_authentication_errors', 'mco_handle_auth_errors_cors', 15);
+});
+
+// --- NEW, ROBUST CORS & PREFLIGHT HANDLING ---
+
+/**
+ * Gets the list of allowed origin URLs from the plugin settings.
+ * @return array A list of validated origin URLs.
+ */
+function mco_get_allowed_origins() {
+    $app_urls_string = get_option('mco_exam_app_url', '');
+    if (empty($app_urls_string)) return [];
+
+    $urls = preg_split('/\r\n|\r|\n/', $app_urls_string);
+    $allowed_origins = [];
+
+    foreach ($urls as $url) {
+        $trimmed_url = trim($url);
+        if (empty($trimmed_url)) continue;
+
+        $parsed_url = parse_url($trimmed_url);
+        if (empty($parsed_url['scheme']) || empty($parsed_url['host'])) continue;
         
-        if (is_admin()) {
-            mco_check_for_updates();
-            mco_register_admin_hooks();
+        $origin = $parsed_url['scheme'] . '://' . $parsed_url['host'];
+        if (!empty($parsed_url['port'])) {
+            $origin .= ':' . $parsed_url['port'];
+        }
+        
+        if (!in_array($origin, $allowed_origins, true)) {
+            $allowed_origins[] = $origin;
         }
     }
-    add_action('init', 'mco_init_base_and_admin');
+    return $allowed_origins;
 }
 
-if (!function_exists('mco_init_rest_api')) {
-    /**
-     * Initializes all REST API components on the 'rest_api_init' action, which is best practice.
-     */
-    function mco_init_rest_api() {
-        mco_register_api_hooks();
-    }
-    add_action('rest_api_init', 'mco_init_rest_api');
-}
+/**
+ * Handles CORS headers for all API requests and properly responds to preflight OPTIONS requests.
+ * This is the core fix for all connectivity issues.
+ */
+function mco_handle_cors_and_preflight($served, $result, $request, $server) {
+    // Only apply this logic to our custom namespace to avoid interfering with other plugins.
+    if (strpos($request->get_route(), '/mco-app/v1/') !== false) {
+        $origin = get_http_origin();
+        $allowed_origins = mco_get_allowed_origins();
 
-
-if (!function_exists('mco_check_for_updates')) {
-    function mco_check_for_updates() {
-        $current_db_version = get_option(MCO_DB_VERSION_OPTION, '0.0.0');
-        if (version_compare($current_db_version, MCO_PLUGIN_VERSION, '<')) {
-            // This is an update. Run the activation logic, which is safe.
-            mco_exam_engine_activate(); 
-            // Update the DB version to match the plugin version.
-            update_option(MCO_DB_VERSION_OPTION, MCO_PLUGIN_VERSION);
+        if ($origin && in_array($origin, $allowed_origins, true)) {
+            // Use the WordPress REST Server's method to send headers. This is the correct way.
+            $server->send_header('Access-Control-Allow-Origin', $origin);
+            $server->send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+            $server->send_header('Access-Control-Allow-Credentials', 'true');
+            $server->send_header('Access-Control-Allow-Headers', 'Authorization, X-WP-Nonce, Content-Type, X-Requested-With');
+            $server->send_header('Vary', 'Origin');
+        }
+        
+        // If this is a preflight (OPTIONS) request, we must send a 200 OK and exit.
+        if ($request->get_method() === 'OPTIONS') {
+            status_header(200);
+            exit();
         }
     }
+    return $served;
 }
 
-// Activation hook for flushing rewrite rules
-if (!function_exists('mco_exam_engine_activate')) {
-    function mco_exam_engine_activate() {
-        mco_register_custom_post_types();
-        flush_rewrite_rules();
-        delete_transient('mco_app_config_data');
-        // Set the version on activation/update
-        update_option(MCO_DB_VERSION_OPTION, MCO_PLUGIN_VERSION);
+/**
+ * Ensures that even authentication error responses get the correct CORS headers.
+ * This allows the frontend to read the error message (e.g., "Token expired")
+ * instead of just getting a generic network error.
+ */
+function mco_handle_auth_errors_cors($result) {
+    if (is_wp_error($result) && !headers_sent()) {
+        $origin = get_http_origin();
+        $allowed_origins = mco_get_allowed_origins();
+        if ($origin && in_array($origin, $allowed_origins, true)) {
+            header('Access-Control-Allow-Origin: ' . esc_url_raw($origin));
+            header('Access-Control-Allow-Credentials: true');
+            header('Vary: Origin');
+        }
     }
-    register_activation_hook(MCO_PLUGIN_FILE, 'mco_exam_engine_activate');
+    return $result;
 }
 
-// Deactivation hook
-if (!function_exists('mco_exam_engine_deactivate')) {
-    function mco_exam_engine_deactivate() {
-        flush_rewrite_rules();
-    }
-    register_deactivation_hook(MCO_PLUGIN_FILE, 'mco_exam_engine_deactivate');
-}
+
+// --- ACTIVATION & DEACTIVATION HOOKS ---
+
+register_activation_hook(MCO_PLUGIN_FILE, function() {
+    mco_register_custom_post_types();
+    flush_rewrite_rules();
+    delete_transient('mco_app_config_data');
+});
+
+register_deactivation_hook(MCO_PLUGIN_FILE, function() {
+    flush_rewrite_rules();
+});
 ?>

@@ -5,6 +5,9 @@ import { BookUp, BookOpen } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 
 const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } | null => {
+    if (!book.affiliateLinks) {
+        return null;
+    }
     const links = book.affiliateLinks;
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     
