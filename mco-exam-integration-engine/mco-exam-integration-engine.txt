@@ -20,11 +20,11 @@ define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
 $plugin_data = get_file_data(MCO_PLUGIN_FILE, array('Version' => 'Version'));
 define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 
-require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-data.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-api.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.txt';
+require_once MCO_PLUGIN_PATH . 'includes/mco-data.txt';
+require_once MCO_PLUGIN_PATH . 'includes/mco-api.txt';
+require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.txt';
+require_once MCO_PLUGIN_PATH . 'includes/mco-admin.txt';
 
 // --- INITIALIZATION HOOKS ---
 add_action('init', function() {
@@ -36,14 +36,18 @@ add_action('init', function() {
 });
 
 // Centralized hook for all REST API related setup.
-add_action('rest_api_init', 'mco_rest_api_init_setup');
+add_action('rest_api_init', 'mco_rest_api_cors_init');
 
 /**
  * Main setup function for the REST API.
  * Registers routes and sets up crucial security filters for CORS.
  */
-function mco_rest_api_init_setup() {
-    mco_register_api_hooks();
+function mco_rest_api_cors_init() {
+    // This is the main hook where all API routes are registered.
+    // It's defined within mco-api.php to keep route definitions organized.
+    mco_register_api_hooks(); 
+
+    // Add filters to handle CORS headers for both successful responses and authentication errors.
     add_filter('rest_pre_serve_request', 'mco_handle_cors_and_preflight', 15, 4);
     add_filter('rest_authentication_errors', 'mco_handle_auth_errors_cors', 15);
 }
@@ -70,8 +74,10 @@ function mco_handle_cors_and_preflight($served, $result, $request, $server) {
         
         // If this is a preflight OPTIONS request, send a 200 OK and exit.
         if ($request->get_method() === 'OPTIONS') {
+            // Setting status_header(200) is crucial for the browser to accept the preflight.
             status_header(200);
-            // This is served, so we should exit.
+            // This is "served", so we should exit to prevent WordPress from continuing.
+            // Returning true from the filter is not enough for OPTIONS requests.
             exit();
         }
     }

@@ -92,7 +92,7 @@ if (!function_exists('mco_verify_exam_jwt')) {
         if (count($parts) !== 3) return false;
         list($header_encoded, $payload_encoded, $signature_encoded) = $parts;
         $signature_to_verify = mco_base64url_decode($signature_encoded);
-        $expected_signature = hash_hmac('sha256', "$header.$payload_encoded", MCO_JWT_SECRET, true);
+        $expected_signature = hash_hmac('sha256', "$header_encoded.$payload_encoded", MCO_JWT_SECRET, true);
         if (!hash_equals($expected_signature, $signature_to_verify)) return false;
         $payload = json_decode(mco_base64url_decode($payload_encoded), true);
         if (!$payload || (isset($payload['exp']) && $payload['exp'] < time())) return false;
