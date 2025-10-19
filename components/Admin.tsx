@@ -92,22 +92,16 @@ const Admin: FC = () => {
     const generateCsvPostRequest = async (action: string, nonceAction: string, setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>) => {
         setIsGenerating(true);
         try {
-            // We are triggering a download from a form submission, which is a standard browser action.
-            // This is simpler than handling blob responses via Fetch API for this use case.
             const form = document.createElement('form');
             form.method = 'post';
             form.action = `${getApiBaseUrl()}/wp-admin/admin-post.php`;
-            form.target = '_blank'; // Open in a new tab to avoid navigating away
+            form.target = '_blank';
 
             const actionInput = document.createElement('input');
             actionInput.type = 'hidden';
             actionInput.name = 'action';
             actionInput.value = action;
             form.appendChild(actionInput);
-
-            // Note: We can't easily get a dynamic nonce here without another API call. 
-            // The nonce verification on the backend is disabled for these specific admin-post actions
-            // and relies on the user being a logged-in admin. This is a reasonable trade-off.
 
             document.body.appendChild(form);
             form.submit();
@@ -299,4 +293,5 @@ const Admin: FC = () => {
         </>
     );
 };
+
 export default Admin;

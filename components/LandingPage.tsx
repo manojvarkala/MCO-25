@@ -129,5 +129,6 @@ const LandingPage: FC = () => {
             </div>
         </div>
     );
+    
 };
 export default LandingPage;

@@ -3,7 +3,12 @@
 .mco-admin-wrap .form-table th { width: 200px; }
 .mco-admin-wrap .button.delete { color: #fff; background: #d63638; border-color: #d63638; }
 .mco-admin-wrap .button.delete:hover { background: #b02a2c; border-color: #b02a2c; }
-
+/* Accordion for Certificate Templates */
+.mco-accordion-item {    border: 1px solid #ddd;    margin-bottom: -1px;}
+.mco-accordion-title {    background-color: #f5f5f5;    padding: 10px 15px;    cursor: pointer;    font-size: 14px;font-weight: bold;    margin: 0;    border-bottom: 1px solid #ddd;}
+.mco-accordion-title:hover {    background-color: #f0f0f0;}
+.mco-accordion-content {    max-height: 0;    overflow: hidden;    transition: max-height 0.3s ease-out;    background: #fff;    padding: 0 15px;}
+.mco-accordion-title.active + .mco-accordion-content {    padding: 15px;}
 /* --- Admin Theme Selector Styles --- */
 .mco-theme-selector-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-top: 1rem; }
 .mco-theme-card { position: relative; display: block; padding: 1rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s ease-in-out; background-color: #fff; }
@@ -13,6 +18,7 @@
 .mco-theme-swatches { display: flex; justify-content: center; gap: 0.25rem; height: 2rem; pointer-events: none; margin-bottom: 0.75rem; }
 .mco-theme-swatch { width: 25%; border-radius: 0.25rem; }
 .mco-theme-name { font-weight: 600; text-align: center; pointer-events: none; color: #1e293b; }
+
 
 /* Theme Swatch Colors */
 .theme-swatch-default-primary { background-color: rgb(8 145 178); }

@@ -164,7 +164,7 @@ function mco_render_bulk_data_tab() { ?>
     </form>
 <?php }
 
-// ... other render functions ...
+// ... other render functions from the user's provided file ...
 
 // --- Handlers for Bulk CSV Export ---
 function mco_handle_generate_programs_csv() {
@@ -210,6 +210,7 @@ function mco_handle_generate_programs_csv() {
     fclose($output);
     exit;
 }
+
 
 function mco_handle_generate_products_csv() {
     if (!current_user_can('manage_options') || !isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_generate_products_csv_nonce')) {
