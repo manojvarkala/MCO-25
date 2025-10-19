@@ -240,7 +240,7 @@ if (!function_exists('mco_register_api_hooks')) {
         register_rest_route('mco-app/v1', '/config', array('methods' => 'GET', 'callback' => 'mco_api_get_config', 'permission_callback' => '__return_true'));
         register_rest_route('mco-app/v1', '/questions-from-sheet', array('methods' => 'POST', 'callback' => 'mco_api_get_questions_from_sheet', 'permission_callback' => 'mco_api_permission_check_user'));
         register_rest_route('mco-app/v1', '/submit-result', array('methods' => 'POST', 'callback' => 'mco_api_submit_result', 'permission_callback' => 'mco_api_permission_check_user'));
-        register_rest_route('mco-app/v1', '/user-results', array('methods' => 'GET', 'callback' => 'mco_api_get_user_results', 'permission_callback' => 'mco_api_permission_check_user'));
+        register_rest_route('mco-app/v1', '/user-results', array('methods' => 'POST', 'callback' => 'mco_api_get_user_results', 'permission_callback' => 'mco_api_permission_check_user'));
         register_rest_route('mco-app/v1', '/certificate-data/(?P<testId>[a-zA-Z0-9_-]+)', array('methods' => 'GET', 'callback' => 'mco_api_get_certificate_data', 'permission_callback' => 'mco_api_permission_check_user'));
         register_rest_route('mco-app/v1', '/update-name', array('methods' => 'POST', 'callback' => 'mco_api_update_user_name', 'permission_callback' => 'mco_api_permission_check_user'));
         register_rest_route('mco-app/v1', '/debug-details', array('methods' => 'GET', 'callback' => 'mco_api_get_debug_details', 'permission_callback' => 'mco_api_permission_check_admin'));
