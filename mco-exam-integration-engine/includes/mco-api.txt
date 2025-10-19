@@ -233,8 +233,8 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
 // --- HOOKS ---
 if (!function_exists('mco_register_api_hooks')) {
     function mco_register_api_hooks() {
-        // IMPORTANT: All Cross-Origin Resource Sharing (CORS) policies are now handled exclusively
-        // by the `mco_rest_api_cors_init` function in the main plugin file.
+        // IMPORTANT: All Cross-Origin Resource Sharing (CORS) policies, including preflight OPTIONS
+        // requests, are now handled exclusively by the `mco_rest_api_cors_init` function in the main plugin file.
 
         register_rest_route('mco-app/v1', '/config', array('methods' => 'GET', 'callback' => 'mco_api_get_config', 'permission_callback' => '__return_true'));
         register_rest_route('mco-app/v1', '/questions-from-sheet', array('methods' => 'POST', 'callback' => 'mco_api_get_questions_from_sheet', 'permission_callback' => 'mco_api_permission_check_user'));

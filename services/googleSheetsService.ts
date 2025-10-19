@@ -205,6 +205,7 @@ export const googleSheetsService = {
         // Create a new promise for this sync operation.
         syncPromise = (async () => {
             try {
+                // REVERT: Changed method back to GET as per user request.
                 const serverResults: TestResult[] = await apiFetch('/user-results', 'GET', token) || [];
 
                 const resultsObject: { [testId: string]: TestResult } = {};
