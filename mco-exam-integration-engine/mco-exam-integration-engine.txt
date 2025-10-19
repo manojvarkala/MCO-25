@@ -55,6 +55,7 @@ function mco_rest_api_init_setup() {
  * Handles CORS headers for all API requests and properly responds to preflight OPTIONS requests.
  */
 function mco_handle_cors_and_preflight($served, $result, $request, $server) {
+    // Only apply this logic to our custom namespace
     if (strpos($request->get_route(), '/mco-app/v1/') !== false) {
         $origin = get_http_origin();
         $allowed_origins = mco_get_allowed_origins();
@@ -67,8 +68,10 @@ function mco_handle_cors_and_preflight($served, $result, $request, $server) {
             $server->send_header('Vary', 'Origin');
         }
         
+        // If this is a preflight OPTIONS request, send a 200 OK and exit.
         if ($request->get_method() === 'OPTIONS') {
             status_header(200);
+            // This is served, so we should exit.
             exit();
         }
     }
@@ -77,6 +80,7 @@ function mco_handle_cors_and_preflight($served, $result, $request, $server) {
 
 /**
  * Ensures that even authentication error responses get the correct CORS headers.
+ * This allows the frontend app to properly handle "session expired" errors instead of showing a generic network error.
  */
 function mco_handle_auth_errors_cors($result) {
     if (!empty($result) && is_wp_error($result) && !headers_sent()) {
@@ -97,6 +101,7 @@ function mco_handle_auth_errors_cors($result) {
 register_activation_hook(MCO_PLUGIN_FILE, function() {
     mco_register_custom_post_types();
     flush_rewrite_rules();
+    // Clear the config cache on activation to ensure the latest data structure is loaded.
     delete_transient('mco_app_config_data');
 });
 

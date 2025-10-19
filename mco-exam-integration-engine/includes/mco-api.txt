@@ -48,12 +48,15 @@ if (!function_exists('mco_generate_exam_jwt')) {
         $subscription_info = mco_get_user_subscription_info($user_id);
         $is_subscribed = $subscription_info && $subscription_info['status'] === 'active';
 
-        $customer_orders = wc_get_orders(['customer_id' => $user_id, 'status' => ['wc-completed', 'wc-processing']]);
-        foreach ($customer_orders as $order) {
-            foreach ($order->get_items() as $item) {
-                $product = $item->get_product();
-                if ($product && $product->get_sku()) {
-                    $paid_exam_ids[] = $product->get_sku();
+        // Get purchases from WooCommerce
+        if (class_exists('WooCommerce')) {
+            $customer_orders = wc_get_orders(['customer_id' => $user_id, 'status' => ['wc-completed', 'wc-processing']]);
+            foreach ($customer_orders as $order) {
+                foreach ($order->get_items() as $item) {
+                    $product = $item->get_product();
+                    if ($product && $product->get_sku()) {
+                        $paid_exam_ids[] = $product->get_sku();
+                    }
                 }
             }
         }
@@ -82,7 +85,6 @@ if (!function_exists('mco_generate_exam_jwt')) {
     }
 }
 
-// ... [mco_verify_exam_jwt and mco_get_exam_app_url functions remain unchanged]
 if (!function_exists('mco_verify_exam_jwt')) {
     function mco_verify_exam_jwt($token) {
         if (!defined('MCO_JWT_SECRET')) return false;
@@ -90,13 +92,14 @@ if (!function_exists('mco_verify_exam_jwt')) {
         if (count($parts) !== 3) return false;
         list($header_encoded, $payload_encoded, $signature_encoded) = $parts;
         $signature_to_verify = mco_base64url_decode($signature_encoded);
-        $expected_signature = hash_hmac('sha256', "$header_encoded.$payload_encoded", MCO_JWT_SECRET, true);
+        $expected_signature = hash_hmac('sha256', "$header.$payload_encoded", MCO_JWT_SECRET, true);
         if (!hash_equals($expected_signature, $signature_to_verify)) return false;
         $payload = json_decode(mco_base64url_decode($payload_encoded), true);
         if (!$payload || (isset($payload['exp']) && $payload['exp'] < time())) return false;
         return $payload;
     }
 }
+
 if (!function_exists('mco_get_exam_app_url')) {
     function mco_get_exam_app_url() {
         $app_urls_string = get_option('mco_exam_app_url', '');
@@ -105,7 +108,7 @@ if (!function_exists('mco_get_exam_app_url')) {
         return trim($urls[0]);
     }
 }
-// ...
+
 
 // --- API REGISTRATION & HOOKS ---
 if (!function_exists('mco_register_api_hooks')) {
@@ -114,7 +117,6 @@ if (!function_exists('mco_register_api_hooks')) {
     }
 }
 
-// ... [rest of the file with route registration and callbacks, but NO CORS code]
 if (!function_exists('mco_register_rest_routes')) {
     function mco_register_rest_routes() {
         $namespace = 'mco-app/v1';
@@ -152,7 +154,7 @@ if (!function_exists('mco_register_rest_routes')) {
     }
 }
 
-// ... [all permission checks and API callback functions remain here]
+// ... all permission checks and API callback functions remain here
 if (!function_exists('mco_api_permission_check_user')) {
     function mco_api_permission_check_user(WP_REST_Request $request) {
         $auth_header = $request->get_header('authorization');
@@ -178,7 +180,6 @@ if (!function_exists('mco_api_permission_check_admin')) {
         return true;
     }
 }
-// ... [all other callback functions like mco_api_get_config, etc.]
 function mco_api_get_config(WP_REST_Request $request) {
     $config_object = mco_get_app_config_data();
     return new WP_REST_Response($config_object, 200);
