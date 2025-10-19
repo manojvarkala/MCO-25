@@ -22,57 +22,6 @@ if (!defined('ABSPATH')) exit;
  * =================================================================================================
  */
 
-if (!function_exists('mco_add_cors_to_api_response')) {
-    /**
-     * Adds CORS headers to successful API responses. This is hooked late to catch the final response object.
-     */
-    function mco_add_cors_to_api_response($result) {
-        $origin = get_http_origin();
-        $allowed_urls_option = get_option('mco_exam_app_url', '');
-        
-        if (empty($allowed_urls_option)) {
-            return $result;
-        }
-        
-        $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
-        
-        if ($origin && in_array($origin, $allowed_origins)) {
-            $response = rest_get_server()->get_response();
-            // This check is important because this hook can run for non-REST responses in some cases.
-            if ($response instanceof WP_REST_Response) {
-                $response->header('Access-Control-Allow-Origin', $origin);
-                $response->header('Access-Control-Allow-Credentials', 'true');
-            }
-        }
-        
-        return $result;
-    }
-}
-
-
-if (!function_exists('mco_add_cors_to_auth_errors')) {
-    /**
-     * Adds CORS headers to authentication error responses.
-     * This is critical to ensure the frontend can read the error message instead of getting a generic CORS error.
-     */
-    function mco_add_cors_to_auth_errors($result) {
-        // This hook is only called on errors. If $result is not an error, it passes through.
-        if (is_wp_error($result)) {
-            $origin = get_http_origin();
-            $allowed_urls_option = get_option('mco_exam_app_url', '');
-            if (!empty($allowed_urls_option) && !headers_sent()) {
-                $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
-                if ($origin && in_array($origin, $allowed_origins)) {
-                    header("Access-Control-Allow-Origin: {$origin}");
-                    header("Access-Control-Allow-Credentials: true");
-                }
-            }
-        }
-        return $result;
-    }
-}
-
-
 // --- JWT GENERATION AND HELPER FUNCTIONS ---
 
 if (!function_exists('mco_base64_url_encode')) {
@@ -284,10 +233,8 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
 // --- HOOKS ---
 if (!function_exists('mco_register_api_hooks')) {
     function mco_register_api_hooks() {
-        // BULLETPROOF CORS FIX: Add headers to all responses (both success and auth errors)
-        // This ensures the frontend can always read the response, even for 403 permission errors.
-        add_filter('rest_pre_serve_request', 'mco_add_cors_to_api_response', 15, 4);
-        add_filter('rest_authentication_errors', 'mco_add_cors_to_auth_errors');
+        // All CORS handling is now managed globally by the mco_handle_all_cors function
+        // in the main plugin file for increased reliability and to override conflicts.
 
         register_rest_route('mco-app/v1', '/config', array('methods' => 'GET', 'callback' => 'mco_api_get_config', 'permission_callback' => '__return_true'));
         register_rest_route('mco-app/v1', '/questions-from-sheet', array('methods' => 'POST', 'callback' => 'mco_api_get_questions_from_sheet', 'permission_callback' => 'mco_api_permission_check_user'));

@@ -69,32 +69,40 @@ require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; // This file only defines functions, so it's safe to include globally.
 
 
-// --- DEFINITIVE CORS PREFLIGHT HANDLER ---
-if (!function_exists('mco_handle_preflight_request')) {
-    function mco_handle_preflight_request() {
-        // Only run this for REST API requests to avoid interfering with the main site.
-        if (defined('REST_REQUEST') && REST_REQUEST && isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-            $origin = get_http_origin();
-            $allowed_urls_option = get_option('mco_exam_app_url', '');
+// --- NEW BULLETPROOF, AGGRESSIVE CORS HANDLING ---
+if (!function_exists('mco_handle_all_cors')) {
+    function mco_handle_all_cors() {
+        // We only want to apply these headers to REST API requests.
+        if (!defined('REST_REQUEST') || !REST_REQUEST) {
+            return;
+        }
 
-            if (empty($allowed_urls_option)) {
-                return; // No allowed origins configured, so do nothing.
-            }
+        $origin = get_http_origin();
+        $allowed_urls_option = get_option('mco_exam_app_url', '');
 
-            $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
-            
-            if ($origin && in_array($origin, $allowed_origins)) {
-                header("Access-Control-Allow-Origin: {$origin}");
-                header("Access-Control-Allow-Credentials: true");
-                header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
-                header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type, X-Requested-With');
-                exit(0); // Immediately terminate the script for OPTIONS requests
-            }
+        if (empty($allowed_urls_option)) {
+            return; // No allowed origins configured.
+        }
+
+        $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
+
+        if ($origin && in_array($origin, $allowed_origins) && !headers_sent()) {
+            header("Access-Control-Allow-Origin: {$origin}");
+            header("Access-Control-Allow-Credentials: true");
+            header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
+            header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type, X-Requested-With');
+        }
+
+        // Specifically handle and terminate the OPTIONS preflight request with a 200 OK status.
+        if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+            status_header(200);
+            exit();
         }
     }
 }
-// Use 'init' with a high priority to catch the request early before other plugins can interfere.
-add_action('init', 'mco_handle_preflight_request', 4);
+// Hook into 'send_headers'. This is an aggressive approach that runs late in the WordPress load,
+// ensuring our headers are the last ones sent and can override any conflicting headers from other plugins or server configs.
+add_action('send_headers', 'mco_handle_all_cors');
 
 
 // --- INITIALIZATION HOOKS ---

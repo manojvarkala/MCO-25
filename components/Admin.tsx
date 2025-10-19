@@ -242,6 +242,7 @@ const Admin: FC = () => {
 
     // State for CSV downloads
     const [isGeneratingWooCsv, setIsGeneratingWooCsv] = useState(false);
+    const [isGeneratingProgramsCsv, setIsGeneratingProgramsCsv] = useState(false);
 
     // State for Sheet Tester
     const [sheetUrlToTest, setSheetUrlToTest] = useState('');
@@ -381,6 +382,7 @@ const Admin: FC = () => {
 
             if (data.length === 0) {
                 toast.error('No certification exams found to generate products for.', { id: toastId });
+                setIsGeneratingWooCsv(false);
                 return;
             }
 
@@ -392,6 +394,62 @@ const Admin: FC = () => {
             toast.error('Failed to generate products CSV.', { id: toastId });
         } finally {
             setIsGeneratingWooCsv(false);
+        }
+    };
+    
+    const handleGenerateProgramsCsv = () => {
+        if (!activeOrg?.examProductCategories || !activeOrg.exams) {
+            toast.error("Exam data not loaded.");
+            return;
+        }
+        setIsGeneratingProgramsCsv(true);
+        const toastId = toast.loading('Generating exam programs CSV...', { id: 'generate-programs-csv' });
+
+        try {
+            const headers = [
+                'program_title', 'program_description', 'question_source_url', 
+                'certification_exam_sku', 'is_proctored', 'certificate_enabled', 
+                'recommended_book_id', 'practice_questions', 'practice_duration', 
+                'cert_questions', 'cert_duration', 'pass_score', 'status'
+            ];
+
+            const data = activeOrg.examProductCategories
+                .map(category => {
+                    const practiceExam = activeOrg.exams.find(e => e.id === category.practiceExamId);
+                    const certExam = activeOrg.exams.find(e => e.id === category.certificationExamId);
+                    
+                    return [
+                        category.name || '',
+                        stripHtml(category.description || ''),
+                        category.questionSourceUrl || practiceExam?.questionSourceUrl || certExam?.questionSourceUrl || '',
+                        certExam?.productSku || '',
+                        certExam?.isProctored ? '1' : '0',
+                        certExam?.certificateEnabled ? '1' : '0',
+                        certExam?.recommendedBookIds?.join(',') || '',
+                        practiceExam?.numberOfQuestions || '',
+                        practiceExam?.durationMinutes || '',
+                        certExam?.numberOfQuestions || '',
+                        certExam?.durationMinutes || '',
+                        certExam?.passScore || '',
+                        'publish'
+                    ];
+                });
+
+            if (data.length === 0) {
+                toast.error('No exam programs found to generate CSV.', { id: toastId });
+                setIsGeneratingProgramsCsv(false);
+                return;
+            }
+
+            const csvContent = createCsvContent(headers, data as any[][]);
+            downloadCsv(csvContent, 'existing_exam_programs.csv');
+            toast.success('Exam Programs CSV generated!', { id: toastId });
+
+        } catch (error: any) {
+            console.error("Failed to generate Exam Programs CSV", error);
+            toast.error('Failed to generate programs CSV.', { id: toastId });
+        } finally {
+            setIsGeneratingProgramsCsv(false);
         }
     };
 
@@ -732,36 +790,46 @@ const Admin: FC = () => {
                     </p>
 
                     <div className="space-y-4 p-4 bg-[rgb(var(--color-muted-rgb))] rounded-lg border border-[rgb(var(--color-border-rgb))]">
-                        <ol className="list-decimal list-inside space-y-4 text-[rgb(var(--color-text-muted-rgb))]">
+                        <ol className="list-decimal list-inside space-y-6 text-[rgb(var(--color-text-muted-rgb))]">
                              <li>
-                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Download Templates</strong><br />
-                                Get the CSV templates for your content. The "Question Sheet Template" is new and supports both 3-column and the recommended 6-column formats.
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                     <a href="/template-exam-programs.csv" download className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-border-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]">
-                                        <DownloadCloud size={16} className="mr-2"/> Download Exam Program Template
-                                    </a>
-                                    <a href="/template-questions.csv" download className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-border-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]">
-                                        <DownloadCloud size={16} className="mr-2"/> Download Question Sheet Template
-                                    </a>
+                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 1: Generate or Download CSV Files</strong><br />
+                                Generate CSVs from your existing data for easy bulk editing, or download an empty template for your questions.
+                                <div className="flex flex-col gap-3 mt-3">
+                                    <div>
+                                        <button
+                                            onClick={handleGenerateProgramsCsv}
+                                            disabled={isGeneratingProgramsCsv}
+                                            className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-border-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] disabled:opacity-50"
+                                        >
+                                            {isGeneratingProgramsCsv ? <Spinner size="sm" /> : <DownloadCloud size={16} className="mr-2"/>}
+                                            {isGeneratingProgramsCsv ? 'Generating...' : 'Generate Exam Programs CSV from Data'}
+                                        </button>
+                                         <a href="/template-exam-programs.csv" download className="text-xs text-[rgb(var(--color-text-muted-rgb))] hover:underline ml-2">(or download empty template)</a>
+                                    </div>
+                                    <div>
+                                        <button
+                                            onClick={handleGenerateWooCsv}
+                                            disabled={isGeneratingWooCsv}
+                                            className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-border-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] disabled:opacity-50"
+                                        >
+                                            {isGeneratingWooCsv ? <Spinner size="sm" /> : <DownloadCloud size={16} className="mr-2"/>}
+                                            {isGeneratingWooCsv ? 'Generating...' : 'Generate WooCommerce Products CSV from Programs'}
+                                        </button>
+                                    </div>
+                                    <div>
+                                         <a href="/template-questions.csv" download className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-border-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-text-default-rgb))] bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]">
+                                            <DownloadCloud size={16} className="mr-2"/> Download Question Sheet Template (Empty)
+                                        </a>
+                                    </div>
                                 </div>
                             </li>
                             <li>
-                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Upload Exam Programs CSV</strong><br />
+                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 2: Upload Exam Programs CSV</strong><br />
                                 Fill the template with your program data, then upload it in your WordPress admin under <a href={`${getApiBaseUrl()}/wp-admin/admin.php?page=mco-exam-engine&tab=bulk_import`} target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] font-semibold hover:underline">Exam App Engine &rarr; Bulk Import</a>.
                             </li>
                             <li>
-                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Generate & Upload WooCommerce Products CSV</strong><br />
-                                After uploading programs, click the button below to generate a new CSV pre-filled with product details for each new exam. Then, upload it in WooCommerce under <a href={`${getApiBaseUrl()}/wp-admin/edit.php?post_type=product&page=product_importer`} target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] font-semibold hover:underline">Products &rarr; Import</a>.
-                                 <div className="flex flex-wrap gap-2 mt-2">
-                                    <button
-                                        onClick={handleGenerateWooCsv}
-                                        disabled={isGeneratingWooCsv}
-                                        className="inline-flex items-center justify-center px-3 py-1.5 border border-[rgb(var(--color-primary-rgb))] text-sm font-medium rounded-md text-[rgb(var(--color-primary-rgb))] bg-[rgba(var(--color-primary-rgb),0.1)] hover:bg-[rgba(var(--color-primary-rgb),0.2)] disabled:opacity-50"
-                                    >
-                                        {isGeneratingWooCsv ? <Spinner size="sm" /> : <FileText size={16} className="mr-2"/>}
-                                        {isGeneratingWooCsv ? 'Generating...' : 'Generate & Download WooCommerce Products CSV'}
-                                    </button>
-                                </div>
+                                <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 3: Upload WooCommerce Products CSV</strong><br />
+                                After uploading programs, use the button in Step 1 to generate a new CSV pre-filled with product details. Then, upload it in WooCommerce under <a href={`${getApiBaseUrl()}/wp-admin/edit.php?post_type=product&page=product_importer`} target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] font-semibold hover:underline">Products &rarr; Import</a>.
                             </li>
                         </ol>
                     </div>
