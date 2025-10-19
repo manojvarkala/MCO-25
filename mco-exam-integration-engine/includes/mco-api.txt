@@ -233,7 +233,7 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
 // --- HOOKS ---
 if (!function_exists('mco_register_api_hooks')) {
     function mco_register_api_hooks() {
-        // All CORS handling is now managed globally by the mco_handle_all_cors function
+        // All CORS handling is now managed globally by the mco_apply_cors_globally function
         // in the main plugin file for increased reliability and to override conflicts.
 
         register_rest_route('mco-app/v1', '/config', array('methods' => 'GET', 'callback' => 'mco_api_get_config', 'permission_callback' => '__return_true'));

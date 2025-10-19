@@ -70,13 +70,8 @@ require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; // This file only defin
 
 
 // --- NEW BULLETPROOF, AGGRESSIVE CORS HANDLING ---
-if (!function_exists('mco_handle_all_cors')) {
-    function mco_handle_all_cors() {
-        // We only want to apply these headers to REST API requests.
-        if (!defined('REST_REQUEST') || !REST_REQUEST) {
-            return;
-        }
-
+if (!function_exists('mco_apply_cors_globally')) {
+    function mco_apply_cors_globally() {
         $origin = get_http_origin();
         $allowed_urls_option = get_option('mco_exam_app_url', '');
 
@@ -86,11 +81,13 @@ if (!function_exists('mco_handle_all_cors')) {
 
         $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
 
+        // Unconditionally add headers if the origin is in our allowed list.
+        // This runs late, so it should override any other conflicting headers.
         if ($origin && in_array($origin, $allowed_origins) && !headers_sent()) {
             header("Access-Control-Allow-Origin: {$origin}");
+            header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+            header("Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type, X-Requested-With");
             header("Access-Control-Allow-Credentials: true");
-            header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
-            header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type, X-Requested-With');
         }
 
         // Specifically handle and terminate the OPTIONS preflight request with a 200 OK status.
@@ -101,8 +98,8 @@ if (!function_exists('mco_handle_all_cors')) {
     }
 }
 // Hook into 'send_headers'. This is an aggressive approach that runs late in the WordPress load,
-// ensuring our headers are the last ones sent and can override any conflicting headers from other plugins or server configs.
-add_action('send_headers', 'mco_handle_all_cors');
+// ensuring our headers are the last ones sent and can override any conflicting headers.
+add_action('send_headers', 'mco_apply_cors_globally');
 
 
 // --- INITIALIZATION HOOKS ---
