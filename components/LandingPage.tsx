@@ -1,5 +1,4 @@
 import React, { FC, useEffect, useRef } from 'react';
-// FIX: Corrected react-router-dom import to resolve module export errors.
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -7,7 +6,6 @@ import { LogIn, UserPlus, FileText, Award, Sparkles } from 'lucide-react';
 import LogoSpinner from './LogoSpinner.tsx';
 
 const LandingPage: FC = () => {
-    // Fix: Use useNavigate for v6 compatibility.
     const navigate = useNavigate();
     const { user } = useAuth();
     const { activeOrg } = useAppContext();
@@ -15,31 +13,25 @@ const LandingPage: FC = () => {
     
     useEffect(() => {
         if (user) {
-            // Fix: Use navigate for v6 compatibility.
             navigate('/dashboard');
         }
     }, [user, navigate]);
 
     useEffect(() => {
         if (videoRef.current) {
-            // Mute is essential for autoplay in modern browsers.
             videoRef.current.muted = true;
-            // Attempt to play the video programmatically.
             videoRef.current.play().catch(error => {
                 console.warn("Video autoplay was prevented by the browser:", error);
-                // The user will have to manually click play via the controls.
             });
         }
     }, [activeOrg?.introVideoUrl]);
 
-    // FIX: Re-instated a local loading guard. This provides a crucial safety net to prevent
-    // the component from crashing if it ever renders before the global configuration is loaded,
-    // which was the direct cause of the white screen issue.
+    // FIX: Re-instated a crucial loading guard to prevent crashes on initial load.
     if (!activeOrg) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh]">
                 <LogoSpinner />
-                <p className="mt-4 text-slate-500">Loading Portal...</p>
+                <p className="mt-4 text-[rgb(var(--color-text-muted-rgb))]">Loading Portal...</p>
             </div>
         );
     }

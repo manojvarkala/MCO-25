@@ -20,17 +20,22 @@ if (!function_exists('mco_get_user_subscription_info')) {
         if (empty($subscriptions)) return null;
 
         $active_sub = null;
+        $latest_sub = null;
         foreach ($subscriptions as $subscription) {
-            if ($subscription->has_status(['active', 'on-hold'])) {
+            if (!$latest_sub) $latest_sub = $subscription;
+            if ($subscription->has_status(['active'])) {
                 $active_sub = $subscription;
                 break;
             }
         }
-        if (!$active_sub) return null;
+        $sub_to_use = $active_sub ? $active_sub : $latest_sub;
+        if (!$sub_to_use) return null;
         
+        $next_payment_timestamp = $sub_to_use->get_time('next_payment');
+
         return [
-            'status' => $active_sub->get_status(),
-            'nextPaymentDate' => date('F j, Y', strtotime($active_sub->get_date('next_payment')))
+            'status' => $sub_to_use->get_status(),
+            'nextPaymentDate' => $next_payment_timestamp ? date('F j, Y', $next_payment_timestamp) : null
         ];
     }
 }
@@ -47,8 +52,7 @@ if (!function_exists('mco_generate_exam_jwt')) {
         $paid_exam_ids = [];
         $subscription_info = mco_get_user_subscription_info($user_id);
         $is_subscribed = $subscription_info && $subscription_info['status'] === 'active';
-
-        // Get purchases from WooCommerce
+        
         if (class_exists('WooCommerce')) {
             $customer_orders = wc_get_orders(['customer_id' => $user_id, 'status' => ['wc-completed', 'wc-processing']]);
             foreach ($customer_orders as $order) {
@@ -92,23 +96,13 @@ if (!function_exists('mco_verify_exam_jwt')) {
         if (count($parts) !== 3) return false;
         list($header_encoded, $payload_encoded, $signature_encoded) = $parts;
         $signature_to_verify = mco_base64url_decode($signature_encoded);
-        $expected_signature = hash_hmac('sha256', "$header.$payload_encoded", MCO_JWT_SECRET, true);
+        $expected_signature = hash_hmac('sha256', "$header_encoded.$payload_encoded", MCO_JWT_SECRET, true);
         if (!hash_equals($expected_signature, $signature_to_verify)) return false;
         $payload = json_decode(mco_base64url_decode($payload_encoded), true);
         if (!$payload || (isset($payload['exp']) && $payload['exp'] < time())) return false;
         return $payload;
     }
 }
-
-if (!function_exists('mco_get_exam_app_url')) {
-    function mco_get_exam_app_url() {
-        $app_urls_string = get_option('mco_exam_app_url', '');
-        if (empty($app_urls_string)) return false;
-        $urls = preg_split('/\\r\\n|\\r|\\n/', $app_urls_string);
-        return trim($urls[0]);
-    }
-}
-
 
 // --- API REGISTRATION & HOOKS ---
 if (!function_exists('mco_register_api_hooks')) {
@@ -141,8 +135,6 @@ if (!function_exists('mco_register_rest_routes')) {
         register_rest_route($namespace, '/debug-details', ['methods' => 'GET', 'callback' => 'mco_api_get_debug_details', 'permission_callback' => 'mco_api_permission_check_admin']);
         register_rest_route($namespace, '/exam-stats', ['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats', 'permission_callback' => 'mco_api_permission_check_admin']);
         register_rest_route($namespace, '/admin/test-sheet-url', ['methods' => 'POST', 'callback' => 'mco_api_admin_test_sheet_url', 'permission_callback' => 'mco_api_permission_check_admin']);
-        register_rest_route($namespace, '/admin/clear-config-cache', ['methods' => 'POST', 'callback' => 'mco_api_admin_clear_config_cache', 'permission_callback' => 'mco_api_permission_check_admin']);
-        register_rest_route($namespace, '/admin/clear-question-caches', ['methods' => 'POST', 'callback' => 'mco_api_admin_clear_question_caches', 'permission_callback' => 'mco_api_permission_check_admin']);
         register_rest_route($namespace, '/admin/clear-all-results', ['methods' => 'POST', 'callback' => 'mco_api_admin_clear_all_results', 'permission_callback' => 'mco_api_permission_check_admin']);
         register_rest_route($namespace, '/admin/update-exam-program', ['methods' => 'POST', 'callback' => 'mco_api_admin_update_exam_program', 'permission_callback' => 'mco_api_permission_check_admin']);
         register_rest_route($namespace, '/admin/create-exam-program', ['methods' => 'POST', 'callback' => 'mco_api_admin_create_exam_program', 'permission_callback' => 'mco_api_permission_check_admin']);
@@ -150,7 +142,6 @@ if (!function_exists('mco_register_rest_routes')) {
         register_rest_route($namespace, '/admin/delete-post', ['methods' => 'POST', 'callback' => 'mco_api_admin_delete_post', 'permission_callback' => 'mco_api_permission_check_admin']);
         register_rest_route($namespace, '/admin/post-creation-data', ['methods' => 'GET', 'callback' => 'mco_api_get_post_creation_data', 'permission_callback' => 'mco_api_permission_check_admin']);
         register_rest_route($namespace, '/admin/create-post-from-app', ['methods' => 'POST', 'callback' => 'mco_api_create_post_from_app', 'permission_callback' => 'mco_api_permission_check_admin']);
-        register_rest_route($namespace, '/admin/set-intro-video', ['methods' => 'POST', 'callback' => 'mco_api_admin_set_intro_video', 'permission_callback' => 'mco_api_permission_check_admin']);
     }
 }
 

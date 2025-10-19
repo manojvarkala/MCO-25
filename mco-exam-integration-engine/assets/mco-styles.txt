@@ -1,117 +1,36 @@
 /* --- MCO Admin Page General Styles --- */
-.mco-admin-wrap .nav-tab-wrapper {
-    margin-bottom: 20px;
-}
-.mco-admin-wrap .form-table th {
-    width: 200px;
-}
-.mco-admin-wrap .button.delete {
-    color: #fff;
-    background: #d63638;
-    border-color: #d63638;
-}
-.mco-admin-wrap .button.delete:hover {
-    background: #b02a2c;
-    border-color: #b02a2c;
-}
-
-/* Accordion for Certificate Templates */
-.mco-accordion-item {
-    border: 1px solid #ddd;
-    margin-bottom: -1px;
-}
-.mco-accordion-title {
-    background-color: #f5f5f5;
-    padding: 10px 15px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    margin: 0;
-    border-bottom: 1px solid #ddd;
-}
-.mco-accordion-title:hover {
-    background-color: #f0f0f0;
-}
-.mco-accordion-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-out;
-    background: #fff;
-    padding: 0 15px;
-}
-.mco-accordion-title.active + .mco-accordion-content {
-    padding: 15px;
-}
+.mco-admin-wrap .nav-tab-wrapper { margin-bottom: 20px; }
+.mco-admin-wrap .form-table th { width: 200px; }
+.mco-admin-wrap .button.delete { color: #fff; background: #d63638; border-color: #d63638; }
+.mco-admin-wrap .button.delete:hover { background: #b02a2c; border-color: #b02a2c; }
 
 /* --- Admin Theme Selector Styles --- */
-.mco-theme-selector-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
-}
-.mco-theme-card {
-    position: relative;
-    padding: 1rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    background-color: #fff;
-}
-.mco-theme-card:hover {
-    border-color: #3b82f6;
-}
-.mco-theme-card.mco-theme-card--selected {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
-.mco-theme-radio {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-.mco-theme-swatches {
-    display: flex;
-    justify-content: center;
-    gap: 0.25rem;
-    height: 2rem;
-    pointer-events: none;
-    margin-bottom: 0.75rem;
-}
-.mco-theme-swatch {
-    width: 25%;
-    border-radius: 0.25rem;
-}
-.mco-theme-name {
-    font-weight: 600;
-    text-align: center;
-    pointer-events: none;
-    color: #1e293b;
-}
+.mco-theme-selector-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-top: 1rem; }
+.mco-theme-card { position: relative; padding: 1rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s ease-in-out; background-color: #fff; }
+.mco-theme-card:hover { border-color: #3b82f6; }
+.mco-theme-card.mco-theme-card--selected { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+.mco-theme-radio { position: absolute; opacity: 0; width: 0; height: 0; }
+.mco-theme-swatches { display: flex; justify-content: center; gap: 0.25rem; height: 2rem; pointer-events: none; margin-bottom: 0.75rem; }
+.mco-theme-swatch { width: 25%; border-radius: 0.25rem; }
+.mco-theme-name { font-weight: 600; text-align: center; pointer-events: none; color: #1e293b; }
 
 /* Theme Swatch Colors */
 .theme-swatch-default-primary { background-color: rgb(8 145 178); }
 .theme-swatch-default-secondary { background-color: rgb(147 51 234); }
 .theme-swatch-default-accent { background-color: rgb(250 204 21); }
 .theme-swatch-default-background { background-color: rgb(15 23 42); border: 1px solid #334155; }
-
 .theme-swatch-professional-primary { background-color: rgb(29 78 216); }
 .theme-swatch-professional-secondary { background-color: rgb(14 165 233); }
 .theme-swatch-professional-accent { background-color: rgb(250 204 21); }
 .theme-swatch-professional-background { background-color: rgb(241 245 249); border: 1px solid #e2e8f0; }
-
 .theme-swatch-serene-primary { background-color: rgb(5 150 105); }
 .theme-swatch-serene-secondary { background-color: rgb(132 204 22); }
 .theme-swatch-serene-accent { background-color: rgb(250 204 21); }
 .theme-swatch-serene-background { background-color: rgb(240 253 244); border: 1px solid #dcfce7; }
-
 .theme-swatch-academic-primary { background-color: rgb(159 18 57); }
 .theme-swatch-academic-secondary { background-color: rgb(217 70 239); }
 .theme-swatch-academic-accent { background-color: rgb(250 204 21); }
 .theme-swatch-academic-background { background-color: rgb(254 250 245); border: 1px solid #f1f5f9; }
-
 .theme-swatch-noir-primary { background-color: rgb(225 29 72); }
 .theme-swatch-noir-secondary { background-color: rgb(245 158 11); }
 .theme-swatch-noir-accent { background-color: rgb(250 204 21); }
