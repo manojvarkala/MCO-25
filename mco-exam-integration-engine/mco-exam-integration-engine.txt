@@ -70,36 +70,51 @@ require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; // This file only defin
 
 
 // --- NEW BULLETPROOF, AGGRESSIVE CORS HANDLING ---
-if (!function_exists('mco_apply_cors_globally')) {
-    function mco_apply_cors_globally() {
+if (!function_exists('mco_handle_cors_and_preflight')) {
+    function mco_handle_cors_and_preflight() {
+        // Only run for REST API requests.
+        if (!mco_is_api_request() || headers_sent()) {
+            return;
+        }
+
         $origin = get_http_origin();
         $allowed_urls_option = get_option('mco_exam_app_url', '');
 
-        if (empty($allowed_urls_option)) {
-            return; // No allowed origins configured.
+        if (empty($allowed_urls_option) || empty($origin)) {
+            return;
         }
 
         $allowed_origins = array_map('trim', explode("\n", $allowed_urls_option));
 
-        // Unconditionally add headers if the origin is in our allowed list.
-        // This runs late, so it should override any other conflicting headers.
-        if ($origin && in_array($origin, $allowed_origins) && !headers_sent()) {
+        // If the request origin is in our allowed list, handle CORS.
+        if (in_array($origin, $allowed_origins)) {
             header("Access-Control-Allow-Origin: {$origin}");
             header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
             header("Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type, X-Requested-With");
             header("Access-Control-Allow-Credentials: true");
-        }
 
-        // Specifically handle and terminate the OPTIONS preflight request with a 200 OK status.
-        if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-            status_header(200);
-            exit();
+            // For preflight (OPTIONS) requests, we send the headers and terminate with 200 OK.
+            // This is the CRITICAL part for authenticated cross-origin requests.
+            if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+                status_header(200);
+                exit();
+            }
         }
     }
 }
-// Hook into 'send_headers'. This is an aggressive approach that runs late in the WordPress load,
-// ensuring our headers are the last ones sent and can override any conflicting headers.
-add_action('send_headers', 'mco_apply_cors_globally');
+
+// Helper function to detect if the current request is for the REST API.
+if (!function_exists('mco_is_api_request')) {
+    function mco_is_api_request() {
+        if (empty($_SERVER['REQUEST_URI'])) {
+            return false;
+        }
+        return strpos($_SERVER['REQUEST_URI'], '/wp-json/') !== false;
+    }
+}
+
+// Hook into 'init' to handle the preflight request before WordPress does anything else.
+add_action('init', 'mco_handle_cors_and_preflight', 1);
 
 
 // --- INITIALIZATION HOOKS ---
