@@ -27,8 +27,6 @@ require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php';
 
 // --- INITIALIZATION HOOKS ---
-
-// Handles CPTs, shortcodes, and admin-specific hooks.
 add_action('init', function() {
     mco_register_custom_post_types();
     mco_register_shortcode_hooks();
@@ -37,38 +35,31 @@ add_action('init', function() {
     }
 });
 
-// Centralized hook for all REST API related setup, including routes and CORS.
+// Centralized hook for all REST API related setup.
 add_action('rest_api_init', 'mco_rest_api_init_setup');
 
 /**
  * Main setup function for the REST API.
- * Registers routes and sets up crucial security filters.
+ * Registers routes and sets up crucial security filters for CORS.
  */
 function mco_rest_api_init_setup() {
-    mco_register_api_hooks(); // From mco-api.php
-
-    // This is our new, robust CORS handler.
+    mco_register_api_hooks();
     add_filter('rest_pre_serve_request', 'mco_handle_cors_and_preflight', 15, 4);
-    
-    // This ensures auth errors also get correct CORS headers.
     add_filter('rest_authentication_errors', 'mco_handle_auth_errors_cors', 15);
 }
 
 
-// --- NEW, ROBUST CORS & PREFLIGHT HANDLING ---
+// --- ROBUST CORS & PREFLIGHT HANDLING ---
 
 /**
  * Handles CORS headers for all API requests and properly responds to preflight OPTIONS requests.
- * This is the core fix for all connectivity issues.
  */
 function mco_handle_cors_and_preflight($served, $result, $request, $server) {
-    // Only apply this logic to our custom namespace to avoid interfering with other plugins.
     if (strpos($request->get_route(), '/mco-app/v1/') !== false) {
         $origin = get_http_origin();
         $allowed_origins = mco_get_allowed_origins();
 
         if ($origin && in_array($origin, $allowed_origins, true)) {
-            // Use the WordPress REST Server's method to send headers. This is the correct way.
             $server->send_header('Access-Control-Allow-Origin', $origin);
             $server->send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
             $server->send_header('Access-Control-Allow-Credentials', 'true');
@@ -76,11 +67,8 @@ function mco_handle_cors_and_preflight($served, $result, $request, $server) {
             $server->send_header('Vary', 'Origin');
         }
         
-        // If this is a preflight (OPTIONS) request, we must send a 200 OK and exit.
         if ($request->get_method() === 'OPTIONS') {
             status_header(200);
-            // This is necessary to prevent WordPress from processing the request further
-            // and potentially returning an error for an empty request body.
             exit();
         }
     }
@@ -89,16 +77,12 @@ function mco_handle_cors_and_preflight($served, $result, $request, $server) {
 
 /**
  * Ensures that even authentication error responses get the correct CORS headers.
- * This allows the frontend to read the error message (e.g., "Token expired")
- * instead of just getting a generic network error.
  */
 function mco_handle_auth_errors_cors($result) {
-    // Only act if an error is present.
     if (!empty($result) && is_wp_error($result) && !headers_sent()) {
         $origin = get_http_origin();
         $allowed_origins = mco_get_allowed_origins();
         if ($origin && in_array($origin, $allowed_origins, true)) {
-            // Use the standard PHP header function here as we don't have the $server object.
             header('Access-Control-Allow-Origin: ' . esc_url_raw($origin));
             header('Access-Control-Allow-Credentials: true');
             header('Vary: Origin');
@@ -113,7 +97,6 @@ function mco_handle_auth_errors_cors($result) {
 register_activation_hook(MCO_PLUGIN_FILE, function() {
     mco_register_custom_post_types();
     flush_rewrite_rules();
-    // Clear the config cache on activation to ensure latest settings are loaded.
     delete_transient('mco_app_config_data');
 });
 
