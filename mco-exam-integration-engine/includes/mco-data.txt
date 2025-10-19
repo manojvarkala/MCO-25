@@ -1,41 +1,42 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-if (!function_exists('mco_get_default_certificate_templates')) {
-    function mco_get_default_certificate_templates() { 
-        return [
-            'cert-practice' => [
-                'id' => 'cert-practice', 
-                'name' => 'Default Practice Certificate', 
-                'title' => 'Certificate of Proficiency', 
-                'body' => "This certifies that <strong>{candidateName}</strong> has successfully demonstrated proficiency in the <strong>{examName}</strong> practice exam, achieving a score of <strong>{finalScore}%</strong>.", 
-                'signature1Name' => 'Amelia Reed', 
-                'signature1Title' => 'Program Director', 
-                'signature1ImageUrl' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw1My4zMjYxQzE2Ljg2NDcsNDcuMjQzNyAyOC43MjQ3LDQwLjM0NDIgNDEuMzQzOCw0NS4xMTM4QzUzLjM2Niw0OS42Njc3IDU5Ljk0ODksNTguNDg4NyA3Mi4zNDM4LDYxLjUxMTRDODQuNzM4OCw2NC41MzQgOTkuNDUwNCw2MC4zODI0IDExMS4yNSw1NC43MkMxMjMuMDQ5Niw0OS4wNTc2IDEzNi44OTYsNDQuNjE4NCAxNDguOTIyLDQ1LjExMzhDMTYwLjk0Niw0NS42MDkzIDE2Ny44OTksNTEuMzMzNyAxNzkuNTgsNDkuNjY3N0MxOTEuMjYsNDggMTk4LjgzNCwzNi4xNzQzIDIxMC43NSwzNi4xNzQzQzIyMi42NjYsMzYuMTc0MyAyMjguODEzLDQ4LjA4NjYgMjM5LjUsNDkuNjY3N0MyNTAuMTg3LDUxLjI0ODkgMjU4LjU5OCw0NC4wMzIxIDI2OS41LDQ1LjExMzhDMjgwLjQwMSw0Ni4xOTU1IDI4Ni41LDUzLjA5NSAyOTEsNjEuNTExNCIgc3Ryb2tlPSIjMWUyOTJiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==', 
-                'signature2Name' => 'Quinn Casey, CPC', 
-                'signature2Title' => 'Lead Instructor',
-                'signature2ImageUrl' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw0Mi4xNDQ4QzE2Ljg2NDcsMzYuMDYyNCAyOC43MjQ3LDI5LjE2MyA0MS4zNDM4LDMzLjkyMjdDNTMuMzY2LDM4LjQ4NjQgNTkuOTQ4OSw0Ny4zMDc1IDcyLjM0MzgsNTAuMzMyMkM4NC43Mzg4LDUzLjM1MjggOTkuNDUwNCw0OS4yMDEyIDExMS4yNSw0My41Mzg4QzEyMy4wNDk2LDM3Ljg3NjQgMTM2Ljg5NiwzMy40Mzc0IDE0OC45MjIsMzMuOTMyN0MxNjAuOTQ2LDM0LjQyNzkgMTY3Ljg5OSw0MC4xNTI1IDE3OS41OCwzOC40ODY3QzE5MS4yNiwzNi44MjA2IDE5OC44MzQsMjQuOTkzMSAyMTAuNzUsMjQuOTkzMUMyMjIuNjY2LDI0Ljk5MzEgMjI4LjgxMywzNi45MDkyIDIzOS41LDM4LjQ4NjdDMjUwLjE4Nyw0MC4wNjczIDI1OC41OTgsMzIuODUwMSAyNjkuNSwzMy45MzI3QzI4MC40MDEsMzUuMDE0MyAyODYuNSw0MS45MTM4IDI5MSw1MC4zMzIyIiBzdHJva2U9IiMxZTI5MmIiIGZpbGw9Im5vbmUiIHN0cm9rZS1waWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+'
-            ], 
-            'cert-completion' => [
-                'id' => 'cert-completion', 
-                'name' => 'Default Completion Certificate', 
-                'title' => 'Certificate of Achievement', 
-                'body' => "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", 
-                'signature1Name' => 'Amelia Reed', 
-                'signature1Title' => 'Program Director', 
-                'signature1ImageUrl' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw1My4zMjYxQzE2Ljg2NDcsNDcuMjQzNyAyOC43MjQ3LDQwLjM0NDIgNDEuMzQzOCw0NS4xMTM4QzUzLjM2Niw0OS42Njc3IDU5Ljk0ODksNTguNDg4NyA3Mi4zNDM4LDYxLjUxMTRDODQuNzM4OCw2NC41MzQgOTkuNDUwNCw2MC4zODI0IDExMS4yNSw1NC43MkMxMjMuMDQ5Niw0OS4wNTc2IDEzNi44OTYsNDQuNjE4NCAxNDguOTIyLDQ1LjExMzhDMTYwLjk0Niw0NS42MDkzIDE2Ny44OTksNTEuMzMzNyAxNzkuNTgsNDkuNjY3N0MxOTEuMjYsNDggMTk4LjgzNCwzNi4xNzQzIDIxMC43NSwzNi4xNzQzQzIyMi42NjYsMzYuMTc0MyAyMjguODEzLDQ4LjA4NjYgMjM5LjUsNDkuNjY3N0MyNTAuMTg3LDUxLjI0ODkgMjU4LjU5OCw0NC4wMzIxIDI2OS41LDQ1LjExMzhDMjgwLjQwMSw0Ni4xOTU1IDI4Ni41LDUzLjA5NSAyOTEsNjEuNTExNCIgc3Ryb2tlPSIjMWUyOTJiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==', 
-                'signature2Name' => 'Quinn Casey, CPC', 
-                'signature2Title' => 'Lead Instructor',
-                'signature2ImageUrl' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw0Mi4xNDQ4QzE2Ljg2NDcsMzYuMDYyNCAyOC43MjQ3LDI5LjE2MyA0MS4zNDM4LDMzLjkyMjdDNTMuMzY2LDM4LjQ4NjQgNTkuOTQ4OSw0Ny4zMDc1IDcyLjM0MzgsNTAuMzMyMkM4NC43Mzg4LDUzLjM1MjggOTkuNDUwNCw0OS4yMDEyIDExMS4yNSw0My41Mzg4QzEyMy4wNDk2LDM3Ljg3NjQgMTM2Ljg5NiwzMy40Mzc0IDE0OC45MjIsMzMuOTMyN0MxNjAuOTQ2LDM0LjQyNzkgMTY3Ljg5OSw0MC4xNTI1IDE3OS41OCwzOC40ODY3QzE5MS4yNiwzNi44MjA2IDE5OC44MzQsMjQuOTkzMSAyMTAuNzUsMjQuOTkzMUMyMjIuNjY2LDI0Ljk5MzEgMjI4LjgxMywzNi45MDkyIDIzOS41LDM4LjQ4NjdDMjUwLjE4Nyw0MC4wNjczIDI1OC41OTgsMzIuODUwMSAyNjkuNSwzMy45MzI3QzI4MC40MDEsMzUuMDE0MyAyODYuNSw0MS45MTM4IDI5MSw1MC4zMzIyIiBzdHJva2U9IiMxZTI5MmIiIGZpbGw9Im5vbmUiIHN0cm9rZS1waWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+'
-            ]
-        ]; 
+// This function is the single source of truth for all dynamic data passed to the React app.
+// It uses a transient for caching to improve performance on high-traffic sites.
+function mco_get_app_config_data() {
+    $cached_data = get_transient('mco_app_config_data');
+    if ($cached_data !== false) {
+        return $cached_data;
     }
+
+    $full_snapshot = mco_get_full_snapshot_data(false);
+    
+    // The snapshot contains the fully structured data. We just need to extract the parts.
+    $active_org = $full_snapshot['organizations'][0] ?? null;
+
+    if (!$active_org) {
+         $data = [
+            'organizations' => [],
+            'examPrices' => new stdClass(),
+        ];
+        set_transient('mco_app_config_data', $data, HOUR_IN_SECONDS);
+        return $data;
+    }
+
+    $data = [
+        'organizations' => $full_snapshot['organizations'],
+        'examPrices' => $full_snapshot['examPrices'],
+    ];
+
+    set_transient('mco_app_config_data', $data, HOUR_IN_SECONDS);
+    return $data;
 }
 
 // A unified function to generate either an empty blueprint or a full content snapshot.
 function mco_get_full_snapshot_data($is_blueprint = false) {
     $site_name = get_bloginfo('name');
     $site_url_parts = parse_url(home_url());
+    // FIX: Removed str_replace to ensure 'www.' is preserved in the website URL.
     $site_host = $site_url_parts['host'] ?? 'default-site.com';
     $custom_logo_url = get_option('mco_custom_logo_url', '');
     $logo_url = !empty($custom_logo_url) ? $custom_logo_url : (get_site_icon_url(512) ?: '');
@@ -53,6 +54,8 @@ function mco_get_full_snapshot_data($is_blueprint = false) {
         $configured_templates = mco_get_default_certificate_templates();
     }
 
+
+    // If it's just a blueprint, we return empty arrays for content.
     if ($is_blueprint) {
         $dynamic_data = [
             'exams' => [],
@@ -61,7 +64,8 @@ function mco_get_full_snapshot_data($is_blueprint = false) {
             'examPrices' => new stdClass()
         ];
     } else {
-        $dynamic_data = mco_get_app_config_data();
+        // Otherwise, we fetch all live data.
+        $dynamic_data = mco_get_live_content_data();
     }
 
     $snapshot_object = [
@@ -70,12 +74,12 @@ function mco_get_full_snapshot_data($is_blueprint = false) {
             [
                 "id" => "org-" . sanitize_title($site_name),
                 "name" => $site_name,
-                "website" => str_replace('www.', '', $site_host),
+                "website" => $site_host,
                 "logo" => $logo_url,
                 "introVideoUrl" => get_option('mco_intro_video_url', ''),
                 "availableThemes" => $available_themes,
                 "activeThemeId" => get_option('mco_active_theme_id', 'default'),
-                "certificateThemeId" => get_option('mco_certificate_theme', 'classic'),
+                "certificateThemeId" => get_option('mco_certificate_theme_id', 'classic'),
                 "exams" => $dynamic_data['exams'],
                 "examProductCategories" => $dynamic_data['examProductCategories'],
                 "certificateTemplates" => array_values($configured_templates),
@@ -88,13 +92,8 @@ function mco_get_full_snapshot_data($is_blueprint = false) {
     return $snapshot_object;
 }
 
-// This function is the single source of truth for all dynamic data passed to the React app.
-function mco_get_app_config_data() {
-    $cached_data = get_transient('mco_app_config_data');
-    if ($cached_data !== false) {
-        return $cached_data;
-    }
-
+// Gathers all live content from CPTs and WooCommerce.
+function mco_get_live_content_data() {
     $all_exams = [];
     $all_prices = [];
     $all_suggested_books = [];
@@ -132,7 +131,7 @@ function mco_get_app_config_data() {
             'certificationExamId' => $cert_exam_obj ? $cert_exam_obj['id'] : null,
         ];
     }
-
+    
     // Step 2: Get ALL products from WooCommerce
     if (class_exists('WooCommerce')) {
         $all_wc_products = wc_get_products(['limit' => -1]);
@@ -184,20 +183,13 @@ function mco_get_app_config_data() {
             ]
         ];
     }
-    
-    // Build the final organizations object for the config
-    $organizations_data = mco_get_full_snapshot_data(true)['organizations'];
-    $organizations_data[0]['exams'] = $all_exams;
-    $organizations_data[0]['examProductCategories'] = $exam_product_categories;
-    $organizations_data[0]['suggestedBooks'] = $all_suggested_books;
 
-    $data = [
-        'organizations' => $organizations_data,
+    return [
+        'exams' => $all_exams,
+        'examProductCategories' => $exam_product_categories,
+        'suggestedBooks' => $all_suggested_books,
         'examPrices' => $all_prices,
     ];
-
-    set_transient('mco_app_config_data', $data, HOUR_IN_SECONDS);
-    return $data;
 }
 
 if (!function_exists('mco_get_single_term')) {
@@ -247,7 +239,8 @@ if (!function_exists('mco_build_exam_object')) {
             $exam_data['id'] = $exam_id;
             $exam_data['numberOfQuestions'] = (int)mco_get_single_term($post->ID, 'exam_practice_questions', 'name');
             $exam_data['durationMinutes'] = (int)mco_get_single_term($post->ID, 'exam_practice_duration', 'name');
-            $exam_data['certificateEnabled'] = (bool)get_post_meta($post->ID, '_mco_practice_certificate_enabled', true);
+            $cert_enabled_meta = get_post_meta($post->ID, '_mco_practice_certificate_enabled', true);
+            $exam_data['certificateEnabled'] = ($cert_enabled_meta === '') ? false : (bool)$cert_enabled_meta;
             $exam_data['certificateTemplateId'] = 'cert-practice';
             $exam_data['isProctored'] = false;
         } else {
@@ -259,7 +252,8 @@ if (!function_exists('mco_build_exam_object')) {
             $exam_data['numberOfQuestions'] = (int)mco_get_single_term($post->ID, 'exam_cert_questions', 'name');
             $exam_data['durationMinutes'] = (int)mco_get_single_term($post->ID, 'exam_cert_duration', 'name');
             $exam_data['isProctored'] = (bool)get_post_meta($post->ID, '_mco_is_proctored', true);
-            $exam_data['certificateEnabled'] = (bool)get_post_meta($post->ID, '_mco_certificate_enabled', true);
+            $cert_enabled_meta = get_post_meta($post->ID, '_mco_certificate_enabled', true);
+            $exam_data['certificateEnabled'] = ($cert_enabled_meta === '') ? true : (bool)$cert_enabled_meta;
             $exam_data['certificateTemplateId'] = 'cert-completion';
 
             if ($cert_sku && class_exists('WooCommerce') && function_exists('wc_get_product_id_by_sku')) {

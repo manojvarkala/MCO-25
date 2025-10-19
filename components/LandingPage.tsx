@@ -8,7 +8,7 @@ import LogoSpinner from './LogoSpinner.tsx';
 const LandingPage: FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { activeOrg } = useAppContext();
+    const { activeOrg, isInitializing } = useAppContext();
     const videoRef = useRef<HTMLVideoElement>(null);
     
     useEffect(() => {
@@ -27,7 +27,7 @@ const LandingPage: FC = () => {
     }, [activeOrg?.introVideoUrl]);
 
     // FIX: Re-instated a crucial loading guard to prevent crashes on initial load.
-    if (!activeOrg) {
+    if (isInitializing || !activeOrg) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh]">
                 <LogoSpinner />

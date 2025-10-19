@@ -6,9 +6,9 @@
 
 /* --- Admin Theme Selector Styles --- */
 .mco-theme-selector-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-top: 1rem; }
-.mco-theme-card { position: relative; padding: 1rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s ease-in-out; background-color: #fff; }
+.mco-theme-card { position: relative; display: block; padding: 1rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s ease-in-out; background-color: #fff; }
 .mco-theme-card:hover { border-color: #3b82f6; }
-.mco-theme-card.mco-theme-card--selected { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+.mco-theme-card.mco-theme-card--selected { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); }
 .mco-theme-radio { position: absolute; opacity: 0; width: 0; height: 0; }
 .mco-theme-swatches { display: flex; justify-content: center; gap: 0.25rem; height: 2rem; pointer-events: none; margin-bottom: 0.75rem; }
 .mco-theme-swatch { width: 25%; border-radius: 0.25rem; }

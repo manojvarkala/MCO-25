@@ -3,13 +3,12 @@
  * Plugin Name:       MCO Exam Integration Engine
  * Plugin URI:        https://annapoornainfo.com
  * Description:       Provides the backend API, user authentication (SSO), and content management for the React-based examination app.
- * Version:           2.3.0
+ * Version:           2.4.0
  * Author:            Annapoorna Infotech
  * Author URI:        https://annapoornainfo.com
  * License:           GPL v2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       mco-exam-engine
- * Update URI:        false
  */
 if (!defined('ABSPATH')) exit;
 
@@ -58,6 +57,7 @@ function mco_rest_api_cors_init() {
  * Handles CORS headers for all API requests and properly responds to preflight OPTIONS requests.
  */
 function mco_handle_cors_and_preflight($served, $result, $request, $server) {
+    // Target only our custom namespace to avoid interfering with other plugins
     if (strpos($request->get_route(), '/mco-app/v1/') !== false) {
         $origin = get_http_origin();
         $allowed_origins = mco_get_allowed_origins();
@@ -70,8 +70,10 @@ function mco_handle_cors_and_preflight($served, $result, $request, $server) {
             $server->send_header('Vary', 'Origin');
         }
         
+        // If this is a preflight OPTIONS request, send a 200 OK and terminate.
         if ($request->get_method() === 'OPTIONS') {
             status_header(200);
+            // This exit is crucial for preflight requests to succeed.
             exit();
         }
     }
@@ -80,6 +82,7 @@ function mco_handle_cors_and_preflight($served, $result, $request, $server) {
 
 /**
  * Ensures that even authentication error responses get the correct CORS headers.
+ * This prevents the app from showing a generic network error when a token expires.
  */
 function mco_handle_auth_errors_cors($result) {
     if (!empty($result) && is_wp_error($result) && !headers_sent()) {
