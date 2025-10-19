@@ -196,364 +196,184 @@ export const googleSheetsService = {
     syncResults: (user: User, token: string): Promise<TestResult[]> => {
         // If a sync is already in progress, return the existing promise to the caller.
         // This prevents a race condition where a component mounts and requests data
-        // while a background sync from login is still running.
+        // while a sync from a previous component (e.g., login) is still running.
         if (syncPromise) {
-            console.warn("Synchronization already in progress. Awaiting existing operation.");
             return syncPromise;
         }
 
         // Create a new promise for this sync operation.
         syncPromise = (async () => {
+            const localResultsKey = `exam_results_${user.id}`;
+            let localResults: TestResult[] = [];
             try {
-                // REVERT: Changed method back to GET as per user request.
-                const serverResults: TestResult[] = await apiFetch('/user-results', 'GET', token) || [];
+                const stored = localStorage.getItem(localResultsKey);
+                if (stored) localResults = JSON.parse(stored);
+            } catch (e) {
+                console.error("Could not parse local results, starting fresh.", e);
+                localResults = [];
+            }
 
-                const resultsObject: { [testId: string]: TestResult } = {};
-                serverResults.forEach(result => {
-                    resultsObject[result.testId] = result;
-                });
+            try {
+                // Fetch remote results from the WordPress backend.
+                // REVERT: Changed method back to GET as requested by the user.
+                const remoteResults: TestResult[] = await apiFetch('/user-results', 'GET', token);
 
-                const key = `exam_results_${user.id}`;
-                const storedResults = localStorage.getItem(key);
-                const localResults = storedResults ? JSON.parse(storedResults) : {};
+                // Merge local and remote results, giving precedence to remote data.
+                const mergedResultsMap = new Map<string, TestResult>();
+                localResults.forEach(r => mergedResultsMap.set(r.testId, r));
+                remoteResults.forEach(r => mergedResultsMap.set(r.testId, r));
 
-                const mergedResults = { ...localResults, ...resultsObject };
+                const mergedResults = Array.from(mergedResultsMap.values());
                 
-                localStorage.setItem(key, JSON.stringify(mergedResults));
-                console.log('Results successfully synced with the server.');
-                return Object.values(mergedResults);
+                // Save the merged results back to local storage.
+                localStorage.setItem(localResultsKey, JSON.stringify(mergedResults));
+
+                // A user might take a test offline and then log in. We need to sync any unsynced local results.
+                const unsyncedLocalResults = localResults.filter(local => !remoteResults.some(remote => remote.testId === local.testId));
+
+                // Send any unsynced results to the backend.
+                for (const result of unsyncedLocalResults) {
+                    await apiFetch('/submit-result', 'POST', token, result);
+                }
+
+                return mergedResults;
             } catch (error) {
-                console.error("Failed to sync results with server:", error);
-                throw error;
+                console.error("Could not sync with server, using local results only.", error);
+                throw error; // Re-throw to be caught in the UI
             } finally {
-                // Clear the promise once the operation is complete (success or failure).
+                // Clear the promise so the next sync operation can start fresh.
                 syncPromise = null;
             }
         })();
-        
+
         return syncPromise;
     },
-
-
     getLocalTestResultsForUser: (userId: string): TestResult[] => {
         try {
-            const storedResults = localStorage.getItem(`exam_results_${userId}`);
-            if (storedResults) {
-                const resultsData = JSON.parse(storedResults);
-                if (resultsData && typeof resultsData === 'object') {
-                    return Object.values(resultsData);
-                }
-            }
-            return [];
-        } catch (error) {
-            console.error("Failed to parse results from localStorage", error);
+            const stored = localStorage.getItem(`exam_results_${userId}`);
+            return stored ? JSON.parse(stored) : [];
+        } catch {
             return [];
         }
     },
-
     getTestResult: (user: User, testId: string): TestResult | undefined => {
-        try {
-            const storedResults = localStorage.getItem(`exam_results_${user.id}`);
-            const results = storedResults ? JSON.parse(storedResults) : {};
-            return results[testId];
-        } catch (error) {
-            console.error("Failed to parse results from localStorage", error);
-            return undefined;
-        }
+        const results = googleSheetsService.getLocalTestResultsForUser(user.id);
+        return results.find(r => r.testId === testId);
     },
-
-    // --- DIRECT API CALLS (NOT CACHED LOCALLY) ---
-    getCertificateData: async (token: string, testId: string, adminView: boolean = false): Promise<ApiCertificateData> => {
-        try {
-            let endpoint = `/certificate-data/${testId}`;
-            if (adminView) {
-                endpoint += '?admin_view=true';
-            }
-            return await apiFetch(endpoint, 'GET', token);
-        } catch (error) {
-            console.error("Failed to get certificate data from server:", error);
-            throw error;
-        }
-    },
-    
-    verifyCertificate: async (certId: string): Promise<VerificationData> => {
-        try {
-            // Public endpoint, so token is null.
-            return await apiFetch(`/verify-certificate/${encodeURIComponent(certId)}`, 'GET', null);
-        } catch (error) {
-            console.error("Failed to verify certificate:", error);
-            throw error;
-        }
-    },
-
-    getDebugDetails: async (token: string): Promise<DebugData> => {
-        try {
-            return await apiFetch(`/debug-details`, 'GET', token);
-        } catch (error) {
-            console.error("Failed to get debug details from server:", error);
-            throw error;
-        }
-    },
-
-    updateUserName: async (token: string, newName: string): Promise<any> => {
-        try {
-            return await apiFetch('/update-name', 'POST', token, { fullName: newName });
-        } catch (error) {
-            console.error("Failed to update user name:", error);
-            throw error;
-        }
-    },
-
-    // --- QUESTION LOADING ---
     getQuestions: async (exam: Exam, token: string): Promise<Question[]> => {
-        if (!exam.questionSourceUrl) {
-            throw new Error(`The exam "${exam.name}" is not configured with a valid question source. Please contact an administrator.`);
-        }
-
-        try {
-            const fetchedQuestions: Question[] = await apiFetch('/questions-from-sheet', 'POST', token, {
-                sheetUrl: exam.questionSourceUrl,
-                count: exam.numberOfQuestions
-            });
-
-            if (!fetchedQuestions || fetchedQuestions.length === 0) {
-                throw new Error("No valid questions were returned from the source. Please check the Google Sheet configuration and ensure it is public.");
-            }
-            
-            if (fetchedQuestions.length < exam.numberOfQuestions) {
-                console.warn(`Warning: Not enough unique questions available for ${exam.name}. Requested ${exam.numberOfQuestions}, but only found ${fetchedQuestions.length}.`);
-            }
-
-            const shuffledQuestions = fetchedQuestions.map(question => {
-                if (!question.options || question.options.length === 0) {
-                    return question;
-                }
-                const correctAnswerText = question.options[question.correctAnswer - 1];
-                
-                let optionsToShuffle = [...question.options];
-                for (let i = optionsToShuffle.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [optionsToShuffle[i], optionsToShuffle[j]] = [optionsToShuffle[j], optionsToShuffle[i]];
-                }
-
-                const newCorrectAnswerIndex = optionsToShuffle.findIndex(option => option === correctAnswerText);
-
-                return {
-                    ...question,
-                    options: optionsToShuffle,
-                    correctAnswer: newCorrectAnswerIndex + 1,
-                };
-            });
-
-            return shuffledQuestions;
-
-        } catch (error) {
-            console.error("Failed to get questions via API proxy:", error);
-            throw error;
-        }
+        return await apiFetch('/questions-from-sheet', 'POST', token, {
+            sheetUrl: exam.questionSourceUrl,
+            count: exam.numberOfQuestions
+        });
     },
-    
-    // --- DUAL-MODE SUBMISSION ---
-    submitTest: async (user: User, examId: string, answers: UserAnswer[], questions: Question[], token: string, proctoringViolations: number): Promise<TestResult> => {
-        const questionPool = questions;
-        const answerMap = new Map(answers.map(a => [a.questionId, a.answer]));
-        let correctCount = 0;
-        const review: TestResult['review'] = [];
+    submitTest: async (user: User, examId: string, userAnswers: UserAnswer[], questions: Question[], token: string, proctoringViolations: number): Promise<TestResult> => {
+        const correctAnswers = questions.reduce((acc, q) => {
+            acc.set(q.id, q.correctAnswer - 1); // Convert to 0-based
+            return acc;
+        }, new Map<number, number>());
 
-        questionPool.forEach(question => {
-            const userAnswerIndex = answerMap.get(question.id);
-            const isAnswered = userAnswerIndex !== undefined;
-            const isCorrect = isAnswered && (userAnswerIndex === question.correctAnswer -1);
-            if (isCorrect) correctCount++;
-            review.push({
-                questionId: question.id,
-                question: question.question,
-                options: question.options,
-                userAnswer: isAnswered ? userAnswerIndex : -1,
-                correctAnswer: question.correctAnswer - 1,
-            });
+        let correctCount = 0;
+        userAnswers.forEach(ua => {
+            if (correctAnswers.get(ua.questionId) === ua.answer) {
+                correctCount++;
+            }
         });
 
-        const totalQuestions = questionPool.length;
-        const score = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
-        
-        const newResult: TestResult = {
-            testId: `test-${Date.now()}`,
+        const score = (correctCount / questions.length) * 100;
+        const testId = `test_${user.id}_${examId}_${Date.now()}`;
+
+        const reviewData = questions.map(q => {
+            const userAnswer = userAnswers.find(ua => ua.questionId === q.id);
+            return {
+                questionId: q.id,
+                question: q.question,
+                options: q.options,
+                userAnswer: userAnswer ? userAnswer.answer : -1, // -1 for unanswered
+                correctAnswer: q.correctAnswer - 1,
+            };
+        });
+
+        const result: TestResult = {
+            testId,
             userId: user.id,
             examId,
-            answers,
-            score: parseFloat(score.toFixed(2)),
+            answers: userAnswers,
+            score,
             correctCount,
-            totalQuestions,
+            totalQuestions: questions.length,
             timestamp: Date.now(),
-            review,
-            proctoringViolations,
+            review: reviewData,
+            proctoringViolations: proctoringViolations
         };
-
-        // Save locally first for responsiveness
-        try {
-            const key = `exam_results_${user.id}`;
-            const storedResults = localStorage.getItem(key);
-            const results = storedResults ? JSON.parse(storedResults) : {};
-            results[newResult.testId] = newResult;
-            localStorage.setItem(key, JSON.stringify(results));
-        } catch (error) {
-            console.error("Failed to save result to localStorage", error);
-            toast.error("Could not save your test result locally.");
-        }
         
-        // Sync with server in the background
-        (async () => {
-            try {
-                await apiFetch('/submit-result', 'POST', token, newResult);
-                console.log('Result successfully synced with the server.');
-            } catch (error) {
-                console.error("Failed to sync result with server:", error);
-                toast.error("Syncing result with the server failed. It's saved locally.");
-            }
-        })();
+        // Save to local storage first for immediate UI update.
+        const localResultsKey = `exam_results_${user.id}`;
+        const localResults = googleSheetsService.getLocalTestResultsForUser(user.id);
+        localResults.push(result);
+        localStorage.setItem(localResultsKey, JSON.stringify(localResults));
+        
+        // Then, sync to backend. Errors are caught by the caller.
+        await apiFetch('/submit-result', 'POST', token, result);
 
-        return Promise.resolve(newResult);
+        return result;
     },
-
-    // --- FEEDBACK & REVIEW SUBMISSIONS ---
-    submitFeedback: async (token: string, category: string, message: string): Promise<void> => {
-        try {
-            await apiFetch('/submit-feedback', 'POST', token, { category, message });
-        } catch (error) {
-            console.error("Failed to submit feedback:", error);
-            throw error;
-        }
+    getCertificateData: async (token: string, testId: string, isAdminView: boolean = false): Promise<ApiCertificateData> => {
+        const endpoint = `/certificate-data/${testId}${isAdminView ? '?admin_view=true' : ''}`;
+        return await apiFetch(endpoint, 'GET', token);
     },
-
-    submitReview: async (token: string, examId: string, rating: number, reviewText: string): Promise<void> => {
-        try {
-            await apiFetch('/submit-review', 'POST', token, { examId, rating, reviewText });
-        } catch (error) {
-            console.error("Failed to submit review:", error);
-            throw error;
-        }
+    updateUserName: async (token: string, fullName: string): Promise<{ message: string }> => {
+        return await apiFetch('/update-name', 'POST', token, { fullName });
     },
-
-    // --- ADMIN ACTIONS ---
+    submitFeedback: async (token: string, category: string, message: string): Promise<{ success: boolean }> => {
+        return await apiFetch('/submit-feedback', 'POST', token, { category, message });
+    },
+    submitReview: async (token: string, examId: string, rating: number, reviewText: string): Promise<{ success: boolean }> => {
+        return await apiFetch('/submit-review', 'POST', token, { examId, rating, reviewText });
+    },
+    verifyCertificate: async (certId: string): Promise<VerificationData> => {
+        return await apiFetch(`/verify-certificate/${certId}`, 'GET', null);
+    },
+    
+    // --- ADMIN ENDPOINTS ---
+    getDebugDetails: async (token: string): Promise<DebugData> => {
+        return await apiFetch('/debug-details', 'GET', token);
+    },
+    getExamStats: async (token: string): Promise<ExamStat[]> => {
+        return await apiFetch('/exam-stats', 'GET', token);
+    },
+    adminTestSheetUrl: async (token: string, sheetUrl: string): Promise<any> => {
+        return await apiFetch('/admin/test-sheet-url', 'POST', token, { sheetUrl });
+    },
+    adminClearConfigCache: async (token: string): Promise<{ success: boolean, message: string }> => {
+        return await apiFetch('/admin/clear-config-cache', 'POST', token);
+    },
+    adminClearQuestionCaches: async (token: string): Promise<{ success: boolean, message: string }> => {
+        return await apiFetch('/admin/clear-question-caches', 'POST', token);
+    },
+    adminClearAllResults: async (token: string): Promise<{ success: boolean, message: string }> => {
+        return await apiFetch('/admin/clear-all-results', 'POST', token);
+    },
+    adminUpdateExamProgram: async (token: string, programId: string, updateData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
+        return await apiFetch('/admin/update-exam-program', 'POST', token, { programId, updateData });
+    },
+    adminCreateExamProgram: async (token: string, programName: string, productLinkData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
+        return await apiFetch('/admin/create-exam-program', 'POST', token, { programName, productLinkData });
+    },
+    adminUpsertProduct: async (token: string, productData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
+        return await apiFetch('/admin/upsert-product', 'POST', token, productData);
+    },
+    adminDeletePost: async (token: string, postId: string, postType: 'mco_exam_program' | 'product'): Promise<{ organizations: Organization[], examPrices: any }> => {
+        return await apiFetch('/admin/delete-post', 'POST', token, { postId, postType });
+    },
+    getPostCreationData: async (token: string): Promise<PostCreationData> => {
+        return await apiFetch('/admin/post-creation-data', 'GET', token);
+    },
+    createPostFromApp: async (token: string, postPayload: any): Promise<{ success: boolean, post_id: number, post_url: string }> => {
+        return await apiFetch('/admin/create-post-from-app', 'POST', token, postPayload);
+    },
     adminUploadIntroVideo: async (token: string, videoBlob: Blob): Promise<{ organizations: Organization[], examPrices: any }> => {
         const formData = new FormData();
         formData.append('video', videoBlob, 'intro-video.mp4');
-        try {
-            return await apiFetch('/admin/set-intro-video', 'POST', token, formData as any, true);
-        } catch (error) {
-            console.error("Failed to upload intro video:", error);
-            throw error;
-        }
-    },
-    
-    getPostCreationData: async (token: string): Promise<PostCreationData> => {
-        try {
-            return await apiFetch('/admin/post-creation-data', 'GET', token);
-        } catch (error) {
-            console.error("Failed to get post creation data:", error);
-            throw error;
-        }
-    },
-
-    createPostFromApp: async (token: string, postData: any): Promise<{ success: boolean; post_id: number; post_url: string; }> => {
-        try {
-            return await apiFetch('/admin/create-post-from-app', 'POST', token, postData);
-        } catch (error) {
-            console.error("Failed to create post:", error);
-            throw error;
-        }
-    },
-
-    adminUpdateExamProgram: async (token: string, programId: string, updateData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
-        try {
-            return await apiFetch('/admin/update-exam-program', 'POST', token, { programId, updateData });
-        } catch (error) {
-            console.error("Failed to update exam program:", error);
-            throw error;
-        }
-    },
-    
-    adminCreateExamProgram: async (token: string, programName: string, productLinkData?: any): Promise<{ organizations: Organization[], examPrices: any }> => {
-        try {
-            return await apiFetch('/admin/create-exam-program', 'POST', token, { programName, productLinkData });
-        } catch (error) {
-            console.error("Failed to create exam program:", error);
-            throw error;
-        }
-    },
-    
-    adminUpsertProduct: async (token: string, productData: { 
-        sku: string; 
-        name?: string; 
-        price?: number; 
-        regularPrice?: number; 
-        isBundle?: boolean;
-        bundled_skus?: string[];
-        subscription_period?: 'day' | 'week' | 'month' | 'year';
-        subscription_period_interval?: string;
-        subscription_length?: string;
-    }): Promise<any> => {
-        try {
-            return await apiFetch('/admin/upsert-product', 'POST', token, productData);
-        } catch (error) {
-            console.error("Failed to upsert product:", error);
-            throw error;
-        }
-    },
-
-    adminDeletePost: async (token: string, postId: string | number, postType: string): Promise<{ organizations: Organization[], examPrices: any }> => {
-        try {
-            return await apiFetch('/admin/delete-post', 'POST', token, { postId, postType });
-        } catch (error) {
-            console.error("Failed to delete post:", error);
-            throw error;
-        }
-    },
-
-    adminTestSheetUrl: async (token: string, sheetUrl: string): Promise<any> => {
-        try {
-            return await apiFetch('/admin/test-sheet-url', 'POST', token, { sheetUrl });
-        } catch (error) {
-            console.error("Failed to test sheet URL:", error);
-            throw error;
-        }
-    },
-
-    adminClearConfigCache: async (token: string): Promise<any> => {
-        try {
-            return await apiFetch('/admin/clear-config-cache', 'POST', token);
-        } catch (error) {
-            console.error("Failed to clear config cache:", error);
-            throw error;
-        }
-    },
-
-    adminClearQuestionCaches: async (token: string): Promise<any> => {
-        try {
-            return await apiFetch('/admin/clear-question-caches', 'POST', token);
-        } catch (error) {
-            console.error("Failed to clear question caches:", error);
-            throw error;
-        }
-    },
-    
-    adminClearAllResults: async (token: string): Promise<any> => {
-        try {
-            return await apiFetch('/admin/clear-all-results', 'POST', token);
-        } catch (error) {
-            console.error("Failed to clear all results:", error);
-            throw error;
-        }
-    },
-
-    // --- EXAM STATS ---
-    getExamStats: async (token: string): Promise<ExamStat[]> => {
-        try {
-            return await apiFetch('/exam-stats', 'GET', token);
-        } catch (error) {
-            console.error("Failed to get exam stats:", error);
-            throw error;
-        }
-    },
+        return await apiFetch('/admin/set-intro-video', 'POST', token, formData as any, true);
+    }
 };
