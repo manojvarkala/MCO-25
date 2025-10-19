@@ -38,7 +38,7 @@ function mco_get_full_snapshot_data($is_blueprint = false) {
     $site_name = get_bloginfo('name');
     $site_url_parts = parse_url(home_url());
     $site_host = $site_url_parts['host'] ?? 'default-site.com';
-    $custom_logo_url = get_option('mco_logo_url', '');
+    $custom_logo_url = get_option('mco_custom_logo_url', '');
     $logo_url = !empty($custom_logo_url) ? $custom_logo_url : (get_site_icon_url(512) ?: '');
 
     // FIX: This forces the `www.` prefix for the specified domain, correcting the login link bug.
@@ -84,7 +84,7 @@ function mco_get_full_snapshot_data($is_blueprint = false) {
                 "availableThemes" => $available_themes,
                 "activeThemeId" => "default",
                 "exams" => $dynamic_data['exams'],
-                "examProductCategories' => $dynamic_data['examProductCategories'],
+                "examProductCategories" => $dynamic_data['examProductCategories'],
                 "certificateTemplates" => array_values($configured_templates),
                 "suggestedBooks" => $dynamic_data['suggestedBooks']
             ]

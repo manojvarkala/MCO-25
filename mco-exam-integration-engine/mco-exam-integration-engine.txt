@@ -30,13 +30,15 @@ require_once MCO_PLUGIN_PATH . 'includes/mco-admin.txt';
 add_action('init', function() {
     mco_register_custom_post_types();
     mco_register_shortcode_hooks();
-    if (is_admin()) {
-        mco_register_admin_hooks();
-    }
 });
 
-// Centralized hook for all REST API related setup.
+// This is the single, reliable hook for all API-related functionality.
 add_action('rest_api_init', 'mco_register_api_hooks');
+
+// Admin-specific hooks
+if (is_admin()) {
+    add_action('init', 'mco_register_admin_hooks');
+}
 
 
 // --- ACTIVATION & DEACTIVATION HOOKS ---

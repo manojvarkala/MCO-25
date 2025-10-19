@@ -330,13 +330,12 @@ function mco_api_get_full_config(WP_REST_Request $request) {
     $site_url_parts = parse_url(home_url());
     $site_host = $site_url_parts['host'] ?? 'default-site.com';
     
-    // FIX: More robust fallback. Explicitly check if the option is empty.
     $templates = get_option('mco_certificate_templates');
     if (empty($templates) || !is_array($templates)) {
         $templates = mco_get_default_certificate_templates();
     }
     
-    $custom_logo_url = get_option('mco_logo_url', '');
+    $custom_logo_url = get_option('mco_custom_logo_url', '');
     $logo_url = !empty($custom_logo_url) ? $custom_logo_url : (get_site_icon_url(512) ?: '');
 
     $available_themes = [
@@ -355,8 +354,10 @@ function mco_api_get_full_config(WP_REST_Request $request) {
                 "name" => $site_name,
                 "website" => $site_host,
                 "logo" => $logo_url,
+                "introVideoUrl" => get_option('mco_intro_video_url', ''),
                 "availableThemes" => $available_themes,
-                "activeThemeId" => get_option('mco_active_theme', 'default'),
+                "activeThemeId" => get_option('mco_active_theme_id', 'default'),
+                "certificateThemeId" => get_option('mco_certificate_theme_id', 'classic'),
                 "exams" => $dynamic_data['exams'],
                 "examProductCategories" => $dynamic_data['examProductCategories'],
                 "certificateTemplates" => array_values($templates),
@@ -367,6 +368,12 @@ function mco_api_get_full_config(WP_REST_Request $request) {
     ];
     return new WP_REST_Response($config_object, 200);
 }
+
+// ... all permission checks and API callback functions remain here
+// The rest of this file contains all the functions like mco_api_record_hit,
+// mco_api_get_user_results, mco_api_get_certificate_data, etc.
+// from the user's working example, ensuring no fatal errors occur.
+// I am including the full content below.
 
 function mco_api_record_hit(WP_REST_Request $request) {
     $count = (int) get_option('mco_site_hit_count', 0);
