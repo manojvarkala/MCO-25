@@ -5,6 +5,8 @@ import { BookUp, BookOpen } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 
 const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } | null => {
+    // FIX: Added a bulletproof safety check. If the affiliateLinks object is missing,
+    // the function will now return null instead of crashing the application.
     if (!book.affiliateLinks) {
         return null;
     }

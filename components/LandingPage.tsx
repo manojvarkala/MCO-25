@@ -1,6 +1,6 @@
 import React, { FC, useEffect, useRef } from 'react';
-// FIX: Corrected import for react-router-dom to resolve module export errors.
-import { useNavigate } from "react-router-dom";
+// FIX: Corrected react-router-dom import to resolve module export errors.
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LogIn, UserPlus, FileText, Award, Sparkles } from 'lucide-react';

@@ -1,6 +1,6 @@
 import React, { FC, useRef, useEffect } from 'react';
-// FIX: Corrected import for react-router-dom to resolve module export errors.
-import { useLocation, useNavigate } from "react-router-dom";
+// FIX: Corrected react-router-dom import to resolve module export errors.
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import toast from 'react-hot-toast';

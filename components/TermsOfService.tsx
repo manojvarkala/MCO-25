@@ -1,5 +1,6 @@
 import React, { FC } from 'react';
-import { Link } from "react-router-dom";
+// FIX: Corrected react-router-dom import to resolve module export errors.
+import { Link } from 'react-router-dom';
 
 const TermsOfService: FC = () => {
     return (

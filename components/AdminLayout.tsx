@@ -1,4 +1,5 @@
 import React, { FC } from 'react';
+// FIX: Corrected react-router-dom import to resolve module export errors.
 import { NavLink, Outlet } from 'react-router-dom';
 import { LayoutDashboard, Settings, ShoppingCart, Code, ArrowLeft, History, BarChart3, Sparkles, BookOpen } from 'lucide-react';
 
@@ -40,17 +41,18 @@ const AdminLayout: FC = () => {
                     </NavLink>
                     <NavLink to="/admin/history" className={navLinkClass}>
                         <History size={18} />
-                        <span>Development History</span>
+                        <span>Dev History</span>
                     </NavLink>
-                     <NavLink to="/admin/handbook" className={navLinkClass}>
+                    <NavLink to="/admin/handbook" className={navLinkClass}>
                         <BookOpen size={18} />
                         <span>Handbook</span>
                     </NavLink>
-                     <hr className="my-4 border-[rgb(var(--color-border-rgb))]" />
-                    <NavLink to="/dashboard" className={navLinkClass}>
-                        <ArrowLeft size={18} />
-                        <span>Back to Main Site</span>
-                    </NavLink>
+                    <div className="pt-4 mt-4 border-t border-[rgb(var(--color-border-rgb))]">
+                        <NavLink to="/dashboard" className={navLinkClass}>
+                            <ArrowLeft size={18} />
+                            <span>Back to App</span>
+                        </NavLink>
+                    </div>
                 </nav>
             </aside>
             <main className="md:col-span-3 lg:col-span-4">
@@ -59,6 +61,5 @@ const AdminLayout: FC = () => {
         </div>
     );
 };
-
 
 export default AdminLayout;

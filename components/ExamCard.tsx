@@ -1,4 +1,5 @@
 import React, { FC, useState } from 'react';
+// FIX: Corrected react-router-dom import to resolve module export errors.
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';

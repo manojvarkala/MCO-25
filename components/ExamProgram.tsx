@@ -1,5 +1,6 @@
 import React, { FC, useMemo, useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from "react-router-dom";
+// FIX: Corrected react-router-dom import to resolve module export errors.
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';

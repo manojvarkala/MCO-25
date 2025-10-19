@@ -3,7 +3,7 @@
  * Plugin Name:       MCO Exam Integration Engine
  * Plugin URI:        https://annapoornainfo.com
  * Description:       Provides the backend API, user authentication (SSO), and content management for the React-based examination app.
- * Version:           1.0.0
+ * Version:           2.2.0
  * Author:            Annapoorna Infotech
  * Author URI:        https://annapoornainfo.com
  * License:           GPL v2 or later
@@ -37,8 +37,14 @@ add_action('init', function() {
     }
 });
 
-// Handles all REST API related setup, including routes and CORS.
-add_action('rest_api_init', function() {
+// Centralized hook for all REST API related setup, including routes and CORS.
+add_action('rest_api_init', 'mco_rest_api_init_setup');
+
+/**
+ * Main setup function for the REST API.
+ * Registers routes and sets up crucial security filters.
+ */
+function mco_rest_api_init_setup() {
     mco_register_api_hooks(); // From mco-api.php
 
     // This is our new, robust CORS handler.
@@ -46,39 +52,10 @@ add_action('rest_api_init', function() {
     
     // This ensures auth errors also get correct CORS headers.
     add_filter('rest_authentication_errors', 'mco_handle_auth_errors_cors', 15);
-});
+}
+
 
 // --- NEW, ROBUST CORS & PREFLIGHT HANDLING ---
-
-/**
- * Gets the list of allowed origin URLs from the plugin settings.
- * @return array A list of validated origin URLs.
- */
-function mco_get_allowed_origins() {
-    $app_urls_string = get_option('mco_exam_app_url', '');
-    if (empty($app_urls_string)) return [];
-
-    $urls = preg_split('/\r\n|\r|\n/', $app_urls_string);
-    $allowed_origins = [];
-
-    foreach ($urls as $url) {
-        $trimmed_url = trim($url);
-        if (empty($trimmed_url)) continue;
-
-        $parsed_url = parse_url($trimmed_url);
-        if (empty($parsed_url['scheme']) || empty($parsed_url['host'])) continue;
-        
-        $origin = $parsed_url['scheme'] . '://' . $parsed_url['host'];
-        if (!empty($parsed_url['port'])) {
-            $origin .= ':' . $parsed_url['port'];
-        }
-        
-        if (!in_array($origin, $allowed_origins, true)) {
-            $allowed_origins[] = $origin;
-        }
-    }
-    return $allowed_origins;
-}
 
 /**
  * Handles CORS headers for all API requests and properly responds to preflight OPTIONS requests.
@@ -102,6 +79,8 @@ function mco_handle_cors_and_preflight($served, $result, $request, $server) {
         // If this is a preflight (OPTIONS) request, we must send a 200 OK and exit.
         if ($request->get_method() === 'OPTIONS') {
             status_header(200);
+            // This is necessary to prevent WordPress from processing the request further
+            // and potentially returning an error for an empty request body.
             exit();
         }
     }
@@ -114,10 +93,12 @@ function mco_handle_cors_and_preflight($served, $result, $request, $server) {
  * instead of just getting a generic network error.
  */
 function mco_handle_auth_errors_cors($result) {
-    if (is_wp_error($result) && !headers_sent()) {
+    // Only act if an error is present.
+    if (!empty($result) && is_wp_error($result) && !headers_sent()) {
         $origin = get_http_origin();
         $allowed_origins = mco_get_allowed_origins();
         if ($origin && in_array($origin, $allowed_origins, true)) {
+            // Use the standard PHP header function here as we don't have the $server object.
             header('Access-Control-Allow-Origin: ' . esc_url_raw($origin));
             header('Access-Control-Allow-Credentials: true');
             header('Vary: Origin');
@@ -132,6 +113,7 @@ function mco_handle_auth_errors_cors($result) {
 register_activation_hook(MCO_PLUGIN_FILE, function() {
     mco_register_custom_post_types();
     flush_rewrite_rules();
+    // Clear the config cache on activation to ensure latest settings are loaded.
     delete_transient('mco_app_config_data');
 });
 

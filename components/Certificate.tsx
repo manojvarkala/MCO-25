@@ -1,7 +1,8 @@
 
+
 import React, { FC, useState, useEffect, useRef } from 'react';
-// FIX: Corrected import for react-router-dom to resolve module export errors.
-import { useParams, useNavigate } from "react-router-dom";
+// FIX: Corrected react-router-dom import to resolve module export errors.
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';

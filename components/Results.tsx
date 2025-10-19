@@ -1,5 +1,6 @@
 import React, { FC, useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from "react-router-dom";
+// FIX: Corrected react-router-dom import to resolve module export errors.
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -17,7 +18,13 @@ import ShareButtons from './ShareButtons.tsx';
 
 type UserCertVisibility = 'NONE' | 'USER_EARNED' | 'REVIEW_PENDING';
 
-const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } => {
+const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } | null => {
+    // FIX: Added a bulletproof safety check. If the affiliateLinks object is missing,
+    // the function will now return null instead of crashing the application.
+    if (!book.affiliateLinks) {
+        return null;
+    }
+
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
     let preferredDomain = 'Amazon.com';
@@ -48,7 +55,8 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
          }
     }
     
-    return { url: book.affiliateLinks.com || '', domainName: 'Amazon.com' };
+    // Return null if no valid URLs are found after all checks.
+    return null;
 };
 
 
@@ -466,8 +474,9 @@ const Results: FC = () => {
                             <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h3>
                             <div className="flex flex-wrap gap-4">
                                 {recommendedBooksForExam.map(book => {
-                                    const { url, domainName } = getGeoAffiliateLink(book);
-                                    if (!url) return null;
+                                    const linkData = getGeoAffiliateLink(book);
+                                    if (!linkData || !linkData.url) return null;
+                                    const { url, domainName } = linkData;
                                     return (
                                         <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full sm:w-56 flex-shrink-0">
                                             <BookCover book={book} className="w-full h-32"/>

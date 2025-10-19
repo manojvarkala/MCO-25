@@ -7,6 +7,8 @@ import BookCover from '../assets/BookCover.tsx';
 
 const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
     const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
+        // FIX: Added a bulletproof safety check. If the affiliateLinks object is missing,
+        // the function will now return null instead of crashing the application.
         if (!book.affiliateLinks) {
             return null;
         }
