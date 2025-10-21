@@ -65,6 +65,10 @@ const Admin: FC = () => {
     const [examStats, setExamStats] = useState<ExamStat[] | null>(null);
     const [isLoadingData, setIsLoadingData] = useState(true);
 
+    const [sheetUrlToTest, setSheetUrlToTest] = useState('');
+    const [isTestingUrl, setIsTestingUrl] = useState(false);
+    const [testUrlResult, setTestUrlResult] = useState<{ success: boolean; message: string; dataPreview?: string } | null>(null);
+
     useEffect(() => {
         if (!token) return;
         const fetchAdminData = async () => {
@@ -148,6 +152,30 @@ const Admin: FC = () => {
             setIsClearingCache(false);
         }
     };
+
+    const handleTestUrl = async () => {
+        if (!token || !sheetUrlToTest) {
+            toast.error("Please enter a URL to test.");
+            return;
+        }
+        setIsTestingUrl(true);
+        setTestUrlResult(null);
+        try {
+            const result = await googleSheetsService.adminTestSheetUrl(token, sheetUrlToTest);
+            setTestUrlResult(result);
+            if(result.success) {
+                toast.success("Sheet is accessible!");
+            } else {
+                toast.error(`Test Failed: ${result.message}`);
+            }
+        } catch (error: any) {
+            const errorMessage = error.message || 'An unknown error occurred.';
+            setTestUrlResult({ success: false, message: errorMessage });
+            toast.error(errorMessage);
+        } finally {
+            setIsTestingUrl(false);
+        }
+    };
     
 
     return (
@@ -192,6 +220,40 @@ const Admin: FC = () => {
                             <HealthListItem title="WooCommerce Subscriptions" status={healthStatus?.wc_subscriptions} onDetails={setDetailsModalData} />
                             <HealthListItem title="App URL Configuration" status={healthStatus?.app_url_config} onDetails={setDetailsModalData} />
                             <HealthListItem title="Google Sheet Accessibility" status={healthStatus?.google_sheet} onDetails={setDetailsModalData} />
+                        </div>
+                    )}
+                </div>
+
+                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                        <FileSpreadsheet className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Google Sheet URL Checker
+                    </h2>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-4">
+                        Test if a specific Google Sheet URL is accessible by the server. Use the "Publish to the web" CSV link for best results.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                            type="url"
+                            value={sheetUrlToTest}
+                            onChange={(e) => setSheetUrlToTest(e.target.value)}
+                            placeholder="Paste Google Sheet URL here..."
+                            className="flex-grow p-2 border rounded-md bg-white"
+                            aria-label="Google Sheet URL"
+                        />
+                        <button onClick={handleTestUrl} disabled={isTestingUrl} className="flex items-center justify-center gap-2 px-4 py-2 bg-[rgb(var(--color-primary-rgb))] text-white rounded-lg font-semibold hover:bg-[rgb(var(--color-primary-hover-rgb))] transition disabled:bg-slate-400">
+                            {isTestingUrl ? <Spinner size="sm" /> : <RefreshCw size={16} />}
+                            {isTestingUrl ? 'Testing...' : 'Test URL'}
+                        </button>
+                    </div>
+                    {testUrlResult && (
+                        <div className={`mt-4 p-3 rounded-lg border ${testUrlResult.success ? 'bg-green-900/50 border-green-500' : 'bg-red-900/50 border-red-500'}`}>
+                            <p className={`font-bold ${testUrlResult.success ? 'text-green-300' : 'text-red-300'}`}>
+                                {testUrlResult.success ? 'Success' : 'Failed'}: {testUrlResult.message}
+                            </p>
+                            {testUrlResult.dataPreview && (
+                                <pre className="text-xs bg-black/20 text-slate-300 p-2 rounded mt-2 whitespace-pre-wrap font-mono">{testUrlResult.dataPreview}</pre>
+                            )}
                         </div>
                     )}
                 </div>

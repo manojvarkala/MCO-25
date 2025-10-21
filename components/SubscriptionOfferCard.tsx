@@ -9,6 +9,7 @@ import Spinner from './Spinner.tsx';
 interface SubscriptionOfferCardProps {
     planName: string;
     price: number;
+    regularPrice?: number;
     priceUnit: string;
     url: string; // This will now be used as a fallback.
     features: string[];
@@ -19,6 +20,7 @@ interface SubscriptionOfferCardProps {
 const SubscriptionOfferCard: FC<SubscriptionOfferCardProps> = ({
     planName,
     price,
+    regularPrice,
     priceUnit,
     url,
     features,
@@ -71,7 +73,14 @@ const SubscriptionOfferCard: FC<SubscriptionOfferCardProps> = ({
             )}
             <h3 className="text-xl font-bold text-center">{planName}</h3>
             <div className="my-4 text-center">
-                <span className="text-4xl font-extrabold">${price.toFixed(2)}</span>
+                {regularPrice && regularPrice > price ? (
+                    <div className="flex items-baseline justify-center gap-2">
+                        <span className="text-2xl line-through text-white/70">${regularPrice.toFixed(2)}</span>
+                        <span className="text-4xl font-extrabold text-white">${price.toFixed(2)}</span>
+                    </div>
+                ) : (
+                    <span className="text-4xl font-extrabold text-white">${price.toFixed(2)}</span>
+                )}
                 <span className="text-base font-medium text-white/80">/{priceUnit}</span>
             </div>
             <ul className="space-y-2 text-sm text-white/90 mb-6">

@@ -97,14 +97,16 @@ const Dashboard: FC = () => {
             });
     }, [activeOrg]);
     
-    const { monthlyPrice, yearlyPrice, monthlySubUrl, yearlySubUrl } = useMemo(() => {
+    const { monthlyPrice, monthlyRegularPrice, yearlyPrice, yearlyRegularPrice, monthlySubUrl, yearlySubUrl } = useMemo(() => {
         const monthlyData = examPrices?.['sub-monthly'];
         const yearlyData = examPrices?.['sub-yearly'];
         const website = activeOrg ? `https://www.${activeOrg.website}` : '';
 
         return {
             monthlyPrice: monthlyData?.price ?? 19.99,
+            monthlyRegularPrice: monthlyData?.regularPrice,
             yearlyPrice: yearlyData?.price ?? 149.99,
+            yearlyRegularPrice: yearlyData?.regularPrice,
             monthlySubUrl: monthlyData?.productId ? `${website}/cart/?add-to-cart=${monthlyData.productId}` : `${website}/product/monthly-subscription/`,
             yearlySubUrl: yearlyData?.productId ? `${website}/cart/?add-to-cart=${yearlyData.productId}` : `${website}/product/yearly-subscription/`,
         };
@@ -191,6 +193,7 @@ const Dashboard: FC = () => {
                         <SubscriptionOfferCard
                             planName="Monthly Subscription"
                             price={monthlyPrice}
+                            regularPrice={monthlyRegularPrice}
                             priceUnit="month"
                             url={monthlySubUrl}
                             features={[
@@ -203,6 +206,7 @@ const Dashboard: FC = () => {
                         <SubscriptionOfferCard
                             planName="Yearly Subscription"
                             price={yearlyPrice}
+                            regularPrice={yearlyRegularPrice}
                             priceUnit="year"
                             url={yearlySubUrl}
                             features={[
