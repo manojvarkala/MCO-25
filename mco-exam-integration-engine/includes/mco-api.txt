@@ -658,4 +658,40 @@ function mco_api_notify_admin(WP_REST_Request $request) {
     wp_mail($admin_email, "[Exam App] " . $subject, $body);
     return new WP_REST_Response(['success' => true], 200);
 }
+
+// RESTORED: This function was missing, causing the "invalid handler" error.
+function mco_api_admin_test_sheet_url(WP_REST_Request $request) {
+    $sheet_url = esc_url_raw($request->get_param('sheetUrl'));
+    if (empty($sheet_url)) {
+        return new WP_Error('bad_request', 'Sheet URL is missing.', ['status' => 400]);
+    }
+    $response = mco_fetch_remote_csv_content($sheet_url);
+
+    if (is_wp_error($response)) {
+        return new WP_Error('fetch_error', 'Could not connect to Google Sheets: ' . $response->get_error_message(), ['status' => 500]);
+    }
+
+    $status_code = $response['response']['code'];
+    $body = $response['body'];
+
+    if ($status_code != 200) {
+        return new WP_REST_Response([
+            'success' => false,
+            'message' => 'HTTP Status ' . $status_code,
+        ], 200);
+    }
+
+    if (empty(trim($body))) {
+        return new WP_REST_Response([
+            'success' => false,
+            'message' => 'Sheet is empty',
+        ], 200);
+    }
+    
+    return new WP_REST_Response([
+        'success' => true,
+        'message' => 'Accessible',
+        'dataPreview' => substr($body, 0, 500) . '...'
+    ], 200);
+}
 ?>

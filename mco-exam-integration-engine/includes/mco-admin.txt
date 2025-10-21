@@ -38,13 +38,44 @@ function mco_exam_engine_admin_page() {
             update_option('mco_intro_video_url', esc_url_raw($_POST['mco_intro_video_url']));
             delete_transient('mco_app_config_data');
             update_option('mco_config_version', current_time('YmdHis'));
-            echo '<div class="notice notice-success is-dismissible"><p>Settings saved and cache cleared.</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>Settings saved and config cache cleared.</p></div>';
 
         } elseif ($form_action === 'save_theme_settings') {
             update_option('mco_active_theme_id', sanitize_text_field($_POST['mco_active_theme_id']));
             delete_transient('mco_app_config_data');
             update_option('mco_config_version', current_time('YmdHis'));
             echo '<div class="notice notice-success is-dismissible"><p>Theme settings saved.</p></div>';
+
+        } elseif ($form_action === 'save_certificate_templates') {
+            $templates_data = $_POST['mco_templates'] ?? [];
+            $sanitized_templates = [];
+            foreach ($templates_data as $id => $template) {
+                $sanitized_templates[sanitize_key($id)] = [
+                    'id' => sanitize_key($id),
+                    'name' => sanitize_text_field($template['name']), 'title' => sanitize_text_field($template['title']),
+                    'body' => wp_kses_post($template['body']), 'signature1Name' => sanitize_text_field($template['signature1Name']),
+                    'signature1Title' => sanitize_text_field($template['signature1Title']), 'signature1ImageUrl' => esc_url_raw($template['signature1ImageUrl']),
+                    'signature2Name' => sanitize_text_field($template['signature2Name']), 'signature2Title' => sanitize_text_field($template['signature2Title']),
+                    'signature2ImageUrl' => esc_url_raw($template['signature2ImageUrl']),
+                ];
+            }
+            update_option('mco_certificate_templates', $sanitized_templates);
+            update_option('mco_certificate_theme_id', sanitize_text_field($_POST['mco_certificate_theme_id']));
+            delete_transient('mco_app_config_data');
+            update_option('mco_config_version', current_time('YmdHis'));
+            echo '<div class="notice notice-success is-dismissible"><p>Certificate templates saved and cache cleared.</p></div>';
+        
+        } elseif ($form_action === 'clear_caches') {
+             if (isset($_POST['clear_config_cache'])) {
+                delete_transient('mco_app_config_data');
+                update_option('mco_config_version', current_time('YmdHis'));
+                echo '<div class="notice notice-success is-dismissible"><p>Application config cache cleared.</p></div>';
+            }
+            if (isset($_POST['clear_question_caches'])) {
+                global $wpdb;
+                $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '\_transient\_mco\_sheet\_%' OR option_name LIKE '\_transient\_timeout\_mco\_sheet\_%'");
+                echo '<div class="notice notice-success is-dismissible"><p>All question sheet caches cleared.</p></div>';
+            }
         }
     }
 
@@ -83,6 +114,64 @@ function mco_render_main_settings_tab() { ?>
         </table>
         <?php submit_button(); ?>
     </form>
+<?php }
+
+function mco_render_certificate_templates_tab() {
+    $saved_templates = get_option('mco_certificate_templates');
+    $templates = (empty($saved_templates) || !is_array($saved_templates)) ? mco_get_default_certificate_templates() : $saved_templates;
+    $cert_theme = get_option('mco_certificate_theme_id', 'classic');
+    ?>
+    <form method="post" action="?page=mco-exam-engine&tab=certificate_templates">
+        <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
+        <input type="hidden" name="mco_form_action" value="save_certificate_templates">
+        <h2>Certificate Templates</h2>
+        <p>Customize the content of the certificates. Use placeholders like <code>{candidateName}</code>, <code>{examName}</code>, and <code>{finalScore}</code>.</p>
+        
+        <table class="form-table">
+            <tr><th>Default Certificate Theme</th><td>
+                <select name="mco_certificate_theme_id">
+                    <option value="classic" <?php selected($cert_theme, 'classic'); ?>>Classic</option>
+                    <option value="modern" <?php selected($cert_theme, 'modern'); ?>>Modern</option>
+                </select>
+                <p class="description">Select the default visual style for all certificates.</p>
+            </td></tr>
+        </table>
+
+        <div id="mco-certificate-accordion">
+            <?php foreach ($templates as $id => $template): ?>
+            <div class="mco-accordion-item">
+                <h3 class="mco-accordion-title"><?php echo esc_html($template['name']); ?></h3>
+                <div class="mco-accordion-content">
+                    <input type="hidden" name="mco_templates[<?php echo esc_attr($id); ?>][name]" value="<?php echo esc_attr($template['name']); ?>">
+                    <table class="form-table">
+                        <tr><th>Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][title]" value="<?php echo esc_attr($template['title']); ?>"></td></tr>
+                        <tr><th>Body Text</th><td><textarea class="widefat" rows="4" name="mco_templates[<?php echo esc_attr($id); ?>][body]"><?php echo esc_textarea($template['body']); ?></textarea></td></tr>
+                        <tr><th>Signature 1 Name</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name']); ?>"></td></tr>
+                        <tr><th>Signature 1 Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature1Title]" value="<?php echo esc_attr($template['signature1Title']); ?>"></td></tr>
+                        <tr><th>Signature 1 Image URL</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature1ImageUrl]" value="<?php echo esc_attr($template['signature1ImageUrl']); ?>" placeholder="Optional. Use data URI for best results."></td></tr>
+                        <tr><th>Signature 2 Name</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature2Name]" value="<?php echo esc_attr($template['signature2Name']); ?>"></td></tr>
+                        <tr><th>Signature 2 Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature2Title]" value="<?php echo esc_attr($template['signature2Title']); ?>"></td></tr>
+                        <tr><th>Signature 2 Image URL</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature2ImageUrl]" value="<?php echo esc_attr($template['signature2ImageUrl']); ?>" placeholder="Optional."></td></tr>
+                    </table>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php submit_button(); ?>
+    </form>
+    <script>
+    jQuery(document).ready(function($) {
+        $('.mco-accordion-title').on('click', function() {
+            $(this).toggleClass('active');
+            var content = $(this).next('.mco-accordion-content');
+            if (content.css('max-height') !== '0px') {
+                content.css('max-height', '0px');
+            } else {
+                content.css('max-height', content.get(0).scrollHeight + 'px');
+            }
+        });
+    });
+    </script>
 <?php }
 
 function mco_render_theme_selector_tab() {
@@ -164,7 +253,45 @@ function mco_render_bulk_data_tab() { ?>
     </form>
 <?php }
 
-// ... other render functions from the user's provided file ...
+function mco_render_tools_tab() {
+    $is_blueprint_ready = !empty(get_option('mco_exam_app_url')) && !empty(get_option('mco_certificate_templates'));
+    ?>
+    <h2>Maintenance Tools</h2>
+    <form method="post" action="?page=mco-exam-engine&tab=tools">
+        <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
+        <input type="hidden" name="mco_form_action" value="clear_caches">
+        <table class="form-table">
+            <tr><th>Clear Application Config Cache</th><td>
+                <button type="submit" name="clear_config_cache" class="button">Clear Config Cache</button>
+                <p class="description">Forces the app to fetch the latest settings, exams, and books. Use after making content changes.</p>
+            </td></tr>
+            <tr><th>Clear Question Sheet Caches</th><td>
+                <button type="submit" name="clear_question_caches" class="button">Clear All Question Caches</button>
+                <p class="description">Forces the server to re-fetch questions from all Google Sheets. Use after updating questions.</p>
+            </td></tr>
+        </table>
+    </form>
+    <hr>
+    <h2>Onboarding & Backup Tools</h2>
+    <table class="form-table">
+         <tr><th>Generate Tenant Blueprint</th><td>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <input type="hidden" name="action" value="mco_generate_tenant_blueprint">
+                <?php wp_nonce_field('mco_generate_tenant_blueprint_nonce'); ?>
+                <button type="submit" class="button" <?php disabled(!$is_blueprint_ready); ?>>Generate & Download Blueprint</button>
+                <p class="description">Generates a JSON config file for onboarding a new tenant. <?php if(!$is_blueprint_ready) echo '<strong>Requires App URL and Certificate settings to be saved first.</strong>'; ?></p>
+            </form>
+        </td></tr>
+        <tr><th>Generate Full Content Snapshot</th><td>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <input type="hidden" name="action" value="mco_generate_full_snapshot">
+                <?php wp_nonce_field('mco_generate_full_snapshot_nonce'); ?>
+                <?php submit_button('Generate & Download Snapshot', 'secondary', 'submit_generate_snapshot', false); ?>
+                <p class="description">Creates a complete JSON backup of all current content and settings for performance optimization or migration.</p>
+            </form>
+        </td></tr>
+    </table>
+<?php }
 
 // --- Handlers for Bulk CSV Export ---
 function mco_handle_generate_programs_csv() {
@@ -241,6 +368,25 @@ function mco_handle_generate_products_csv() {
         }
     }
     fclose($output);
+    exit;
+}
+
+// RESTORED: These functions were missing from the previous version.
+function mco_handle_generate_tenant_blueprint() {
+    if (!current_user_can('manage_options')) wp_die('Permission denied.');
+    $snapshot_data = mco_get_full_snapshot_data(true); // true for blueprint
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="tenant-blueprint-' . sanitize_title(get_bloginfo('name')) . '.json"');
+    echo json_encode($snapshot_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+function mco_handle_generate_full_snapshot() {
+    if (!current_user_can('manage_options')) wp_die('Permission denied.');
+    $snapshot_data = mco_get_full_snapshot_data(false); // false for full snapshot
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="content-snapshot-' . sanitize_title(get_bloginfo('name')) . '-' . date('Y-m-d') . '.json"');
+    echo json_encode($snapshot_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     exit;
 }
 ?>
