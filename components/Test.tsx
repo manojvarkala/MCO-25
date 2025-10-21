@@ -39,6 +39,8 @@ const Test: FC = () => {
   
   // Browser-based proctoring state
   const [focusViolationCount, setFocusViolationCount] = useState(0);
+  const [isStarting, setIsStarting] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
   
   const timerIntervalRef = useRef<number | null>(null);
   const hasSubmittedRef = useRef(false);
@@ -198,17 +200,38 @@ const Test: FC = () => {
         }
     }, [focusViolationCount, handleSubmit]);
 
+    // Effect 6: Manage the pre-exam countdown.
+    useEffect(() => {
+        if (countdown === null) return;
+
+        if (countdown > 0) {
+            const timer = setTimeout(() => {
+                setCountdown(countdown - 1);
+            }, 1000);
+            return () => clearTimeout(timer);
+        } else if (countdown === 0) {
+            // When countdown finishes, start the exam
+            const timer = setTimeout(() => {
+                setExamStarted(true);
+                setCountdown(null); // Reset countdown state
+            }, 800); // Brief pause on "Go!"
+            return () => clearTimeout(timer);
+        }
+    }, [countdown]);
+
 
     const handleStartExamFlow = async () => {
-        if (!examConfig) return;
+        if (!examConfig || isStarting) return;
+        setIsStarting(true);
         try {
-            // Only force fullscreen for proctored exams
             if (examConfig.isProctored) {
                 await document.documentElement.requestFullscreen();
             }
-            setExamStarted(true);
+            setCountdown(3);
         } catch (err) {
             toast.error("Fullscreen is required to start this exam.");
+        } finally {
+            setIsStarting(false);
         }
     };
 
@@ -308,29 +331,38 @@ const Test: FC = () => {
     }
 
     if (!examStarted) {
-        // Pre-exam start screen
+        // Pre-exam start screen with countdown overlay
         return (
-            <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-lg text-center">
-                <h1 className="text-3xl font-bold text-slate-800 mb-2">{examConfig.name}</h1>
-                <p className="text-slate-500 mb-6">{examConfig.description}</p>
-                <div className="grid grid-cols-2 gap-4 text-lg mb-8">
-                    <div className="bg-slate-100 p-4 rounded-lg"><p className="font-bold">{examConfig.numberOfQuestions}</p><p className="text-sm text-slate-600">Questions</p></div>
-                    <div className="bg-slate-100 p-4 rounded-lg"><p className="font-bold">{examConfig.durationMinutes}</p><p className="text-sm text-slate-600">Minutes</p></div>
-                </div>
-                {examConfig.isProctored && (
-                    <div className="bg-red-50 border-l-4 border-red-500 p-4 my-4 text-left">
-                        <p className="font-bold text-red-800 flex items-center gap-2"><AlertTriangle size={16}/> Important Rules</p>
-                        <ul className="list-disc pl-5 text-red-700 space-y-1 text-sm mt-2">
-                            <li>This exam must be taken in <strong>fullscreen mode</strong>.</li>
-                            <li>Do not exit fullscreen or switch to another tab/application.</li>
-                            <li>Violations will be tracked and may result in exam termination.</li>
-                        </ul>
+            <>
+                {countdown !== null && (
+                    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+                        <div key={countdown} className="text-white text-9xl font-extrabold animate-countdown-pop">
+                            {countdown > 0 ? countdown : 'GO!'}
+                        </div>
                     </div>
                 )}
-                <button onClick={handleStartExamFlow} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 px-8 rounded-lg text-xl transition-transform transform hover:scale-105">
-                    Start Exam
-                </button>
-            </div>
+                <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-lg text-center">
+                    <h1 className="text-3xl font-bold text-slate-800 mb-2">{examConfig.name}</h1>
+                    <p className="text-slate-500 mb-6">{examConfig.description}</p>
+                    <div className="grid grid-cols-2 gap-4 text-lg mb-8">
+                        <div className="bg-slate-100 p-4 rounded-lg"><p className="font-bold">{examConfig.numberOfQuestions}</p><p className="text-sm text-slate-600">Questions</p></div>
+                        <div className="bg-slate-100 p-4 rounded-lg"><p className="font-bold">{examConfig.durationMinutes}</p><p className="text-sm text-slate-600">Minutes</p></div>
+                    </div>
+                    {examConfig.isProctored && (
+                        <div className="bg-red-50 border-l-4 border-red-500 p-4 my-4 text-left">
+                            <p className="font-bold text-red-800 flex items-center gap-2"><AlertTriangle size={16}/> Important Rules</p>
+                            <ul className="list-disc pl-5 text-red-700 space-y-1 text-sm mt-2">
+                                <li>This exam must be taken in <strong>fullscreen mode</strong>.</li>
+                                <li>Do not exit fullscreen or switch to another tab/application.</li>
+                                <li>Violations will be tracked and may result in exam termination.</li>
+                            </ul>
+                        </div>
+                    )}
+                    <button onClick={handleStartExamFlow} disabled={isStarting || countdown !== null} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 px-8 rounded-lg text-xl transition-transform transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed">
+                        {isStarting ? <Spinner /> : 'Start Exam'}
+                    </button>
+                </div>
+            </>
         );
     }
 
