@@ -190,14 +190,6 @@ if (!function_exists('mco_get_exam_app_url')) {
 
 // --- API REGISTRATION & HOOKS ---
 
-if (!function_exists('mco_register_api_hooks')) {
-    function mco_register_api_hooks() {
-        add_action('rest_api_init', 'mco_register_rest_routes');
-        add_action('rest_api_init', 'mco_set_api_nocache_constants');
-        add_filter('rest_pre_serve_request', 'mco_add_cors_and_nocache_headers', 10, 4);
-    }
-}
-
 function mco_set_api_nocache_constants(WP_REST_Server $server) {
     if (strpos($_SERVER['REQUEST_URI'], '/wp-json/mco-app/v1/') !== false) {
         if (!defined('DONOTCACHE')) define('DONOTCACHEPAGE', true);

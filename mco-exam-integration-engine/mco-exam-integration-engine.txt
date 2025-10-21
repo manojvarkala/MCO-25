@@ -32,8 +32,11 @@ add_action('init', function() {
     mco_register_shortcode_hooks();
 });
 
-// This is the single, reliable hook for all API-related functionality.
-add_action('rest_api_init', 'mco_register_api_hooks');
+// FIX: Corrected a race condition by hooking all API functions directly to the appropriate actions/filters,
+// instead of nesting them inside a secondary function. This ensures routes are always registered.
+add_action('rest_api_init', 'mco_register_rest_routes');
+add_action('rest_api_init', 'mco_set_api_nocache_constants');
+add_filter('rest_pre_serve_request', 'mco_add_cors_and_nocache_headers', 10, 4);
 
 // Admin-specific hooks
 if (is_admin()) {
