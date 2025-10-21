@@ -1,6 +1,144 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+// --- HELPER FUNCTIONS ---
+
+// New Annapoorna Style A
+function mco_render_annapoorna_style_a($book, $color_index) {
+    $colors = [
+        ['bg' => '#0369a1', 'pattern' => '#075985', 'text' => '#ffffff'], // sky
+        ['bg' => '#059669', 'pattern' => '#065f46', 'text' => '#ffffff'], // emerald
+        ['bg' => '#be185d', 'pattern' => '#9d174d', 'text' => '#ffffff'], // rose
+        ['bg' => '#7e22ce', 'pattern' => '#6b21a8', 'text' => '#ffffff'], // purple
+        ['bg' => '#334155', 'pattern' => '#1e293b', 'text' => '#ffffff'], // slate
+    ];
+    $color = $colors[$color_index % 5];
+    ob_start();
+    ?>
+    <div class="mco-book-cover mco-proc-cover-annapoorna-a" style="color: <?php echo esc_attr($color['text']); ?>;">
+        <div class="mco-proc-cover-annapoorna-a__bg" style="background-color: <?php echo esc_attr($color['bg']); ?>;"></div>
+        <div class="mco-proc-cover-annapoorna-a__pattern-bg" style="background-color: <?php echo esc_attr($color['pattern']); ?>;">
+             <svg width="100%" height="100%" class="mco-proc-cover-annapoorna-a__pattern-svg">
+                <defs><pattern id="mco-annapoorna-pattern-a-php" patternUnits="userSpaceOnUse" width="20" height="20"><circle cx="10" cy="10" r="1" fill="white" /></pattern></defs>
+                <rect width="100%" height="100%" fill="url(#mco-annapoorna-pattern-a-php)" />
+            </svg>
+        </div>
+        <div class="mco-proc-cover-annapoorna-a__content">
+            <span class="mco-proc-cover-annapoorna-a__super-title">Study Material</span>
+            <h4 class="mco-proc-cover-annapoorna-a__title"><?php echo esc_html($book['title']); ?></h4>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+// New Annapoorna Style B
+function mco_render_annapoorna_style_b($book, $color_index) {
+    $colors = [
+        ['bg' => '#fef08a', 'shape' => '#facc15', 'text' => '#713f12'], // amber
+        ['bg' => '#d9f99d', 'shape' => '#a3e635', 'text' => '#3f6212'], // lime
+        ['bg' => '#cffafe', 'shape' => '#67e8f9', 'text' => '#155e75'], // cyan
+        ['bg' => '#f5d0fe', 'shape' => '#e879f9', 'text' => '#701a75'], // fuchsia
+        ['bg' => '#e5e7eb', 'shape' => '#9ca3af', 'text' => '#1f2937'], // gray
+    ];
+    $color = $colors[$color_index % 5];
+    ob_start();
+    ?>
+    <div class="mco-book-cover mco-proc-cover-annapoorna-b" style="background-color: <?php echo esc_attr($color['bg']); ?>; color: <?php echo esc_attr($color['text']); ?>;">
+        <div class="mco-proc-cover-annapoorna-b__shape" style="background-color: <?php echo esc_attr($color['shape']); ?>;"></div>
+        <div class="mco-proc-cover-annapoorna-b__content">
+            <h4 class="mco-proc-cover-annapoorna-b__title"><?php echo esc_html($book['title']); ?></h4>
+            <span class="mco-proc-cover-annapoorna-b__super-title">Official Guide</span>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+
+// New MCO Style A
+function mco_render_mco_style_a($book, $color_index) {
+    $colors = [
+        ['bg' => '#f1f5f9', 'text' => '#1e293b', 'bgWord' => '#e2e8f0'],
+        ['bg' => '#f0f9ff', 'text' => '#0c4a6e', 'bgWord' => '#e0f2fe'],
+        ['bg' => '#f0fdfa', 'text' => '#134e4a', 'bgWord' => '#ccfbf1'],
+        ['bg' => '#f0f9ff', 'text' => '#0c4a6e', 'bgWord' => '#e0f2fe'],
+    ];
+    $color = $colors[$color_index % 4];
+    $title_words = explode(' ', $book['title']);
+    $bg_word_candidates = array_filter($title_words, function($w) { return strlen($w) > 4; });
+    $bg_word = strtoupper(empty($bg_word_candidates) ? ($title_words[0] ?? '') : current($bg_word_candidates));
+
+    ob_start();
+    ?>
+     <div class="mco-book-cover mco-proc-cover-mco-a" style="background-color: <?php echo esc_attr($color['bg']); ?>; color: <?php echo esc_attr($color['text']); ?>;">
+        <span class="mco-proc-cover-mco-a__bg-word" style="color: <?php echo esc_attr($color['bgWord']); ?>;"><?php echo esc_html($bg_word); ?></span>
+        <div class="mco-proc-cover-mco-a__content">
+             <h4 class="mco-proc-cover-mco-a__title"><?php echo esc_html($book['title']); ?></h4>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+// New MCO Style B
+function mco_render_mco_style_b($book, $color_index) {
+    $colors = [
+        ['bg' => '#1e293b', 'text' => '#ffffff', 'accent' => '#38bdf8'],
+        ['bg' => '#44403c', 'text' => '#ffffff', 'accent' => '#facc15'],
+        ['bg' => '#0c4a6e', 'text' => '#ffffff', 'accent' => '#fb7185'],
+        ['bg' => '#065f46', 'text' => '#ffffff', 'accent' => '#a3e635'],
+    ];
+    $color = $colors[$color_index % 4];
+    ob_start();
+    ?>
+    <div class="mco-book-cover mco-proc-cover-mco-b" style="background-color: <?php echo esc_attr($color['bg']); ?>; color: <?php echo esc_attr($color['text']); ?>;">
+        <div class="mco-proc-cover-mco-b__accent" style="background-color: <?php echo esc_attr($color['accent']); ?>;"></div>
+        <div class="mco-proc-cover-mco-b__content">
+            <span class="mco-proc-cover-mco-b__super-title">Reference Material</span>
+            <h4 class="mco-proc-cover-mco-b__title"><?php echo esc_html($book['title']); ?></h4>
+        </div>
+        <div class="mco-proc-cover-mco-b__logo-mark">MCO</div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+// REVISED AnnapoornaProceduralCover function
+function mco_render_annapoorna_procedural_cover_php($book) {
+    $hash = 0;
+    $str = $book['title'];
+    for ($i = 0; $i < strlen($str); $i++) { $hash = ord($str[$i]) + (($hash << 5) - $hash); }
+    $hash = abs($hash);
+    
+    $style_index = $hash % 2;
+    $color_index = floor($hash / 2);
+
+    if ($style_index === 0) {
+        return mco_render_annapoorna_style_a($book, $color_index);
+    } else {
+        return mco_render_annapoorna_style_b($book, $color_index);
+    }
+}
+
+// REVISED McoProceduralCover function
+function mco_render_mco_procedural_cover_php($book) {
+    $hash = 0;
+    $str = $book['title'];
+    for ($i = 0; $i < strlen($str); $i++) { $hash = ord($str[$i]) + (($hash << 5) - $hash); }
+    $hash = abs($hash);
+    
+    $style_index = $hash % 2;
+    $color_index = floor($hash / 2);
+
+    if ($style_index === 0) {
+        return mco_render_mco_style_a($book, $color_index);
+    } else {
+        return mco_render_mco_style_b($book, $color_index);
+    }
+}
+
+
 // --- HOOKS ---
 if (!function_exists('mco_register_shortcode_hooks')) {
     function mco_register_shortcode_hooks() {
@@ -370,14 +508,17 @@ function mco_book_showcase_shortcode() {
 
         echo '<div class="mco-card mco-card--book">';
         
+        $site_name = strtolower(get_bloginfo('name'));
+        $is_mco_tenant = (strpos($site_name, 'medical coding online') !== false);
+
         if ($book['thumbnailUrl']) {
             echo '<div class="mco-book-cover mco-book-cover--image"><img src="' . esc_url($book['thumbnailUrl']) . '" alt="' . esc_attr($book['title']) . '"/></div>';
         } else {
-            $color_index = mco_simple_hash_to_color_index($book['title'], 9);
-            echo '<div class="mco-book-cover mco-book-cover--procedural mco-book-cover--color-' . $color_index . '">';
-            echo '<h4 class="mco-book-cover__title">' . esc_html($book['title']) . '</h4>';
-            echo '<div class="mco-book-cover__accent"></div>';
-            echo '</div>';
+            if ($is_mco_tenant) {
+                echo mco_render_mco_procedural_cover_php($book);
+            } else {
+                echo mco_render_annapoorna_procedural_cover_php($book);
+            }
         }
         
         echo '<div class="mco-card__body">';

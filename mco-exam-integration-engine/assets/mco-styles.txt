@@ -85,48 +85,8 @@
 .mco-gradient--sub-yearly { background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%); }
 
 .mco-card--book { color: #1e293b; background-color: #fff; }
-.mco-book-cover { height: 12rem; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 1rem; text-align: center; font-family: sans-serif; position: relative; overflow: hidden; }
-.mco-book-cover--image { padding: 0; }
+.mco-book-cover { height: 12rem; position: relative; overflow: hidden; }
 .mco-book-cover--image img { width: 100%; height: 100%; object-fit: cover; }
-
-.mco-book-cover__title {
-    font-weight: 700;
-    font-size: 1.125rem;
-    line-height: 1.3;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-height: calc(1.125rem * 1.3 * 4); 
-    word-break: break-word;
-    z-index: 10;
-}
-.mco-book-cover__subtitle { display: none; }
-
-.mco-book-cover__accent { width: 33.33%; height: 0.25rem; border-radius: 9999px; z-index: 10; }
-.mco-book-cover--procedural:before, .mco-book-cover--procedural:after { content: ''; position: absolute; border-radius: 9999px; opacity: 0.5; }
-.mco-book-cover--procedural:before { width: 8rem; height: 8rem; top: -3rem; left: -2rem; }
-.mco-book-cover--procedural:after { width: 6rem; height: 6rem; bottom: -2.5rem; right: -2.5rem; }
-
-.mco-book-cover--color-0 { background-color: #fee2e2; color: #991b1b; }
-.mco-book-cover--color-0 .mco-book-cover__accent, .mco-book-cover--color-0:before, .mco-book-cover--color-0:after { background-color: #fca5a5; }
-.mco-book-cover--color-1 { background-color: #fef3c7; color: #92400e; }
-.mco-book-cover--color-1 .mco-book-cover__accent, .mco-book-cover--color-1:before, .mco-book-cover--color-1:after { background-color: #fcd34d; }
-.mco-book-cover--color-2 { background-color: #dcfce7; color: #166534; }
-.mco-book-cover--color-2 .mco-book-cover__accent, .mco-book-cover--color-2:before, .mco-book-cover--color-2:after { background-color: #86efac; }
-.mco-book-cover--color-3 { background-color: #dbeafe; color: #1e40af; }
-.mco-book-cover--color-3 .mco-book-cover__accent, .mco-book-cover--color-3:before, .mco-book-cover--color-3:after { background-color: #93c5fd; }
-.mco-book-cover--color-4 { background-color: #e0e7ff; color: #3730a3; }
-.mco-book-cover--color-4 .mco-book-cover__accent, .mco-book-cover--color-4:before, .mco-book-cover--color-4:after { background-color: #a5b4fc; }
-.mco-book-cover--color-5 { background-color: #f3e8ff; color: #5b21b6; }
-.mco-book-cover--color-5 .mco-book-cover__accent, .mco-book-cover--color-5:before, .mco-book-cover--color-5:after { background-color: #d8b4fe; }
-.mco-book-cover--color-6 { background-color: #fce7f3; color: #9d174d; }
-.mco-book-cover--color-6 .mco-book-cover__accent, .mco-book-cover--color-6:before, .mco-book-cover--color-6:after { background-color: #f9a8d4; }
-.mco-book-cover--color-7 { background-color: #ccfbf1; color: #0f766e; }
-.mco-book-cover--color-7 .mco-book-cover__accent, .mco-book-cover--color-7:before, .mco-book-cover--color-7:after { background-color: #5eead4; }
-.mco-book-cover--color-8 { background-color: #ffedd5; color: #9a3412; }
-.mco-book-cover--color-8 .mco-book-cover__accent, .mco-book-cover--color-8:before, .mco-book-cover--color-8:after { background-color: #fdba74; }
 
 .mco-card__title { font-size: 1.125rem; font-weight: 700; color: #1e293b; margin-bottom: 0.5rem; }
 .mco-card__description { font-size: 0.875rem; color: #64748b; flex-grow: 1; }
@@ -150,6 +110,33 @@
     background-color: #e2e8f0;
     color: #1e293b;
 }
+
+/* --- NEW Procedural Book Cover Styles --- */
+.mco-proc-cover-annapoorna-a { position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center; text-align: center; padding: 1rem; }
+.mco-proc-cover-annapoorna-a__bg, .mco-proc-cover-annapoorna-a__pattern-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.mco-proc-cover-annapoorna-a__pattern-bg { clip-path: polygon(0 0, 100% 0, 0 100%); }
+.mco-proc-cover-annapoorna-a__pattern-svg { position: absolute; inset: 0; opacity: 0.1; }
+.mco-proc-cover-annapoorna-a__content { position: relative; z-index: 1; }
+.mco-proc-cover-annapoorna-a__super-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; }
+.mco-proc-cover-annapoorna-a__title { font-weight: 700; font-size: 1.125rem; line-height: 1.2; margin-top: 0.25rem; }
+
+.mco-proc-cover-annapoorna-b { position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; text-align: left; padding: 1rem; }
+.mco-proc-cover-annapoorna-b__shape { position: absolute; right: -25%; top: -25%; width: 75%; height: 75%; border-radius: 9999px; opacity: 0.5; mix-blend-mode: multiply; }
+.mco-proc-cover-annapoorna-b__content { position: relative; z-index: 1; }
+.mco-proc-cover-annapoorna-b__title { font-weight: 700; font-size: 1.5rem; line-height: 1.2; }
+.mco-proc-cover-annapoorna-b__super-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; }
+
+.mco-proc-cover-mco-a { position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; padding: 1rem; }
+.mco-proc-cover-mco-a__bg-word { position: absolute; bottom: -1rem; right: -0.5rem; font-size: 6rem; font-weight: 900; line-height: 1; z-index: 0; user-select: none; }
+.mco-proc-cover-mco-a__content { position: relative; z-index: 1; }
+.mco-proc-cover-mco-a__title { font-weight: 800; font-size: 1.5rem; line-height: 1.2; }
+
+.mco-proc-cover-mco-b { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 1rem; }
+.mco-proc-cover-mco-b__accent { position: absolute; top: 1rem; left: 0; width: 0.25rem; height: 25%; }
+.mco-proc-cover-mco-b__super-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; }
+.mco-proc-cover-mco-b__title { font-weight: 700; font-size: 1.125rem; line-height: 1.2; margin-top: 0.25rem; }
+.mco-proc-cover-mco-b__logo-mark { align-self: flex-end; font-size: 3rem; font-weight: 900; opacity: 0.1; user-select: none; }
+
 
 @media (max-width: 768px) {
     .mco-card--best-value { transform: none; }

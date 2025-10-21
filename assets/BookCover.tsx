@@ -9,6 +9,7 @@ interface BookCoverProps {
 
 const getHashOfString = (str: string) => {
   let hash = 0;
+  if (!str) return hash;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
@@ -16,61 +17,127 @@ const getHashOfString = (str: string) => {
   return hash;
 };
 
-const AnnapoornaProceduralCover: FC<BookCoverProps> = ({ book, className }) => {
-    const colorIndex = Math.abs(getHashOfString(book.title)) % 6;
-    const bgColors = ['bg-cyan-700', 'bg-sky-700', 'bg-indigo-700', 'bg-purple-700', 'bg-rose-700', 'bg-emerald-700'];
-    const accentColors = ['bg-cyan-400', 'bg-sky-400', 'bg-indigo-400', 'bg-purple-400', 'bg-rose-400', 'bg-emerald-400'];
-    
-    const bgColorClass = bgColors[colorIndex];
-    const accentColorClass = accentColors[colorIndex];
+// --- Annapoorna (Default) Tenant Procedural Covers ---
 
-    return (
-        <div className={`relative flex items-stretch ${className} ${bgColorClass} overflow-hidden`}>
-            <div className={`w-2 flex-shrink-0 ${accentColorClass}`}></div>
-            <div className="p-4 flex flex-col justify-center text-white">
-                <span className="text-xs uppercase tracking-widest opacity-70">Study Material</span>
-                <h4 className="font-bold text-lg leading-tight mt-1">{book.title}</h4>
-            </div>
-            <svg width="100%" height="100%" className="absolute inset-0 opacity-[0.03]" style={{mixBlendMode: 'overlay'}}>
+const AnnapoornaStyleA: FC<{ book: RecommendedBook; color: { bg: string; pattern: string; text: string; } }> = ({ book, color }) => (
+    <div className={`relative w-full h-full overflow-hidden flex items-center justify-center text-center p-4 ${color.text}`}>
+        <div className={`absolute top-0 left-0 w-full h-full ${color.bg}`}></div>
+        <div className={`absolute top-0 left-0 w-full h-full ${color.pattern}`} style={{ clipPath: 'polygon(0 0, 100% 0, 0 100%)' }}>
+             <svg width="100%" height="100%" className="absolute inset-0 opacity-10">
                 <defs>
-                    <pattern id="annapoorna-pattern" patternUnits="userSpaceOnUse" width="40" height="40">
-                        <path d="M-10 10l20 -20 M0 40l40 -40 M30 50l20 -20" stroke="white" strokeWidth="1.5" />
+                    <pattern id="annapoorna-pattern-a" patternUnits="userSpaceOnUse" width="20" height="20">
+                        <circle cx="10" cy="10" r="1" fill="white" />
                     </pattern>
                 </defs>
-                <rect width="100%" height="100%" fill="url(#annapoorna-pattern)" />
+                <rect width="100%" height="100%" fill="url(#annapoorna-pattern-a)" />
             </svg>
         </div>
-    );
+        <div className="relative z-10">
+            <span className="text-xs uppercase tracking-widest opacity-70">Study Material</span>
+            <h4 className="font-bold text-lg leading-tight mt-1">{book.title}</h4>
+        </div>
+    </div>
+);
+
+const AnnapoornaStyleB: FC<{ book: RecommendedBook; color: { bg: string; shape: string; text: string; } }> = ({ book, color }) => (
+    <div className={`relative w-full h-full overflow-hidden flex flex-col justify-end text-left p-4 ${color.text} ${color.bg}`}>
+        <div className={`absolute -right-1/4 -top-1/4 w-3/4 h-3/4 rounded-full ${color.shape} opacity-50`} style={{ mixBlendMode: 'multiply' }}></div>
+        <div className="relative z-10">
+            <h4 className="font-bold text-2xl leading-tight">{book.title}</h4>
+            <span className="text-xs uppercase tracking-widest opacity-70">Official Guide</span>
+        </div>
+    </div>
+);
+
+const AnnapoornaProceduralCover: FC<Omit<BookCoverProps, 'className'>> = ({ book }) => {
+    const hash = getHashOfString(book.title);
+    const styleIndex = Math.abs(hash) % 2;
+    const colorIndex = Math.floor(Math.abs(hash) / 2) % 5;
+
+    const colorsA = [
+        { bg: 'bg-sky-700', pattern: 'bg-sky-800', text: 'text-white' },
+        { bg: 'bg-emerald-700', pattern: 'bg-emerald-800', text: 'text-white' },
+        { bg: 'bg-rose-700', pattern: 'bg-rose-800', text: 'text-white' },
+        { bg: 'bg-purple-700', pattern: 'bg-purple-800', text: 'text-white' },
+        { bg: 'bg-slate-700', pattern: 'bg-slate-800', text: 'text-white' },
+    ];
+    
+    const colorsB = [
+        { bg: 'bg-amber-200', shape: 'bg-amber-400', text: 'text-amber-900' },
+        { bg: 'bg-lime-200', shape: 'bg-lime-400', text: 'text-lime-900' },
+        { bg: 'bg-cyan-200', shape: 'bg-cyan-400', text: 'text-cyan-900' },
+        { bg: 'bg-fuchsia-200', shape: 'bg-fuchsia-400', text: 'text-fuchsia-900' },
+        { bg: 'bg-gray-200', shape: 'bg-gray-400', text: 'text-gray-900' },
+    ];
+    
+    if (styleIndex === 0) {
+        return <AnnapoornaStyleA book={book} color={colorsA[colorIndex]} />;
+    }
+    return <AnnapoornaStyleB book={book} color={colorsB[colorIndex]} />;
 };
 
-const McoProceduralCover: FC<BookCoverProps> = ({ book, className }) => {
-    const colorIndex = Math.abs(getHashOfString(book.title)) % 4;
-    const bgColors = ['bg-slate-100', 'bg-cyan-50', 'bg-teal-50', 'bg-sky-100'];
-    const textColors = ['text-slate-800', 'text-cyan-800', 'text-teal-800', 'text-sky-800'];
-    const largeTextColors = ['text-slate-200', 'text-cyan-100', 'text-teal-100', 'text-sky-200'];
 
-    const bgColorClass = bgColors[colorIndex];
-    const textColorClass = textColors[colorIndex];
-    const largeTextColorClass = largeTextColors[colorIndex];
+// --- MCO Tenant Procedural Covers ---
+
+const MCOStyleA: FC<{ book: RecommendedBook; color: { bg: string; text: string; bgWord: string; } }> = ({ book, color }) => {
     const titleWords = book.title.split(' ');
-    const firstWord = titleWords[0].toUpperCase();
-
+    const bgWord = (titleWords.find(w => w.length > 4) || titleWords[0] || '').toUpperCase();
     return (
-        <div className={`relative overflow-hidden flex flex-col justify-center items-start text-left p-4 ${className} ${bgColorClass}`}>
-            <div className={`absolute -bottom-2 -right-1 text-8xl lg:text-9xl font-black ${largeTextColorClass} select-none leading-none z-0`}>
-                {firstWord}
+         <div className={`relative overflow-hidden flex flex-col justify-center items-start text-left p-4 w-full h-full ${color.bg} ${color.text}`}>
+            <div className={`absolute -bottom-4 -right-2 text-9xl font-black ${color.bgWord} select-none leading-none z-0`}>
+                {bgWord}
             </div>
             <div className="relative z-10">
-                <h4 className={`font-extrabold text-xl lg:text-2xl leading-tight ${textColorClass}`}>{book.title}</h4>
+                <h4 className="font-extrabold text-2xl leading-tight">{book.title}</h4>
             </div>
         </div>
     );
 };
 
+const MCOStyleB: FC<{ book: RecommendedBook; color: { bg: string; text: string; accent: string; } }> = ({ book, color }) => {
+    return (
+        <div className={`relative w-full h-full flex flex-col justify-between p-4 ${color.bg} ${color.text}`}>
+            <div className={`absolute top-4 left-0 w-1 h-1/4 ${color.accent}`}></div>
+            <div>
+                 <span className="text-xs uppercase tracking-widest opacity-70">Reference Material</span>
+                <h4 className="font-bold text-lg leading-tight mt-1">{book.title}</h4>
+            </div>
+            <div className={`self-end text-5xl font-black opacity-10 select-none`}>
+                MCO
+            </div>
+        </div>
+    );
+};
+
+const McoProceduralCover: FC<Omit<BookCoverProps, 'className'>> = ({ book }) => {
+    const hash = getHashOfString(book.title);
+    const styleIndex = Math.abs(hash) % 2;
+    const colorIndex = Math.floor(Math.abs(hash) / 2) % 4;
+    
+    const colorsA = [
+        { bg: 'bg-slate-100', text: 'text-slate-800', bgWord: 'text-slate-200' },
+        { bg: 'bg-cyan-50', text: 'text-cyan-800', bgWord: 'text-cyan-100' },
+        { bg: 'bg-teal-50', text: 'text-teal-800', bgWord: 'text-teal-100' },
+        { bg: 'bg-sky-50', text: 'text-sky-800', bgWord: 'text-sky-100' },
+    ];
+    const colorsB = [
+        { bg: 'bg-slate-800', text: 'text-white', accent: 'bg-cyan-400' },
+        { bg: 'bg-gray-800', text: 'text-white', accent: 'bg-amber-400' },
+        { bg: 'bg-sky-800', text: 'text-white', accent: 'bg-rose-400' },
+        { bg: 'bg-emerald-800', text: 'text-white', accent: 'bg-lime-400' },
+    ];
+
+    if (styleIndex === 0) {
+        return <MCOStyleA book={book} color={colorsA[colorIndex]} />;
+    }
+    return <MCOStyleB book={book} color={colorsB[colorIndex]} />;
+};
+
+
+// --- Main BookCover Component ---
 const BookCover: FC<BookCoverProps> = ({ book, className }) => {
   const { activeOrg } = useAppContext();
 
-  // If a custom thumbnail URL is provided, use it.
   if (typeof book.thumbnailUrl === 'string' && book.thumbnailUrl) {
     return (
       <div className={`relative ${className} bg-slate-100`}>
@@ -78,14 +145,16 @@ const BookCover: FC<BookCoverProps> = ({ book, className }) => {
       </div>
     );
   }
+  
+  const ProceduralCover = (activeOrg && activeOrg.id === 'org-medical-coding-online') 
+    ? <McoProceduralCover book={book} />
+    : <AnnapoornaProceduralCover book={book} />;
 
-  // Fallback to procedural generation based on tenant ID.
-  if (activeOrg && activeOrg.id === 'org-medical-coding-online') {
-      return <McoProceduralCover book={book} className={className} />;
-  }
-
-  // Default to Annapoorna style for all other tenants.
-  return <AnnapoornaProceduralCover book={book} className={className} />;
+  return (
+    <div className={className}>
+      {ProceduralCover}
+    </div>
+  );
 };
 
 export default BookCover;
