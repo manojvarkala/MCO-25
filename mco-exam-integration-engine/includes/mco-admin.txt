@@ -25,7 +25,7 @@ function mco_admin_enqueue_scripts($hook) {
     if (!$screen || ($screen->post_type !== 'mco_exam_program' && $screen->base !== 'toplevel_page_mco-exam-engine' && $screen->base !== 'exam-app-engine_page_mco-exam-engine')) {
         return;
     }
-    wp_enqueue_style('mco-admin-styles', MCO_PLUGIN_URL . 'assets/mco-styles.txt', [], MCO_PLUGIN_VERSION);
+    wp_enqueue_style('mco-admin-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
 }
 
 function mco_exam_engine_admin_page() {

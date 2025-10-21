@@ -20,11 +20,11 @@ $plugin_data = get_file_data(MCO_PLUGIN_FILE, array('Version' => 'Version'));
 define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 
 // Include all the functional parts of the plugin
-require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.txt';
-require_once MCO_PLUGIN_PATH . 'includes/mco-data.txt';
-require_once MCO_PLUGIN_PATH . 'includes/mco-api.txt';
-require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.txt';
-require_once MCO_PLUGIN_PATH . 'includes/mco-admin.txt';
+require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-data.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-api.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php';
 
 // --- INITIALIZATION HOOKS ---
 add_action('init', function() {

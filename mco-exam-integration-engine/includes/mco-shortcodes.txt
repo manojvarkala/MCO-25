@@ -32,7 +32,7 @@ if (!function_exists('mco_prevent_caching_on_shortcode_pages')) {
 // --- STYLES ---
 if (!function_exists('mco_enqueue_shortcode_styles')) {
     function mco_enqueue_shortcode_styles() {
-        wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.txt', [], MCO_PLUGIN_VERSION);
+        wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
     }
 }
 
