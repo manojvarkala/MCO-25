@@ -88,28 +88,22 @@
 .mco-book-cover { height: 12rem; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 1rem; text-align: center; font-family: sans-serif; position: relative; overflow: hidden; }
 .mco-book-cover--image { padding: 0; }
 .mco-book-cover--image img { width: 100%; height: 100%; object-fit: cover; }
-.mco-book-cover__title, .mco-book-cover__subtitle {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    word-break: break-word;
-    z-index: 10;
-}
+
 .mco-book-cover__title {
     font-weight: 700;
     font-size: 1.125rem;
-    line-height: 1.25;
-    -webkit-line-clamp: 3;
-    max-height: 3.75rem; /* 1.25 * 3 */
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-height: calc(1.125rem * 1.3 * 4);
+    word-break: break-word;
+    z-index: 10;
 }
-.mco-book-cover__subtitle {
-    font-size: 0.875rem;
-    opacity: 0.8;
-    line-height: 1.4;
-    -webkit-line-clamp: 2;
-    max-height: 2.45rem; /* 1.4 * 2 */
-}
+.mco-book-cover__subtitle { display: none; }
+
 .mco-book-cover__accent { width: 33.33%; height: 0.25rem; border-radius: 9999px; z-index: 10; }
 .mco-book-cover--procedural:before, .mco-book-cover--procedural:after { content: ''; position: absolute; border-radius: 9999px; opacity: 0.5; }
 .mco-book-cover--procedural:before { width: 8rem; height: 8rem; top: -3rem; left: -2rem; }
@@ -137,6 +131,27 @@
 .mco-card__title { font-size: 1.125rem; font-weight: 700; color: #1e293b; margin-bottom: 0.5rem; }
 .mco-card__description { font-size: 0.875rem; color: #64748b; flex-grow: 1; }
 .mco-card__no-links { text-align: center; color: #9ca3af; font-size: 0.875rem; }
+
+.mco-card--book .mco-card__title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -webkit-line-clamp: 2;
+    line-height: 1.4;
+    min-height: calc(1.125rem * 1.4 * 2); 
+}
+
+.mco-card--book .mco-card__button--secondary {
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+.mco-card--book .mco-card__button--secondary:hover {
+    background-color: #e2e8f0 !important;
+    color: #1e293b !important;
+}
 
 @media (max-width: 768px) {
     .mco-card--best-value { transform: none; }

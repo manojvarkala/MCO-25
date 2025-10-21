@@ -360,7 +360,7 @@ function mco_book_showcase_shortcode() {
         $book = [
             'title' => wp_strip_all_tags(get_the_title($book_post)),
             'description' => has_excerpt($book_post->ID) ? wp_strip_all_tags(get_the_excerpt($book_post->ID)) : wp_strip_all_tags(wp_trim_words($book_post->post_content, 30, '...')),
-            'thumbnailUrl' => get_post_meta($book_post->ID, '_mco_thumbnail_url', true) ?: get_the_post_thumbnail_url($book_post->ID, 'medium_large'),
+            'thumbnailUrl' => get_post_meta($book_post->ID, '_mco_thumbnail_url', true),
             'links' => [
                 'com' => get_post_meta($book_post->ID, '_mco_link_com', true),
                 'in' => get_post_meta($book_post->ID, '_mco_link_in', true),
@@ -373,11 +373,9 @@ function mco_book_showcase_shortcode() {
         if ($book['thumbnailUrl']) {
             echo '<div class="mco-book-cover mco-book-cover--image"><img src="' . esc_url($book['thumbnailUrl']) . '" alt="' . esc_attr($book['title']) . '"/></div>';
         } else {
-            $title_words = explode(' ', $book['title']);
-            $color_index = mco_simple_hash_to_color_index($book['title'], 9); // Use 9 colors
+            $color_index = mco_simple_hash_to_color_index($book['title'], 9);
             echo '<div class="mco-book-cover mco-book-cover--procedural mco-book-cover--color-' . $color_index . '">';
-            echo '<h4 class="mco-book-cover__title">' . esc_html(implode(' ', array_slice($title_words, 0, 4))) . '</h4>';
-            if (count($title_words) > 4) echo '<p class="mco-book-cover__subtitle">' . esc_html(implode(' ', array_slice($title_words, 4))) . '</p>';
+            echo '<h4 class="mco-book-cover__title">' . esc_html($book['title']) . '</h4>';
             echo '<div class="mco-book-cover__accent"></div>';
             echo '</div>';
         }
