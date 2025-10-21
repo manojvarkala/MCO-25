@@ -123,13 +123,13 @@
     background-color: #f59e0b; /* yellow-500 */
 }
 
-/* This is the new style for secondary buttons on book cards, visible on light BG */
-.mco-card--book .mco-card__button--secondary {
+/* Specific override for book buttons on WP shortcode to ensure visibility */
+.mco-card--book .mco-book-button {
     background-color: #f1f5f9; /* slate-100 */
     color: #475569; /* slate-600 */
     font-weight: 600;
 }
-.mco-card--book .mco-card__button--secondary:hover {
+.mco-card--book .mco-book-button:hover {
     background-color: #e2e8f0; /* slate-200 */
 }
 
@@ -149,6 +149,7 @@
 .mco-proc-cover-annapoorna-b__title { font-weight: 700; font-size: 1.5rem; line-height: 1.2; }
 .mco-proc-cover-annapoorna-b__super-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; }
 
+/* NEW MCO (Medical Coding Online) Procedural Covers */
 .mco-proc-cover-mco-a { position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; padding: 1rem; }
 .mco-proc-cover-mco-a__bg-word { position: absolute; bottom: -1rem; right: -0.5rem; font-size: 6rem; font-weight: 900; line-height: 1; z-index: 0; user-select: none; }
 .mco-proc-cover-mco-a__content { position: relative; z-index: 1; }
@@ -159,6 +160,27 @@
 .mco-proc-cover-mco-b__super-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; }
 .mco-proc-cover-mco-b__title { font-weight: 700; font-size: 1.125rem; line-height: 1.2; margin-top: 0.25rem; }
 .mco-proc-cover-mco-b__logo-mark { align-self: flex-end; font-size: 3rem; font-weight: 900; opacity: 0.1; user-select: none; }
+
+/* MCO Style A Colors */
+.mco-proc-cover-mco-a--color-0 { background-color: #334155; color: #f1f5f9; }
+.mco-proc-cover-mco-a--color-0 .mco-proc-cover-mco-a__bg-word { color: #475569; }
+.mco-proc-cover-mco-a--color-1 { background-color: #0891b2; color: #cffafe; }
+.mco-proc-cover-mco-a--color-1 .mco-proc-cover-mco-a__bg-word { color: #155e75; }
+.mco-proc-cover-mco-a--color-2 { background-color: #115e59; color: #ccfbf1; }
+.mco-proc-cover-mco-a--color-2 .mco-proc-cover-mco-a__bg-word { color: #134e4a; }
+.mco-proc-cover-mco-a--color-3 { background-color: #0369a1; color: #e0f2fe; }
+.mco-proc-cover-mco-a--color-3 .mco-proc-cover-mco-a__bg-word { color: #0c4a6e; }
+
+/* MCO Style B Colors */
+.mco-proc-cover-mco-b--color-0 { background-color: #1e293b; color: #ffffff; }
+.mco-proc-cover-mco-b--color-0 .mco-proc-cover-mco-b__accent { background-color: #38bdf8; }
+.mco-proc-cover-mco-b--color-1 { background-color: #44403c; color: #ffffff; }
+.mco-proc-cover-mco-b--color-1 .mco-proc-cover-mco-b__accent { background-color: #facc15; }
+.mco-proc-cover-mco-b--color-2 { background-color: #0c4a6e; color: #ffffff; }
+.mco-proc-cover-mco-b--color-2 .mco-proc-cover-mco-b__accent { background-color: #fb7185; }
+.mco-proc-cover-mco-b--color-3 { background-color: #065f46; color: #ffffff; }
+.mco-proc-cover-mco-b--color-3 .mco-proc-cover-mco-b__accent { background-color: #a3e635; }
+
 
 
 @media (max-width: 768px) {

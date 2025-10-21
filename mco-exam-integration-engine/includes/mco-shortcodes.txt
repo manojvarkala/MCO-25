@@ -59,10 +59,10 @@ function mco_render_annapoorna_style_b($book, $color_index) {
 // New MCO Style A
 function mco_render_mco_style_a($book, $color_index) {
     $colors = [
-        ['bg' => '#f1f5f9', 'text' => '#1e293b', 'bgWord' => '#e2e8f0'],
-        ['bg' => '#f0f9ff', 'text' => '#0c4a6e', 'bgWord' => '#e0f2fe'],
-        ['bg' => '#f0fdfa', 'text' => '#134e4a', 'bgWord' => '#ccfbf1'],
-        ['bg' => '#f0f9ff', 'text' => '#0c4a6e', 'bgWord' => '#e0f2fe'],
+        ['bg' => '#334155', 'text' => '#f1f5f9', 'bgWord' => '#475569'], // slate
+        ['bg' => '#0891b2', 'text' => '#cffafe', 'bgWord' => '#155e75'], // cyan
+        ['bg' => '#115e59', 'text' => '#ccfbf1', 'bgWord' => '#134e4a'], // teal
+        ['bg' => '#0369a1', 'text' => '#e0f2fe', 'bgWord' => '#0c4a6e'], // sky
     ];
     $color = $colors[$color_index % 4];
     $title_words = explode(' ', $book['title']);
@@ -71,8 +71,8 @@ function mco_render_mco_style_a($book, $color_index) {
 
     ob_start();
     ?>
-     <div class="mco-book-cover mco-proc-cover-mco-a" style="background-color: <?php echo esc_attr($color['bg']); ?>; color: <?php echo esc_attr($color['text']); ?>;">
-        <span class="mco-proc-cover-mco-a__bg-word" style="color: <?php echo esc_attr($color['bgWord']); ?>;"><?php echo esc_html($bg_word); ?></span>
+     <div class="mco-book-cover mco-proc-cover-mco-a mco-proc-cover-mco-a--color-<?php echo ($color_index % 4); ?>">
+        <span class="mco-proc-cover-mco-a__bg-word"><?php echo esc_html($bg_word); ?></span>
         <div class="mco-proc-cover-mco-a__content">
              <h4 class="mco-proc-cover-mco-a__title"><?php echo esc_html($book['title']); ?></h4>
         </div>
@@ -84,16 +84,16 @@ function mco_render_mco_style_a($book, $color_index) {
 // New MCO Style B
 function mco_render_mco_style_b($book, $color_index) {
     $colors = [
-        ['bg' => '#1e293b', 'text' => '#ffffff', 'accent' => '#38bdf8'],
-        ['bg' => '#44403c', 'text' => '#ffffff', 'accent' => '#facc15'],
-        ['bg' => '#0c4a6e', 'text' => '#ffffff', 'accent' => '#fb7185'],
-        ['bg' => '#065f46', 'text' => '#ffffff', 'accent' => '#a3e635'],
+        ['bg' => '#1e293b', 'text' => '#ffffff', 'accent' => '#38bdf8'], // slate
+        ['bg' => '#44403c', 'text' => '#ffffff', 'accent' => '#facc15'], // stone/gray
+        ['bg' => '#0c4a6e', 'text' => '#ffffff', 'accent' => '#fb7185'], // sky
+        ['bg' => '#065f46', 'text' => '#ffffff', 'accent' => '#a3e635'], // emerald
     ];
     $color = $colors[$color_index % 4];
     ob_start();
     ?>
-    <div class="mco-book-cover mco-proc-cover-mco-b" style="background-color: <?php echo esc_attr($color['bg']); ?>; color: <?php echo esc_attr($color['text']); ?>;">
-        <div class="mco-proc-cover-mco-b__accent" style="background-color: <?php echo esc_attr($color['accent']); ?>;"></div>
+    <div class="mco-book-cover mco-proc-cover-mco-b mco-proc-cover-mco-b--color-<?php echo ($color_index % 4); ?>">
+        <div class="mco-proc-cover-mco-b__accent"></div>
         <div class="mco-proc-cover-mco-b__content">
             <span class="mco-proc-cover-mco-b__super-title">Reference Material</span>
             <h4 class="mco-proc-cover-mco-b__title"><?php echo esc_html($book['title']); ?></h4>
@@ -528,9 +528,9 @@ function mco_book_showcase_shortcode() {
         
         echo '<div class="mco-card__footer" data-book-links>';
         $link_found = false;
-        if (!empty($book['links']['com'])) { echo '<a href="' . esc_url($book['links']['com']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary" data-store="com">' . $icons['cart'] . ' Buy on Amazon.com</a>'; $link_found = true; }
-        if (!empty($book['links']['in'])) { echo '<a href="' . esc_url($book['links']['in']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary" data-store="in">' . $icons['cart'] . ' Buy on Amazon.in</a>'; $link_found = true; }
-        if (!empty($book['links']['ae'])) { echo '<a href="' . esc_url($book['links']['ae']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary" data-store="ae">' . $icons['cart'] . ' Buy on Amazon.ae</a>'; $link_found = true; }
+        if (!empty($book['links']['com'])) { echo '<a href="' . esc_url($book['links']['com']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary mco-book-button" data-store="com">' . $icons['cart'] . ' Buy on Amazon.com</a>'; $link_found = true; }
+        if (!empty($book['links']['in'])) { echo '<a href="' . esc_url($book['links']['in']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary mco-book-button" data-store="in">' . $icons['cart'] . ' Buy on Amazon.in</a>'; $link_found = true; }
+        if (!empty($book['links']['ae'])) { echo '<a href="' . esc_url($book['links']['ae']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary mco-book-button" data-store="ae">' . $icons['cart'] . ' Buy on Amazon.ae</a>'; $link_found = true; }
         if (!$link_found) { echo '<p class="mco-card__no-links">Purchase links unavailable.</p>'; }
         echo '</div>';
         
@@ -569,6 +569,7 @@ function mco_book_showcase_shortcode() {
 
                 if (primaryLink) {
                     primaryLink.classList.remove("mco-card__button--secondary");
+                    primaryLink.classList.remove("mco-book-button");
                     primaryLink.classList.add("mco-card__button--purchase");
                     footer.prepend(primaryLink);
                 }

@@ -115,10 +115,10 @@ const McoProceduralCover: FC<Omit<BookCoverProps, 'className'>> = ({ book }) => 
     const colorIndex = Math.floor(Math.abs(hash) / 2) % 4;
     
     const colorsA = [
-        { bg: 'bg-slate-100', text: 'text-slate-800', bgWord: 'text-slate-200' },
-        { bg: 'bg-cyan-50', text: 'text-cyan-800', bgWord: 'text-cyan-100' },
-        { bg: 'bg-teal-50', text: 'text-teal-800', bgWord: 'text-teal-100' },
-        { bg: 'bg-sky-50', text: 'text-sky-800', bgWord: 'text-sky-100' },
+        { bg: 'bg-slate-700', text: 'text-slate-100', bgWord: 'text-slate-600' },
+        { bg: 'bg-cyan-700', text: 'text-cyan-100', bgWord: 'text-cyan-600' },
+        { bg: 'bg-teal-700', text: 'text-teal-100', bgWord: 'text-teal-600' },
+        { bg: 'bg-sky-700', text: 'text-sky-100', bgWord: 'text-sky-600' },
     ];
     const colorsB = [
         { bg: 'bg-slate-800', text: 'text-white', accent: 'bg-cyan-400' },

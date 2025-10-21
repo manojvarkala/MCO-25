@@ -1,7 +1,5 @@
 
-
 import React, { FC, useState, useEffect, useRef } from 'react';
-// FIX: Corrected react-router-dom import to resolve module export errors.
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -28,7 +26,6 @@ const decodeHtmlEntities = (text: string | undefined): string => {
 
 const Certificate: FC = () => {
     const { testId = 'sample' } = useParams<{ testId?: string }>();
-    // Fix: Use useNavigate for navigation in v6
     const navigate = useNavigate();
     const { user, token, isEffectivelyAdmin } = useAuth();
     const { activeOrg } = useAppContext();
@@ -38,10 +35,9 @@ const Certificate: FC = () => {
     const certificatePrintRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // Handling the sample certificate locally without an API call.
         if (testId === 'sample') {
             if (!user || !activeOrg) {
-                if (!activeOrg) setIsLoading(true); // Still waiting for context
+                if (!activeOrg) setIsLoading(true);
                 return;
             }
 
@@ -61,24 +57,21 @@ const Certificate: FC = () => {
                 organization: activeOrg,
                 template: sampleTemplate,
                 examName: 'Sample Proficiency Exam',
-                // FIX: Added missing examId property to satisfy the CertificateData type.
                 examId: 'sample-exam',
             };
             setCertData(sampleCertData);
             setIsLoading(false);
-            return; // End execution for sample
+            return;
         }
 
-        // Fetch data for a real certificate
         const fetchCertificateData = async () => {
             if (!user || !token || !activeOrg) {
-                if (!activeOrg) setIsLoading(true); // Still loading
+                if (!activeOrg) setIsLoading(true);
                 return;
             }
             
             setIsLoading(true);
             try {
-                // The user object is no longer needed here; it's derived from the token on the backend.
                 const partialData = await googleSheetsService.getCertificateData(token, testId, isEffectivelyAdmin);
 
                 if (partialData) {
@@ -132,7 +125,7 @@ const Certificate: FC = () => {
 
         try {
             const canvas = await html2canvas(certificatePrintRef.current, {
-                scale: 2, useCORS: true, backgroundColor: null,
+                scale: 2, useCORS: true, backgroundColor: '#ffffff',
             });
             const imgData = canvas.toDataURL('image/png', 0.95);
             const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -140,7 +133,6 @@ const Certificate: FC = () => {
             const pdfHeight = pdf.internal.pageSize.getHeight();
             
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            // Fix: Corrected the regular expression to properly replace whitespace characters in the filename.
             pdf.save(`Certificate-of-Completion-${certData.candidateName.replace(/\s+/g, '_')}.pdf`);
             toast.dismiss(toastId);
             toast.success("Certificate downloaded!");
@@ -162,12 +154,9 @@ const Certificate: FC = () => {
     }
 
     const { organization, template, examName } = certData;
-    const hasTwoSignatures = !!(template.signature2Name && template.signature2Title);
     const isSig1Base64 = template.signature1ImageUrl && template.signature1ImageUrl.startsWith('data:image');
-    const isSig2Base64 = template.signature2ImageUrl && template.signature2ImageUrl.startsWith('data:image');
     const verificationUrl = `${window.location.origin}/verify/${certData.certificateNumber}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(verificationUrl)}`;
-    const certificateTheme = organization.certificateThemeId || 'classic';
 
     return (
         <>
@@ -190,98 +179,69 @@ const Certificate: FC = () => {
                 </button>
             </div>
             
-            <div
-                ref={certificatePrintRef}
-                data-cert-theme={certificateTheme}
-                className="cert-container bg-[var(--cert-bg-color)] p-2 relative aspect-[1.414/1] w-full shadow-2xl text-[var(--cert-text-color)]"
-            >
-                {/* Borders */}
-                <div className="cert-border cert-border--outer"></div>
-                <div className="cert-border cert-border--middle"></div>
-                <div className="cert-border cert-border--inner"></div>
-                <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-slate-50 to-white/80"></div>
-
-                <div className="relative z-10 flex flex-col h-full p-4 md:p-8 text-center">
-                    {/* Header */}
-                    <header className="flex justify-between items-start gap-4 mb-4">
-                        <div className="flex items-center gap-4 text-left">
-                            {organization.logo && <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="h-16 w-16 object-contain" />}
-                             <div>
-                                <h1 className="text-2xl md:text-3xl font-bold text-[var(--cert-header-color)] font-[var(--cert-font-display)]">{organization.name}</h1>
-                                <p className="text-sm text-[var(--cert-text-muted-color)]">{organization.website}</p>
-                            </div>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                             <p className="text-xs text-[var(--cert-text-muted-color)]">Certificate ID</p>
-                             <p className="text-sm font-semibold text-[var(--cert-text-color)] whitespace-nowrap">{certData.certificateNumber}</p>
-                        </div>
-                    </header>
-
-                    {/* Main Content */}
-                    <main className="flex-grow flex flex-col items-center justify-center my-4">
-                        <p className="text-xl sm:text-2xl tracking-[0.2em] uppercase text-[var(--cert-text-muted-color)] font-semibold font-[var(--cert-font-display)]">{template.title}</p>
-                        <p className="mt-8 text-base sm:text-lg text-[var(--cert-text-muted-color)] font-[var(--cert-font-body)]">This certificate is proudly presented to</p>
-                        
-                        <h2 className="font-[var(--cert-font-script)] text-5xl sm:text-6xl text-[var(--cert-header-color)] my-2 sm:my-4 px-8 border-b-2 border-[var(--cert-accent-color)]">
-                            {certData.candidateName}
-                        </h2>
-
-                        <p className="text-base sm:text-lg text-[var(--cert-text-color)] max-w-2xl mx-auto font-[var(--cert-font-body)]">
-                            For successfully completing the rigorous requirements of the
-                        </p>
-                        <h3 className="text-2xl sm:text-3xl font-bold text-[var(--cert-primary-color)] mt-2 font-[var(--cert-font-display)]">
-                            {examName}
-                        </h3>
-                        <p className="mt-4 text-base sm:text-lg text-[var(--cert-text-color)] font-[var(--cert-font-body)]">
-                            having achieved a passing score of <strong>{certData.finalScore}%</strong>.
-                        </p>
-                    </main>
-
-                    {/* Footer */}
-                    <footer className="mt-auto pt-4 relative">
-                        <div className="flex justify-between items-end pt-12">
-                            <div className="text-center w-1/3">
-                                <div className="h-12 flex items-center justify-center">
-                                    {template.signature1ImageUrl ? (
-                                        <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="h-10 mx-auto" />
-                                    ) : (
-                                        <p className="font-[var(--cert-font-script)] text-3xl text-[var(--cert-text-color)]">{template.signature1Name}</p>
+            <div ref={certificatePrintRef} className="cert-container-classic aspect-[1.414/1] w-full shadow-2xl">
+                <div className="cert-border-pattern">
+                    <div className="cert-border-line">
+                        <div className="cert-content-wrapper">
+                             <div className="cert-content-inner">
+                                {/* Header */}
+                                <header className="cert-header">
+                                    {organization.logo && (
+                                        <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="cert-logo" />
                                     )}
-                                </div>
-                                <hr className="cert-hr" />
-                                <p className="font-semibold text-sm mt-2">{template.signature1Name}</p>
-                                <p className="text-xs text-[var(--cert-text-muted-color)]">{template.signature1Title}</p>
-                            </div>
-
-                            <div className="text-center w-1/3">
-                                <p className="font-[var(--cert-font-display)] text-lg text-[var(--cert-text-color)] h-12 flex items-end justify-center pb-1">{certData.date}</p>
-                                <hr className="cert-hr" />
-                                <p className="font-semibold text-sm mt-2">Date</p>
-                            </div>
-                            
-                            {hasTwoSignatures ? (
-                                <div className="text-center w-1/3">
-                                    <div className="h-12 flex items-center justify-center">
-                                        {template.signature2ImageUrl ? (
-                                            <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} className="h-10 mx-auto" />
-                                        ) : (
-                                            <p className="font-[var(--cert-font-script)] text-3xl text-[var(--cert-text-color)]">{template.signature2Name}</p>
-                                        )}
+                                    <div className="cert-brain-icon">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-slate-200">
+                                            <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v0A2.5 2.5 0 0 1 9.5 7v0A2.5 2.5 0 0 1 7 4.5v0A2.5 2.5 0 0 1 9.5 2Z" /><path d="M14.5 2A2.5 2.5 0 0 1 17 4.5v0A2.5 2.5 0 0 1 14.5 7v0A2.5 2.5 0 0 1 12 4.5v0A2.5 2.5 0 0 1 14.5 2Z" /><path d="M12 18H5c-1.1 0-2-1.34-2-3v-1.5c0-.83.67-1.5 1.5-1.5.83 0 1.5.67 1.5 1.5v.5a.5.5 0 0 0 .5.5h1" /><path d="M12 18h7c1.1 0 2-1.34 2-3v-1.5c0-.83-.67-1.5-1.5-1.5-.83 0-1.5.67-1.5 1.5v.5a.5.5 0 0 1-.5.5h-1" /><path d="M12 18v-5.5" /><path d="M12 12.5v-2" /><path d="M12 7.5V6" /><path d="M7 15a2.5 2.5 0 0 1 0-5" /><path d="M17 15a2.5 2.5 0 0 0 0-5" />
+                                        </svg>
                                     </div>
-                                    <hr className="cert-hr" />
-                                    <p className="font-semibold text-sm mt-2">{template.signature2Name}</p>
-                                    <p className="text-xs text-[var(--cert-text-muted-color)]">{template.signature2Title}</p>
+                                </header>
+                                
+                                {/* Main Body */}
+                                <main className="cert-body">
+                                    <p className="cert-title-main">{template.title}</p>
+                                    <p className="cert-text-normal mt-4">This is to certify that</p>
+                                    <h2 className="cert-candidate-name">{certData.candidateName}</h2>
+                                    <p className="cert-text-normal max-w-xl mx-auto">
+                                        has successfully completed intellectual examination
+                                        for the <strong>{examName}</strong>
+                                    </p>
+                                    <p className="cert-text-normal mt-2">with the following score:</p>
+                                    <p className="cert-score">{certData.finalScore}</p>
+                                </main>
+
+                                {/* Footer */}
+                                <footer className="cert-footer">
+                                    <div className="cert-footer-item">
+                                        <p className="font-semibold text-sm h-6">{certData.certificateNumber}</p>
+                                        <hr className="cert-hr"/>
+                                        <p className="text-xs">Certificate Number</p>
+                                    </div>
+                                    <div className="cert-footer-item">
+                                        <div className="h-10 flex items-center justify-center">
+                                            {template.signature1ImageUrl ? (
+                                                <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="h-8 mx-auto" />
+                                            ) : (
+                                                <p className="cert-signature-text">{template.signature1Name}</p>
+                                            )}
+                                        </div>
+                                        <hr className="cert-hr"/>
+                                        <p className="font-semibold text-sm mt-1">{template.signature1Name}</p>
+                                        <p className="text-xs">{template.signature1Title}</p>
+                                    </div>
+                                    <div className="cert-footer-item">
+                                        <p className="font-semibold text-sm h-6">{certData.date}</p>
+                                        <hr className="cert-hr"/>
+                                        <p className="text-xs">Date of Completion</p>
+                                    </div>
+                                </footer>
+
+                                <div className="cert-qr-footer">
+                                    <p>Verify this certificate at: {verificationUrl}</p>
+                                    <img src={qrCodeUrl} alt="Verification QR Code" className="cert-qr-code" />
                                 </div>
-                            ) : <div className="w-1/3"></div>}
-                        </div>
-                        <div className="text-center mt-6 flex justify-between items-center border-t border-slate-200 pt-2">
-                            <div className="text-left">
-                                <p className="text-xs text-slate-500">Verify authenticity at:</p>
-                                <a href={verificationUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-600 hover:underline break-all">{verificationUrl}</a>
                             </div>
-                            <img src={qrCodeUrl} alt="Verification QR Code" className="w-16 h-16" />
                         </div>
-                    </footer>
+                    </div>
                 </div>
             </div>
         </div>
