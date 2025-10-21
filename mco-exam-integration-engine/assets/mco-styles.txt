@@ -84,7 +84,18 @@
 .mco-gradient--sub-monthly { background: linear-gradient(135deg, #22d3ee 0%, #0ea5e9 100%); }
 .mco-gradient--sub-yearly { background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%); }
 
-.mco-card--book { color: #1e293b; background-color: #fff; }
+.mco-card--book {
+    color: #1e293b;
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.mco-card--book:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+}
+
 .mco-book-cover { height: 12rem; position: relative; overflow: hidden; }
 .mco-book-cover--image img { width: 100%; height: 100%; object-fit: cover; }
 
@@ -102,14 +113,26 @@
     min-height: calc(1.125rem * 1.4 * 2); 
 }
 
-.mco-book-button {
-    background-color: #f1f5f9;
-    color: #475569;
+/* Styling for buttons specifically inside a book card */
+.mco-card--book .mco-card__button--purchase {
+    background-color: #facc15; /* yellow-400 */
+    color: #1e293b; /* slate-800 */
+    font-weight: 700;
 }
-.mco-book-button:hover {
-    background-color: #e2e8f0;
-    color: #1e293b;
+.mco-card--book .mco-card__button--purchase:hover {
+    background-color: #f59e0b; /* yellow-500 */
 }
+
+/* This is the new style for secondary buttons on book cards, visible on light BG */
+.mco-card--book .mco-card__button--secondary {
+    background-color: #f1f5f9; /* slate-100 */
+    color: #475569; /* slate-600 */
+    font-weight: 600;
+}
+.mco-card--book .mco-card__button--secondary:hover {
+    background-color: #e2e8f0; /* slate-200 */
+}
+
 
 /* --- NEW Procedural Book Cover Styles --- */
 .mco-proc-cover-annapoorna-a { position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center; text-align: center; padding: 1rem; }

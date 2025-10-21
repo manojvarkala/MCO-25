@@ -528,9 +528,9 @@ function mco_book_showcase_shortcode() {
         
         echo '<div class="mco-card__footer" data-book-links>';
         $link_found = false;
-        if (!empty($book['links']['com'])) { echo '<a href="' . esc_url($book['links']['com']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary mco-book-button" data-store="com">' . $icons['cart'] . ' Buy on Amazon.com</a>'; $link_found = true; }
-        if (!empty($book['links']['in'])) { echo '<a href="' . esc_url($book['links']['in']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary mco-book-button" data-store="in">' . $icons['cart'] . ' Buy on Amazon.in</a>'; $link_found = true; }
-        if (!empty($book['links']['ae'])) { echo '<a href="' . esc_url($book['links']['ae']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary mco-book-button" data-store="ae">' . $icons['cart'] . ' Buy on Amazon.ae</a>'; $link_found = true; }
+        if (!empty($book['links']['com'])) { echo '<a href="' . esc_url($book['links']['com']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary" data-store="com">' . $icons['cart'] . ' Buy on Amazon.com</a>'; $link_found = true; }
+        if (!empty($book['links']['in'])) { echo '<a href="' . esc_url($book['links']['in']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary" data-store="in">' . $icons['cart'] . ' Buy on Amazon.in</a>'; $link_found = true; }
+        if (!empty($book['links']['ae'])) { echo '<a href="' . esc_url($book['links']['ae']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary" data-store="ae">' . $icons['cart'] . ' Buy on Amazon.ae</a>'; $link_found = true; }
         if (!$link_found) { echo '<p class="mco-card__no-links">Purchase links unavailable.</p>'; }
         echo '</div>';
         
