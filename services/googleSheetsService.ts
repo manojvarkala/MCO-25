@@ -341,6 +341,9 @@ export const googleSheetsService = {
     getExamStats: async (token: string): Promise<ExamStat[]> => {
         return await apiFetch('/exam-stats', 'GET', token);
     },
+    adminGetSystemStatus: async (token: string): Promise<any> => {
+        return await apiFetch('/admin/system-status', 'GET', token);
+    },
     adminTestSheetUrl: async (token: string, sheetUrl: string): Promise<any> => {
         return await apiFetch('/admin/test-sheet-url', 'POST', token, { sheetUrl });
     },

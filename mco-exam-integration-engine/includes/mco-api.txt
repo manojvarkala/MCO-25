@@ -275,6 +275,7 @@ function mco_register_rest_routes() {
     // ADMIN-ONLY ENDPOINTS (JWT-PROTECTED)
     register_rest_route($namespace, '/exam-stats', ['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/debug-details', ['methods' => 'GET', 'callback' => 'mco_api_get_debug_details', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/system-status', ['methods' => 'GET', 'callback' => 'mco_api_get_system_status', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/post-creation-data', ['methods' => 'GET', 'callback' => 'mco_api_get_post_creation_data', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/create-post-from-app', ['methods' => 'POST', 'callback' => 'mco_api_create_post_from_app', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/update-exam-program', ['methods' => 'POST', 'callback' => 'mco_api_admin_update_exam_program', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
@@ -659,7 +660,6 @@ function mco_api_notify_admin(WP_REST_Request $request) {
     return new WP_REST_Response(['success' => true], 200);
 }
 
-// RESTORED: This function was missing, causing the "invalid handler" error.
 function mco_api_admin_test_sheet_url(WP_REST_Request $request) {
     $sheet_url = esc_url_raw($request->get_param('sheetUrl'));
     if (empty($sheet_url)) {
@@ -693,5 +693,35 @@ function mco_api_admin_test_sheet_url(WP_REST_Request $request) {
         'message' => 'Accessible',
         'dataPreview' => substr($body, 0, 500) . '...'
     ], 200);
+}
+
+function mco_api_get_system_status(WP_REST_Request $request) {
+    $status = [];
+    $status['api_connection'] = [ 'success' => true, 'message' => 'Connected' ];
+    $status['jwt_secret'] = [ 'success' => defined('MCO_JWT_SECRET'), 'message' => defined('MCO_JWT_SECRET') ? 'Defined' : 'Not Defined!' ];
+    $status['woocommerce'] = [ 'success' => class_exists('WooCommerce'), 'message' => class_exists('WooCommerce') ? 'Active' : 'Not Active' ];
+    $status['wc_subscriptions'] = [ 'success' => class_exists('WC_Subscriptions'), 'message' => class_exists('WC_Subscriptions') ? 'Active' : 'Not Active (Optional)' ];
+    $app_url = get_option('mco_exam_app_url', '');
+    $status['app_url_config'] = [ 'success' => !empty($app_url), 'message' => !empty($app_url) ? 'Configured' : 'Not Configured', 'data' => esc_textarea($app_url) ];
+    
+    $sheet_test = ['success' => false, 'message' => 'No sheet URLs configured.'];
+    $config = mco_get_app_config_data();
+    $test_url = '';
+    if (!empty($config['exams'])) {
+        foreach($config['exams'] as $exam) if(!empty($exam['questionSourceUrl'])) {$test_url = $exam['questionSourceUrl']; break;}
+    }
+    if ($test_url) {
+        $response = mco_fetch_remote_csv_content($test_url);
+        if (is_wp_error($response)) $sheet_test = ['success' => false, 'message' => 'WP_Error: ' . $response->get_error_message()];
+        else {
+             $status_code = $response['response']['code'];
+             if ($status_code != 200) $sheet_test = ['success' => false, 'message' => 'HTTP Status ' . $status_code];
+             else if (empty(trim($response['body']))) $sheet_test = ['success' => false, 'message' => 'Sheet is empty'];
+             else $sheet_test = ['success' => true, 'message' => 'Accessible', 'data' => substr($response['body'], 0, 500) . '...'];
+        }
+    }
+    $status['google_sheet'] = $sheet_test;
+
+    return new WP_REST_Response($status, 200);
 }
 ?>

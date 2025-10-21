@@ -1,7 +1,8 @@
-import React, { FC, useState, useCallback, ReactNode, useEffect } from 'react';
-import { Settings, Award, Lightbulb, PlusCircle, Trash2, RefreshCw, FileText, Cpu, Loader, CheckCircle, XCircle, Trash, Bug, Paintbrush, FileSpreadsheet, DownloadCloud, DatabaseZap, Check, Sparkles, UploadCloud } from 'lucide-react';
+import React, { FC, useState, useCallback, ReactNode, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { Settings, Paintbrush, DatabaseZap, DownloadCloud, FileSpreadsheet, Cpu, Loader, CheckCircle, XCircle, RefreshCw, Trash2, Bug, ShoppingCart, BarChart3, FileText, DollarSign } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
-import type { DebugData, Organization } from '../types.ts';
+import type { ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -9,32 +10,17 @@ import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
 import DebugSidebar from './DebugSidebar.tsx';
 
-const HealthCheckItem: FC<{ title: string; check: () => Promise<{ success: boolean; message: string; data?: any }>; onDetails: (data: any) => void }> = ({ title, check, onDetails }) => {
-    const [status, setStatus] = useState<{ success: boolean; message: string; data?: any } | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+interface HealthStatus {
+    [key: string]: { success: boolean; message: string; data?: any };
+}
 
-    useEffect(() => {
-        let isMounted = true;
-        check()
-            .then(result => {
-                if (isMounted) setStatus(result);
-            })
-            .catch(error => {
-                if (isMounted) setStatus({ success: false, message: error.message || 'An unknown error occurred.' });
-            })
-            .finally(() => {
-                if (isMounted) setIsLoading(false);
-            });
-        
-        return () => { isMounted = false; };
-    }, [check]);
-
+const HealthListItem: FC<{ title: string; status?: { success: boolean; message: string; data?: any }; onDetails: (data: any) => void }> = ({ title, status, onDetails }) => {
     return (
         <div className="flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg">
             <div className="flex items-center gap-3">
-                {isLoading ? (
+                { !status ? (
                     <Loader size={18} className="animate-spin text-[rgb(var(--color-text-muted-rgb))]" />
-                ) : status?.success ? (
+                ) : status.success ? (
                     <CheckCircle size={18} className="text-green-500" />
                 ) : (
                     <XCircle size={18} className="text-red-500" />
@@ -43,7 +29,7 @@ const HealthCheckItem: FC<{ title: string; check: () => Promise<{ success: boole
             </div>
             <div className="flex items-center gap-3 text-sm">
                 <p className={`font-medium ${status && !status.success ? 'text-red-400' : 'text-[rgb(var(--color-text-muted-rgb))]'}`}>
-                    {isLoading ? 'Checking...' : status?.message}
+                    { !status ? 'Checking...' : status.message }
                 </p>
                 {status?.data && (
                     <button onClick={() => onDetails(status.data)} className="text-xs font-semibold text-[rgb(var(--color-primary-rgb))] hover:underline">
@@ -55,9 +41,19 @@ const HealthCheckItem: FC<{ title: string; check: () => Promise<{ success: boole
     );
 };
 
+const StatCard: FC<{ title: string; value: string | number; icon: ReactNode }> = ({ title, value, icon }) => (
+    <div className="bg-[rgb(var(--color-muted-rgb))] p-4 rounded-lg flex items-center border border-[rgb(var(--color-border-rgb))]">
+        <div className="p-3 rounded-full mr-4 bg-[rgba(var(--color-primary-rgb),0.1)]">{icon}</div>
+        <div>
+            <p className="text-sm text-[rgb(var(--color-text-muted-rgb))]">{title}</p>
+            <p className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))]">{value}</p>
+        </div>
+    </div>
+);
+
 
 const Admin: FC = () => {
-    const { activeOrg, availableThemes, activeTheme, setActiveTheme, updateConfigData } = useAppContext();
+    const { activeOrg, availableThemes, activeTheme, setActiveTheme } = useAppContext();
     const { token } = useAuth();
     const [isGeneratingWooCsv, setIsGeneratingWooCsv] = useState(false);
     const [isGeneratingProgramsCsv, setIsGeneratingProgramsCsv] = useState(false);
@@ -65,44 +61,56 @@ const Admin: FC = () => {
     const [isDebugOpen, setIsDebugOpen] = useState(false);
     const [detailsModalData, setDetailsModalData] = useState<any>(null);
 
-    // Health Check Functions
-    const testApiConnection = useCallback(async () => {
-        if (!token) throw new Error("Not authenticated.");
-        try {
-            await googleSheetsService.getDebugDetails(token);
-            return { success: true, message: "Connected" };
-        } catch (error: any) {
-            return { success: false, message: error.message };
-        }
-    }, [token]);
+    const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
+    const [examStats, setExamStats] = useState<ExamStat[] | null>(null);
+    const [isLoadingData, setIsLoadingData] = useState(true);
 
-    const testSheetUrl = useCallback(async () => {
-        if (!token) throw new Error("Not authenticated.");
-        const firstExamWithUrl = activeOrg?.exams.find(e => e.questionSourceUrl);
-        if (!firstExamWithUrl) return { success: true, message: "No sheet URLs configured to test." };
-        
-        try {
-            const result = await googleSheetsService.adminTestSheetUrl(token, firstExamWithUrl.questionSourceUrl);
-            return { success: result.success, message: result.message, data: result.dataPreview };
-        } catch (error: any) {
-            return { success: false, message: error.message };
-        }
+    useEffect(() => {
+        if (!token) return;
+        const fetchAdminData = async () => {
+            setIsLoadingData(true);
+            try {
+                const [status, stats] = await Promise.all([
+                    googleSheetsService.adminGetSystemStatus(token),
+                    googleSheetsService.getExamStats(token)
+                ]);
+                setHealthStatus(status);
+                if (activeOrg) {
+                    const certExamIds = activeOrg.exams.filter(e => !e.isPractice).map(e => e.id);
+                    const relevantStats = stats.filter((stat: ExamStat) => certExamIds.includes(stat.id));
+                    setExamStats(relevantStats);
+                }
+            } catch (error: any) {
+                toast.error("Could not load admin data: " + error.message);
+            } finally {
+                setIsLoadingData(false);
+            }
+        };
+        fetchAdminData();
     }, [token, activeOrg]);
+
+    const summaryStats = useMemo(() => {
+        if (!examStats) return { totalSales: 0, totalRevenue: 0, totalAttempts: 0 };
+        return examStats.reduce((acc, stat) => {
+            acc.totalSales += stat.totalSales;
+            acc.totalRevenue += stat.totalRevenue;
+            acc.totalAttempts += stat.attempts;
+            return acc;
+        }, { totalSales: 0, totalRevenue: 0, totalAttempts: 0 });
+    }, [examStats]);
     
-    const generateCsvPostRequest = async (action: string, nonceAction: string, setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>) => {
+    const generateCsvPostRequest = async (action: string, setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>) => {
         setIsGenerating(true);
         try {
             const form = document.createElement('form');
             form.method = 'post';
             form.action = `${getApiBaseUrl()}/wp-admin/admin-post.php`;
             form.target = '_blank';
-
             const actionInput = document.createElement('input');
             actionInput.type = 'hidden';
             actionInput.name = 'action';
             actionInput.value = action;
             form.appendChild(actionInput);
-
             document.body.appendChild(form);
             form.submit();
             document.body.removeChild(form);
@@ -113,33 +121,20 @@ const Admin: FC = () => {
         }
     };
 
-    const handleGenerateProgramsCsv = () => {
-        generateCsvPostRequest('mco_generate_programs_csv', 'mco_generate_programs_csv_nonce', setIsGeneratingProgramsCsv);
-    };
-
-    const handleGenerateWooCsv = () => {
-        generateCsvPostRequest('mco_generate_products_csv', 'mco_generate_products_csv_nonce', setIsGeneratingWooCsv);
-    };
+    const handleGenerateProgramsCsv = () => generateCsvPostRequest('mco_generate_programs_csv', setIsGeneratingProgramsCsv);
+    const handleGenerateWooCsv = () => generateCsvPostRequest('mco_generate_products_csv', setIsGeneratingWooCsv);
 
     const handleCacheClear = async (action: 'config' | 'questions' | 'results') => {
         if (!token) { toast.error("Authentication Error"); return; }
-
         let apiCall;
         switch(action) {
-            case 'config':
-                apiCall = googleSheetsService.adminClearConfigCache;
-                break;
-            case 'questions':
-                apiCall = googleSheetsService.adminClearQuestionCaches;
-                break;
+            case 'config': apiCall = googleSheetsService.adminClearConfigCache; break;
+            case 'questions': apiCall = googleSheetsService.adminClearQuestionCaches; break;
             case 'results':
-                if (!window.confirm("ARE YOU SURE? This will permanently delete all user exam results from the database. This action cannot be undone.")) {
-                    return;
-                }
+                if (!window.confirm("ARE YOU SURE? This will permanently delete all user exam results from the database. This action cannot be undone.")) return;
                 apiCall = googleSheetsService.adminClearAllResults;
                 break;
-            default:
-                return;
+            default: return;
         }
 
         setIsClearingCache(true);
@@ -165,7 +160,7 @@ const Admin: FC = () => {
                             <h2 className="font-bold text-lg">Health Check Details</h2>
                         </div>
                         <div className="p-4 overflow-auto">
-                            <pre className="text-xs bg-[rgb(var(--color-muted-rgb))] p-2 rounded whitespace-pre-wrap">{detailsModalData}</pre>
+                            <pre className="text-xs bg-[rgb(var(--color-muted-rgb))] p-2 rounded whitespace-pre-wrap">{typeof detailsModalData === 'object' ? JSON.stringify(detailsModalData, null, 2) : detailsModalData}</pre>
                         </div>
                         <div className="p-4 border-t border-[rgb(var(--color-border-rgb))] text-right">
                             <button onClick={() => setDetailsModalData(null)} className="px-4 py-2 bg-slate-200 rounded-lg font-semibold text-slate-700">Close</button>
@@ -189,10 +184,41 @@ const Admin: FC = () => {
                         <Cpu className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
                         System Health Check
                     </h2>
-                    <div className="space-y-2">
-                        <HealthCheckItem title="Backend API Connection" check={testApiConnection} onDetails={setDetailsModalData} />
-                        <HealthCheckItem title="Google Sheet Accessibility" check={testSheetUrl} onDetails={setDetailsModalData} />
-                    </div>
+                    {isLoadingData ? <div className="flex justify-center"><Spinner /></div> : (
+                        <div className="space-y-2">
+                            <HealthListItem title="Backend API Connection" status={healthStatus?.api_connection} onDetails={setDetailsModalData} />
+                            <HealthListItem title="JWT Secret Key" status={healthStatus?.jwt_secret} onDetails={setDetailsModalData} />
+                            <HealthListItem title="WooCommerce Plugin" status={healthStatus?.woocommerce} onDetails={setDetailsModalData} />
+                            <HealthListItem title="WooCommerce Subscriptions" status={healthStatus?.wc_subscriptions} onDetails={setDetailsModalData} />
+                            <HealthListItem title="App URL Configuration" status={healthStatus?.app_url_config} onDetails={setDetailsModalData} />
+                            <HealthListItem title="Google Sheet Accessibility" status={healthStatus?.google_sheet} onDetails={setDetailsModalData} />
+                        </div>
+                    )}
+                </div>
+                
+                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
+                        <BarChart3 className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Analytics at a Glance
+                    </h2>
+                    {isLoadingData ? <div className="flex justify-center"><Spinner /></div> : (
+                        examStats ? (
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <StatCard title="Total Sales" value={summaryStats.totalSales} icon={<ShoppingCart className="text-[rgb(var(--color-primary-rgb))]" />} />
+                                    <StatCard title="Total Revenue" value={summaryStats.totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} icon={<DollarSign className="text-[rgb(var(--color-primary-rgb))]" />} />
+                                    <StatCard title="Total Attempts" value={summaryStats.totalAttempts} icon={<FileText className="text-[rgb(var(--color-primary-rgb))]" />} />
+                                </div>
+                                <div className="text-right mt-4">
+                                    <Link to="/admin/analytics" className="font-semibold text-[rgb(var(--color-primary-rgb))] hover:underline">
+                                        View Full Analytics Report →
+                                    </Link>
+                                </div>
+                            </>
+                        ) : (
+                            <p className="text-center p-4 text-[rgb(var(--color-text-muted-rgb))]">No analytics data available yet.</p>
+                        )
+                    )}
                 </div>
 
                 <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
@@ -210,7 +236,7 @@ const Admin: FC = () => {
                             >
                                 {activeTheme === theme.id && (
                                     <div className="absolute -top-2 -right-2 bg-cyan-500 text-white rounded-full p-1 shadow-md">
-                                        <Check size={14} />
+                                        <CheckCircle size={14} />
                                     </div>
                                 )}
                                 <div className="flex justify-center space-x-1 h-8 pointer-events-none">

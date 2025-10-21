@@ -205,7 +205,6 @@ function mco_render_theme_selector_tab() {
         <?php submit_button(); ?>
     </form>
 <?php }
-
 function mco_render_bulk_data_tab() { ?>
     <h2>Bulk Data Import & Export</h2>
     <p>Use these tools to manage your exam content in bulk using CSV files.</p>
@@ -252,7 +251,6 @@ function mco_render_bulk_data_tab() { ?>
         <?php submit_button('Import Recommended Books'); ?>
     </form>
 <?php }
-
 function mco_render_tools_tab() {
     $is_blueprint_ready = !empty(get_option('mco_exam_app_url')) && !empty(get_option('mco_certificate_templates'));
     ?>
@@ -292,7 +290,6 @@ function mco_render_tools_tab() {
         </td></tr>
     </table>
 <?php }
-
 // --- Handlers for Bulk CSV Export ---
 function mco_handle_generate_programs_csv() {
     if (!current_user_can('manage_options') || !isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_generate_programs_csv_nonce')) {
@@ -316,7 +313,6 @@ function mco_handle_generate_programs_csv() {
                 if ($custom_id) $book_slugs[] = $custom_id;
             }
         }
-
         $row = [
             'program_title' => $program->post_title,
             'program_description' => $program->post_content,
@@ -337,8 +333,6 @@ function mco_handle_generate_programs_csv() {
     fclose($output);
     exit;
 }
-
-
 function mco_handle_generate_products_csv() {
     if (!current_user_can('manage_options') || !isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_generate_products_csv_nonce')) {
         wp_die('Security check failed.');
@@ -351,7 +345,6 @@ function mco_handle_generate_products_csv() {
     header('Content-Disposition: attachment; filename="woocommerce_products_from_programs_' . date('Y-m-d') . '.csv"');
     $output = fopen('php://output', 'w');
     fputcsv($output, $csv_headers);
-
     foreach ($programs as $program) {
         $sku = get_post_meta($program->ID, '_mco_certification_exam_sku', true);
         if ($sku) {
@@ -370,8 +363,6 @@ function mco_handle_generate_products_csv() {
     fclose($output);
     exit;
 }
-
-// RESTORED: These functions were missing from the previous version.
 function mco_handle_generate_tenant_blueprint() {
     if (!current_user_can('manage_options')) wp_die('Permission denied.');
     $snapshot_data = mco_get_full_snapshot_data(true); // true for blueprint
@@ -380,7 +371,6 @@ function mco_handle_generate_tenant_blueprint() {
     echo json_encode($snapshot_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     exit;
 }
-
 function mco_handle_generate_full_snapshot() {
     if (!current_user_can('manage_options')) wp_die('Permission denied.');
     $snapshot_data = mco_get_full_snapshot_data(false); // false for full snapshot
