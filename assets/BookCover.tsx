@@ -28,17 +28,17 @@ const BookCover: FC<BookCoverProps> = ({ book, className }) => {
   };
 
   const bgColors = [
-    'from-red-50 to-red-100', 'from-yellow-50 to-yellow-100', 'from-green-50 to-green-100',
-    'from-blue-50 to-blue-100', 'from-indigo-50 to-indigo-100', 'from-purple-50 to-purple-100',
-    'from-pink-50 to-pink-100', 'from-teal-50 to-teal-100', 'from-orange-50 to-orange-100',
+    'from-red-200 to-red-300', 'from-yellow-200 to-yellow-300', 'from-green-200 to-green-300',
+    'from-blue-200 to-blue-300', 'from-indigo-200 to-indigo-300', 'from-purple-200 to-purple-300',
+    'from-pink-200 to-pink-300', 'from-teal-200 to-teal-300', 'from-orange-200 to-orange-300',
   ];
   const textColors = [
-    'text-red-900', 'text-yellow-900', 'text-green-900', 'text-blue-900', 'text-indigo-900',
-    'text-purple-900', 'text-pink-900', 'text-teal-900', 'text-orange-900',
+    'text-red-800', 'text-yellow-800', 'text-green-800', 'text-blue-800', 'text-indigo-800',
+    'text-purple-800', 'text-pink-800', 'text-teal-800', 'text-orange-800',
   ];
   const accentColors = [
-    'bg-red-300', 'bg-yellow-300', 'bg-green-300', 'bg-blue-300', 'bg-indigo-300',
-    'bg-purple-300', 'bg-pink-300', 'bg-teal-300', 'bg-orange-300',
+    'bg-red-400', 'bg-yellow-400', 'bg-green-400', 'bg-blue-400', 'bg-indigo-400',
+    'bg-purple-400', 'bg-pink-400', 'bg-teal-400', 'bg-orange-400',
   ];
 
   const colorIndex = Math.abs(getHashOfString(book.title)) % bgColors.length;

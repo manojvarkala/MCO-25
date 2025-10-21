@@ -34,7 +34,7 @@ function mco_exam_engine_admin_page() {
 
         if ($form_action === 'save_main_settings') {
             update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
-            update_option('mco_custom_logo_url', esc_url_raw($_POST['mco_custom_logo_url']));
+            update_option('mco_custom_logo_url', sanitize_textarea_field($_POST['mco_custom_logo_url']));
             update_option('mco_intro_video_url', esc_url_raw($_POST['mco_intro_video_url']));
             delete_transient('mco_app_config_data');
             update_option('mco_config_version', current_time('YmdHis'));
@@ -54,9 +54,9 @@ function mco_exam_engine_admin_page() {
                     'id' => sanitize_key($id),
                     'name' => sanitize_text_field($template['name']), 'title' => sanitize_text_field($template['title']),
                     'body' => wp_kses_post($template['body']), 'signature1Name' => sanitize_text_field($template['signature1Name']),
-                    'signature1Title' => sanitize_text_field($template['signature1Title']), 'signature1ImageUrl' => esc_url_raw($template['signature1ImageUrl']),
+                    'signature1Title' => sanitize_text_field($template['signature1Title']), 'signature1ImageUrl' => sanitize_textarea_field($template['signature1ImageUrl']),
                     'signature2Name' => sanitize_text_field($template['signature2Name']), 'signature2Title' => sanitize_text_field($template['signature2Title']),
-                    'signature2ImageUrl' => esc_url_raw($template['signature2ImageUrl']),
+                    'signature2ImageUrl' => sanitize_textarea_field($template['signature2ImageUrl']),
                 ];
             }
             update_option('mco_certificate_templates', $sanitized_templates);
@@ -108,7 +108,7 @@ function mco_render_main_settings_tab() { ?>
         <input type="hidden" name="mco_form_action" value="save_main_settings">
         <table class="form-table">
             <tr><th>App URL(s)</th><td><textarea name="mco_exam_app_url" rows="3" class="widefat"><?php echo esc_textarea(get_option('mco_exam_app_url')); ?></textarea><p class="description">Enter the full URL of your React app. Add multiple URLs on new lines for different environments.</p></td></tr>
-            <tr><th>Custom Logo URL</th><td><input type="text" name="mco_custom_logo_url" value="<?php echo esc_attr(get_option('mco_custom_logo_url')); ?>" class="widefat"><p class="description">Optional. If empty, uses the Site Icon from Customizer.</p></td></tr>
+            <tr><th>Custom Logo URL</th><td><textarea name="mco_custom_logo_url" class="widefat" rows="5"><?php echo esc_textarea(get_option('mco_custom_logo_url')); ?></textarea><p class="description">Optional. Can be a URL or a base64 data URI. If empty, uses the Site Icon from Customizer.</p></td></tr>
             <tr><th>Intro Video URL</th><td><input type="text" name="mco_intro_video_url" value="<?php echo esc_attr(get_option('mco_intro_video_url')); ?>" class="widefat"><p class="description">Optional. URL for the intro video on the landing page.</p></td></tr>
             <tr><th>JWT Secret Key</th><td><code><?php echo defined('MCO_JWT_SECRET') ? 'Defined in wp-config.php' : '<strong>Not Defined!</strong>'; ?></code><p class="description">You must define <code>MCO_JWT_SECRET</code> in your <code>wp-config.php</code> file.</p></td></tr>
         </table>
@@ -148,10 +148,10 @@ function mco_render_certificate_templates_tab() {
                         <tr><th>Body Text</th><td><textarea class="widefat" rows="4" name="mco_templates[<?php echo esc_attr($id); ?>][body]"><?php echo esc_textarea($template['body']); ?></textarea></td></tr>
                         <tr><th>Signature 1 Name</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name']); ?>"></td></tr>
                         <tr><th>Signature 1 Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature1Title]" value="<?php echo esc_attr($template['signature1Title']); ?>"></td></tr>
-                        <tr><th>Signature 1 Image URL</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature1ImageUrl]" value="<?php echo esc_attr($template['signature1ImageUrl']); ?>" placeholder="Optional. Use data URI for best results."></td></tr>
+                        <tr><th>Signature 1 Image URL</th><td><textarea class="widefat" rows="5" name="mco_templates[<?php echo esc_attr($id); ?>][signature1ImageUrl]"><?php echo esc_textarea($template['signature1ImageUrl']); ?></textarea><p class="description">Optional. Use a URL or a base64 data URI for best results.</p></td></tr>
                         <tr><th>Signature 2 Name</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature2Name]" value="<?php echo esc_attr($template['signature2Name']); ?>"></td></tr>
                         <tr><th>Signature 2 Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature2Title]" value="<?php echo esc_attr($template['signature2Title']); ?>"></td></tr>
-                        <tr><th>Signature 2 Image URL</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature2ImageUrl]" value="<?php echo esc_attr($template['signature2ImageUrl']); ?>" placeholder="Optional."></td></tr>
+                        <tr><th>Signature 2 Image URL</th><td><textarea class="widefat" rows="5" name="mco_templates[<?php echo esc_attr($id); ?>][signature2ImageUrl]"><?php echo esc_textarea($template['signature2ImageUrl']); ?></textarea><p class="description">Optional.</p></td></tr>
                     </table>
                 </div>
             </div>
