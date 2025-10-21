@@ -387,17 +387,61 @@ function mco_book_showcase_shortcode() {
         echo '<p class="mco-card__description">' . esc_html($book['description']) . '</p>';
         echo '</div>';
         
-        echo '<div class="mco-card__footer">';
+        echo '<div class="mco-card__footer" data-book-links>';
         $link_found = false;
-        if (!empty($book['links']['com'])) { echo '<a href="' . esc_url($book['links']['com']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--purchase">' . $icons['cart'] . ' Buy on Amazon.com</a>'; $link_found = true; }
-        if (!empty($book['links']['in'])) { echo '<a href="' . esc_url($book['links']['in']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary">Buy on Amazon.in</a>'; $link_found = true; }
-        if (!empty($book['links']['ae'])) { echo '<a href="' . esc_url($book['links']['ae']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary">Buy on Amazon.ae</a>'; $link_found = true; }
+        if (!empty($book['links']['com'])) { echo '<a href="' . esc_url($book['links']['com']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary" data-store="com">' . $icons['cart'] . ' Buy on Amazon.com</a>'; $link_found = true; }
+        if (!empty($book['links']['in'])) { echo '<a href="' . esc_url($book['links']['in']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary" data-store="in">' . $icons['cart'] . ' Buy on Amazon.in</a>'; $link_found = true; }
+        if (!empty($book['links']['ae'])) { echo '<a href="' . esc_url($book['links']['ae']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary" data-store="ae">' . $icons['cart'] . ' Buy on Amazon.ae</a>'; $link_found = true; }
         if (!$link_found) { echo '<p class="mco-card__no-links">Purchase links unavailable.</p>'; }
         echo '</div>';
         
         echo '</div>';
     }
     echo '</div>';
+    
+    // Geo-targeting script
+    $script = '
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        try {
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            let preferredStore = "com";
+            const gccTimezones = ["Asia/Dubai", "Asia/Riyadh", "Asia/Qatar", "Asia/Bahrain", "Asia/Kuwait", "Asia/Muscat"];
+            if (timeZone.includes("Asia/Kolkata") || timeZone.includes("Asia/Calcutta")) {
+                preferredStore = "in";
+            } else if (gccTimezones.some(tz => timeZone === tz)) {
+                preferredStore = "ae";
+            }
+
+            document.querySelectorAll("[data-book-links]").forEach(function(footer) {
+                const links = {
+                    com: footer.querySelector("[data-store=\'com\']"),
+                    in: footer.querySelector("[data-store=\'in\']"),
+                    ae: footer.querySelector("[data-store=\'ae\']")
+                };
+
+                let primaryLink = links[preferredStore];
+                
+                if (!primaryLink) { // Fallback logic
+                    if (links.com) primaryLink = links.com;
+                    else if (links.in) primaryLink = links.in;
+                    else if (links.ae) primaryLink = links.ae;
+                }
+
+                if (primaryLink) {
+                    primaryLink.classList.remove("mco-card__button--secondary");
+                    primaryLink.classList.add("mco-card__button--purchase");
+                    footer.prepend(primaryLink);
+                }
+            });
+        } catch (e) {
+            console.error("MCO Geo-targeting script failed:", e);
+        }
+    });
+    </script>';
+    
+    echo $script;
+    
     return ob_get_clean();
 }
 ?>

@@ -724,4 +724,82 @@ function mco_api_get_system_status(WP_REST_Request $request) {
 
     return new WP_REST_Response($status, 200);
 }
+
+// --- RESTORED ADMIN FUNCTIONS ---
+function mco_api_get_exam_stats(WP_REST_Request $request) {
+    $all_user_results = [];
+    $users = get_users(['fields' => ['ID']]);
+    foreach ($users as $user) {
+        $results = get_user_meta($user->ID, 'mco_exam_results', true);
+        if (is_array($results)) {
+            foreach($results as $result) {
+                if(isset($result['examId'])) {
+                    if (!isset($all_user_results[$result['examId']])) {
+                        $all_user_results[$result['examId']] = [];
+                    }
+                    $all_user_results[$result['examId']][] = $result;
+                }
+            }
+        }
+    }
+
+    $exam_programs = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish']);
+    $stats = [];
+    foreach ($exam_programs as $program) {
+        $sku = get_post_meta($program->ID, '_mco_certification_exam_sku', true);
+        if (!$sku) continue;
+        
+        $product_id = wc_get_product_id_by_sku($sku);
+        $product = $product_id ? wc_get_product($product_id) : null;
+        if (!$product) continue;
+
+        $attempts = isset($all_user_results[$sku]) ? count($all_user_results[$sku]) : 0;
+        $total_score = 0;
+        $passed_count = 0;
+        $pass_score_term = mco_get_single_term($program->ID, 'exam_pass_score', 'name');
+        $pass_score = !empty($pass_score_term) ? (int)$pass_score_term : 70;
+
+
+        if ($attempts > 0) {
+            foreach ($all_user_results[$sku] as $result) {
+                $total_score += $result['score'];
+                if ($result['score'] >= $pass_score) {
+                    $passed_count++;
+                }
+            }
+        }
+        
+        $stats[] = [
+            'id' => $sku,
+            'name' => get_the_title($program),
+            'attempts' => $attempts,
+            'averageScore' => $attempts > 0 ? $total_score / $attempts : 0,
+            'passRate' => $attempts > 0 ? ($passed_count / $attempts) * 100 : 0,
+            'totalSales' => (int)$product->get_total_sales(),
+            'totalRevenue' => (float)$product->get_total_sales() * (float)$product->get_price(),
+        ];
+    }
+    return new WP_REST_Response($stats, 200);
+}
+
+function mco_api_get_post_creation_data(WP_REST_Request $request) {
+    $authors_query = get_users([
+        'role__in' => ['author', 'editor', 'administrator'],
+        'fields' => ['ID', 'display_name']
+    ]);
+    
+    $categories = get_categories(['hide_empty' => false]);
+    $formatted_categories = [];
+    foreach($categories as $category) {
+        $formatted_categories[] = [
+            'term_id' => $category->term_id,
+            'name' => $category->name,
+        ];
+    }
+
+    return new WP_REST_Response([
+        'authors' => $authors_query,
+        'categories' => $formatted_categories,
+    ], 200);
+}
 ?>
