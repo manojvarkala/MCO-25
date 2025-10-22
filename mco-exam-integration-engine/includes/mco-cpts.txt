@@ -77,8 +77,11 @@ if (!function_exists('mco_exam_program_meta_box_callback')) {
         $practice_cert_enabled = get_post_meta($post->ID, '_mco_practice_certificate_enabled', true);
         $recommended_books = get_post_meta($post->ID, '_mco_recommended_book_ids', true) ?: array();
         $sections = get_post_meta($post->ID, '_mco_exam_sections', true) ?: array();
+        $template_id = get_post_meta($post->ID, '_mco_certificate_template_id', true);
         
         $all_books = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
+        $all_templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
+
         ?>
         <table class="form-table">
             <tr><th colspan="2"><h4>General Settings</h4></th></tr>
@@ -102,6 +105,19 @@ if (!function_exists('mco_exam_program_meta_box_callback')) {
             <tr>
                 <th><label for="mco_certification_exam_sku">WooCommerce Product SKU</label></th>
                 <td><input type="text" id="mco_certification_exam_sku" name="mco_certification_exam_sku" value="<?php echo esc_attr($sku); ?>" class="regular-text"></td>
+            </tr>
+            <tr>
+                <th><label for="mco_certificate_template_id">Certificate Template</label></th>
+                <td>
+                    <select id="mco_certificate_template_id" name="mco_certificate_template_id">
+                        <option value="">-- Use Default Template --</option>
+                        <?php foreach ($all_templates as $id => $template): ?>
+                            <option value="<?php echo esc_attr($id); ?>" <?php selected($template_id, $id); ?>>
+                                <?php echo esc_html($template['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </td>
             </tr>
             <tr>
                 <th><label for="mco_is_proctored">Enable Proctoring</label></th>
@@ -176,6 +192,7 @@ if (!function_exists('mco_save_exam_program_meta_data')) {
             '_mco_cert_exam_title_override' => 'sanitize_text_field',
             '_mco_question_source_url' => 'esc_url_raw',
             '_mco_certification_exam_sku' => 'sanitize_text_field',
+            '_mco_certificate_template_id' => 'sanitize_text_field',
             '_mco_is_proctored' => 'sanitize_text_field',
             '_mco_certificate_enabled' => 'sanitize_text_field',
             '_mco_practice_certificate_enabled' => 'sanitize_text_field'

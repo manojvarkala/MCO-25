@@ -129,6 +129,8 @@ function mco_get_app_config_data() {
         
         $certificate_enabled_meta = get_post_meta($post->ID, '_mco_certificate_enabled', true);
         $certificate_enabled = ($certificate_enabled_meta === '') ? true : (bool) $certificate_enabled_meta;
+        
+        $cert_template_id = get_post_meta($post->ID, '_mco_certificate_template_id', true);
 
         $practice_name_override = get_post_meta($post->ID, '_mco_practice_exam_title_override', true);
         $cert_name_override = get_post_meta($post->ID, '_mco_cert_exam_title_override', true);
@@ -207,7 +209,7 @@ function mco_get_app_config_data() {
                     'productSlug' => $product->get_slug(),
                     'numberOfQuestions' => (int)$cert_questions,
                     'passScore' => (int)$pass_score,
-                    'certificateTemplateId' => 'cert-completion',
+                    'certificateTemplateId' => !empty($cert_template_id) ? $cert_template_id : 'cert-completion',
                     'isPractice' => false,
                     'certificateEnabled' => $certificate_enabled,
                     'isProctored' => $is_proctored,
