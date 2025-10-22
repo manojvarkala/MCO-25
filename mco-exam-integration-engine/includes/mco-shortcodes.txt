@@ -597,18 +597,21 @@ function mco_single_book_shortcode($atts) {
         return '<!-- MCO Single Book: This shortcode must be used on a "Recommended Book" post. -->';
     }
 
-    $post_id = $post->ID;
-    $content = $post->post_content;
-    $content_without_shortcode = preg_replace('/\[mco_single_book[^\]]*\]/', '', $content);
-
+    // Temporarily remove this shortcode to prevent an infinite loop when applying the_content filter.
+    remove_shortcode('mco_single_book');
+    // Get the raw content and process it. This will now safely render other shortcodes, paragraphs, etc.
+    $processed_content = apply_filters('the_content', $post->post_content);
+    // Re-add the shortcode in case it's used again on the same page (unlikely but good practice).
+    add_shortcode('mco_single_book', 'mco_single_book_shortcode');
+    
     $book = [
-        'title'        => get_the_title($post_id),
-        'description'  => apply_filters('the_content', $content_without_shortcode),
-        'thumbnailUrl' => get_post_meta($post_id, '_mco_thumbnail_url', true),
+        'title'        => get_the_title($post->ID),
+        'description'  => $processed_content,
+        'thumbnailUrl' => get_post_meta($post->ID, '_mco_thumbnail_url', true),
         'links'        => [
-            'com' => get_post_meta($post_id, '_mco_link_com', true),
-            'in'  => get_post_meta($post_id, '_mco_link_in', true),
-            'ae'  => get_post_meta($post_id, '_mco_link_ae', true),
+            'com' => get_post_meta($post->ID, '_mco_link_com', true),
+            'in'  => get_post_meta($post->ID, '_mco_link_in', true),
+            'ae'  => get_post_meta($post->ID, '_mco_link_ae', true),
         ]
     ];
     
