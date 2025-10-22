@@ -472,12 +472,10 @@ const ExamProgramCustomizer: FC = () => {
         
         setIsSaving(true);
         try {
-            const result = await googleSheetsService.adminUpdateExamProgram(token, programId, payload);
-            if (result.organizations && result.examPrices) {
-                updateConfigData(result.organizations, result.examPrices);
-            }
-            toast.success("Exam program updated successfully!");
+            await googleSheetsService.adminUpdateExamProgram(token, programId, payload);
+            toast.success("Exam program updated successfully! Refreshing data...", { duration: 4000 });
             setEditingProgramId(null);
+            setTimeout(() => window.location.reload(), 1000); // Reload to fetch fresh data
         } catch (error: any) {
             toast.error(error.message || "Failed to save changes.");
         } finally {
@@ -496,16 +494,12 @@ const ExamProgramCustomizer: FC = () => {
         const toastId = toast.loading(`Updating ${selectedProgramIds.length} programs...`);
 
         try {
-            let lastResult: { organizations: Organization[]; examPrices: any; } | null = null;
             for (const programId of selectedProgramIds) {
-                lastResult = await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
+                await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
             }
-        
-            if (lastResult && lastResult.organizations && lastResult.examPrices) {
-                updateConfigData(lastResult.organizations, lastResult.examPrices);
-            }
-            toast.success(`${selectedProgramIds.length} programs updated!`, { id: toastId });
+            toast.success(`${selectedProgramIds.length} programs updated! Refreshing data...`, { id: toastId, duration: 4000 });
             setSelectedProgramIds([]);
+            setTimeout(() => window.location.reload(), 1000);
         } catch (error: any) {
             toast.error(error.message || "An error occurred during bulk update.", { id: toastId });
         } finally {
@@ -521,12 +515,10 @@ const ExamProgramCustomizer: FC = () => {
         
         setIsSaving(true);
         try {
-            const result = await googleSheetsService.adminCreateExamProgram(token, name, productLinkData);
-            if (result.organizations && result.examPrices) {
-                updateConfigData(result.organizations, result.examPrices);
-            }
-            toast.success(`Program "${name}" created successfully!`);
+            await googleSheetsService.adminCreateExamProgram(token, name, productLinkData);
+            toast.success(`Program "${name}" created successfully! Refreshing data...`, { duration: 4000 });
             setIsCreateModalOpen(false);
+            setTimeout(() => window.location.reload(), 1000);
         } catch (error: any) {
             toast.error(error.message || "Failed to create program.");
         } finally {
@@ -546,11 +538,9 @@ const ExamProgramCustomizer: FC = () => {
         setIsSaving(true);
         const postId = program.category.id.replace('prod-', '');
         try {
-            const result = await googleSheetsService.adminDeletePost(token, postId, 'mco_exam_program');
-            if (result.organizations && result.examPrices) {
-                updateConfigData(result.organizations, result.examPrices);
-            }
-            toast.success(`Program "${program.category.name}" moved to trash.`);
+            await googleSheetsService.adminDeletePost(token, postId, 'mco_exam_program');
+            toast.success(`Program "${program.category.name}" moved to trash. Refreshing data...`, { duration: 4000 });
+            setTimeout(() => window.location.reload(), 1000);
         } catch (error: any) {
             toast.error(error.message || "Failed to delete program.");
         } finally {

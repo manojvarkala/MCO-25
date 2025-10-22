@@ -513,9 +513,15 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
     $sheet_url = esc_url_raw($request->get_param('sheetUrl'));
     if (empty($sheet_url)) return new WP_Error('bad_request', 'Sheet URL is missing.', ['status' => 400]);
 
-    // FIX: Auto-convert standard Google Sheet sharing URL to a CSV export URL.
-    if (strpos($sheet_url, '/edit') !== false) {
-        $sheet_url = preg_replace('/\/edit.*$/', '/export?format=csv', $sheet_url);
+    // FIX: More robust Google Sheet URL conversion using regex
+    $sheet_id = null;
+    if (preg_match('/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
+        $sheet_id = $matches[1];
+    }
+    
+    // If we found an ID and it's not already a direct export/publish link, rebuild it.
+    if ($sheet_id && strpos($sheet_url, '/pub?output=csv') === false && strpos($sheet_url, '/export?format=csv') === false) {
+        $sheet_url = 'https://docs.google.com/spreadsheets/d/' . $sheet_id . '/export?format=csv';
     }
 
     if (strpos($sheet_url, '/pub?output=csv') === false && strpos($sheet_url, '/export?format=csv') === false) {
@@ -674,10 +680,17 @@ function mco_api_admin_test_sheet_url(WP_REST_Request $request) {
     if (empty($sheet_url)) {
         return new WP_Error('bad_request', 'Sheet URL is missing.', ['status' => 400]);
     }
-    // FIX: Also apply the URL conversion logic here for consistent testing.
-    if (strpos($sheet_url, '/edit') !== false) {
-        $sheet_url = preg_replace('/\/edit.*$/', '/export?format=csv', $sheet_url);
+
+    // FIX: More robust Google Sheet URL conversion using regex
+    $sheet_id = null;
+    if (preg_match('/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $sheet_url, $matches)) {
+        $sheet_id = $matches[1];
     }
+    
+    if ($sheet_id && strpos($sheet_url, '/pub?output=csv') === false && strpos($sheet_url, '/export?format=csv') === false) {
+        $sheet_url = 'https://docs.google.com/spreadsheets/d/' . $sheet_id . '/export?format=csv';
+    }
+
     $response = mco_fetch_remote_csv_content($sheet_url);
 
     if (is_wp_error($response)) {
@@ -910,12 +923,8 @@ function mco_api_admin_update_exam_program(WP_REST_Request $request) {
 
     delete_transient('mco_app_config_data');
     update_option('mco_config_version', current_time('YmdHis'));
-    $config = mco_get_app_config_data();
-
-    return new WP_REST_Response([
-        'organizations' => [mco_get_full_config(new WP_REST_Request())->get_data()['organizations'][0]],
-        'examPrices' => $config['examPrices'] ?? null
-    ], 200);
+    
+    return new WP_REST_Response(['success' => true, 'message' => 'Exam program updated successfully.'], 200);
 }
 
 function mco_api_admin_create_exam_program(WP_REST_Request $request) {
@@ -969,12 +978,8 @@ function mco_api_admin_create_exam_program(WP_REST_Request $request) {
 
     delete_transient('mco_app_config_data');
     update_option('mco_config_version', current_time('YmdHis'));
-    $config = mco_get_app_config_data();
-
-    return new WP_REST_Response([
-        'organizations' => [mco_get_full_config(new WP_REST_Request())->get_data()['organizations'][0]],
-        'examPrices' => $config['examPrices'] ?? null
-    ], 200);
+    
+    return new WP_REST_Response(['success' => true, 'message' => 'Exam program created successfully.'], 200);
 }
 
 function mco_api_admin_upsert_product(WP_REST_Request $request) {
@@ -1028,12 +1033,8 @@ function mco_api_admin_upsert_product(WP_REST_Request $request) {
     
     delete_transient('mco_app_config_data');
     update_option('mco_config_version', current_time('YmdHis'));
-    $config = mco_get_app_config_data();
-
-    return new WP_REST_Response([
-        'organizations' => [mco_get_full_config(new WP_REST_Request())->get_data()['organizations'][0]],
-        'examPrices' => $config['examPrices'] ?? null
-    ], 200);
+    
+    return new WP_REST_Response(['success' => true, 'message' => 'Product saved successfully.'], 200);
 }
 
 function mco_api_admin_delete_post(WP_REST_Request $request) {
@@ -1057,12 +1058,8 @@ function mco_api_admin_delete_post(WP_REST_Request $request) {
 
     delete_transient('mco_app_config_data');
     update_option('mco_config_version', current_time('YmdHis'));
-    $config = mco_get_app_config_data();
 
-    return new WP_REST_Response([
-        'organizations' => [mco_get_full_config(new WP_REST_Request())->get_data()['organizations'][0]],
-        'examPrices' => $config['examPrices'] ?? null
-    ], 200);
+    return new WP_REST_Response(['success' => true, 'message' => 'Post moved to trash.'], 200);
 }
 
 function mco_api_create_post_from_app(WP_REST_Request $request) {
@@ -1112,12 +1109,8 @@ function mco_api_admin_set_intro_video(WP_REST_Request $request) {
 
         delete_transient('mco_app_config_data');
         update_option('mco_config_version', current_time('YmdHis'));
-        $config = mco_get_app_config_data();
 
-        return new WP_REST_Response([
-            'organizations' => [mco_get_full_config(new WP_REST_Request())->get_data()['organizations'][0]],
-            'examPrices' => $config['examPrices'] ?? null
-        ], 200);
+        return new WP_REST_Response(['success' => true, 'url' => $movefile['url']], 200);
     } else {
         return new WP_Error('upload_error', $movefile['error'], ['status' => 500]);
     }
