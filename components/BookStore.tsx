@@ -45,53 +45,50 @@ const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
         return null;
     };
 
-    const primaryLink = getGeoAffiliateLink(book);
+    const primaryLinkInfo = getGeoAffiliateLink(book);
     const allStores = [
         { key: 'com' as const, name: 'Amazon.com', url: book.affiliateLinks?.com },
         { key: 'in' as const, name: 'Amazon.in', url: book.affiliateLinks?.in },
         { key: 'ae' as const, name: 'Amazon.ae', url: book.affiliateLinks?.ae }
-    ];
-    const secondaryStores = primaryLink 
-        ? allStores.filter(store => store.key !== primaryLink.key && store.url && store.url.trim() !== '')
-        : [];
+    ].filter(store => store.url && store.url.trim() !== '');
 
     return (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-1 transition-transform duration-300 border border-slate-200">
-            <BookCover book={book} className="w-full h-48" />
+        <div className="bg-[rgb(var(--color-muted-rgb))] rounded-xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-1 transition-transform duration-300 border border-[rgb(var(--color-border-rgb))]">
+            <BookCover book={book} className="w-full h-56" />
             <div className="p-6 flex flex-col flex-grow">
-                <h3 className="text-lg font-bold text-slate-800 mb-2 leading-tight">{book.title}</h3>
+                <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2 leading-tight">{book.title}</h3>
                 
                 <div className="flex-grow">
-                    <p className="text-slate-600 text-sm mb-4">
+                    <p className="text-[rgb(var(--color-text-default-rgb))] text-base mb-4">
                         {book.description}
                     </p>
                 </div>
 
-                <div className="mt-auto pt-4 border-t border-slate-200 space-y-2">
-                    {primaryLink ? (
-                        <>
-                            <a 
-                                href={primaryLink.url}
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="w-full text-center bg-yellow-400 hover:bg-yellow-500 text-slate-800 font-bold py-3 px-4 rounded-lg text-base flex items-center justify-center gap-2 transition-all transform hover:scale-105"
-                            >
-                                <ShoppingCart size={18} /> Buy on {primaryLink.domainName}
-                            </a>
-                            {secondaryStores.map((store) => (
-                                <a 
-                                    key={store.key}
-                                    href={store.url}
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-all"
-                                >
-                                Buy on {store.name}
-                                </a>
-                            ))}
-                        </>
+                <div className="mt-auto pt-4 border-t border-[rgb(var(--color-border-rgb))]">
+                    {allStores.length > 0 ? (
+                        <div className="space-y-2">
+                             <p className="text-xs font-semibold text-[rgb(var(--color-text-muted-rgb))]">Available on:</p>
+                             {allStores.map(store => {
+                                 const isPrimary = store.key === primaryLinkInfo?.key;
+                                 return (
+                                     <a 
+                                         key={store.key}
+                                         href={store.url}
+                                         target="_blank" 
+                                         rel="noopener noreferrer"
+                                         className={`w-full text-center font-bold py-2 px-4 rounded-lg text-base flex items-center justify-center gap-2 transition-all transform ${
+                                             isPrimary 
+                                                 ? 'bg-yellow-400 hover:bg-yellow-500 text-slate-800 hover:scale-105'
+                                                 : 'bg-[rgb(var(--color-card-rgb))] hover:bg-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-default-rgb))]'
+                                         }`}
+                                     >
+                                         <ShoppingCart size={16} /> Buy on {store.name}
+                                     </a>
+                                 )
+                             })}
+                        </div>
                     ) : (
-                        <p className="text-sm text-center text-slate-500">Purchase links currently unavailable.</p>
+                        <p className="text-sm text-center text-[rgb(var(--color-text-muted-rgb))]">Purchase links currently unavailable.</p>
                     )}
                 </div>
             </div>
@@ -106,21 +103,21 @@ const BookStore: FC = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh]">
                 <LogoSpinner />
-                <p className="mt-4 text-slate-500">Loading Books...</p>
+                <p className="mt-4 text-[rgb(var(--color-text-muted-rgb))]">Loading Books...</p>
             </div>
         );
     }
 
     return (
         <div className="max-w-7xl mx-auto">
-            <div className="bg-white p-8 rounded-xl shadow-lg">
+            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                 <div className="text-center mb-12">
-                     <BookOpenCheck className="mx-auto h-12 w-12 text-cyan-500" />
-                     <h1 className="text-4xl font-extrabold text-slate-900 mt-4">Recommended Study Materials</h1>
-                    <p className="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">
+                     <BookOpenCheck className="mx-auto h-12 w-12 text-[rgb(var(--color-primary-rgb))]" />
+                     <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] mt-4">Recommended Study Materials</h1>
+                    <p className="mt-4 text-lg text-[rgb(var(--color-text-default-rgb))] max-w-3xl mx-auto">
                         Enhance your learning with our curated list of essential books for medical coding professionals. Each book has been selected to help you succeed in your exams and career.
                     </p>
-                    <p className="text-xs text-slate-400 mt-4">
+                    <p className="text-xs text-[rgb(var(--color-text-muted-rgb))] mt-4">
                         As an Amazon Associate, we earn from qualifying purchases. Using our links doesn't cost you anything extra and helps support our platform to keep creating great content for you. Please note that book availability may vary by region.
                     </p>
                 </div>
@@ -132,7 +129,7 @@ const BookStore: FC = () => {
                         ))}
                     </div>
                 ) : (
-                    <p className="text-center text-slate-500">No books are currently recommended.</p>
+                    <p className="text-center text-[rgb(var(--color-text-muted-rgb))]">No books are currently recommended.</p>
                 )}
             </div>
         </div>

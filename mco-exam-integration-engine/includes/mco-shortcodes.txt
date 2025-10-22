@@ -619,12 +619,13 @@ function mco_single_book_shortcode($atts) {
 
     ob_start();
 
-    echo '<div class="mco-single-book-container">';
+    // The main card container
+    echo '<div class="mco-single-book-card">';
 
-    // Cover Column
-    echo '<div class="mco-single-book__cover">';
+    // Left side: Cover
+    echo '<div class="mco-single-book-card__cover">';
     if ($book['thumbnailUrl']) {
-        echo '<img src="' . esc_url($book['thumbnailUrl']) . '" alt="' . esc_attr($book['title']) . '" style="width:100%; height:100%; object-fit:cover;"/>';
+        echo '<img src="' . esc_url($book['thumbnailUrl']) . '" alt="' . esc_attr($book['title']) . '"/>';
     } else {
         $site_name = strtolower(get_bloginfo('name'));
         $is_mco_tenant = (strpos($site_name, 'medical coding online') !== false);
@@ -636,28 +637,79 @@ function mco_single_book_shortcode($atts) {
     }
     echo '</div>';
 
-    // Details Column
-    echo '<div class="mco-single-book__details">';
-    echo '<h1 class="mco-single-book__title">' . esc_html($book['title']) . '</h1>';
-    echo '<div class="mco-single-book__description">' . $book['description'] . '</div>';
+    // Right side: Details
+    echo '<div class="mco-single-book-card__details">';
+    echo '<h1 class="mco-single-book-card__title">' . esc_html($book['title']) . '</h1>';
+    echo '<div class="mco-single-book-card__description">' . $book['description'] . '</div>';
 
     $has_links = !empty($book['links']['com']) || !empty($book['links']['in']) || !empty($book['links']['ae']);
     if ($has_links) {
-        echo '<div class="mco-single-book__buttons">';
+        echo '<div class="mco-single-book-card__buttons" data-book-links-single>';
+        echo '<p class="mco-single-book-card__buttons-label">Available on:</p>';
         if (!empty($book['links']['com'])) {
-            echo '<a href="' . esc_url($book['links']['com']) . '" target="_blank" rel="noopener noreferrer" class="mco-single-book__button mco-single-book__button--amazon">' . $icons['cart'] . ' Buy on Amazon.com</a>';
+            echo '<a href="' . esc_url($book['links']['com']) . '" target="_blank" rel="noopener noreferrer" class="mco-single-book-card__button" data-store="com">' . $icons['cart'] . ' Buy on Amazon.com</a>';
         }
         if (!empty($book['links']['in'])) {
-            echo '<a href="' . esc_url($book['links']['in']) . '" target="_blank" rel="noopener noreferrer" class="mco-single-book__button mco-single-book__button--amazon">' . $icons['cart'] . ' Buy on Amazon.in</a>';
+            echo '<a href="' . esc_url($book['links']['in']) . '" target="_blank" rel="noopener noreferrer" class="mco-single-book-card__button" data-store="in">' . $icons['cart'] . ' Buy on Amazon.in</a>';
         }
         if (!empty($book['links']['ae'])) {
-            echo '<a href="' . esc_url($book['links']['ae']) . '" target="_blank" rel="noopener noreferrer" class="mco-single-book__button mco-single-book__button--amazon">' . $icons['cart'] . ' Buy on Amazon.ae</a>';
+            echo '<a href="' . esc_url($book['links']['ae']) . '" target="_blank" rel="noopener noreferrer" class="mco-single-book-card__button" data-store="ae">' . $icons['cart'] . ' Buy on Amazon.ae</a>';
         }
         echo '</div>';
     }
+
+    echo '</div>'; // end details
+    echo '</div>'; // end card
+
+    // The geo-targeting script.
+    $script = '
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        try {
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            let preferredStore = "com";
+            const gccTimezones = ["Asia/Dubai", "Asia/Riyadh", "Asia/Qatar", "Asia/Bahrain", "Asia/Kuwait", "Asia/Muscat"];
+            if (timeZone.includes("Asia/Kolkata") || timeZone.includes("Asia/Calcutta")) {
+                preferredStore = "in";
+            } else if (gccTimezones.some(tz => timeZone === tz)) {
+                preferredStore = "ae";
+            }
+
+            document.querySelectorAll("[data-book-links-single]").forEach(function(buttonContainer) {
+                const links = {
+                    com: buttonContainer.querySelector("[data-store=\'com\']"),
+                    in: buttonContainer.querySelector("[data-store=\'in\']"),
+                    ae: buttonContainer.querySelector("[data-store=\'ae\']")
+                };
+
+                let primaryLink = links[preferredStore];
+                
+                // Fallback if preferred store link does not exist
+                if (!primaryLink) {
+                    if (links.com) primaryLink = links.com;
+                    else if (links.in) primaryLink = links.in;
+                    else if (links.ae) primaryLink = links.ae;
+                }
+
+                if (primaryLink) {
+                    primaryLink.classList.add("mco-single-book-card__button--primary");
+                    buttonContainer.prepend(primaryLink);
+                    
+                    // Add secondary class to other buttons
+                    Object.values(links).forEach(link => {
+                        if (link && link !== primaryLink) {
+                            link.classList.add("mco-single-book-card__button--secondary");
+                        }
+                    });
+                }
+            });
+        } catch (e) {
+            console.error("MCO Geo-targeting script failed:", e);
+        }
+    });
+    </script>';
     
-    echo '</div>';
-    echo '</div>';
+    echo $script;
 
     return ob_get_clean();
 }
