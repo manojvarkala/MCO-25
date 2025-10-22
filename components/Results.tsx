@@ -309,7 +309,7 @@ const Results: FC = () => {
         setExpandedQuestion(expandedQuestion === id ? null : id);
     };
 
-    const shareText = `I passed the ${exam.name} with a score of ${result.score}%! Thanks to ${activeOrg.name} for their great exam platform.`;
+    const shareText = `I passed the ${exam.name} with a score of ${result.score.toFixed(0)}%! Thanks to ${activeOrg.name} for their great exam platform.`;
     const shareTitle = `I passed the ${exam.name}!`;
 
     return (

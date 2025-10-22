@@ -70,7 +70,7 @@ const VerifyCertificate: FC = () => {
                             </div>
                             <div>
                                 <p className="text-sm text-slate-500">Passing Score</p>
-                                <p className="text-lg font-semibold text-slate-700">{verificationData.finalScore}%</p>
+                                <p className="text-lg font-semibold text-slate-700">{verificationData.finalScore.toFixed(0)}%</p>
                             </div>
                         </div>
                     </div>

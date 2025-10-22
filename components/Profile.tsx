@@ -199,7 +199,7 @@ const Profile: FC = () => {
                                             <p className="text-sm text-slate-500">{new Date(result.timestamp).toLocaleString()}</p>
                                         </div>
                                         <div className="flex items-center gap-4">
-                                            <span className={`font-bold text-2xl ${scoreColor}`}>{result.score}%</span>
+                                            <span className={`font-bold text-2xl ${scoreColor}`}>{result.score.toFixed(0)}%</span>
                                             {isPass ? (
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                                     <CheckCircle size={14} className="mr-1" /> Passed

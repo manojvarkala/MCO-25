@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -211,7 +212,7 @@ const Certificate: FC = () => {
                                         for the <strong>{examName}</strong>
                                     </p>
                                     <p className="cert-text-normal mt-2">with the following score:</p>
-                                    <p className="cert-score">{certData.finalScore}</p>
+                                    <p className="cert-score">{certData.finalScore.toFixed(0)}%</p>
                                 </main>
 
                                 {/* Footer */}

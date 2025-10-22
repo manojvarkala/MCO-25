@@ -50,7 +50,7 @@ const ShareableResult: FC<ShareableResultProps> = ({ user, exam, result, organiz
                 <h2 className="text-7xl font-script my-4 py-2 text-cyan-300">{user.name}</h2>
                 <p className="text-2xl text-white/90">has successfully passed the</p>
                 <h3 className="text-4xl font-bold mt-3">{exam.name}</h3>
-                <p className="text-2xl mt-4">with a score of <span className="font-bold text-yellow-300">{result.score}%</span> on {date}</p>
+                <p className="text-2xl mt-4">with a score of <span className="font-bold text-yellow-300">{result.score.toFixed(0)}%</span> on {date}</p>
             </main>
 
             {/* Footer */}
