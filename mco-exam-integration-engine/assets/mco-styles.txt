@@ -182,6 +182,50 @@
 .mco-proc-cover-mco-b--color-3 .mco-proc-cover-mco-b__accent { background-color: #a3e635; }
 
 
+/* --- NEW Single Book Shortcode Styles --- */
+.mco-single-book-container {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 2rem;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    padding: 2rem;
+    margin: 2rem 0;
+}
+.mco-single-book__cover {
+    width: 250px;
+    height: 375px;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+}
+.mco-single-book__details { display: flex; flex-direction: column; }
+.mco-single-book__title { font-size: 2.25rem; font-weight: 800; color: #1e293b; margin-top: 0; margin-bottom: 1rem; }
+.mco-single-book__description { color: #475569; flex-grow: 1; }
+.mco-single-book__description p:first-child { margin-top: 0; }
+.mco-single-book__buttons { margin-top: 2rem; display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+.mco-single-book__button { display: inline-flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+.mco-single-book__button--amazon { background-color: #facc15; color: #1e293b; }
+.mco-single-book__button--amazon:hover { background-color: #f59e0b; }
+
+@media (max-width: 768px) {
+    .mco-single-book-container {
+        grid-template-columns: 1fr;
+        padding: 1.5rem;
+    }
+    .mco-single-book__cover {
+        width: 100%;
+        max-width: 250px;
+        height: auto;
+        aspect-ratio: 2 / 3;
+        margin: 0 auto;
+    }
+    .mco-single-book__title { font-size: 1.75rem; text-align: center; margin-top: 1.5rem; }
+    .mco-single-book__buttons { align-items: stretch; }
+    .mco-single-book__button { justify-content: center; }
+}
+
 
 @media (max-width: 768px) {
     .mco-card--best-value { transform: none; }
