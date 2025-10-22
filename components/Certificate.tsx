@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -155,6 +156,7 @@ const Certificate: FC = () => {
 
     const { organization, template, examName } = certData;
     const isSig1Base64 = template.signature1ImageUrl && template.signature1ImageUrl.startsWith('data:image');
+    const isSig2Base64 = template.signature2ImageUrl && template.signature2ImageUrl.startsWith('data:image');
     const verificationUrl = `${window.location.origin}/verify/${certData.certificateNumber}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(verificationUrl)}`;
 
@@ -212,26 +214,48 @@ const Certificate: FC = () => {
                                 {/* Footer */}
                                 <footer className="cert-footer">
                                     <div className="cert-footer-item">
-                                        <p className="font-semibold text-sm h-6">{certData.certificateNumber}</p>
-                                        <hr className="cert-hr"/>
-                                        <p className="text-xs">Certificate Number</p>
-                                    </div>
-                                    <div className="cert-footer-item">
-                                        <div className="h-10 flex items-center justify-center">
-                                            {template.signature1ImageUrl ? (
-                                                <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="h-8 mx-auto" />
-                                            ) : (
-                                                <p className="cert-signature-text">{template.signature1Name}</p>
-                                            )}
-                                        </div>
-                                        <hr className="cert-hr"/>
-                                        <p className="font-semibold text-sm mt-1">{template.signature1Name}</p>
-                                        <p className="text-xs">{template.signature1Title}</p>
-                                    </div>
-                                    <div className="cert-footer-item">
                                         <p className="font-semibold text-sm h-6">{certData.date}</p>
                                         <hr className="cert-hr"/>
                                         <p className="text-xs">Date of Completion</p>
+                                    </div>
+
+                                    <div className="cert-footer-item">
+                                        <div className="cert-signatures-container">
+                                            {template.signature1Name && (
+                                                <div className="cert-signature-block">
+                                                    <div className="h-10 flex items-center justify-center">
+                                                        {template.signature1ImageUrl ? (
+                                                            <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="h-8 mx-auto" />
+                                                        ) : (
+                                                            <p className="cert-signature-text">{template.signature1Name}</p>
+                                                        )}
+                                                    </div>
+                                                    <hr className="cert-hr"/>
+                                                    <p className="font-semibold text-sm mt-1">{template.signature1Name}</p>
+                                                    <p className="text-xs">{template.signature1Title}</p>
+                                                </div>
+                                            )}
+                                            {template.signature2Name && (
+                                                <div className="cert-signature-block">
+                                                    <div className="h-10 flex items-center justify-center">
+                                                        {template.signature2ImageUrl ? (
+                                                            <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} className="h-8 mx-auto" />
+                                                        ) : (
+                                                            <p className="cert-signature-text">{template.signature2Name}</p>
+                                                        )}
+                                                    </div>
+                                                    <hr className="cert-hr"/>
+                                                    <p className="font-semibold text-sm mt-1">{template.signature2Name}</p>
+                                                    <p className="text-xs">{template.signature2Title}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="cert-footer-item">
+                                        <p className="font-semibold text-sm h-6">{certData.certificateNumber}</p>
+                                        <hr className="cert-hr"/>
+                                        <p className="text-xs">Certificate Number</p>
                                     </div>
                                 </footer>
 

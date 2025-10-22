@@ -121,6 +121,7 @@ export interface Organization {
   name: string;
   logo: string;
   website: string;
+  address?: string;
   introVideoUrl?: string;
   exams: Exam[];
   examProductCategories: ExamProductCategory[];

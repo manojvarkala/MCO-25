@@ -78,7 +78,7 @@ const Header: FC = () => {
                             )}
                         </div>
                         <span className="text-md font-display text-[rgb(var(--color-text-muted-rgb))]">
-                            {activeOrg.website}
+                            {activeOrg.address || activeOrg.website}
                         </span>
                      </>
                 ) : (

@@ -5,6 +5,7 @@
             "id": "org-annapoorna",
             "name": "Annapoorna Infotech",
             "website": "annapoornainfo.com",
+            "address": "Coimbatore, Tamil Nadu, India",
             "logo": "/logo.png",
             "availableThemes": [
                 { "id": "default", "name": "Cyberpunk" },

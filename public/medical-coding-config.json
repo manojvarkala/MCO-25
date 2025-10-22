@@ -5,6 +5,7 @@
       "id": "org-medical-coding-online",
       "name": "Medical Coding Online",
       "website": "www.coding-online.net",
+      "address": "Dubai, United Arab Emirates",
       "logo": "https://www.coding-online.net/wp-content/uploads/2025/09/coding-logo-vectorised-Copy.png",
       "availableThemes": [
           { "id": "default", "name": "Cyberpunk" },
