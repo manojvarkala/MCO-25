@@ -802,4 +802,307 @@ function mco_api_get_post_creation_data(WP_REST_Request $request) {
         'categories' => $formatted_categories,
     ], 200);
 }
+
+// --- ADDING MISSING ADMIN ENDPOINT CALLBACKS ---
+
+function mco_api_clear_config_cache(WP_REST_Request $request) {
+    delete_transient('mco_app_config_data');
+    update_option('mco_config_version', current_time('YmdHis'));
+    return new WP_REST_Response(['success' => true, 'message' => 'Application config cache cleared.'], 200);
+}
+
+function mco_api_clear_question_caches(WP_REST_Request $request) {
+    global $wpdb;
+    $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '\_transient\_mco\_sheet\_%' OR option_name LIKE '\_transient\_timeout\_mco\_sheet\_%'");
+    return new WP_REST_Response(['success' => true, 'message' => 'All question sheet caches cleared.'], 200);
+}
+
+function mco_api_admin_clear_all_results(WP_REST_Request $request) {
+    global $wpdb;
+    $wpdb->query("DELETE FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'");
+    return new WP_REST_Response(['success' => true, 'message' => 'All user exam results have been deleted from the database.'], 200);
+}
+
+function mco_api_admin_update_exam_program(WP_REST_Request $request) {
+    $program_id = $request->get_param('programId');
+    $update_data = $request->get_param('updateData');
+
+    if (empty($program_id) || empty($update_data) || !is_array($update_data)) {
+        return new WP_Error('bad_request', 'Missing programId or updateData.', ['status' => 400]);
+    }
+
+    $post_id = (int) str_replace('prod-', '', $program_id);
+    if ($post_id <= 0 || get_post_type($post_id) !== 'mco_exam_program') {
+        return new WP_Error('not_found', 'Exam program not found.', ['status' => 404]);
+    }
+
+    if (isset($update_data['programName'])) {
+        wp_update_post(['ID' => $post_id, 'post_title' => sanitize_text_field($update_data['programName'])]);
+    }
+    if (isset($update_data['programDescription'])) {
+        wp_update_post(['ID' => $post_id, 'post_content' => wp_kses_post($update_data['programDescription'])]);
+    }
+
+    $meta_map = [
+        'questionSourceUrl' => '_mco_question_source_url',
+        'practice_name_override' => '_mco_practice_exam_title_override',
+        'cert_name_override' => '_mco_cert_exam_title_override',
+        'cert_productSku' => '_mco_certification_exam_sku',
+        'cert_isProctored' => '_mco_is_proctored',
+        'cert_certificateEnabled' => '_mco_certificate_enabled',
+        'practice_certificateEnabled' => '_mco_practice_certificate_enabled',
+        'recommended_book_ids' => '_mco_recommended_book_ids'
+    ];
+    foreach ($meta_map as $key => $meta_key) {
+        if (isset($update_data[$key])) {
+            $value = $update_data[$key];
+            if (is_bool($value)) {
+                $value = $value ? '1' : '0';
+            }
+            if ($meta_key === '_mco_recommended_book_ids') {
+                $book_post_ids = [];
+                if (is_array($value)) {
+                    foreach($value as $book_app_id) {
+                        $args = ['post_type' => 'mco_recommended_book', 'meta_key' => '_mco_book_id', 'meta_value' => sanitize_text_field($book_app_id), 'posts_per_page' => 1, 'fields' => 'ids'];
+                        $query = new WP_Query($args);
+                        if (!empty($query->posts)) {
+                            $book_post_ids[] = $query->posts[0];
+                        }
+                    }
+                }
+                update_post_meta($post_id, $meta_key, $book_post_ids);
+            } else {
+                update_post_meta($post_id, $meta_key, sanitize_text_field($value));
+            }
+        }
+    }
+    
+    $taxonomy_map = [
+        'practice_numberOfQuestions' => 'exam_practice_questions',
+        'practice_durationMinutes' => 'exam_practice_duration',
+        'cert_numberOfQuestions' => 'exam_cert_questions',
+        'cert_durationMinutes' => 'exam_cert_duration',
+        'cert_passScore' => 'exam_pass_score'
+    ];
+    foreach ($taxonomy_map as $key => $taxonomy) {
+        if (isset($update_data[$key])) {
+            wp_set_object_terms($post_id, sanitize_text_field($update_data[$key]), $taxonomy, false);
+        }
+    }
+
+    delete_transient('mco_app_config_data');
+    update_option('mco_config_version', current_time('YmdHis'));
+    $config = mco_get_app_config_data();
+
+    return new WP_REST_Response([
+        'organizations' => [mco_get_full_config(new WP_REST_Request())->get_data()['organizations'][0]],
+        'examPrices' => $config['examPrices'] ?? null
+    ], 200);
+}
+
+function mco_api_admin_create_exam_program(WP_REST_Request $request) {
+    $program_name = sanitize_text_field($request->get_param('programName'));
+    $product_link_data = $request->get_param('productLinkData');
+
+    if (empty($program_name) || empty($product_link_data)) {
+        return new WP_Error('bad_request', 'Program name and product link data are required.', ['status' => 400]);
+    }
+
+    $post_id = wp_insert_post([
+        'post_title' => $program_name,
+        'post_status' => 'publish',
+        'post_type' => 'mco_exam_program',
+        'post_content' => 'Description for ' . $program_name,
+    ]);
+
+    if (is_wp_error($post_id)) {
+        return $post_id;
+    }
+
+    $sku_to_link = '';
+    if ($product_link_data['type'] === 'auto') {
+        $sku_to_link = 'exam-' . sanitize_title($program_name);
+        $product = new WC_Product_Simple();
+        $product->set_name($program_name . ' Certification');
+        $product->set_sku($sku_to_link);
+        $product->set_regular_price('49.99');
+        $product->set_virtual(true);
+        $product->save();
+    } elseif ($product_link_data['type'] === 'existing') {
+        $sku_to_link = sanitize_text_field($product_link_data['sku']);
+    }  elseif ($product_link_data['type'] === 'new') {
+        $sku_to_link = sanitize_text_field($product_link_data['sku']);
+        $product = new WC_Product_Simple();
+        $product->set_name(sanitize_text_field($product_link_data['name']));
+        $product->set_sku($sku_to_link);
+        $product->set_sale_price(sanitize_text_field($product_link_data['price']));
+        $product->set_regular_price(sanitize_text_field($product_link_data['regularPrice']));
+        $product->set_virtual(true);
+        $product->save();
+    }
+
+    update_post_meta($post_id, '_mco_certification_exam_sku', $sku_to_link);
+    wp_set_object_terms($post_id, '70', 'exam_pass_score');
+    wp_set_object_terms($post_id, '100', 'exam_cert_questions');
+    wp_set_object_terms($post_id, '120', 'exam_cert_duration');
+    wp_set_object_terms($post_id, '25', 'exam_practice_questions');
+    wp_set_object_terms($post_id, '60', 'exam_practice_duration');
+    update_post_meta($post_id, '_mco_certificate_enabled', '1');
+
+    delete_transient('mco_app_config_data');
+    update_option('mco_config_version', current_time('YmdHis'));
+    $config = mco_get_app_config_data();
+
+    return new WP_REST_Response([
+        'organizations' => [mco_get_full_config(new WP_REST_Request())->get_data()['organizations'][0]],
+        'examPrices' => $config['examPrices'] ?? null
+    ], 200);
+}
+
+function mco_api_admin_upsert_product(WP_REST_Request $request) {
+    $product_data = $request->get_json_params();
+    $sku = sanitize_text_field($product_data['sku']);
+    if (empty($sku)) {
+        return new WP_Error('bad_request', 'SKU is required.', ['status' => 400]);
+    }
+    
+    $product_id = wc_get_product_id_by_sku($sku);
+    $product_type = 'simple';
+    if (isset($product_data['subscription_period'])) {
+        $product_type = 'subscription';
+    }
+
+    if ($product_id) {
+        $product = wc_get_product($product_id);
+    } else {
+        if ($product_type === 'subscription' && class_exists('WC_Product_Subscription')) {
+            $product = new WC_Product_Subscription();
+        } else {
+            $product = new WC_Product_Simple();
+        }
+        $product->set_sku($sku);
+    }
+
+    if (isset($product_data['name'])) $product->set_name(sanitize_text_field($product_data['name']));
+    if (isset($product_data['price'])) $product->set_sale_price($product_data['price']);
+    if (isset($product_data['regularPrice'])) $product->set_regular_price($product_data['regularPrice']);
+    
+    if ($product_type === 'subscription' && isset($product_data['price'])) {
+        $product->set_price($product_data['price']);
+    }
+    
+    $product->set_virtual(true);
+    $product_id = $product->save();
+
+    if ($product_id) {
+        if ($product_type === 'subscription') {
+            update_post_meta($product_id, '_subscription_period', sanitize_text_field($product_data['subscription_period']));
+            update_post_meta($product_id, '_subscription_period_interval', sanitize_text_field($product_data['subscription_period_interval']));
+            update_post_meta($product_id, '_subscription_length', sanitize_text_field($product_data['subscription_length']));
+        }
+        if (isset($product_data['isBundle'])) {
+            update_post_meta($product_id, '_mco_is_bundle', $product_data['isBundle'] ? 'yes' : 'no');
+            if (isset($product_data['bundled_skus'])) {
+                update_post_meta($product_id, '_mco_bundled_skus', $product_data['bundled_skus']);
+            }
+        }
+    }
+    
+    delete_transient('mco_app_config_data');
+    update_option('mco_config_version', current_time('YmdHis'));
+    $config = mco_get_app_config_data();
+
+    return new WP_REST_Response([
+        'organizations' => [mco_get_full_config(new WP_REST_Request())->get_data()['organizations'][0]],
+        'examPrices' => $config['examPrices'] ?? null
+    ], 200);
+}
+
+function mco_api_admin_delete_post(WP_REST_Request $request) {
+    $post_id = sanitize_text_field($request->get_param('postId'));
+    $post_type = sanitize_text_field($request->get_param('postType'));
+
+    if (empty($post_id) || empty($post_type)) {
+        return new WP_Error('bad_request', 'Post ID and Post Type are required.', ['status' => 400]);
+    }
+    
+    $allowed_types = ['mco_exam_program', 'product'];
+    if (!in_array($post_type, $allowed_types, true)) {
+        return new WP_Error('bad_request', 'Invalid post type specified.', ['status' => 400]);
+    }
+
+    $result = wp_trash_post($post_id);
+
+    if ($result === false) {
+        return new WP_Error('delete_failed', 'Could not move the post to trash.', ['status' => 500]);
+    }
+
+    delete_transient('mco_app_config_data');
+    update_option('mco_config_version', current_time('YmdHis'));
+    $config = mco_get_app_config_data();
+
+    return new WP_REST_Response([
+        'organizations' => [mco_get_full_config(new WP_REST_Request())->get_data()['organizations'][0]],
+        'examPrices' => $config['examPrices'] ?? null
+    ], 200);
+}
+
+function mco_api_create_post_from_app(WP_REST_Request $request) {
+    $payload = $request->get_json_params();
+
+    $new_post_args = [
+        'post_title'   => sanitize_text_field($payload['post_title']),
+        'post_content' => wp_kses_post($payload['post_content']),
+        'post_status'  => sanitize_text_field($payload['post_status']),
+        'post_date'    => sanitize_text_field($payload['post_date']),
+        'post_author'  => isset($payload['post_author']) ? intval($payload['post_author']) : get_current_user_id(),
+        'post_type'    => 'post',
+    ];
+
+    if (isset($payload['post_category'])) {
+        $new_post_args['post_category'] = [intval($payload['post_category'])];
+    }
+    
+    $post_id = wp_insert_post($new_post_args, true);
+
+    if (is_wp_error($post_id)) {
+        return $post_id;
+    }
+    
+    if (isset($payload['keywords'])) {
+        update_post_meta($post_id, '_yoast_wpseo_focuskw', sanitize_text_field($payload['keywords']));
+    }
+    
+    return new WP_REST_Response([
+        'success' => true,
+        'post_id' => $post_id,
+        'post_url' => get_edit_post_link($post_id, 'raw'),
+    ], 200);
+}
+
+function mco_api_admin_set_intro_video(WP_REST_Request $request) {
+    if (!function_exists('wp_handle_upload')) {
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+    }
+
+    $uploaded_file = $_FILES['video'];
+    $upload_overrides = ['test_form' => false];
+    $movefile = wp_handle_upload($uploaded_file, $upload_overrides);
+
+    if ($movefile && !isset($movefile['error'])) {
+        update_option('mco_intro_video_url', $movefile['url']);
+
+        delete_transient('mco_app_config_data');
+        update_option('mco_config_version', current_time('YmdHis'));
+        $config = mco_get_app_config_data();
+
+        return new WP_REST_Response([
+            'organizations' => [mco_get_full_config(new WP_REST_Request())->get_data()['organizations'][0]],
+            'examPrices' => $config['examPrices'] ?? null
+        ], 200);
+    } else {
+        return new WP_Error('upload_error', $movefile['error'], ['status' => 500]);
+    }
+}
+
 ?>

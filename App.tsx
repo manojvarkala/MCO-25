@@ -1,6 +1,7 @@
 
 
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected react-router-dom import to resolve module export errors.
 import { Navigate, useLocation, Routes, Route, BrowserRouter, Outlet } from 'react-router-dom';
@@ -47,6 +48,8 @@ import Handbook from './components/handbook/Handbook.tsx';
 import VerifyCertificate from './components/VerifyCertificate.tsx';
 import VerifyPage from './components/VerifyPage.tsx';
 import LogoSpinner from './components/LogoSpinner.tsx';
+import AdminToolbar from './components/AdminToolbar.tsx';
+import DebugSidebar from './components/DebugSidebar.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -67,10 +70,11 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }
 };
 
 const AppContent: FC = () => {
-    const { user, isMasquerading } = useAuth();
+    const { user, isMasquerading, isEffectivelyAdmin } = useAuth();
     const { activeOrg, activeTheme } = useAppContext();
     const location = useLocation();
     const [isNameModalOpen, setIsNameModalOpen] = useState(false);
+    const [isDebugSidebarOpen, setIsDebugSidebarOpen] = useState(false);
 
     const isTestPage = location.pathname.startsWith('/test/');
     const isAdminPage = location.pathname.startsWith('/admin');
@@ -181,6 +185,10 @@ const AppContent: FC = () => {
             </div>
             {!isTestPage && <Footer />}
             {!isTestPage && <LivePurchaseNotification />}
+            
+            {/* Global Admin Tools */}
+            {isEffectivelyAdmin && <AdminToolbar onToggleDebug={() => setIsDebugSidebarOpen(true)} />}
+            <DebugSidebar isOpen={isDebugSidebarOpen} onClose={() => setIsDebugSidebarOpen(false)} />
         </div>
     );
 };

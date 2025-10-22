@@ -8,7 +8,6 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
-import DebugSidebar from './DebugSidebar.tsx';
 
 interface HealthStatus {
     [key: string]: { success: boolean; message: string; data?: any };
@@ -58,7 +57,6 @@ const Admin: FC = () => {
     const [isGeneratingWooCsv, setIsGeneratingWooCsv] = useState(false);
     const [isGeneratingProgramsCsv, setIsGeneratingProgramsCsv] = useState(false);
     const [isClearingCache, setIsClearingCache] = useState(false);
-    const [isDebugOpen, setIsDebugOpen] = useState(false);
     const [detailsModalData, setDetailsModalData] = useState<any>(null);
 
     const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
@@ -180,7 +178,6 @@ const Admin: FC = () => {
 
     return (
         <>
-            <DebugSidebar isOpen={isDebugOpen} onClose={() => setIsDebugOpen(false)} />
              {detailsModalData && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-[rgb(var(--color-card-rgb))] rounded-lg shadow-lg w-full max-w-2xl max-h-[80vh] flex flex-col">
@@ -197,14 +194,9 @@ const Admin: FC = () => {
                 </div>
             )}
             <div className="space-y-8">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">Admin Dashboard</h1>
-                        <p className="text-lg text-[rgb(var(--color-text-muted-rgb))]">Tools and diagnostics for managing the application.</p>
-                    </div>
-                    <button onClick={() => setIsDebugOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition">
-                        <Bug size={18} /> Launch Debug Sidebar
-                    </button>
+                <div>
+                    <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">Admin Dashboard</h1>
+                    <p className="text-lg text-[rgb(var(--color-text-muted-rgb))]">Tools and diagnostics for managing the application.</p>
                 </div>
             
                 <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
