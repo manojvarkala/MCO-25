@@ -222,7 +222,9 @@ const Certificate: FC = () => {
                                             <p>{certData.date}</p>
                                         </div>
                                         <hr className="cert-hr"/>
-                                        <p className="cert-item-label">Date of Completion</p>
+                                        <div className="cert-item-label-group">
+                                            <p className="cert-item-label">Date of Completion</p>
+                                        </div>
                                     </div>
 
                                     <div className="cert-footer-item">
@@ -237,8 +239,10 @@ const Certificate: FC = () => {
                                                         )}
                                                     </div>
                                                     <hr className="cert-hr"/>
-                                                    <p className="cert-item-label font-semibold">{template.signature1Name}</p>
-                                                    <p className="cert-item-label">{template.signature1Title}</p>
+                                                    <div className="cert-item-label-group">
+                                                        <p className="cert-item-label font-semibold">{template.signature1Name}</p>
+                                                        <p className="cert-item-label">{template.signature1Title}</p>
+                                                    </div>
                                                 </div>
                                             )}
                                             {template.signature2Name && (
@@ -251,8 +255,10 @@ const Certificate: FC = () => {
                                                         )}
                                                     </div>
                                                     <hr className="cert-hr"/>
-                                                    <p className="cert-item-label font-semibold">{template.signature2Name}</p>
-                                                    <p className="cert-item-label">{template.signature2Title}</p>
+                                                    <div className="cert-item-label-group">
+                                                        <p className="cert-item-label font-semibold">{template.signature2Name}</p>
+                                                        <p className="cert-item-label">{template.signature2Title}</p>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -263,7 +269,9 @@ const Certificate: FC = () => {
                                             <p>{certData.certificateNumber}</p>
                                         </div>
                                         <hr className="cert-hr"/>
-                                        <p className="cert-item-label">Certificate Number</p>
+                                        <div className="cert-item-label-group">
+                                            <p className="cert-item-label">Certificate Number</p>
+                                        </div>
                                     </div>
                                 </footer>
 
