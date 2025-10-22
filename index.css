@@ -175,12 +175,17 @@
 .theme-swatch-noir-accent { background-color: rgb(250 204 21); }
 .theme-swatch-noir-background { background-color: rgb(24 24 27); border: 1px solid #3f3f46; }
 
-/* --- On-Screen Handbook Content Styles --- */
+/* --- On-Screen Handbook Cover Preview --- */
+.handbook-cover-preview > div {
+    min-height: 400px;
+}
+
+/* --- On-Screen Handbook Content Styles (Improved Readability) --- */
 .handbook-content {
-    color: #94a3b8; /* slate-400 */
+    color: #cbd5e1; /* slate-300 */
 }
 .handbook-content h2, .handbook-content h3, .handbook-content h4 {
-    color: #f1f5f9; /* slate-100 */
+    color: #f8fafc; /* slate-50 */
     font-weight: 700;
     margin-bottom: 1em;
     margin-top: 1.5em;
@@ -194,13 +199,13 @@
     line-height: 1.7;
 }
 .handbook-content a {
-    color: #67e8f9; /* cyan-400 */
+    color: #67e8f9; /* cyan-300 */
     text-decoration: none;
     font-weight: 500;
 }
 .handbook-content a:hover {
     text-decoration: underline;
-    color: #a5f3fc; /* cyan-300 */
+    color: #a5f3fc; /* cyan-200 */
 }
 .handbook-content ul, .handbook-content ol {
     margin-bottom: 1.25em;
@@ -215,7 +220,7 @@
     margin-top: 0.5em;
 }
 .handbook-content strong {
-    color: #f8fafc; /* slate-50 */
+    color: #ffffff; /* white */
     font-weight: 600;
 }
 .handbook-content code {
@@ -253,7 +258,6 @@
 }
 .handbook-pdf-content h2 {
     font-size: 24pt;
-    page-break-before: always;
     border-bottom: 1px solid #ccc;
     padding-bottom: 8pt;
 }
@@ -293,7 +297,10 @@
 .handbook-pdf-content .handbook-toc a {
     color: #0000EE; /* Make TOC links blue in PDF */
 }
-/* Don't apply page break before the very first H2 (which would be the Title Page) */
+/* This is for browser print, but not relied upon for jsPDF */
+.handbook-pdf-content h2 {
+    page-break-before: always;
+}
 .handbook-pdf-content h2:first-of-type {
     page-break-before: avoid;
 }
