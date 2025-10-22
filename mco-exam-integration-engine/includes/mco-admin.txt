@@ -65,14 +65,12 @@ function mco_exam_engine_admin_page() {
             $existing_templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
 
             foreach ($templates_data as $id => $template) {
-                // Skip if marked for deletion, but don't delete the default templates.
                 if (isset($template['delete']) && $template['delete'] === '1' && !in_array($id, ['cert-practice', 'cert-completion'])) {
                     continue;
                 }
 
                 $new_id = $id;
-                // If it's a new template, generate a proper ID from its name
-                if (strpos($id, 'new_template_') === 0) {
+                if (strpos($id, 'new_template_') === 0 && isset($template['name']) && !empty($template['name'])) {
                     $base_id = 'cert-' . sanitize_title($template['name']);
                     $final_id = $base_id;
                     $counter = 2;
@@ -83,13 +81,16 @@ function mco_exam_engine_admin_page() {
                 }
 
                 $sanitized_templates[$new_id] = [
-                    'id' => $new_id, 'name' => sanitize_text_field($template['name']), 'title' => sanitize_text_field($template['title']),
-                    'body' => wp_kses_post($template['body']), 'signature1Name' => sanitize_text_field($template['signature1Name']),
-                    'signature1Title' => sanitize_text_field($template['signature1Title']),
-                    'signature1ImageUrl' => mco_sanitize_data_uri_or_url($template['signature1ImageUrl']),
-                    'signature2Name' => sanitize_text_field($template['signature2Name']),
-                    'signature2Title' => sanitize_text_field($template['signature2Title']),
-                    'signature2ImageUrl' => mco_sanitize_data_uri_or_url($template['signature2ImageUrl']),
+                    'id' => $new_id,
+                    'name' => isset($template['name']) ? sanitize_text_field($template['name']) : 'Untitled Template',
+                    'title' => isset($template['title']) ? sanitize_text_field($template['title']) : '',
+                    'body' => isset($template['body']) ? wp_kses_post($template['body']) : '',
+                    'signature1Name' => isset($template['signature1Name']) ? sanitize_text_field($template['signature1Name']) : '',
+                    'signature1Title' => isset($template['signature1Title']) ? sanitize_text_field($template['signature1Title']) : '',
+                    'signature1ImageUrl' => isset($template['signature1ImageUrl']) ? mco_sanitize_data_uri_or_url($template['signature1ImageUrl']) : '',
+                    'signature2Name' => isset($template['signature2Name']) ? sanitize_text_field($template['signature2Name']) : '',
+                    'signature2Title' => isset($template['signature2Title']) ? sanitize_text_field($template['signature2Title']) : '',
+                    'signature2ImageUrl' => isset($template['signature2ImageUrl']) ? mco_sanitize_data_uri_or_url($template['signature2ImageUrl']) : '',
                 ];
             }
             update_option('mco_certificate_templates', $sanitized_templates);
@@ -177,7 +178,7 @@ function mco_render_certificate_templates_tab() {
                     <option value="classic" <?php selected($cert_theme, 'classic'); ?>>Classic</option>
                     <option value="modern" <?php selected($cert_theme, 'modern'); ?>>Modern</option>
                 </select>
-                <p class="description">Select the default visual style for all certificates.</p>
+                <p class="description">Select the default visual style for all certificates. You can preview any template with this theme below.</p>
             </td></tr>
         </table>
 
@@ -186,19 +187,20 @@ function mco_render_certificate_templates_tab() {
                 $is_default = in_array($id, ['cert-practice', 'cert-completion']);
             ?>
             <div class="mco-accordion-item" id="template-item-<?php echo esc_attr($id); ?>">
-                <h3 class="mco-accordion-title"><?php echo esc_html($template['name']); ?> <?php if ($is_default) echo '(Default)'; ?></h3>
+                <h3 class="mco-accordion-title"><?php echo esc_html($template['name'] ?? 'Untitled Template'); ?> <?php if ($is_default) echo '(Default)'; ?></h3>
                 <div class="mco-accordion-content">
                     <input type="hidden" name="mco_templates[<?php echo esc_attr($id); ?>][delete]" value="0" class="delete-flag">
                     <table class="form-table">
-                        <tr><th>Template Name</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][name]" value="<?php echo esc_attr($template['name']); ?>" <?php if ($is_default) echo 'readonly'; ?>></td></tr>
-                        <tr><th>Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][title]" value="<?php echo esc_attr($template['title']); ?>"></td></tr>
-                        <tr><th>Body Text</th><td><textarea class="widefat" rows="4" name="mco_templates[<?php echo esc_attr($id); ?>][body]"><?php echo esc_textarea($template['body']); ?></textarea></td></tr>
-                        <tr><th>Signature 1 Name</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name']); ?>"></td></tr>
-                        <tr><th>Signature 1 Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature1Title]" value="<?php echo esc_attr($template['signature1Title']); ?>"></td></tr>
-                        <tr><th>Signature 1 Image URL</th><td><textarea class="widefat" rows="5" name="mco_templates[<?php echo esc_attr($id); ?>][signature1ImageUrl]"><?php echo esc_textarea($template['signature1ImageUrl']); ?></textarea><p class="description">Optional. Use a URL or a base64 data URI for best results.</p></td></tr>
-                        <tr><th>Signature 2 Name</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature2Name]" value="<?php echo esc_attr($template['signature2Name']); ?>"></td></tr>
-                        <tr><th>Signature 2 Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature2Title]" value="<?php echo esc_attr($template['signature2Title']); ?>"></td></tr>
-                        <tr><th>Signature 2 Image URL</th><td><textarea class="widefat" rows="5" name="mco_templates[<?php echo esc_attr($id); ?>][signature2ImageUrl]"><?php echo esc_textarea($template['signature2ImageUrl']); ?></textarea><p class="description">Optional.</p></td></tr>
+                        <tr><th>Template Name</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][name]" value="<?php echo esc_attr($template['name'] ?? ''); ?>" <?php if ($is_default) echo 'readonly'; ?>></td></tr>
+                        <tr><th>Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][title]" value="<?php echo esc_attr($template['title'] ?? ''); ?>"></td></tr>
+                        <tr><th>Body Text</th><td><textarea class="widefat" rows="4" name="mco_templates[<?php echo esc_attr($id); ?>][body]"><?php echo esc_textarea($template['body'] ?? ''); ?></textarea></td></tr>
+                        <tr><th>Signature 1 Name</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name'] ?? ''); ?>"></td></tr>
+                        <tr><th>Signature 1 Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature1Title]" value="<?php echo esc_attr($template['signature1Title'] ?? ''); ?>"></td></tr>
+                        <tr><th>Signature 1 Image URL</th><td><textarea class="widefat" rows="5" name="mco_templates[<?php echo esc_attr($id); ?>][signature1ImageUrl]"><?php echo esc_textarea($template['signature1ImageUrl'] ?? ''); ?></textarea><p class="description">Optional. Use a URL or a base64 data URI for best results.</p></td></tr>
+                        <tr><th>Signature 2 Name</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature2Name]" value="<?php echo esc_attr($template['signature2Name'] ?? ''); ?>"></td></tr>
+                        <tr><th>Signature 2 Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature2Title]" value="<?php echo esc_attr($template['signature2Title'] ?? ''); ?>"></td></tr>
+                        <tr><th>Signature 2 Image URL</th><td><textarea class="widefat" rows="5" name="mco_templates[<?php echo esc_attr($id); ?>][signature2ImageUrl]"><?php echo esc_textarea($template['signature2ImageUrl'] ?? ''); ?></textarea><p class="description">Optional.</p></td></tr>
+                         <tr><th>Actions</th><td><a href="#" class="button mco-preview-cert" data-template-id="<?php echo esc_attr($id); ?>" target="_blank">Preview</a></td></tr>
                     </table>
                     <?php if (!$is_default): ?>
                         <p class="submit" style="padding:0; margin-top: 10px;">
@@ -217,6 +219,24 @@ function mco_render_certificate_templates_tab() {
     <script>
     jQuery(document).ready(function($) {
         var accordion = $('#mco-certificate-accordion');
+
+        function updatePreviewLinks() {
+            var appUrl = "<?php echo esc_js(mco_get_exam_app_url()); ?>";
+            if (!appUrl) return;
+
+            var themeId = $('select[name="mco_certificate_theme_id"]').val();
+            
+            $('.mco-preview-cert').each(function() {
+                var templateId = $(this).data('template-id');
+                var previewUrl = new URL(appUrl.split('\\n')[0].trim() + '/certificate/sample');
+                previewUrl.searchParams.set('template_id', templateId);
+                previewUrl.searchParams.set('theme_id', themeId);
+                $(this).attr('href', previewUrl.toString());
+            });
+        }
+
+        updatePreviewLinks();
+        $('select[name="mco_certificate_theme_id"]').on('change', updatePreviewLinks);
         
         accordion.on('click', '.mco-accordion-title', function() {
             $(this).toggleClass('active');
@@ -245,6 +265,7 @@ function mco_render_certificate_templates_tab() {
                             <tr><th>Signature 2 Name</th><td><input type="text" class="widefat" name="mco_templates[${newId}][signature2Name]" value=""></td></tr>
                             <tr><th>Signature 2 Title</th><td><input type="text" class="widefat" name="mco_templates[${newId}][signature2Title]" value=""></td></tr>
                             <tr><th>Signature 2 Image URL</th><td><textarea class="widefat" rows="5" name="mco_templates[${newId}][signature2ImageUrl]"></textarea></td></tr>
+                            <tr><th>Actions</th><td><a href="#" class="button mco-preview-cert" data-template-id="${newId}" target="_blank">Preview</a></td></tr>
                         </table>
                         <p class="submit" style="padding:0; margin-top: 10px;">
                             <button type="button" class="button delete mco-delete-template">Delete Template</button>
@@ -252,6 +273,7 @@ function mco_render_certificate_templates_tab() {
                     </div>
                 </div>`;
             accordion.append(newTemplateHtml);
+            updatePreviewLinks();
         });
 
         accordion.on('click', '.mco-delete-template', function() {

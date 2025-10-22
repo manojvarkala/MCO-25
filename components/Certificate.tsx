@@ -1,7 +1,7 @@
 
 
 import React, { FC, useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -12,6 +12,7 @@ import { Download, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppContext } from '../context/AppContext.tsx';
+import Seal from '../assets/Seal.tsx';
 
 const decodeHtmlEntities = (text: string | undefined): string => {
     if (!text || typeof text !== 'string') return text || '';
@@ -28,6 +29,7 @@ const decodeHtmlEntities = (text: string | undefined): string => {
 const Certificate: FC = () => {
     const { testId = 'sample' } = useParams<{ testId?: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
     const { user, token, isEffectivelyAdmin } = useAuth();
     const { activeOrg } = useAppContext();
     const [certData, setCertData] = useState<CertificateData | null>(null);
@@ -35,22 +37,31 @@ const Certificate: FC = () => {
     const [isDownloading, setIsDownloading] = useState(false);
     const certificatePrintRef = useRef<HTMLDivElement>(null);
     
-    // Read the theme from the AppContext, defaulting to 'classic'.
-    const certificateThemeId = activeOrg?.certificateThemeId || 'classic';
+    const certificateThemeIdFromOrg = activeOrg?.certificateThemeId || 'classic';
+    const [effectiveTheme, setEffectiveTheme] = useState(certificateThemeIdFromOrg);
 
     useEffect(() => {
+        const searchParams = new URLSearchParams(location.search);
+        const themeIdFromUrl = searchParams.get('theme_id');
+
         if (testId === 'sample') {
             if (!user || !activeOrg) {
                 if (!activeOrg) setIsLoading(true);
                 return;
             }
 
-            const sampleTemplate = activeOrg.certificateTemplates.find(t => t.id === 'cert-practice');
-            if (!sampleTemplate) {
+            const templateIdFromUrl = searchParams.get('template_id');
+            const templateToUse = templateIdFromUrl
+                ? activeOrg.certificateTemplates.find(t => t.id === templateIdFromUrl)
+                : activeOrg.certificateTemplates.find(t => t.id === 'cert-practice');
+
+            if (!templateToUse) {
                 toast.error("Sample certificate template not found.");
                 navigate('/dashboard');
                 return;
             }
+            
+            setEffectiveTheme(themeIdFromUrl || certificateThemeIdFromOrg);
 
             const sampleCertData: CertificateData = {
                 certificateNumber: 'SAMPLE-123456',
@@ -59,7 +70,7 @@ const Certificate: FC = () => {
                 date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
                 totalQuestions: 100,
                 organization: activeOrg,
-                template: sampleTemplate,
+                template: templateToUse,
                 examName: 'Sample Proficiency Exam',
                 examId: 'sample-exam',
             };
@@ -67,6 +78,9 @@ const Certificate: FC = () => {
             setIsLoading(false);
             return;
         }
+
+        // For real certificates, always use the organization's default theme setting
+        setEffectiveTheme(certificateThemeIdFromOrg);
 
         const fetchCertificateData = async () => {
             if (!user || !token || !activeOrg) {
@@ -120,7 +134,7 @@ const Certificate: FC = () => {
         };
 
         fetchCertificateData();
-    }, [testId, user, token, navigate, activeOrg, isEffectivelyAdmin]);
+    }, [testId, user, token, navigate, activeOrg, isEffectivelyAdmin, location.search, certificateThemeIdFromOrg]);
 
     const handleDownload = async () => {
         if (!certificatePrintRef.current || !certData) return;
@@ -250,8 +264,8 @@ const Certificate: FC = () => {
 
     const modernCertificate = (
         <div className="cert-container-modern">
-            <div className="cert-color-panel">
-                <div>
+            <div className="cert-modern-sidebar">
+                <div className="cert-modern-sidebar__header">
                     {organization.logo && <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="cert-logo-modern" />}
                     <h3 className="cert-org-name-modern mt-4">{organization.name}</h3>
                     <p className="cert-org-website-modern">{organization.website}</p>
@@ -266,31 +280,35 @@ const Certificate: FC = () => {
                     <h1 className="cert-title-main-modern">{template.title}</h1>
                 </header>
                 <main className="cert-body-modern">
+                    <p className="cert-recipient-label">This is to certify that</p>
                     <h2 className="cert-candidate-name-modern">{certData.candidateName}</h2>
                     <p className="cert-completion-text" dangerouslySetInnerHTML={{ __html: template.body.replace('{examName}', `<strong>${examName}</strong>`).replace('{finalScore}%', '').replace('{candidateName}', '') }} />
+                </main>
+                <footer className="cert-footer-modern">
                     <div className="cert-details-grid">
                         <div className="cert-detail-item"><h4>Final Score</h4><p>{certData.finalScore.toFixed(0)}%</p></div>
                         <div className="cert-detail-item"><h4>Date Issued</h4><p>{certData.date}</p></div>
                     </div>
-                </main>
-                <footer className="cert-footer-modern">
-                    {template.signature1Name && (
-                        <div className="cert-signature-block-modern">
-                            {template.signature1ImageUrl ? <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="cert-signature-image-modern" /> : <p className="cert-signature-text-modern">{template.signature1Name}</p>}
-                            <div className="cert-signature-line"></div>
-                            <p className="cert-signature-name">{template.signature1Name}</p>
-                            <p className="cert-signature-title">{template.signature1Title}</p>
-                        </div>
-                    )}
-                     {template.signature2Name && (
-                        <div className="cert-signature-block-modern">
-                            {template.signature2ImageUrl ? <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} className="cert-signature-image-modern" /> : <p className="cert-signature-text-modern">{template.signature2Name}</p>}
-                            <div className="cert-signature-line"></div>
-                            <p className="cert-signature-name">{template.signature2Name}</p>
-                            <p className="cert-signature-title">{template.signature2Title}</p>
-                        </div>
-                    )}
+                    <div className="cert-signatures-container-modern">
+                        {template.signature1Name && (
+                            <div className="cert-signature-block-modern">
+                                {template.signature1ImageUrl ? <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="cert-signature-image-modern" /> : <p className="cert-signature-text-modern">{template.signature1Name}</p>}
+                                <div className="cert-signature-line"></div>
+                                <p className="cert-signature-name">{template.signature1Name}</p>
+                                <p className="cert-signature-title">{template.signature1Title}</p>
+                            </div>
+                        )}
+                         {template.signature2Name && (
+                            <div className="cert-signature-block-modern">
+                                {template.signature2ImageUrl ? <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} className="cert-signature-image-modern" /> : <p className="cert-signature-text-modern">{template.signature2Name}</p>}
+                                <div className="cert-signature-line"></div>
+                                <p className="cert-signature-name">{template.signature2Name}</p>
+                                <p className="cert-signature-title">{template.signature2Title}</p>
+                            </div>
+                        )}
+                    </div>
                 </footer>
+                 <Seal className="cert-modern-seal" />
             </div>
         </div>
     );
@@ -317,7 +335,7 @@ const Certificate: FC = () => {
             </div>
             
             <div ref={certificatePrintRef} className="cert-base">
-                {certificateThemeId === 'modern' ? modernCertificate : classicCertificate}
+                {effectiveTheme === 'modern' ? modernCertificate : classicCertificate}
             </div>
         </div>
         </>
