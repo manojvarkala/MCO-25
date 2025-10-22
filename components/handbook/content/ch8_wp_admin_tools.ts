@@ -1,5 +1,5 @@
 export const ch8_wp_admin_tools = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch8">Chapter 8: Plugin Settings & Tools</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch8">Chapter 8: Plugin Settings & Tools</h2>
     <p>The <strong>Exam App Engine → Settings & Tools</strong> page is the control center for your tenant's backend configuration. It is organized into several key tabs.</p>
 
     <h3 class="text-xl font-bold mt-6">8.1 Main Settings Tab</h3>

@@ -1,5 +1,5 @@
 export const ch4_user_guide_dashboard = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch4">Chapter 4: The Dashboard & Subscription Management</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch4">Chapter 4: The Dashboard & Subscription Management</h2>
 
     <h3 class="text-xl font-bold mt-6">4.1 Getting Started: Login & Sync</h3>
     <p>Your journey begins on our main website. You must <strong>register</strong> and <strong>log in</strong> there first. After purchasing an exam or subscription, log in through the main site to be automatically and securely redirected to your app dashboard.</p>

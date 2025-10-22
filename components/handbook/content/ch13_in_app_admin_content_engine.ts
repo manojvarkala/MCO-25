@@ -1,5 +1,5 @@
 export const ch13_in_app_admin_content_engine = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch13">Chapter 13: AI Content Engine</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch13">Chapter 13: AI Content Engine</h2>
 
     <h3 class="text-xl font-bold mt-6">13.1 The Power of Automated SEO Content</h3>
     <p>The AI Content Engine is a transformative tool designed to automate your content marketing efforts. Located at <strong>Admin → Content Engine</strong>, it leverages the Google Gemini API to turn your existing Exam Programs into unique, well-structured, and SEO-friendly blog posts. This allows you to consistently publish relevant content to your main WordPress site, driving organic traffic and building your brand's authority with minimal effort.</p>

@@ -1,5 +1,5 @@
 export const ch6_wp_admin_setup = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch6">Chapter 6: Plugin Setup & Admin Menu Overview</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch6">Chapter 6: Plugin Setup & Admin Menu Overview</h2>
 
     <h3 class="text-xl font-bold mt-6">6.1 Installing the Integration Plugin</h3>
     <p>The <code>mco-exam-integration-engine</code> plugin is the heart of the backend. It must be installed on the WordPress site that will serve as the "body" for your tenant.</p>
@@ -30,7 +30,7 @@ export const ch6_wp_admin_setup = `
             <strong>Set the Application URL for CORS:</strong> This tells the server it's safe to communicate with your React app.
             <ul class="list-disc pl-5 mt-1">
                 <li>In WordPress, navigate to the new <strong>Exam App Engine → Main Settings</strong> menu.</li>
-                <li>In the "Exam Application URL(s)" field, enter the full URL of your React app (e.g., <code>https://exams.yourdomain.com</code>). If you use multiple URLs (like for Vercel preview environments), add each one on a new line.</li>
+                <li>In the "Exam Application URL(s)" field, enter the full URL of your React app (e.g., <code>https://exams.yourdomain.com</code>). If you use multiple URLs (like for staging or Vercel preview environments), add each one on a new line.</li>
                 <li>Click "Save Changes".</li>
             </ul>
         </li>

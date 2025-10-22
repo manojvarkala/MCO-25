@@ -1,92 +1,92 @@
-import React, { FC, useState, useRef, useEffect, useCallback } from 'react';
-import { chapters } from './chapters';
-import { BookOpen, Download, ChevronLeft, ChevronRight, List } from 'lucide-react';
+import React, { FC, useState, useRef } from 'react';
+import { chapters } from './chapters.ts';
+import { BookOpen, Download, List } from 'lucide-react';
 import Spinner from '../Spinner.tsx';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
+// FIX: Import 'html2canvas' to resolve 'Cannot find name' errors.
 import html2canvas from 'html2canvas';
+import { useAppContext } from '../context/AppContext.tsx';
 
 const Handbook: FC = () => {
+    const { activeOrg } = useAppContext();
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-    const [activeChapterIndex, setActiveChapterIndex] = useState(0);
-    const [isTocOpen, setIsTocOpen] = useState(true);
-    const contentRef = useRef<HTMLDivElement>(null);
     const pdfPrintRef = useRef<HTMLDivElement>(null);
 
-    const activeChapter = chapters[activeChapterIndex];
-
-    useEffect(() => {
-        if (contentRef.current) {
-            contentRef.current.scrollTop = 0;
-        }
-    }, [activeChapterIndex]);
-
-    const goToChapter = (index: number) => {
-        setActiveChapterIndex(index);
-        if (window.innerWidth < 1024) { // Close TOC on mobile after selection
-            setIsTocOpen(false);
-        }
-    };
-
-    const generatePdf = useCallback(async () => {
+    const generatePdf = async () => {
         if (!pdfPrintRef.current) return;
         
         setIsGeneratingPdf(true);
-        const toastId = toast.loading('Preparing handbook for download...');
+        const toastId = toast.loading('Initializing PDF generator...');
 
         try {
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'px',
-                format: 'a4',
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const margin = 40;
+            const contentWidth = pageWidth - (margin * 2);
+
+            // --- Add Cover Page ---
+            toast.loading('Generating cover page...', { id: toastId });
+            pdfPrintRef.current.innerHTML = chapters[0].content;
+            const coverCanvas = await html2canvas(pdfPrintRef.current, { scale: 2 });
+            pdf.addImage(coverCanvas.toDataURL('image/png'), 'PNG', 0, 0, pageWidth, pageHeight);
+
+            // --- Add Title Page ---
+            toast.loading('Generating title page...', { id: toastId });
+            pdf.addPage();
+            pdfPrintRef.current.innerHTML = chapters[1].content;
+            const titleCanvas = await html2canvas(pdfPrintRef.current, { scale: 2 });
+            pdf.addImage(titleCanvas.toDataURL('image/png'), 'PNG', 0, 0, pageWidth, pageHeight);
+
+            // --- Add Table of Contents ---
+            toast.loading('Generating Table of Contents...', { id: toastId });
+            pdf.addPage();
+            pdfPrintRef.current.innerHTML = chapters[2].content;
+            await pdf.html(pdfPrintRef.current, {
+                x: margin,
+                y: margin,
+                width: contentWidth,
+                windowWidth: contentWidth,
+                autoPaging: 'text',
+                margin: [0, 0, 0, 0],
+                callback: (doc) => {
+                    // We'll add page numbers later
+                }
             });
-            const a4Width = pdf.internal.pageSize.getWidth();
-            const a4Height = pdf.internal.pageSize.getHeight();
 
-            for (let i = 0; i < chapters.length; i++) {
+            // --- Add Content Chapters ---
+            for (let i = 3; i < chapters.length; i++) {
                 const chapter = chapters[i];
-                toast.loading(`Processing page ${i + 1} of ${chapters.length}: ${chapter.title}`, { id: toastId });
+                toast.loading(`Processing Chapter ${i-2}: ${chapter.title}`, { id: toastId });
+                pdf.addPage();
+                pdfPrintRef.current.innerHTML = `<div class="prose max-w-none">${chapter.content}</div>`;
                 
-                if (pdfPrintRef.current) {
-                    // FIX: The content is HTML, so it should be set via innerHTML. The prose class adds styling.
-                    pdfPrintRef.current.innerHTML = `<div class="prose max-w-none">${chapter.content}</div>`;
-                }
+                // Add chapter title manually for better formatting control
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(22);
+                pdf.text(chapter.title, margin, margin);
                 
-                const canvas = await html2canvas(pdfPrintRef.current, {
-                    scale: 2,
-                    useCORS: true,
-                    // FIX: Set width and height to capture the full content of the chapter, not the window size.
-                    width: pdfPrintRef.current.scrollWidth,
-                    height: pdfPrintRef.current.scrollHeight,
+                await pdf.html(pdfPrintRef.current, {
+                    x: margin,
+                    y: margin + 40, // Start content below the title
+                    width: contentWidth,
+                    windowWidth: contentWidth,
+                    autoPaging: 'text',
+                    margin: [margin, margin, margin, margin],
                 });
-                
-                const imgData = canvas.toDataURL('image/png');
-                const imgWidth = canvas.width;
-                const imgHeight = canvas.height;
-                
-                const ratio = imgWidth / imgHeight;
-                let finalWidth = a4Width;
-                let finalHeight = a4Width / ratio;
-                
-                if (finalHeight > a4Height) {
-                    finalHeight = a4Height;
-                    finalWidth = a4Height * ratio;
-                }
-                
-                const x = (a4Width - finalWidth) / 2;
-                const y = (a4Height - finalHeight) / 2;
-                
-                if (i > 0) {
-                    pdf.addPage();
-                }
-                pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
-
-                // Add footer with page number
-                pdf.setFontSize(8);
-                pdf.setTextColor(150);
-                pdf.text(`Page ${i + 1}`, a4Width / 2, a4Height - 10, { align: 'center' });
             }
 
+            // --- Add Page Numbers ---
+            toast.loading('Finalizing document...', { id: toastId });
+            const pageCount = pdf.getNumberOfPages();
+            pdf.setFontSize(8);
+            pdf.setTextColor(150);
+            for (let i = 2; i <= pageCount; i++) { // Start numbering after cover
+                pdf.setPage(i);
+                pdf.text(`Page ${i - 1}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
+            }
+            
             pdf.save('Annapoorna_Examination_Engine_Handbook.pdf');
             toast.success('Handbook downloaded successfully!', { id: toastId });
         } catch (error) {
@@ -94,16 +94,15 @@ const Handbook: FC = () => {
             toast.error('Failed to generate PDF.', { id: toastId });
         } finally {
             setIsGeneratingPdf(false);
-            if (pdfPrintRef.current) {
-                pdfPrintRef.current.innerHTML = '';
-            }
+            if (pdfPrintRef.current) pdfPrintRef.current.innerHTML = '';
         }
-    }, []);
+    };
+
 
     return (
         <div className="space-y-8">
-            {/* Hidden div for PDF printing */}
-            <div ref={pdfPrintRef} className="fixed -left-[9999px] top-0 p-8 bg-white text-slate-800 font-main" style={{ width: '8.5in', minHeight: '11in' }}></div>
+            {/* Hidden div for PDF printing, sized for A4 ratio */}
+            <div ref={pdfPrintRef} className="fixed -left-[9999px] top-0 bg-white text-black" style={{ width: '595pt', padding: '40pt' }}></div>
 
             <div className="flex justify-between items-start">
                 <div>
@@ -125,60 +124,13 @@ const Handbook: FC = () => {
                 </button>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-8">
-                {/* Table of Contents */}
-                <aside className={`lg:w-1/4 xl:w-1/5 flex-shrink-0 ${isTocOpen ? 'block' : 'hidden'} lg:block`}>
-                    <div className="sticky top-28 bg-[rgb(var(--color-card-rgb))] p-4 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                        <h2 className="font-bold text-lg mb-2">Contents</h2>
-                        <ul className="space-y-1 text-sm max-h-[calc(100vh-12rem)] overflow-y-auto">
-                            {chapters.map((chapter, index) => (
-                                <li key={index}>
-                                    <button
-                                        onClick={() => goToChapter(index)}
-                                        className={`w-full text-left p-2 rounded transition-colors ${activeChapterIndex === index ? 'bg-[rgba(var(--color-primary-rgb),0.1)] text-[rgb(var(--color-primary-rgb))] font-semibold' : 'hover:bg-[rgb(var(--color-muted-rgb))]'}`}
-                                    >
-                                        {chapter.title}
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </aside>
-
-                {/* Main Content */}
-                <main ref={contentRef} className="flex-grow bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))] p-8 overflow-y-auto" style={{ height: 'calc(100vh - 10rem)' }}>
-                    <div className="prose max-w-none prose-slate" dangerouslySetInnerHTML={{ __html: activeChapter.content }} />
-                </main>
-            </div>
-
-             {/* Mobile/Tablet Controls */}
-            <div className="fixed bottom-4 right-4 lg:hidden z-40 flex flex-col gap-2">
-                <button onClick={() => setIsTocOpen(!isTocOpen)} className="p-3 bg-cyan-600 text-white rounded-full shadow-lg">
-                    <List size={24} />
-                </button>
-            </div>
-
-            <div className="fixed bottom-4 inset-x-0 flex justify-center lg:hidden z-30">
-                <div className="flex items-center gap-2 bg-slate-800 p-2 rounded-full shadow-lg">
-                    <button
-                        onClick={() => setActiveChapterIndex(prev => Math.max(0, prev - 1))}
-                        disabled={activeChapterIndex === 0}
-                        className="p-3 text-white rounded-full bg-slate-700 hover:bg-slate-600 disabled:opacity-50"
-                    >
-                        <ChevronLeft size={24} />
-                    </button>
-                    <span className="text-white text-sm font-semibold w-20 text-center">
-                        {activeChapterIndex + 1} / {chapters.length}
-                    </span>
-                    <button
-                        onClick={() => setActiveChapterIndex(prev => Math.min(chapters.length - 1, prev + 1))}
-                        disabled={activeChapterIndex === chapters.length - 1}
-                        className="p-3 text-white rounded-full bg-slate-700 hover:bg-slate-600 disabled:opacity-50"
-                    >
-                        <ChevronRight size={24} />
-                    </button>
+            <main className="bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))] p-8 lg:p-12">
+                <div className="prose max-w-none prose-invert prose-headings:text-cyan-400 prose-a:text-cyan-400 hover:prose-a:text-cyan-300 prose-strong:text-white">
+                    {chapters.slice(2).map((chapter, index) => (
+                        <section key={index} dangerouslySetInnerHTML={{ __html: chapter.content }} />
+                    ))}
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

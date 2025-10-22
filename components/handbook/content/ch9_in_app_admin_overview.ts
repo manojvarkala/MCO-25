@@ -1,5 +1,5 @@
 export const ch9_in_app_admin_overview = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch9">Chapter 9: In-App Admin Panel & Debug Sidebar</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch9">Chapter 9: In-App Admin Panel & Debug Sidebar</h2>
     <p>While the WordPress backend is for permanent content creation, the in-app admin panel is a suite of powerful tools designed for live monitoring, rapid customization, content generation, and diagnostics, all without leaving the React application.</p>
 
     <h3 class="text-xl font-bold mt-6">9.1 Accessing the Admin Panel</h3>

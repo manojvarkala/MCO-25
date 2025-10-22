@@ -1,5 +1,5 @@
 export const ch7_wp_admin_content = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch7">Chapter 7: Managing Content (CPTs & Bulk Import)</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch7">Chapter 7: Managing Content (CPTs & Bulk Import)</h2>
     
     <h3 class="text-xl font-bold mt-6">7.1 Creating an "Exam Program"</h3>
     <p>The "Exam Program" is the primary content type. Each program you create will appear as a distinct section on the user's dashboard, containing both a practice test and a certification exam.</p>

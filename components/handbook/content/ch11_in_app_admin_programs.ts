@@ -1,5 +1,5 @@
 export const ch11_in_app_admin_programs = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch11">Chapter 11: Exam Program Customizer</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch11">Chapter 11: Exam Program Customizer</h2>
 
     <h3 class="text-xl font-bold mt-6">11.1 The In-App Editor vs. WordPress Admin</h3>
     <p>The Exam Program Customizer, found at <strong>Admin → Exam Programs</strong>, is the in-app interface for managing your exam content. While you can also edit these programs in the WordPress admin, this interface provides a more streamlined, real-time experience without leaving the app.</p>

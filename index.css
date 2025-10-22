@@ -1,4 +1,5 @@
 
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -177,44 +178,23 @@
 .theme-swatch-noir-background { background-color: rgb(24 24 27); border: 1px solid #3f3f46; }
 
 
-/* Page Flip Animation */
-.perspective {
-  perspective: 2000px;
-}
-.transform-style-3d {
-  transform-style: preserve-3d;
-}
-.backface-hidden {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
-@keyframes page-flip-forward {
-  0% {
-    transform: rotateY(0deg);
-  }
-  100% {
-    transform: rotateY(-180deg);
-  }
-}
-
-@keyframes page-flip-backward {
-  0% {
-    transform: rotateY(-180deg);
-  }
-  100% {
-    transform: rotateY(0deg);
-  }
-}
-
-.animate-page-flip-forward {
-  transform-origin: left;
-  animation: page-flip-forward 0.5s ease-in-out forwards;
-}
-
-.animate-page-flip-backward {
-  transform-origin: right;
-  animation: page-flip-backward 0.5s ease-in-out forwards;
+.prose-invert {
+    --tw-prose-body: #94a3b8;
+    --tw-prose-headings: #f1f5f9;
+    --tw-prose-lead: #a1a1aa;
+    --tw-prose-links: #f8fafc;
+    --tw-prose-bold: #f8fafc;
+    --tw-prose-counters: #a1a1aa;
+    --tw-prose-bullets: #475569;
+    --tw-prose-hr: #334155;
+    --tw-prose-quotes: #f1f5f9;
+    --tw-prose-quote-borders: #334155;
+    --tw-prose-captions: #a1a1aa;
+    --tw-prose-code: #f8fafc;
+    --tw-prose-pre-code: #d4d4d8;
+    --tw-prose-pre-bg: #18181b;
+    --tw-prose-th-borders: #3f3f46;
+    --tw-prose-td-borders: #334155;
 }
 
 @keyframes countdown-pop {

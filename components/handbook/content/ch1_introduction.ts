@@ -1,5 +1,5 @@
 export const ch1_introduction = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch1">Chapter 1: Introduction & The Headless Advantage</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch1">Chapter 1: Introduction & The Headless Advantage</h2>
 
     <h3 class="text-xl font-bold mt-6">1.1 The Vision: A Centralized Examination Ecosystem</h3>
     <p>Welcome to the Annapoorna Examination Engine, a revolutionary platform engineered not just to administer tests, but to build and scale entire educational enterprises. Our vision was to create a single, powerful, multi-tenant solution that empowers organizations to launch bespoke, branded examination portals with unparalleled speed and efficiency. Whether you operate in medical coding, legal studies, finance, or any other professional field, this engine is your launchpad for creating a world-class certification experience.</p>

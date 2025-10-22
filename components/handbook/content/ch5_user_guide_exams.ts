@@ -1,5 +1,5 @@
 export const ch5_user_guide_exams = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch5">Chapter 5: Taking Exams & Understanding Results</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch5">Chapter 5: Taking Exams & Understanding Results</h2>
 
     <h3 class="text-xl font-bold mt-6">5.1 The Exam Player Interface</h3>
     <p>Our exam player is designed to be clean and intuitive, allowing you to focus on the questions.</p>

@@ -1,5 +1,5 @@
 export const ch2_architecture = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch2">Chapter 2: Architecture & Multi-Tenancy</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch2">Chapter 2: Architecture & Multi-Tenancy</h2>
 
     <h3 class="text-xl font-bold mt-6">2.1 Data Flow: From WordPress to the User</h3>
     <p>The entire system is built on a clear and efficient data flow designed for performance and security. Understanding this flow is key to grasping the platform's power.</p>

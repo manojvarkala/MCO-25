@@ -1,5 +1,5 @@
 export const ch12_in_app_admin_products = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch12">Chapter 12: Product Customizer</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch12">Chapter 12: Product Customizer</h2>
     
     <h3 class="text-xl font-bold mt-6">12.1 Managing WooCommerce Products from the App</h3>
     <p>The Product Customizer, located at <strong>Admin → Product Customizer</strong>, is a powerful feature that allows you to create, edit, and manage your WooCommerce products directly from the app interface. This is often faster and more convenient than using the standard WooCommerce product editor in the WordPress admin, especially for managing subscriptions and bundles.</p>

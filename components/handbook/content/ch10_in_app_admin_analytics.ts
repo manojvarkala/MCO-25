@@ -1,5 +1,5 @@
 export const ch10_in_app_admin_analytics = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch10">Chapter 10: Sales Analytics Dashboard</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch10">Chapter 10: Sales Analytics Dashboard</h2>
 
     <h3 class="text-xl font-bold mt-6">10.1 Accessing Analytics</h3>
     <p>The Sales Analytics dashboard is a powerful tool for monitoring the performance and profitability of your certification exams. You can access it from the in-app admin panel by navigating to <strong>Admin → Sales Analytics</strong>.</p>

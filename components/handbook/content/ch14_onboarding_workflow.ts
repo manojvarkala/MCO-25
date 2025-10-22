@@ -1,5 +1,5 @@
 export const ch14_onboarding_workflow = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch14">Chapter 14: The Complete Onboarding Workflow</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch14">Chapter 14: The Complete Onboarding Workflow</h2>
     <p>This chapter provides the definitive, step-by-step workflow for launching a new examination portal for a client or brand using the Annapoorna Examination Engine.</p>
 
     <h3 class="text-xl font-bold mt-6">Step 1: Prepare the React App Hosting (e.g., Vercel)</h3>

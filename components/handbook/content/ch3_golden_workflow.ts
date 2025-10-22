@@ -1,5 +1,5 @@
 export const ch3_golden_workflow = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch3">Chapter 3: The Golden Workflow: Performance & Content</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch3">Chapter 3: The Golden Workflow: Performance & Content</h2>
 
     <h3 class="text-xl font-bold mt-6">3.1 User Authentication & SSO Journey</h3>
     <p>The platform uses a secure Single Sign-On (SSO) model with WordPress as the central authentication authority. This ensures a seamless user experience and leverages WordPress's robust user management capabilities.</p>

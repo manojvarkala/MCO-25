@@ -1,5 +1,5 @@
 export const ch15_plugin_integration = `
-    <h2 class="text-3xl font-bold font-display text-slate-800" id="ch15">Chapter 15: Plugin Integration & Shortcodes</h2>
+    <h2 class="text-3xl font-bold font-display" id="ch15">Chapter 15: Plugin Integration & Shortcodes</h2>
     <p>The <code>mco-exam-integration-engine</code> plugin provides several shortcodes to seamlessly integrate the headless React application with your public-facing WordPress site.</p>
 
     <h3 class="text-xl font-bold mt-6">15.1 The Login Shortcode: <code>[mco_exam_login]</code></h3>

@@ -22,16 +22,16 @@ export const tocContent = `
             <ol class="list-decimal list-inside space-y-1 pl-4 mt-1" start="6">
                 <li><a href="#ch6">Plugin Setup & Admin Menu Overview</a></li>
                 <li><a href="#ch7">Managing Content: CPTs & Bulk Import</a></li>
-                <li><a href="#ch8">Configuring Settings & Using Tools</a></li>
+                <li><a href="#ch8">Plugin Settings & Tools</a></li>
             </ol>
         </div>
         <div>
             <h3 class="text-lg font-semibold text-slate-700">Part IV: Administrator's Guide (In-App Tools)</h3>
             <ol class="list-decimal list-inside space-y-1 pl-4 mt-1" start="9">
                 <li><a href="#ch9">In-App Admin Panel & Debug Sidebar</a></li>
-                <li><a href="#ch10">Sales Analytics Dashboard</a></li>
+                <li><a href="#ch10">Sales Analytics</a></li>
                 <li><a href="#ch11">Exam Program Customizer</a></li>
-                <li><a href="#ch12">Product Customizer (Simple, Subscriptions, Bundles)</a></li>
+                <li><a href="#ch12">Product Customizer</a></li>
                 <li><a href="#ch13">AI Content Engine</a></li>
             </ol>
         </div>
