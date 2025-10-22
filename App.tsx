@@ -1,7 +1,4 @@
 
-
-
-
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected react-router-dom import to resolve module export errors.
 import { Navigate, useLocation, Routes, Route, BrowserRouter, Outlet } from 'react-router-dom';
@@ -84,6 +81,15 @@ const AppContent: FC = () => {
     const themeClass = useMemo(() => {
         return activeTheme ? `theme-${activeTheme}` : 'theme-default';
     }, [activeTheme]);
+
+    // FIX: When entering masquerade mode, ensure the debug sidebar (an admin tool) is closed.
+    // This prevents potential render errors from the sidebar having an inconsistent state
+    // during the transition, which can cause a white screen.
+    useEffect(() => {
+        if (isMasquerading) {
+            setIsDebugSidebarOpen(false);
+        }
+    }, [isMasquerading]);
 
     useEffect(() => {
         if (activeOrg) {
