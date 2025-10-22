@@ -21,6 +21,8 @@ interface AppContextType {
   availableThemes: Theme[];
   activeTheme: string;
   setActiveTheme: (themeId: string) => void;
+  subscriptionsEnabled: boolean;
+  bundlesEnabled: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -113,6 +115,9 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   
   const [availableThemes, setAvailableThemes] = useState<Theme[]>([]);
   const [activeTheme, setActiveThemeState] = useState<string>('default');
+  
+  const [subscriptionsEnabled, setSubscriptionsEnabled] = useState<boolean>(true);
+  const [bundlesEnabled, setBundlesEnabled] = useState<boolean>(true);
 
   const setActiveTheme = (themeId: string) => {
       setActiveThemeState(themeId);
@@ -143,6 +148,9 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       if (newActiveOrg) {
           localStorage.setItem('activeOrgId', newActiveOrg.id);
           setAvailableThemes(newActiveOrg.availableThemes || []);
+          
+          setSubscriptionsEnabled(newActiveOrg.subscriptionsEnabled ?? true);
+          setBundlesEnabled(newActiveOrg.bundlesEnabled ?? true);
 
           const savedTheme = localStorage.getItem('mco_active_theme');
           const defaultTheme = newActiveOrg.activeThemeId || 'default';
@@ -322,11 +330,13 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     hitCount,
     availableThemes,
     activeTheme,
-    setActiveTheme
+    setActiveTheme,
+    subscriptionsEnabled,
+    bundlesEnabled,
   }), [
     organizations, activeOrg, isInitializing, setActiveOrgById,
     updateActiveOrg, updateConfigData, updateExamInOrg, inProgressExam, examPrices, suggestedBooks,
-    hitCount, availableThemes, activeTheme, setActiveTheme
+    hitCount, availableThemes, activeTheme, setActiveTheme, subscriptionsEnabled, bundlesEnabled
   ]);
 
   return (

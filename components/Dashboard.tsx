@@ -37,7 +37,7 @@ const stripHtml = (html: string): string => {
 
 const Dashboard: FC = () => {
     const { user, token, paidExamIds, isSubscribed, subscriptionInfo, loginWithToken, isEffectivelyAdmin } = useAuth();
-    const { activeOrg, isInitializing, inProgressExam, examPrices } = useAppContext();
+    const { activeOrg, isInitializing, inProgressExam, examPrices, subscriptionsEnabled, bundlesEnabled } = useAppContext();
     const navigate = useNavigate();
 
     const [results, setResults] = useState<TestResult[]>([]);
@@ -185,7 +185,7 @@ const Dashboard: FC = () => {
             )}
 
 
-            {!isSubscribed && !subscriptionInfo && (
+            {subscriptionsEnabled && !isSubscribed && !subscriptionInfo && (
                 <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
                     <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2 flex items-center gap-2"><Star className="text-yellow-400" /> Unlock Your Full Potential</h2>
                     <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">Get unlimited access to all practice exams and AI study guides with a subscription.</p>
@@ -240,7 +240,7 @@ const Dashboard: FC = () => {
                          const certAttempts = user && category.certExam ? results.filter(r => r.examId === category.certExam.id).length : undefined;
                          
                          let bundleTypeToShow: 'practice' | 'subscription' | null = null;
-                         if (category.certExam && examPrices) {
+                         if (bundlesEnabled && category.certExam && examPrices) {
                              const subBundleSku = `${category.certExam.productSku}-1mo-addon`;
                              const practiceBundleSku = `${category.certExam.productSku}-1`;
                              if (examPrices[subBundleSku]) {
@@ -278,7 +278,7 @@ const Dashboard: FC = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} />}
                                     {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} attemptsMade={certAttempts}/>}
-                                    {category.certExam && bundleTypeToShow && (
+                                    {bundlesEnabled && category.certExam && bundleTypeToShow && (
                                         <ExamBundleCard
                                             type={bundleTypeToShow}
                                             certExam={category.certExam}

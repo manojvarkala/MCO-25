@@ -335,6 +335,23 @@ function mco_api_get_full_config(WP_REST_Request $request) {
         [ 'id' => 'noir', 'name' => 'Noir' ],
     ];
 
+    $subscriptions_enabled = get_option('mco_subscriptions_enabled', '1') === '1';
+    $bundles_enabled = get_option('mco_bundles_enabled', '1') === '1';
+    $exam_prices = $dynamic_data['examPrices'] ?? null;
+
+    if ($exam_prices) {
+        if (!$subscriptions_enabled) {
+            $exam_prices = array_filter($exam_prices, function($key) {
+                return strpos($key, 'sub-') !== 0;
+            }, ARRAY_FILTER_USE_KEY);
+        }
+        if (!$bundles_enabled) {
+            $exam_prices = array_filter($exam_prices, function($product_data) {
+                return !($product_data['isBundle'] ?? false);
+            }, ARRAY_FILTER_USE_BOTH);
+        }
+    }
+
     $config_object = [
         "version" => get_option('mco_config_version', current_time('YmdHis')),
         "organizations" => [
@@ -347,13 +364,15 @@ function mco_api_get_full_config(WP_REST_Request $request) {
                 "availableThemes" => $available_themes,
                 "activeThemeId" => get_option('mco_active_theme_id', 'default'),
                 "certificateThemeId" => get_option('mco_certificate_theme_id', 'classic'),
+                "subscriptionsEnabled" => $subscriptions_enabled,
+                "bundlesEnabled" => $bundles_enabled,
                 "exams" => $dynamic_data['exams'],
                 "examProductCategories" => $dynamic_data['examProductCategories'],
                 "certificateTemplates" => array_values($templates),
                 "suggestedBooks" => $dynamic_data['suggestedBooks']
             ]
         ],
-        "examPrices" => $dynamic_data['examPrices'] ?? null
+        "examPrices" => $exam_prices
     ];
     return new WP_REST_Response($config_object, 200);
 }

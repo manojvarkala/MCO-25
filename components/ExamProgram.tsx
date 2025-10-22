@@ -62,7 +62,7 @@ const stripHtml = (html: string): string => {
 const ExamProgram: FC = () => {
     const { programId } = useParams<{ programId: string }>();
     const navigate = useNavigate();
-    const { activeOrg, suggestedBooks, isInitializing, examPrices } = useAppContext();
+    const { activeOrg, suggestedBooks, isInitializing, examPrices, subscriptionsEnabled, bundlesEnabled } = useAppContext();
     const { user, paidExamIds, isSubscribed, isEffectivelyAdmin } = useAuth();
     
     const [results, setResults] = useState<TestResult[]>([]);
@@ -147,14 +147,14 @@ const ExamProgram: FC = () => {
     const { category, practiceExam, certExam } = programData;
     
     const bundleTypeToShow = useMemo(() => {
-        if (!certExam || !examPrices) return null;
+        if (!bundlesEnabled || !certExam || !examPrices) return null;
         const subBundleSku = `${certExam.productSku}-1mo-addon`;
         const practiceBundleSku = `${certExam.productSku}-1`;
 
         if (examPrices[subBundleSku]) return 'subscription';
         if (examPrices[practiceBundleSku]) return 'practice';
         return null;
-    }, [certExam, examPrices]);
+    }, [certExam, examPrices, bundlesEnabled]);
 
     const certAttempts = user && certExam ? results.filter(r => r.examId === certExam.id).length : undefined;
     const fullDescription = certExam?.description || practiceExam?.description || category.description;
@@ -260,7 +260,7 @@ const ExamProgram: FC = () => {
                         attemptsMade={certAttempts}
                     />
                 )}
-                {certExam && bundleTypeToShow && (
+                {bundlesEnabled && certExam && bundleTypeToShow && (
                     <ExamBundleCard
                         type={bundleTypeToShow}
                         certExam={certExam}
@@ -268,7 +268,7 @@ const ExamProgram: FC = () => {
                         examPrices={examPrices}
                     />
                 )}
-                {!isSubscribed && (
+                {subscriptionsEnabled && !isSubscribed && (
                     <>
                         <SubscriptionOfferCard
                             planName="Monthly Subscription"

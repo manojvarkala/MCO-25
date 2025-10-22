@@ -47,6 +47,8 @@ function mco_exam_engine_admin_page() {
             update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
             update_option('mco_custom_logo_url', sanitize_textarea_field($_POST['mco_custom_logo_url']));
             update_option('mco_intro_video_url', esc_url_raw($_POST['mco_intro_video_url']));
+            update_option('mco_subscriptions_enabled', isset($_POST['mco_subscriptions_enabled']) ? '1' : '0');
+            update_option('mco_bundles_enabled', isset($_POST['mco_bundles_enabled']) ? '1' : '0');
             delete_transient('mco_app_config_data');
             update_option('mco_config_version', current_time('YmdHis'));
             echo '<div class="notice notice-success is-dismissible"><p>Settings saved and config cache cleared.</p></div>';
@@ -142,6 +144,17 @@ function mco_render_main_settings_tab() { ?>
             <tr><th>Custom Logo URL</th><td><textarea name="mco_custom_logo_url" class="widefat" rows="5"><?php echo esc_textarea(get_option('mco_custom_logo_url')); ?></textarea><p class="description">Optional. Can be a URL or a base64 data URI. If empty, uses the Site Icon from Customizer.</p></td></tr>
             <tr><th>Intro Video URL</th><td><input type="text" name="mco_intro_video_url" value="<?php echo esc_attr(get_option('mco_intro_video_url')); ?>" class="widefat"><p class="description">Optional. URL for the intro video on the landing page.</p></td></tr>
             <tr><th>JWT Secret Key</th><td><code><?php echo defined('MCO_JWT_SECRET') ? 'Defined in wp-config.php' : '<strong>Not Defined!</strong>'; ?></code><p class="description">You must define <code>MCO_JWT_SECRET</code> in your <code>wp-config.php</code> file.</p></td></tr>
+            <tr><th colspan="2"><h4>Feature Toggles</h4></th></tr>
+            <tr>
+                <th><label for="mco_subscriptions_enabled">Enable Subscriptions</label></th>
+                <td><input type="checkbox" id="mco_subscriptions_enabled" name="mco_subscriptions_enabled" value="1" <?php checked(get_option('mco_subscriptions_enabled', '1'), '1'); ?>>
+                <p class="description">Show monthly/yearly subscription offers in the app. Requires the official WooCommerce Subscriptions plugin.</p></td>
+            </tr>
+            <tr>
+                <th><label for="mco_bundles_enabled">Enable Bundle Products</label></th>
+                <td><input type="checkbox" id="mco_bundles_enabled" name="mco_bundles_enabled" value="1" <?php checked(get_option('mco_bundles_enabled', '1'), '1'); ?>>
+                <p class="description">Show product bundles (e.g., Exam + Subscription) in the app.</p></td>
+            </tr>
         </table>
         <?php submit_button(); ?>
     </form>

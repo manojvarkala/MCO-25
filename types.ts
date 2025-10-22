@@ -130,6 +130,8 @@ export interface Organization {
   availableThemes: Theme[];
   activeThemeId: string;
   certificateThemeId: string;
+  subscriptionsEnabled?: boolean;
+  bundlesEnabled?: boolean;
 }
 
 export interface ApiCertificateData {
