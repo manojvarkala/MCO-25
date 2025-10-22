@@ -1,6 +1,17 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+// Custom sanitizer to allow data URIs for images or sanitize as a URL
+function mco_sanitize_data_uri_or_url($input) {
+    $trimmed_input = trim($input);
+    // Allow data URIs for common image types
+    if (preg_match('/^data:image\/(svg\+xml|png|jpeg|gif|webp);base64,/', $trimmed_input)) {
+        return $trimmed_input;
+    }
+    // For anything else, treat it as a URL and sanitize it.
+    return esc_url_raw($trimmed_input);
+}
+
 // --- ADMIN MENU & HOOKS ---
 function mco_add_admin_menu() {
     add_menu_page('Exam App Engine', 'Exam App Engine', 'manage_options', 'mco-exam-engine', 'mco_exam_engine_admin_page', 'dashicons-welcome-learn-more', 25);
@@ -54,9 +65,11 @@ function mco_exam_engine_admin_page() {
                     'id' => sanitize_key($id),
                     'name' => sanitize_text_field($template['name']), 'title' => sanitize_text_field($template['title']),
                     'body' => wp_kses_post($template['body']), 'signature1Name' => sanitize_text_field($template['signature1Name']),
-                    'signature1Title' => sanitize_text_field($template['signature1Title']), 'signature1ImageUrl' => sanitize_textarea_field($template['signature1ImageUrl']),
-                    'signature2Name' => sanitize_text_field($template['signature2Name']), 'signature2Title' => sanitize_text_field($template['signature2Title']),
-                    'signature2ImageUrl' => sanitize_textarea_field($template['signature2ImageUrl']),
+                    'signature1Title' => sanitize_text_field($template['signature1Title']),
+                    'signature1ImageUrl' => mco_sanitize_data_uri_or_url($template['signature1ImageUrl']),
+                    'signature2Name' => sanitize_text_field($template['signature2Name']),
+                    'signature2Title' => sanitize_text_field($template['signature2Title']),
+                    'signature2ImageUrl' => mco_sanitize_data_uri_or_url($template['signature2ImageUrl']),
                 ];
             }
             update_option('mco_certificate_templates', $sanitized_templates);

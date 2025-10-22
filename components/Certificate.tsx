@@ -196,6 +196,10 @@ const Certificate: FC = () => {
                                             <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v0A2.5 2.5 0 0 1 9.5 7v0A2.5 2.5 0 0 1 7 4.5v0A2.5 2.5 0 0 1 9.5 2Z" /><path d="M14.5 2A2.5 2.5 0 0 1 17 4.5v0A2.5 2.5 0 0 1 14.5 7v0A2.5 2.5 0 0 1 12 4.5v0A2.5 2.5 0 0 1 14.5 2Z" /><path d="M12 18H5c-1.1 0-2-1.34-2-3v-1.5c0-.83.67-1.5 1.5-1.5.83 0 1.5.67 1.5 1.5v.5a.5.5 0 0 0 .5.5h1" /><path d="M12 18h7c1.1 0 2-1.34 2-3v-1.5c0-.83-.67-1.5-1.5-1.5-.83 0-1.5.67-1.5 1.5v.5a.5.5 0 0 1-.5.5h-1" /><path d="M12 18v-5.5" /><path d="M12 12.5v-2" /><path d="M12 7.5V6" /><path d="M7 15a2.5 2.5 0 0 1 0-5" /><path d="M17 15a2.5 2.5 0 0 0 0-5" />
                                         </svg>
                                     </div>
+                                    <div className="cert-org-details">
+                                        <p className="cert-org-name">{organization.name}</p>
+                                        {organization.address && <p className="cert-org-address">{organization.address}</p>}
+                                    </div>
                                 </header>
                                 
                                 {/* Main Body */}
@@ -214,48 +218,52 @@ const Certificate: FC = () => {
                                 {/* Footer */}
                                 <footer className="cert-footer">
                                     <div className="cert-footer-item">
-                                        <p className="font-semibold text-sm h-6">{certData.date}</p>
+                                        <div className="cert-item-value">
+                                            <p>{certData.date}</p>
+                                        </div>
                                         <hr className="cert-hr"/>
-                                        <p className="text-xs">Date of Completion</p>
+                                        <p className="cert-item-label">Date of Completion</p>
                                     </div>
 
                                     <div className="cert-footer-item">
                                         <div className="cert-signatures-container">
                                             {template.signature1Name && (
                                                 <div className="cert-signature-block">
-                                                    <div className="h-10 flex items-center justify-center">
+                                                    <div className="cert-item-value">
                                                         {template.signature1ImageUrl ? (
-                                                            <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="h-8 mx-auto" />
+                                                            <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} />
                                                         ) : (
                                                             <p className="cert-signature-text">{template.signature1Name}</p>
                                                         )}
                                                     </div>
                                                     <hr className="cert-hr"/>
-                                                    <p className="font-semibold text-sm mt-1">{template.signature1Name}</p>
-                                                    <p className="text-xs">{template.signature1Title}</p>
+                                                    <p className="cert-item-label font-semibold">{template.signature1Name}</p>
+                                                    <p className="cert-item-label">{template.signature1Title}</p>
                                                 </div>
                                             )}
                                             {template.signature2Name && (
                                                 <div className="cert-signature-block">
-                                                    <div className="h-10 flex items-center justify-center">
+                                                    <div className="cert-item-value">
                                                         {template.signature2ImageUrl ? (
-                                                            <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} className="h-8 mx-auto" />
+                                                            <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} />
                                                         ) : (
                                                             <p className="cert-signature-text">{template.signature2Name}</p>
                                                         )}
                                                     </div>
                                                     <hr className="cert-hr"/>
-                                                    <p className="font-semibold text-sm mt-1">{template.signature2Name}</p>
-                                                    <p className="text-xs">{template.signature2Title}</p>
+                                                    <p className="cert-item-label font-semibold">{template.signature2Name}</p>
+                                                    <p className="cert-item-label">{template.signature2Title}</p>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
                                     
                                     <div className="cert-footer-item">
-                                        <p className="font-semibold text-sm h-6">{certData.certificateNumber}</p>
+                                        <div className="cert-item-value">
+                                            <p>{certData.certificateNumber}</p>
+                                        </div>
                                         <hr className="cert-hr"/>
-                                        <p className="text-xs">Certificate Number</p>
+                                        <p className="cert-item-label">Certificate Number</p>
                                     </div>
                                 </footer>
 
