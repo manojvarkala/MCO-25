@@ -175,7 +175,7 @@
 .theme-swatch-noir-accent { background-color: rgb(250 204 21); }
 .theme-swatch-noir-background { background-color: rgb(24 24 27); border: 1px solid #3f3f46; }
 
-/* --- Handbook Content Styles --- */
+/* --- On-Screen Handbook Content Styles --- */
 .handbook-content {
     color: #94a3b8; /* slate-400 */
 }
@@ -237,8 +237,65 @@
     background-color: transparent;
     padding: 0;
 }
-.handbook-content .handbook-toc a {
-    color: #334155; /* slate-700 for light background PDF */
+
+/* --- PDF-Specific Handbook Styles --- */
+.handbook-pdf-content {
+    background-color: white;
+    color: black;
+    font-family: 'Times New Roman', serif;
+}
+.handbook-pdf-content h1, .handbook-pdf-content h2, .handbook-pdf-content h3, .handbook-pdf-content h4 {
+    color: black;
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    font-weight: bold;
+    margin-top: 1.5em;
+    margin-bottom: 1em;
+}
+.handbook-pdf-content h2 {
+    font-size: 24pt;
+    page-break-before: always;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 8pt;
+}
+.handbook-pdf-content h3 { font-size: 18pt; }
+.handbook-pdf-content h4 { font-size: 14pt; }
+.handbook-pdf-content p {
+    font-size: 12pt;
+    line-height: 1.5;
+    margin-bottom: 1em;
+}
+.handbook-pdf-content a {
+    color: #0000EE; /* Standard blue link color for PDFs */
+    text-decoration: none;
+}
+.handbook-pdf-content ul, .handbook-pdf-content ol {
+    font-size: 12pt;
+    margin-bottom: 1em;
+    padding-left: 2em;
+}
+.handbook-pdf-content li { margin-bottom: 0.5em; }
+.handbook-pdf-content strong { font-weight: bold; }
+.handbook-pdf-content code {
+    font-family: 'Courier New', monospace;
+    background-color: #f0f0f0;
+    padding: 2pt 4pt;
+    border-radius: 3pt;
+    font-size: 10pt;
+}
+.handbook-pdf-content pre {
+    background-color: #f0f0f0;
+    padding: 1em;
+    border-radius: 5pt;
+    font-size: 10pt;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+.handbook-pdf-content .handbook-toc a {
+    color: #0000EE; /* Make TOC links blue in PDF */
+}
+/* Don't apply page break before the very first H2 (which would be the Title Page) */
+.handbook-pdf-content h2:first-of-type {
+    page-break-before: avoid;
 }
 
 
