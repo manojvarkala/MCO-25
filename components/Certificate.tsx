@@ -1,5 +1,4 @@
 
-
 import React, { FC, useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -198,7 +197,7 @@ const Certificate: FC = () => {
                                     </div>
                                     <div className="cert-org-details">
                                         <p className="cert-org-name">{organization.name}</p>
-                                        {organization.address && <p className="cert-org-address">{organization.address}</p>}
+                                        <p className="cert-org-address">{organization.address || organization.website}</p>
                                     </div>
                                 </header>
                                 
@@ -276,8 +275,8 @@ const Certificate: FC = () => {
                                 </footer>
 
                                 <div className="cert-qr-footer">
-                                    <p>Verify this certificate at: {verificationUrl}</p>
                                     <img src={qrCodeUrl} alt="Verification QR Code" className="cert-qr-code" />
+                                    <p>Verify at: <br/> {verificationUrl}</p>
                                 </div>
                             </div>
                         </div>

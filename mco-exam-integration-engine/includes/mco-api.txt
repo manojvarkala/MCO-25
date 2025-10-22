@@ -513,6 +513,11 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
     $sheet_url = esc_url_raw($request->get_param('sheetUrl'));
     if (empty($sheet_url)) return new WP_Error('bad_request', 'Sheet URL is missing.', ['status' => 400]);
 
+    // FIX: Auto-convert standard Google Sheet sharing URL to a CSV export URL.
+    if (strpos($sheet_url, '/edit') !== false) {
+        $sheet_url = preg_replace('/\/edit.*$/', '/export?format=csv', $sheet_url);
+    }
+
     if (strpos($sheet_url, '/pub?output=csv') === false && strpos($sheet_url, '/export?format=csv') === false) {
         return new WP_Error('bad_request', 'Invalid Google Sheet URL. Please use a "Publish to the web" CSV link or a share link with "/export?format=csv".', ['status' => 400]);
     }
@@ -607,6 +612,10 @@ function mco_api_get_debug_details(WP_REST_Request $request) {
     if (!empty($config['exams'])) foreach($config['exams'] as $exam) if(!empty($exam['questionSourceUrl'])) {$test_url = $exam['questionSourceUrl']; break;}
     
     if ($test_url) {
+        // FIX: Also apply the URL conversion logic here for consistent testing.
+        if (strpos($test_url, '/edit') !== false) {
+            $test_url = preg_replace('/\/edit.*$/', '/export?format=csv', $test_url);
+        }
         $response = mco_fetch_remote_csv_content($test_url);
         if (is_wp_error($response)) $sheet_test = ['success' => false, 'message' => 'WP_Error: ' . $response->get_error_message()];
         else {
@@ -665,6 +674,10 @@ function mco_api_admin_test_sheet_url(WP_REST_Request $request) {
     if (empty($sheet_url)) {
         return new WP_Error('bad_request', 'Sheet URL is missing.', ['status' => 400]);
     }
+    // FIX: Also apply the URL conversion logic here for consistent testing.
+    if (strpos($sheet_url, '/edit') !== false) {
+        $sheet_url = preg_replace('/\/edit.*$/', '/export?format=csv', $sheet_url);
+    }
     $response = mco_fetch_remote_csv_content($sheet_url);
 
     if (is_wp_error($response)) {
@@ -711,6 +724,10 @@ function mco_api_get_system_status(WP_REST_Request $request) {
         foreach($config['exams'] as $exam) if(!empty($exam['questionSourceUrl'])) {$test_url = $exam['questionSourceUrl']; break;}
     }
     if ($test_url) {
+        // FIX: Also apply the URL conversion logic here for consistent testing.
+        if (strpos($test_url, '/edit') !== false) {
+            $test_url = preg_replace('/\/edit.*$/', '/export?format=csv', $test_url);
+        }
         $response = mco_fetch_remote_csv_content($test_url);
         if (is_wp_error($response)) $sheet_test = ['success' => false, 'message' => 'WP_Error: ' . $response->get_error_message()];
         else {
