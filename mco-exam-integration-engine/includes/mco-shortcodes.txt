@@ -150,6 +150,42 @@ if (!function_exists('mco_register_shortcode_hooks')) {
         
         add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles');
         add_action('wp', 'mco_prevent_caching_on_shortcode_pages');
+
+        // Automatically apply the single book style to the CPT single page.
+        add_filter('the_content', 'mco_auto_apply_single_book_style');
+    }
+}
+
+if (!function_exists('mco_auto_apply_single_book_style')) {
+    /**
+     * Automatically applies the [mco_single_book] shortcode style to the content
+     * of any 'mco_recommended_book' custom post type single page.
+     */
+    function mco_auto_apply_single_book_style($content) {
+        // Only run on single pages for our CPT, in the main loop, and not in the admin area.
+        if (is_singular('mco_recommended_book') && in_the_loop() && is_main_query() && !is_admin()) {
+            
+            // If the user has manually added the shortcode, respect that and do nothing.
+            if (has_shortcode($content, 'mco_single_book')) {
+                return $content;
+            }
+
+            // The mco_single_book_shortcode is designed to use the post's content as its description.
+            // It does this by calling `apply_filters('the_content', ...)`, which would cause a recursive loop.
+            // To prevent this, we remove our own filter before calling the shortcode function.
+            remove_filter('the_content', 'mco_auto_apply_single_book_style');
+            
+            // Call the shortcode function directly. It uses the global $post, which is set correctly in this context.
+            $new_content = mco_single_book_shortcode([]);
+            
+            // Re-add the filter so it doesn't affect other content on the page (if any).
+            add_filter('the_content', 'mco_auto_apply_single_book_style');
+            
+            return $new_content;
+        }
+        
+        // For any other page, return the content unmodified.
+        return $content;
     }
 }
 
@@ -598,7 +634,7 @@ function mco_single_book_shortcode($atts) {
     }
 
     // Temporarily remove this shortcode to prevent an infinite loop when applying the_content filter.
-    remove_shortcode('mco_single_book');
+    remove_shortcode('mco_single_book', 'mco_single_book_shortcode');
     // Get the raw content and process it. This will now safely render other shortcodes, paragraphs, etc.
     $processed_content = apply_filters('the_content', $post->post_content);
     // Re-add the shortcode in case it's used again on the same page (unlikely but good practice).
@@ -683,8 +719,7 @@ function mco_single_book_shortcode($atts) {
                 };
 
                 let primaryLink = links[preferredStore];
-                
-                // Fallback if preferred store link does not exist
+                                // Fallback if preferred store link does not exist
                 if (!primaryLink) {
                     if (links.com) primaryLink = links.com;
                     else if (links.in) primaryLink = links.in;
