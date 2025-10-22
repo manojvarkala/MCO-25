@@ -132,7 +132,7 @@ interface ExamEditorProps {
 }
 
 const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, unlinkedProducts, suggestedBooks, examPrices }) => {
-    
+    const { activeOrg } = useAppContext();
     const [data, setData] = useState<EditableProgramData>({
         category: { ...program.category },
         practiceExam: program.practiceExam ? { ...program.practiceExam } : undefined,
@@ -173,7 +173,7 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
         if (!program.certExam?.productSku || !examPrices) return null;
         const productInfo = examPrices[program.certExam.productSku];
         if (productInfo) {
-            return { sku: productInfo.sku, name: productInfo.name };
+            return { sku: program.certExam.productSku, name: productInfo.name };
         }
         return { sku: program.certExam.productSku, name: 'Linked Product (Name not found)' };
     }, [program.certExam, examPrices]);
@@ -241,6 +241,21 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
                                 </option>
                             )}
                             {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold">Certificate Template</label>
+                        <select
+                            value={certExam.certificateTemplateId || ''}
+                            onChange={e => handleExamChange('certExam', 'certificateTemplateId', e.target.value)}
+                            className="w-full p-2 border rounded bg-white"
+                        >
+                            <option value="">-- Use Default Template --</option>
+                            {activeOrg?.certificateTemplates.map(template => (
+                                <option key={template.id} value={template.id}>
+                                    {template.name}
+                                </option>
+                            ))}
                         </select>
                     </div>
                      <div className="grid grid-cols-3 gap-2">
@@ -448,6 +463,9 @@ const ExamProgramCustomizer: FC = () => {
         if (data.certExam?.passScore) payload.cert_passScore = data.certExam.passScore;
         if (data.certExam?.numberOfQuestions) payload.cert_numberOfQuestions = data.certExam.numberOfQuestions;
         if (data.certExam?.durationMinutes) payload.cert_durationMinutes = data.certExam.durationMinutes;
+        if (data.certExam && typeof data.certExam.certificateTemplateId !== 'undefined') {
+            payload.cert_template_id = data.certExam.certificateTemplateId;
+        }
         if (data.certExam && typeof data.certExam.recommendedBookIds !== 'undefined') {
             payload.recommended_book_ids = data.certExam.recommendedBookIds;
         }

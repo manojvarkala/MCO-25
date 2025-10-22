@@ -60,10 +60,28 @@ function mco_exam_engine_admin_page() {
         } elseif ($form_action === 'save_certificate_templates') {
             $templates_data = $_POST['mco_templates'] ?? [];
             $sanitized_templates = [];
+            $existing_templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
+
             foreach ($templates_data as $id => $template) {
-                $sanitized_templates[sanitize_key($id)] = [
-                    'id' => sanitize_key($id),
-                    'name' => sanitize_text_field($template['name']), 'title' => sanitize_text_field($template['title']),
+                // Skip if marked for deletion, but don't delete the default templates.
+                if (isset($template['delete']) && $template['delete'] === '1' && !in_array($id, ['cert-practice', 'cert-completion'])) {
+                    continue;
+                }
+
+                $new_id = $id;
+                // If it's a new template, generate a proper ID from its name
+                if (strpos($id, 'new_template_') === 0) {
+                    $base_id = 'cert-' . sanitize_title($template['name']);
+                    $final_id = $base_id;
+                    $counter = 2;
+                    while (isset($sanitized_templates[$final_id]) || isset($existing_templates[$final_id])) {
+                        $final_id = $base_id . '-' . $counter++;
+                    }
+                    $new_id = $final_id;
+                }
+
+                $sanitized_templates[$new_id] = [
+                    'id' => $new_id, 'name' => sanitize_text_field($template['name']), 'title' => sanitize_text_field($template['title']),
                     'body' => wp_kses_post($template['body']), 'signature1Name' => sanitize_text_field($template['signature1Name']),
                     'signature1Title' => sanitize_text_field($template['signature1Title']),
                     'signature1ImageUrl' => mco_sanitize_data_uri_or_url($template['signature1ImageUrl']),
@@ -151,12 +169,15 @@ function mco_render_certificate_templates_tab() {
         </table>
 
         <div id="mco-certificate-accordion">
-            <?php foreach ($templates as $id => $template): ?>
-            <div class="mco-accordion-item">
-                <h3 class="mco-accordion-title"><?php echo esc_html($template['name']); ?></h3>
+            <?php foreach ($templates as $id => $template): 
+                $is_default = in_array($id, ['cert-practice', 'cert-completion']);
+            ?>
+            <div class="mco-accordion-item" id="template-item-<?php echo esc_attr($id); ?>">
+                <h3 class="mco-accordion-title"><?php echo esc_html($template['name']); ?> <?php if ($is_default) echo '(Default)'; ?></h3>
                 <div class="mco-accordion-content">
-                    <input type="hidden" name="mco_templates[<?php echo esc_attr($id); ?>][name]" value="<?php echo esc_attr($template['name']); ?>">
+                    <input type="hidden" name="mco_templates[<?php echo esc_attr($id); ?>][delete]" value="0" class="delete-flag">
                     <table class="form-table">
+                        <tr><th>Template Name</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][name]" value="<?php echo esc_attr($template['name']); ?>" <?php if ($is_default) echo 'readonly'; ?>></td></tr>
                         <tr><th>Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][title]" value="<?php echo esc_attr($template['title']); ?>"></td></tr>
                         <tr><th>Body Text</th><td><textarea class="widefat" rows="4" name="mco_templates[<?php echo esc_attr($id); ?>][body]"><?php echo esc_textarea($template['body']); ?></textarea></td></tr>
                         <tr><th>Signature 1 Name</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name']); ?>"></td></tr>
@@ -166,21 +187,65 @@ function mco_render_certificate_templates_tab() {
                         <tr><th>Signature 2 Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature2Title]" value="<?php echo esc_attr($template['signature2Title']); ?>"></td></tr>
                         <tr><th>Signature 2 Image URL</th><td><textarea class="widefat" rows="5" name="mco_templates[<?php echo esc_attr($id); ?>][signature2ImageUrl]"><?php echo esc_textarea($template['signature2ImageUrl']); ?></textarea><p class="description">Optional.</p></td></tr>
                     </table>
+                    <?php if (!$is_default): ?>
+                        <p class="submit" style="padding:0; margin-top: 10px;">
+                            <button type="button" class="button delete mco-delete-template">Delete Template</button>
+                        </p>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endforeach; ?>
+        </div>
+        <div style="margin-top: 20px;">
+            <button type="button" id="mco-add-template" class="button button-secondary">Add New Template</button>
         </div>
         <?php submit_button(); ?>
     </form>
     <script>
     jQuery(document).ready(function($) {
-        $('.mco-accordion-title').on('click', function() {
+        var accordion = $('#mco-certificate-accordion');
+        
+        accordion.on('click', '.mco-accordion-title', function() {
             $(this).toggleClass('active');
             var content = $(this).next('.mco-accordion-content');
             if (content.css('max-height') !== '0px') {
                 content.css('max-height', '0px');
             } else {
                 content.css('max-height', content.get(0).scrollHeight + 'px');
+            }
+        });
+
+        $('#mco-add-template').on('click', function() {
+            var newId = 'new_template_' + Date.now();
+            var newTemplateHtml = `
+                <div class="mco-accordion-item" id="template-item-${newId}">
+                    <h3 class="mco-accordion-title active">New Custom Template</h3>
+                    <div class="mco-accordion-content" style="max-height: 1000px; padding: 15px;">
+                        <input type="hidden" name="mco_templates[${newId}][delete]" value="0" class="delete-flag">
+                        <table class="form-table">
+                            <tr><th>Template Name</th><td><input type="text" class="widefat" name="mco_templates[${newId}][name]" value="New Custom Template"></td></tr>
+                            <tr><th>Title</th><td><input type="text" class="widefat" name="mco_templates[${newId}][title]" value="Certificate of Completion"></td></tr>
+                            <tr><th>Body Text</th><td><textarea class="widefat" rows="4" name="mco_templates[${newId}][body]"></textarea></td></tr>
+                            <tr><th>Signature 1 Name</th><td><input type="text" class="widefat" name="mco_templates[${newId}][signature1Name]" value=""></td></tr>
+                            <tr><th>Signature 1 Title</th><td><input type="text" class="widefat" name="mco_templates[${newId}][signature1Title]" value=""></td></tr>
+                            <tr><th>Signature 1 Image URL</th><td><textarea class="widefat" rows="5" name="mco_templates[${newId}][signature1ImageUrl]"></textarea></td></tr>
+                            <tr><th>Signature 2 Name</th><td><input type="text" class="widefat" name="mco_templates[${newId}][signature2Name]" value=""></td></tr>
+                            <tr><th>Signature 2 Title</th><td><input type="text" class="widefat" name="mco_templates[${newId}][signature2Title]" value=""></td></tr>
+                            <tr><th>Signature 2 Image URL</th><td><textarea class="widefat" rows="5" name="mco_templates[${newId}][signature2ImageUrl]"></textarea></td></tr>
+                        </table>
+                        <p class="submit" style="padding:0; margin-top: 10px;">
+                            <button type="button" class="button delete mco-delete-template">Delete Template</button>
+                        </p>
+                    </div>
+                </div>`;
+            accordion.append(newTemplateHtml);
+        });
+
+        accordion.on('click', '.mco-delete-template', function() {
+            if (confirm('Are you sure you want to delete this template? This cannot be undone.')) {
+                var item = $(this).closest('.mco-accordion-item');
+                item.find('.delete-flag').val('1');
+                item.slideUp();
             }
         });
     });

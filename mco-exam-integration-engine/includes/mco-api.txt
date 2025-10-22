@@ -868,7 +868,8 @@ function mco_api_admin_update_exam_program(WP_REST_Request $request) {
         'cert_isProctored' => '_mco_is_proctored',
         'cert_certificateEnabled' => '_mco_certificate_enabled',
         'practice_certificateEnabled' => '_mco_practice_certificate_enabled',
-        'recommended_book_ids' => '_mco_recommended_book_ids'
+        'recommended_book_ids' => '_mco_recommended_book_ids',
+        'cert_template_id' => '_mco_certificate_template_id'
     ];
     foreach ($meta_map as $key => $meta_key) {
         if (isset($update_data[$key])) {
