@@ -1,3 +1,4 @@
+
 import React, { FC, useState, useRef } from 'react';
 import { chapters } from './chapters.ts';
 import { BookOpen, Download, List } from 'lucide-react';
@@ -6,7 +7,7 @@ import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 // FIX: Import 'html2canvas' to resolve 'Cannot find name' errors.
 import html2canvas from 'html2canvas';
-import { useAppContext } from '../context/AppContext.tsx';
+import { useAppContext } from '../../context/AppContext.tsx';
 
 const Handbook: FC = () => {
     const { activeOrg } = useAppContext();
