@@ -1,3 +1,185 @@
+/* Base styles and fonts */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --font-main: 'Inter', sans-serif;
+    --font-display: 'Inter', sans-serif;
+    --font-serif-display: 'Source Serif 4', serif;
+    --font-script: 'Dancing Script', cursive;
+}
+
+/* Base colors */
+body {
+    background-color: rgb(var(--color-background-rgb));
+    color: rgb(var(--color-text-default-rgb));
+}
+
+/* ================= THEME DEFINITIONS ================= */
+
+/* --- 1. Default (Cyberpunk) Theme --- */
+:root, [data-theme="default"] {
+  --color-primary-rgb: 6, 182, 212; /* cyan-500 */
+  --color-primary-hover-rgb: 8, 145, 178; /* cyan-600 */
+  --color-secondary-rgb: 219, 39, 119; /* pink-600 */
+  --color-secondary-hover-rgb: 190, 24, 93; /* pink-700 */
+  --color-accent-rgb: 253, 224, 71; /* yellow-400 */
+  --color-background-rgb: 15, 23, 42; /* slate-900 */
+  --color-card-rgb: 30, 41, 59; /* slate-800 */
+  --color-muted-rgb: 51, 65, 85; /* slate-700 */
+  --color-border-rgb: 71, 85, 105; /* slate-600 */
+  --color-text-strong-rgb: 248, 250, 252; /* slate-50 */
+  --color-text-default-rgb: 226, 232, 240; /* slate-200 */
+  --color-text-muted-rgb: 148, 163, 184; /* slate-400 */
+  --color-success-rgb: 74, 222, 128; /* green-400 */
+  --color-danger-rgb: 248, 113, 113; /* red-400 */
+}
+
+/* --- 2. Professional Theme --- */
+[data-theme="professional"] {
+  --color-primary-rgb: 4, 120, 87; /* teal-700 */
+  --color-primary-hover-rgb: 5, 150, 105; /* teal-600 */
+  --color-secondary-rgb: 59, 130, 246; /* blue-500 */
+  --color-secondary-hover-rgb: 37, 99, 235; /* blue-600 */
+  --color-accent-rgb: 234, 179, 8; /* yellow-500 */
+  --color-background-rgb: 241, 245, 249; /* slate-100 */
+  --color-card-rgb: 255, 255, 255; /* white */
+  --color-muted-rgb: 226, 232, 240; /* slate-200 */
+  --color-border-rgb: 203, 213, 225; /* slate-300 */
+  --color-text-strong-rgb: 15, 23, 42; /* slate-900 */
+  --color-text-default-rgb: 51, 65, 85; /* slate-700 */
+  --color-text-muted-rgb: 100, 116, 139; /* slate-500 */
+  --color-success-rgb: 22, 163, 74; /* green-600 */
+  --color-danger-rgb: 220, 38, 38; /* red-600 */
+}
+
+/* --- 3. Serene Theme --- */
+[data-theme="serene"] {
+  --color-primary-rgb: 96, 165, 250; /* blue-400 */
+  --color-primary-hover-rgb: 59, 130, 246; /* blue-500 */
+  --color-secondary-rgb: 52, 211, 153; /* emerald-400 */
+  --color-secondary-hover-rgb: 16, 185, 129; /* emerald-500 */
+  --color-accent-rgb: 251, 146, 60; /* orange-400 */
+  --color-background-rgb: 240, 253, 250; /* emerald-50 */
+  --color-card-rgb: 255, 255, 255;
+  --color-muted-rgb: 229, 231, 235; /* gray-200 */
+  --color-border-rgb: 209, 213, 219; /* gray-300 */
+  --color-text-strong-rgb: 23, 37, 84; /* blue-900 */
+  --color-text-default-rgb: 55, 65, 81; /* gray-700 */
+  --color-text-muted-rgb: 107, 114, 128; /* gray-500 */
+  --color-success-rgb: 22, 163, 74;
+  --color-danger-rgb: 220, 38, 38;
+}
+
+/* --- 4. Academic Theme --- */
+[data-theme="academic"] {
+  --color-primary-rgb: 127, 29, 29; /* red-900 */
+  --color-primary-hover-rgb: 153, 27, 27; /* red-800 */
+  --color-secondary-rgb: 161, 98, 7; /* amber-800 */
+  --color-secondary-hover-rgb: 180, 83, 9; /* amber-700 */
+  --color-accent-rgb: 217, 119, 6; /* amber-600 */
+  --color-background-rgb: 254, 252, 251; /* stone-50 */
+  --color-card-rgb: 255, 255, 255;
+  --color-muted-rgb: 245, 245, 244; /* stone-100 */
+  --color-border-rgb: 228, 228, 228; /* stone-200 */
+  --color-text-strong-rgb: 28, 25, 23; /* stone-900 */
+  --color-text-default-rgb: 68, 64, 60; /* stone-700 */
+  --color-text-muted-rgb: 120, 113, 108; /* stone-500 */
+  --color-success-rgb: 21, 128, 61; /* green-700 */
+  --color-danger-rgb: 185, 28, 28; /* red-700 */
+}
+
+/* --- 5. Noir Theme --- */
+[data-theme="noir"] {
+  --color-primary-rgb: 229, 231, 235; /* gray-200 */
+  --color-primary-hover-rgb: 255, 255, 255; /* white */
+  --color-secondary-rgb: 139, 92, 246; /* violet-500 */
+  --color-secondary-hover-rgb: 124, 58, 237; /* violet-600 */
+  --color-accent-rgb: 234, 179, 8; /* yellow-500 */
+  --color-background-rgb: 17, 24, 39; /* gray-900 */
+  --color-card-rgb: 31, 41, 55; /* gray-800 */
+  --color-muted-rgb: 55, 65, 81; /* gray-700 */
+  --color-border-rgb: 75, 85, 99; /* gray-600 */
+  --color-text-strong-rgb: 249, 250, 251; /* gray-50 */
+  --color-text-default-rgb: 209, 213, 219; /* gray-300 */
+  --color-text-muted-rgb: 156, 163, 175; /* gray-400 */
+  --color-success-rgb: 52, 211, 153; /* emerald-400 */
+  --color-danger-rgb: 251, 113, 133; /* rose-400 */
+}
+
+/* ================= THEME SWATCHES FOR ADMIN UI ================= */
+.theme-swatch-default-primary { background-color: rgb(6, 182, 212); }
+.theme-swatch-default-secondary { background-color: rgb(219, 39, 119); }
+.theme-swatch-default-accent { background-color: rgb(253, 224, 71); }
+.theme-swatch-default-background { background-color: rgb(30, 41, 59); }
+
+.theme-swatch-professional-primary { background-color: rgb(4, 120, 87); }
+.theme-swatch-professional-secondary { background-color: rgb(59, 130, 246); }
+.theme-swatch-professional-accent { background-color: rgb(234, 179, 8); }
+.theme-swatch-professional-background { background-color: rgb(241, 245, 249); }
+
+.theme-swatch-serene-primary { background-color: rgb(96, 165, 250); }
+.theme-swatch-serene-secondary { background-color: rgb(52, 211, 153); }
+.theme-swatch-serene-accent { background-color: rgb(251, 146, 60); }
+.theme-swatch-serene-background { background-color: rgb(240, 253, 250); }
+
+.theme-swatch-academic-primary { background-color: rgb(127, 29, 29); }
+.theme-swatch-academic-secondary { background-color: rgb(161, 98, 7); }
+.theme-swatch-academic-accent { background-color: rgb(217, 119, 6); }
+.theme-swatch-academic-background { background-color: rgb(254, 252, 251); }
+
+.theme-swatch-noir-primary { background-color: rgb(229, 231, 235); }
+.theme-swatch-noir-secondary { background-color: rgb(139, 92, 246); }
+.theme-swatch-noir-accent { background-color: rgb(234, 179, 8); }
+.theme-swatch-noir-background { background-color: rgb(31, 41, 55); }
+
+/* ================= EXAM CARD GRADIENTS ================= */
+.exam-card--practice { background-image: linear-gradient(to top right, rgb(var(--color-secondary-rgb)), rgb(var(--color-secondary-hover-rgb))); }
+.exam-card--cert { background-image: linear-gradient(to top right, rgb(var(--color-primary-rgb)), rgb(var(--color-primary-hover-rgb))); }
+
+.premium-header-gradient {
+    background-image: linear-gradient(to right, #1e3a8a, #2563eb, #1e3a8a);
+    color: white;
+}
+.premium-header-gradient .text-slate-300 { color: #d1d5db; }
+.premium-header-gradient .hover\:text-white:hover { color: #ffffff; }
+
+/* ================= EDITABLE CARD STYLES FOR ADMIN ================= */
+.editable-card {
+    background-color: rgb(var(--color-card-rgb));
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,.1), 0 1px 2px -1px rgba(0,0,0,.1);
+    border: 1px solid rgb(var(--color-border-rgb));
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+}
+.editable-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1);
+    border-color: rgb(var(--color-primary-rgb));
+}
+.editable-card--selected {
+    --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+    --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+    --tw-ring-offset-color: rgb(var(--color-background-rgb));
+    --tw-ring-color: rgb(var(--color-primary-rgb));
+    border-color: rgb(var(--color-primary-rgb));
+}
+.editable-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid rgb(var(--color-border-rgb));
+}
+.editable-card__content {
+    padding: 0.75rem;
+}
+
+
 /* --- On-Screen Handbook Content Styles (Improved Readability) --- */
 .handbook-content {
     color: #cbd5e1; /* slate-300 */
