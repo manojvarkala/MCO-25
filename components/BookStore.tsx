@@ -56,7 +56,13 @@ const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
         <div className="bg-[rgb(var(--color-muted-rgb))] rounded-xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-1 transition-transform duration-300 border border-[rgb(var(--color-border-rgb))]">
             <BookCover book={book} className="w-full h-56" />
             <div className="p-6 flex flex-col flex-grow">
-                <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2 leading-tight">{book.title}</h3>
+                {book.permalink ? (
+                    <a href={book.permalink} target="_blank" rel="noopener noreferrer" className="group">
+                        <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2 leading-tight group-hover:text-[rgb(var(--color-primary-rgb))] transition-colors">{book.title}</h3>
+                    </a>
+                ) : (
+                    <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2 leading-tight">{book.title}</h3>
+                )}
                 
                 <div className="flex-grow">
                     <p className="text-[rgb(var(--color-text-default-rgb))] text-base mb-4">

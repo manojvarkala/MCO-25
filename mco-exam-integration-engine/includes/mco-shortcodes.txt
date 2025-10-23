@@ -325,6 +325,7 @@ function mco_book_showcase_shortcode() {
     ob_start();
     echo '<div class="mco-grid">';
     foreach ($books as $book_post) {
+        $permalink = get_permalink($book_post->ID);
         $book = [
             'title' => get_the_title($book_post),
             'description' => has_excerpt($book_post->ID) ? get_the_excerpt($book_post->ID) : wp_trim_words($book_post->post_content, 30),
@@ -344,7 +345,7 @@ function mco_book_showcase_shortcode() {
             $is_mco_tenant = (strpos($site_name, 'medical coding online') !== false);
             echo $is_mco_tenant ? mco_render_mco_procedural_cover_php($book) : mco_render_annapoorna_procedural_cover_php($book);
         }
-        echo '<div class="mco-card__body"><h3 class="mco-card__title">' . esc_html($book['title']) . '</h3><p class="mco-card__description">' . esc_html($book['description']) . '</p></div>';
+        echo '<div class="mco-card__body"><a href="' . esc_url($permalink) . '"><h3 class="mco-card__title">' . esc_html($book['title']) . '</h3></a><p class="mco-card__description">' . esc_html($book['description']) . '</p></div>';
         echo '<div class="mco-card__footer" data-book-links>';
         if (!empty($book['links']['com'])) echo '<a href="'.esc_url($book['links']['com']).'" target="_blank" rel="noopener" class="mco-book-button" data-store="com">' . mco_get_svg_icon('cart') . ' Buy on Amazon.com</a>';
         if (!empty($book['links']['in'])) echo '<a href="'.esc_url($book['links']['in']).'" target="_blank" rel="noopener" class="mco-book-button" data-store="in">' . mco_get_svg_icon('cart') . ' Buy on Amazon.in</a>';

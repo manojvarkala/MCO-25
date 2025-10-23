@@ -266,6 +266,7 @@ function mco_get_app_config_data() {
             'id' => get_post_meta($book->ID, '_mco_book_id', true),
             'title' => get_the_title($book),
             'description' => has_excerpt($book->ID) ? get_the_excerpt($book->ID) : wp_trim_words($book->post_content, 30),
+            'permalink' => get_permalink($book->ID),
             'thumbnailUrl' => get_post_meta($book->ID, '_mco_thumbnail_url', true),
             'affiliateLinks' => [
                 'com' => get_post_meta($book->ID, '_mco_link_com', true),

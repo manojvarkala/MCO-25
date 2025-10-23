@@ -104,6 +104,7 @@ export interface RecommendedBook {
     title: string;
     description: string;
     thumbnailUrl: string;
+    permalink?: string;
     affiliateLinks: {
         com: string;
         in: string;

@@ -49,13 +49,64 @@
 .mco-proc-cover-mco-b--color-2 { background-color: #0c4a6e; color: #ffffff; } .mco-proc-cover-mco-b--color-2 .mco-proc-cover-mco-b__accent { background-color: #fb7185; }
 .mco-proc-cover-mco-b--color-3 { background-color: #065f46; color: #ffffff; } .mco-proc-cover-mco-b--color-3 .mco-proc-cover-mco-b__accent { background-color: #a3e635; }
 
+/* --- MCO Shortcode Card Styles --- */
+.mco-card__title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+    transition: color 0.2s ease-in-out;
+}
+.mco-card__body a {
+    text-decoration: none;
+}
+.mco-card__body a:hover .mco-card__title {
+    color: #0891b2; /* cyan-600 */
+}
+.mco-card__description {
+    font-size: 0.875rem;
+    color: #475569;
+    line-height: 1.6;
+    flex-grow: 1;
+}
+.mco-book-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: 1px solid #e2e8f0;
+    background-color: #f1f5f9;
+    color: #475569;
+}
+.mco-book-button:hover {
+    background-color: #e2e8f0;
+    border-color: #cbd5e1;
+}
+.mco-card__footer .mco-card__button--purchase {
+    background-color: #facc15;
+    color: #1e293b;
+    border-color: #facc15;
+}
+.mco-card__footer .mco-card__button--purchase:hover {
+    background-color: #f59e0b;
+    border-color: #f59e0b;
+}
+
+
 /* --- Single Book Card Styles --- */
 .mco-single-book-card { display: grid; grid-template-columns: 300px 1fr; gap: 2.5rem; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 2.5rem; margin: 2rem auto; max-width: 900px; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); }
 .mco-single-book-card__cover { width: 300px; height: 450px; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1); }
 .mco-single-book-card__cover img, .mco-single-book-card__cover .mco-book-cover { width: 100%; height: 100%; }
 .mco-single-book-card__cover img { object-fit: cover; }
 .mco-single-book-card__details { display: flex; flex-direction: column; }
-.mco-single-book-card__title { font-size: 2.5rem; font-weight: 800; color: #1e293b; margin-top: 0; margin-bottom: 1rem; line-height: 1.2; }
+.mco-single-book-card__details h1 { font-size: 2.5rem; font-weight: 800; color: #1e293b; margin-top: 0; margin-bottom: 1rem; line-height: 1.2; }
 .mco-single-book-card__description { color: #475569; flex-grow: 1; font-size: 1rem; line-height: 1.6; }
 .mco-single-book-card__description p:first-child { margin-top: 0; }
 .mco-single-book-card__buttons { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.75rem; }
@@ -69,7 +120,7 @@
 @media (max-width: 768px) {
     .mco-single-book-card { grid-template-columns: 1fr; padding: 1.5rem; gap: 1.5rem; }
     .mco-single-book-card__cover { width: 100%; max-width: 250px; height: auto; aspect-ratio: 2 / 3; margin: 0 auto; }
-    .mco-single-book-card__title { font-size: 1.75rem; text-align: center; }
+    .mco-single-book-card__details h1 { font-size: 1.75rem; text-align: center; }
     .mco-single-book-card__description { text-align: center; }
     .mco-single-book-card__buttons-label { text-align: center; }
 }
