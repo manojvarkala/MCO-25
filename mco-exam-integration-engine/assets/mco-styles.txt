@@ -51,7 +51,15 @@
 
 /* --- Styles for Exam Showcase --- */
 .mco-showcase-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
     margin-bottom: 2rem;
+}
+@media (min-width: 768px) {
+    .mco-showcase-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 .mco-program-group {
@@ -62,13 +70,8 @@
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
     display: flex;
     flex-direction: column;
-    margin-bottom: 2rem;
+    margin-bottom: 0; /* remove margin-bottom for grid layout */
 }
-
-.mco-showcase-grid .mco-program-group:last-child {
-    margin-bottom: 0;
-}
-
 
 .mco-program-group__title { 
     font-size: 1.5rem; 

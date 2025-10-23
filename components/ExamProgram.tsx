@@ -14,6 +14,11 @@ import SubscriptionOfferCard from './SubscriptionOfferCard.tsx';
 import ShareButtons from './ShareButtons.tsx';
 
 const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } | null => {
+    // FIX: Added a bulletproof safety check. If the affiliateLinks object is missing,
+    // the function will now return null instead of crashing the application.
+    if (!book.affiliateLinks) {
+        return null;
+    }
     const links = book.affiliateLinks;
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     
@@ -77,8 +82,9 @@ const ExamProgram: FC = () => {
     }, [user]);
 
     const programData = useMemo(() => {
-        if (!activeOrg || !Array.isArray(activeOrg.examProductCategories) || !Array.isArray(activeOrg.exams) || !programId) {
-            return null;
+        // This is safe because of the loading guard below.
+        if (!activeOrg || !programId) {
+             return null;
         }
 
         const category = activeOrg.examProductCategories.find(cat => cat && cat.id === programId);
@@ -95,14 +101,16 @@ const ExamProgram: FC = () => {
         return suggestedBooks.filter(book => programData.certExam.recommendedBookIds.includes(book.id));
     }, [programData, suggestedBooks]);
 
-    const { monthlyPrice, yearlyPrice, monthlySubUrl, yearlySubUrl } = useMemo(() => {
+    const { monthlyPrice, monthlyRegularPrice, yearlyPrice, yearlyRegularPrice, monthlySubUrl, yearlySubUrl } = useMemo(() => {
         const monthlyData = examPrices?.['sub-monthly'];
         const yearlyData = examPrices?.['sub-yearly'];
-        const website = activeOrg ? `https://www.${activeOrg.website}` : '';
+        const website = activeOrg ? `https://${activeOrg.website}` : '';
 
         return {
             monthlyPrice: monthlyData?.price ?? 19.99,
+            monthlyRegularPrice: monthlyData?.regularPrice,
             yearlyPrice: yearlyData?.price ?? 149.99,
+            yearlyRegularPrice: yearlyData?.regularPrice,
             monthlySubUrl: monthlyData?.productId ? `${website}/cart/?add-to-cart=${monthlyData.productId}` : `${website}/product/monthly-subscription/`,
             yearlySubUrl: yearlyData?.productId ? `${website}/cart/?add-to-cart=${yearlyData.productId}` : `${website}/product/yearly-subscription/`,
         };
@@ -164,79 +172,54 @@ const ExamProgram: FC = () => {
     const shareText = `Check out the ${shareTitle} program on ${activeOrg.name}! Great for certification prep.`;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            <main className="lg:col-span-3 space-y-8">
-                <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                    <div className="flex flex-wrap justify-between items-start gap-2">
-                        <h1 className="text-3xl font-extrabold text-slate-900">{stripHtml(category.name)}</h1>
-                        <div className="flex items-center gap-3">
-                            {isEffectivelyAdmin && (
-                                <Link 
-                                    to={`/admin/programs#${category.id}`} 
-                                    className="flex items-center gap-1.5 text-sm font-semibold text-amber-600 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-md transition"
-                                    title="Edit Program"
-                                >
-                                    <Edit size={14} />
-                                    Edit Program
-                                </Link>
-                            )}
-                            <ShareButtons shareUrl={shareUrl} shareText={shareText} shareTitle={shareTitle} size={18} />
-                        </div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center mt-4 mb-6 border-t border-b border-slate-200 py-3">
-                        {navigationLinks.prev ? (
-                            <Link to={`/program/${navigationLinks.prev.id}`} className="flex items-center gap-2 text-cyan-600 hover:text-cyan-800 transition-colors group">
-                                <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform"/>
-                                <div>
-                                    <span className="text-xs text-slate-500">Previous</span>
-                                    <span className="block font-semibold text-sm line-clamp-1">{stripHtml(navigationLinks.prev.name)}</span>
-                                </div>
+        <div className="space-y-8">
+            <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                <div className="flex flex-wrap justify-between items-start gap-2">
+                    <h1 className="text-3xl font-extrabold text-slate-900">{stripHtml(category.name)}</h1>
+                    <div className="flex items-center gap-3">
+                        {isEffectivelyAdmin && (
+                            <Link 
+                                to={`/admin/programs#${category.id}`} 
+                                className="flex items-center gap-1.5 text-sm font-semibold text-amber-600 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-md transition"
+                                title="Edit Program"
+                            >
+                                <Edit size={14} />
+                                Edit Program
                             </Link>
-                        ) : (
-                            <div /> // Placeholder to keep the 'Next' button on the right
                         )}
-                        {navigationLinks.next ? (
-                            <Link to={`/program/${navigationLinks.next.id}`} className="flex items-center gap-2 text-cyan-600 hover:text-cyan-800 transition-colors text-right group">
-                                <div className="text-right">
-                                    <span className="text-xs text-slate-500">Next</span>
-                                    <span className="block font-semibold text-sm line-clamp-1">{stripHtml(navigationLinks.next.name)}</span>
-                                </div>
-                                <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform"/>
-                            </Link>
-                        ) : (
-                            <div /> // Placeholder
-                        )}
+                        <ShareButtons shareUrl={shareUrl} shareText={shareText} shareTitle={shareTitle} size={18} />
                     </div>
-
-                    <div className="prose max-w-none text-slate-600" dangerouslySetInnerHTML={{ __html: fullDescription }} />
+                </div>
+                
+                <div className="flex justify-between items-center mt-4 mb-6 border-t border-b border-slate-200 py-3">
+                    {navigationLinks.prev ? (
+                        <Link to={`/program/${navigationLinks.prev.id}`} className="flex items-center gap-2 text-cyan-600 hover:text-cyan-800 transition-colors group">
+                            <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform"/>
+                            <div>
+                                <span className="text-xs text-slate-500">Previous</span>
+                                <span className="block font-semibold text-sm line-clamp-1">{stripHtml(navigationLinks.prev.name)}</span>
+                            </div>
+                        </Link>
+                    ) : (
+                        <div /> // Placeholder to keep the 'Next' button on the right
+                    )}
+                    {navigationLinks.next ? (
+                        <Link to={`/program/${navigationLinks.next.id}`} className="flex items-center gap-2 text-cyan-600 hover:text-cyan-800 transition-colors text-right group">
+                            <div className="text-right">
+                                <span className="text-xs text-slate-500">Next</span>
+                                <span className="block font-semibold text-sm line-clamp-1">{stripHtml(navigationLinks.next.name)}</span>
+                            </div>
+                            <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform"/>
+                        </Link>
+                    ) : (
+                        <div /> // Placeholder
+                    )}
                 </div>
 
-                {recommendedBooksForProgram.length > 0 && (
-                    <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                        <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                            {recommendedBooksForProgram.map(book => {
-                                const linkData = getGeoAffiliateLink(book);
-                                if (!linkData) return null;
-                                return (
-                                    <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full flex-shrink-0 flex flex-col transform hover:-translate-y-1 transition-transform duration-200">
-                                        <BookCover book={book} className="w-full h-40"/>
-                                        <div className="p-4 flex flex-col flex-grow">
-                                            <h4 className="font-bold text-slate-800 text-sm mb-2 leading-tight flex-grow">{book.title}</h4>
-                                            <a href={linkData.url} target="_blank" rel="noopener noreferrer" className="mt-auto w-full flex items-center justify-center text-xs text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-2 py-1.5 transition-colors">
-                                                Buy on {linkData.domainName}
-                                            </a>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    </div>
-                )}
-            </main>
+                <div className="prose max-w-none text-slate-600" dangerouslySetInnerHTML={{ __html: fullDescription }} />
+            </div>
 
-            <aside className="lg:col-span-2 space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
                 {practiceExam && (
                     <ExamCard 
                         exam={practiceExam} 
@@ -268,36 +251,62 @@ const ExamProgram: FC = () => {
                         examPrices={examPrices}
                     />
                 )}
-                {subscriptionsEnabled && !isSubscribed && (
-                    <>
-                        <SubscriptionOfferCard
-                            planName="Monthly Subscription"
-                            price={monthlyPrice}
-                            priceUnit="month"
-                            url={monthlySubUrl}
-                            features={[
-                                'Unlimited Practice Exams',
-                                'Unlimited AI Feedback',
-                                'Cancel Anytime',
-                            ]}
-                            gradientClass="bg-gradient-to-br from-cyan-500 to-sky-600"
-                        />
-                        <SubscriptionOfferCard
-                            planName="Yearly Subscription"
-                            price={yearlyPrice}
-                            priceUnit="year"
-                            url={yearlySubUrl}
-                            features={[
-                                'All Monthly features',
-                                'Access All Exam Programs',
-                                'Saves over 35%!',
-                            ]}
-                            isBestValue={true}
-                            gradientClass="bg-gradient-to-br from-purple-600 to-indigo-700"
-                        />
-                    </>
-                )}
-            </aside>
+            </div>
+
+            {subscriptionsEnabled && !isSubscribed && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+                    <SubscriptionOfferCard
+                        planName="Monthly Subscription"
+                        price={monthlyPrice}
+                        regularPrice={monthlyRegularPrice}
+                        priceUnit="month"
+                        url={monthlySubUrl}
+                        features={[
+                            'Unlimited Practice Exams',
+                            'Unlimited AI Feedback',
+                            'Cancel Anytime',
+                        ]}
+                        gradientClass="bg-gradient-to-br from-cyan-500 to-sky-600"
+                    />
+                    <SubscriptionOfferCard
+                        planName="Yearly Subscription"
+                        price={yearlyPrice}
+                        regularPrice={yearlyRegularPrice}
+                        priceUnit="year"
+                        url={yearlySubUrl}
+                        features={[
+                            'All Monthly features',
+                            'Access All Exam Programs',
+                            'Saves over 35%!',
+                        ]}
+                        isBestValue={true}
+                        gradientClass="bg-gradient-to-br from-purple-600 to-indigo-700"
+                    />
+                </div>
+            )}
+
+            {recommendedBooksForProgram.length > 0 && (
+                <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                        {recommendedBooksForProgram.map(book => {
+                            const linkData = getGeoAffiliateLink(book);
+                            if (!linkData) return null;
+                            return (
+                                <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full flex-shrink-0 flex flex-col transform hover:-translate-y-1 transition-transform duration-200">
+                                    <BookCover book={book} className="w-full h-40"/>
+                                    <div className="p-4 flex flex-col flex-grow">
+                                        <h4 className="font-bold text-slate-800 text-sm mb-2 leading-tight flex-grow">{book.title}</h4>
+                                        <a href={linkData.url} target="_blank" rel="noopener noreferrer" className="mt-auto w-full flex items-center justify-center text-xs text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-2 py-1.5 transition-colors">
+                                            Buy on {linkData.domainName}
+                                        </a>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

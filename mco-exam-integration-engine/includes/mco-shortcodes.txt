@@ -153,6 +153,7 @@ if (!function_exists('mco_register_shortcode_hooks')) {
         add_action('wp', 'mco_prevent_caching_on_shortcode_pages');
 
         add_filter('the_content', 'mco_auto_apply_single_book_style', 999);
+        add_filter('the_content', 'mco_auto_apply_single_program_style', 999);
     }
 }
 
@@ -166,6 +167,27 @@ if (!function_exists('mco_auto_apply_single_book_style')) {
             $new_content = mco_single_book_shortcode([]);
             add_filter('the_content', 'mco_auto_apply_single_book_style', 999);
             return $new_content;
+        }
+        return $content;
+    }
+}
+
+if (!function_exists('mco_auto_apply_single_program_style')) {
+    function mco_auto_apply_single_program_style($content) {
+        if (is_singular('mco_exam_program') && in_the_loop() && is_main_query() && !is_admin()) {
+            global $post;
+            $app_id = 'prod-' . $post->ID;
+            
+            // To prevent infinite loops if the shortcode itself calls the_content
+            remove_filter('the_content', 'mco_auto_apply_single_program_style', 999);
+            
+            $shortcode_output = mco_exam_showcase_shortcode(['id' => $app_id]);
+            
+            // Re-add the filter for subsequent posts on the page (though unlikely for a singular view)
+            add_filter('the_content', 'mco_auto_apply_single_program_style', 999);
+
+            // Return ONLY our shortcode output, overwriting everything else.
+            return $shortcode_output;
         }
         return $content;
     }

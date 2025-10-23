@@ -1026,11 +1026,15 @@ function mco_api_admin_upsert_product(WP_REST_Request $request) {
     }
 
     if (isset($product_data['name'])) $product->set_name(sanitize_text_field($product_data['name']));
-    if (isset($product_data['price'])) $product->set_sale_price($product_data['price']);
-    if (isset($product_data['regularPrice'])) $product->set_regular_price($product_data['regularPrice']);
     
-    if ($product_type === 'subscription' && isset($product_data['price'])) {
-        $product->set_price($product_data['price']);
+    // FIX: Add a guard to prevent trying to set a price on a variable product, which causes a fatal error.
+    if ($product && !$product->is_type('variable')) {
+        if (isset($product_data['price'])) $product->set_sale_price($product_data['price']);
+        if (isset($product_data['regularPrice'])) $product->set_regular_price($product_data['regularPrice']);
+        
+        if ($product_type === 'subscription' && isset($product_data['price'])) {
+            $product->set_price($product_data['price']);
+        }
     }
     
     $product->set_virtual(true);
