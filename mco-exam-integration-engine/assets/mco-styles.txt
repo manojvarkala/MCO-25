@@ -49,7 +49,7 @@
 .mco-proc-cover-mco-b--color-2 { background-color: #0c4a6e; color: #ffffff; } .mco-proc-cover-mco-b--color-2 .mco-proc-cover-mco-b__accent { background-color: #fb7185; }
 .mco-proc-cover-mco-b--color-3 { background-color: #065f46; color: #ffffff; } .mco-proc-cover-mco-b--color-3 .mco-proc-cover-mco-b__accent { background-color: #a3e635; }
 
-/* --- Styles for Exam Showcase (Updated for Dashboard Consistency) --- */
+/* --- Styles for Exam Showcase (Uniform App Dashboard Style) --- */
 .mco-showcase-grid {
     display: flex;
     flex-direction: column;
@@ -58,7 +58,7 @@
 }
 
 .mco-program-group {
-    background-color: #334155; /* slate-700 */
+    background-color: #30415B; /* slate-800 from app */
     border: 1px solid #475569; /* slate-600 */
     border-radius: 0.75rem; /* rounded-xl */
     padding: 1.5rem; /* p-6 */
@@ -70,21 +70,23 @@
 .mco-program-group__title {
     font-size: 1.25rem; /* text-xl */
     font-weight: 700;
-    margin-bottom: 0.25rem;
+    margin: 0 0 0.25rem 0;
     color: #f8fafc; /* slate-50 */
 }
 .mco-program-group__title a { text-decoration: none; color: inherit; transition: color 0.2s; }
 .mco-program-group__title a:hover { color: #06b6d4; /* cyan-500 */ }
+
 .mco-program-group__description {
     color: #94a3b8; /* slate-400 */
     margin-bottom: 1.5rem;
     font-size: 0.875rem; /* text-sm */
+    line-height: 1.6;
 }
 .mco-program-group__description p {
-    margin: 0; /* Reset paragraph margin inside description */
+    margin: 0;
 }
 
-/* The grid for the inner cards (practice, cert, bundle) */
+/* Inner cards (practice, cert, bundle) grid */
 .mco-program-group__cards { 
     display: grid; 
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
@@ -97,7 +99,7 @@
     flex-direction: column; 
     color: white; 
     border-radius: 0.75rem; 
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.05); 
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05); 
 }
 
 .mco-card__header { 
@@ -195,35 +197,23 @@
 .mco-sub-card__features { list-style: none; padding: 0; margin: 0 0 1.5rem 0; display: flex; flex-direction: column; gap: 0.75rem; }
 .mco-sub-card__features li { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.875rem; }
 
-
-/* --- MCO Shortcode Card Styles (Scoped to Book Grid) --- */
-.mco-book-grid .mco-card__title {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 0.75rem;
-    line-height: 1.4;
-    transition: color 0.2s ease-in-out;
-}
-.mco-book-grid .mco-card__body a {
-    text-decoration: none;
-}
-.mco-book-grid .mco-card__body a:hover .mco-card__title {
-    color: #0891b2; /* cyan-600 */
-}
-.mco-book-grid .mco-card__description {
-    font-size: 0.875rem;
-    color: #475569;
-    line-height: 1.6;
-    flex-grow: 1;
-}
-
-/* --- New styles for Book Showcase --- */
+/* --- Styles for Book Showcase (Uniform App Bookstore Style) --- */
 .mco-book-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: 1fr; /* 1 column by default */
     gap: 2rem;
 }
+@media (min-width: 640px) { /* sm breakpoint */
+    .mco-book-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (min-width: 1024px) { /* lg breakpoint */
+    .mco-book-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
 .mco-book-grid .mco-card {
     display: flex;
     flex-direction: column;
@@ -241,6 +231,26 @@
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
+    flex-grow: 1;
+}
+.mco-book-grid .mco-card__title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 0.75rem 0;
+    line-height: 1.4;
+    transition: color 0.2s ease-in-out;
+}
+.mco-book-grid .mco-card__body a {
+    text-decoration: none;
+}
+.mco-book-grid .mco-card__body a:hover .mco-card__title {
+    color: #0891b2; /* cyan-600 */
+}
+.mco-book-grid .mco-card__description {
+    font-size: 0.875rem;
+    color: #475569;
+    line-height: 1.6;
     flex-grow: 1;
 }
 .mco-book-grid .mco-card__footer {
