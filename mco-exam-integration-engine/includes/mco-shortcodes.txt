@@ -312,10 +312,6 @@ function mco_book_showcase_shortcode() {
     ob_start();
     echo '<div class="mco-book-grid">';
     foreach ($config_data['suggestedBooks'] as $book) {
-        $hash = 0; $str = $book['title'];
-        for ($i = 0; $i < strlen($str); $i++) { $hash = ord($str[$i]) + (($hash << 5) - $hash); }
-        $color_index = abs($hash) % 4;
-
         $book_cover = '';
         if (!empty($book['thumbnailUrl'])) {
             $book_cover = '<img src="' . esc_url($book['thumbnailUrl']) . '" alt="' . esc_attr($book['title']) . '" style="width:100%; height:100%; object-fit: cover;">';
@@ -328,7 +324,7 @@ function mco_book_showcase_shortcode() {
             }
         }
 
-        echo '<div class="mco-card mco-gradient--book-' . $color_index . '">';
+        echo '<div class="mco-card">';
         echo '<div class="mco-book-cover">' . $book_cover . '</div>';
         echo '<div class="mco-card__body">';
         echo '<a href="' . esc_url($book['permalink']) . '" target="_blank" rel="noopener noreferrer"><h3 class="mco-card__title">' . esc_html($book['title']) . '</h3></a>';
@@ -351,7 +347,6 @@ function mco_book_showcase_shortcode() {
     return ob_get_clean();
 }
 
-
 function mco_single_book_shortcode() {
     global $post;
     if (!$post || $post->post_type !== 'mco_recommended_book') return '<p>This shortcode must be used on a "Recommended Book" post.</p>';
@@ -364,8 +359,12 @@ function mco_single_book_shortcode() {
 
     ob_start();
     
-    // This is much safer and avoids re-running content filters that add related posts.
-    $book_content = wpautop($post->post_content);
+    // FIX: Get raw post content from the database to bypass other content filters, then apply wpautop manually.
+    $raw_post = get_post($post->ID);
+    $book_content = '';
+    if ($raw_post) {
+        $book_content = wpautop($raw_post->post_content);
+    }
 
     $book_cover = '';
     if (!empty($book['thumbnailUrl'])) {
@@ -408,6 +407,7 @@ function mco_single_book_shortcode() {
                             <?php echo mco_get_svg_icon('cart'); ?>
                             Buy on <?php echo esc_html($store_map[$key]); ?>
                         </a>
+                        <p> As an Amazon Associate, we earn from qualifying purchases. Using our links doesn’t cost you anything extra and helps support our platform to keep creating great content for you. Please note that book availability may vary by region.</p>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
