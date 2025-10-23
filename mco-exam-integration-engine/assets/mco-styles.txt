@@ -152,20 +152,24 @@
     font-weight: 600;
     text-decoration: none;
     transition: all 0.2s;
+}
+/* Default/Secondary Button Style */
+.mco-book-button, .mco-book-button--secondary {
     border: 1px solid #e2e8f0;
     background-color: #f1f5f9;
     color: #475569;
 }
-.mco-book-button:hover {
+.mco-book-button:hover, .mco-book-button--secondary:hover {
     background-color: #e2e8f0;
     border-color: #cbd5e1;
 }
-.mco-book-grid .mco-card__footer .mco-book-button {
+/* Primary Button Style */
+.mco-book-grid .mco-card__footer .mco-book-button--primary {
     background-color: #facc15;
     color: #1e293b;
     border-color: #facc15;
 }
-.mco-book-grid .mco-card__footer .mco-book-button:hover {
+.mco-book-grid .mco-card__footer .mco-book-button--primary:hover {
     background-color: #f59e0b;
     border-color: #f59e0b;
 }

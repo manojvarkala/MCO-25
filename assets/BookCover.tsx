@@ -55,19 +55,19 @@ const AnnapoornaProceduralCover: FC<Omit<BookCoverProps, 'className'>> = ({ book
     const colorIndex = Math.floor(Math.abs(hash) / 2) % 5;
 
     const colorsA = [
-        { bg: 'bg-sky-700', pattern: 'bg-sky-800', text: 'text-white' },
-        { bg: 'bg-emerald-700', pattern: 'bg-emerald-800', text: 'text-white' },
-        { bg: 'bg-rose-700', pattern: 'bg-rose-800', text: 'text-white' },
-        { bg: 'bg-purple-700', pattern: 'bg-purple-800', text: 'text-white' },
+        { bg: 'bg-indigo-700', pattern: 'bg-indigo-800', text: 'text-white' },
+        { bg: 'bg-teal-700', pattern: 'bg-teal-800', text: 'text-white' },
         { bg: 'bg-slate-700', pattern: 'bg-slate-800', text: 'text-white' },
+        { bg: 'bg-blue-800', pattern: 'bg-blue-900', text: 'text-white' },
+        { bg: 'bg-gray-700', pattern: 'bg-gray-800', text: 'text-white' },
     ];
     
     const colorsB = [
-        { bg: 'bg-amber-200', shape: 'bg-amber-400', text: 'text-amber-900' },
-        { bg: 'bg-lime-200', shape: 'bg-lime-400', text: 'text-lime-900' },
-        { bg: 'bg-cyan-200', shape: 'bg-cyan-400', text: 'text-cyan-900' },
-        { bg: 'bg-fuchsia-200', shape: 'bg-fuchsia-400', text: 'text-fuchsia-900' },
-        { bg: 'bg-gray-200', shape: 'bg-gray-400', text: 'text-gray-900' },
+        { bg: 'bg-blue-100', shape: 'bg-blue-300', text: 'text-blue-900' },
+        { bg: 'bg-emerald-100', shape: 'bg-emerald-300', text: 'text-emerald-900' },
+        { bg: 'bg-rose-100', shape: 'bg-rose-300', text: 'text-rose-900' },
+        { bg: 'bg-violet-100', shape: 'bg-violet-300', text: 'text-violet-900' },
+        { bg: 'bg-slate-100', shape: 'bg-slate-300', text: 'text-slate-900' },
     ];
     
     if (styleIndex === 0) {
@@ -115,16 +115,16 @@ const McoProceduralCover: FC<Omit<BookCoverProps, 'className'>> = ({ book }) => 
     const colorIndex = Math.floor(Math.abs(hash) / 2) % 4;
     
     const colorsA = [
-        { bg: 'bg-slate-700', text: 'text-slate-100', bgWord: 'text-slate-600' },
-        { bg: 'bg-cyan-700', text: 'text-cyan-100', bgWord: 'text-cyan-600' },
-        { bg: 'bg-teal-700', text: 'text-teal-100', bgWord: 'text-teal-600' },
-        { bg: 'bg-sky-700', text: 'text-sky-100', bgWord: 'text-sky-600' },
+        { bg: 'bg-gray-800', text: 'text-gray-100', bgWord: 'text-gray-700' },
+        { bg: 'bg-blue-900', text: 'text-blue-100', bgWord: 'text-blue-800' },
+        { bg: 'bg-green-900', text: 'text-green-100', bgWord: 'text-green-800' },
+        { bg: 'bg-indigo-900', text: 'text-indigo-100', bgWord: 'text-indigo-800' },
     ];
     const colorsB = [
-        { bg: 'bg-slate-800', text: 'text-white', accent: 'bg-cyan-400' },
-        { bg: 'bg-gray-800', text: 'text-white', accent: 'bg-amber-400' },
-        { bg: 'bg-sky-800', text: 'text-white', accent: 'bg-rose-400' },
-        { bg: 'bg-emerald-800', text: 'text-white', accent: 'bg-lime-400' },
+        { bg: 'bg-gray-900', text: 'text-white', accent: 'bg-amber-500' },
+        { bg: 'bg-slate-800', text: 'text-white', accent: 'bg-sky-500' },
+        { bg: 'bg-zinc-800', text: 'text-white', accent: 'bg-lime-500' },
+        { bg: 'bg-stone-800', text: 'text-white', accent: 'bg-rose-500' },
     ];
 
     if (styleIndex === 0) {
