@@ -255,5 +255,490 @@ function mco_single_book_shortcode($atts) {
     echo $script;
     return ob_get_clean();
 }
-// Other shortcodes like mco_exam_showcase and mco_book_showcase are omitted for brevity, but would be here.
+
+/**
+ * [mco_exam_showcase id="..."]
+ * Displays one or all exam programs in a styled grid format.
+ * - If `id` is provided, it shows only that specific program.
+ * - If no `id`, it shows all published programs.
+ */
+function mco_exam_showcase_shortcode($atts) {
+    $atts = shortcode_atts(['id' => ''], $atts, 'exam_program');
+    $program_id_str = sanitize_text_field($atts['id']);
+    
+    $query_args = [
+        'post_type' => 'mco_exam_program',
+        'posts_per_page' => -1,
+        'post_status' => 'publish',
+        'orderby' => 'title',
+        'order' => 'ASC',
+    ];
+    
+    if (!empty($program_id_str)) {
+        $post_id_from_app_id = (int) str_replace('prod-', '', $program_id_str);
+        if ($post_id_from_app_id > 0) {
+            $query_args['p'] = $post_id_from_app_id;
+        } else {
+            $query_args['name'] = $program_id_str;
+            $query_args['posts_per_page'] = 1;
+        }
+    }
+    
+    $programs = get_posts($query_args);
+    if (empty($programs)) {
+        return '<p>No exam programs found.</p>';
+    }
+    
+    $config_data = mco_get_app_config_data();
+    if (!$config_data) {
+        return '<p>Error loading exam configuration data.</p>';
+    }
+    
+    $app_url = mco_get_exam_app_url();
+    if (!$app_url) {
+        return '<p>Exam application URL is not configured. Please contact an administrator.</p>';
+    }
+
+    $icons = [
+        'practice' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+        'cert' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>',
+        'cart' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',
+        'bundle' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
+        'check' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+        'star' => '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    ];
+
+    ob_start();
+    
+    // --- Subscription Offers Section ---
+    $subscriptions_enabled = get_option('mco_subscriptions_enabled', '1') === '1';
+    $bundles_enabled = get_option('mco_bundles_enabled', '1') === '1';
+    $is_subscribed = (is_user_logged_in() && class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription(get_current_user_id(), '', 'active'));
+    
+    // Only show subscription offers on the main showcase page, not when a single program is displayed.
+    if (!$is_subscribed && empty($program_id_str) && $subscriptions_enabled) {
+        $monthly_sub = $config_data['examPrices']['sub-monthly'] ?? null;
+        $yearly_sub = $config_data['examPrices']['sub-yearly'] ?? null;
+        
+        if (($monthly_sub && isset($monthly_sub['productId'])) || ($yearly_sub && isset($yearly_sub['productId']))) {
+            echo '<div class="mco-subscription-grid">';
+            
+            if ($monthly_sub && isset($monthly_sub['productId'])) {
+                $monthly_url = get_site_url() . '/cart/?add-to-cart=' . $monthly_sub['productId'];
+                echo '<div class="mco-card mco-gradient--sub-monthly">';
+                echo '<h3 class="mco-sub-card__title">Monthly Subscription</h3>';
+                echo '<p class="mco-sub-card__description">Perfect for focused, short-term preparation.</p>';
+                echo '<div class="mco-sub-card__price">';
+                if (isset($monthly_sub['regularPrice']) && $monthly_sub['regularPrice'] > $monthly_sub['price']) {
+                    echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($monthly_sub['regularPrice'], 2) . '</span> ';
+                }
+                echo '<span class="mco-sub-card__price-value">$' . number_format_i18n($monthly_sub['price'], 2) . '</span>';
+                echo '<span class="mco-sub-card__price-unit">/month</span>';
+                echo '</div>';
+                echo '<ul class="mco-sub-card__features">';
+                echo '<li>' . $icons['check'] . '<span>Unlimited Access to ALL Practice Exams</span></li>';
+                echo '<li>' . $icons['check'] . '<span>Unlimited AI-Powered Feedback & Study Guides</span></li>';
+                echo '<li>' . $icons['check'] . '<span>Cancel Anytime</span></li>';
+                echo '</ul>';
+                echo '<div class="mco-card__footer">';
+                echo '<a href="' . esc_url($monthly_url) . '" class="mco-card__button mco-card__button--primary">Subscribe Now</a>';
+                echo '</div></div>';
+            }
+            
+            if ($yearly_sub && isset($yearly_sub['productId'])) {
+                $yearly_url = get_site_url() . '/cart/?add-to-cart=' . $yearly_sub['productId'];
+                echo '<div class="mco-card mco-gradient--sub-yearly mco-card--best-value">';
+                echo '<div class="mco-best-value-tag">' . $icons['star'] . ' Best Value</div>';
+                echo '<h3 class="mco-sub-card__title">Yearly Subscription</h3>';
+                echo '<p class="mco-sub-card__description">For continuous learning and preparing for multiple certifications.</p>';
+                echo '<div class="mco-sub-card__price">';
+                if (isset($yearly_sub['regularPrice']) && $yearly_sub['regularPrice'] > $yearly_sub['price']) {
+                    echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($yearly_sub['regularPrice'], 2) . '</span> ';
+                }
+                echo '<span class="mco-sub-card__price-value">$' . number_format_i18n($yearly_sub['price'], 2) . '</span>';
+                echo '<span class="mco-sub-card__price-unit">/year</span>';
+                echo '</div>';
+                echo '<p style="text-align:center; font-size: 0.875rem; color: #fcd34d; font-weight: 600;">Saves over 35%!</p>';
+                echo '<ul class="mco-sub-card__features">';
+                echo '<li>' . $icons['check'] . '<span>All Monthly features</span></li>';
+                echo '<li>' . $icons['check'] . '<span>Access All Exam Programs</span></li>';
+                echo '<li>' . $icons['check'] . '<span>Billed Annually</span></li>';
+                echo '</ul>';
+                echo '<div class="mco-card__footer">';
+                echo '<a href="' . esc_url($yearly_url) . '" class="mco-card__button mco-card__button--primary">Subscribe & Save</a>';
+                echo '</div></div>';
+            }
+            
+            echo '</div>';
+        }
+    }
+
+
+    echo '<div class="mco-showcase-grid">';
+    foreach ($programs as $program_post) {
+        $app_program_id = 'prod-' . $program_post->ID;
+        
+        $program_category = current(array_filter($config_data['examProductCategories'], function($c) use ($app_program_id) { return $c['id'] === $app_program_id; }));
+        if (!$program_category) continue;
+        
+        $practice_exam = current(array_filter($config_data['exams'], function($e) use ($program_category) { return $e['id'] === $program_category['practiceExamId']; }));
+        $cert_exam = current(array_filter($config_data['exams'], function($e) use ($program_category) { return $e['id'] === $program_category['certificationExamId']; }));
+
+        $program_link_url = rtrim($app_url, '/') . '/program/' . $app_program_id;
+
+        echo '<div class="mco-program-group" id="' . esc_attr($app_program_id) . '">';
+        echo '<a href="' . esc_url($program_link_url) . '"><h2 class="mco-program-group__title">' . esc_html($program_category['name']) . '</h2></a>';
+        echo '<div class="mco-program-group__description">' . wp_kses_post($program_category['description']) . '</div>';
+        echo '<div class="mco-program-group__cards">';
+
+        // Practice Exam Card
+        if ($practice_exam) {
+            echo '<div class="mco-card mco-gradient--practice-1">';
+            echo '<div class="mco-card__header"><span>' . $icons['practice'] . '</span> Practice Exam</div>';
+            echo '<div class="mco-card__body">';
+            echo '<h3 class="mco-card__subtitle">' . esc_html($practice_exam['name']) . '</h3>';
+            echo '<div class="mco-card__stats"><span>' . esc_html($practice_exam['numberOfQuestions']) . ' Qs</span><span>' . esc_html($practice_exam['durationMinutes']) . ' Mins</span><span>' . esc_html($practice_exam['passScore']) . '% Pass</span></div>';
+            echo '</div>';
+            echo '<div class="mco-card__footer">';
+            echo '<a href="' . esc_url(mco_get_exam_app_url() . '/test/' . $practice_exam['id']) . '" class="mco-card__button mco-card__button--primary">Start Practice</a>';
+            echo '</div>';
+            echo '</div>';
+        }
+
+        // Certification Exam Card
+        if ($cert_exam) {
+            $is_purchased = false;
+            $product_id = wc_get_product_id_by_sku($cert_exam['productSku']);
+
+            if (is_user_logged_in()) {
+                $user_id = get_current_user_id();
+                $is_subscribed = (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($user_id, '', 'active'));
+                $is_purchased = $is_subscribed || ($product_id ? wc_customer_bought_product('', $user_id, $product_id) : false);
+            }
+            $button_text = $is_purchased ? 'Start Exam' : 'Add to Cart';
+            $button_icon = $is_purchased ? $icons['practice'] : $icons['cart'];
+            $button_url = $is_purchased ? mco_get_exam_app_url() . '/test/' . $cert_exam['id'] : ($product_id ? get_site_url() . '/cart/?add-to-cart=' . $product_id : '#');
+            $button_class = $is_purchased ? 'mco-card__button--primary' : 'mco-card__button--purchase';
+
+            echo '<div class="mco-card mco-gradient--cert-1">';
+            echo '<div class="mco-card__header"><span>' . $icons['cert'] . '</span> Certification Exam</div>';
+            echo '<div class="mco-card__body">';
+            echo '<h3 class="mco-card__subtitle">' . esc_html($cert_exam['name']) . '</h3>';
+            if (!$is_purchased && $cert_exam['price'] > 0) {
+                echo '<div style="text-align: center; margin-bottom: 1rem;">';
+                if ($cert_exam['regularPrice'] > $cert_exam['price']) {
+                    echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($cert_exam['regularPrice'], 2) . '</span>';
+                }
+                echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($cert_exam['price'], 2) . '</span>';
+                echo '</div>';
+            }
+            echo '<div class="mco-card__stats"><span>' . esc_html($cert_exam['numberOfQuestions']) . ' Qs</span><span>' . esc_html($cert_exam['durationMinutes']) . ' Mins</span><span>' . esc_html($cert_exam['passScore']) . '% Pass</span></div>';
+            echo '</div>';
+            echo '<div class="mco-card__footer">';
+            echo '<a href="' . esc_url($button_url) . '" class="mco-card__button ' . $button_class . '">' . $button_icon . ' ' . $button_text . '</a>';
+            echo '</div>';
+            echo '</div>';
+
+            if ($bundles_enabled) {
+                // --- Bundle Card Logic (Prioritizing Subscription Bundle) ---
+                $subscription_bundle_sku = $cert_exam['productSku'] . '-1mo-addon';
+                $practice_bundle_sku = $cert_exam['productSku'] . '-1';
+
+                if ($subscriptions_enabled && isset($config_data['examPrices'][$subscription_bundle_sku])) {
+                    // Render Subscription Bundle Card
+                    $bundle_data = $config_data['examPrices'][$subscription_bundle_sku];
+                    $bundle_product_id = $bundle_data['productId'] ?? null;
+                    $bundle_url = $bundle_product_id ? get_site_url() . '/cart/?add-to-cart=' . $bundle_product_id : '#';
+
+                    echo '<div class="mco-card mco-gradient--sub-bundle-1">';
+                    echo '<div class="mco-card__header"><span>' . $icons['bundle'] . '</span> Exam + Subscription</div>';
+                    echo '<div class="mco-card__body">';
+                    echo '<h3 class="mco-card__subtitle">Get the certification exam plus one month of full subscription benefits.</h3>';
+                    if (($bundle_data['price'] ?? 0) > 0) {
+                        echo '<div style="text-align: center; margin-bottom: 1rem;">';
+                        if (($bundle_data['regularPrice'] ?? 0) > $bundle_data['price']) {
+                            echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($bundle_data['regularPrice'], 2) . '</span>';
+                        }
+                        echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($bundle_data['price'], 2) . '</span>';
+                        echo '</div>';
+                    }
+                    echo '<ul class="mco-sub-card__features">';
+                    echo '<li>' . $icons['check'] . '<span>One Certification Exam</span></li>';
+                    echo '<li>' . $icons['check'] . '<span>1-Month Full Subscription</span></li>';
+                    echo '<li style="padding-left: 28px; font-size: 0.8rem; opacity: 0.8;"><span>Incl. Unlimited Practice & AI Feedback</span></li>';
+                    echo '</ul>';
+                    echo '</div>';
+                    echo '<div class="mco-card__footer">';
+                    echo '<a href="' . esc_url($bundle_url) . '" class="mco-card__button mco-card__button--purchase">' . $icons['cart'] . ' Purchase Bundle</a>';
+                    echo '</div>';
+                    echo '</div>';
+
+                } elseif (isset($config_data['examPrices'][$practice_bundle_sku])) {
+                    // Render Practice Bundle Card (existing logic)
+                    $bundle_data = $config_data['examPrices'][$practice_bundle_sku];
+                    $bundle_product_id = $bundle_data['productId'] ?? null;
+                    $bundle_url = $bundle_product_id ? get_site_url() . '/cart/?add-to-cart=' . $bundle_product_id : '#';
+
+                    echo '<div class="mco-card mco-gradient--bundle-1">';
+                    echo '<div class="mco-card__header"><span>' . $icons['bundle'] . '</span> Exam Bundle</div>';
+                    echo '<div class="mco-card__body">';
+                    echo '<h3 class="mco-card__subtitle">The complete package for your certification.</h3>';
+                    if (($bundle_data['price'] ?? 0) > 0) {
+                        echo '<div style="text-align: center; margin-bottom: 1rem;">';
+                        if (($bundle_data['regularPrice'] ?? 0) > $bundle_data['price']) {
+                            echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($bundle_data['regularPrice'], 2) . '</span>';
+                        }
+                        echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($bundle_data['price'], 2) . '</span>';
+                        echo '</div>';
+                    }
+                    echo '<ul class="mco-sub-card__features">';
+                    echo '<li>' . $icons['check'] . '<span>One Certification Exam</span></li>';
+                    echo '<li>' . $icons['check'] . '<span>1-Month Unlimited Practice</span></li>';
+                    echo '<li>' . $icons['check'] . '<span>1-Month Unlimited AI Feedback</span></li>';
+                    echo '</ul>';
+                    echo '</div>';
+                    echo '<div class="mco-card__footer">';
+                    echo '<a href="' . esc_url($bundle_url) . '" class="mco-card__button mco-card__button--purchase">' . $icons['cart'] . ' Purchase Bundle</a>';
+                    echo '</div>';
+                    echo '</div>';
+                }
+            }
+        }
+
+        echo '</div></div>'; // Close cards and group
+    }
+    echo '</div>'; // Close grid
+    return ob_get_clean();
+}
+
+
+/**
+ * [mco_book_showcase]
+ * Displays all recommended books in a styled grid.
+ */
+function mco_book_showcase_shortcode() {
+    $books = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
+    if (empty($books)) return '<p>No recommended books found.</p>';
+    
+    $icons = ['cart' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>'];
+
+    ob_start();
+    echo '<div class="mco-grid">';
+    foreach ($books as $index => $book_post) {
+        $book = [
+            'title' => wp_strip_all_tags(get_the_title($book_post)),
+            'description' => has_excerpt($book_post->ID) ? wp_strip_all_tags(get_the_excerpt($book_post->ID)) : wp_strip_all_tags(wp_trim_words($book_post->post_content, 30, '...')),
+            'thumbnailUrl' => get_post_meta($book_post->ID, '_mco_thumbnail_url', true),
+            'links' => [
+                'com' => get_post_meta($book_post->ID, '_mco_link_com', true),
+                'in' => get_post_meta($book_post->ID, '_mco_link_in', true),
+                'ae' => get_post_meta($book_post->ID, '_mco_link_ae', true),
+            ]
+        ];
+
+        echo '<div class="mco-card mco-card--book">';
+        
+        $site_name = strtolower(get_bloginfo('name'));
+        $is_mco_tenant = (strpos($site_name, 'medical coding online') !== false);
+
+        if ($book['thumbnailUrl']) {
+            echo '<div class="mco-book-cover mco-book-cover--image"><img src="' . esc_url($book['thumbnailUrl']) . '" alt="' . esc_attr($book['title']) . '"/></div>';
+        } else {
+            if ($is_mco_tenant) {
+                echo mco_render_mco_procedural_cover_php($book);
+            } else {
+                echo mco_render_annapoorna_procedural_cover_php($book);
+            }
+        }
+        
+        echo '<div class="mco-card__body">';
+        echo '<h3 class="mco-card__title">' . esc_html($book['title']) . '</h3>';
+        echo '<p class="mco-card__description">' . esc_html($book['description']) . '</p>';
+        echo '</div>';
+        
+        echo '<div class="mco-card__footer" data-book-links>';
+        $link_found = false;
+        if (!empty($book['links']['com'])) { echo '<a href="' . esc_url($book['links']['com']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary mco-book-button" data-store="com">' . $icons['cart'] . ' Buy on Amazon.com</a>'; $link_found = true; }
+        if (!empty($book['links']['in'])) { echo '<a href="' . esc_url($book['links']['in']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary mco-book-button" data-store="in">' . $icons['cart'] . ' Buy on Amazon.in</a>'; $link_found = true; }
+        if (!empty($book['links']['ae'])) { echo '<a href="' . esc_url($book['links']['ae']) . '" target="_blank" rel="noopener" class="mco-card__button mco-card__button--secondary mco-book-button" data-store="ae">' . $icons['cart'] . ' Buy on Amazon.ae</a>'; $link_found = true; }
+        if (!$link_found) { echo '<p class="mco-card__no-links">Purchase links unavailable.</p>'; }
+        echo '</div>';
+        
+        echo '</div>';
+    }
+    echo '</div>';
+    
+    // Geo-targeting script
+    $script = '
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        try {
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            let preferredStore = "com";
+            const gccTimezones = ["Asia/Dubai", "Asia/Riyadh", "Asia/Qatar", "Asia/Bahrain", "Asia/Kuwait", "Asia/Muscat"];
+            if (timeZone.includes("Asia/Kolkata") || timeZone.includes("Asia/Calcutta")) {
+                preferredStore = "in";
+            } else if (gccTimezones.some(tz => timeZone === tz)) {
+                preferredStore = "ae";
+            }
+
+            document.querySelectorAll("[data-book-links]").forEach(function(footer) {
+                const links = {
+                    com: footer.querySelector("[data-store=\'com\']"),
+                    in: footer.querySelector("[data-store=\'in\']"),
+                    ae: footer.querySelector("[data-store=\'ae\']")
+                };
+
+                let primaryLink = links[preferredStore];
+                
+                if (!primaryLink) { // Fallback logic
+                    if (links.com) primaryLink = links.com;
+                    else if (links.in) primaryLink = links.in;
+                    else if (links.ae) primaryLink = links.ae;
+                }
+
+                if (primaryLink) {
+                    primaryLink.classList.remove("mco-card__button--secondary");
+                    primaryLink.classList.remove("mco-book-button");
+                    primaryLink.classList.add("mco-card__button--purchase");
+                    footer.prepend(primaryLink);
+                }
+            });
+        } catch (e) {
+            console.error("MCO Geo-targeting script failed:", e);
+        }
+    });
+    </script>';
+    
+    echo $script;
+    
+    return ob_get_clean();
+}
+
+/**
+ * [mco_single_book]
+ * Displays a detailed view for a single book. Intended for use on the 'mco_recommended_book' CPT single post page.
+ */
+function mco_single_book_shortcode($atts) {
+    global $post;
+    if (!is_a($post, 'WP_Post') || $post->post_type !== 'mco_recommended_book') {
+        return '<!-- MCO Single Book: This shortcode must be used on a "Recommended Book" post. -->';
+    }
+
+    // Temporarily remove this shortcode to prevent an infinite loop when applying the_content filter.
+    remove_shortcode('mco_single_book', 'mco_single_book_shortcode');
+    // Get the raw content and process it. This will now safely render other shortcodes, paragraphs, etc.
+    $processed_content = apply_filters('the_content', $post->post_content);
+    // Re-add the shortcode in case it's used again on the same page (unlikely but good practice).
+    add_shortcode('mco_single_book', 'mco_single_book_shortcode');
+    
+    $book = [
+        'title'        => get_the_title($post->ID),
+        'description'  => $processed_content,
+        'thumbnailUrl' => get_post_meta($post->ID, '_mco_thumbnail_url', true),
+        'links'        => [
+            'com' => get_post_meta($post->ID, '_mco_link_com', true),
+            'in'  => get_post_meta($post->ID, '_mco_link_in', true),
+            'ae'  => get_post_meta($post->ID, '_mco_link_ae', true),
+        ]
+    ];
+    
+    $icons = ['cart' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>'];
+
+    ob_start();
+
+    // The main card container
+    echo '<div class="mco-single-book-card">';
+
+    // Left side: Cover
+    echo '<div class="mco-single-book-card__cover">';
+    if ($book['thumbnailUrl']) {
+        echo '<img src="' . esc_url($book['thumbnailUrl']) . '" alt="' . esc_attr($book['title']) . '"/>';
+    } else {
+        $site_name = strtolower(get_bloginfo('name'));
+        $is_mco_tenant = (strpos($site_name, 'medical coding online') !== false);
+        if ($is_mco_tenant) {
+            echo mco_render_mco_procedural_cover_php($book);
+        } else {
+            echo mco_render_annapoorna_procedural_cover_php($book);
+        }
+    }
+    echo '</div>';
+
+    // Right side: Details
+    echo '<div class="mco-single-book-card__details">';
+    echo '<h1 class="mco-single-book-card__title">' . esc_html($book['title']) . '</h1>';
+    echo '<div class="mco-single-book-card__description">' . $book['description'] . '</div>';
+
+    $has_links = !empty($book['links']['com']) || !empty($book['links']['in']) || !empty($book['links']['ae']);
+    if ($has_links) {
+        echo '<div class="mco-single-book-card__buttons" data-book-links-single>';
+        echo '<p class="mco-single-book-card__buttons-label">Available on:</p>';
+        if (!empty($book['links']['com'])) {
+            echo '<a href="' . esc_url($book['links']['com']) . '" target="_blank" rel="noopener noreferrer" class="mco-single-book-card__button" data-store="com">' . $icons['cart'] . ' Buy on Amazon.com</a>';
+        }
+        if (!empty($book['links']['in'])) {
+            echo '<a href="' . esc_url($book['links']['in']) . '" target="_blank" rel="noopener noreferrer" class="mco-single-book-card__button" data-store="in">' . $icons['cart'] . ' Buy on Amazon.in</a>';
+        }
+        if (!empty($book['links']['ae'])) {
+            echo '<a href="' . esc_url($book['links']['ae']) . '" target="_blank" rel="noopener noreferrer" class="mco-single-book-card__button" data-store="ae">' . $icons['cart'] . ' Buy on Amazon.ae</a>';
+        }
+        echo '</div>';
+    }
+
+    echo '</div>'; // end details
+    echo '</div>'; // end card
+
+    // The geo-targeting script.
+    $script = '
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        try {
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            let preferredStore = "com";
+            const gccTimezones = ["Asia/Dubai", "Asia/Riyadh", "Asia/Qatar", "Asia/Bahrain", "Asia/Kuwait", "Asia/Muscat"];
+            if (timeZone.includes("Asia/Kolkata") || timeZone.includes("Asia/Calcutta")) {
+                preferredStore = "in";
+            } else if (gccTimezones.some(tz => timeZone === tz)) {
+                preferredStore = "ae";
+            }
+
+            document.querySelectorAll("[data-book-links-single]").forEach(function(buttonContainer) {
+                const links = {
+                    com: buttonContainer.querySelector("[data-store=\'com\']"),
+                    in: buttonContainer.querySelector("[data-store=\'in\']"),
+                    ae: buttonContainer.querySelector("[data-store=\'ae\']")
+                };
+
+                let primaryLink = links[preferredStore];
+                                // Fallback if preferred store link does not exist
+                if (!primaryLink) {
+                    if (links.com) primaryLink = links.com;
+                    else if (links.in) primaryLink = links.in;
+                    else if (links.ae) primaryLink = links.ae;
+                }
+
+                if (primaryLink) {
+                    primaryLink.classList.add("mco-single-book-card__button--primary");
+                    buttonContainer.prepend(primaryLink);
+                    
+                    // Add secondary class to other buttons
+                    Object.values(links).forEach(link => {
+                        if (link && link !== primaryLink) {
+                            link.classList.add("mco-single-book-card__button--secondary");
+                        }
+                    });
+                }
+            });
+        } catch (e) {
+            console.error("MCO Geo-targeting script failed:", e);
+        }
+    });
+    </script>';
+    
+    echo $script;
+
+    return ob_get_clean();
+}
+
 ?>
