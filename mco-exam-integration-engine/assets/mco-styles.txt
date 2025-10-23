@@ -49,8 +49,8 @@
 .mco-proc-cover-mco-b--color-2 { background-color: #0c4a6e; color: #ffffff; } .mco-proc-cover-mco-b--color-2 .mco-proc-cover-mco-b__accent { background-color: #fb7185; }
 .mco-proc-cover-mco-b--color-3 { background-color: #065f46; color: #ffffff; } .mco-proc-cover-mco-b--color-3 .mco-proc-cover-mco-b__accent { background-color: #a3e635; }
 
-/* --- MCO Shortcode Card Styles --- */
-.mco-card__title {
+/* --- MCO Shortcode Card Styles (Scoped to Book Grid) --- */
+.mco-book-grid .mco-card__title {
     font-size: 1.125rem;
     font-weight: 700;
     color: #1e293b;
@@ -58,18 +58,53 @@
     line-height: 1.4;
     transition: color 0.2s ease-in-out;
 }
-.mco-card__body a {
+.mco-book-grid .mco-card__body a {
     text-decoration: none;
 }
-.mco-card__body a:hover .mco-card__title {
+.mco-book-grid .mco-card__body a:hover .mco-card__title {
     color: #0891b2; /* cyan-600 */
 }
-.mco-card__description {
+.mco-book-grid .mco-card__description {
     font-size: 0.875rem;
     color: #475569;
     line-height: 1.6;
     flex-grow: 1;
 }
+
+/* --- New styles for Book Showcase --- */
+.mco-book-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+}
+.mco-book-grid .mco-card {
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05);
+    overflow: hidden;
+}
+.mco-book-grid .mco-book-cover {
+    width: 100%;
+    height: 14rem; /* 224px */
+}
+.mco-book-grid .mco-card__body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+.mco-book-grid .mco-card__footer {
+    margin-top: auto;
+    padding: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
 .mco-book-button {
     display: inline-flex;
     align-items: center;
@@ -89,12 +124,12 @@
     background-color: #e2e8f0;
     border-color: #cbd5e1;
 }
-.mco-card__footer .mco-card__button--purchase {
+.mco-book-grid .mco-card__footer .mco-book-button {
     background-color: #facc15;
     color: #1e293b;
     border-color: #facc15;
 }
-.mco-card__footer .mco-card__button--purchase:hover {
+.mco-book-grid .mco-card__footer .mco-book-button:hover {
     background-color: #f59e0b;
     border-color: #f59e0b;
 }

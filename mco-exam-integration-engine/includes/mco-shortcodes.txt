@@ -66,13 +66,6 @@ function mco_render_annapoorna_style_b($book, $color_index) {
 }
 
 function mco_render_mco_style_a($book, $color_index) {
-    $colors = [
-        ['bg' => '#334155', 'text' => '#f1f5f9', 'bgWord' => '#475569'],
-        ['bg' => '#0891b2', 'text' => '#cffafe', 'bgWord' => '#155e75'],
-        ['bg' => '#115e59', 'text' => '#ccfbf1', 'bgWord' => '#134e4a'],
-        ['bg' => '#0369a1', 'text' => '#e0f2fe', 'bgWord' => '#0c4a6e'],
-    ];
-    $color = $colors[$color_index % 4];
     $title_words = explode(' ', $book['title']);
     $bg_word_candidates = array_filter($title_words, function($w) { return strlen($w) > 4; });
     $bg_word = strtoupper(empty($bg_word_candidates) ? ($title_words[0] ?? '') : current($bg_word_candidates));
@@ -90,12 +83,6 @@ function mco_render_mco_style_a($book, $color_index) {
 }
 
 function mco_render_mco_style_b($book, $color_index) {
-    $colors = [
-        ['bg' => '#1e293b', 'text' => '#ffffff', 'accent' => '#38bdf8'],
-        ['bg' => '#44403c', 'text' => '#ffffff', 'accent' => '#facc15'],
-        ['bg' => '#0c4a6e', 'text' => '#ffffff', 'accent' => '#fb7185'],
-        ['bg' => '#065f46', 'text' => '#ffffff', 'accent' => '#a3e635'],
-    ];
     ob_start();
     ?>
     <div class="mco-book-cover mco-proc-cover-mco-b mco-proc-cover-mco-b--color-<?php echo ($color_index % 4); ?>">
@@ -327,7 +314,7 @@ function mco_book_showcase_shortcode() {
     foreach ($config_data['suggestedBooks'] as $book) {
         $book_cover = '';
         if (!empty($book['thumbnailUrl'])) {
-            $book_cover = '<img src="' . esc_url($book['thumbnailUrl']) . '" alt="' . esc_attr($book['title']) . '" class="mco-book-cover">';
+            $book_cover = '<img src="' . esc_url($book['thumbnailUrl']) . '" alt="' . esc_attr($book['title']) . '" style="width:100%; height:100%; object-fit: cover;">';
         } else {
             $site_host = parse_url(home_url(), PHP_URL_HOST);
             if (strpos($site_host, 'coding-online') !== false) {
@@ -337,8 +324,9 @@ function mco_book_showcase_shortcode() {
             }
         }
 
-        echo '<div class="mco-card"><div class="mco-card__body">';
-        echo $book_cover;
+        echo '<div class="mco-card">';
+        echo '<div class="mco-book-cover">' . $book_cover . '</div>';
+        echo '<div class="mco-card__body">';
         echo '<a href="' . esc_url($book['permalink']) . '" target="_blank" rel="noopener noreferrer"><h3 class="mco-card__title">' . esc_html($book['title']) . '</h3></a>';
         echo '<p class="mco-card__description">' . esc_html($book['description']) . '</p>';
         echo '</div><div class="mco-card__footer">';
