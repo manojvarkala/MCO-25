@@ -49,39 +49,40 @@
 .mco-proc-cover-mco-b--color-2 { background-color: #0c4a6e; color: #ffffff; } .mco-proc-cover-mco-b--color-2 .mco-proc-cover-mco-b__accent { background-color: #fb7185; }
 .mco-proc-cover-mco-b--color-3 { background-color: #065f46; color: #ffffff; } .mco-proc-cover-mco-b--color-3 .mco-proc-cover-mco-b__accent { background-color: #a3e635; }
 
-/* --- Styles for Exam Showcase --- */
+/* --- Styles for Exam Showcase (Updated for Dashboard Consistency) --- */
 .mco-showcase-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
     margin-bottom: 2rem;
-}
-@media (min-width: 768px) {
-    .mco-showcase-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
 }
 
 .mco-program-group {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0; /* slate-200 */
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    background-color: #334155; /* slate-700 */
+    border: 1px solid #475569; /* slate-600 */
+    border-radius: 0.75rem; /* rounded-xl */
+    padding: 1.5rem; /* p-6 */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
-    margin-bottom: 0; /* remove margin-bottom for grid layout */
 }
 
-.mco-program-group__title { 
-    font-size: 1.5rem; 
-    font-weight: 700; 
-    margin-bottom: 0.5rem;
-    color: #1e293b; /* Dark text for white card */
+.mco-program-group__title {
+    font-size: 1.25rem; /* text-xl */
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    color: #f8fafc; /* slate-50 */
 }
-.mco-program-group__title a { text-decoration: none; color: inherit; }
-.mco-program-group__title a:hover { color: #0891b2; }
-.mco-program-group__description { color: #475569; margin-bottom: 1.5rem; }
+.mco-program-group__title a { text-decoration: none; color: inherit; transition: color 0.2s; }
+.mco-program-group__title a:hover { color: #06b6d4; /* cyan-500 */ }
+.mco-program-group__description {
+    color: #94a3b8; /* slate-400 */
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem; /* text-sm */
+}
+.mco-program-group__description p {
+    margin: 0; /* Reset paragraph margin inside description */
+}
 
 /* The grid for the inner cards (practice, cert, bundle) */
 .mco-program-group__cards { 
@@ -91,7 +92,7 @@
 }
 
 /* Styles for the inner cards */
-.mco-showcase-grid .mco-card, .mco-subscription-grid .mco-card { 
+.mco-card { 
     display: flex; 
     flex-direction: column; 
     color: white; 
@@ -99,7 +100,7 @@
     box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.05); 
 }
 
-.mco-showcase-grid .mco-card__header, .mco-subscription-grid .mco-card__header { 
+.mco-card__header { 
     display: flex; 
     align-items: center; 
     gap: 0.75rem; 
@@ -110,19 +111,19 @@
     letter-spacing: 0.05em; 
     background: rgba(0,0,0,0.1); 
 }
-.mco-showcase-grid .mco-card__body { 
+.mco-card__body { 
     padding: 1.5rem; 
     display: flex; 
     flex-direction: column; 
     flex-grow: 1; 
 }
-.mco-showcase-grid .mco-card__subtitle { 
+.mco-card__subtitle { 
     font-size: 1.25rem; 
     font-weight: 700; 
     line-height: 1.3; 
     flex-grow: 1; 
 }
-.mco-showcase-grid .mco-card__stats { 
+.mco-card__stats { 
     display: grid; 
     grid-template-columns: repeat(3, 1fr); 
     gap: 1rem; 
@@ -134,11 +135,11 @@
     padding: 0.75rem; 
     border-radius: 0.5rem; 
 }
-.mco-showcase-grid .mco-card__footer { 
+.mco-card__footer { 
     margin-top: auto; 
     padding: 1.5rem; 
 }
-.mco-showcase-grid .mco-card__button { 
+.mco-card__button { 
     display: flex; 
     align-items: center; 
     justify-content: center; 
@@ -165,7 +166,7 @@
     background-color: #f59e0b; 
 }
 
-/* Subscription Grid (This was combined before, now separate) */
+/* Subscription Grid */
 .mco-subscription-grid {
     display: grid; 
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
