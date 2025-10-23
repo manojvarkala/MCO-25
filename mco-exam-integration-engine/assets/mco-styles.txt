@@ -85,55 +85,62 @@
 .mco-sub-card__features { list-style: none; padding: 0; margin: 0 0 1.5rem 0; display: flex; flex-direction: column; gap: 0.75rem; }
 .mco-sub-card__features li { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.875rem; }
 
-/* --- MCO Book Showcase Card Styles (REVISED) --- */
-.mco-book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; }
+/* --- MCO Shortcode Card Styles (Scoped to Book Grid) --- */
+.mco-book-grid .mco-card__title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+    transition: color 0.2s ease-in-out;
+}
+.mco-book-grid .mco-card__body a {
+    text-decoration: none;
+}
+.mco-book-grid .mco-card__body a:hover .mco-card__title {
+    color: #0891b2; /* cyan-600 */
+}
+.mco-book-grid .mco-card__description {
+    font-size: 0.875rem;
+    color: #475569;
+    line-height: 1.6;
+    flex-grow: 1;
+}
+
+/* --- New styles for Book Showcase --- */
+.mco-book-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+}
 .mco-book-grid .mco-card {
     display: flex;
     flex-direction: column;
-    color: #ffffff;
-    border: 1px solid rgba(255,255,255,0.1);
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 0.75rem;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.05);
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05);
     overflow: hidden;
 }
-/* Apply cycling gradients to book cards for a colorful layout */
-.mco-book-grid .mco-card:nth-child(4n+1) { background-image: linear-gradient(to top right, #075985, #0ea5e9); } /* sky */
-.mco-book-grid .mco-card:nth-child(4n+2) { background-image: linear-gradient(to top right, #6d28d9, #8b5cf6); } /* violet */
-.mco-book-grid .mco-card:nth-child(4n+3) { background-image: linear-gradient(to top right, #be185d, #ec4899); } /* pink */
-.mco-book-grid .mco-card:nth-child(4n+4) { background-image: linear-gradient(to top right, #047857, #10b981); } /* emerald */
-.mco-book-grid .mco-book-cover { width: 100%; height: 14rem; }
+.mco-book-grid .mco-book-cover {
+    width: 100%;
+    height: 14rem; /* 224px */
+}
 .mco-book-grid .mco-card__body {
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    background-color: rgba(0,0,0,0.15);
-}
-.mco-book-grid .mco-card__title {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: #ffffff;
-    margin-bottom: 0.75rem;
-    line-height: 1.4;
-    transition: color 0.2s ease-in-out;
-}
-.mco-book-grid .mco-card__body a { text-decoration: none; }
-.mco-book-grid .mco-card__body a:hover .mco-card__title { color: #bae6fd; }
-.mco-book-grid .mco-card__description {
-    font-size: 0.875rem;
-    color: rgba(255,255,255,0.85);
-    line-height: 1.6;
-    flex-grow: 1;
 }
 .mco-book-grid .mco-card__footer {
     margin-top: auto;
     padding: 1.5rem;
-    border-top: 1px solid rgba(255,255,255,0.15);
+    border-top: 1px solid #e2e8f0;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    background-color: rgba(0,0,0,0.15);
 }
+
 .mco-book-button {
     display: inline-flex;
     align-items: center;
@@ -145,10 +152,24 @@
     font-weight: 600;
     text-decoration: none;
     transition: all 0.2s;
-    border: none;
+    border: 1px solid #e2e8f0;
+    background-color: #f1f5f9;
+    color: #475569;
 }
-.mco-book-grid .mco-card__footer .mco-book-button { background-color: #facc15; color: #1e293b; }
-.mco-book-grid .mco-card__footer .mco-book-button:hover { background-color: #f59e0b; }
+.mco-book-button:hover {
+    background-color: #e2e8f0;
+    border-color: #cbd5e1;
+}
+.mco-book-grid .mco-card__footer .mco-book-button {
+    background-color: #facc15;
+    color: #1e293b;
+    border-color: #facc15;
+}
+.mco-book-grid .mco-card__footer .mco-book-button:hover {
+    background-color: #f59e0b;
+    border-color: #f59e0b;
+}
+
 
 /* --- Single Book Card Styles --- */
 .mco-single-book-card { display: grid; grid-template-columns: 300px 1fr; gap: 2.5rem; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 2.5rem; margin: 2rem auto; max-width: 900px; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); }

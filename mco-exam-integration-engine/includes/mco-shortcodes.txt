@@ -407,8 +407,8 @@ function mco_single_book_shortcode() {
                             <?php echo mco_get_svg_icon('cart'); ?>
                             Buy on <?php echo esc_html($store_map[$key]); ?>
                         </a>
-                        <p> As an Amazon Associate, we earn from qualifying purchases. Using our links doesn’t cost you anything extra and helps support our platform to keep creating great content for you. Please note that book availability may vary by region.</p>
                     <?php endforeach; ?>
+                     <p style="font-size: 0.75rem; color: #64748b; margin-top: 1rem; text-align: center;"> As an Amazon Associate, we earn from qualifying purchases. Using our links doesn’t cost you anything extra and helps support our platform to keep creating great content for you. Please note that book availability may vary by region.</p>
                 </div>
             <?php endif; ?>
         </div>
