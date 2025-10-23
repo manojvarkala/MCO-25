@@ -73,3 +73,5 @@
     .mco-single-book-card__description { text-align: center; }
     .mco-single-book-card__buttons-label { text-align: center; }
 }
+
+/* Other shortcode styles omitted for brevity */
