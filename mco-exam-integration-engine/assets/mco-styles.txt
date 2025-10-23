@@ -49,19 +49,9 @@
 .mco-proc-cover-mco-b--color-2 { background-color: #0c4a6e; color: #ffffff; } .mco-proc-cover-mco-b--color-2 .mco-proc-cover-mco-b__accent { background-color: #fb7185; }
 .mco-proc-cover-mco-b--color-3 { background-color: #065f46; color: #ffffff; } .mco-proc-cover-mco-b--color-3 .mco-proc-cover-mco-b__accent { background-color: #a3e635; }
 
-/* --- New styles for Exam Showcase --- */
+/* --- Styles for Exam Showcase --- */
 .mco-showcase-grid {
-    display: grid;
-    grid-template-columns: 1fr; /* Mobile first: single column */
-    gap: 2rem;
     margin-bottom: 2rem;
-}
-
-/* Two columns for medium screens and up */
-@media (min-width: 768px) {
-    .mco-showcase-grid {
-        grid-template-columns: 1fr 1fr;
-    }
 }
 
 .mco-program-group {
@@ -72,7 +62,13 @@
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
     display: flex;
     flex-direction: column;
+    margin-bottom: 2rem;
 }
+
+.mco-showcase-grid .mco-program-group:last-child {
+    margin-bottom: 0;
+}
+
 
 .mco-program-group__title { 
     font-size: 1.5rem; 
