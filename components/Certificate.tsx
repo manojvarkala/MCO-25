@@ -177,6 +177,24 @@ const Certificate: FC = () => {
     const verificationUrl = `${window.location.origin}/verify/${certData.certificateNumber}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(verificationUrl)}`;
 
+    // FIX: Sanitize the body to prevent repetition and ensure placeholder removal.
+    const sanitizeBody = (body: string) => {
+        let sanitized = body || '';
+        // Remove common prefixes, case-insensitively
+        sanitized = sanitized.replace(/^this is to certify that/i, '').trim();
+        sanitized = sanitized.replace(/^this certifies that/i, '').trim();
+        // Robustly remove the candidate name placeholder, with or without surrounding tags
+        sanitized = sanitized.replace(/<strong>{\s*candidateName\s*}<\/strong>|{\s*candidateName\s*}/gi, '').trim();
+        return sanitized;
+    };
+
+    const processedBody = sanitizeBody(template.body)
+        .replace(/{examName}/g, `<strong>${examName}</strong>`);
+    
+    const classicBody = processedBody.replace(/{finalScore}%/g, `<strong>${certData.finalScore.toFixed(0)}%</strong>`);
+    const modernBody = processedBody.replace(/{finalScore}%/g, '');
+
+
     const classicCertificate = (
         <div className="cert-container-classic">
             <div className="cert-border-pattern">
@@ -204,7 +222,7 @@ const Certificate: FC = () => {
                                 <p className="cert-title-main">{template.title}</p>
                                 <p className="cert-text-normal mt-4">This is to certify that</p>
                                 <h2 className="cert-candidate-name">{certData.candidateName}</h2>
-                                <p className="cert-text-normal max-w-xl mx-auto" dangerouslySetInnerHTML={{ __html: template.body.replace('{examName}', `<strong>${examName}</strong>`).replace('{finalScore}%', `<strong>${certData.finalScore.toFixed(0)}%</strong>`).replace('{candidateName}', '') }} />
+                                <p className="cert-text-normal max-w-xl mx-auto" dangerouslySetInnerHTML={{ __html: classicBody }} />
                             </main>
 
                             {/* Footer */}
@@ -282,7 +300,7 @@ const Certificate: FC = () => {
                 <main className="cert-body-modern">
                     <p className="cert-recipient-label">This is to certify that</p>
                     <h2 className="cert-candidate-name-modern">{certData.candidateName}</h2>
-                    <p className="cert-completion-text" dangerouslySetInnerHTML={{ __html: template.body.replace('{examName}', `<strong>${examName}</strong>`).replace('{finalScore}%', '').replace('{candidateName}', '') }} />
+                    <p className="cert-completion-text" dangerouslySetInnerHTML={{ __html: modernBody }} />
                 </main>
                 <footer className="cert-footer-modern">
                     <div className="cert-details-grid">

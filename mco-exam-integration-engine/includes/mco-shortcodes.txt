@@ -292,4 +292,140 @@ function mco_exam_showcase_shortcode($atts) {
                 if ($subscriptions_enabled && isset($config_data['examPrices'][$subscription_bundle_sku])) {
                     $bundle_data = $config_data['examPrices'][$subscription_bundle_sku];
                     $bundle_url = isset($bundle_data['productId']) ? get_site_url() . '/cart/?add-to-cart=' . $bundle_data['productId'] : '#';
-                    echo '<div class="mco-card mco-gradient
+                    echo '<div class="mco-card mco-gradient--bundle-sub"><div class="mco-card__header"><span>' . mco_get_svg_icon('bundle') . '</span> Exam + Subscription</div><div class="mco-card__body"><h3 class="mco-card__subtitle">Get This Exam PLUS 1-Month Full Access</h3>';
+                    if (isset($bundle_data['price'])) {
+                        echo '<div style="text-align: center; margin-bottom: 1rem;">';
+                        if ($bundle_data['regularPrice'] > $bundle_data['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($bundle_data['regularPrice'], 2) . '</span>';
+                        echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($bundle_data['price'], 2) . '</span></div>';
+                    }
+                    echo '</div><div class="mco-card__footer"><a href="' . esc_url($bundle_url) . '" class="mco-card__button mco-card__button--purchase">' . mco_get_svg_icon('cart') . ' Purchase Bundle</a></div></div>';
+                } elseif (isset($config_data['examPrices'][$practice_bundle_sku])) {
+                     $bundle_data = $config_data['examPrices'][$practice_bundle_sku];
+                     $bundle_url = isset($bundle_data['productId']) ? get_site_url() . '/cart/?add-to-cart=' . $bundle_data['productId'] : '#';
+                     echo '<div class="mco-card mco-gradient--bundle-practice"><div class="mco-card__header"><span>' . mco_get_svg_icon('bundle') . '</span> Exam Bundle</div><div class="mco-card__body"><h3 class="mco-card__subtitle">Get This Exam PLUS 1-Month Practice Access</h3>';
+                     if (isset($bundle_data['price'])) {
+                         echo '<div style="text-align: center; margin-bottom: 1rem;">';
+                         if ($bundle_data['regularPrice'] > $bundle_data['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($bundle_data['regularPrice'], 2) . '</span>';
+                         echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($bundle_data['price'], 2) . '</span></div>';
+                     }
+                     echo '</div><div class="mco-card__footer"><a href="' . esc_url($bundle_url) . '" class="mco-card__button mco-card__button--purchase">' . mco_get_svg_icon('cart') . ' Purchase Bundle</a></div></div>';
+                }
+            }
+        }
+        echo '</div></div>';
+    }
+    echo '</div>';
+    return ob_get_clean();
+}
+
+function mco_book_showcase_shortcode() {
+    $config_data = mco_get_app_config_data();
+    if (empty($config_data['suggestedBooks'])) return '<p>No recommended books found.</p>';
+
+    ob_start();
+    echo '<div class="mco-book-grid">';
+    foreach ($config_data['suggestedBooks'] as $book) {
+        $book_cover = '';
+        if (!empty($book['thumbnailUrl'])) {
+            $book_cover = '<img src="' . esc_url($book['thumbnailUrl']) . '" alt="' . esc_attr($book['title']) . '" class="mco-book-cover">';
+        } else {
+            $site_host = parse_url(home_url(), PHP_URL_HOST);
+            if (strpos($site_host, 'coding-online') !== false) {
+                $book_cover = mco_render_mco_procedural_cover_php($book);
+            } else {
+                $book_cover = mco_render_annapoorna_procedural_cover_php($book);
+            }
+        }
+
+        echo '<div class="mco-card"><div class="mco-card__body">';
+        echo $book_cover;
+        echo '<a href="' . esc_url($book['permalink']) . '" target="_blank" rel="noopener noreferrer"><h3 class="mco-card__title">' . esc_html($book['title']) . '</h3></a>';
+        echo '<p class="mco-card__description">' . esc_html($book['description']) . '</p>';
+        echo '</div><div class="mco-card__footer">';
+
+        $links = array_filter($book['affiliateLinks']);
+        if (!empty($links)) {
+            foreach($links as $key => $url) {
+                $domain = 'Amazon.' . $key;
+                echo '<a href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer" class="mco-book-button">'.mco_get_svg_icon('cart').' Buy on ' . esc_html($domain) . '</a>';
+            }
+        } else {
+            echo '<p>Purchase links coming soon.</p>';
+        }
+
+        echo '</div></div>';
+    }
+    echo '</div>';
+    return ob_get_clean();
+}
+
+
+function mco_single_book_shortcode() {
+    global $post;
+    if (!$post || $post->post_type !== 'mco_recommended_book') return '<p>This shortcode must be used on a "Recommended Book" post.</p>';
+
+    $config_data = mco_get_app_config_data();
+    $book_id_meta = get_post_meta($post->ID, '_mco_book_id', true);
+    $book = current(array_filter($config_data['suggestedBooks'], function($b) use ($book_id_meta) { return $b['id'] === $book_id_meta; }));
+
+    if (!$book) return '<p>Book data not found in application configuration.</p>';
+
+    ob_start();
+    
+    // Temporarily remove the content filter to prevent an infinite loop, but keep other essential filters.
+    remove_filter('the_content', 'wpautop');
+    remove_filter('the_content', 'mco_auto_apply_single_book_style', 999);
+    $book_content = apply_filters('the_content', get_the_content());
+    add_filter('the_content', 'wpautop');
+    add_filter('the_content', 'mco_auto_apply_single_book_style', 999);
+
+    $book_cover = '';
+    if (!empty($book['thumbnailUrl'])) {
+        $book_cover = '<img src="' . esc_url($book['thumbnailUrl']) . '" alt="' . esc_attr($book['title']) . '">';
+    } else {
+        $site_host = parse_url(home_url(), PHP_URL_HOST);
+        if (strpos($site_host, 'coding-online') !== false) {
+            $book_cover = mco_render_mco_procedural_cover_php($book);
+        } else {
+            $book_cover = mco_render_annapoorna_procedural_cover_php($book);
+        }
+    }
+
+    $links = array_filter($book['affiliateLinks']);
+
+    ?>
+    <div class="mco-single-book-card">
+        <div class="mco-single-book-card__cover">
+            <?php echo $book_cover; ?>
+        </div>
+        <div class="mco-single-book-card__details">
+            <h1><?php echo esc_html($book['title']); ?></h1>
+            <div class="mco-single-book-card__description">
+                <?php echo wp_kses_post($book_content); ?>
+            </div>
+            <?php if (!empty($links)): ?>
+                <div class="mco-single-book-card__buttons">
+                    <p class="mco-single-book-card__buttons-label">Purchase this book:</p>
+                    <?php
+                    $store_map = ['com' => 'Amazon.com', 'in' => 'Amazon.in', 'ae' => 'Amazon.ae'];
+                    $primary_key = 'com'; // You can add geo-logic here if needed
+                    if (isset($links[$primary_key])): ?>
+                        <a href="<?php echo esc_url($links[$primary_key]); ?>" class="mco-single-book-card__button mco-single-book-card__button--primary" target="_blank" rel="noopener noreferrer">
+                            <?php echo mco_get_svg_icon('cart'); ?>
+                            Buy on <?php echo esc_html($store_map[$primary_key]); ?>
+                        </a>
+                    <?php endif; ?>
+                    <?php foreach ($links as $key => $url): if ($key === $primary_key) continue; ?>
+                        <a href="<?php echo esc_url($url); ?>" class="mco-single-book-card__button mco-single-book-card__button--secondary" target="_blank" rel="noopener noreferrer">
+                            <?php echo mco_get_svg_icon('cart'); ?>
+                            Buy on <?php echo esc_html($store_map[$key]); ?>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+?>

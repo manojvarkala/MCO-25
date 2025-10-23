@@ -3,13 +3,14 @@ if (!defined('ABSPATH')) exit;
 
 // Custom sanitizer to allow data URIs for images or sanitize as a URL
 function mco_sanitize_data_uri_or_url($input) {
-    $trimmed_input = trim($input);
+    // FIX: Add wp_unslash to prevent backslashes from being added to base64 strings on save.
+    $unslashed_input = wp_unslash(trim($input));
     // Allow data URIs for common image types
-    if (preg_match('/^data:image\/(svg\+xml|png|jpeg|gif|webp);base64,/', $trimmed_input)) {
-        return $trimmed_input;
+    if (preg_match('/^data:image\/(svg\+xml|png|jpeg|gif|webp);base64,/', $unslashed_input)) {
+        return $unslashed_input;
     }
     // For anything else, treat it as a URL and sanitize it.
-    return esc_url_raw($trimmed_input);
+    return esc_url_raw($unslashed_input);
 }
 
 // --- ADMIN MENU & HOOKS ---
