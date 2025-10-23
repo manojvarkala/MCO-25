@@ -127,6 +127,16 @@ const ExamProgram: FC = () => {
         };
     }, [programId, activeOrg]);
 
+    const bundleTypeToShow = useMemo(() => {
+        if (!bundlesEnabled || !programData?.certExam || !examPrices) return null;
+        const subBundleSku = `${programData.certExam.productSku}-1mo-addon`;
+        const practiceBundleSku = `${programData.certExam.productSku}-1`;
+
+        if (examPrices[subBundleSku]) return 'subscription';
+        if (examPrices[practiceBundleSku]) return 'practice';
+        return null;
+    }, [programData, examPrices, bundlesEnabled]);
+
     // This is the critical guard to prevent rendering with incomplete data on a direct page load.
     if (isInitializing || !activeOrg || !activeOrg.exams) {
         return <div className="text-center py-10"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading program details...</p></div>;
@@ -146,16 +156,6 @@ const ExamProgram: FC = () => {
 
     const { category, practiceExam, certExam } = programData;
     
-    const bundleTypeToShow = useMemo(() => {
-        if (!bundlesEnabled || !certExam || !examPrices) return null;
-        const subBundleSku = `${certExam.productSku}-1mo-addon`;
-        const practiceBundleSku = `${certExam.productSku}-1`;
-
-        if (examPrices[subBundleSku]) return 'subscription';
-        if (examPrices[practiceBundleSku]) return 'practice';
-        return null;
-    }, [certExam, examPrices, bundlesEnabled]);
-
     const certAttempts = user && certExam ? results.filter(r => r.examId === certExam.id).length : undefined;
     const fullDescription = certExam?.description || practiceExam?.description || category.description;
     

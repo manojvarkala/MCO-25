@@ -235,7 +235,7 @@ const Dashboard: FC = () => {
 
             <div>
                  <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">Exam Programs</h2>
-                 <div className="space-y-6">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                      {examCategories.map((category, index) => {
                          const certAttempts = user && category.certExam ? results.filter(r => r.examId === category.certExam.id).length : undefined;
                          
