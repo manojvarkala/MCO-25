@@ -48,6 +48,8 @@ function mco_exam_engine_admin_page() {
             update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
             update_option('mco_custom_logo_url', sanitize_textarea_field($_POST['mco_custom_logo_url']));
             update_option('mco_intro_video_url', esc_url_raw($_POST['mco_intro_video_url']));
+            // FIX: Add logic to save the WordPress user registration setting.
+            update_option('users_can_register', isset($_POST['mco_users_can_register']) ? '1' : '0');
             update_option('mco_subscriptions_enabled', isset($_POST['mco_subscriptions_enabled']) ? '1' : '0');
             update_option('mco_bundles_enabled', isset($_POST['mco_bundles_enabled']) ? '1' : '0');
             delete_transient('mco_app_config_data');
@@ -147,6 +149,12 @@ function mco_render_main_settings_tab() { ?>
             <tr><th>Intro Video URL</th><td><input type="text" name="mco_intro_video_url" value="<?php echo esc_attr(get_option('mco_intro_video_url')); ?>" class="widefat"><p class="description">Optional. URL for the intro video on the landing page.</p></td></tr>
             <tr><th>JWT Secret Key</th><td><code><?php echo defined('MCO_JWT_SECRET') ? 'Defined in wp-config.php' : '<strong>Not Defined!</strong>'; ?></code><p class="description">You must define <code>MCO_JWT_SECRET</code> in your <code>wp-config.php</code> file.</p></td></tr>
             <tr><th colspan="2"><h4>Feature Toggles</h4></th></tr>
+            <!-- FIX: Add a checkbox to control WordPress's native user registration setting. -->
+            <tr>
+                <th><label for="mco_users_can_register">Enable User Registration</label></th>
+                <td><input type="checkbox" id="mco_users_can_register" name="mco_users_can_register" value="1" <?php checked(get_option('users_can_register'), '1'); ?>>
+                <p class="description">Allow new users to register an account from the WordPress login page. This is required for new customers to sign up.</p></td>
+            </tr>
             <tr>
                 <th><label for="mco_subscriptions_enabled">Enable Subscriptions</label></th>
                 <td><input type="checkbox" id="mco_subscriptions_enabled" name="mco_subscriptions_enabled" value="1" <?php checked(get_option('mco_subscriptions_enabled', '1'), '1'); ?>>
@@ -623,5 +631,4 @@ function mco_handle_csv_upload() {
     wp_redirect(admin_url("admin.php?page=mco-exam-engine&tab=bulk_data&import_status=success&message={$message}"));
     exit;
 }
-
 ?>
