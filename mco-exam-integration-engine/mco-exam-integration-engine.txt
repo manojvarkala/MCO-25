@@ -3,7 +3,7 @@
  * Plugin Name:       MCO Exam Integration Engine
  * Plugin URI:        https://annapoornainfo.com
  * Description:       Provides the backend API, user authentication (SSO), and content management for the React-based examination app.
- * Version:           2.6.0
+ * Version:           2.7.1
  * Author:            Annapoorna Infotech
  * Author URI:        https://annapoornainfo.com
  * License:           GPL v2 or later
@@ -12,46 +12,44 @@
  */
 if (!defined('ABSPATH')) exit;
 
-// --- CONSTANTS & INCLUDES ---
+// --- CONSTANTS ---
 define('MCO_PLUGIN_FILE', __FILE__);
 define('MCO_PLUGIN_PATH', plugin_dir_path(MCO_PLUGIN_FILE));
 define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
 $plugin_data = get_file_data(MCO_PLUGIN_FILE, array('Version' => 'Version'));
 define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 
-// Include all the functional parts of the plugin
-require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-data.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-api.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php';
+// --- INCLUDES ---
+require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.txt';
+require_once MCO_PLUGIN_PATH . 'includes/mco-data.txt';
+require_once MCO_PLUGIN_PATH . 'includes/mco-admin.txt';
+require_once MCO_PLUGIN_PATH . 'includes/mco-api.txt';
+require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.txt';
 
-// --- INITIALIZATION HOOKS ---
-add_action('init', function() {
-    mco_register_custom_post_types();
-    mco_register_shortcode_hooks();
-});
-
-// FIX: Corrected a race condition by hooking all API functions directly to the appropriate actions/filters,
-// instead of nesting them inside a secondary function. This ensures routes are always registered.
+// --- MAIN HOOKS ---
+add_action('init', 'mco_register_custom_post_types');
 add_action('rest_api_init', 'mco_register_rest_routes');
-add_action('rest_api_init', 'mco_set_api_nocache_constants');
-add_filter('rest_pre_serve_request', 'mco_add_cors_and_nocache_headers', 10, 4);
+add_action('rest_pre_serve_request', 'mco_add_cors_and_nocache_headers', 10, 4);
+add_action('rest_api_init', 'mco_set_api_nocache_constants', 10, 1);
+mco_register_admin_hooks();
+mco_register_shortcode_hooks();
 
-// Admin-specific hooks
-if (is_admin()) {
-    add_action('init', 'mco_register_admin_hooks');
+// --- SINGLE SIGN-ON REDIRECT ---
+function mco_sso_login_redirect() {
+    if (is_user_logged_in() && isset($_GET['mco_sso_trigger'])) {
+        $app_url = mco_get_exam_app_url();
+        if (!$app_url) {
+            wp_die('Exam application URL is not configured.');
+        }
+        $token = mco_generate_exam_jwt(get_current_user_id());
+        if (!$token) {
+            wp_die('Could not generate authentication token. Please ensure MCO_JWT_SECRET is defined in wp-config.php.');
+        }
+        $redirect_url = add_query_arg('token', $token, rtrim($app_url, '/') . '/auth');
+        wp_redirect($redirect_url);
+        exit;
+    }
 }
+add_action('template_redirect', 'mco_sso_login_redirect');
 
-
-// --- ACTIVATION & DEACTIVATION HOOKS ---
-register_activation_hook(MCO_PLUGIN_FILE, function() {
-    mco_register_custom_post_types();
-    flush_rewrite_rules();
-    delete_transient('mco_app_config_data');
-});
-
-register_deactivation_hook(MCO_PLUGIN_FILE, function() {
-    flush_rewrite_rules();
-});
 ?>

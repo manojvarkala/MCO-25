@@ -10,7 +10,7 @@ The platform's strength lies in its headless architecture, which separates the a
     -   **User Management & SSO**: Handles all user registration and authentication via JWT.
     -   **E-commerce**: Manages exam and subscription sales through WooCommerce.
     -   **Content Management**: Admins create and manage "Exam Programs" and "Recommended Books" as Custom Post Types.
-    -   **API Server**: Provides secure `admin-ajax.php` endpoints for all dynamic app operations (e.g., fetching user data, submitting results, getting stats).
+    -   **API Server**: Provides secure REST API endpoints for all dynamic app operations (e.g., fetching user data, submitting results, getting stats).
 
 -   **Multi-Tenant Configuration**: The React app is made multi-tenant through static JSON configuration files located in the `/public` directory. The `services/apiConfig.ts` service detects the website's hostname and dynamically loads the appropriate configuration, allowing the same application to serve different branding, content, and API endpoints.
 
@@ -32,19 +32,11 @@ The platform's strength lies in its headless architecture, which separates the a
 ### For Administrators
 -   **In-App Admin Panel**: A powerful interface within the React app for:
     -   Viewing detailed exam statistics (sales, attempts, pass rates).
-    -   Temporarily customizing exam settings (e.g., number of questions, duration) for the current session.
+    -   Editing exam program settings in real-time.
+    -   Managing WooCommerce products, including complex bundles and subscriptions.
+-   **AI Content Engine**: Automatically generate and schedule SEO-friendly blog posts from existing exam content.
+-   **Debug Sidebar & Masquerade Mode**: A real-time tool for inspecting application state and viewing the app as a regular user or visitor.
 -   **WordPress CPTs**: Easy content management for Exam Programs and Recommended Books within the familiar WordPress environment.
--   **Debug Sidebar**: A real-time tool for inspecting user data, purchases, and API connectivity.
-
----
-
-## Technology Stack
-
--   **Frontend**: React, TypeScript, Vite
--   **Styling**: Tailwind CSS
--   **Routing**: React Router DOM v6
--   **AI Integration**: `@google/genai` (Gemini API)
--   **PDF Generation**: `jspdf`, `html2canvas`
 
 ---
 
@@ -52,29 +44,30 @@ The platform's strength lies in its headless architecture, which separates the a
 
 Setting up a local development environment involves two main parts: the WordPress backend and the React frontend.
 
-### Part 1: WordPress Backend Setup
+### Part 1: WordPress Backend Setup (Manual)
 
-1.  **Install Prerequisites**: Set up a WordPress site with the WooCommerce plugin installed and activated.
+1.  **Install Prerequisites**: Set up a WordPress site with the WooCommerce and WooCommerce Subscriptions plugins installed and activated.
 2.  **Install the Engine Plugin**:
-    -   Locate the `mco-exam-integration-engine` directory in this project's source.
-    -   **Crucially, rename all `.txt` files to their correct extensions**:
-        -   `mco-exam-integration-engine.txt` &rarr; `mco-exam-integration-engine.php`
-        -   All files in `/includes/` &rarr; `.php`
-        -   `/assets/mco-styles.txt` &rarr; `mco-styles.css`
-    -   Zip the entire `mco-exam-integration-engine` directory.
-    -   In your WordPress admin, go to **Plugins &rarr; Add New &rarr; Upload Plugin** and upload the zip file.
+    -   Use the in-app generator at **Admin Panel → Integration** to download a ready-to-install `.zip` file. This is the recommended method.
+    -   **Alternatively, for manual installation from source**:
+        -   Locate the `mco-exam-integration-engine` directory in this project's source.
+        -   Inside `mco-exam-integration-engine/`, rename `mco-exam-integration-engine.txt` to `mco-exam-integration-engine.php`.
+        -   Inside the `mco-exam-integration-engine/includes/` directory, rename all `.txt` files to `.php` (e.g., `mco-api.txt` becomes `mco-api.php`).
+        -   In the `mco-exam-integration-engine/assets/` folder, rename `mco-styles.txt` to `mco-styles.css`.
+        -   Zip the entire `mco-exam-integration-engine` directory.
+    -   In your WordPress admin, go to **Plugins → Add New → Upload Plugin** and upload the zip file.
     -   Activate the plugin.
 3.  **Configure JWT Secret**:
     -   Open your `wp-config.php` file.
-    -   Add a security salt for JWT signing. It must be a unique, long, and random string (at least 32 characters).
+    -   Add a security salt for JWT signing. It must be a unique, long, and random string.
     -   `define('MCO_JWT_SECRET', 'your-super-long-and-secret-random-string-goes-here');`
 4.  **Configure Plugin Settings**:
     -   In WordPress, navigate to the new **Exam App Engine** menu.
     -   In the "Main Settings" tab, enter the URL of your local React app (e.g., `http://localhost:5173`). This is required for security (CORS) and generating correct links.
+    -   Ensure the "Enable User Registration" checkbox is checked.
 5.  **Create Content**:
-    -   Go to **Exam App Engine &rarr; Exam Programs** to create your exam categories.
-    -   Go to **Exam App Engine &rarr; Recommended Books** to add study materials.
-    -   Go to **WooCommerce &rarr; Products** to create the products associated with your certification exams.
+    -   Go to **Exam App Engine → Exam Programs** to create your exam categories.
+    -   Go to **WooCommerce → Products** to create the products associated with your certification exams, ensuring the SKUs match.
 
 ### Part 2: React Frontend Setup
 

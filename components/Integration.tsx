@@ -6,19 +6,22 @@ import Spinner from './Spinner.tsx';
 
 // Import file contents as raw strings using Vite's ?raw feature
 import mainPluginFile from '../mco-exam-integration-engine/mco-exam-integration-engine.txt?raw';
+import stylesFile from '../mco-exam-integration-engine/assets/mco-styles.txt?raw';
 import cptsFile from '../mco-exam-integration-engine/includes/mco-cpts.txt?raw';
 import adminFile from '../mco-exam-integration-engine/includes/mco-admin.txt?raw';
 import apiFile from '../mco-exam-integration-engine/includes/mco-api.txt?raw';
 import dataFile from '../mco-exam-integration-engine/includes/mco-data.txt?raw';
 import shortcodesFile from '../mco-exam-integration-engine/includes/mco-shortcodes.txt?raw';
-import stylesFile from '../mco-exam-integration-engine/assets/mco-styles.txt?raw';
 import templateExamPrograms from '../public/template-exam-programs.csv?raw';
 import templateRecommendedBooks from '../public/template-recommended-books.csv?raw';
 import templateQuestions from '../public/template-questions.csv?raw';
 
 const Integration: FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
-    const pluginVersion = "1.0.0";
+    
+    // The version is sourced from the main plugin file content.
+    const pluginVersionMatch = mainPluginFile.match(/Version:\s*([0-9.]+)/);
+    const pluginVersion = pluginVersionMatch ? pluginVersionMatch[1] : "2.7.1";
 
     const generateZip = async () => {
         setIsGenerating(true);
@@ -30,17 +33,19 @@ const Integration: FC = () => {
             const rootFolder = zip.folder(rootFolderName);
             if (!rootFolder) throw new Error("Could not create root folder in zip.");
 
-            // The main plugin file is the single source of truth for the plugin header.
-            const mainPhpContent = mainPluginFile;
+            // Create the includes folder
+            const includesFolder = rootFolder.folder('includes');
+            if (!includesFolder) throw new Error("Could not create includes folder in zip.");
 
+            // Define all files to be included in the zip with their final names
             const filesToZip = {
-                'mco-exam-integration-engine.php': mainPhpContent,
+                'mco-exam-integration-engine.php': mainPluginFile,
+                'assets/mco-styles.css': stylesFile,
                 'includes/mco-cpts.php': cptsFile,
                 'includes/mco-admin.php': adminFile,
                 'includes/mco-api.php': apiFile,
                 'includes/mco-data.php': dataFile,
                 'includes/mco-shortcodes.php': shortcodesFile,
-                'assets/mco-styles.css': stylesFile,
                 'public/template-exam-programs.csv': templateExamPrograms,
                 'public/template-recommended-books.csv': templateRecommendedBooks,
                 'public/template-questions.csv': templateQuestions,
@@ -84,7 +89,7 @@ const Integration: FC = () => {
                 <div className="space-y-4 p-4 bg-[rgb(var(--color-muted-rgb))] rounded-lg border border-[rgb(var(--color-border-rgb))]">
                      <ol className="list-decimal list-inside space-y-4 text-[rgb(var(--color-text-muted-rgb))]">
                         <li>
-                            <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 1: Generate & Download the Plugin</strong><br />
+                            <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 1: Generate & Download the Plugin (Recommended)</strong><br />
                             Click the button below to generate a ready-to-install <code>.zip</code> file. This process automatically handles all file naming and structuring for you.
                             <div className="flex flex-wrap gap-2 mt-2">
                                  <button
