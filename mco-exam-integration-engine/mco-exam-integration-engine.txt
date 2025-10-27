@@ -20,10 +20,12 @@ $plugin_data = get_file_data(MCO_PLUGIN_FILE, array('Version' => 'Version'));
 define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 
 // --- INCLUDES ---
+// FIX: Corrected the include order to resolve fatal errors from dependency issues.
+// API functions must be loaded before admin pages or shortcodes that use them.
 require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-data.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-api.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
 
 // --- MAIN HOOKS ---
