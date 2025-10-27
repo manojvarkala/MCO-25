@@ -624,6 +624,7 @@ function mco_handle_csv_upload() {
         }
     }
 
+
     delete_transient('mco_app_config_data');
     update_option('mco_config_version', current_time('YmdHis'));
 
