@@ -48,8 +48,8 @@ function mco_exam_engine_admin_page() {
             update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
             update_option('mco_custom_logo_url', sanitize_textarea_field($_POST['mco_custom_logo_url']));
             update_option('mco_intro_video_url', esc_url_raw($_POST['mco_intro_video_url']));
-            // FIX: Save the user registration option as a boolean to prevent type conflicts.
-            update_option('users_can_register', isset($_POST['mco_users_can_register']));
+            // FIX: Save the user registration option as 1 or 0 to align with WordPress core behavior.
+            update_option('users_can_register', isset($_POST['mco_users_can_register']) ? 1 : 0);
             update_option('mco_subscriptions_enabled', isset($_POST['mco_subscriptions_enabled']) ? '1' : '0');
             update_option('mco_bundles_enabled', isset($_POST['mco_bundles_enabled']) ? '1' : '0');
             delete_transient('mco_app_config_data');
@@ -149,11 +149,32 @@ function mco_render_main_settings_tab() { ?>
             <tr><th>Intro Video URL</th><td><input type="text" name="mco_intro_video_url" value="<?php echo esc_attr(get_option('mco_intro_video_url')); ?>" class="widefat"><p class="description">Optional. URL for the intro video on the landing page.</p></td></tr>
             <tr><th>JWT Secret Key</th><td><code><?php echo defined('MCO_JWT_SECRET') ? 'Defined in wp-config.php' : '<strong>Not Defined!</strong>'; ?></code><p class="description">You must define <code>MCO_JWT_SECRET</code> in your <code>wp-config.php</code> file.</p></td></tr>
             <tr><th colspan="2"><h4>Feature Toggles</h4></th></tr>
-            <!-- FIX: Add a checkbox to control WordPress's native user registration setting. -->
             <tr>
                 <th><label for="mco_users_can_register">Enable User Registration</label></th>
-                <td><input type="checkbox" id="mco_users_can_register" name="mco_users_can_register" value="1" <?php checked((bool) get_option('users_can_register')); ?>>
-                <p class="description">Allow new users to register an account from the WordPress login page. This is required for new customers to sign up.</p></td>
+                <td>
+                    <?php
+                    $is_multisite = is_multisite();
+                    $registration_constant_defined = defined('USERS_CAN_REGISTER');
+                    $is_disabled_by_multisite = $is_multisite && !get_site_option('registration', 'user');
+                    $is_disabled_by_constant = $registration_constant_defined && USERS_CAN_REGISTER === false;
+                    $is_disabled = $is_disabled_by_multisite || $is_disabled_by_constant;
+                    ?>
+                    <input type="checkbox" id="mco_users_can_register" name="mco_users_can_register" value="1" <?php checked(get_option('users_can_register'), 1); ?> <?php disabled($is_disabled, true); ?>>
+                    <p class="description">Allow new users to register an account from the WordPress login page. This is required for new customers to sign up.</p>
+                    <?php if ($is_disabled_by_multisite): ?>
+                        <p class="mco-admin-notice mco-admin-notice--warning">
+                            <strong>Setting Disabled:</strong> This is a multisite installation. User registration is controlled globally from the <a href="<?php echo esc_url(network_admin_url('settings.php')); ?>">Network Settings</a> page.
+                        </p>
+                    <?php elseif ($is_disabled_by_constant): ?>
+                        <p class="mco-admin-notice mco-admin-notice--warning">
+                            <strong>Setting Disabled:</strong> User registration is hardcoded to 'false' by the <code>USERS_CAN_REGISTER</code> constant in your <code>wp-config.php</code> file. This setting cannot be changed here until that line is removed.
+                        </p>
+                    <?php elseif ($registration_constant_defined && USERS_CAN_REGISTER === true): ?>
+                         <p class="mco-admin-notice mco-admin-notice--info">
+                            <strong>Note:</strong> User registration is hardcoded to 'true' by the <code>USERS_CAN_REGISTER</code> constant in your <code>wp-config.php</code> file. This setting is currently forced on.
+                        </p>
+                    <?php endif; ?>
+                </td>
             </tr>
             <tr>
                 <th><label for="mco_subscriptions_enabled">Enable Subscriptions</label></th>

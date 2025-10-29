@@ -1,5 +1,6 @@
 
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Corrected react-router-dom import to resolve module export errors.
 import { Navigate, useLocation, Routes, Route, BrowserRouter, Outlet } from 'react-router-dom';
@@ -31,7 +32,6 @@ import TermsOfService from './components/TermsOfService.tsx';
 import LivePurchaseNotification from './components/LivePurchaseNotification.tsx';
 import SidebarLayout from './components/SidebarLayout.tsx';
 import Integration from './components/Integration.tsx';
-import UpdateNameModal from './components/UpdateNameModal.tsx';
 import MasqueradeBanner from './components/MasqueradeBanner.tsx';
 import BookStore from './components/BookStore.tsx';
 import ExamProgram from './components/ExamProgram.tsx';
@@ -71,7 +71,6 @@ const AppContent: FC = () => {
     const { user, isMasquerading, isEffectivelyAdmin } = useAuth();
     const { activeOrg, activeTheme } = useAppContext();
     const location = useLocation();
-    const [isNameModalOpen, setIsNameModalOpen] = useState(false);
     const [isDebugSidebarOpen, setIsDebugSidebarOpen] = useState(false);
 
     const isTestPage = location.pathname.startsWith('/test/');
@@ -99,17 +98,6 @@ const AppContent: FC = () => {
         }
     }, [activeOrg]);
 
-    useEffect(() => {
-        // Show the modal to update name if it looks like a username and hasn't been shown this session
-        if (user && user.name && !user.name.includes(' ') && !sessionStorage.getItem('nameUpdateModalShown')) {
-            const timer = setTimeout(() => {
-                setIsNameModalOpen(true);
-                sessionStorage.setItem('nameUpdateModalShown', 'true');
-            }, 2000); // Delay slightly after login
-            return () => clearTimeout(timer);
-        }
-    }, [user]);
-
     const mainClasses = isTestPage 
         ? "py-8" 
         : "container mx-auto px-4 py-8";
@@ -117,7 +105,6 @@ const AppContent: FC = () => {
     return (
         <div data-theme={activeTheme} className={`flex flex-col min-h-screen bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-default-rgb))] font-main ${isMasquerading ? 'pt-10' : ''}`}>
             {isMasquerading && <MasqueradeBanner />}
-            {user && <UpdateNameModal isOpen={isNameModalOpen} onClose={() => setIsNameModalOpen(false)} />}
             {!isTestPage && <Header />}
             <div className="flex-grow w-full relative">
                 <main className={mainClasses}>

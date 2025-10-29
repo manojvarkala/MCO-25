@@ -140,6 +140,79 @@ function mco_get_geo_primary_link_info($links) {
 }
 
 
+// --- REGISTRATION FORM MODIFICATION ---
+if (!function_exists('mco_add_fullname_to_registration_form')) {
+    function mco_add_fullname_to_registration_form() {
+        ?>
+        <p>
+            <label for="full_name"><?php _e('Full Name (for Certificate)', 'mco-exam-engine'); ?><br />
+            <input type="text" name="full_name" id="full_name" class="input" value="<?php echo (isset($_POST['full_name']) ? esc_attr(wp_unslash($_POST['full_name'])) : ''); ?>" size="25" required /></label>
+        </p>
+        <?php
+    }
+}
+if (!function_exists('mco_validate_fullname_on_registration')) {
+    function mco_validate_fullname_on_registration($errors, $sanitized_user_login, $user_email) {
+        if (empty($_POST['full_name']) || !is_string($_POST['full_name'])) {
+            $errors->add('fullname_error', __('<strong>ERROR</strong>: You must include your full name.', 'mco-exam-engine'));
+        } elseif (strpos(trim($_POST['full_name']), ' ') === false) {
+            $errors->add('fullname_error', __('<strong>ERROR</strong>: Please enter both your first and last name.', 'mco-exam-engine'));
+        }
+        return $errors;
+    }
+}
+if (!function_exists('mco_save_fullname_on_registration')) {
+    function mco_save_fullname_on_registration($user_id) {
+        if (isset($_POST['full_name'])) {
+            $full_name = sanitize_text_field($_POST['full_name']);
+            wp_update_user(['ID' => $user_id, 'display_name' => $full_name]);
+            $name_parts = explode(' ', $full_name, 2);
+            update_user_meta($user_id, 'first_name', $name_parts[0]);
+            update_user_meta($user_id, 'last_name', $name_parts[1] ?? '');
+        }
+    }
+}
+
+// --- HELPER FUNCTIONS FOR LOGIN SHORTCODE ---
+if (!function_exists('mco_redirect_to_app_with_token')) {
+    function mco_redirect_to_app_with_token() {
+        $app_url = mco_get_exam_app_url();
+        if (!$app_url) return '<p>Exam application URL is not configured.</p>';
+        $token = mco_generate_exam_jwt(get_current_user_id());
+        if (!$token) return '<p>Could not generate authentication token.</p>';
+        $redirect_url = add_query_arg('token', $token, rtrim($app_url, '/') . '/auth');
+        if (!headers_sent()) {
+            wp_redirect($redirect_url);
+            exit;
+        }
+        return '<div class="mco-redirect-message">Redirecting you to the exam portal... <a href="' . esc_url($redirect_url) . '">Click here if you are not redirected</a>.</div><script>window.location.href="' . esc_url($redirect_url) . '";</script>';
+    }
+}
+if (!function_exists('mco_render_name_update_form')) {
+    function mco_render_name_update_form($error_message = '') {
+        ob_start();
+        ?>
+        <div id="mco-name-update-form" class="mco-form-container">
+            <h2>Update Your Name</h2>
+            <p>Your name will be printed on your certificate. Please provide your full name before proceeding to the exam portal.</p>
+            <?php if ($error_message): ?>
+                <p class="mco-error"><?php echo esc_html($error_message); ?></p>
+            <?php endif; ?>
+            <form method="post" action="">
+                <?php wp_nonce_field('mco_update_name_action', 'mco_update_name_nonce'); ?>
+                <div>
+                    <label for="full_name">Full Name</label>
+                    <input type="text" id="full_name" name="full_name" required value="<?php echo esc_attr(wp_get_current_user()->display_name); ?>">
+                </div>
+                <button type="submit">Save and Continue</button>
+            </form>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+}
+
+
 // --- HOOKS ---
 if (!function_exists('mco_register_shortcode_hooks')) {
     function mco_register_shortcode_hooks() {
@@ -154,6 +227,10 @@ if (!function_exists('mco_register_shortcode_hooks')) {
 
         add_filter('the_content', 'mco_auto_apply_single_book_style', 999);
         add_filter('the_content', 'mco_auto_apply_single_program_style', 999);
+
+        add_action('register_form', 'mco_add_fullname_to_registration_form');
+        add_filter('registration_errors', 'mco_validate_fullname_on_registration', 10, 3);
+        add_action('user_register', 'mco_save_fullname_on_registration');
     }
 }
 
@@ -220,22 +297,43 @@ if (!function_exists('mco_enqueue_shortcode_styles')) {
 // --- SHORTCODE IMPLEMENTATIONS ---
 
 function mco_exam_login_shortcode() {
-    if (is_user_logged_in()) {
-        $app_url = mco_get_exam_app_url();
-        if (!$app_url) return '<p>Exam application URL is not configured.</p>';
-        $token = mco_generate_exam_jwt(get_current_user_id());
-        if (!$token) return '<p>Could not generate authentication token.</p>';
-        $redirect_url = add_query_arg('token', $token, $app_url . '/auth');
-        if (!headers_sent()) {
-            wp_redirect($redirect_url); exit;
+    // 1. Handle form submission for name update from a logged-in user
+    if (is_user_logged_in() && isset($_POST['mco_update_name_nonce']) && wp_verify_nonce($_POST['mco_update_name_nonce'], 'mco_update_name_action')) {
+        $full_name = sanitize_text_field($_POST['full_name']);
+        if (!empty($full_name) && strpos(trim($full_name), ' ') !== false) {
+            $user_id = get_current_user_id();
+            wp_update_user(['ID' => $user_id, 'display_name' => $full_name]);
+            $name_parts = explode(' ', $full_name, 2);
+            update_user_meta($user_id, 'first_name', $name_parts[0]);
+            update_user_meta($user_id, 'last_name', $name_parts[1] ?? '');
+            
+            // Name updated, now redirect to the app
+            return mco_redirect_to_app_with_token();
+        } else {
+            // Submission was invalid, show the form again with an error
+            return mco_render_name_update_form('Please enter your full first and last name.');
         }
-        return '<p>Redirecting... <a href="' . esc_url($redirect_url) . '">Click here</a>.</p><script>window.location.href="' . esc_url($redirect_url) . '";</script>';
+    }
+
+    // 2. Check if user is logged in
+    if (is_user_logged_in()) {
+        $user = wp_get_current_user();
+        // Check if display name looks like a full name (contains a space)
+        if (strpos($user->display_name, ' ') !== false) {
+            // Name is valid, redirect immediately
+            return mco_redirect_to_app_with_token();
+        } else {
+            // Name is invalid, show the update form
+            return mco_render_name_update_form();
+        }
     } else {
+        // 3. User is not logged in, redirect to standard WP login/register page
         $login_url = wp_login_url(get_permalink());
         if (!headers_sent()) {
-            wp_redirect($login_url); exit;
+            wp_redirect($login_url);
+            exit;
         }
-        return '<p>Please <a href="' . esc_url($login_url) . '">log in</a>.</p>';
+        return '<p>Please <a href="' . esc_url($login_url) . '">log in</a> to continue.</p>';
     }
 }
 
