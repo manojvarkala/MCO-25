@@ -48,8 +48,8 @@ function mco_exam_engine_admin_page() {
             update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
             update_option('mco_custom_logo_url', sanitize_textarea_field($_POST['mco_custom_logo_url']));
             update_option('mco_intro_video_url', esc_url_raw($_POST['mco_intro_video_url']));
-            // FIX: Add logic to save the WordPress user registration setting.
-            update_option('users_can_register', isset($_POST['mco_users_can_register']) ? '1' : '0');
+            // FIX: Save the user registration option as a boolean to prevent type conflicts.
+            update_option('users_can_register', isset($_POST['mco_users_can_register']));
             update_option('mco_subscriptions_enabled', isset($_POST['mco_subscriptions_enabled']) ? '1' : '0');
             update_option('mco_bundles_enabled', isset($_POST['mco_bundles_enabled']) ? '1' : '0');
             delete_transient('mco_app_config_data');
@@ -152,7 +152,7 @@ function mco_render_main_settings_tab() { ?>
             <!-- FIX: Add a checkbox to control WordPress's native user registration setting. -->
             <tr>
                 <th><label for="mco_users_can_register">Enable User Registration</label></th>
-                <td><input type="checkbox" id="mco_users_can_register" name="mco_users_can_register" value="1" <?php checked(get_option('users_can_register'), '1'); ?>>
+                <td><input type="checkbox" id="mco_users_can_register" name="mco_users_can_register" value="1" <?php checked((bool) get_option('users_can_register')); ?>>
                 <p class="description">Allow new users to register an account from the WordPress login page. This is required for new customers to sign up.</p></td>
             </tr>
             <tr>
