@@ -15,6 +15,7 @@
                 { "id": "noir", "name": "Noir" }
             ],
             "activeThemeId": "professional",
+            "disclaimerText": "All exams are independent practice tools designed to build proficiency and are not affiliated with any official certifying body unless explicitly stated.",
             "exams": [
                 { "id": "exam-ca-practice", "name": "CA Foundation Practice Exam", "description": "A practice test covering the core concepts of the Chartered Accountancy Foundation course.", "price": 0, "productSku": "exam-ca-practice", "numberOfQuestions": 50, "passScore": 50, "certificateTemplateId": "cert-practice", "isPractice": true, "durationMinutes": 90, "recommendedBookIds": ["book-ca-foundation"]},
                 { "id": "exam-ca-cert", "name": "CA Foundation Certification", "description": "Certify your knowledge of the fundamentals required for the Chartered Accountancy course.", "price": 25, "regularPrice": 49.99, "productSku": "exam-ca-cert", "productSlug": "ca-foundation-certification", "numberOfQuestions": 100, "passScore": 50, "certificateTemplateId": "cert-completion", "isPractice": false, "isProctored": true, "durationMinutes": 180, "recommendedBookIds": ["book-ca-foundation"]},

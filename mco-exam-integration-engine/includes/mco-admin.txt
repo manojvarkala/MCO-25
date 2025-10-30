@@ -49,6 +49,7 @@ function mco_exam_engine_admin_page() {
             update_option('mco_exam_app_url', sanitize_textarea_field($_POST['mco_exam_app_url']));
             update_option('mco_custom_logo_url', sanitize_textarea_field($_POST['mco_custom_logo_url']));
             update_option('mco_intro_video_url', esc_url_raw($_POST['mco_intro_video_url']));
+            update_option('mco_disclaimer_text', wp_kses_post($_POST['mco_disclaimer_text']));
             // FIX: Save the user registration option as 1 or 0 to align with WordPress core behavior.
             update_option('users_can_register', isset($_POST['mco_users_can_register']) ? 1 : 0);
             update_option('mco_subscriptions_enabled', isset($_POST['mco_subscriptions_enabled']) ? '1' : '0');
@@ -152,6 +153,7 @@ function mco_render_main_settings_tab() { ?>
             <tr><th>App URL(s)</th><td><textarea name="mco_exam_app_url" rows="3" class="widefat"><?php echo esc_textarea(get_option('mco_exam_app_url')); ?></textarea><p class="description">Enter the full URL of your React app. Add multiple URLs on new lines for different environments.</p></td></tr>
             <tr><th>Custom Logo URL</th><td><textarea name="mco_custom_logo_url" class="widefat" rows="5"><?php echo esc_textarea(get_option('mco_custom_logo_url')); ?></textarea><p class="description">Optional. Can be a URL or a base64 data URI. If empty, uses the Site Icon from Customizer.</p></td></tr>
             <tr><th>Intro Video URL</th><td><input type="text" name="mco_intro_video_url" value="<?php echo esc_attr(get_option('mco_intro_video_url')); ?>" class="widefat"><p class="description">Optional. URL for the intro video on the landing page.</p></td></tr>
+            <tr><th>Disclaimer Text</th><td><textarea name="mco_disclaimer_text" rows="3" class="widefat"><?php echo esc_textarea(get_option('mco_disclaimer_text')); ?></textarea><p class="description">Optional. A short disclaimer to be displayed in the application footer.</p></td></tr>
             <tr><th>JWT Secret Key</th><td><code><?php echo defined('MCO_JWT_SECRET') ? 'Defined in wp-config.php' : '<strong>Not Defined!</strong>'; ?></code><p class="description">You must define <code>MCO_JWT_SECRET</code> in your <code>wp-config.php</code> file.</p></td></tr>
             <tr><th colspan="2"><h4>Feature Toggles</h4></th></tr>
             <tr>

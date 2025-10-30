@@ -137,6 +137,7 @@ export interface Organization {
   purchaseNotifierDelay?: number;
   purchaseNotifierMinGap?: number;
   purchaseNotifierMaxGap?: number;
+  disclaimerText?: string;
 }
 
 export interface ApiCertificateData {

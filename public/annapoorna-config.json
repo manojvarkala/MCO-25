@@ -15,6 +15,7 @@
                 { "id": "noir", "name": "Noir" }
             ],
             "activeThemeId": "default",
+            "disclaimerText": "All exams are independent practice tools designed to build proficiency and are not affiliated with any official certifying body unless explicitly stated.",
             "exams": [
                 { "id": "exam-dm-practice", "name": "Digital Marketing Fundamentals Practice", "description": "A practice test to assess your team's core digital marketing knowledge.", "price": 0, "productSku": "exam-dm-practice", "numberOfQuestions": 25, "passScore": 70, "certificateTemplateId": "cert-practice", "isPractice": true, "durationMinutes": 60},
                 { "id": "exam-dm-cert", "name": "Digital Marketing Fundamentals Certification", "description": "Certify your team's expertise in SEO, SEM, and social media marketing. Ideal for agencies and marketing departments.", "price": 1, "regularPrice": 49.99, "productSku": "exam-dm-cert", "productSlug": "digital-marketing-certification", "numberOfQuestions": 100, "passScore": 70, "certificateTemplateId": "cert-dm", "isPractice": false, "isProctored": true, "durationMinutes": 180, "recommendedBookId": "book-dm-dummies"},

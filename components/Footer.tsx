@@ -55,10 +55,16 @@ const Footer: FC = () => {
             </div>
 
         )}
-        <p className="mt-4">&copy; {new Date().getFullYear()} {activeOrg.name}. All Rights Reserved.</p>
-        <p className="mt-2 text-xs italic opacity-75 max-w-2xl mx-auto">
-            All exams are independent practice tools designed to build proficiency. Not affiliated with AAPC, AHIMA, or any certifying body.
-        </p>
+        
+        {activeOrg.disclaimerText && (
+            <div className="mt-6 pt-6 border-t border-[rgb(var(--color-border-rgb))]">
+                <p className="text-sm text-center max-w-3xl mx-auto opacity-90">
+                    {activeOrg.disclaimerText}
+                </p>
+            </div>
+        )}
+
+        <p className="mt-6">&copy; {new Date().getFullYear()} {activeOrg.name}. All Rights Reserved.</p>
         <p className="mt-2">An <a href="https://annapoornainfo.com" target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Annapoorna Infotech</a> Venture.</p>
       </div>
     </footer>
