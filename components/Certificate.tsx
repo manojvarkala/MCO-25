@@ -1,7 +1,7 @@
 
+
 import React, { FC, useState, useEffect, useRef } from 'react';
-// FIX: Refactored to use react-router-dom v6 to resolve module export errors.
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useHistory, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -28,8 +28,7 @@ const decodeHtmlEntities = (text: string | undefined): string => {
 
 const Certificate: FC = () => {
     const { testId = 'sample' } = useParams<{ testId?: string }>();
-    // FIX: Replaced useHistory with useNavigate for v6 compatibility.
-    const navigate = useNavigate();
+    const history = useHistory();
     const location = useLocation();
     const { user, token, isEffectivelyAdmin } = useAuth();
     const { activeOrg } = useAppContext();
@@ -58,7 +57,7 @@ const Certificate: FC = () => {
 
             if (!templateToUse) {
                 toast.error("Sample certificate template not found.");
-                navigate('/dashboard');
+                history.push('/dashboard');
                 return;
             }
             
@@ -103,7 +102,7 @@ const Certificate: FC = () => {
                     
                     if (exam && !exam.certificateEnabled && !isEffectivelyAdmin) {
                         toast.error("A certificate is not available for this exam.");
-                        navigate(`/results/${testId}`, { replace: true });
+                        history.replace(`/results/${testId}`);
                         return;
                     }
 
@@ -120,22 +119,22 @@ const Certificate: FC = () => {
                         setCertData(fullCertData);
                     } else {
                         toast.error("Certificate configuration missing in the app.");
-                        navigate('/dashboard');
+                        history.push('/dashboard');
                     }
                 } else {
                     toast.error("Certificate not earned or result not found.");
-                    navigate('/dashboard');
+                    history.push('/dashboard');
                 }
             } catch (error: any) {
                 toast.error(error.message || "Failed to load certificate data.");
-                navigate('/dashboard');
+                history.push('/dashboard');
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchCertificateData();
-    }, [testId, user, token, navigate, activeOrg, isEffectivelyAdmin, location.search, certificateThemeIdFromOrg]);
+    }, [testId, user, token, history, activeOrg, isEffectivelyAdmin, location.search, certificateThemeIdFromOrg]);
 
     const handleDownload = async () => {
         if (!certificatePrintRef.current || !certData) return;
@@ -178,7 +177,6 @@ const Certificate: FC = () => {
     const verificationUrl = `${window.location.origin}/verify/${certData.certificateNumber}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(verificationUrl)}`;
 
-    // FIX: Sanitize the body to prevent repetition and ensure placeholder removal.
     const sanitizeBody = (body: string) => {
         let sanitized = body || '';
         // Remove common prefixes, case-insensitively
@@ -337,7 +335,7 @@ const Certificate: FC = () => {
         <div className="max-w-5xl mx-auto bg-slate-100 p-4 sm:p-6 rounded-lg">
             <div className="flex justify-between items-center mb-6">
                  <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => history.goBack()}
                     className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition"
                 >
                     <ArrowLeft size={16} />

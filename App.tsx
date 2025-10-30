@@ -1,7 +1,6 @@
 
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
-// FIX: Refactored to use react-router-dom v6 to resolve module export errors.
-import { Navigate, useLocation, Routes, Route, BrowserRouter } from 'react-router-dom';
+import { Switch, Route, BrowserRouter, Redirect, useLocation } from 'react-router-dom';
 import { Toaster, ToastBar, toast } from 'react-hot-toast';
 import { X } from 'lucide-react';
 
@@ -50,19 +49,26 @@ import DebugSidebar from './components/DebugSidebar.tsx';
 interface ProtectedRouteProps {
   children: ReactNode;
   adminOnly?: boolean;
+  path: string;
+  exact?: boolean;
 }
 
-const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }) => {
+const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false, ...rest }) => {
   const { user, isEffectivelyAdmin } = useAuth();
-  if (!user) {
-    // FIX: Use <Navigate> for react-router-dom v6
-    return <Navigate to="/" replace />;
-  }
-  if (adminOnly && !isEffectivelyAdmin) {
-    // FIX: Use <Navigate> for react-router-dom v6
-    return <Navigate to="/dashboard" replace />;
-  }
-  return <>{children}</>;
+  return (
+    <Route
+      {...rest}
+      render={() => {
+        if (!user) {
+          return <Redirect to="/" />;
+        }
+        if (adminOnly && !isEffectivelyAdmin) {
+          return <Redirect to="/dashboard" />;
+        }
+        return children;
+      }}
+    />
+  );
 };
 
 const AppContent: FC = () => {
@@ -104,49 +110,56 @@ const AppContent: FC = () => {
             {!isTestPage && <Header />}
             <div className="flex-grow w-full relative">
                 <main className={mainClasses}>
-                    {/* FIX: Use <Routes> and v6 Route syntax */}
-                    <Routes>
-                        <Route path="/" element={<LandingPage />} />
-                        <Route path="/auth" element={<Login />} />
-                        <Route path="/checkout/:productSlug" element={<Checkout />} />
-                        <Route path="/verify" element={<VerifyPage />} />
-                        <Route path="/verify/:certId" element={<VerifyCertificate />} />
-                        <Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
-                        <Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
-                        <Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
+                    <Switch>
+                        <Route path="/" exact component={LandingPage} />
+                        <Route path="/auth" component={Login} />
+                        <Route path="/checkout/:productSlug" component={Checkout} />
+                        <Route path="/verify" exact component={VerifyPage} />
+                        <Route path="/verify/:certId" component={VerifyCertificate} />
+                        <ProtectedRoute path="/test/:examId"><Test /></ProtectedRoute>
+                        <ProtectedRoute path="/certificate/sample"><Certificate /></ProtectedRoute>
+                        <ProtectedRoute path="/certificate/:testId"><Certificate /></ProtectedRoute>
 
                         {/* Routes with Sidebar */}
-                        <Route element={<SidebarLayout />}>
-                            <Route path="/dashboard" element={<Dashboard />} />
-                            <Route path="/instructions" element={<Instructions />} />
-                            <Route path="/pricing" element={<Pricing />} />
-                            <Route path="/feedback" element={<Feedback />} />
-                            <Route path="/user-guide" element={<UserGuide />} />
-                            <Route path="/about-us" element={<AboutUs />} />
-                            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                            <Route path="/refund-policy" element={<RefundPolicy />} />
-                            <Route path="/terms-of-service" element={<TermsOfService />} />
-                            <Route path="/bookstore" element={<BookStore />} />
-                            <Route path="/program/:programId" element={<ExamProgram />} />
-                            <Route path="/faq" element={<FAQ />} />
-                            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                            <Route path="/results/:testId" element={<ProtectedRoute><Results /></ProtectedRoute>} />
+                         <Route path={["/dashboard", "/instructions", "/pricing", "/feedback", "/user-guide", "/about-us", "/privacy-policy", "/refund-policy", "/terms-of-service", "/bookstore", "/program/:programId", "/faq", "/profile", "/results/:testId"]}>
+                            <SidebarLayout>
+                                <Switch>
+                                    <Route path="/dashboard" component={Dashboard} />
+                                    <Route path="/instructions" component={Instructions} />
+                                    <Route path="/pricing" component={Pricing} />
+                                    <Route path="/feedback" component={Feedback} />
+                                    <Route path="/user-guide" component={UserGuide} />
+                                    <Route path="/about-us" component={AboutUs} />
+                                    <Route path="/privacy-policy" component={PrivacyPolicy} />
+                                    <Route path="/refund-policy" component={RefundPolicy} />
+                                    <Route path="/terms-of-service" component={TermsOfService} />
+                                    <Route path="/bookstore" component={BookStore} />
+                                    <Route path="/program/:programId" component={ExamProgram} />
+                                    <Route path="/faq" component={FAQ} />
+                                    <ProtectedRoute path="/profile"><Profile /></ProtectedRoute>
+                                    <ProtectedRoute path="/results/:testId"><Results /></ProtectedRoute>
+                                </Switch>
+                            </SidebarLayout>
                         </Route>
 
                         {/* Admin Routes with dedicated layout */}
-                        <Route element={<ProtectedRoute adminOnly={true}><AdminLayout /></ProtectedRoute>}>
-                          <Route path="/admin" element={<Admin />} />
-                          <Route path="/admin/analytics" element={<SalesAnalytics />} />
-                          <Route path="/admin/products" element={<ProductCustomizer />} />
-                          <Route path="/admin/programs" element={<ExamProgramCustomizer />} />
-                          <Route path="/admin/content-engine" element={<ContentEngine />} />
-                          <Route path="/admin/integration" element={<Integration />} />
-                          <Route path="/admin/history" element={<DevelopmentHistory />} />
-                          <Route path="/admin/handbook" element={<Handbook />} />
-                        </Route>
+                        <ProtectedRoute path="/admin" adminOnly={true}>
+                            <AdminLayout>
+                                <Switch>
+                                    <Route path="/admin" exact component={Admin} />
+                                    <Route path="/admin/analytics" component={SalesAnalytics} />
+                                    <Route path="/admin/products" component={ProductCustomizer} />
+                                    <Route path="/admin/programs" component={ExamProgramCustomizer} />
+                                    <Route path="/admin/content-engine" component={ContentEngine} />
+                                    <Route path="/admin/integration" component={Integration} />
+                                    <Route path="/admin/history" component={DevelopmentHistory} />
+                                    <Route path="/admin/handbook" component={Handbook} />
+                                </Switch>
+                            </AdminLayout>
+                        </ProtectedRoute>
                     
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
+                        <Redirect to="/" />
+                    </Switch>
                 </main>
             </div>
             {!isTestPage && <Footer />}
@@ -154,7 +167,6 @@ const AppContent: FC = () => {
             
             {/* Global Admin Tools */}
             {isEffectivelyAdmin && <AdminToolbar onToggleDebug={() => setIsDebugSidebarOpen(true)} />}
-            {/* FIX: The DebugSidebar is an admin-only tool. Its visibility should be tied to both its own open state AND whether the user is an effective admin. This prevents it from rendering with inconsistent state during the transition into masquerade mode, which caused a white screen crash. */}
             <DebugSidebar isOpen={isDebugSidebarOpen && isEffectivelyAdmin} onClose={() => setIsDebugSidebarOpen(false)} />
         </div>
     );

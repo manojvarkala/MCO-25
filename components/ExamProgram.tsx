@@ -1,6 +1,6 @@
+
 import React, { FC, useMemo, useState, useEffect } from 'react';
-// FIX: Refactored to use react-router-dom v6 to resolve module export errors.
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useHistory, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -14,8 +14,6 @@ import SubscriptionOfferCard from './SubscriptionOfferCard.tsx';
 import ShareButtons from './ShareButtons.tsx';
 
 const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } | null => {
-    // FIX: Added a bulletproof safety check. If the affiliateLinks object is missing,
-    // the function will now return null instead of crashing the application.
     if (!book.affiliateLinks) {
         return null;
     }
@@ -66,8 +64,7 @@ const stripHtml = (html: string): string => {
 
 const ExamProgram: FC = () => {
     const { programId } = useParams<{ programId: string }>();
-    // FIX: Replaced useNavigate with useHistory for v6 compatibility.
-    const navigate = useNavigate();
+    const history = useHistory();
     const { activeOrg, suggestedBooks, isInitializing, examPrices, subscriptionsEnabled, bundlesEnabled } = useAppContext();
     const { user, paidExamIds, isSubscribed, isEffectivelyAdmin } = useAuth();
     
@@ -83,7 +80,6 @@ const ExamProgram: FC = () => {
     }, [user]);
 
     const programData = useMemo(() => {
-        // This is safe because of the loading guard below.
         if (!activeOrg || !programId) {
              return null;
         }
@@ -146,7 +142,6 @@ const ExamProgram: FC = () => {
         return null;
     }, [programData, examPrices, bundlesEnabled]);
 
-    // This is the critical guard to prevent rendering with incomplete data on a direct page load.
     if (isInitializing || !activeOrg || !activeOrg.exams) {
         return <div className="text-center py-10"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading program details...</p></div>;
     }
@@ -156,7 +151,7 @@ const ExamProgram: FC = () => {
             <div className="text-center bg-white p-8 rounded-xl shadow-lg">
                 <h1 className="text-2xl font-bold text-slate-800 mt-4">Program Not Found</h1>
                 <p className="text-slate-600 mt-2">The exam program you are looking for does not exist or could not be loaded.</p>
-                <button onClick={() => navigate('/dashboard')} className="mt-6 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg">
+                <button onClick={() => history.push('/dashboard')} className="mt-6 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg">
                     Back to Dashboard
                 </button>
             </div>
@@ -202,7 +197,7 @@ const ExamProgram: FC = () => {
                             </div>
                         </Link>
                     ) : (
-                        <div /> // Placeholder to keep the 'Next' button on the right
+                        <div /> 
                     )}
                     {navigationLinks.next ? (
                         <Link to={`/program/${navigationLinks.next.id}`} className="flex items-center gap-2 text-cyan-600 hover:text-cyan-800 transition-colors text-right group">
@@ -213,7 +208,7 @@ const ExamProgram: FC = () => {
                             <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform"/>
                         </Link>
                     ) : (
-                        <div /> // Placeholder
+                        <div /> 
                     )}
                 </div>
 
