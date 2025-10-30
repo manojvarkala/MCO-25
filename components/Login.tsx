@@ -1,14 +1,14 @@
 import React, { FC, useRef, useEffect } from 'react';
-// FIX: Refactored to use react-router-dom v5 to resolve module export errors.
-import { useLocation, useHistory } from 'react-router-dom';
+// FIX: Refactored to use react-router-dom v6 to resolve module export errors.
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import toast from 'react-hot-toast';
 
 const Login: FC = () => {
     const location = useLocation();
-    // FIX: Replaced useNavigate with useHistory for v5 compatibility.
-    const history = useHistory();
+    // FIX: Replaced useHistory with useNavigate for v6 compatibility.
+    const navigate = useNavigate();
     const { loginWithToken, user } = useAuth();
     const hasProcessed = useRef(false);
 
@@ -29,24 +29,24 @@ const Login: FC = () => {
                 .then(() => {
                     // After all auth state is set and sync is done, navigate.
                     // This imperative navigation fixes a race condition on login.
-                    history.replace('/dashboard');
+                    navigate('/dashboard', { replace: true });
                 })
                 .catch((e: any) => {
                     // This catch handles critical token validation errors from AuthContext.
                     const errorMessage = e.message || 'Invalid login token. Please try again.';
                     toast.error(errorMessage);
-                    history.replace('/');
+                    navigate('/', { replace: true });
                 });
         } else {
             // If there's no token but the user is already logged in, redirect them.
             // Otherwise, send them to the landing page.
             if (user) {
-                history.replace('/dashboard');
+                navigate('/dashboard', { replace: true });
             } else {
-                history.replace('/');
+                navigate('/', { replace: true });
             }
         }
-    }, [location.search, loginWithToken, history, user]);
+    }, [location.search, loginWithToken, navigate, user]);
 
     // This component's primary job is to process and redirect.
     // It will show a loading screen for the brief moment it's mounted.

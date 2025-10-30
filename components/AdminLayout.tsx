@@ -1,5 +1,5 @@
 import React, { FC } from 'react';
-// FIX: Corrected react-router-dom import to resolve module export errors.
+// FIX: Corrected react-router-dom import to resolve module export errors and support v6.
 import { NavLink, Outlet } from 'react-router-dom';
 import { LayoutDashboard, Settings, ShoppingCart, Code, ArrowLeft, History, BarChart3, Sparkles, BookOpen } from 'lucide-react';
 

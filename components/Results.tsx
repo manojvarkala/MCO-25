@@ -1,6 +1,6 @@
 import React, { FC, useEffect, useState, useMemo, useRef, useCallback } from 'react';
-// FIX: Refactored to use react-router-dom v5 to resolve module export errors.
-import { useParams, useHistory } from 'react-router-dom';
+// FIX: Refactored to use react-router-dom v6 to resolve module export errors.
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -62,8 +62,8 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
 
 const Results: FC = () => {
     const { testId } = useParams<{ testId: string }>();
-    // FIX: Replaced useNavigate with useHistory for v5 compatibility.
-    const history = useHistory();
+    // FIX: Replaced useHistory with useNavigate for v6 compatibility.
+    const navigate = useNavigate();
     const { user, token, isSubscribed, paidExamIds, isEffectivelyAdmin } = useAuth();
     const { activeOrg, suggestedBooks } = useAppContext();
 
@@ -92,11 +92,11 @@ const Results: FC = () => {
                 setExam(examConfig || null);
             } else {
                 toast.error("Test result not found.");
-                history.push('/dashboard');
+                navigate('/dashboard');
             }
             setIsLoading(false);
         }
-    }, [testId, user, activeOrg, history]);
+    }, [testId, user, activeOrg, navigate]);
     
     useEffect(() => {
         if (!isLoading) {
@@ -339,7 +339,7 @@ const Results: FC = () => {
                     
                     {isEffectivelyAdmin && (
                         <button 
-                            onClick={() => history.push(`/certificate/${result.testId}`)} 
+                            onClick={() => navigate(`/certificate/${result.testId}`)} 
                             className="w-full text-sm flex items-center justify-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-4 rounded-lg"
                         >
                             <Award size={16} /> View Certificate (Admin)
@@ -348,7 +348,7 @@ const Results: FC = () => {
 
                     {userCertificateVisibility === 'USER_EARNED' && (
                         <button 
-                            onClick={() => history.push(`/certificate/${result.testId}`)} 
+                            onClick={() => navigate(`/certificate/${result.testId}`)} 
                             className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
                         >
                             <Award size={20} /> Download Your Certificate

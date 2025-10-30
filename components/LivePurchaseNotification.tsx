@@ -69,6 +69,10 @@ const LivePurchaseNotification: FC = () => {
 
         let timeoutId: number | undefined;
 
+        const minGap = (activeOrg.purchaseNotifierMinGap || 8) * 1000;
+        const maxGap = (activeOrg.purchaseNotifierMaxGap || 23) * 1000;
+        const range = maxGap - minGap;
+
         const showRandomNotification = () => {
             const randomName = firstNames[Math.floor(Math.random() * firstNames.length)];
             const randomLocation = locations[Math.floor(Math.random() * locations.length)];
@@ -84,7 +88,7 @@ const LivePurchaseNotification: FC = () => {
             }, 5000);
 
             // Schedule next notification
-            const randomDelay = Math.random() * 15000 + 8000; // 8 to 23 seconds
+            const randomDelay = Math.random() * range + minGap;
             timeoutId = window.setTimeout(showRandomNotification, randomDelay + 5000); // add 5s for hide animation duration
         };
 

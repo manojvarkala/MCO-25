@@ -135,6 +135,8 @@ export interface Organization {
   bundlesEnabled?: boolean;
   purchaseNotifierEnabled?: boolean;
   purchaseNotifierDelay?: number;
+  purchaseNotifierMinGap?: number;
+  purchaseNotifierMaxGap?: number;
 }
 
 export interface ApiCertificateData {

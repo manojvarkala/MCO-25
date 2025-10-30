@@ -368,6 +368,8 @@ function mco_api_get_full_config(WP_REST_Request $request) {
                 "bundlesEnabled" => $bundles_enabled,
                 "purchaseNotifierEnabled" => get_option('mco_purchase_notifier_enabled', '1') === '1',
                 "purchaseNotifierDelay" => (int) get_option('mco_purchase_notifier_delay', '7'),
+                "purchaseNotifierMinGap" => (int) get_option('mco_purchase_notifier_min_gap', '8'),
+                "purchaseNotifierMaxGap" => (int) get_option('mco_purchase_notifier_max_gap', '23'),
                 "exams" => $dynamic_data['exams'],
                 "examProductCategories" => $dynamic_data['examProductCategories'],
                 "certificateTemplates" => array_values($templates),

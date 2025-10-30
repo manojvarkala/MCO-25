@@ -55,6 +55,8 @@ function mco_exam_engine_admin_page() {
             update_option('mco_bundles_enabled', isset($_POST['mco_bundles_enabled']) ? '1' : '0');
             update_option('mco_purchase_notifier_enabled', isset($_POST['mco_purchase_notifier_enabled']) ? '1' : '0');
             update_option('mco_purchase_notifier_delay', sanitize_text_field($_POST['mco_purchase_notifier_delay']));
+            update_option('mco_purchase_notifier_min_gap', sanitize_text_field($_POST['mco_purchase_notifier_min_gap']));
+            update_option('mco_purchase_notifier_max_gap', sanitize_text_field($_POST['mco_purchase_notifier_max_gap']));
             delete_transient('mco_app_config_data');
             update_option('mco_config_version', current_time('YmdHis'));
             echo '<div class="notice notice-success is-dismissible"><p>Settings saved and config cache cleared.</p></div>';
@@ -203,6 +205,16 @@ function mco_render_main_settings_tab() { ?>
                 <th><label for="mco_purchase_notifier_delay">Notifier Initial Delay (seconds)</label></th>
                 <td><input type="number" id="mco_purchase_notifier_delay" name="mco_purchase_notifier_delay" value="<?php echo esc_attr(get_option('mco_purchase_notifier_delay', '7')); ?>" min="1">
                 <p class="description">The delay before the first notification appears after a page load.</p></td>
+            </tr>
+             <tr>
+                <th><label for="mco_purchase_notifier_min_gap">Notifier Gap (Min Seconds)</label></th>
+                <td><input type="number" id="mco_purchase_notifier_min_gap" name="mco_purchase_notifier_min_gap" value="<?php echo esc_attr(get_option('mco_purchase_notifier_min_gap', '8')); ?>" min="1">
+                <p class="description">The minimum time gap between notifications.</p></td>
+            </tr>
+            <tr>
+                <th><label for="mco_purchase_notifier_max_gap">Notifier Gap (Max Seconds)</label></th>
+                <td><input type="number" id="mco_purchase_notifier_max_gap" name="mco_purchase_notifier_max_gap" value="<?php echo esc_attr(get_option('mco_purchase_notifier_max_gap', '23')); ?>" min="1">
+                <p class="description">The maximum time gap between notifications.</p></td>
             </tr>
         </table>
         <?php submit_button(); ?>
