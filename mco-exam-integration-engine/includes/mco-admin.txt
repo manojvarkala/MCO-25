@@ -158,8 +158,9 @@ function mco_render_main_settings_tab() { ?>
                     $is_disabled_by_multisite = $is_multisite && !get_site_option('registration', 'user');
                     $is_disabled_by_constant = $registration_constant_defined && USERS_CAN_REGISTER === false;
                     $is_disabled = $is_disabled_by_multisite || $is_disabled_by_constant;
+                    $current_setting = get_option('users_can_register');
                     ?>
-                    <input type="checkbox" id="mco_users_can_register" name="mco_users_can_register" value="1" <?php checked(get_option('users_can_register'), 1); ?> <?php disabled($is_disabled, true); ?>>
+                    <input type="checkbox" id="mco_users_can_register" name="mco_users_can_register" value="1" <?php checked($current_setting, 1); ?> <?php disabled($is_disabled, true); ?>>
                     <p class="description">Allow new users to register an account from the WordPress login page. This is required for new customers to sign up.</p>
                     <?php if ($is_disabled_by_multisite): ?>
                         <p class="mco-admin-notice mco-admin-notice--warning">
@@ -172,6 +173,10 @@ function mco_render_main_settings_tab() { ?>
                     <?php elseif ($registration_constant_defined && USERS_CAN_REGISTER === true): ?>
                          <p class="mco-admin-notice mco-admin-notice--info">
                             <strong>Note:</strong> User registration is hardcoded to 'true' by the <code>USERS_CAN_REGISTER</code> constant in your <code>wp-config.php</code> file. This setting is currently forced on.
+                        </p>
+                    <?php elseif (!$current_setting && !$is_disabled): ?>
+                        <p class="mco-admin-notice mco-admin-notice--warning">
+                            <strong>Warning:</strong> User registration is currently disabled. If you are trying to enable it here and the setting does not save, another plugin or your theme may be overriding this option. Check for plugins that manage security or login/registration, or check your theme's functions.php file.
                         </p>
                     <?php endif; ?>
                 </td>
@@ -389,7 +394,7 @@ function mco_render_bulk_data_tab() { ?>
     } 
     ?>
     <h4>Import Exam Programs</h4>
-    <p>Required columns: <code>program_title, program_description, question_source_url, certification_exam_sku, is_proctored, certificate_enabled, recommended_book_id, practice_questions, practice_duration, cert_questions, cert_duration, pass_score, status</code></p>
+    <p>Required columns: <code>program_title, program_description, practice_exam_name_override, cert_exam_name_override, question_source_url, certification_exam_sku, is_proctored, certificate_enabled, recommended_book_id, practice_questions, practice_duration, cert_questions, cert_duration, pass_score, status</code></p>
     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
         <input type="hidden" name="action" value="mco_bulk_import_csv"><input type="hidden" name="import_type" value="exam_programs"><?php wp_nonce_field('mco_bulk_import_csv_nonce', 'mco_bulk_import_csv_nonce'); ?>
         <table class="form-table"><tr><th>Exam Programs CSV File</th><td><input type="file" name="csv_file" accept=".csv" required></td></tr></table>
@@ -450,7 +455,7 @@ function mco_handle_generate_programs_csv() {
     }
 
     $programs = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => ['publish', 'draft', 'pending']]);
-    $csv_headers = ['program_title', 'program_description', 'question_source_url', 'certification_exam_sku', 'is_proctored', 'certificate_enabled', 'recommended_book_id', 'practice_questions', 'practice_duration', 'cert_questions', 'cert_duration', 'pass_score', 'status'];
+    $csv_headers = ['program_title', 'program_description', 'practice_exam_name_override', 'cert_exam_name_override', 'question_source_url', 'certification_exam_sku', 'is_proctored', 'certificate_enabled', 'recommended_book_id', 'practice_questions', 'practice_duration', 'cert_questions', 'cert_duration', 'pass_score', 'status'];
     
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="exam_programs_export_' . date('Y-m-d') . '.csv"');
@@ -469,6 +474,8 @@ function mco_handle_generate_programs_csv() {
         $row = [
             'program_title' => $program->post_title,
             'program_description' => $program->post_content,
+            'practice_exam_name_override' => get_post_meta($program->ID, '_mco_practice_exam_title_override', true),
+            'cert_exam_name_override' => get_post_meta($program->ID, '_mco_cert_exam_title_override', true),
             'question_source_url' => get_post_meta($program->ID, '_mco_question_source_url', true),
             'certification_exam_sku' => get_post_meta($program->ID, '_mco_certification_exam_sku', true),
             'is_proctored' => get_post_meta($program->ID, '_mco_is_proctored', true) ? '1' : '0',
@@ -581,6 +588,12 @@ function mco_handle_csv_upload() {
             }
 
             if ($post_id && !is_wp_error($post_id)) {
+                if (isset($row_data['practice_exam_name_override'])) {
+                    update_post_meta($post_id, '_mco_practice_exam_title_override', sanitize_text_field($row_data['practice_exam_name_override']));
+                }
+                if (isset($row_data['cert_exam_name_override'])) {
+                    update_post_meta($post_id, '_mco_cert_exam_title_override', sanitize_text_field($row_data['cert_exam_name_override']));
+                }
                 update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($row_data['question_source_url']));
                 update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($row_data['certification_exam_sku']));
                 update_post_meta($post_id, '_mco_is_proctored', ($row_data['is_proctored'] == '1') ? '1' : '0');
