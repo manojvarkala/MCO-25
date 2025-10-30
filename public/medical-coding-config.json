@@ -1,5 +1,5 @@
 {
-  "version": "20250926000001",
+  "version": "20250926000002",
   "organizations": [
     {
       "id": "org-medical-coding-online",
@@ -8,11 +8,11 @@
       "address": "Dubai, United Arab Emirates",
       "logo": "https://www.coding-online.net/wp-content/uploads/2025/09/coding-logo-vectorised-Copy.png",
       "availableThemes": [
-          { "id": "default", "name": "Cyberpunk" },
-          { "id": "professional", "name": "Professional" },
-          { "id": "serene", "name": "Serene" },
-          { "id": "academic", "name": "Academic" },
-          { "id": "noir", "name": "Noir" }
+        { "id": "default", "name": "Cyberpunk" },
+        { "id": "professional", "name": "Professional" },
+        { "id": "serene", "name": "Serene" },
+        { "id": "academic", "name": "Academic" },
+        { "id": "noir", "name": "Noir" }
       ],
       "activeThemeId": "default",
       "disclaimerText": "All exams are independent practice tools designed to build proficiency. Not affiliated with AAPC, AHIMA, or any certifying body.",
@@ -42,6 +42,7 @@
           "passScore": 70,
           "certificateTemplateId": "cert-completion",
           "isPractice": false,
+          "isProctored": true,
           "durationMinutes": 120,
           "questionSourceUrl": "https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing"
         },
@@ -70,6 +71,7 @@
           "passScore": 70,
           "certificateTemplateId": "cert-completion",
           "isPractice": false,
+          "isProctored": true,
           "durationMinutes": 120,
           "questionSourceUrl": "https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing"
         },
@@ -98,6 +100,7 @@
           "passScore": 70,
           "certificateTemplateId": "cert-completion",
           "isPractice": false,
+          "isProctored": true,
           "durationMinutes": 120,
           "questionSourceUrl": "https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing"
         },
@@ -126,6 +129,7 @@
           "passScore": 70,
           "certificateTemplateId": "cert-completion",
           "isPractice": false,
+          "isProctored": true,
           "durationMinutes": 90,
           "questionSourceUrl": "https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing"
         },
@@ -152,4 +156,84 @@
           "productSlug": "anatomy-physiology-certification-exam",
           "numberOfQuestions": 100,
           "passScore": 70,
-          "certificateTemplateId": "cert-
+          "certificateTemplateId": "cert-completion",
+          "isPractice": false,
+          "isProctored": true,
+          "durationMinutes": 120,
+          "questionSourceUrl": "https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing"
+        }
+      ],
+      "examProductCategories": [
+        {
+          "id": "prod-mcf",
+          "name": "Medical Coding Fundamentals",
+          "description": "Establish your grasp of the essential principles of medical coding.",
+          "practiceExamId": "exam-mcf-practice-practice",
+          "certificationExamId": "exam-mcf-cert"
+        },
+        {
+          "id": "prod-hi",
+          "name": "Health Informatics",
+          "description": "Test your understanding of health informatics principles, including data standards, electronic health records (EHRs), and data analytics in healthcare.",
+          "practiceExamId": "exam-hi-practice-practice",
+          "certificationExamId": "exam-hi-cert"
+        },
+        {
+          "id": "prod-rcm",
+          "name": "Revenue Cycle Management",
+          "description": "This comprehensive exam covers all stages of the healthcare revenue cycle, from patient access and charge capture to claims management and analytics.",
+          "practiceExamId": "exam-rcm-practice-practice",
+          "certificationExamId": "exam-rcm-cert"
+        },
+        {
+          "id": "prod-em",
+          "name": "Evaluation & Management",
+          "description": "Demonstrate your expertise in the complex world of Evaluation and Management (E/M) coding.",
+          "practiceExamId": "exam-em-practice-practice",
+          "certificationExamId": "exam-em-cert"
+        },
+        {
+          "id": "prod-ap",
+          "name": "Anatomy & Physiology",
+          "description": "Validate your comprehensive knowledge of human anatomy and physiology.",
+          "practiceExamId": "exam-ap-practice-practice",
+          "certificationExamId": "exam-ap-cert"
+        }
+      ],
+      "certificateTemplates": [
+        {
+          "id": "cert-practice",
+          "name": "Default Practice Certificate",
+          "title": "Certificate of Proficiency",
+          "body": "This certifies that <strong>{candidateName}</strong> has successfully demonstrated proficiency in the <strong>{examName}</strong> practice exam, achieving a score of <strong>{finalScore}%</strong>.",
+          "signature1Name": "Amelia Reed",
+          "signature1Title": "Program Director",
+          "signature1ImageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw1My4zMjYxQzE2Ljg2NDcsNDcuMjQzNyAyOC43MjQ3LDQwLjM0NDIgNDEuMzQzOCw0NS4xMTM4QzUzLjM2Niw0OS42Njc3IDU5Ljk0ODksNTguNDg4NyA3Mi4zNDM4LDYxLjUxMTRDODQuNzM4OCw2NC41MzQgOTkuNDUwNCw2MC4zODI0IDExMS4yNSw1NC43MkMxMjMuMDQ5Niw0OS4wNTc2IDEzNi44OTYsNDQuNjE4NCAxNDguOTIyLDQ1LjExMzhDMTYwLjk0Niw0NS42MDkzIDE2Ny44OTksNTEuMzMzNyAxNzkuNTgsNDkuNjY3N0MxOTEuMjYsNDggMTk4LjgzNCwzNi4xNzQzIDIxMC43NSwzNi4xNzQzQzIyMi42NjYsMzYuMTc0MyAyMjguODEzLDQ4LjA4NjYgMjM5LjUsNDkuNjY3N0MyNTAuMTg3LDUxLjI0ODkgMjU4LjU5OCw0NC4wMzIxIDI2OS41LDQ1LjExMzhDMjgwLjQwMSw0Ni4xOTU1IDI4Ni41LDUzLjA5NSAyOTEsNjEuNTExNCIgc3Ryb2tlPSIjMWUyOTJiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==",
+          "signature2Name": "Quinn Casey, CPC",
+          "signature2Title": "Lead Instructor",
+          "signature2ImageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw0Mi4xNDQ4QzE2Ljg2NDcsMzYuMDYyNCAyOC43MjQ3LDI5LjE2MyA0MS4zNDM4LDMzLjkyMjdDNTMuMzY2LDM4LjQ4NjQgNTkuOTQ4OSw0Ny4zMDc1IDcyLjM0MzgsNTAuMzMyMkM4NC43Mzg4LDUzLjM1MjggOTkuNDUwNCw0OS4yMDEyIDExMS4yNSw0My41Mzg4QzEyMy4wNDk2LDM3Ljg3NjQgMTM2Ljg5NiwzMy40Mzc0IDE0OC45MjIsMzMuOTMyN0MxNjAuOTQ2LDM0LjQyNzkgMTY3Ljg5OSw0MC4xNTI1IDE3OS41OCwzOC44ODY3QzE5MS4yNiwzNi44MjA2IDE5OC44MzQsMjQuOTkzMSAyMTAuNzUsMjQuOTkzMUMyMjIuNjY2LDI0Ljk5MzEgMjI4LjgxMywzNi45MDkyIDIzOS41LDM4LjQ4NjdDMjUwLjE4Nyw0MC4wNjczIDI1Mjg1OTgsMzIuODUwMSAyNjkuNSwzMy45MzI3QzI4MC40MDEsMzUuMDE0MyAyODYuNSw0MS45MTM4IDI5MSw1MC4zMzIyIiBzdHJva2U9IiMxZTI5MmIiIGZpbGw9Im5vbmUiIHN0cm9rZS1waWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+"
+        },
+        {
+          "id": "cert-completion",
+          "name": "Default Completion Certificate",
+          "title": "Certificate of Achievement",
+          "body": "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.",
+          "signature1Name": "Amelia Reed",
+          "signature1Title": "Program Director",
+          "signature1ImageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw1My4zMjYxQzE2Ljg2NDcsNDcuMjQzNyAyOC43MjQ3LDQwLjM0NDIgNDEuMzQzOCw0NS4xMTM4QzUzLjM2Niw0OS42Njc3IDU5Ljk0ODksNTguNDg4NyA3Mi4zNDM4LDYxLjUxMTRDODQuNzM4OCw2NC41MzQgOTkuNDUwNCw2MC4zODI0IDExMS4yNSw1NC43MkMxMjMuMDQ5Niw0OS4wNTc2IDEzNi44OTYsNDQuNjE4NCAxNDguOTIyLDQ1LjExMzhDMTYwLjk0Niw0NS42MDkzIDE2Ny44OTksNTEuMzMzNyAxNzkuNTgsNDkuNjY3N0MxOTEuMjYsNDggMTk4LjgzNCwzNi4xNzQzIDIxMC43NSwzNi4xNzQzQzIyMi42NjYsMzYuMTc0MyAyMjguODEzLDQ4LjA4NjYgMjM5LjUsNDkuNjY3N0MyNTAuMTg3LDUxLjI0ODkgMjU4LjU5OCw0NC4wMzIxIDI2OS41LDQ1LjExMzhDMjgwLjQwMSw0Ni4xOTU1IDI4Ni41LDUzLjA5NSAyOTEsNjEuNTExNCIgc3Ryb2tlPSIjMWUyOTJiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==",
+          "signature2Name": "Quinn Casey, CPC",
+          "signature2Title": "Lead Instructor",
+          "signature2ImageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw0Mi4xNDQ4QzE2Ljg2NDcsMzYuMDYyNCAyOC43MjQ3LDI5LjE2MyA0MS4zNDM4LDMzLjkyMjdDNTMuMzY2LDM4LjQ4NjQgNTkuOTQ4OSw0Ny4zMDc1IDcyLjM0MzgsNTAuMzMyMkM4NC43Mzg4LDUzLjM1MjggOTkuNDUwNCw0OS4yMDEyIDExMS4yNSw0My41Mzg4QzEyMy4wNDk2LDM3Ljg3NjQgMTM2Ljg5NiwzMy40Mzc0IDE0OC45MjIsMzMuOTMyN0MxNjAuOTQ2LDM0LjQyNzkgMTY3Ljg5OSw0MC4xNTI1IDE3OS41OCwzOC44ODY3QzE5MS4yNiwzNi44MjA2IDE5OC44MzQsMjQuOTkzMSAyMTAuNzUsMjQuOTkzMUMyMjIuNjY2LDI0Ljk5MzEgMjI4LjgxMywzNi45MDkyIDIzOS41LDM4LjQ4NjdDMjUwLjE4Nyw0MC4wNjczIDI1Mjg1OTgsMzIuODUwMSAyNjkuNSwzMy45MzI3QzI4MC40MDEsMzUuMDE0MyAyODYuNSw0MS45MTM4IDI5MSw1MC4zMzIyIiBzdHJva2U9IiMxZTI5MmIiIGZpbGw9Im5vbmUiIHN0cm9rZS1waWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+"
+        }
+      ],
+      "suggestedBooks": []
+    }
+  ],
+  "examPrices": {
+    "exam-mcf-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "medical-coding-fundamentals-certification" },
+    "exam-hi-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "health-informatics-certification-exam" },
+    "exam-rcm-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "revenue-cycle-management-certification-exam" },
+    "exam-em-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "e-m-coding-certification-exam" },
+    "exam-ap-cert": { "price": 1, "regularPrice": 49.99, "productSlug": "anatomy-physiology-certification-exam" }
+  }
+}
