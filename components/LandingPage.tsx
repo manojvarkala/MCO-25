@@ -1,7 +1,10 @@
 
 
+
+
+
 import React, { FC, useEffect, useRef } from 'react';
-// FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+// FIX: Updated useHistory to useNavigate for react-router-dom v6.
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -9,7 +12,7 @@ import { LogIn, UserPlus, FileText, Award, Sparkles } from 'lucide-react';
 import LogoSpinner from './LogoSpinner.tsx';
 
 const LandingPage: FC = () => {
-    // FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+    // FIX: Updated useHistory to useNavigate for react-router-dom v6.
     const navigate = useNavigate();
     const { user } = useAuth();
     const { activeOrg, isInitializing } = useAppContext();

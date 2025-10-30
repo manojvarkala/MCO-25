@@ -1,7 +1,10 @@
 
 
+
+
+
 import React, { FC, useState, useEffect } from 'react';
-// FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+// FIX: Updated useHistory to useNavigate for react-router-dom v6.
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -14,7 +17,7 @@ import Spinner from './Spinner.tsx';
 const Profile: FC = () => {
     const { user, token, updateUserName, isSubscribed, isEffectivelyAdmin } = useAuth();
     const { activeOrg, availableThemes, activeTheme, setActiveTheme } = useAppContext();
-    // FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+    // FIX: Updated useHistory to useNavigate for react-router-dom v6.
     const navigate = useNavigate();
 
     const [results, setResults] = useState<TestResult[]>([]);

@@ -1,7 +1,10 @@
 
 
+
+
+
 import React, { FC, useRef, useEffect } from 'react';
-// FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+// FIX: Reverted useNavigate to useHistory for react-router-dom v5.
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
@@ -9,7 +12,7 @@ import toast from 'react-hot-toast';
 
 const Login: FC = () => {
     const location = useLocation();
-    // FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+    // FIX: Updated useHistory to useNavigate for react-router-dom v6.
     const navigate = useNavigate();
     const { loginWithToken, user } = useAuth();
     const hasProcessed = useRef(false);

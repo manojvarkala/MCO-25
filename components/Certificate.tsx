@@ -1,8 +1,11 @@
 
 
 
+
+
+
 import React, { FC, useState, useEffect, useRef } from 'react';
-// FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+// FIX: Updated useHistory to useNavigate for react-router-dom v6.
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -30,7 +33,7 @@ const decodeHtmlEntities = (text: string | undefined): string => {
 
 const Certificate: FC = () => {
     const { testId = 'sample' } = useParams<{ testId?: string }>();
-    // FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+    // FIX: Updated useHistory to useNavigate for react-router-dom v6.
     const navigate = useNavigate();
     const location = useLocation();
     const { user, token, isEffectivelyAdmin } = useAuth();
@@ -106,7 +109,7 @@ const Certificate: FC = () => {
                     
                     if (exam && !exam.certificateEnabled && !isEffectivelyAdmin) {
                         toast.error("A certificate is not available for this exam.");
-                        // FIX: Replaced history.replace with navigate for react-router-dom v6.
+                        // FIX: Replaced navigate with history.replace for react-router-dom v6.
                         navigate(`/results/${testId}`, { replace: true });
                         return;
                     }
@@ -142,7 +145,7 @@ const Certificate: FC = () => {
         };
 
         fetchCertificateData();
-    // FIX: Replaced history with navigate in dependency array.
+    // FIX: Replaced navigate with history in dependency array.
     }, [testId, user, token, navigate, activeOrg, isEffectivelyAdmin, location.search, certificateThemeIdFromOrg]);
 
     const handleDownload = async () => {
@@ -344,7 +347,7 @@ const Certificate: FC = () => {
         <div className="max-w-5xl mx-auto bg-slate-100 p-4 sm:p-6 rounded-lg">
             <div className="flex justify-between items-center mb-6">
                  <button
-                    // FIX: Replaced history.goBack with navigate(-1) for react-router-dom v6.
+                    // FIX: Replaced history.goBack() with navigate(-1) for react-router-dom v6.
                     onClick={() => navigate(-1)}
                     className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition"
                 >

@@ -1,7 +1,10 @@
 
 
+
+
+
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
-// FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+// FIX: Updated useHistory to useNavigate for react-router-dom v6.
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -40,7 +43,7 @@ const stripHtml = (html: string): string => {
 const Dashboard: FC = () => {
     const { user, token, paidExamIds, isSubscribed, subscriptionInfo, loginWithToken, isEffectivelyAdmin } = useAuth();
     const { activeOrg, isInitializing, inProgressExam, examPrices, subscriptionsEnabled, bundlesEnabled } = useAppContext();
-    // FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+    // FIX: Updated useHistory to useNavigate for react-router-dom v6.
     const navigate = useNavigate();
 
     const [results, setResults] = useState<TestResult[]>([]);

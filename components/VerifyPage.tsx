@@ -1,14 +1,17 @@
 
 
+
+
+
 import React, { FC, useState } from 'react';
-// FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+// FIX: Updated useHistory to useNavigate for react-router-dom v6.
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const VerifyPage: FC = () => {
     const [inputId, setInputId] = useState('');
-    // FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+    // FIX: Updated useHistory to useNavigate for react-router-dom v6.
     const navigate = useNavigate();
 
     const handleVerify = (e: React.FormEvent) => {

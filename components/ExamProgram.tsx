@@ -1,7 +1,10 @@
 
 
+
+
+
 import React, { FC, useMemo, useState, useEffect } from 'react';
-// FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+// FIX: Updated useHistory to useNavigate for react-router-dom v6.
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -66,7 +69,7 @@ const stripHtml = (html: string): string => {
 
 const ExamProgram: FC = () => {
     const { programId } = useParams<{ programId: string }>();
-    // FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+    // FIX: Updated useHistory to useNavigate for react-router-dom v6.
     const navigate = useNavigate();
     const { activeOrg, suggestedBooks, isInitializing, examPrices, subscriptionsEnabled, bundlesEnabled } = useAppContext();
     const { user, paidExamIds, isSubscribed, isEffectivelyAdmin } = useAuth();
