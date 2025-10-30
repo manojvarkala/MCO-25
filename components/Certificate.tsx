@@ -1,7 +1,9 @@
 
 
+
 import React, { FC, useState, useEffect, useRef } from 'react';
-import { useParams, useHistory, useLocation } from 'react-router-dom';
+// FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -28,7 +30,8 @@ const decodeHtmlEntities = (text: string | undefined): string => {
 
 const Certificate: FC = () => {
     const { testId = 'sample' } = useParams<{ testId?: string }>();
-    const history = useHistory();
+    // FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+    const navigate = useNavigate();
     const location = useLocation();
     const { user, token, isEffectivelyAdmin } = useAuth();
     const { activeOrg } = useAppContext();
@@ -57,7 +60,8 @@ const Certificate: FC = () => {
 
             if (!templateToUse) {
                 toast.error("Sample certificate template not found.");
-                history.push('/dashboard');
+                // FIX: Replaced history.push with navigate for react-router-dom v6.
+                navigate('/dashboard');
                 return;
             }
             
@@ -102,7 +106,8 @@ const Certificate: FC = () => {
                     
                     if (exam && !exam.certificateEnabled && !isEffectivelyAdmin) {
                         toast.error("A certificate is not available for this exam.");
-                        history.replace(`/results/${testId}`);
+                        // FIX: Replaced history.replace with navigate for react-router-dom v6.
+                        navigate(`/results/${testId}`, { replace: true });
                         return;
                     }
 
@@ -119,22 +124,26 @@ const Certificate: FC = () => {
                         setCertData(fullCertData);
                     } else {
                         toast.error("Certificate configuration missing in the app.");
-                        history.push('/dashboard');
+                        // FIX: Replaced history.push with navigate for react-router-dom v6.
+                        navigate('/dashboard');
                     }
                 } else {
                     toast.error("Certificate not earned or result not found.");
-                    history.push('/dashboard');
+                    // FIX: Replaced history.push with navigate for react-router-dom v6.
+                    navigate('/dashboard');
                 }
             } catch (error: any) {
                 toast.error(error.message || "Failed to load certificate data.");
-                history.push('/dashboard');
+                // FIX: Replaced history.push with navigate for react-router-dom v6.
+                navigate('/dashboard');
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchCertificateData();
-    }, [testId, user, token, history, activeOrg, isEffectivelyAdmin, location.search, certificateThemeIdFromOrg]);
+    // FIX: Replaced history with navigate in dependency array.
+    }, [testId, user, token, navigate, activeOrg, isEffectivelyAdmin, location.search, certificateThemeIdFromOrg]);
 
     const handleDownload = async () => {
         if (!certificatePrintRef.current || !certData) return;
@@ -335,7 +344,8 @@ const Certificate: FC = () => {
         <div className="max-w-5xl mx-auto bg-slate-100 p-4 sm:p-6 rounded-lg">
             <div className="flex justify-between items-center mb-6">
                  <button
-                    onClick={() => history.goBack()}
+                    // FIX: Replaced history.goBack with navigate(-1) for react-router-dom v6.
+                    onClick={() => navigate(-1)}
                     className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition"
                 >
                     <ArrowLeft size={16} />

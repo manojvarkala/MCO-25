@@ -1,6 +1,8 @@
 
+
 import React, { FC, useState } from 'react';
-import { useHistory, Link } from 'react-router-dom';
+// FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -20,7 +22,8 @@ export interface ExamCardProps {
 }
 
 const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, activeOrg, examPrices, hideDetailsLink = false, attemptsMade }) => {
-    const history = useHistory();
+    // FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+    const navigate = useNavigate();
     const { user, token, isSubscribed } = useAuth();
     const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -37,7 +40,8 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
 
     const handleButtonClick = async () => {
         if (canTake) {
-            history.push(`/test/${exam.id}`);
+            // FIX: Replaced history.push with navigate for react-router-dom v6.
+            navigate(`/test/${exam.id}`);
         } else if (exam.productSku) {
             if (!user || !token) {
                 toast.error("Please log in to make a purchase.");

@@ -1,6 +1,8 @@
 
+
 import React, { FC, useState, useEffect } from 'react';
-import { useHistory } from 'react-router-dom';
+// FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -12,7 +14,8 @@ import Spinner from './Spinner.tsx';
 const Profile: FC = () => {
     const { user, token, updateUserName, isSubscribed, isEffectivelyAdmin } = useAuth();
     const { activeOrg, availableThemes, activeTheme, setActiveTheme } = useAppContext();
-    const history = useHistory();
+    // FIX: Replaced useHistory with useNavigate for react-router-dom v6.
+    const navigate = useNavigate();
 
     const [results, setResults] = useState<TestResult[]>([]);
     const [isEditingName, setIsEditingName] = useState(false);
@@ -217,12 +220,14 @@ const Profile: FC = () => {
                                             <span>Passing Score: <strong>{exam.passScore}%</strong></span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <button onClick={() => history.push(`/results/${result.testId}`)} className="text-sm font-semibold text-cyan-600 hover:text-cyan-800 flex items-center gap-1">
+                                            {/* FIX: Replaced history.push with navigate for react-router-dom v6. */}
+                                            <button onClick={() => navigate(`/results/${result.testId}`)} className="text-sm font-semibold text-cyan-600 hover:text-cyan-800 flex items-center gap-1">
                                                 View Details <ChevronRight size={16} />
                                             </button>
                                             {(canGetCertificate || isEffectivelyAdmin) && (
+                                                // FIX: Replaced history.push with navigate for react-router-dom v6.
                                                 <button 
-                                                    onClick={() => history.push(`/certificate/${result.testId}`)} 
+                                                    onClick={() => navigate(`/certificate/${result.testId}`)} 
                                                     className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
                                                     title={isEffectivelyAdmin && !canGetCertificate ? "View Certificate (Admin Override)" : "View Certificate"}
                                                 >
