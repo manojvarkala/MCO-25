@@ -1,21 +1,22 @@
 import React, { FC, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LogIn, UserPlus, FileText, Award, Sparkles } from 'lucide-react';
 import LogoSpinner from './LogoSpinner.tsx';
 
 const LandingPage: FC = () => {
-    const navigate = useNavigate();
+    // FIX: Replaced useNavigate with useHistory for v5 compatibility.
+    const history = useHistory();
     const { user } = useAuth();
     const { activeOrg, isInitializing } = useAppContext();
     const videoRef = useRef<HTMLVideoElement>(null);
     
     useEffect(() => {
         if (user) {
-            navigate('/dashboard');
+            history.push('/dashboard');
         }
-    }, [user, navigate]);
+    }, [user, history]);
 
     useEffect(() => {
         if (videoRef.current) {

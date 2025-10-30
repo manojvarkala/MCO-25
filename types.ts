@@ -133,6 +133,8 @@ export interface Organization {
   certificateThemeId: string;
   subscriptionsEnabled?: boolean;
   bundlesEnabled?: boolean;
+  purchaseNotifierEnabled?: boolean;
+  purchaseNotifierDelay?: number;
 }
 
 export interface ApiCertificateData {

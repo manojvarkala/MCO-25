@@ -1,7 +1,9 @@
 
 
+
 import React, { FC, useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+// FIX: Refactored to use react-router-dom v5 to resolve module export errors.
+import { useParams, useHistory, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -28,7 +30,8 @@ const decodeHtmlEntities = (text: string | undefined): string => {
 
 const Certificate: FC = () => {
     const { testId = 'sample' } = useParams<{ testId?: string }>();
-    const navigate = useNavigate();
+    // FIX: Replaced useNavigate with useHistory for v5 compatibility.
+    const history = useHistory();
     const location = useLocation();
     const { user, token, isEffectivelyAdmin } = useAuth();
     const { activeOrg } = useAppContext();
@@ -57,7 +60,7 @@ const Certificate: FC = () => {
 
             if (!templateToUse) {
                 toast.error("Sample certificate template not found.");
-                navigate('/dashboard');
+                history.push('/dashboard');
                 return;
             }
             
@@ -102,7 +105,7 @@ const Certificate: FC = () => {
                     
                     if (exam && !exam.certificateEnabled && !isEffectivelyAdmin) {
                         toast.error("A certificate is not available for this exam.");
-                        navigate(`/results/${testId}`, { replace: true });
+                        history.replace(`/results/${testId}`);
                         return;
                     }
 
@@ -119,22 +122,22 @@ const Certificate: FC = () => {
                         setCertData(fullCertData);
                     } else {
                         toast.error("Certificate configuration missing in the app.");
-                        navigate('/dashboard');
+                        history.push('/dashboard');
                     }
                 } else {
                     toast.error("Certificate not earned or result not found.");
-                    navigate('/dashboard');
+                    history.push('/dashboard');
                 }
             } catch (error: any) {
                 toast.error(error.message || "Failed to load certificate data.");
-                navigate('/dashboard');
+                history.push('/dashboard');
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchCertificateData();
-    }, [testId, user, token, navigate, activeOrg, isEffectivelyAdmin, location.search, certificateThemeIdFromOrg]);
+    }, [testId, user, token, history, activeOrg, isEffectivelyAdmin, location.search, certificateThemeIdFromOrg]);
 
     const handleDownload = async () => {
         if (!certificatePrintRef.current || !certData) return;
@@ -207,7 +210,7 @@ const Certificate: FC = () => {
                                     <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="cert-logo" />
                                 )}
                                 <div className="cert-brain-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-slate-200">
+                                    <svg xmlns="http://www.w.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-slate-200">
                                         <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v0A2.5 2.5 0 0 1 9.5 7v0A2.5 2.5 0 0 1 7 4.5v0A2.5 2.5 0 0 1 9.5 2Z" /><path d="M14.5 2A2.5 2.5 0 0 1 17 4.5v0A2.5 2.5 0 0 1 14.5 7v0A2.5 2.5 0 0 1 12 4.5v0A2.5 2.5 0 0 1 14.5 2Z" /><path d="M12 18H5c-1.1 0-2-1.34-2-3v-1.5c0-.83.67-1.5 1.5-1.5.83 0 1.5.67 1.5 1.5v.5a.5.5 0 0 0 .5.5h1" /><path d="M12 18h7c1.1 0 2-1.34 2-3v-1.5c0-.83-.67-1.5-1.5-1.5-.83 0-1.5.67-1.5 1.5v.5a.5.5 0 0 1-.5.5h-1" /><path d="M12 18v-5.5" /><path d="M12 12.5v-2" /><path d="M12 7.5V6" /><path d="M7 15a2.5 2.5 0 0 1 0-5" /><path d="M17 15a2.5 2.5 0 0 0 0-5" />
                                     </svg>
                                 </div>
@@ -336,7 +339,7 @@ const Certificate: FC = () => {
         <div className="max-w-5xl mx-auto bg-slate-100 p-4 sm:p-6 rounded-lg">
             <div className="flex justify-between items-center mb-6">
                  <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => history.goBack()}
                     className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition"
                 >
                     <ArrowLeft size={16} />

@@ -366,6 +366,8 @@ function mco_api_get_full_config(WP_REST_Request $request) {
                 "certificateThemeId" => get_option('mco_certificate_theme_id', 'classic'),
                 "subscriptionsEnabled" => $subscriptions_enabled,
                 "bundlesEnabled" => $bundles_enabled,
+                "purchaseNotifierEnabled" => get_option('mco_purchase_notifier_enabled', '1') === '1',
+                "purchaseNotifierDelay" => (int) get_option('mco_purchase_notifier_delay', '7'),
                 "exams" => $dynamic_data['exams'],
                 "examProductCategories" => $dynamic_data['examProductCategories'],
                 "certificateTemplates" => array_values($templates),
@@ -770,6 +772,12 @@ function mco_api_get_system_status(WP_REST_Request $request) {
         }
     }
     $status['google_sheet'] = $sheet_test;
+
+    $status['nonces'] = [
+        'generate_programs_csv' => wp_create_nonce('mco_generate_programs_csv_nonce'),
+        'generate_books_csv' => wp_create_nonce('mco_generate_books_csv_nonce'),
+        'generate_products_csv' => wp_create_nonce('mco_generate_products_csv_nonce')
+    ];
 
     return new WP_REST_Response($status, 200);
 }

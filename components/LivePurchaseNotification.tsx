@@ -32,6 +32,11 @@ const LivePurchaseNotification: FC = () => {
     const [isVisible, setIsVisible] = useState(false);
     const [notification, setNotification] = useState({ name: '', location: '', exam: '', time: '' });
     
+    // The entire notifier is disabled from the backend.
+    if (!activeOrg || !activeOrg.purchaseNotifierEnabled) {
+        return null;
+    }
+
     const [adminPrefersHidden, setAdminPrefersHidden] = useState(() => {
         try {
             return localStorage.getItem('mco_show_notifications') === 'false';
@@ -62,7 +67,7 @@ const LivePurchaseNotification: FC = () => {
             return;
         }
 
-        let timeoutId: number;
+        let timeoutId: number | undefined;
 
         const showRandomNotification = () => {
             const randomName = firstNames[Math.floor(Math.random() * firstNames.length)];
@@ -83,10 +88,12 @@ const LivePurchaseNotification: FC = () => {
             timeoutId = window.setTimeout(showRandomNotification, randomDelay + 5000); // add 5s for hide animation duration
         };
 
-        // Start the loop after an initial delay
-        timeoutId = window.setTimeout(showRandomNotification, 7000);
+        const initialDelay = (activeOrg.purchaseNotifierDelay || 7) * 1000;
 
-        return () => clearTimeout(timeoutId);
+        // Start the loop after an initial delay
+        timeoutId = window.setTimeout(showRandomNotification, initialDelay);
+
+        return () => { if (timeoutId) clearTimeout(timeoutId); };
     }, [activeOrg, certificationExams]);
 
     return (

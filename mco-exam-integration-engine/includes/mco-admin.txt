@@ -28,6 +28,7 @@ function mco_register_admin_hooks() {
     add_action('admin_post_mco_generate_tenant_blueprint', 'mco_handle_generate_tenant_blueprint');
     add_action('admin_post_mco_generate_full_snapshot', 'mco_handle_generate_full_snapshot');
     add_action('admin_post_mco_generate_programs_csv', 'mco_handle_generate_programs_csv');
+    add_action('admin_post_mco_generate_books_csv', 'mco_handle_generate_books_csv');
     add_action('admin_post_mco_generate_products_csv', 'mco_handle_generate_products_csv');
 }
 
@@ -52,6 +53,8 @@ function mco_exam_engine_admin_page() {
             update_option('users_can_register', isset($_POST['mco_users_can_register']) ? 1 : 0);
             update_option('mco_subscriptions_enabled', isset($_POST['mco_subscriptions_enabled']) ? '1' : '0');
             update_option('mco_bundles_enabled', isset($_POST['mco_bundles_enabled']) ? '1' : '0');
+            update_option('mco_purchase_notifier_enabled', isset($_POST['mco_purchase_notifier_enabled']) ? '1' : '0');
+            update_option('mco_purchase_notifier_delay', sanitize_text_field($_POST['mco_purchase_notifier_delay']));
             delete_transient('mco_app_config_data');
             update_option('mco_config_version', current_time('YmdHis'));
             echo '<div class="notice notice-success is-dismissible"><p>Settings saved and config cache cleared.</p></div>';
@@ -190,6 +193,16 @@ function mco_render_main_settings_tab() { ?>
                 <th><label for="mco_bundles_enabled">Enable Bundle Products</label></th>
                 <td><input type="checkbox" id="mco_bundles_enabled" name="mco_bundles_enabled" value="1" <?php checked(get_option('mco_bundles_enabled', '1'), '1'); ?>>
                 <p class="description">Show product bundles (e.g., Exam + Subscription) in the app.</p></td>
+            </tr>
+            <tr>
+                <th><label for="mco_purchase_notifier_enabled">Enable Live Purchase Notifier</label></th>
+                <td><input type="checkbox" id="mco_purchase_notifier_enabled" name="mco_purchase_notifier_enabled" value="1" <?php checked(get_option('mco_purchase_notifier_enabled', '1'), '1'); ?>>
+                <p class="description">Show a small pop-up with fake purchase data to create social proof.</p></td>
+            </tr>
+            <tr>
+                <th><label for="mco_purchase_notifier_delay">Notifier Initial Delay (seconds)</label></th>
+                <td><input type="number" id="mco_purchase_notifier_delay" name="mco_purchase_notifier_delay" value="<?php echo esc_attr(get_option('mco_purchase_notifier_delay', '7')); ?>" min="1">
+                <p class="description">The delay before the first notification appears after a page load.</p></td>
             </tr>
         </table>
         <?php submit_button(); ?>
@@ -355,28 +368,47 @@ function mco_render_theme_selector_tab() {
 <?php }
 function mco_render_bulk_data_tab() { ?>
     <h2>Bulk Data Import & Export</h2>
-    <p>Use these tools to manage your exam content in bulk using CSV files.</p>
-    <h3 style="margin-top: 2rem;">Step 1: Export Data (Optional)</h3>
-    <p>Generate CSV files from your existing content for bulk editing.</p>
+    <p>Use these tools to manage your exam content in bulk using CSV files. You can download a template, export existing data for editing, or upload a completed file.</p>
+    <h3 style="margin-top: 2rem;">Step 1: Get a CSV Template</h3>
+    <p>Download a blank template or generate a CSV file from your existing content for bulk editing.</p>
     <table class="form-table">
         <tr>
-            <th>Export Exam Programs</th>
+            <th>Exam Programs</th>
             <td>
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                    <input type="hidden" name="action" value="mco_generate_programs_csv">
-                    <?php wp_nonce_field('mco_generate_programs_csv_nonce'); ?>
-                    <?php submit_button('Generate & Download Programs CSV', 'secondary', 'submit_generate_programs_csv', false); ?>
-                </form>
+                <div style="display: flex; gap: 10px;">
+                    <a href="<?php echo esc_url(MCO_PLUGIN_URL . 'public/template-exam-programs.csv'); ?>" class="button" download>Download Blank Template</a>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin: 0;">
+                        <input type="hidden" name="action" value="mco_generate_programs_csv">
+                        <?php wp_nonce_field('mco_generate_programs_csv_nonce'); ?>
+                        <?php submit_button('Generate CSV from Data', 'secondary', 'submit_generate_programs_csv', false); ?>
+                    </form>
+                </div>
             </td>
         </tr>
         <tr>
-            <th>Export WooCommerce Products</th>
+            <th>Recommended Books</th>
             <td>
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                    <input type="hidden" name="action" value="mco_generate_products_csv">
-                    <?php wp_nonce_field('mco_generate_products_csv_nonce'); ?>
-                    <?php submit_button('Generate & Download Products CSV', 'secondary', 'submit_generate_products_csv', false); ?>
-                </form>
+                <div style="display: flex; gap: 10px;">
+                     <a href="<?php echo esc_url(MCO_PLUGIN_URL . 'public/template-recommended-books.csv'); ?>" class="button" download>Download Blank Template</a>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin: 0;">
+                        <input type="hidden" name="action" value="mco_generate_books_csv">
+                        <?php wp_nonce_field('mco_generate_books_csv_nonce'); ?>
+                        <?php submit_button('Generate CSV from Data', 'secondary', 'submit_generate_books_csv', false); ?>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <th>WooCommerce Products</th>
+            <td>
+                <div style="display: flex; gap: 10px;">
+                    <a href="<?php echo esc_url(MCO_PLUGIN_URL . 'public/template-woo-products.csv'); ?>" class="button" download>Download Blank Template</a>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin: 0;">
+                        <input type="hidden" name="action" value="mco_generate_products_csv">
+                        <?php wp_nonce_field('mco_generate_products_csv_nonce'); ?>
+                        <?php submit_button('Generate CSV from Programs', 'secondary', 'submit_generate_products_csv', false); ?>
+                    </form>
+                </div>
             </td>
         </tr>
     </table>
@@ -402,7 +434,7 @@ function mco_render_bulk_data_tab() { ?>
     </form>
     <hr>
     <h4>Import Recommended Books</h4>
-    <p>Required columns: <code>book_id, title, description, thumbnail_url, link_com, link_in, link_ae, status</code></p>
+    <p>Required columns: <code>book_id, title, description, status, thumbnail_url, link_com, link_in, link_ae</code></p>
     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
         <input type="hidden" name="action" value="mco_bulk_import_csv"><input type="hidden" name="import_type" value="recommended_books"><?php wp_nonce_field('mco_bulk_import_csv_nonce', 'mco_bulk_import_csv_nonce'); ?>
         <table class="form-table"><tr><th>Recommended Books CSV File</th><td><input type="file" name="csv_file" accept=".csv" required></td></tr></table>
@@ -488,11 +520,51 @@ function mco_handle_generate_programs_csv() {
             'pass_score' => mco_get_single_term($program->ID, 'exam_pass_score'),
             'status' => $program->post_status,
         ];
-        fputcsv($output, $row);
+        
+        $ordered_row = [];
+        foreach ($csv_headers as $header) {
+            $ordered_row[] = $row[$header] ?? '';
+        }
+        fputcsv($output, $ordered_row);
     }
     fclose($output);
     exit;
 }
+
+function mco_handle_generate_books_csv() {
+    if (!current_user_can('manage_options') || !isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_generate_books_csv_nonce')) {
+        wp_die('Security check failed.');
+    }
+
+    $books = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => ['publish', 'draft', 'pending']]);
+    $csv_headers = ['book_id', 'title', 'description', 'status', 'thumbnail_url', 'link_com', 'link_in', 'link_ae'];
+    
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="recommended_books_export_' . date('Y-m-d') . '.csv"');
+    $output = fopen('php://output', 'w');
+    fputcsv($output, $csv_headers);
+
+    foreach ($books as $book) {
+        $row_data = [
+            'book_id'       => get_post_meta($book->ID, '_mco_book_id', true),
+            'title'         => $book->post_title,
+            'description'   => $book->post_content,
+            'status'        => $book->post_status,
+            'thumbnail_url' => get_post_meta($book->ID, '_mco_thumbnail_url', true),
+            'link_com'      => get_post_meta($book->ID, '_mco_link_com', true),
+            'link_in'       => get_post_meta($book->ID, '_mco_link_in', true),
+            'link_ae'       => get_post_meta($book->ID, '_mco_link_ae', true),
+        ];
+        $ordered_row = [];
+        foreach($csv_headers as $header) {
+            $ordered_row[] = $row_data[$header] ?? '';
+        }
+        fputcsv($output, $ordered_row);
+    }
+    fclose($output);
+    exit;
+}
+
 function mco_handle_generate_products_csv() {
     if (!current_user_can('manage_options') || !isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'mco_generate_products_csv_nonce')) {
         wp_die('Security check failed.');
@@ -558,18 +630,27 @@ function mco_handle_csv_upload() {
     $file_content = file_get_contents($file_path);
     $file_content = preg_replace('/^\xEF\xBB\xBF/', '', $file_content); // Remove UTF-8 BOM
     $csv_data = array_map('str_getcsv', preg_split('/\r\n|\r|\n/', $file_content));
+    
+    // FIX: Make header parsing robust against whitespace and empty files.
+    $raw_headers = array_shift($csv_data);
+    if (empty($raw_headers) || empty(implode('', $raw_headers))) {
+        wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=bulk_data&import_status=error&message=' . urlencode('CSV file is empty or has an empty header row.')));
+        exit;
+    }
+    $headers = array_map('trim', $raw_headers);
 
-    $headers = array_shift($csv_data);
     $success_count = 0;
     $error_count = 0;
-    $errors = [];
 
     if ($import_type === 'exam_programs') {
         foreach ($csv_data as $index => $row) {
-            if (count($headers) !== count($row)) continue;
+            if (empty(implode('', $row))) continue; // Skip completely empty rows
+            if (count($headers) !== count($row)) { $error_count++; continue; }
+            
             $row_data = array_combine($headers, $row);
             
             $post_id = 0;
+            // Use a direct query for case-insensitivity which is more robust for titles.
             $existing_post = get_page_by_title($row_data['program_title'], OBJECT, 'mco_exam_program');
             if ($existing_post) $post_id = $existing_post->ID;
 
@@ -579,6 +660,8 @@ function mco_handle_csv_upload() {
                 'post_type'    => 'mco_exam_program',
                 'post_status'  => sanitize_text_field($row_data['status'] ?? 'publish'),
             ];
+            
+            if (empty($post_arr['post_title'])) { $error_count++; continue; }
             
             if ($post_id) {
                 $post_arr['ID'] = $post_id;
@@ -621,7 +704,8 @@ function mco_handle_csv_upload() {
         }
     } elseif ($import_type === 'recommended_books') {
         foreach ($csv_data as $index => $row) {
-            if (count($headers) !== count($row)) continue;
+            if (empty(implode('', $row))) continue; // Skip completely empty rows
+            if (count($headers) !== count($row)) { $error_count++; continue; }
             $row_data = array_combine($headers, $row);
 
             $book_id = sanitize_text_field($row_data['book_id']);
@@ -637,6 +721,8 @@ function mco_handle_csv_upload() {
                 'post_type' => 'mco_recommended_book',
                 'post_status' => sanitize_text_field($row_data['status'] ?? 'publish'),
             ];
+            
+            if (empty($post_arr['post_title']) || empty($book_id)) { $error_count++; continue; }
 
             if ($post_id) {
                 $post_arr['ID'] = $post_id;

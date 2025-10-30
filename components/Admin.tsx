@@ -10,7 +10,8 @@ import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
 
 interface HealthStatus {
-    [key: string]: { success: boolean; message: string; data?: any };
+    [key: string]: { success: boolean; message: string; data?: any } | { [key: string]: string };
+    nonces?: { [key: string]: string };
 }
 
 const HealthListItem: FC<{ title: string; status?: { success: boolean; message: string; data?: any }; onDetails: (data: any) => void }> = ({ title, status, onDetails }) => {
@@ -67,6 +68,14 @@ const Admin: FC = () => {
     const [isTestingUrl, setIsTestingUrl] = useState(false);
     const [testUrlResult, setTestUrlResult] = useState<{ success: boolean; message: string; dataPreview?: string } | null>(null);
 
+    const [showNotifications, setShowNotifications] = useState(() => {
+        try {
+            return localStorage.getItem('mco_show_notifications') !== 'false';
+        } catch {
+            return true;
+        }
+    });
+
     useEffect(() => {
         if (!token) return;
         const fetchAdminData = async () => {
@@ -100,19 +109,41 @@ const Admin: FC = () => {
             return acc;
         }, { totalSales: 0, totalRevenue: 0, totalAttempts: 0 });
     }, [examStats]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('mco_show_notifications', String(showNotifications));
+        } catch (e) {
+            console.error("Could not save notification preference", e);
+        }
+    }, [showNotifications]);
     
-    const generateCsvPostRequest = async (action: string, setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>) => {
+    const generateCsvPostRequest = async (action: string, nonceName: string, nonceKey: string, setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>) => {
         setIsGenerating(true);
+        if (!healthStatus || !healthStatus.nonces || !healthStatus.nonces[nonceKey]) {
+            toast.error("Could not generate CSV: Security token is missing. Please refresh the page.");
+            setIsGenerating(false);
+            return;
+        }
+
         try {
             const form = document.createElement('form');
             form.method = 'post';
             form.action = `${getApiBaseUrl()}/wp-admin/admin-post.php`;
             form.target = '_blank';
+            
             const actionInput = document.createElement('input');
             actionInput.type = 'hidden';
             actionInput.name = 'action';
             actionInput.value = action;
             form.appendChild(actionInput);
+
+            const nonceInput = document.createElement('input');
+            nonceInput.type = 'hidden';
+            nonceInput.name = nonceName;
+            nonceInput.value = healthStatus.nonces[nonceKey];
+            form.appendChild(nonceInput);
+
             document.body.appendChild(form);
             form.submit();
             document.body.removeChild(form);
@@ -123,8 +154,8 @@ const Admin: FC = () => {
         }
     };
 
-    const handleGenerateProgramsCsv = () => generateCsvPostRequest('mco_generate_programs_csv', setIsGeneratingProgramsCsv);
-    const handleGenerateWooCsv = () => generateCsvPostRequest('mco_generate_products_csv', setIsGeneratingWooCsv);
+    const handleGenerateProgramsCsv = () => generateCsvPostRequest('mco_generate_programs_csv', '_wpnonce', 'generate_programs_csv', setIsGeneratingProgramsCsv);
+    const handleGenerateWooCsv = () => generateCsvPostRequest('mco_generate_products_csv', '_wpnonce', 'generate_products_csv', setIsGeneratingWooCsv);
 
     const handleCacheClear = async (action: 'config' | 'questions' | 'results') => {
         if (!token) { toast.error("Authentication Error"); return; }
@@ -206,12 +237,12 @@ const Admin: FC = () => {
                     </h2>
                     {isLoadingData ? <div className="flex justify-center"><Spinner /></div> : (
                         <div className="space-y-2">
-                            <HealthListItem title="Backend API Connection" status={healthStatus?.api_connection} onDetails={setDetailsModalData} />
-                            <HealthListItem title="JWT Secret Key" status={healthStatus?.jwt_secret} onDetails={setDetailsModalData} />
-                            <HealthListItem title="WooCommerce Plugin" status={healthStatus?.woocommerce} onDetails={setDetailsModalData} />
-                            <HealthListItem title="WooCommerce Subscriptions" status={healthStatus?.wc_subscriptions} onDetails={setDetailsModalData} />
-                            <HealthListItem title="App URL Configuration" status={healthStatus?.app_url_config} onDetails={setDetailsModalData} />
-                            <HealthListItem title="Google Sheet Accessibility" status={healthStatus?.google_sheet} onDetails={setDetailsModalData} />
+                            <HealthListItem title="Backend API Connection" status={healthStatus?.api_connection as any} onDetails={setDetailsModalData} />
+                            <HealthListItem title="JWT Secret Key" status={healthStatus?.jwt_secret as any} onDetails={setDetailsModalData} />
+                            <HealthListItem title="WooCommerce Plugin" status={healthStatus?.woocommerce as any} onDetails={setDetailsModalData} />
+                            <HealthListItem title="WooCommerce Subscriptions" status={healthStatus?.wc_subscriptions as any} onDetails={setDetailsModalData} />
+                            <HealthListItem title="App URL Configuration" status={healthStatus?.app_url_config as any} onDetails={setDetailsModalData} />
+                            <HealthListItem title="Google Sheet Accessibility" status={healthStatus?.google_sheet as any} onDetails={setDetailsModalData} />
                         </div>
                     )}
                 </div>
@@ -302,6 +333,29 @@ const Admin: FC = () => {
                                 <p className="font-semibold text-center mt-2 text-slate-700 pointer-events-none">{theme.name}</p>
                             </button>
                         ))}
+                    </div>
+                    <div className="mt-6 pt-6 border-t border-[rgb(var(--color-border-rgb))]">
+                        <h3 className="font-bold mb-2">Admin UI Tools</h3>
+                        <div className="bg-[rgb(var(--color-muted-rgb))] p-4 rounded-lg">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h4 className="font-semibold">Live Purchase Notifier</h4>
+                                    <p className="text-xs text-[rgb(var(--color-text-muted-rgb))]">Show/hide the social proof pop-up for your admin session.</p>
+                                </div>
+                                <label htmlFor="toggle-notifications" className="flex items-center cursor-pointer">
+                                    <div className="relative">
+                                        <input
+                                            type="checkbox"
+                                            id="toggle-notifications"
+                                            className="sr-only"
+                                            checked={showNotifications}
+                                            onChange={() => setShowNotifications(prev => !prev)} />
+                                        <div className={`block w-14 h-8 rounded-full ${showNotifications ? 'bg-[rgb(var(--color-primary-rgb))]' : 'bg-slate-600'}`}></div>
+                                        <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${showNotifications ? 'transform translate-x-6' : ''}`}></div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 

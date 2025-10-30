@@ -1,1 +1,2 @@
-book_title,book_description,thumbnail_url,affiliate_link_com,affiliate_link_in,affiliate_link_ae
+book_id,title,description,status,thumbnail_url,link_com,link_in,link_ae
+sample-book-1,"Sample Book Title","A great book for studying.","publish","","https://amazon.com/your-link","https://amazon.in/your-link","https://amazon.ae/your-link"

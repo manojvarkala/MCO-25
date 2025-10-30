@@ -1,6 +1,6 @@
 import React, { FC, useState } from 'react';
-// FIX: Corrected react-router-dom import to resolve module export errors.
-import { useNavigate, Link } from 'react-router-dom';
+// FIX: Refactored to use react-router-dom v5 to resolve module export errors.
+import { useHistory, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -20,7 +20,8 @@ export interface ExamCardProps {
 }
 
 const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, activeOrg, examPrices, hideDetailsLink = false, attemptsMade }) => {
-    const navigate = useNavigate();
+    // FIX: Replaced useNavigate with useHistory for v5 compatibility.
+    const history = useHistory();
     const { user, token, isSubscribed } = useAuth();
     const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -37,7 +38,7 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
 
     const handleButtonClick = async () => {
         if (canTake) {
-            navigate(`/test/${exam.id}`);
+            history.push(`/test/${exam.id}`);
         } else if (exam.productSku) {
             if (!user || !token) {
                 toast.error("Please log in to make a purchase.");
@@ -119,15 +120,4 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                     {!hideDetailsLink && (
                         <Link
                             to={`/program/${programId}`}
-                            className="block w-full text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all"
-                        >
-                            View Program Details
-                        </Link>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-export default ExamCard;
+                            className="block w-full text-center bg-white/10 hover:bg-white/20 text-white font
