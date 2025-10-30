@@ -1,19 +1,12 @@
-
-
-
-
-
 import React, { FC, useRef, useEffect } from 'react';
-// FIX: Reverted useNavigate to useHistory for react-router-dom v5.
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useHistory } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import toast from 'react-hot-toast';
 
 const Login: FC = () => {
     const location = useLocation();
-    // FIX: Updated useHistory to useNavigate for react-router-dom v6.
-    const navigate = useNavigate();
+    const history = useHistory();
     const { loginWithToken, user } = useAuth();
     const hasProcessed = useRef(false);
 
@@ -34,29 +27,24 @@ const Login: FC = () => {
                 .then(() => {
                     // After all auth state is set and sync is done, navigate.
                     // This imperative navigation fixes a race condition on login.
-                    // FIX: Replaced history.replace with navigate for react-router-dom v6.
-                    navigate('/dashboard', { replace: true });
+                    history.replace('/dashboard');
                 })
                 .catch((e: any) => {
                     // This catch handles critical token validation errors from AuthContext.
                     const errorMessage = e.message || 'Invalid login token. Please try again.';
                     toast.error(errorMessage);
-                    // FIX: Replaced history.replace with navigate for react-router-dom v6.
-                    navigate('/', { replace: true });
+                    history.replace('/');
                 });
         } else {
             // If there's no token but the user is already logged in, redirect them.
             // Otherwise, send them to the landing page.
             if (user) {
-                // FIX: Replaced history.replace with navigate for react-router-dom v6.
-                navigate('/dashboard', { replace: true });
+                history.replace('/dashboard');
             } else {
-                // FIX: Replaced history.replace with navigate for react-router-dom v6.
-                navigate('/', { replace: true });
+                history.replace('/');
             }
         }
-    // FIX: Replaced history with navigate in dependency array.
-    }, [location.search, loginWithToken, navigate, user]);
+    }, [location.search, loginWithToken, history, user]);
 
     // This component's primary job is to process and redirect.
     // It will show a loading screen for the brief moment it's mounted.

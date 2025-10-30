@@ -1,5 +1,3 @@
-
-
 import React, { FC, ReactNode } from 'react';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
 

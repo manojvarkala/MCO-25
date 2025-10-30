@@ -1,30 +1,21 @@
-
-
-
-
-
 import React, { FC, useEffect, useRef } from 'react';
-// FIX: Updated useHistory to useNavigate for react-router-dom v6.
-import { useNavigate } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LogIn, UserPlus, FileText, Award, Sparkles } from 'lucide-react';
 import LogoSpinner from './LogoSpinner.tsx';
 
 const LandingPage: FC = () => {
-    // FIX: Updated useHistory to useNavigate for react-router-dom v6.
-    const navigate = useNavigate();
+    const history = useHistory();
     const { user } = useAuth();
     const { activeOrg, isInitializing } = useAppContext();
     const videoRef = useRef<HTMLVideoElement>(null);
     
     useEffect(() => {
         if (user) {
-            // FIX: Replaced history.push with navigate for react-router-dom v6.
-            navigate('/dashboard');
+            history.push('/dashboard');
         }
-    // FIX: Replaced history with navigate in dependency array.
-    }, [user, navigate]);
+    }, [user, history]);
 
     useEffect(() => {
         if (videoRef.current) {

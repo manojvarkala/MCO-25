@@ -1,11 +1,5 @@
-
-
-
-
-
 import React, { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
-// FIX: Updated useHistory to useNavigate for react-router-dom v6.
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useHistory } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Question, UserAnswer, Exam, ExamProgress } from '../types.ts';
@@ -27,8 +21,7 @@ const FOCUS_VIOLATION_TOAST_ID = 'focus-violation-toast';
 
 const Test: FC = () => {
   const { examId } = useParams<{ examId: string }>();
-  // FIX: Updated useHistory to useNavigate for react-router-dom v6.
-  const navigate = useNavigate();
+  const history = useHistory();
   const { user, isSubscribed, token } = useAuth();
   const { activeOrg, isInitializing } = useAppContext();
 
@@ -65,8 +58,7 @@ const Test: FC = () => {
 
     if (!user || !examId || !token || questions.length === 0) {
         toast.error("Cannot submit: user or exam context is missing.");
-        // FIX: Replaced history.push with navigate for react-router-dom v6.
-        navigate('/');
+        history.push('/');
         setIsSubmitting(false);
         return;
     }
@@ -90,15 +82,13 @@ const Test: FC = () => {
         const userAnswers: UserAnswer[] = Array.from(answers.entries()).map(([questionId, answer]) => ({ questionId, answer }));
         const result = await googleSheetsService.submitTest(user, examId, userAnswers, questions, token, focusViolationCount);
         toast.success("Test submitted successfully!");
-        // FIX: Replaced history.push with navigate for react-router-dom v6.
-        navigate(`/results/${result.testId}`);
+        history.push(`/results/${result.testId}`);
     } catch (error) {
         toast.error("Failed to submit the test. Please try again.");
         setIsSubmitting(false);
         hasSubmittedRef.current = false; // Reset submit lock
     }
-  // FIX: Replaced history with navigate in dependency array.
-  }, [examId, navigate, token, user, isSubmitting, questions, answers, progressKey, focusViolationCount]);
+  }, [examId, history, token, user, isSubmitting, questions, answers, progressKey, focusViolationCount]);
   
   // Effect 1: Load questions and saved progress.
   useEffect(() => {
@@ -107,8 +97,7 @@ const Test: FC = () => {
     const config = activeOrg.exams.find(e => e.id === examId);
     if (!config) {
         toast.error("Could not find the specified exam.");
-        // FIX: Replaced history.push with navigate for react-router-dom v6.
-        navigate('/dashboard');
+        history.push('/dashboard');
         return;
     }
     setExamConfig(config);
@@ -151,8 +140,7 @@ const Test: FC = () => {
         }
     };
     loadTest();
-  // FIX: Replaced history with navigate in dependency array.
-  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, progressKey]);
+  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, history, progressKey]);
 
   // Effect 2: Manage the timer.
   useEffect(() => {
@@ -326,7 +314,7 @@ const Test: FC = () => {
                 )}
 
                 <button 
-                    onClick={() => navigate('/dashboard')} 
+                    onClick={() => history.push('/dashboard')} 
                     className="mt-6 w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg transition"
                 >
                     Back to Dashboard

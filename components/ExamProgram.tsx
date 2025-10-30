@@ -1,11 +1,5 @@
-
-
-
-
-
 import React, { FC, useMemo, useState, useEffect } from 'react';
-// FIX: Updated useHistory to useNavigate for react-router-dom v6.
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useHistory, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -69,8 +63,7 @@ const stripHtml = (html: string): string => {
 
 const ExamProgram: FC = () => {
     const { programId } = useParams<{ programId: string }>();
-    // FIX: Updated useHistory to useNavigate for react-router-dom v6.
-    const navigate = useNavigate();
+    const history = useHistory();
     const { activeOrg, suggestedBooks, isInitializing, examPrices, subscriptionsEnabled, bundlesEnabled } = useAppContext();
     const { user, paidExamIds, isSubscribed, isEffectivelyAdmin } = useAuth();
     
@@ -157,8 +150,7 @@ const ExamProgram: FC = () => {
             <div className="text-center bg-white p-8 rounded-xl shadow-lg">
                 <h1 className="text-2xl font-bold text-slate-800 mt-4">Program Not Found</h1>
                 <p className="text-slate-600 mt-2">The exam program you are looking for does not exist or could not be loaded.</p>
-                {/* FIX: Replaced history.push with navigate for react-router-dom v6. */}
-                <button onClick={() => navigate('/dashboard')} className="mt-6 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg">
+                <button onClick={() => history.push('/dashboard')} className="mt-6 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg">
                     Back to Dashboard
                 </button>
             </div>

@@ -1,11 +1,5 @@
-
-
-
-
-
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
-// FIX: Upgraded react-router-dom imports for version 6.
-import { Routes, Route, BrowserRouter, Navigate, useLocation } from 'react-router-dom';
+import { Switch, Route, BrowserRouter, Redirect, useLocation } from 'react-router-dom';
 import { Toaster, ToastBar, toast } from 'react-hot-toast';
 import { X } from 'lucide-react';
 
@@ -51,23 +45,6 @@ import LogoSpinner from './components/LogoSpinner.tsx';
 import AdminToolbar from './components/AdminToolbar.tsx';
 import DebugSidebar from './components/DebugSidebar.tsx';
 
-// FIX: Updated ProtectedRoute to be a wrapper component compatible with react-router-dom v6.
-interface ProtectedRouteProps {
-  children: ReactNode;
-  adminOnly?: boolean;
-}
-
-const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, adminOnly = false }) => {
-  const { user, isEffectivelyAdmin } = useAuth();
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-  if (adminOnly && !isEffectivelyAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return <>{children}</>;
-};
-
 const AppContent: FC = () => {
     const { user, isMasquerading, isEffectivelyAdmin } = useAuth();
     const { activeOrg, activeTheme } = useAppContext();
@@ -75,11 +52,6 @@ const AppContent: FC = () => {
     const [isDebugSidebarOpen, setIsDebugSidebarOpen] = useState(false);
 
     const isTestPage = location.pathname.startsWith('/test/');
-    const isAdminPage = location.pathname.startsWith('/admin');
-
-    const themeClass = useMemo(() => {
-        return activeTheme ? `theme-${activeTheme}` : 'theme-default';
-    }, [activeTheme]);
 
     useEffect(() => {
         if (activeOrg) {
@@ -101,51 +73,118 @@ const AppContent: FC = () => {
         ? "py-8" 
         : "container mx-auto px-4 py-8";
 
+    // Helper component for routes requiring authentication
+    const ProtectedRoute: FC<{ path: string; children: ReactNode; adminOnly?: boolean }> = ({ children, adminOnly = false, ...rest }) => {
+        return (
+            <Route {...rest} render={({ location }) => {
+                if (!user) {
+                    return <Redirect to={{ pathname: "/", state: { from: location } }} />;
+                }
+                if (adminOnly && !isEffectivelyAdmin) {
+                    return <Redirect to={{ pathname: "/dashboard", state: { from: location } }} />;
+                }
+                return children;
+            }} />
+        );
+    };
+
     return (
         <div data-theme={activeTheme} className={`flex flex-col min-h-screen bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-default-rgb))] font-main ${isMasquerading ? 'pt-10' : ''}`}>
             {isMasquerading && <MasqueradeBanner />}
             {!isTestPage && <Header />}
             <div className="flex-grow w-full relative">
                 <main className={mainClasses}>
-                    {/* FIX: Replaced Switch with Routes and updated Route syntax for react-router-dom v6. */}
-                    <Routes>
-                        <Route path="/" element={<LandingPage />} />
-                        <Route path="/auth" element={<Login />} />
-                        <Route path="/checkout/:productSlug" element={<Checkout />} />
-                        <Route path="/verify" element={<VerifyPage />} />
-                        <Route path="/verify/:certId" element={<VerifyCertificate />} />
-                        <Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
-                        <Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
-                        <Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
+                    <Switch>
+                        <Route exact path="/" component={LandingPage} />
+                        <Route path="/auth" component={Login} />
+                        <Route path="/checkout/:productSlug" component={Checkout} />
+                        <Route path="/verify" component={VerifyPage} />
+                        <Route path="/verify/:certId" component={VerifyCertificate} />
+                        
+                        <ProtectedRoute path="/test/:examId">
+                            <Test />
+                        </ProtectedRoute>
+                        <ProtectedRoute path="/certificate/sample">
+                            <Certificate />
+                        </ProtectedRoute>
+                        <ProtectedRoute path="/certificate/:testId">
+                            <Certificate />
+                        </ProtectedRoute>
 
                         {/* Routes with Sidebar */}
-                        <Route path="/dashboard" element={<SidebarLayout><Dashboard /></SidebarLayout>} />
-                        <Route path="/instructions" element={<SidebarLayout><Instructions /></SidebarLayout>} />
-                        <Route path="/pricing" element={<SidebarLayout><Pricing /></SidebarLayout>} />
-                        <Route path="/feedback" element={<SidebarLayout><Feedback /></SidebarLayout>} />
-                        <Route path="/user-guide" element={<SidebarLayout><UserGuide /></SidebarLayout>} />
-                        <Route path="/about-us" element={<SidebarLayout><AboutUs /></SidebarLayout>} />
-                        <Route path="/privacy-policy" element={<SidebarLayout><PrivacyPolicy /></SidebarLayout>} />
-                        <Route path="/refund-policy" element={<SidebarLayout><RefundPolicy /></SidebarLayout>} />
-                        <Route path="/terms-of-service" element={<SidebarLayout><TermsOfService /></SidebarLayout>} />
-                        <Route path="/bookstore" element={<SidebarLayout><BookStore /></SidebarLayout>} />
-                        <Route path="/program/:programId" element={<SidebarLayout><ExamProgram /></SidebarLayout>} />
-                        <Route path="/faq" element={<SidebarLayout><FAQ /></SidebarLayout>} />
-                        <Route path="/profile" element={<ProtectedRoute><SidebarLayout><Profile /></SidebarLayout></ProtectedRoute>} />
-                        <Route path="/results/:testId" element={<ProtectedRoute><SidebarLayout><Results /></SidebarLayout></ProtectedRoute>} />
+                        <Route path="/dashboard">
+                            <SidebarLayout><Dashboard /></SidebarLayout>
+                        </Route>
+                        <Route path="/instructions">
+                            <SidebarLayout><Instructions /></SidebarLayout>
+                        </Route>
+                        <Route path="/pricing">
+                            <SidebarLayout><Pricing /></SidebarLayout>
+                        </Route>
+                        <Route path="/feedback">
+                            <SidebarLayout><Feedback /></SidebarLayout>
+                        </Route>
+                        <Route path="/user-guide">
+                            <SidebarLayout><UserGuide /></SidebarLayout>
+                        </Route>
+                        <Route path="/about-us">
+                            <SidebarLayout><AboutUs /></SidebarLayout>
+                        </Route>
+                        <Route path="/privacy-policy">
+                            <SidebarLayout><PrivacyPolicy /></SidebarLayout>
+                        </Route>
+                        <Route path="/refund-policy">
+                            <SidebarLayout><RefundPolicy /></SidebarLayout>
+                        </Route>
+                        <Route path="/terms-of-service">
+                            <SidebarLayout><TermsOfService /></SidebarLayout>
+                        </Route>
+                        <Route path="/bookstore">
+                            <SidebarLayout><BookStore /></SidebarLayout>
+                        </Route>
+                        <Route path="/program/:programId">
+                            <SidebarLayout><ExamProgram /></SidebarLayout>
+                        </Route>
+                        <Route path="/faq">
+                            <SidebarLayout><FAQ /></SidebarLayout>
+                        </Route>
+                        <ProtectedRoute path="/profile">
+                            <SidebarLayout><Profile /></SidebarLayout>
+                        </ProtectedRoute>
+                        <ProtectedRoute path="/results/:testId">
+                            <SidebarLayout><Results /></SidebarLayout>
+                        </ProtectedRoute>
                         
                         {/* Admin Routes with dedicated layout */}
-                        <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminLayout><Admin /></AdminLayout></ProtectedRoute>} />
-                        <Route path="/admin/analytics" element={<ProtectedRoute adminOnly={true}><AdminLayout><SalesAnalytics /></AdminLayout></ProtectedRoute>} />
-                        <Route path="/admin/products" element={<ProtectedRoute adminOnly={true}><AdminLayout><ProductCustomizer /></AdminLayout></ProtectedRoute>} />
-                        <Route path="/admin/programs" element={<ProtectedRoute adminOnly={true}><AdminLayout><ExamProgramCustomizer /></AdminLayout></ProtectedRoute>} />
-                        <Route path="/admin/content-engine" element={<ProtectedRoute adminOnly={true}><AdminLayout><ContentEngine /></AdminLayout></ProtectedRoute>} />
-                        <Route path="/admin/integration" element={<ProtectedRoute adminOnly={true}><AdminLayout><Integration /></AdminLayout></ProtectedRoute>} />
-                        <Route path="/admin/history" element={<ProtectedRoute adminOnly={true}><AdminLayout><DevelopmentHistory /></AdminLayout></ProtectedRoute>} />
-                        <Route path="/admin/handbook" element={<ProtectedRoute adminOnly={true}><AdminLayout><Handbook /></AdminLayout></ProtectedRoute>} />
+                        <ProtectedRoute path="/admin/analytics" adminOnly>
+                            <AdminLayout><SalesAnalytics /></AdminLayout>
+                        </ProtectedRoute>
+                        <ProtectedRoute path="/admin/products" adminOnly>
+                            <AdminLayout><ProductCustomizer /></AdminLayout>
+                        </ProtectedRoute>
+                        <ProtectedRoute path="/admin/programs" adminOnly>
+                            <AdminLayout><ExamProgramCustomizer /></AdminLayout>
+                        </ProtectedRoute>
+                        <ProtectedRoute path="/admin/content-engine" adminOnly>
+                            <AdminLayout><ContentEngine /></AdminLayout>
+                        </ProtectedRoute>
+                        <ProtectedRoute path="/admin/integration" adminOnly>
+                            <AdminLayout><Integration /></AdminLayout>
+                        </ProtectedRoute>
+                        <ProtectedRoute path="/admin/history" adminOnly>
+                            <AdminLayout><DevelopmentHistory /></AdminLayout>
+                        </ProtectedRoute>
+                        <ProtectedRoute path="/admin/handbook" adminOnly>
+                            <AdminLayout><Handbook /></AdminLayout>
+                        </ProtectedRoute>
+                        <ProtectedRoute exact path="/admin" adminOnly>
+                           <AdminLayout><Admin /></AdminLayout>
+                        </ProtectedRoute>
                     
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
+                        <Route path="*">
+                            <Redirect to="/" />
+                        </Route>
+                    </Switch>
                 </main>
             </div>
             {!isTestPage && <Footer />}
