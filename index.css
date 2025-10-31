@@ -104,32 +104,6 @@ body {
   --color-danger-rgb: 251, 113, 133; /* rose-400 */
 }
 
-/* ================= THEME SWATCHES FOR ADMIN UI ================= */
-.theme-swatch-default-primary { background-color: rgb(6, 182, 212); }
-.theme-swatch-default-secondary { background-color: rgb(219, 39, 119); }
-.theme-swatch-default-accent { background-color: rgb(253, 224, 71); }
-.theme-swatch-default-background { background-color: rgb(30, 41, 59); }
-
-.theme-swatch-professional-primary { background-color: rgb(4, 120, 87); }
-.theme-swatch-professional-secondary { background-color: rgb(59, 130, 246); }
-.theme-swatch-professional-accent { background-color: rgb(234, 179, 8); }
-.theme-swatch-professional-background { background-color: rgb(241, 245, 249); }
-
-.theme-swatch-serene-primary { background-color: rgb(96, 165, 250); }
-.theme-swatch-serene-secondary { background-color: rgb(52, 211, 153); }
-.theme-swatch-serene-accent { background-color: rgb(251, 146, 60); }
-.theme-swatch-serene-background { background-color: rgb(240, 253, 250); }
-
-.theme-swatch-academic-primary { background-color: rgb(127, 29, 29); }
-.theme-swatch-academic-secondary { background-color: rgb(161, 98, 7); }
-.theme-swatch-academic-accent { background-color: rgb(217, 119, 6); }
-.theme-swatch-academic-background { background-color: rgb(254, 252, 251); }
-
-.theme-swatch-noir-primary { background-color: rgb(229, 231, 235); }
-.theme-swatch-noir-secondary { background-color: rgb(139, 92, 246); }
-.theme-swatch-noir-accent { background-color: rgb(234, 179, 8); }
-.theme-swatch-noir-background { background-color: rgb(31, 41, 55); }
-
 /* ================= EXAM CARD GRADIENTS ================= */
 .exam-card--practice { background-image: linear-gradient(to top right, rgb(var(--color-secondary-rgb)), rgb(var(--color-secondary-hover-rgb))); }
 .exam-card--cert { background-image: linear-gradient(to top right, rgb(var(--color-primary-rgb)), rgb(var(--color-primary-hover-rgb))); }

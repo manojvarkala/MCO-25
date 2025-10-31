@@ -9,6 +9,40 @@ import type { TestResult, Exam } from '../types.ts';
 import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight, Gift, Star, Paintbrush, Check } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
+// FIX: Define theme colors directly in the component for robust rendering.
+const themeColors: { [key: string]: { [key: string]: string } } = {
+    default: {
+        primary: 'rgb(6, 182, 212)',
+        secondary: 'rgb(219, 39, 119)',
+        accent: 'rgb(253, 224, 71)',
+        background: 'rgb(30, 41, 59)',
+    },
+    professional: {
+        primary: 'rgb(4, 120, 87)',
+        secondary: 'rgb(59, 130, 246)',
+        accent: 'rgb(234, 179, 8)',
+        background: 'rgb(241, 245, 249)',
+    },
+    serene: {
+        primary: 'rgb(96, 165, 250)',
+        secondary: 'rgb(52, 211, 153)',
+        accent: 'rgb(251, 146, 60)',
+        background: 'rgb(240, 253, 250)',
+    },
+    academic: {
+        primary: 'rgb(127, 29, 29)',
+        secondary: 'rgb(161, 98, 7)',
+        accent: 'rgb(217, 119, 6)',
+        background: 'rgb(254, 252, 251)',
+    },
+    noir: {
+        primary: 'rgb(229, 231, 235)',
+        secondary: 'rgb(139, 92, 246)',
+        accent: 'rgb(234, 179, 8)',
+        background: 'rgb(31, 41, 55)',
+    }
+};
+
 const Profile: FC = () => {
     const { user, token, updateUserName, isSubscribed, isEffectivelyAdmin } = useAuth();
     const { activeOrg, availableThemes, activeTheme, setActiveTheme } = useAppContext();
@@ -161,11 +195,12 @@ const Profile: FC = () => {
                                         <Check size={14} />
                                     </div>
                                 )}
+                                {/* FIX: Replaced dynamic classes with inline styles for robust rendering. */}
                                 <div className="flex justify-center space-x-1 h-8 pointer-events-none">
-                                    <div className={`w-1/4 rounded theme-swatch-${theme.id}-primary`}></div>
-                                    <div className={`w-1/4 rounded theme-swatch-${theme.id}-secondary`}></div>
-                                    <div className={`w-1/4 rounded theme-swatch-${theme.id}-accent`}></div>
-                                    <div className={`w-1/4 rounded theme-swatch-${theme.id}-background`}></div>
+                                    <div className="w-1/4 rounded" style={{ backgroundColor: themeColors[theme.id]?.primary || '#ccc' }}></div>
+                                    <div className="w-1/4 rounded" style={{ backgroundColor: themeColors[theme.id]?.secondary || '#ccc' }}></div>
+                                    <div className="w-1/4 rounded" style={{ backgroundColor: themeColors[theme.id]?.accent || '#ccc' }}></div>
+                                    <div className="w-1/4 rounded" style={{ backgroundColor: themeColors[theme.id]?.background || '#ccc' }}></div>
                                 </div>
                                 <p className="font-semibold text-center mt-2 text-slate-700 pointer-events-none">{theme.name}</p>
                             </button>
