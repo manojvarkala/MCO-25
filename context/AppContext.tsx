@@ -65,6 +65,7 @@ const processConfigData = (configData: any) => {
 
         // FIX: Re-implemented a robust URL mapping for full backward compatibility with older plugin versions.
         // This ensures the questionSourceUrl from the category is correctly assigned to each exam.
+        // The new logic prioritizes the exam-specific URL and uses the category URL as a fallback.
         org.exams = (org.exams || []).map((exam: Exam): Exam | null => {
             // Safety check for malformed exam entries
             if (!exam || !exam.id) {
@@ -77,7 +78,7 @@ const processConfigData = (configData: any) => {
                 ...exam,
                 name: decodeHtmlEntities(exam.name),
                 description: decodeHtmlEntities(exam.description),
-                questionSourceUrl: categoryUrl || exam.questionSourceUrl,
+                questionSourceUrl: exam.questionSourceUrl || categoryUrl,
             };
         }).filter(Boolean) as Exam[]; // filter out any null entries
 
