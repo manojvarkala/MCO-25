@@ -652,7 +652,8 @@ function mco_handle_generate_full_snapshot() {
     exit;
 }
 
-// --- NEWLY IMPLEMENTED: Bulk CSV Upload Handler ---
+// FIX: Re-engineered the CSV upload handler to be more robust. It now uses `fgetcsv` to correctly
+// parse files with complex data (like newlines in descriptions) and provides more detailed error feedback.
 function mco_handle_csv_upload() {
     if (!current_user_can('manage_options') || !isset($_POST['mco_bulk_import_csv_nonce']) || !wp_verify_nonce($_POST['mco_bulk_import_csv_nonce'], 'mco_bulk_import_csv_nonce')) {
         wp_die('Security check failed.');
@@ -665,32 +666,45 @@ function mco_handle_csv_upload() {
 
     $import_type = sanitize_text_field($_POST['import_type']);
     $file_path = $_FILES['csv_file']['tmp_name'];
-    
-    // Read the file and handle BOM
-    $file_content = file_get_contents($file_path);
-    $file_content = preg_replace('/^\xEF\xBB\xBF/', '', $file_content); // Remove UTF-8 BOM
-    $csv_data = array_map('str_getcsv', preg_split('/\r\n|\r|\n/', $file_content));
-    
-    // FIX: Make header parsing robust against whitespace and empty files.
-    $raw_headers = array_shift($csv_data);
-    if (empty($raw_headers) || empty(implode('', $raw_headers))) {
-        wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=bulk_data&import_status=error&message=' . urlencode('CSV file is empty or has an empty header row.')));
+
+    $handle = fopen($file_path, "r");
+    if ($handle === FALSE) {
+        wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=bulk_data&import_status=error&message=' . urlencode('Could not open the uploaded file.')));
         exit;
     }
-    $headers = array_map('trim', $raw_headers);
+    
+    // Handle UTF-8 BOM by reading the first 3 bytes.
+    if (fgets($handle, 4) !== "\xef\xbb\xbf") {
+        rewind($handle); // Not a BOM, so rewind the file pointer.
+    }
+
+    $headers = fgetcsv($handle);
+    if ($headers === FALSE || empty(implode('', $headers))) {
+        fclose($handle);
+        wp_redirect(admin_url('admin.php?page=mco-exam-engine&tab=bulk_data&import_status=error&message=' . urlencode('CSV file is empty or has an invalid header row.')));
+        exit;
+    }
+    $headers = array_map('trim', $headers);
 
     $success_count = 0;
     $error_count = 0;
+    $error_messages = [];
+    $row_index = 1;
 
-    if ($import_type === 'exam_programs') {
-        foreach ($csv_data as $index => $row) {
-            if (empty(implode('', $row))) continue; // Skip completely empty rows
-            if (count($headers) !== count($row)) { $error_count++; continue; }
-            
-            $row_data = array_combine($headers, $row);
-            
+    while (($row = fgetcsv($handle)) !== FALSE) {
+        $row_index++;
+        if (count($row) === 1 && $row[0] === null) continue; // Skip empty lines that fgetcsv might read
+
+        if (count($headers) !== count($row)) {
+            $error_count++;
+            $error_messages[] = "Row {$row_index}: Column count mismatch. Expected " . count($headers) . ", found " . count($row) . ".";
+            continue;
+        }
+
+        $row_data = array_combine($headers, $row);
+
+        if ($import_type === 'exam_programs') {
             $post_id = 0;
-            // Use a direct query for case-insensitivity which is more robust for titles.
             $existing_post = get_page_by_title($row_data['program_title'], OBJECT, 'mco_exam_program');
             if ($existing_post) $post_id = $existing_post->ID;
 
@@ -701,7 +715,7 @@ function mco_handle_csv_upload() {
                 'post_status'  => sanitize_text_field($row_data['status'] ?? 'publish'),
             ];
             
-            if (empty($post_arr['post_title'])) { $error_count++; continue; }
+            if (empty($post_arr['post_title'])) { $error_count++; $error_messages[] = "Row {$row_index}: Program title is missing."; continue; }
             
             if ($post_id) {
                 $post_arr['ID'] = $post_id;
@@ -739,15 +753,10 @@ function mco_handle_csv_upload() {
                 }
                 $success_count++;
             } else {
-                $error_count++;
+                $error_count++; $error_messages[] = "Row {$row_index}: Failed to insert/update WordPress post.";
             }
-        }
-    } elseif ($import_type === 'recommended_books') {
-        foreach ($csv_data as $index => $row) {
-            if (empty(implode('', $row))) continue; // Skip completely empty rows
-            if (count($headers) !== count($row)) { $error_count++; continue; }
-            $row_data = array_combine($headers, $row);
 
+        } elseif ($import_type === 'recommended_books') {
             $book_id = sanitize_text_field($row_data['book_id']);
             $post_id = 0;
             if ($book_id) {
@@ -762,7 +771,7 @@ function mco_handle_csv_upload() {
                 'post_status' => sanitize_text_field($row_data['status'] ?? 'publish'),
             ];
             
-            if (empty($post_arr['post_title']) || empty($book_id)) { $error_count++; continue; }
+            if (empty($post_arr['post_title']) || empty($book_id)) { $error_count++; $error_messages[] = "Row {$row_index}: Book title or book_id is missing."; continue; }
 
             if ($post_id) {
                 $post_arr['ID'] = $post_id;
@@ -779,17 +788,23 @@ function mco_handle_csv_upload() {
                 update_post_meta($post_id, '_mco_link_ae', esc_url_raw($row_data['link_ae']));
                 $success_count++;
             } else {
-                $error_count++;
+                $error_count++; $error_messages[] = "Row {$row_index}: Failed to insert/update WordPress post for book.";
             }
         }
     }
-
+    
+    fclose($handle);
 
     delete_transient('mco_app_config_data');
     update_option('mco_config_version', current_time('YmdHis'));
 
-    $message = urlencode("Import complete. {$success_count} rows processed successfully. {$error_count} rows failed.");
-    wp_redirect(admin_url("admin.php?page=mco-exam-engine&tab=bulk_data&import_status=success&message={$message}"));
+    $status = ($error_count > 0 && $success_count === 0) ? 'error' : 'success';
+    $message = "Import complete. {$success_count} rows processed successfully. {$error_count} rows failed.";
+    if ($error_count > 0 && !empty($error_messages)) {
+        // Only show the first error to keep the URL from getting too long.
+        $message .= ' First error: ' . $error_messages[0];
+    }
+    wp_redirect(admin_url("admin.php?page=mco-exam-engine&tab=bulk_data&import_status={$status}&message=" . urlencode($message)));
     exit;
 }
 ?>
