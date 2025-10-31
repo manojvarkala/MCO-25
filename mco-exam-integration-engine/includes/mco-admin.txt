@@ -704,9 +704,9 @@ function mco_handle_csv_upload() {
         $row_data = array_combine($headers, $row);
 
         if ($import_type === 'exam_programs') {
-            $post_id = 0;
-            $existing_post = get_page_by_title($row_data['program_title'], OBJECT, 'mco_exam_program');
-            if ($existing_post) $post_id = $existing_post->ID;
+            // FIX: Replaced get_page_by_title with post_exists for more reliable post lookup during CSV import.
+            // This resolves a bug where wp_insert_post could fail silently.
+            $post_id = post_exists($row_data['program_title'], '', '', 'mco_exam_program');
 
             $post_arr = [
                 'post_title'   => sanitize_text_field($row_data['program_title']),
