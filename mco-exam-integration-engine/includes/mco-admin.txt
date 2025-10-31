@@ -358,20 +358,46 @@ function mco_render_theme_selector_tab() {
         ['id' => 'noir', 'name' => 'Noir'],
     ];
     $active_theme = get_option('mco_active_theme_id', 'default');
+    
+    // FIX: Define theme colors directly in PHP for robust rendering, matching the React app fix.
+    $theme_colors = [
+        'default' => [
+            'primary' => 'rgb(6, 182, 212)', 'secondary' => 'rgb(219, 39, 119)',
+            'accent' => 'rgb(253, 224, 71)', 'background' => 'rgb(30, 41, 59)',
+        ],
+        'professional' => [
+            'primary' => 'rgb(4, 120, 87)', 'secondary' => 'rgb(59, 130, 246)',
+            'accent' => 'rgb(234, 179, 8)', 'background' => 'rgb(241, 245, 249)',
+        ],
+        'serene' => [
+            'primary' => 'rgb(96, 165, 250)', 'secondary' => 'rgb(52, 211, 153)',
+            'accent' => 'rgb(251, 146, 60)', 'background' => 'rgb(240, 253, 250)',
+        ],
+        'academic' => [
+            'primary' => 'rgb(127, 29, 29)', 'secondary' => 'rgb(161, 98, 7)',
+            'accent' => 'rgb(217, 119, 6)', 'background' => 'rgb(254, 252, 251)',
+        ],
+        'noir' => [
+            'primary' => 'rgb(229, 231, 235)', 'secondary' => 'rgb(139, 92, 246)',
+            'accent' => 'rgb(234, 179, 8)', 'background' => 'rgb(31, 41, 55)',
+        ]
+    ];
     ?>
     <form method="post" action="?page=mco-exam-engine&tab=theme_selector">
         <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
         <input type="hidden" name="mco_form_action" value="save_theme_settings">
         <h2>Application Theme</h2><p>Select the default visual theme for the exam application.</p>
         <div class="mco-theme-selector-grid">
-            <?php foreach ($themes as $theme): ?>
+            <?php foreach ($themes as $theme): 
+                $colors = $theme_colors[$theme['id']] ?? $theme_colors['default'];
+            ?>
                 <label class="mco-theme-card <?php echo $active_theme === $theme['id'] ? 'mco-theme-card--selected' : ''; ?>">
                     <input type="radio" name="mco_active_theme_id" value="<?php echo esc_attr($theme['id']); ?>" class="mco-theme-radio" <?php checked($active_theme, $theme['id']); ?>>
                     <div class="mco-theme-swatches">
-                        <div class="mco-theme-swatch theme-swatch-<?php echo esc_attr($theme['id']); ?>-primary"></div>
-                        <div class="mco-theme-swatch theme-swatch-<?php echo esc_attr($theme['id']); ?>-secondary"></div>
-                        <div class="mco-theme-swatch theme-swatch-<?php echo esc_attr($theme['id']); ?>-accent"></div>
-                        <div class="mco-theme-swatch theme-swatch-<?php echo esc_attr($theme['id']); ?>-background"></div>
+                        <div class="mco-theme-swatch" style="background-color: <?php echo esc_attr($colors['primary']); ?>"></div>
+                        <div class="mco-theme-swatch" style="background-color: <?php echo esc_attr($colors['secondary']); ?>"></div>
+                        <div class="mco-theme-swatch" style="background-color: <?php echo esc_attr($colors['accent']); ?>"></div>
+                        <div class="mco-theme-swatch" style="background-color: <?php echo esc_attr($colors['background']); ?>"></div>
                     </div>
                     <p class="mco-theme-name"><?php echo esc_html($theme['name']); ?></p>
                 </label>

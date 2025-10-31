@@ -137,6 +137,16 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
         practiceExam: program.practiceExam ? { ...program.practiceExam } : undefined,
         certExam: program.certExam ? { ...program.certExam } : undefined,
     });
+    
+    // FIX: Add a useEffect hook to update the editor's internal state when the selected program changes.
+    // This ensures that when a new program is opened for editing, its data is correctly loaded into the form fields.
+    useEffect(() => {
+        setData({
+            category: { ...program.category },
+            practiceExam: program.practiceExam ? { ...program.practiceExam } : undefined,
+            certExam: program.certExam ? { ...program.certExam } : undefined,
+        });
+    }, [program]);
 
     const handleCategoryChange = (field: keyof ExamProductCategory, value: string) => {
         setData(prev => ({ ...prev, category: { ...prev.category, [field]: value } }));
