@@ -63,13 +63,23 @@ const processConfigData = (configData: any) => {
             cat.description = decodeHtmlEntities(cat.description);
         });
 
-        // FIX: Removed the redundant and fragile logic that re-mapped questionSourceUrl.
-        // The app now trusts the URL provided directly on each exam object from the backend.
-        org.exams = (org.exams || []).map((exam: Exam): Exam => ({
-            ...exam,
-            name: decodeHtmlEntities(exam.name),
-            description: decodeHtmlEntities(exam.description),
-        }));
+        // FIX: Re-implemented a robust URL mapping for full backward compatibility with older plugin versions.
+        // This ensures the questionSourceUrl from the category is correctly assigned to each exam.
+        org.exams = (org.exams || []).map((exam: Exam): Exam | null => {
+            // Safety check for malformed exam entries
+            if (!exam || !exam.id) {
+                return null;
+            }
+            const category = (org.examProductCategories || []).find(c => c && (c.certificationExamId === exam.id || c.practiceExamId === exam.id));
+            const categoryUrl = category ? category.questionSourceUrl : undefined;
+
+            return {
+                ...exam,
+                name: decodeHtmlEntities(exam.name),
+                description: decodeHtmlEntities(exam.description),
+                questionSourceUrl: categoryUrl || exam.questionSourceUrl,
+            };
+        }).filter(Boolean) as Exam[]; // filter out any null entries
 
 
         if (org.suggestedBooks) {
