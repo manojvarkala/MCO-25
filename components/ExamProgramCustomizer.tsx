@@ -200,7 +200,7 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
             </div>
              <div>
                 <label className="text-xs font-bold">Question Source URL</label>
-                <input type="text" value={practiceExam?.questionSourceUrl || ''} onChange={e => handleExamChange('practiceExam', 'questionSourceUrl', e.target.value)} className="w-full p-2 border rounded bg-white" />
+                <input type="text" value={category?.questionSourceUrl || ''} onChange={e => handleCategoryChange('questionSourceUrl', e.target.value)} className="w-full p-2 border rounded bg-white" />
             </div>
             
             {practiceExam && (
@@ -453,7 +453,9 @@ const ExamProgramCustomizer: FC = () => {
             const updateData: any = {};
             if (data.category?.name) updateData.name = data.category.name;
             if (data.category?.description) updateData.description = data.category.description;
-            if (data.practiceExam?.questionSourceUrl) updateData.questionSourceUrl = data.practiceExam.questionSourceUrl;
+            if (data.category && typeof data.category.questionSourceUrl === 'string') {
+                updateData.questionSourceUrl = data.category.questionSourceUrl;
+            }
 
             if(data.practiceExam) {
                 if (data.practiceExam.name) updateData.practice_name = data.practiceExam.name;
