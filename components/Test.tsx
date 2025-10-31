@@ -1,5 +1,7 @@
+
 import React, { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useParams, useHistory } from 'react-router-dom';
+// FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Question, UserAnswer, Exam, ExamProgress } from '../types.ts';
@@ -21,7 +23,8 @@ const FOCUS_VIOLATION_TOAST_ID = 'focus-violation-toast';
 
 const Test: FC = () => {
   const { examId } = useParams<{ examId: string }>();
-  const history = useHistory();
+  // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
+  const navigate = useNavigate();
   const { user, isSubscribed, token } = useAuth();
   const { activeOrg, isInitializing } = useAppContext();
 
@@ -58,7 +61,8 @@ const Test: FC = () => {
 
     if (!user || !examId || !token || questions.length === 0) {
         toast.error("Cannot submit: user or exam context is missing.");
-        history.push('/');
+        // FIX: Replaced `history.push` with `navigate`.
+        navigate('/');
         setIsSubmitting(false);
         return;
     }
@@ -82,13 +86,14 @@ const Test: FC = () => {
         const userAnswers: UserAnswer[] = Array.from(answers.entries()).map(([questionId, answer]) => ({ questionId, answer }));
         const result = await googleSheetsService.submitTest(user, examId, userAnswers, questions, token, focusViolationCount);
         toast.success("Test submitted successfully!");
-        history.push(`/results/${result.testId}`);
+        // FIX: Replaced `history.push` with `navigate`.
+        navigate(`/results/${result.testId}`);
     } catch (error) {
         toast.error("Failed to submit the test. Please try again.");
         setIsSubmitting(false);
         hasSubmittedRef.current = false; // Reset submit lock
     }
-  }, [examId, history, token, user, isSubmitting, questions, answers, progressKey, focusViolationCount]);
+  }, [examId, navigate, token, user, isSubmitting, questions, answers, progressKey, focusViolationCount]);
   
   // Effect 1: Load questions and saved progress.
   useEffect(() => {
@@ -97,7 +102,8 @@ const Test: FC = () => {
     const config = activeOrg.exams.find(e => e.id === examId);
     if (!config) {
         toast.error("Could not find the specified exam.");
-        history.push('/dashboard');
+        // FIX: Replaced `history.push` with `navigate`.
+        navigate('/dashboard');
         return;
     }
     setExamConfig(config);
@@ -140,7 +146,7 @@ const Test: FC = () => {
         }
     };
     loadTest();
-  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, history, progressKey]);
+  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, progressKey]);
 
   // Effect 2: Manage the timer.
   useEffect(() => {
@@ -290,176 +296,4 @@ const Test: FC = () => {
                 
                 {error.includes("Google Sheet") && (
                     <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-left text-sm text-amber-800">
-                        <h3 className="font-bold mb-2">How to Fix This:</h3>
-                        <p className="mb-2">This error means the Google Sheet with the questions is not accessible from our server. Try the following solutions in order:</p>
-                        <h4 className="font-semibold mt-3 mb-1">Method 1: Share Link (Recommended)</h4>
-                        <ol className="list-decimal list-inside space-y-1">
-                            <li>Open your Google Sheet.</li>
-                            <li>Click the <strong>Share</strong> button (top-right).</li>
-                            <li>Under "General access," change from "Restricted" to <strong>"Anyone with the link"</strong>.</li>
-                            <li>Ensure the role is set to <strong>"Viewer"</strong>.</li>
-                            <li>Copy the URL from your browser's address bar and paste it into the "Question Source" field in WordPress.</li>
-                        </ol>
-                        <h4 className="font-semibold mt-4 mb-1">Method 2: Publish to the Web (More Reliable)</h4>
-                        <p className="mb-2">If sharing doesn't work, publishing is a more stable option.</p>
-                        <ol className="list-decimal list-inside space-y-1">
-                             <li>In your Google Sheet, go to <strong>File &rarr; Share &rarr; Publish to the web</strong>.</li>
-                             <li>In the dialog, select the correct sheet (e.g., "Sheet1").</li>
-                             <li>Choose <strong>"Comma-separated values (.csv)"</strong> from the dropdown.</li>
-                             <li>Click <strong>Publish</strong> and confirm.</li>
-                             <li>Copy the generated link and paste it into the "Question Source" field in WordPress.</li>
-                        </ol>
-                        <p className="mt-3 text-xs">Note: After changing settings, it may take up to 15 minutes for the server to fetch the updated content due to caching.</p>
-                    </div>
-                )}
-
-                <button 
-                    onClick={() => history.push('/dashboard')} 
-                    className="mt-6 w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg transition"
-                >
-                    Back to Dashboard
-                </button>
-            </div>
-        );
-    }
-    
-    if (!examConfig) {
-        return <div className="text-center p-8">Exam configuration could not be loaded.</div>;
-    }
-
-    if (!examStarted) {
-        // Pre-exam start screen with countdown overlay
-        return (
-            <>
-                {countdown !== null && (
-                    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-                        <div key={countdown} className="text-white text-9xl font-extrabold animate-countdown-pop">
-                            {countdown > 0 ? countdown : 'GO!'}
-                        </div>
-                    </div>
-                )}
-                <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-lg text-center">
-                    <h1 className="text-3xl font-bold text-slate-800 mb-2">{examConfig.name}</h1>
-                    <p className="text-slate-500 mb-6">{examConfig.description}</p>
-                    <div className="grid grid-cols-2 gap-4 text-lg mb-8">
-                        <div className="bg-slate-100 p-4 rounded-lg"><p className="font-bold">{examConfig.numberOfQuestions}</p><p className="text-sm text-slate-600">Questions</p></div>
-                        <div className="bg-slate-100 p-4 rounded-lg"><p className="font-bold">{examConfig.durationMinutes}</p><p className="text-sm text-slate-600">Minutes</p></div>
-                    </div>
-                    {examConfig.isProctored && (
-                        <div className="bg-red-50 border-l-4 border-red-500 p-4 my-4 text-left">
-                            <p className="font-bold text-red-800 flex items-center gap-2"><AlertTriangle size={16}/> Important Rules</p>
-                            <ul className="list-disc pl-5 text-red-700 space-y-1 text-sm mt-2">
-                                <li>This exam must be taken in <strong>fullscreen mode</strong>.</li>
-                                <li>Do not exit fullscreen or switch to another tab/application.</li>
-                                <li>Violations will be tracked and may result in exam termination.</li>
-                            </ul>
-                        </div>
-                    )}
-                    <button onClick={handleStartExamFlow} disabled={isStarting || countdown !== null} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 px-8 rounded-lg text-xl transition-transform transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed">
-                        {isStarting ? <Spinner /> : 'Start Exam'}
-                    </button>
-                </div>
-            </>
-        );
-    }
-
-    return (
-        <div className="max-w-7xl mx-auto relative">
-             <div className="bg-slate-800 text-white rounded-t-lg sticky top-0 z-10 shadow-md">
-                <div className="p-4 flex justify-between items-center">
-                    <h1 className="text-xl font-bold">{examConfig.name}</h1>
-                    <div className={`flex items-center gap-2 bg-slate-900/50 px-6 py-2 rounded-full text-2xl font-bold font-mono transition-colors duration-500 ${timerColorClass}`}>
-                        <Clock size={22} />
-                        <span>{timeLeft !== null ? formatTime(timeLeft) : 'Loading...'}</span>
-                    </div>
-                </div>
-                <div className="w-full bg-slate-700 h-2">
-                    <div 
-                        className={`h-full ${progressBarColorClass}`} 
-                        style={{ 
-                            width: `${timePercentage}%`,
-                            transition: 'width 1s linear, background-color 0.5s ease'
-                        }}
-                        role="progressbar"
-                        aria-valuenow={timeLeft !== null ? timeLeft : examConfig.durationMinutes * 60}
-                        aria-valuemin={0}
-                        aria-valuemax={examConfig.durationMinutes * 60}
-                        aria-label="Time remaining"
-                    ></div>
-                </div>
-            </div>
-            <div className="bg-white p-2 sm:p-4 rounded-b-lg shadow-lg">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-1 bg-slate-50 p-3 rounded-lg border border-slate-200 h-full max-h-96 md:max-h-full overflow-y-auto">
-                        <h2 className="font-bold mb-2">Questions ({answers.size}/{questions.length})</h2>
-                        {examConfig.sections && examConfig.sections.length > 0 ? (
-                            examConfig.sections.map(section => (
-                                <div key={section.id} className="mb-4">
-                                    <h3 className="font-semibold text-sm text-slate-600 mb-2 border-b border-slate-200 pb-1">{section.name} (Q{section.startQuestion}-{section.endQuestion})</h3>
-                                    <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                                        {questions.slice(section.startQuestion - 1, section.endQuestion).map((q, index) => {
-                                            const questionNumber = section.startQuestion + index;
-                                            return (
-                                                <button key={q.id} onClick={() => setCurrentQuestionIndex(questionNumber - 1)} className={`w-10 h-10 rounded-md text-sm font-semibold transition ${ (questionNumber - 1) === currentQuestionIndex ? 'bg-cyan-600 text-white ring-2 ring-offset-2 ring-cyan-500' : answers.has(q.id) ? 'bg-slate-300 text-slate-800' : 'bg-white border border-slate-300 hover:bg-slate-100' }`}>
-                                                    {questionNumber}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                                {questions.map((q, index) => (
-                                    <button key={q.id} onClick={() => setCurrentQuestionIndex(index)} className={`w-10 h-10 rounded-md text-sm font-semibold transition ${ index === currentQuestionIndex ? 'bg-cyan-600 text-white ring-2 ring-offset-2 ring-cyan-500' : answers.has(q.id) ? 'bg-slate-300 text-slate-800' : 'bg-white border border-slate-300 hover:bg-slate-100' }`}>
-                                        {index + 1}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                    <div className="md:col-span-2">
-                        {currentQuestion ? (
-                            <div className="p-4">
-                                <p className="text-slate-500 mb-2">Question {currentQuestionIndex + 1} of {questions.length}</p>
-                                <h2 className="text-xl font-semibold text-slate-800 mb-6 leading-relaxed">{currentQuestion.question}</h2>
-                                <div className="space-y-4">
-                                    {currentQuestion.options.map((option, index) => (
-                                        <label key={index} onDoubleClick={() => handleDoubleClick(index)} className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition ${ selectedAnswer === index ? 'bg-cyan-50 border-cyan-500' : 'bg-white border-slate-200 hover:border-cyan-300' }`}>
-                                            <input type="radio" name={`question-${currentQuestion.id}`} checked={selectedAnswer === index} onChange={() => handleAnswerSelect(index)} className="h-5 w-5 text-cyan-600 focus:ring-cyan-500"/>
-                                            <span className="ml-4 text-slate-700">{option}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                        ) : <p>No question loaded.</p>}
-                    </div>
-                </div>
-                <div className="mt-6 pt-4 border-t border-slate-200 flex justify-between items-center">
-                    <button onClick={handlePrev} disabled={currentQuestionIndex === 0} className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50">
-                        <ChevronLeft size={16} /> Previous
-                    </button>
-                    
-                    {currentQuestionIndex < questions.length - 1 ? (
-                         <button 
-                            onClick={handleNext} 
-                            className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition"
-                        >
-                            Next <ChevronRight size={16} />
-                        </button>
-                    ) : (
-                        <button 
-                            onClick={() => handleSubmit()} 
-                            disabled={isSubmitting || selectedAnswer === undefined} 
-                            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed"
-                        >
-                            {isSubmitting ? <Spinner /> : <Send size={16} />}
-                            {isSubmitting ? 'Submitting...' : 'Submit Exam'}
-                        </button>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
-export default Test;
+                        <h3
