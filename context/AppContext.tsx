@@ -320,6 +320,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         return { ...prevOrg, exams: newExams };
     });
   }, []);
+  
 
   const value = useMemo(() => ({
     organizations,
