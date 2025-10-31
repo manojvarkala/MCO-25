@@ -553,11 +553,11 @@ function mco_handle_generate_programs_csv() {
             'is_proctored' => get_post_meta($program->ID, '_mco_is_proctored', true) ? '1' : '0',
             'certificate_enabled' => get_post_meta($program->ID, '_mco_certificate_enabled', true) ? '1' : '0',
             'recommended_book_id' => implode(', ', $book_slugs),
-            'practice_questions' => mco_get_single_term($program->ID, 'exam_practice_questions'),
-            'practice_duration' => mco_get_single_term($program->ID, 'exam_practice_duration'),
-            'cert_questions' => mco_get_single_term($program->ID, 'exam_cert_questions'),
-            'cert_duration' => mco_get_single_term($program->ID, 'exam_cert_duration'),
-            'pass_score' => mco_get_single_term($program->ID, 'exam_pass_score'),
+            'practice_questions' => get_post_meta($program->ID, '_mco_practice_questions', true),
+            'practice_duration' => get_post_meta($program->ID, '_mco_practice_duration', true),
+            'cert_questions' => get_post_meta($program->ID, '_mco_cert_questions', true),
+            'cert_duration' => get_post_meta($program->ID, '_mco_cert_duration', true),
+            'pass_score' => get_post_meta($program->ID, '_mco_pass_score', true),
             'status' => $program->post_status,
         ];
         
@@ -691,6 +691,9 @@ function mco_handle_csv_upload() {
     $error_messages = [];
     $row_index = 1;
 
+    // FIX: Temporarily remove the hook that saves meta data from the post editor to prevent conflicts during programmatic import.
+    remove_action('save_post', 'mco_save_exam_program_meta_data');
+
     while (($row = fgetcsv($handle)) !== FALSE) {
         $row_index++;
         if (count($row) === 1 && $row[0] === null) continue; // Skip empty lines that fgetcsv might read
@@ -736,11 +739,12 @@ function mco_handle_csv_upload() {
                 update_post_meta($post_id, '_mco_is_proctored', ($row_data['is_proctored'] == '1') ? '1' : '0');
                 update_post_meta($post_id, '_mco_certificate_enabled', ($row_data['certificate_enabled'] == '1') ? '1' : '0');
 
-                wp_set_object_terms($post_id, (int)$row_data['practice_questions'], 'exam_practice_questions');
-                wp_set_object_terms($post_id, (int)$row_data['practice_duration'], 'exam_practice_duration');
-                wp_set_object_terms($post_id, (int)$row_data['cert_questions'], 'exam_cert_questions');
-                wp_set_object_terms($post_id, (int)$row_data['cert_duration'], 'exam_cert_duration');
-                wp_set_object_terms($post_id, (int)$row_data['pass_score'], 'exam_pass_score');
+                // FIX: Switched from taxonomies to post meta for exam parameters for reliability.
+                update_post_meta($post_id, '_mco_practice_questions', sanitize_text_field($row_data['practice_questions']));
+                update_post_meta($post_id, '_mco_practice_duration', sanitize_text_field($row_data['practice_duration']));
+                update_post_meta($post_id, '_mco_cert_questions', sanitize_text_field($row_data['cert_questions']));
+                update_post_meta($post_id, '_mco_cert_duration', sanitize_text_field($row_data['cert_duration']));
+                update_post_meta($post_id, '_mco_pass_score', sanitize_text_field($row_data['pass_score']));
                 
                 if (!empty($row_data['recommended_book_id'])) {
                     $book_slugs = array_map('trim', explode(',', $row_data['recommended_book_id']));
@@ -792,6 +796,9 @@ function mco_handle_csv_upload() {
             }
         }
     }
+    
+    // Re-add the hook for normal post editor functionality.
+    add_action('save_post', 'mco_save_exam_program_meta_data');
     
     fclose($handle);
 

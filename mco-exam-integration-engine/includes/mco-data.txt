@@ -117,11 +117,13 @@ function mco_get_app_config_data() {
     ]);
 
     foreach ($exam_program_posts as $post) {
-        $practice_questions = mco_get_single_term($post->ID, 'exam_practice_questions', 'name');
-        $practice_duration = mco_get_single_term($post->ID, 'exam_practice_duration', 'name');
-        $cert_questions = mco_get_single_term($post->ID, 'exam_cert_questions', 'name');
-        $cert_duration = mco_get_single_term($post->ID, 'exam_cert_duration', 'name');
-        $pass_score = mco_get_single_term($post->ID, 'exam_pass_score', 'name');
+        // FIX: Switched from taxonomies to post meta for exam parameters for reliability.
+        // This also provides a fallback to the old taxonomy data for a smooth transition.
+        $practice_questions = get_post_meta($post->ID, '_mco_practice_questions', true) ?: mco_get_single_term($post->ID, 'exam_practice_questions', 'name');
+        $practice_duration = get_post_meta($post->ID, '_mco_practice_duration', true) ?: mco_get_single_term($post->ID, 'exam_practice_duration', 'name');
+        $cert_questions = get_post_meta($post->ID, '_mco_cert_questions', true) ?: mco_get_single_term($post->ID, 'exam_cert_questions', 'name');
+        $cert_duration = get_post_meta($post->ID, '_mco_cert_duration', true) ?: mco_get_single_term($post->ID, 'exam_cert_duration', 'name');
+        $pass_score = get_post_meta($post->ID, '_mco_pass_score', true) ?: mco_get_single_term($post->ID, 'exam_pass_score', 'name');
         
         $cert_sku = get_post_meta($post->ID, '_mco_certification_exam_sku', true);
         $question_source = get_post_meta($post->ID, '_mco_question_source_url', true);

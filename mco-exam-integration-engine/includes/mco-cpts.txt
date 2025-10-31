@@ -3,22 +3,6 @@ if (!defined('ABSPATH')) exit;
 
 if (!function_exists('mco_register_custom_post_types')) {
     function mco_register_custom_post_types() {
-        $taxonomies = array(
-            'exam_practice_questions'  => 'Practice Questions',
-            'exam_practice_duration'   => 'Practice Duration',
-            'exam_cert_questions'      => 'Certification Questions',
-            'exam_cert_duration'       => 'Certification Duration',
-            'exam_pass_score'          => 'Pass Score'
-        );
-        foreach ($taxonomies as $slug => $name) {
-            register_taxonomy($slug, 'mco_exam_program', array(
-                'labels' => array('name' => $name), 
-                'public' => true, 
-                'hierarchical' => false, 
-                'show_in_rest' => true
-            ));
-        }
-
         register_post_type('mco_exam_program', array(
             'labels' => array('name' => 'Exam Programs', 'singular_name' => 'Exam Program'),
             'public' => true, 
@@ -27,7 +11,6 @@ if (!function_exists('mco_register_custom_post_types')) {
             'menu_icon' => 'dashicons-welcome-learn-more',
             'show_in_rest' => true,
             'supports' => array('title', 'editor', 'thumbnail'), 
-            'taxonomies' => array_keys($taxonomies),
             'rewrite' => array('slug' => 'exam-programs'),
         ));
 
@@ -50,7 +33,6 @@ if (!function_exists('mco_register_custom_post_types')) {
 
 if (!function_exists('mco_add_exam_program_meta_boxes')) {
     function mco_add_exam_program_meta_boxes($post_type) {
-        // CRITICAL FIX: Only add the meta box to our custom post type screen.
         if ($post_type === 'mco_exam_program') {
             add_meta_box(
                 'mco_exam_program_settings',
@@ -79,6 +61,13 @@ if (!function_exists('mco_exam_program_meta_box_callback')) {
         $sections = get_post_meta($post->ID, '_mco_exam_sections', true) ?: array();
         $template_id = get_post_meta($post->ID, '_mco_certificate_template_id', true);
         
+        // FIX: Add variables for new meta fields, with fallback to old taxonomy data
+        $practice_questions = get_post_meta($post->ID, '_mco_practice_questions', true) ?: mco_get_single_term($post->ID, 'exam_practice_questions', 'name');
+        $practice_duration = get_post_meta($post->ID, '_mco_practice_duration', true) ?: mco_get_single_term($post->ID, 'exam_practice_duration', 'name');
+        $cert_questions = get_post_meta($post->ID, '_mco_cert_questions', true) ?: mco_get_single_term($post->ID, 'exam_cert_questions', 'name');
+        $cert_duration = get_post_meta($post->ID, '_mco_cert_duration', true) ?: mco_get_single_term($post->ID, 'exam_cert_duration', 'name');
+        $pass_score = get_post_meta($post->ID, '_mco_pass_score', true) ?: mco_get_single_term($post->ID, 'exam_pass_score', 'name');
+
         $all_books = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
         $all_templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
 
@@ -88,6 +77,27 @@ if (!function_exists('mco_exam_program_meta_box_callback')) {
              <tr>
                 <th><label for="mco_question_source_url">Question Source URL</label></th>
                 <td><input type="url" id="mco_question_source_url" name="mco_question_source_url" value="<?php echo esc_url($source_url); ?>" class="large-text" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"></td>
+            </tr>
+             <tr><th colspan="2"><hr><h4>Exam Parameters</h4><p class="description">These settings apply to both the practice and certification exams generated from this program.</p></th></tr>
+            <tr>
+                <th><label for="mco_practice_questions">Practice Exam Questions</label></th>
+                <td><input type="number" id="mco_practice_questions" name="mco_practice_questions" value="<?php echo esc_attr($practice_questions); ?>" class="small-text"></td>
+            </tr>
+            <tr>
+                <th><label for="mco_practice_duration">Practice Exam Duration (Mins)</label></th>
+                <td><input type="number" id="mco_practice_duration" name="mco_practice_duration" value="<?php echo esc_attr($practice_duration); ?>" class="small-text"></td>
+            </tr>
+            <tr>
+                <th><label for="mco_cert_questions">Certification Exam Questions</label></th>
+                <td><input type="number" id="mco_cert_questions" name="mco_cert_questions" value="<?php echo esc_attr($cert_questions); ?>" class="small-text"></td>
+            </tr>
+            <tr>
+                <th><label for="mco_cert_duration">Certification Exam Duration (Mins)</label></th>
+                <td><input type="number" id="mco_cert_duration" name="mco_cert_duration" value="<?php echo esc_attr($cert_duration); ?>" class="small-text"></td>
+            </tr>
+            <tr>
+                <th><label for="mco_pass_score">Passing Score (%)</label></th>
+                <td><input type="number" id="mco_pass_score" name="mco_pass_score" value="<?php echo esc_attr($pass_score); ?>" class="small-text"></td>
             </tr>
             <tr><th colspan="2"><hr><h4>Practice Exam Settings</h4></th></tr>
             <tr>
@@ -184,7 +194,6 @@ if (!function_exists('mco_save_exam_program_meta_data')) {
         if (!isset($_POST['mco_exam_meta_box_nonce']) || !wp_verify_nonce($_POST['mco_exam_meta_box_nonce'], 'mco_save_exam_meta_box_data')) return;
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
         if (!current_user_can('edit_post', $post_id)) return;
-        // CRITICAL FIX: Use get_post_type() for a reliable check, preventing this from running on other post types.
         if (get_post_type($post_id) !== 'mco_exam_program') return;
 
         $fields = [
@@ -195,7 +204,13 @@ if (!function_exists('mco_save_exam_program_meta_data')) {
             '_mco_certificate_template_id' => 'sanitize_text_field',
             '_mco_is_proctored' => 'sanitize_text_field',
             '_mco_certificate_enabled' => 'sanitize_text_field',
-            '_mco_practice_certificate_enabled' => 'sanitize_text_field'
+            '_mco_practice_certificate_enabled' => 'sanitize_text_field',
+            // FIX: Add new meta fields for exam parameters to the save handler.
+            '_mco_practice_questions' => 'sanitize_text_field',
+            '_mco_practice_duration' => 'sanitize_text_field',
+            '_mco_cert_questions' => 'sanitize_text_field',
+            '_mco_cert_duration' => 'sanitize_text_field',
+            '_mco_pass_score' => 'sanitize_text_field',
         ];
         
         foreach ($fields as $key => $sanitize_func) {
