@@ -1,7 +1,8 @@
 
+
 import React, { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Question, UserAnswer, Exam, ExamProgress } from '../types.ts';
@@ -9,7 +10,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { ChevronLeft, ChevronRight, Send, Clock, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Send, Clock, AlertTriangle, PlayCircle, CheckCircle, HelpCircle } from 'lucide-react';
 
 const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
@@ -296,4 +297,174 @@ const Test: FC = () => {
                 
                 {error.includes("Google Sheet") && (
                     <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-left text-sm text-amber-800">
-                        <h3
+                        <h3 className="font-bold text-amber-900 mb-2">Troubleshooting Google Sheet Errors:</h3>
+                        <ol className="list-decimal list-inside space-y-2">
+                            <li>
+                                <strong>Check Sharing Settings:</strong> Ensure your Google Sheet is "Published to the web" as a CSV file. Go to File → Share → Publish to web, select "Comma-separated values (.csv)", and click Publish.
+                            </li>
+                            <li>
+                                <strong>Verify URL:</strong> Double-check that the correct "Publish to the web" URL is pasted in the "Question Source URL" field for this exam program in your WordPress admin.
+                            </li>
+                            <li>
+                                <strong>Clear Caches:</strong> In your WordPress admin, go to "Exam App Engine" → "Tools" and click "Clear All Question Caches".
+                            </li>
+                        </ol>
+                    </div>
+                )}
+                <button onClick={() => navigate('/dashboard')} className="mt-6 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg">
+                    Back to Dashboard
+                </button>
+            </div>
+        );
+    }
+
+    if (!examStarted) {
+        return (
+            <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-lg text-center">
+                <h1 className="text-3xl font-bold text-slate-800">{examConfig.name}</h1>
+                <p className="text-slate-600 mt-4" dangerouslySetInnerHTML={{ __html: examConfig.description }}></p>
+                <div className="grid grid-cols-3 gap-4 my-6 text-center text-slate-700 p-4 bg-slate-100 rounded-lg">
+                    <div><HelpCircle className="mx-auto mb-1 text-cyan-600" /> {examConfig.numberOfQuestions} Questions</div>
+                    <div><Clock className="mx-auto mb-1 text-cyan-600" /> {examConfig.durationMinutes} Minutes</div>
+                    <div><CheckCircle className="mx-auto mb-1 text-cyan-600" /> {examConfig.passScore}% to Pass</div>
+                </div>
+
+                {examConfig.isProctored && (
+                    <div className="bg-red-50 border-l-4 border-red-500 p-4 my-6 text-sm text-left">
+                        <p className="font-bold text-red-800">Important: This is a proctored exam.</p>
+                        <ul className="list-disc pl-5 text-red-700 space-y-1 mt-2">
+                            <li>You must take the exam in <strong>fullscreen mode</strong>.</li>
+                            <li>You must <strong>stay on the exam tab</strong>. Navigating away will be flagged.</li>
+                            <li>Multiple violations will terminate your exam.</li>
+                        </ul>
+                    </div>
+                )}
+                
+                <button
+                    onClick={handleStartExamFlow}
+                    disabled={isStarting}
+                    className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-xl transition disabled:bg-slate-400"
+                >
+                    {isStarting ? <Spinner /> : <PlayCircle size={24} />}
+                    {isStarting ? 'Starting...' : 'Start Exam'}
+                </button>
+            </div>
+        );
+    }
+    
+    if (countdown !== null && countdown > 0) {
+        return (
+            <div className="fixed inset-0 bg-slate-900/80 flex items-center justify-center z-50">
+                <div className="text-white text-9xl font-extrabold animate-countdown-pop" key={countdown}>
+                    {countdown}
+                </div>
+            </div>
+        );
+    }
+    
+    if (countdown === 0) {
+         return (
+            <div className="fixed inset-0 bg-slate-900/80 flex items-center justify-center z-50">
+                <div className="text-green-400 text-9xl font-extrabold animate-countdown-pop">
+                    Go!
+                </div>
+            </div>
+        );
+    }
+
+    if (!currentQuestion) {
+        return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4 text-slate-600">Loading Question...</p></div>;
+    }
+
+    return (
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-2xl max-w-5xl mx-auto">
+            <header className="mb-4">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
+                    <h2 className="text-xl font-bold text-slate-800">{examConfig.name}</h2>
+                    {timeLeft !== null && (
+                        <div className={`flex items-center gap-2 font-bold p-2 rounded-lg text-lg bg-slate-700 ${timerColorClass}`}>
+                            <Clock size={20} />
+                            <span>{formatTime(timeLeft)}</span>
+                        </div>
+                    )}
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                    <div className={`h-2 rounded-full transition-all duration-500 ${progressBarColorClass}`} style={{ width: `${timePercentage}%` }}></div>
+                </div>
+            </header>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="md:col-span-3">
+                    <div className="p-6 bg-slate-50 rounded-lg min-h-[300px]">
+                        <p className="text-sm text-slate-500 mb-4">Question {currentQuestionIndex + 1} of {questions.length}</p>
+                        <p className="text-lg font-semibold text-slate-900 mb-6">{currentQuestion.question}</p>
+                        <div className="space-y-3">
+                            {currentQuestion.options.map((option, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => handleAnswerSelect(index)}
+                                    onDoubleClick={() => handleDoubleClick(index)}
+                                    className={`w-full text-left p-4 border-2 rounded-lg transition-colors flex items-center ${selectedAnswer === index ? 'border-cyan-500 bg-cyan-50 ring-2 ring-cyan-500/20' : 'border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300'}`}
+                                >
+                                    <span className="font-bold mr-3 text-slate-500">{String.fromCharCode(65 + index)}.</span>
+                                    <span>{option}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <aside>
+                    <div className="p-4 bg-slate-100 rounded-lg h-full">
+                        <h3 className="font-bold mb-2">Navigator</h3>
+                        <div className="grid grid-cols-5 gap-2">
+                            {questions.map((_, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => setCurrentQuestionIndex(index)}
+                                    className={`w-10 h-10 rounded text-sm font-semibold transition ${
+                                        index === currentQuestionIndex 
+                                            ? 'bg-cyan-600 text-white ring-2 ring-offset-2 ring-cyan-600'
+                                            : answers.has(questions[index].id)
+                                            ? 'bg-slate-300 text-slate-700 hover:bg-slate-400'
+                                            : 'bg-white hover:bg-slate-200'
+                                    }`}
+                                >
+                                    {index + 1}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            <footer className="mt-6 flex flex-wrap justify-between items-center gap-4">
+                <button
+                    onClick={handlePrev}
+                    disabled={currentQuestionIndex === 0}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 disabled:opacity-50"
+                >
+                    <ChevronLeft size={16} /> Previous
+                </button>
+
+                <button
+                    onClick={() => handleSubmit(false, "")}
+                    disabled={isSubmitting}
+                    className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 disabled:bg-slate-400"
+                >
+                    {isSubmitting ? <Spinner /> : <Send size={16} />} {isSubmitting ? 'Submitting...' : 'Submit Exam'}
+                </button>
+
+                <button
+                    onClick={handleNext}
+                    disabled={currentQuestionIndex === questions.length - 1}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 disabled:opacity-50"
+                >
+                    Next <ChevronRight size={16} />
+                </button>
+            </footer>
+        </div>
+    );
+};
+
+export default Test;

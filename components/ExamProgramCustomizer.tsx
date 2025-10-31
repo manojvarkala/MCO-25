@@ -1,6 +1,5 @@
 import React, { FC, useState, useCallback, useMemo, ReactNode, useEffect } from 'react';
-// FIX: Corrected react-router-dom import to resolve module export errors.
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -328,73 +327,70 @@ const CreateProgramModal: FC<{
             setNewProductSku('');
         }
     }, [isOpen]);
-
+    
     const unlinkedProducts = useMemo(() => {
         if (!examPrices) return [];
-        return Object.values(examPrices)
-            .filter((p: any) => p.type === 'simple' && !linkedSkus.includes(p.sku))
-            .sort((a: { name: string }, b: { name: string }) => (a.name || '').localeCompare(b.name || ''));
+        return Object.values(examPrices).filter((p: any) => p.type === 'simple' && !p.isBundle && !linkedSkus.includes(p.sku));
     }, [examPrices, linkedSkus]);
 
     const handleSave = () => {
         if (!name) { toast.error("Program Name is required."); return; }
+        
         let productLinkData: any = { type: linkType };
         if (linkType === 'existing') {
             if (!existingSku) { toast.error("Please select an existing product to link."); return; }
             productLinkData.sku = existingSku;
         } else if (linkType === 'new') {
-            if (!newProductName || !newProductSku) { toast.error("New Product Name and SKU are required."); return; }
+            if (!newProductName || !newProductSku || !newProductPrice) { toast.error("New product name, SKU, and price are required."); return; }
             productLinkData.name = newProductName;
             productLinkData.sku = newProductSku;
-            productLinkData.price = newProductPrice;
-            productLinkData.regularPrice = newProductRegularPrice;
+            productLinkData.price = parseFloat(newProductPrice);
+            productLinkData.regularPrice = parseFloat(newProductRegularPrice) || parseFloat(newProductPrice);
         }
+        
         onSave(name, productLinkData);
     };
 
-    if(!isOpen) return null;
+    if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-lg w-full max-w-lg p-6">
-                 <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">Create New Exam Program</h2>
-                 <div className="space-y-4">
+                <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">Create New Exam Program</h2>
+                <div className="space-y-4">
                     <div>
                         <label className="text-sm font-medium">Program Name</label>
-                        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. New Certification Program" className="w-full p-2 mt-1 border rounded bg-white" />
+                        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Certified Professional Coder (CPC)" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
                     </div>
                     <div>
-                        <label className="text-sm font-medium">WooCommerce Product</label>
-                        <div className="mt-1 space-y-2 rounded-md bg-[rgb(var(--color-muted-rgb))] p-3 border border-[rgb(var(--color-border-rgb))]">
-                            <label className="flex items-center gap-2"><input type="radio" name="linkType" value="auto" checked={linkType==='auto'} onChange={e=>setLinkType(e.target.value)} /> Automatically create & link new product</label>
-                            <label className="flex items-center gap-2"><input type="radio" name="linkType" value="existing" checked={linkType==='existing'} onChange={e=>setLinkType(e.target.value)} /> Link to existing product</label>
-                            <label className="flex items-center gap-2"><input type="radio" name="linkType" value="new" checked={linkType==='new'} onChange={e=>setLinkType(e.target.value)} /> Create new product</label>
-                        </div>
+                        <label className="text-sm font-medium">Linked WooCommerce Product</label>
+                        <select value={linkType} onChange={e => setLinkType(e.target.value)} className="w-full p-2 mt-1 border rounded bg-white">
+                            <option value="auto">Auto-create new product</option>
+                            <option value="existing">Link to existing product</option>
+                            <option value="new">Create new product with custom details</option>
+                        </select>
                     </div>
                     {linkType === 'existing' && (
-                        <div>
-                            <label className="text-sm font-medium block mt-2">Select an Unlinked Product</label>
-                            <select value={existingSku} onChange={e => setExistingSku(e.target.value)} className="w-full p-2 mt-1 border rounded bg-white">
-                                <option value="">-- Select a product --</option>
-                                {unlinkedProducts.map((p: any) => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
-                            </select>
-                        </div>
+                        <select value={existingSku} onChange={e => setExistingSku(e.target.value)} className="w-full p-2 border rounded bg-white">
+                            <option value="">-- Select a product --</option>
+                            {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
+                        </select>
                     )}
                     {linkType === 'new' && (
-                        <div className="space-y-2 p-3 border border-dashed rounded-md">
-                            <input type="text" value={newProductName} onChange={e => setNewProductName(e.target.value)} placeholder="New Product Name" className="w-full p-2 border rounded bg-white"/>
-                            <input type="text" value={newProductSku} onChange={e => setNewProductSku(e.target.value)} placeholder="New Product SKU" className="w-full p-2 border rounded bg-white"/>
+                        <div className="p-4 border rounded-lg bg-[rgb(var(--color-muted-rgb))] space-y-2">
+                            <input type="text" value={newProductName} onChange={e => setNewProductName(e.target.value)} placeholder="New Product Name" className="w-full p-2 border rounded" />
+                            <input type="text" value={newProductSku} onChange={e => setNewProductSku(e.target.value)} placeholder="New Product SKU" className="w-full p-2 border rounded" />
                             <div className="grid grid-cols-2 gap-2">
-                                <input type="number" value={newProductPrice} onChange={e => setNewProductPrice(e.target.value)} placeholder="Sale Price" className="w-full p-2 border rounded bg-white"/>
-                                <input type="number" value={newProductRegularPrice} onChange={e => setNewProductRegularPrice(e.target.value)} placeholder="Regular Price" className="w-full p-2 border rounded bg-white"/>
+                                <input type="number" value={newProductPrice} onChange={e => setNewProductPrice(e.target.value)} placeholder="Sale Price" className="w-full p-2 border rounded" />
+                                <input type="number" value={newProductRegularPrice} onChange={e => setNewProductRegularPrice(e.target.value)} placeholder="Regular Price" className="w-full p-2 border rounded" />
                             </div>
                         </div>
                     )}
-                 </div>
-                 <div className="flex justify-end gap-3 mt-6">
+                </div>
+                <div className="flex justify-end gap-3 mt-6">
                     <button onClick={onClose} disabled={isSaving} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition">Cancel</button>
-                    <button onClick={handleSave} disabled={isSaving || !name} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
-                        {isSaving ? <Spinner /> : <Save size={16} />} Create Program
+                    <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition">
+                        {isSaving ? <Spinner /> : <PlusCircle size={16} />} Create Program
                     </button>
                 </div>
             </div>
@@ -404,95 +400,86 @@ const CreateProgramModal: FC<{
 
 
 const ExamProgramCustomizer: FC = () => {
-    const { activeOrg, updateConfigData, examPrices, suggestedBooks } = useAppContext();
+    const { activeOrg, examPrices, suggestedBooks, updateConfigData } = useAppContext();
     const { token } = useAuth();
     const [editingProgramId, setEditingProgramId] = useState<string | null>(null);
-    const [expandedProgramId, setExpandedProgramId] = useState<string | null>(null);
-    const [isSaving, setIsSaving] = useState(false);
     const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isBulkSaving, setIsBulkSaving] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
     const location = useLocation();
-    
-    const programs = useMemo(() => {
-        if (!activeOrg) return [];
-        return activeOrg.examProductCategories.map(category => ({
-            category,
-            practiceExam: activeOrg.exams.find(e => e.id === category.practiceExamId),
-            certExam: activeOrg.exams.find(e => e.id === category.certificationExamId),
-        })).sort((a,b) => a.category.name.localeCompare(b.category.name));
+
+    const allPrograms = useMemo(() => {
+        if (!activeOrg || !activeOrg.examProductCategories) return [];
+        return activeOrg.examProductCategories.map(cat => ({
+            category: cat,
+            practiceExam: activeOrg.exams.find(e => e.id === cat.practiceExamId),
+            certExam: activeOrg.exams.find(e => e.id === cat.certificationExamId),
+        }));
     }, [activeOrg]);
+    
+    const unlinkedProducts = useMemo(() => {
+        if (!examPrices || !activeOrg) return [];
+        const linkedSkus = activeOrg.exams.map(e => e.productSku);
+        return Object.values(examPrices).filter((p: any) => p.type === 'simple' && !p.isBundle && !linkedSkus.includes(p.sku));
+    }, [examPrices, activeOrg]);
 
     useEffect(() => {
-        const hash = location.hash;
-        if (hash) {
-            const programId = hash.substring(1);
-            const programExists = programs.some(p => p.category.id === programId);
-            if (programExists) {
-                setEditingProgramId(programId);
-                setExpandedProgramId(programId);
-                setTimeout(() => {
-                    const element = document.getElementById(`program-card-${programId}`);
-                    if (element) {
-                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                }, 100);
+        const hash = location.hash.substring(1);
+        if (hash && allPrograms.some(p => p.category.id === hash)) {
+            setEditingProgramId(hash);
+            const element = document.getElementById(hash);
+            if (element) {
+                setTimeout(() => element.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
             }
         }
-    }, [location.hash, programs]);
+    }, [allPrograms, location.hash]);
 
-    const handleSave = async (programId: string, data: EditableProgramData): Promise<void> => {
-        if (!token) {
-            toast.error("Authentication session has expired.");
-            return;
-        }
-        
-        const payload: any = {};
-        if (data.category?.name) payload.programName = data.category.name;
-        if (data.category?.description) payload.programDescription = data.category.description;
-        
-        if (data.practiceExam?.name) payload.practice_name_override = data.practiceExam.name;
-        if (data.practiceExam?.questionSourceUrl) payload.questionSourceUrl = data.practiceExam.questionSourceUrl;
-        if (data.practiceExam?.numberOfQuestions) payload.practice_numberOfQuestions = data.practiceExam.numberOfQuestions;
-        if (data.practiceExam?.durationMinutes) payload.practice_durationMinutes = data.practiceExam.durationMinutes;
-        if (typeof data.practiceExam?.certificateEnabled === 'boolean') payload.practice_certificateEnabled = data.practiceExam.certificateEnabled;
 
-        if (data.certExam?.name) payload.cert_name_override = data.certExam.name;
-        if (data.certExam?.productSku) payload.cert_productSku = data.certExam.productSku;
-        if (typeof data.certExam?.isProctored === 'boolean') payload.cert_isProctored = data.certExam.isProctored;
-        if (typeof data.certExam?.certificateEnabled === 'boolean') payload.cert_certificateEnabled = data.certExam.certificateEnabled;
-        if (data.certExam?.passScore) payload.cert_passScore = data.certExam.passScore;
-        if (data.certExam?.numberOfQuestions) payload.cert_numberOfQuestions = data.certExam.numberOfQuestions;
-        if (data.certExam?.durationMinutes) payload.cert_durationMinutes = data.certExam.durationMinutes;
-        if (data.certExam && typeof data.certExam.certificateTemplateId !== 'undefined') {
-            payload.cert_template_id = data.certExam.certificateTemplateId;
-        }
-        if (data.certExam && typeof data.certExam.recommendedBookIds !== 'undefined') {
-            payload.recommended_book_ids = data.certExam.recommendedBookIds;
-        }
-        
+    const handleSave = async (programId: string, data: EditableProgramData) => {
+        if (!token) { toast.error("Authentication Error"); return; }
         setIsSaving(true);
         try {
-            await googleSheetsService.adminUpdateExamProgram(token, programId, payload);
-            toast.success("Exam program updated successfully! Refreshing data...", { duration: 4000 });
+            const updateData: any = {};
+            if (data.category?.name) updateData.name = data.category.name;
+            if (data.category?.description) updateData.description = data.category.description;
+            if (data.practiceExam?.questionSourceUrl) updateData.questionSourceUrl = data.practiceExam.questionSourceUrl;
+
+            if(data.practiceExam) {
+                if (data.practiceExam.name) updateData.practice_name = data.practiceExam.name;
+                updateData.practice_numberOfQuestions = data.practiceExam.numberOfQuestions;
+                updateData.practice_durationMinutes = data.practiceExam.durationMinutes;
+            }
+            if(data.certExam) {
+                if (data.certExam.name) updateData.cert_name = data.certExam.name;
+                updateData.cert_productSku = data.certExam.productSku;
+                updateData.cert_certificateTemplateId = data.certExam.certificateTemplateId;
+                updateData.cert_numberOfQuestions = data.certExam.numberOfQuestions;
+                updateData.cert_durationMinutes = data.certExam.durationMinutes;
+                updateData.cert_passScore = data.certExam.passScore;
+                updateData.cert_isProctored = data.certExam.isProctored;
+                updateData.cert_certificateEnabled = data.certExam.certificateEnabled;
+                updateData.cert_recommendedBookIds = data.certExam.recommendedBookIds;
+            }
+            
+            await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
+            toast.success("Program saved successfully! Refreshing data...", { duration: 4000 });
             setEditingProgramId(null);
-            setTimeout(() => window.location.reload(), 1000); // Reload to fetch fresh data
+            setTimeout(() => window.location.reload(), 1000);
         } catch (error: any) {
-            toast.error(error.message || "Failed to save changes.");
+            toast.error(error.message || 'Failed to save program.');
         } finally {
             setIsSaving(false);
         }
     };
     
-    const handleBulkSave = async (updateData: any): Promise<void> => {
-        if (!token || !activeOrg) {
-            toast.error("Authentication error.");
-            return;
-        }
+    const handleBulkSave = async (updateData: any) => {
+        if (!token) { toast.error("Authentication Error"); return; }
         if (selectedProgramIds.length === 0) return;
 
-        setIsSaving(true);
+        setIsBulkSaving(true);
         const toastId = toast.loading(`Updating ${selectedProgramIds.length} programs...`);
-
+        
         try {
             for (const programId of selectedProgramIds) {
                 await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
@@ -501,23 +488,19 @@ const ExamProgramCustomizer: FC = () => {
             setSelectedProgramIds([]);
             setTimeout(() => window.location.reload(), 1000);
         } catch (error: any) {
-            toast.error(error.message || "An error occurred during bulk update.", { id: toastId });
+            toast.error(error.message || "Bulk update failed.", { id: toastId });
         } finally {
-            setIsSaving(false);
+            setIsBulkSaving(false);
         }
     };
-
-    const handleCreateProgram = async (name: string, productLinkData: any): Promise<void> => {
-        if (!token || !activeOrg) {
-            toast.error("Authentication error.");
-            return;
-        }
-        
+    
+    const handleCreate = async (name: string, productLinkData: any) => {
+        if (!token) { toast.error("Authentication Error"); return; }
         setIsSaving(true);
         try {
             await googleSheetsService.adminCreateExamProgram(token, name, productLinkData);
-            toast.success(`Program "${name}" created successfully! Refreshing data...`, { duration: 4000 });
-            setIsCreateModalOpen(false);
+            toast.success(`Program "${name}" created! Refreshing data...`, { duration: 4000 });
+            setIsCreating(false);
             setTimeout(() => window.location.reload(), 1000);
         } catch (error: any) {
             toast.error(error.message || "Failed to create program.");
@@ -525,20 +508,15 @@ const ExamProgramCustomizer: FC = () => {
             setIsSaving(false);
         }
     };
-
-    const handleDeleteProgram = async (program: any): Promise<void> => {
-        if (!token) {
-            toast.error("Authentication error.");
-            return;
-        }
-        if (!window.confirm(`Are you sure you want to delete "${program.category.name}"? This will move it to the trash.`)) {
-            return;
-        }
+    
+    const handleDelete = async (program: any) => {
+         if (!token) { toast.error("Authentication Error"); return; }
+        if (!window.confirm(`Are you sure you want to delete "${program.category.name}"? This will move the program to trash.`)) return;
 
         setIsSaving(true);
-        const postId = program.category.id.replace('prod-', '');
         try {
-            await googleSheetsService.adminDeletePost(token, postId, 'mco_exam_program');
+            const rawPostId = program.category.id.replace('prod-', '');
+            await googleSheetsService.adminDeletePost(token, rawPostId, 'mco_exam_program');
             toast.success(`Program "${program.category.name}" moved to trash. Refreshing data...`, { duration: 4000 });
             setTimeout(() => window.location.reload(), 1000);
         } catch (error: any) {
@@ -547,115 +525,81 @@ const ExamProgramCustomizer: FC = () => {
             setIsSaving(false);
         }
     };
-
+    
+    const toggleSelect = (id: string) => {
+        setSelectedProgramIds(prev => prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]);
+    };
+    
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSelectedProgramIds(e.target.checked ? programs.map(p => p.category.id) : []);
+        if (e.target.checked) {
+            setSelectedProgramIds(allPrograms.map(p => p.category.id));
+        } else {
+            setSelectedProgramIds([]);
+        }
     };
-    
-    const handleSelectOne = (id: string, checked: boolean) => {
-        setSelectedProgramIds(prev => checked ? [...prev, id] : prev.filter(pId => pId !== id));
-    };
-
-    const linkedSkus = useMemo(() => programs.map(p => p.certExam?.productSku).filter(Boolean) as string[], [programs]);
-    
-    const unlinkedProducts = useMemo(() => {
-        if (!examPrices) return [];
-        return Object.values(examPrices)
-            .filter((p: any) => p.type === 'simple' && !linkedSkus.includes(p.sku))
-            .sort((a: { name: string }, b: { name: string }) => (a.name || '').localeCompare(b.name || ''));
-    }, [examPrices, linkedSkus]);
-
-    if (!activeOrg) return <Spinner />;
-    
-    const isAllSelected = selectedProgramIds.length === programs.length && programs.length > 0;
 
     return (
         <div className="space-y-8">
-            <CreateProgramModal
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onSave={handleCreateProgram}
+            <CreateProgramModal 
+                isOpen={isCreating}
+                onClose={() => setIsCreating(false)}
+                onSave={handleCreate}
                 isSaving={isSaving}
                 examPrices={examPrices}
-                linkedSkus={linkedSkus}
+                linkedSkus={activeOrg?.exams.map(e => e.productSku) || []}
             />
-            <div className="flex justify-between items-start">
-                <div>
-                    <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3"><Settings /> Exam Program Customizer</h1>
-                    <p className="text-[rgb(var(--color-text-muted-rgb))] mt-2">Manage your exam programs. Changes made here will be reflected across the app.</p>
-                </div>
-                <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition">
-                    <PlusCircle size={18}/> Create New Program
-                </button>
-            </div>
+
+            <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3"><Settings /> Exam Program Customizer</h1>
+            <p className="text-[rgb(var(--color-text-muted-rgb))]">Manage your exam programs, link products, and adjust settings. Changes are saved live to your WordPress database.</p>
             
             <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                {selectedProgramIds.length > 0 ? (
-                    <BulkEditPanel 
+                <div className="flex justify-end mb-4">
+                     <button onClick={() => setIsCreating(true)} className="flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600">
+                        <PlusCircle size={16}/> Create New Program
+                    </button>
+                </div>
+                
+                {selectedProgramIds.length > 0 && (
+                    <BulkEditPanel
                         selectedCount={selectedProgramIds.length}
                         onSave={handleBulkSave}
                         onCancel={() => setSelectedProgramIds([])}
-                        isSaving={isSaving}
+                        isSaving={isBulkSaving}
                     />
-                ) : null}
-                <div className="space-y-2">
-                     <div className="flex items-center p-4 bg-[rgb(var(--color-card-rgb))] rounded-t-lg border-b border-[rgb(var(--color-border-rgb))]">
-                        <input type="checkbox" onChange={handleSelectAll} checked={isAllSelected} className="h-4 w-4 mr-4"/>
-                        <span className="font-semibold text-sm">Select All Programs</span>
-                    </div>
-                    {programs.map((program) => (
-                        <div key={program.category.id} id={`program-card-${program.category.id}`} className="border border-[rgb(var(--color-border-rgb))] rounded-lg">
-                            <div className="flex justify-between items-center p-4 bg-[rgb(var(--color-card-rgb))] rounded-t-lg">
-                                <div className="flex items-center">
-                                    <input type="checkbox" checked={selectedProgramIds.includes(program.category.id)} onChange={e => handleSelectOne(program.category.id, e.target.checked)} className="h-4 w-4 mr-4"/>
-                                    <div 
-                                        className="cursor-pointer group"
-                                        onClick={() => setEditingProgramId(program.category.id)}
-                                    >
-                                        <h2 
-                                            className="font-bold text-lg text-[rgb(var(--color-text-strong-rgb))] group-hover:text-[rgb(var(--color-primary-rgb))] transition-colors"
-                                        >
-                                            {program.category.name}
-                                        </h2>
-                                        {program.certExam?.productSku && (
-                                            <p className="text-xs text-[rgb(var(--color-text-muted-rgb))]">
-                                                SKU: {program.certExam.productSku}
-                                            </p>
-                                        )}
+                )}
+
+                <div className="flex items-center p-2 mb-4 border-b border-[rgb(var(--color-border-rgb))]">
+                    <label className="flex items-center gap-4 cursor-pointer">
+                        <input type="checkbox" onChange={handleSelectAll} checked={allPrograms.length > 0 && selectedProgramIds.length === allPrograms.length} className="h-4 w-4 rounded text-[rgb(var(--color-primary-rgb))] focus:ring-[rgb(var(--color-primary-rgb))]"/>
+                        <span className="font-semibold text-sm">Select All ({selectedProgramIds.length} / {allPrograms.length})</span>
+                    </label>
+                </div>
+
+                <div className="space-y-4">
+                    {allPrograms.map(program => (
+                        <div key={program.category.id} id={program.category.id} className="editable-card">
+                            <div className="editable-card__header">
+                                <div className="flex items-center gap-3 flex-grow">
+                                    <input type="checkbox" checked={selectedProgramIds.includes(program.category.id)} onChange={() => toggleSelect(program.category.id)} className="h-4 w-4 rounded text-[rgb(var(--color-primary-rgb))] focus:ring-[rgb(var(--color-primary-rgb))]"/>
+                                    <div className="flex-grow">
+                                        <h3 className="font-bold text-base text-[rgb(var(--color-text-strong-rgb))] leading-tight">{program.category.name}</h3>
+                                        <div className="text-xs text-[rgb(var(--color-text-muted-rgb))] flex items-center gap-2">
+                                            {program.certExam?.productSku && <Link2 size={12} />}
+                                            <span>{program.certExam?.productSku || 'No product linked'}</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    {editingProgramId !== program.category.id && (
-                                        <button onClick={() => setEditingProgramId(program.category.id)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-300">
-                                            <Edit size={14} /> Edit
-                                        </button>
-                                    )}
-                                    <button onClick={() => handleDeleteProgram(program)} className="p-2 rounded-full text-red-500 hover:bg-red-100" title="Delete Program">
-                                        <Trash2 size={16} />
+                                 <div className="flex items-center gap-1">
+                                    <button onClick={() => setEditingProgramId(editingProgramId === program.category.id ? null : program.category.id)} className="p-2 rounded-full hover:bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))]">
+                                        {editingProgramId === program.category.id ? <ChevronUp size={16} /> : <Edit size={16} />}
                                     </button>
-                                    <button onClick={() => setExpandedProgramId(expandedProgramId === program.category.id ? null : program.category.id)} className="p-2 rounded-full hover:bg-[rgb(var(--color-muted-rgb))]">
-                                        {expandedProgramId === program.category.id ? <ChevronUp /> : <ChevronDown />}
+                                     <button onClick={() => handleDelete(program)} className="p-2 rounded-full text-red-500 hover:bg-red-100" title="Delete Program">
+                                        <Trash2 size={16} />
                                     </button>
                                 </div>
                             </div>
-                            {expandedProgramId === program.category.id && editingProgramId !== program.category.id && (
-                                <div className="p-4 bg-[rgb(var(--color-muted-rgb))] rounded-b-lg text-sm space-y-2">
-                                    <p><strong>Description:</strong> {program.category.description}</p>
-                                    {program.practiceExam && <p><strong>Practice Exam:</strong> {program.practiceExam.name}</p>}
-                                    {program.certExam && (
-                                        <p>
-                                            <strong>Certification Exam:</strong> {program.certExam.name}
-                                            {program.certExam.productSku && (
-                                                <span className="ml-2 text-xs bg-slate-200 text-slate-600 font-mono px-1.5 py-0.5 rounded">
-                                                    SKU: {program.certExam.productSku}
-                                                </span>
-                                            )}
-                                        </p>
-                                    )}
-                                </div>
-                            )}
                             {editingProgramId === program.category.id && (
-                                <ExamEditor 
+                                <ExamEditor
                                     program={program}
                                     onSave={handleSave}
                                     onCancel={() => setEditingProgramId(null)}

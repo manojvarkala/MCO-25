@@ -1,7 +1,9 @@
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Updated react-router-dom imports for v6. `Switch` is now `Routes`, `Redirect` is `Navigate`.
-import { Routes, Route, BrowserRouter, Navigate, useLocation } from 'react-router-dom';
+// FIX: Using double quotes for module import consistency.
+import { Routes, Route, BrowserRouter, Navigate, useLocation } from "react-router-dom";
 import { Toaster, ToastBar, toast } from 'react-hot-toast';
 import { X } from 'lucide-react';
 

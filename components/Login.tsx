@@ -1,7 +1,8 @@
 
+
 import React, { FC, useRef, useEffect } from 'react';
 // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from '../context/AuthContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import toast from 'react-hot-toast';
