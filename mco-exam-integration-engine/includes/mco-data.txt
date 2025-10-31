@@ -117,8 +117,6 @@ function mco_get_app_config_data() {
     ]);
 
     foreach ($exam_program_posts as $post) {
-        // FIX: Switched from taxonomies to post meta for exam parameters for reliability.
-        // This also provides a fallback to the old taxonomy data for a smooth transition.
         $practice_questions = get_post_meta($post->ID, '_mco_practice_questions', true) ?: mco_get_single_term($post->ID, 'exam_practice_questions', 'name');
         $practice_duration = get_post_meta($post->ID, '_mco_practice_duration', true) ?: mco_get_single_term($post->ID, 'exam_practice_duration', 'name');
         $cert_questions = get_post_meta($post->ID, '_mco_cert_questions', true) ?: mco_get_single_term($post->ID, 'exam_cert_questions', 'name');
@@ -126,7 +124,10 @@ function mco_get_app_config_data() {
         $pass_score = get_post_meta($post->ID, '_mco_pass_score', true) ?: mco_get_single_term($post->ID, 'exam_pass_score', 'name');
         
         $cert_sku = get_post_meta($post->ID, '_mco_certification_exam_sku', true);
-        $question_source = get_post_meta($post->ID, '_mco_question_source_url', true);
+        
+        // FIX: Add a fallback for the question source URL to support older data structures (e.g., taxonomy-based storage).
+        $question_source = get_post_meta($post->ID, '_mco_question_source_url', true) ?: mco_get_single_term($post->ID, 'exam_source_url', 'name');
+
         $is_proctored = (bool) get_post_meta($post->ID, '_mco_is_proctored', true);
         
         $certificate_enabled_meta = get_post_meta($post->ID, '_mco_certificate_enabled', true);

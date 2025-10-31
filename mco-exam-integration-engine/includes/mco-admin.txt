@@ -652,8 +652,8 @@ function mco_handle_generate_full_snapshot() {
     exit;
 }
 
-// FIX: Re-engineered the CSV upload handler to be more robust. It now uses `fgetcsv` to correctly
-// parse files with complex data (like newlines in descriptions) and provides more detailed error feedback.
+// FIX: Re-architected the CSV import handler to use a two-step process (insert post, then update meta)
+// for maximum compatibility, avoiding potential conflicts with the `meta_input` parameter.
 function mco_handle_csv_upload() {
     if (!current_user_can('manage_options') || !isset($_POST['mco_bulk_import_csv_nonce']) || !wp_verify_nonce($_POST['mco_bulk_import_csv_nonce'], 'mco_bulk_import_csv_nonce')) {
         wp_die('Security check failed.');
@@ -673,10 +673,7 @@ function mco_handle_csv_upload() {
         exit;
     }
     
-    // Handle UTF-8 BOM by reading the first 3 bytes.
-    if (fgets($handle, 4) !== "\xef\xbb\xbf") {
-        rewind($handle); // Not a BOM, so rewind the file pointer.
-    }
+    if (fgets($handle, 4) !== "\xef\xbb\xbf") { rewind($handle); }
 
     $headers = fgetcsv($handle);
     if ($headers === FALSE || empty(implode('', $headers))) {
@@ -691,124 +688,121 @@ function mco_handle_csv_upload() {
     $error_messages = [];
     $row_index = 1;
 
-    // FIX: Temporarily remove the hook that saves meta data from the post editor to prevent conflicts during programmatic import.
+    // Temporarily remove any save_post hooks to prevent conflicts.
     remove_action('save_post', 'mco_save_exam_program_meta_data');
 
     while (($row = fgetcsv($handle)) !== FALSE) {
         $row_index++;
-        if (count($row) === 1 && $row[0] === null) continue; // Skip empty lines that fgetcsv might read
+        if (count($row) === 1 && $row[0] === null) continue;
 
         if (count($headers) !== count($row)) {
-            $error_count++;
-            $error_messages[] = "Row {$row_index}: Column count mismatch. Expected " . count($headers) . ", found " . count($row) . ".";
-            continue;
+            $error_count++; $error_messages[] = "Row {$row_index}: Column count mismatch."; continue;
         }
 
         $row_data = array_combine($headers, $row);
 
         if ($import_type === 'exam_programs') {
-            // FIX: Replaced get_page_by_title with post_exists for more reliable post lookup during CSV import.
-            // This resolves a bug where wp_insert_post could fail silently.
-            $post_id = post_exists($row_data['program_title'], '', '', 'mco_exam_program');
-
             $post_arr = [
                 'post_title'   => sanitize_text_field($row_data['program_title']),
                 'post_content' => wp_kses_post($row_data['program_description']),
                 'post_type'    => 'mco_exam_program',
-                'post_status'  => sanitize_text_field($row_data['status'] ?? 'publish'),
+                'post_status'  => sanitize_text_field($row_data['status'] ?? 'publish')
             ];
             
             if (empty($post_arr['post_title'])) { $error_count++; $error_messages[] = "Row {$row_index}: Program title is missing."; continue; }
             
+            $post_id = post_exists($post_arr['post_title'], '', '', 'mco_exam_program');
+            
             if ($post_id) {
                 $post_arr['ID'] = $post_id;
-                wp_update_post($post_arr);
+                $result_id = wp_update_post($post_arr, true);
             } else {
-                $post_id = wp_insert_post($post_arr);
+                $result_id = wp_insert_post($post_arr, true);
             }
 
-            if ($post_id && !is_wp_error($post_id)) {
-                if (isset($row_data['practice_exam_name_override'])) {
-                    update_post_meta($post_id, '_mco_practice_exam_title_override', sanitize_text_field($row_data['practice_exam_name_override']));
-                }
-                if (isset($row_data['cert_exam_name_override'])) {
-                    update_post_meta($post_id, '_mco_cert_exam_title_override', sanitize_text_field($row_data['cert_exam_name_override']));
-                }
-                update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($row_data['question_source_url']));
-                update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($row_data['certification_exam_sku']));
-                update_post_meta($post_id, '_mco_is_proctored', ($row_data['is_proctored'] == '1') ? '1' : '0');
-                update_post_meta($post_id, '_mco_certificate_enabled', ($row_data['certificate_enabled'] == '1') ? '1' : '0');
-
-                // FIX: Switched from taxonomies to post meta for exam parameters for reliability.
-                update_post_meta($post_id, '_mco_practice_questions', sanitize_text_field($row_data['practice_questions']));
-                update_post_meta($post_id, '_mco_practice_duration', sanitize_text_field($row_data['practice_duration']));
-                update_post_meta($post_id, '_mco_cert_questions', sanitize_text_field($row_data['cert_questions']));
-                update_post_meta($post_id, '_mco_cert_duration', sanitize_text_field($row_data['cert_duration']));
-                update_post_meta($post_id, '_mco_pass_score', sanitize_text_field($row_data['pass_score']));
-                
+            if (!is_wp_error($result_id)) {
+                $book_post_ids = [];
                 if (!empty($row_data['recommended_book_id'])) {
                     $book_slugs = array_map('trim', explode(',', $row_data['recommended_book_id']));
-                    $book_post_ids = [];
                     foreach ($book_slugs as $slug) {
                         $book_query = new WP_Query(['post_type' => 'mco_recommended_book', 'meta_key' => '_mco_book_id', 'meta_value' => $slug, 'posts_per_page' => 1, 'fields' => 'ids']);
                         if ($book_query->have_posts()) $book_post_ids[] = $book_query->posts[0];
                     }
-                    update_post_meta($post_id, '_mco_recommended_book_ids', $book_post_ids);
                 }
+                
+                $meta_data = [
+                    '_mco_practice_exam_title_override' => sanitize_text_field($row_data['practice_exam_name_override'] ?? ''),
+                    '_mco_cert_exam_title_override'     => sanitize_text_field($row_data['cert_exam_name_override'] ?? ''),
+                    '_mco_question_source_url'          => esc_url_raw($row_data['question_source_url'] ?? ''),
+                    '_mco_certification_exam_sku'       => sanitize_text_field($row_data['certification_exam_sku'] ?? ''),
+                    '_mco_is_proctored'                 => (($row_data['is_proctored'] ?? '0') == '1') ? '1' : '0',
+                    '_mco_certificate_enabled'          => (($row_data['certificate_enabled'] ?? '0') == '1') ? '1' : '0',
+                    '_mco_practice_questions'           => sanitize_text_field($row_data['practice_questions'] ?? '0'),
+                    '_mco_practice_duration'            => sanitize_text_field($row_data['practice_duration'] ?? '0'),
+                    '_mco_cert_questions'               => sanitize_text_field($row_data['cert_questions'] ?? '0'),
+                    '_mco_cert_duration'                => sanitize_text_field($row_data['cert_duration'] ?? '0'),
+                    '_mco_pass_score'                   => sanitize_text_field($row_data['pass_score'] ?? '0'),
+                    '_mco_recommended_book_ids'         => $book_post_ids
+                ];
+                
+                foreach ($meta_data as $key => $value) {
+                    update_post_meta($result_id, $key, $value);
+                }
+                
                 $success_count++;
             } else {
-                $error_count++; $error_messages[] = "Row {$row_index}: Failed to insert/update WordPress post.";
+                $error_count++; $error_messages[] = "Row {$row_index}: Failed to insert/update WordPress post. Error: " . $result_id->get_error_message();
             }
 
         } elseif ($import_type === 'recommended_books') {
-            $book_id = sanitize_text_field($row_data['book_id']);
-            $post_id = 0;
-            if ($book_id) {
-                $book_query = new WP_Query(['post_type' => 'mco_recommended_book', 'meta_key' => '_mco_book_id', 'meta_value' => $book_id, 'posts_per_page' => 1, 'fields' => 'ids']);
-                if ($book_query->have_posts()) $post_id = $book_query->posts[0];
-            }
-            
+             $book_id_slug = sanitize_text_field($row_data['book_id']);
+             if (empty($row_data['title']) || empty($book_id_slug)) { $error_count++; $error_messages[] = "Row {$row_index}: Book title or book_id is missing."; continue; }
+
             $post_arr = [
-                'post_title' => sanitize_text_field($row_data['title']),
+                'post_title'   => sanitize_text_field($row_data['title']),
                 'post_content' => wp_kses_post($row_data['description']),
-                'post_type' => 'mco_recommended_book',
-                'post_status' => sanitize_text_field($row_data['status'] ?? 'publish'),
+                'post_type'    => 'mco_recommended_book',
+                'post_status'  => sanitize_text_field($row_data['status'] ?? 'publish')
             ];
             
-            if (empty($post_arr['post_title']) || empty($book_id)) { $error_count++; $error_messages[] = "Row {$row_index}: Book title or book_id is missing."; continue; }
-
+            $post_id = 0;
+            $book_query = new WP_Query(['post_type' => 'mco_recommended_book', 'meta_key' => '_mco_book_id', 'meta_value' => $book_id_slug, 'posts_per_page' => 1, 'fields' => 'ids']);
+            if ($book_query->have_posts()) $post_id = $book_query->posts[0];
+            
             if ($post_id) {
                 $post_arr['ID'] = $post_id;
-                wp_update_post($post_arr);
+                $result_id = wp_update_post($post_arr, true);
             } else {
-                $post_id = wp_insert_post($post_arr);
+                $result_id = wp_insert_post($post_arr, true);
             }
             
-            if ($post_id && !is_wp_error($post_id)) {
-                update_post_meta($post_id, '_mco_book_id', $book_id);
-                update_post_meta($post_id, '_mco_thumbnail_url', esc_url_raw($row_data['thumbnail_url']));
-                update_post_meta($post_id, '_mco_link_com', esc_url_raw($row_data['link_com']));
-                update_post_meta($post_id, '_mco_link_in', esc_url_raw($row_data['link_in']));
-                update_post_meta($post_id, '_mco_link_ae', esc_url_raw($row_data['link_ae']));
+            if (!is_wp_error($result_id)) {
+                $meta_data = [
+                    '_mco_book_id'       => $book_id_slug,
+                    '_mco_thumbnail_url' => esc_url_raw($row_data['thumbnail_url'] ?? ''),
+                    '_mco_link_com'      => esc_url_raw($row_data['link_com'] ?? ''),
+                    '_mco_link_in'       => esc_url_raw($row_data['link_in'] ?? ''),
+                    '_mco_link_ae'       => esc_url_raw($row_data['link_ae'] ?? '')
+                ];
+                foreach ($meta_data as $key => $value) {
+                    update_post_meta($result_id, $key, $value);
+                }
                 $success_count++;
             } else {
-                $error_count++; $error_messages[] = "Row {$row_index}: Failed to insert/update WordPress post for book.";
+                $error_count++; $error_messages[] = "Row {$row_index}: Failed to insert/update WordPress post. Error: " . $result_id->get_error_message();
             }
         }
     }
     
-    // Re-add the hook for normal post editor functionality.
+    // Re-add the hook
     add_action('save_post', 'mco_save_exam_program_meta_data');
-    
     fclose($handle);
-
     delete_transient('mco_app_config_data');
     update_option('mco_config_version', current_time('YmdHis'));
 
     $status = ($error_count > 0 && $success_count === 0) ? 'error' : 'success';
     $message = "Import complete. {$success_count} rows processed successfully. {$error_count} rows failed.";
     if ($error_count > 0 && !empty($error_messages)) {
-        // Only show the first error to keep the URL from getting too long.
         $message .= ' First error: ' . $error_messages[0];
     }
     wp_redirect(admin_url("admin.php?page=mco-exam-engine&tab=bulk_data&import_status={$status}&message=" . urlencode($message)));
