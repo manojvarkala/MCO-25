@@ -60,7 +60,8 @@ const LivePurchaseNotification: FC = () => {
         return null; // Don't render for admins who have opted out.
     }
 
-    const certificationExams = activeOrg?.exams.filter(e => !e.isPractice && e.price > 0).map(e => e.name) || [];
+    // FIX: Safely handle cases where activeOrg.exams might not exist yet.
+    const certificationExams = (activeOrg.exams || []).filter(e => !e.isPractice && e.price > 0).map(e => e.name);
 
     useEffect(() => {
         if (!activeOrg || certificationExams.length === 0) {
