@@ -58,23 +58,19 @@ const processConfigData = (configData: any) => {
     processedOrgs.forEach((org: Organization) => {
         org.name = decodeHtmlEntities(org.name);
         
-        const categoryUrlMap = new Map<string, string>();
         (org.examProductCategories || []).forEach((cat: ExamProductCategory) => {
             cat.name = decodeHtmlEntities(cat.name);
             cat.description = decodeHtmlEntities(cat.description);
-            if (cat.questionSourceUrl) {
-                if (cat.practiceExamId) categoryUrlMap.set(cat.practiceExamId, cat.questionSourceUrl);
-                if (cat.certificationExamId) categoryUrlMap.set(cat.certificationExamId, cat.questionSourceUrl);
-            }
         });
 
-        org.exams = (org.exams || []).map((exam: Exam): Exam => {
-            exam.name = decodeHtmlEntities(exam.name);
-            exam.description = decodeHtmlEntities(exam.description);
-            const questionSourceUrl = categoryUrlMap.get(exam.id) || exam.questionSourceUrl;
+        // FIX: Removed the redundant and fragile logic that re-mapped questionSourceUrl.
+        // The app now trusts the URL provided directly on each exam object from the backend.
+        org.exams = (org.exams || []).map((exam: Exam): Exam => ({
+            ...exam,
+            name: decodeHtmlEntities(exam.name),
+            description: decodeHtmlEntities(exam.description),
+        }));
 
-            return { ...exam, questionSourceUrl };
-        });
 
         if (org.suggestedBooks) {
             org.suggestedBooks.forEach(book => {
