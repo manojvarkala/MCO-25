@@ -14,35 +14,43 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-8">
             <aside className="md:col-span-1 lg:col-span-1 bg-[rgb(var(--color-card-rgb))] p-4 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))] self-start sticky top-28">
                 <nav className="space-y-2">
-                    <NavLink to="/admin" exact className={navLinkClass} activeClassName={activeNavLinkClass}>
+                    {/* FIX: Replaced react-router-dom v5 `exact` and `activeClassName` props with v6 syntax. The `end` prop ensures this link is only active on the exact path. */}
+                    <NavLink to="/admin" end className={({ isActive }) => `${navLinkClass} ${isActive ? activeNavLinkClass : ''}`}>
                         <LayoutDashboard size={18} />
                         <span>Admin Dashboard</span>
                     </NavLink>
-                    <NavLink to="/admin/analytics" className={navLinkClass} activeClassName={activeNavLinkClass}>
+                    {/* FIX: Replaced react-router-dom v5 `activeClassName` prop with v6 className function. */}
+                    <NavLink to="/admin/analytics" className={({ isActive }) => `${navLinkClass} ${isActive ? activeNavLinkClass : ''}`}>
                         <BarChart3 size={18} />
                         <span>Sales Analytics</span>
                     </NavLink>
-                    <NavLink to="/admin/programs" className={navLinkClass} activeClassName={activeNavLinkClass}>
+                    {/* FIX: Replaced react-router-dom v5 `activeClassName` prop with v6 className function. */}
+                    <NavLink to="/admin/programs" className={({ isActive }) => `${navLinkClass} ${isActive ? activeNavLinkClass : ''}`}>
                         <Settings size={18} />
                         <span>Exam Programs</span>
                     </NavLink>
-                    <NavLink to="/admin/products" className={navLinkClass} activeClassName={activeNavLinkClass}>
+                    {/* FIX: Replaced react-router-dom v5 `activeClassName` prop with v6 className function. */}
+                    <NavLink to="/admin/products" className={({ isActive }) => `${navLinkClass} ${isActive ? activeNavLinkClass : ''}`}>
                         <ShoppingCart size={18} />
                         <span>Product Customizer</span>
                     </NavLink>
-                    <NavLink to="/admin/content-engine" className={navLinkClass} activeClassName={activeNavLinkClass}>
+                    {/* FIX: Replaced react-router-dom v5 `activeClassName` prop with v6 className function. */}
+                    <NavLink to="/admin/content-engine" className={({ isActive }) => `${navLinkClass} ${isActive ? activeNavLinkClass : ''}`}>
                         <Sparkles size={18} />
                         <span>Content Engine</span>
                     </NavLink>
-                    <NavLink to="/admin/integration" className={navLinkClass} activeClassName={activeNavLinkClass}>
+                    {/* FIX: Replaced react-router-dom v5 `activeClassName` prop with v6 className function. */}
+                    <NavLink to="/admin/integration" className={({ isActive }) => `${navLinkClass} ${isActive ? activeNavLinkClass : ''}`}>
                         <Code size={18} />
                         <span>Integration</span>
                     </NavLink>
-                    <NavLink to="/admin/history" className={navLinkClass} activeClassName={activeNavLinkClass}>
+                    {/* FIX: Replaced react-router-dom v5 `activeClassName` prop with v6 className function. */}
+                    <NavLink to="/admin/history" className={({ isActive }) => `${navLinkClass} ${isActive ? activeNavLinkClass : ''}`}>
                         <History size={18} />
                         <span>Dev History</span>
                     </NavLink>
-                    <NavLink to="/admin/handbook" className={navLinkClass} activeClassName={activeNavLinkClass}>
+                    {/* FIX: Replaced react-router-dom v5 `activeClassName` prop with v6 className function. */}
+                    <NavLink to="/admin/handbook" className={({ isActive }) => `${navLinkClass} ${isActive ? activeNavLinkClass : ''}`}>
                         <BookOpen size={18} />
                         <span>Handbook</span>
                     </NavLink>
