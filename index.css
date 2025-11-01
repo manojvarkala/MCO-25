@@ -222,66 +222,68 @@ body {
     padding: 0;
 }
 
-/* --- PDF-Specific Handbook Styles --- */
+/* --- PDF-Specific Handbook Styles (REVISED for jsPDF compatibility) --- */
 .handbook-pdf-content {
     background-color: white;
     color: black;
     font-family: 'Times New Roman', serif;
+    width: 515pt; /* A4 width (595pt) minus margins (2 * 40pt) */
 }
 .handbook-pdf-content h1, .handbook-pdf-content h2, .handbook-pdf-content h3, .handbook-pdf-content h4 {
     color: black;
     font-family: 'Helvetica', 'Arial', sans-serif;
     font-weight: bold;
-    margin-top: 1.5em;
-    margin-bottom: 1em;
+    margin-top: 18pt;
+    margin-bottom: 12pt;
 }
 .handbook-pdf-content h2 {
-    font-size: 24pt;
+    font-size: 20pt;
     border-bottom: 1px solid #ccc;
-    padding-bottom: 8pt;
+    padding-bottom: 6pt;
+    page-break-before: always; /* Force new page for each chapter */
 }
-.handbook-pdf-content h3 { font-size: 18pt; }
-.handbook-pdf-content h4 { font-size: 14pt; }
-.handbook-pdf-content p {
-    font-size: 12pt;
+/* Prevent the very first heading (Title Page or TOC) from creating a blank page */
+.handbook-pdf-content h1:first-of-type, .handbook-pdf-content h2:first-of-type {
+    page-break-before: avoid;
+}
+.handbook-pdf-content h3 { font-size: 16pt; }
+.handbook-pdf-content h4 { font-size: 13pt; }
+.handbook-pdf-content p, .handbook-pdf-content ul, .handbook-pdf-content ol {
+    font-size: 11pt;
     line-height: 1.5;
-    margin-bottom: 1em;
+    margin-bottom: 11pt;
+    page-break-inside: avoid;
 }
 .handbook-pdf-content a {
     color: #0000EE; /* Standard blue link color for PDFs */
     text-decoration: none;
 }
 .handbook-pdf-content ul, .handbook-pdf-content ol {
-    font-size: 12pt;
-    margin-bottom: 1em;
-    padding-left: 2em;
+    padding-left: 20pt;
 }
-.handbook-pdf-content li { margin-bottom: 0.5em; }
+.handbook-pdf-content li { 
+    margin-bottom: 6pt; 
+    page-break-inside: avoid;
+}
 .handbook-pdf-content strong { font-weight: bold; }
 .handbook-pdf-content code {
     font-family: 'Courier New', monospace;
     background-color: #f0f0f0;
     padding: 2pt 4pt;
     border-radius: 3pt;
-    font-size: 10pt;
+    font-size: 9pt;
 }
 .handbook-pdf-content pre {
     background-color: #f0f0f0;
-    padding: 1em;
+    padding: 10pt;
     border-radius: 5pt;
-    font-size: 10pt;
+    font-size: 9pt;
     white-space: pre-wrap;
     word-wrap: break-word;
+    page-break-inside: avoid;
 }
 .handbook-pdf-content .handbook-toc a {
     color: #0000EE; /* Make TOC links blue in PDF */
-}
-/* This is for browser print, but not relied upon for jsPDF */
-.handbook-pdf-content h2 {
-    page-break-before: always;
-}
-.handbook-pdf-content h2:first-of-type {
-    page-break-before: avoid;
 }
 
 

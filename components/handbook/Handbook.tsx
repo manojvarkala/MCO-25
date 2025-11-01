@@ -23,63 +23,47 @@ const Handbook: FC = () => {
             const margin = 40;
             const contentWidth = pageWidth - (margin * 2);
 
-            // This container will be used to render each section before adding it to the PDF
             const renderContainer = pdfPrintRef.current;
-            renderContainer.innerHTML = ''; // Clear previous content
+            renderContainer.innerHTML = '';
 
-            // --- 1. Render Cover Page (as a full-page image) ---
+            // Step 1: Render Cover Page using html2canvas for full design fidelity
             toast.loading('Step 1/4: Generating cover page...', { id: toastId });
             const coverElement = document.createElement('div');
             coverElement.style.width = `${pageWidth}pt`;
             coverElement.style.height = `${pageHeight}pt`;
-            coverElement.innerHTML = chapters[0].content; // cover.ts
+            coverElement.innerHTML = chapters[0].content;
             renderContainer.appendChild(coverElement);
             const coverCanvas = await html2canvas(coverElement, { scale: 2, useCORS: true });
             pdf.addImage(coverCanvas.toDataURL('image/png'), 'PNG', 0, 0, pageWidth, pageHeight);
             renderContainer.removeChild(coverElement);
 
-            // --- 2. Render Title Page (as HTML) ---
-            toast.loading('Step 2/4: Adding title page and TOC...', { id: toastId });
-            pdf.addPage();
-            const titlePageElement = document.createElement('div');
-            titlePageElement.className = 'handbook-pdf-content';
-            titlePageElement.innerHTML = chapters[1].content; // titlePage.ts
-            renderContainer.appendChild(titlePageElement);
-            await pdf.html(titlePageElement, { x: margin, y: margin, width: contentWidth, windowWidth: contentWidth });
-            renderContainer.removeChild(titlePageElement);
+            // Step 2: Combine all other chapters into a single HTML document
+            toast.loading('Step 2/4: Assembling document content...', { id: toastId });
+            const allContentHtml = chapters.slice(1).map(chapter => chapter.content).join('');
             
-            // --- 3. Render Table of Contents (as HTML) ---
+            const contentElement = document.createElement('div');
+            contentElement.className = 'handbook-pdf-content';
+            contentElement.innerHTML = allContentHtml;
+            renderContainer.appendChild(contentElement);
+
+            // Step 3: Render the combined HTML to the PDF, allowing auto-pagination
+            toast.loading('Step 3/4: Rendering pages...', { id: toastId });
             pdf.addPage();
-            const tocElement = document.createElement('div');
-            tocElement.className = 'handbook-pdf-content';
-            tocElement.innerHTML = chapters[2].content; // toc.ts
-            renderContainer.appendChild(tocElement);
-            await pdf.html(tocElement, { x: margin, y: margin, width: contentWidth, windowWidth: contentWidth });
-            renderContainer.removeChild(tocElement);
+            await pdf.html(contentElement, {
+                x: margin,
+                y: margin,
+                width: contentWidth,
+                windowWidth: contentWidth,
+                autoPaging: 'text'
+            });
+            renderContainer.removeChild(contentElement);
 
-            // --- 4. Render all content chapters sequentially ---
-            for (let i = 3; i < chapters.length; i++) {
-                toast.loading(`Step 3/4: Processing chapter ${i-2} of ${chapters.length-3}...`, { id: toastId });
-                pdf.addPage();
-                const chapterElement = document.createElement('div');
-                chapterElement.className = 'handbook-pdf-content';
-                chapterElement.innerHTML = chapters[i].content;
-                renderContainer.appendChild(chapterElement);
-                await pdf.html(chapterElement, {
-                    x: margin, y: margin,
-                    width: contentWidth,
-                    windowWidth: contentWidth,
-                    autoPaging: 'text',
-                });
-                renderContainer.removeChild(chapterElement);
-            }
-
-            // --- 5. Add Page Numbers ---
+            // Step 4: Add Page Numbers to all pages except the cover
             toast.loading('Step 4/4: Finalizing document...', { id: toastId });
             const pageCount = pdf.getNumberOfPages();
             pdf.setFontSize(8);
-            pdf.setTextColor('#64748b'); // slate-500
-            for (let i = 2; i <= pageCount; i++) { // Start after cover page
+            pdf.setTextColor('#64748b');
+            for (let i = 2; i <= pageCount; i++) { // Start from page 2 (after cover)
                 pdf.setPage(i);
                 const pageNumText = `Page ${i - 1} of ${pageCount - 1}`;
                 pdf.text(pageNumText, pageWidth / 2, pageHeight - 20, { align: 'center' });
