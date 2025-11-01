@@ -1,6 +1,7 @@
 import React, { FC } from 'react';
 import { HelpCircle, ChevronDown } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
+import { Link } from 'react-router-dom';
 
 const FAQItem: FC<{ question: string; children: React.ReactNode }> = ({ question, children }) => (
     <details className="group border-b border-slate-200 py-4">
@@ -17,7 +18,7 @@ const FAQItem: FC<{ question: string; children: React.ReactNode }> = ({ question
 const FAQ: FC = () => {
     const { activeOrg } = useAppContext();
     const orgName = activeOrg ? activeOrg.name : 'our company';
-    const websiteUrl = activeOrg ? `https://www.${activeOrg.website}` : '#';
+    const websiteUrl = activeOrg ? `https://${activeOrg.website}` : '#';
 
     return (
         <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
@@ -44,7 +45,7 @@ const FAQ: FC = () => {
                     <ul>
                         <li>Click the <strong>"Sync My Exams"</strong> button on your dashboard. This forces the system to check for new purchases.</li>
                         <li>Log out of the main site and log back in again. This will generate a new, updated access token.</li>
-                        <li>If the issue persists after a few minutes, please contact support via our <a href="#/feedback">Feedback form</a>.</li>
+                        <li>If the issue persists after a few minutes, please contact support via our <Link to="/feedback">Feedback form</Link>.</li>
                     </ul>
                 </FAQItem>
 
@@ -67,7 +68,7 @@ const FAQ: FC = () => {
                         <li><strong>Fullscreen Mode:</strong> Prevents distractions and access to other materials on your computer.</li>
                         <li><strong>Focus Monitoring:</strong> The system checks if you switch to another browser tab or application.</li>
                     </ul>
-                    <p>Exiting fullscreen or switching tabs is considered a "violation." You will receive a warning, and multiple violations may lead to your exam being automatically terminated.</p>
+                    <p>Exiting fullscreen or switching tabs is considered a "violation." You will receive a warning, and after 3 violations, your exam may be automatically terminated.</p>
                 </FAQItem>
 
                 <FAQItem question="My certificate is not available, but I passed. Why?">
@@ -87,7 +88,7 @@ const FAQ: FC = () => {
                     </p>
                      <ul>
                         <li><strong>For Subscribers:</strong> If you have an active monthly or yearly subscription, you get unlimited AI feedback on any exam you do not pass.</li>
-                        <li><strong>For Bundle Purchasers:</strong> If you purchase an "Exam Bundle", you get AI feedback for that specific exam program for the duration of your bundle's access period.</li>
+                        <li><strong>For Bundle or Single Exam Purchasers:</strong> If you purchase an "Exam Bundle" or a single certification exam, you get AI feedback for that specific exam program.</li>
                     </ul>
                     <p>AI feedback is not generated for exams that you have passed.</p>
                 </FAQItem>

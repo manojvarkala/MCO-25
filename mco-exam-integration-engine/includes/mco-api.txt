@@ -481,17 +481,41 @@ function mco_api_get_certificate_data(WP_REST_Request $request) {
         return new WP_Error('forbidden', 'You do not have permission to view this certificate.', ['status' => 403]);
     }
     
-    $exam_post = get_posts([
-        'post_type' => 'mco_exam_program',
-        'meta_key' => '_mco_certification_exam_sku',
-        'meta_value' => $result['examId'],
-        'posts_per_page' => 1
-    ]);
+    $exam_id_from_result = $result['examId'];
+    $exam_post_arr = [];
 
-    if (empty($exam_post)) {
+    // FIX: Handle both practice exam IDs (exam-prod-123-practice) and certification SKUs
+    $is_practice_exam = preg_match('/^exam-prod-(\d+)-practice$/', $exam_id_from_result, $matches);
+    if ($is_practice_exam) {
+        $exam_post_id = (int)$matches[1];
+        $post = get_post($exam_post_id);
+        if ($post && $post->post_type === 'mco_exam_program') {
+            $exam_post_arr = [$post];
+        }
+    } else {
+        // Assume it's a certification exam SKU
+        $exam_post_arr = get_posts([
+            'post_type' => 'mco_exam_program',
+            'meta_key' => '_mco_certification_exam_sku',
+            'meta_value' => $exam_id_from_result,
+            'posts_per_page' => 1
+        ]);
+    }
+
+    if (empty($exam_post_arr)) {
         return new WP_Error('not_found', 'Exam program configuration not found for this result.', ['status' => 404]);
     }
-    $exam_post_id = $exam_post[0]->ID;
+    $exam_post = $exam_post_arr[0];
+    $exam_post_id = $exam_post->ID;
+    
+    $exam_name_for_cert = '';
+    if ($is_practice_exam) {
+        $practice_name_override = get_post_meta($exam_post_id, '_mco_practice_exam_title_override', true);
+        $exam_name_for_cert = !empty($practice_name_override) ? $practice_name_override : $exam_post->post_title . ' Practice';
+    } else {
+        $cert_name_override = get_post_meta($exam_post_id, '_mco_cert_exam_title_override', true);
+        $exam_name_for_cert = !empty($cert_name_override) ? $cert_name_override : $exam_post->post_title;
+    }
     
     $pass_score = get_post_meta($exam_post_id, '_mco_pass_score', true) ?: mco_get_single_term($exam_post_id, 'exam_pass_score', 'name');
 
@@ -513,7 +537,7 @@ function mco_api_get_certificate_data(WP_REST_Request $request) {
         'finalScore' => $result['score'],
         'date' => date('F j, Y', $timestamp_seconds),
         'examId' => $result['examId'],
-        'examName' => get_the_title($exam_post_id)
+        'examName' => $exam_name_for_cert
     ], 200);
 }
 

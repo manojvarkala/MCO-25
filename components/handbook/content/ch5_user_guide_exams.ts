@@ -11,7 +11,7 @@ export const ch5_user_guide_exams = `
     
     <div class="bg-red-50 border-l-4 border-red-500 p-4 my-4">
         <p class="font-bold text-red-800">Important: Proctoring Rules</p>
-        <p class="text-red-700">For official certification exams, browser-based proctoring is enabled. You must remain in <strong>fullscreen mode</strong> and <strong>on the exam tab</strong> at all times. Leaving fullscreen or switching tabs is a "violation." You will receive a warning, and after 3 violations, your exam will be automatically terminated.</p>
+        <p class="text-red-700">For official certification exams, browser-based proctoring is enabled. You must remain in <strong>fullscreen mode</strong> and <strong>on the exam tab</strong> at all times. Leaving fullscreen or switching tabs is a "violation." You will receive a warning, and after 3 violations, your exam may be automatically terminated.</p>
     </div>
 
     <h3 class="text-xl font-bold mt-6">5.2 The Results Page: A Detailed Breakdown</h3>
@@ -27,6 +27,6 @@ export const ch5_user_guide_exams = `
     <p>Passing a certification exam or having an active subscription unlocks powerful features on the results page.</p>
     <ul>
         <li><strong>AI-Powered Feedback:</strong> This premium feature generates a personalized PDF study guide based on your incorrect answers. Access is unlocked for subscribers on any failed exam, or for users who have purchased an exam or bundle.</li>
-        <li><strong>Downloadable Certificate:</strong> If you pass a paid certification exam, a button will appear to "Download Your Certificate". If your exam had proctoring violations, you will see a "Provisional Pass" notice, and your certificate will be issued within 24 hours after a brief integrity review.</li>
+        <li><strong>Downloadable Certificate:</strong> If you pass a paid certification exam with no proctoring flags, a button will appear to "Download Your Certificate". If your exam had proctoring violations, you will see a "Provisional Pass" notice, and your certificate will be issued within 24 hours after a brief integrity review.</li>
     </ul>
 `;

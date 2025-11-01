@@ -149,6 +149,15 @@ body {
     padding: 0.75rem;
 }
 
+/* --- On-Screen Handbook Cover --- */
+.handbook-cover-preview {
+    height: 600px;
+    font-family: var(--font-main);
+}
+.handbook-cover-preview .text-5xl { font-size: 3rem; }
+.handbook-cover-preview .text-2xl { font-size: 1.5rem; }
+.handbook-cover-preview .font-script { font-family: var(--font-script); }
+.handbook-cover-preview .font-display { font-family: var(--font-display); }
 
 /* --- On-Screen Handbook Content Styles (Improved Readability) --- */
 .handbook-content {
