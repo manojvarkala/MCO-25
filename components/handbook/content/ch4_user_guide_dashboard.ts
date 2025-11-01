@@ -16,19 +16,17 @@ export const ch4_user_guide_dashboard = `
         <li><strong>My Exam History:</strong> A list of your most recently completed exams. You can click on any entry to revisit the detailed results page.</li>
         <li><strong>Exam Programs:</strong> This is the main content area where you'll find your exams, organized by topic or certification path.</li>
     </ul>
-
     <h3 class="text-xl font-bold mt-6">4.3 Managing Your Subscription</h3>
     <p>If you have purchased a subscription, a new "Subscription Status" card will appear prominently on your dashboard. This card is your primary interface for understanding and managing your subscription.</p>
     <ul>
         <li><strong>Active Subscription:</strong> The card will show a green "ACTIVE" status, confirm your full access, and display your next renewal date. It also provides a convenient link to the "My Account" page on our main website where you can manage billing details or cancel your subscription.</li>
         <li><strong>Inactive/Expired Subscription:</strong> If your subscription has expired or a payment has failed, the card will show an "INACTIVE" status. It will feature a prominent <strong>"Renew Now"</strong> button, which directs you to the pricing page to easily re-subscribe and regain access to all premium features.</li>
     </ul>
-
     <h3 class="text-xl font-bold mt-6">4.4 Accessing Exam Programs and Bundles</h3>
     <p>The main section of the dashboard lists all available Exam Programs. Each program typically contains:</p>
     <ul>
         <li>A <strong>Free Practice Exam</strong> to help you prepare.</li>
         <li>A <strong>Certification Exam</strong>, which is unlocked upon purchase or with an active subscription.</li>
         <li>One or more <strong>Bundle Offers</strong>, which provide the best value by packaging the certification exam with subscription benefits.</li>
-    </ul>
-`;
+    </ul>'
+    `;
