@@ -132,6 +132,7 @@ function mco_get_app_config_data() {
         
         $certificate_enabled_meta = get_post_meta($post->ID, '_mco_certificate_enabled', true);
         $certificate_enabled = ($certificate_enabled_meta === '') ? true : (bool) $certificate_enabled_meta;
+        $practice_cert_enabled = get_post_meta($post->ID, '_mco_practice_certificate_enabled', true);
         
         $cert_template_id = get_post_meta($post->ID, '_mco_certificate_template_id', true);
 
@@ -188,7 +189,7 @@ function mco_get_app_config_data() {
             'passScore' => (int)$pass_score,
             'certificateTemplateId' => 'cert-practice',
             'isPractice' => true,
-            'certificateEnabled' => false,
+            'certificateEnabled' => (bool) $practice_cert_enabled,
             'isProctored' => false,
             'durationMinutes' => (int)$practice_duration,
             'questionSourceUrl' => $question_source,

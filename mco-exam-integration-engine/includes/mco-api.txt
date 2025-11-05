@@ -39,6 +39,7 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
             
             $body = curl_exec($ch);
             $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
             $curl_error = curl_error($ch);
             curl_close($ch);
 
@@ -47,12 +48,12 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
             }
 
             return [
-                'response' => ['code' => $http_code],
+                'response' => ['code' => $http_code, 'content_type' => $content_type],
                 'body' => $body
             ];
         }
 
-        // Fallback to wp_remote_get if cURL isn't available
+        // Fallback to wp_remote_get
         $args = [
             'timeout' => 30,
             'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
@@ -66,7 +67,10 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
         }
 
         return [
-            'response' => ['code' => wp_remote_retrieve_response_code($response)],
+            'response' => [
+                'code' => wp_remote_retrieve_response_code($response),
+                'content_type' => wp_remote_retrieve_header($response, 'content-type')
+            ],
             'body' => wp_remote_retrieve_body($response)
         ];
     }
@@ -484,8 +488,8 @@ function mco_api_get_certificate_data(WP_REST_Request $request) {
     $exam_id_from_result = $result['examId'];
     $exam_post_arr = [];
 
-    // FIX: Admins can view certs for draft programs.
-    $post_status_arg = $is_admin_view ? 'any' : 'publish';
+    // FIX: Admins can view certs for draft/trashed programs.
+    $post_status_arg = $is_admin_view ? ['publish', 'pending', 'draft', 'trash'] : 'publish';
 
     $is_practice_exam = preg_match('/^exam-prod-(\d+)-practice$/', $exam_id_from_result, $matches);
     if ($is_practice_exam) {
@@ -1007,11 +1011,20 @@ function mco_test_sheet_url_access($url) {
     if (is_wp_error($response)) {
         return ['success' => false, 'message' => $response->get_error_message()];
     }
-    if ($response['response']['code'] === 200 && !empty($response['body'])) {
+
+    $code = $response['response']['code'] ?? 0;
+    $content_type = $response['response']['content_type'] ?? '';
+    $is_csv = strpos($content_type, 'text/csv') !== false;
+
+    if ($code === 200 && !empty($response['body'])) {
+        if (!$is_csv) {
+            return ['success' => false, 'message' => 'HTTP 200 OK, but received HTML instead of CSV. Check "Publish to the web" settings.'];
+        }
         $preview = substr($response['body'], 0, 300);
-        return ['success' => true, 'message' => 'HTTP 200 OK', 'dataPreview' => $preview . (strlen($response['body']) > 300 ? '...' : '')];
+        return ['success' => true, 'message' => 'HTTP 200 OK (CSV)', 'dataPreview' => $preview . (strlen($response['body']) > 300 ? '...' : '')];
     }
-    $message = 'HTTP Status ' . $response['response']['code'];
+    
+    $message = 'HTTP Status ' . $code;
     if (empty($response['body'])) $message .= ' - Response body was empty.';
     return ['success' => false, 'message' => $message];
 }
