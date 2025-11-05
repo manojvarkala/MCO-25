@@ -484,21 +484,27 @@ function mco_api_get_certificate_data(WP_REST_Request $request) {
     $exam_id_from_result = $result['examId'];
     $exam_post_arr = [];
 
-    // FIX: Handle both practice exam IDs (exam-prod-123-practice) and certification SKUs
+    // FIX: Admins can view certs for draft programs.
+    $post_status_arg = $is_admin_view ? 'any' : 'publish';
+
     $is_practice_exam = preg_match('/^exam-prod-(\d+)-practice$/', $exam_id_from_result, $matches);
     if ($is_practice_exam) {
         $exam_post_id = (int)$matches[1];
-        $post = get_post($exam_post_id);
-        if ($post && $post->post_type === 'mco_exam_program') {
-            $exam_post_arr = [$post];
-        }
+        // Use get_posts to be explicit about post status for admins.
+        $exam_post_arr = get_posts([
+            'p' => $exam_post_id,
+            'post_type' => 'mco_exam_program',
+            'post_status' => $post_status_arg,
+            'posts_per_page' => 1
+        ]);
     } else {
         // Assume it's a certification exam SKU
         $exam_post_arr = get_posts([
             'post_type' => 'mco_exam_program',
             'meta_key' => '_mco_certification_exam_sku',
             'meta_value' => $exam_id_from_result,
-            'posts_per_page' => 1
+            'posts_per_page' => 1,
+            'post_status' => $post_status_arg
         ]);
     }
 
