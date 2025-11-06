@@ -5,7 +5,7 @@ import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Using double quotes for module import consistency.
 import { Routes, Route, BrowserRouter, Navigate, useLocation } from "react-router-dom";
 import { Toaster, ToastBar, toast } from 'react-hot-toast';
-import { X } from 'lucide-react';
+import { X, AlertTriangle } from 'lucide-react';
 
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
 import { AppProvider, useAppContext } from './context/AppContext.tsx';
@@ -96,6 +96,14 @@ const AppContent: FC = () => {
         <div data-theme={activeTheme} className={`flex flex-col min-h-screen bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-default-rgb))] font-main ${isMasquerading ? 'pt-10' : ''}`}>
             {isMasquerading && <MasqueradeBanner />}
             {!isTestPage && <Header />}
+            {!isTestPage && (
+                <div className="bg-[rgba(var(--color-accent-rgb),0.2)] border-b border-[rgba(var(--color-accent-rgb),0.4)]">
+                    <div className="container mx-auto px-4 py-2 text-center text-sm font-medium text-[rgb(var(--color-text-strong-rgb))] flex items-center justify-center gap-2">
+                        <AlertTriangle size={16} className="flex-shrink-0" />
+                        <span>All exams are independent practice tools designed to build proficiency. Not affiliated with AAPC, AHIMA, or any certifying body.</span>
+                    </div>
+                </div>
+            )}
             <div className="flex-grow w-full relative">
                 <main className={mainClasses}>
                     {/* FIX: Replaced Switch with Routes and updated Route syntax for react-router-dom v6 */}
