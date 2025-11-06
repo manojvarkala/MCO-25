@@ -2,7 +2,7 @@ import React, { FC, useState, useMemo, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
-import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, Tag, Users, Gift, Star, List, BookOpen, Menu } from 'lucide-react';
+import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, Tag, Users, Gift, Star, List, BookOpen, Menu, MessageSquare } from 'lucide-react';
 
 const Header: FC = () => {
   const { user, logout, isSubscribed, isEffectivelyAdmin } = useAuth();
@@ -137,6 +137,14 @@ const Header: FC = () => {
             >
                 <Users size={20} />
                 <span className="hidden sm:inline font-semibold">About Us</span>
+            </Link>
+            <Link 
+                to="/feedback"
+                className={`flex items-center space-x-2 transition duration-200 ${linkClasses}`}
+                title="Submit Feedback"
+            >
+                <MessageSquare size={20} />
+                <span className="hidden sm:inline font-semibold">Feedback</span>
             </Link>
           {user ? (
             <>

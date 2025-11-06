@@ -2,7 +2,7 @@ import React, { FC, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import { Send, MessageSquare } from 'lucide-react';
+import { Send, MessageSquare, CreditCard } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 
@@ -49,6 +49,25 @@ const Feedback: FC = () => {
                 <p className="text-slate-500 mt-2">We value your opinion. Let us know how we can improve.</p>
             </div>
             
+            <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 mb-6 rounded-r-lg" role="alert">
+                <div className="flex">
+                    <div className="flex-shrink-0">
+                        <CreditCard className="h-5 w-5 text-blue-500" aria-hidden="true" />
+                    </div>
+                    <div className="ml-3">
+                        <h3 className="text-sm font-medium">Facing a Payment Issue?</h3>
+                        <div className="mt-2 text-sm text-blue-700">
+                            <p>If you're experiencing an error during checkout or with a payment, please select the "Payment or Checkout Issue" category and provide as much detail as possible, including:</p>
+                            <ul className="list-disc pl-5 mt-2 space-y-1">
+                                <li>The name of the exam or product you were trying to purchase.</li>
+                                <li>Your order number, if you received one.</li>
+                                <li>The error message you saw.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-6">
                  <fieldset className="space-y-6">
                     <div>
@@ -66,6 +85,7 @@ const Feedback: FC = () => {
                             <option>Bug Report</option>
                             <option>Feature Request</option>
                             <option>Exam Content</option>
+                            <option>Payment or Checkout Issue</option>
                         </select>
                     </div>
 

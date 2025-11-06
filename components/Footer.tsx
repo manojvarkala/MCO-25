@@ -35,8 +35,6 @@ const Footer: FC = () => {
             <span className="text-slate-300">|</span>
             <Link to="/about-us" className="text-[rgb(var(--color-primary-rgb))] hover:underline">About Us</Link>
             <span className="text-slate-300">|</span>
-            <Link to="/feedback" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Feedback</Link>
-            <span className="text-slate-300">|</span>
             <Link to="/terms-of-service" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Terms of Service</Link>
             <span className="text-slate-300">|</span>
             <Link to="/privacy-policy" className="text-[rgb(var(--color-primary-rgb))] hover:underline">Privacy Policy</Link>
