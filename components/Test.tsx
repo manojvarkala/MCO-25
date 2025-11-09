@@ -1,8 +1,10 @@
 
 
+
+
 import React, { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Question, UserAnswer, Exam, ExamProgress } from '../types.ts';
@@ -48,6 +50,11 @@ const Test: FC = () => {
   const hasSubmittedRef = useRef(false);
   const progressKey = useMemo(() => `exam_progress_${examId}_${user?.id}`, [examId, user?.id]);
 
+  const allQuestionsAnswered = useMemo(() => {
+    if (!examStarted || questions.length === 0) return false;
+    return answers.size === questions.length;
+  }, [answers.size, questions.length, examStarted]);
+
 
   const handleSubmit = useCallback(async (isAutoSubmit = false, reason = "") => {
     if (hasSubmittedRef.current) return;
@@ -72,14 +79,7 @@ const Test: FC = () => {
     localStorage.removeItem(`exam_timer_${examId}_${user.id}`);
     localStorage.removeItem(progressKey);
 
-    if (!isAutoSubmit) {
-        const unansweredCount = questions.length - answers.size;
-        if (unansweredCount > 0 && !window.confirm(`You have ${unansweredCount} unanswered questions. Are you sure you want to submit?`)) {
-            setIsSubmitting(false);
-            hasSubmittedRef.current = false; // Reset submit lock
-            return;
-        }
-    } else if (reason) {
+    if (isAutoSubmit && reason) {
         toast.error(`Exam submitted automatically: ${reason}`, { duration: 6000 });
     }
     
@@ -449,8 +449,9 @@ const Test: FC = () => {
 
                 <button
                     onClick={() => handleSubmit(false, "")}
-                    disabled={isSubmitting}
-                    className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 disabled:bg-slate-400"
+                    disabled={isSubmitting || !allQuestionsAnswered}
+                    className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 disabled:bg-slate-400 disabled:cursor-not-allowed"
+                    title={allQuestionsAnswered ? "Submit your exam" : "Please answer all questions to submit"}
                 >
                     {isSubmitting ? <Spinner /> : <Send size={16} />} {isSubmitting ? 'Submitting...' : 'Submit Exam'}
                 </button>

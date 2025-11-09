@@ -1,6 +1,6 @@
 import React, { FC, useState, useEffect } from 'react';
 // FIX: Updated `useHistory` to `useNavigate` for react-router-dom v6 compatibility.
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';

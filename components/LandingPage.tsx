@@ -1,8 +1,9 @@
 
 
+
 import React, { FC, useEffect, useRef } from 'react';
 // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LogIn, UserPlus, FileText, Award, Sparkles } from 'lucide-react';
