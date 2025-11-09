@@ -28,11 +28,9 @@ const AdvertSidebar: FC = () => {
         {/* AdSense ad unit */}
         <ins 
           className="adsbygoogle"
-          style="display:inline-block;width:250px;height:250px"
+          style={{ display: 'inline-block', width: '250px', height: '250px' }}
           data-ad-client="ca-pub-0776870820469795"
           data-ad-slot="8746661230"
-          data-ad-format="auto"
-          data-full-width-responsive="true"
         ></ins>
       </div>
     </div>
