@@ -1,5 +1,6 @@
 import React, { FC, ReactNode } from 'react';
 import SuggestedBooksSidebar from './SuggestedBooksSidebar.tsx';
+import AdvertSidebar from './AdvertSidebar.tsx';
 
 interface SidebarLayoutProps {
   children: ReactNode;
@@ -12,6 +13,7 @@ const SidebarLayout: FC<SidebarLayoutProps> = ({ children }) => {
                 {children}
             </main>
             <aside className="space-y-8">
+                <AdvertSidebar />
                 <SuggestedBooksSidebar />
             </aside>
         </div>
