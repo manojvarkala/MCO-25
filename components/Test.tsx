@@ -48,8 +48,9 @@ const Test: FC = () => {
   const progressKey = useMemo(() => `exam_progress_${examId}_${user?.id}`, [examId, user?.id]);
 
   const allQuestionsAnswered = useMemo(() => {
-    if (!examStarted || questions.length === 0) return false;
-    return answers.size === questions.length;
+    // FIX: Logic updated to be more robust. The button is enabled only when the exam has started, 
+    // questions are loaded, and the number of answers is equal to the number of questions.
+    return examStarted && questions.length > 0 && answers.size === questions.length;
   }, [answers.size, questions.length, examStarted]);
 
 
