@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Updated react-router-dom imports for v6. `Switch` is now `Routes`, `Redirect` is `Navigate`.
 // FIX: Standardize react-router-dom import to use single quotes to resolve module export errors.
@@ -88,6 +90,17 @@ const AppContent: FC = () => {
             metaDescription.setAttribute('content', description);
         }
     }, [activeOrg]);
+
+    useEffect(() => {
+        if (isTestPage) {
+            document.body.classList.add('google-revocation-no-ad');
+        } else {
+            document.body.classList.remove('google-revocation-no-ad');
+        }
+        return () => {
+            document.body.classList.remove('google-revocation-no-ad');
+        };
+    }, [isTestPage]);
 
     const mainClasses = isTestPage 
         ? "py-8" 
