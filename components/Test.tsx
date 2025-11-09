@@ -1,7 +1,4 @@
 
-
-
-
 import React, { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
 import { useParams, useNavigate } from 'react-router-dom';
@@ -152,6 +149,12 @@ const Test: FC = () => {
   // Effect 2: Manage the timer.
   useEffect(() => {
     if (!examStarted || isLoading || !examConfig || !user || !examId) return;
+
+    // FIX: If duration is 0 or less, treat as an untimed exam and don't start the timer.
+    if (!examConfig.durationMinutes || examConfig.durationMinutes <= 0) {
+      setTimeLeft(null); // No timer for this exam.
+      return; // Stop the effect here.
+    }
 
     const timerKey = `exam_timer_${examId}_${user.id}`;
     let endTime = localStorage.getItem(timerKey);
@@ -325,7 +328,7 @@ const Test: FC = () => {
                 <p className="text-slate-600 mt-4" dangerouslySetInnerHTML={{ __html: examConfig.description }}></p>
                 <div className="grid grid-cols-3 gap-4 my-6 text-center text-slate-700 p-4 bg-slate-100 rounded-lg">
                     <div><HelpCircle className="mx-auto mb-1 text-cyan-600" /> {examConfig.numberOfQuestions} Questions</div>
-                    <div><Clock className="mx-auto mb-1 text-cyan-600" /> {examConfig.durationMinutes} Minutes</div>
+                    <div><Clock className="mx-auto mb-1 text-cyan-600" /> {examConfig.durationMinutes > 0 ? `${examConfig.durationMinutes} Minutes` : 'Untimed'}</div>
                     <div><CheckCircle className="mx-auto mb-1 text-cyan-600" /> {examConfig.passScore}% to Pass</div>
                 </div>
 
@@ -388,9 +391,11 @@ const Test: FC = () => {
                         </div>
                     )}
                 </div>
-                <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div className={`h-2 rounded-full transition-all duration-500 ${progressBarColorClass}`} style={{ width: `${timePercentage}%` }}></div>
-                </div>
+                {timeLeft !== null && (
+                    <div className="w-full bg-slate-200 rounded-full h-2">
+                        <div className={`h-2 rounded-full transition-all duration-500 ${progressBarColorClass}`} style={{ width: `${timePercentage}%` }}></div>
+                    </div>
+                )}
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

@@ -138,8 +138,6 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
         certExam: program.certExam ? { ...program.certExam } : undefined,
     });
     
-    // FIX: Add a useEffect hook to update the editor's internal state when the selected program changes.
-    // This ensures that when a new program is opened for editing, its data is correctly loaded into the form fields.
     useEffect(() => {
         setData({
             category: { ...program.category },
@@ -283,4 +281,295 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
                     </div>
                      <div className="flex items-center gap-4 pt-2">
                         <label className="flex items-center gap-2"><input type="checkbox" checked={certExam.isProctored || false} onChange={e => handleExamChange('certExam', 'isProctored', e.target.checked)} /> Enable Proctoring</label>
-                        <label className="flex items-center gap-2"><input type="checkbox" checked={certExam.certificateEnabled || false} onChange={e => handleExamChange
+                        <label className="flex items-center gap-2"><input type="checkbox" checked={certExam.certificateEnabled || false} onChange={e => handleExamChange('certExam', 'certificateEnabled', e.target.checked)} /> Enable Certificate</label>
+                    </div>
+                     <div>
+                        <label className="text-xs font-bold">Recommended Study Materials</label>
+                        <div className="grid grid-cols-2 gap-2 mt-1 max-h-40 overflow-y-auto p-2 bg-slate-50 border rounded">
+                            {(suggestedBooks || []).map(book => (
+                                <label key={book.id} className="flex items-center gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={(certExam.recommendedBookIds || []).includes(book.id)}
+                                        onChange={() => handleBookSelectionChange(book.id)}
+                                    />
+                                    <span className="truncate" title={book.title}>{book.title}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            <div className="flex justify-end gap-3 mt-4">
+                <button onClick={onCancel} disabled={isSaving} className="px-4 py-2 bg-slate-200 rounded-lg font-semibold text-slate-700 hover:bg-slate-300">Cancel</button>
+                <button onClick={() => onSave(program.category.id, data)} disabled={isSaving} className="flex items-center gap-2 px-4 py-2 bg-green-500 rounded-lg font-semibold text-white hover:bg-green-600 disabled:bg-slate-400">
+                    {isSaving ? <Spinner /> : <Save size={16} />} Save Changes
+                </button>
+            </div>
+        </div>
+    );
+};
+
+const ExamProgramCustomizer: FC = () => {
+    const { activeOrg, examPrices, suggestedBooks, updateConfigData } = useAppContext();
+    const { token } = useAuth();
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    const [expandedProgramId, setExpandedProgramId] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isBulkSaving, setIsBulkSaving] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [newProgramName, setNewProgramName] = useState('');
+    const [newProgramProductLink, setNewProgramProductLink] = useState('');
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
+    const [stats, setStats] = useState<ExamStat[] | null>(null);
+    
+    useEffect(() => {
+        if (location.hash) {
+            setExpandedProgramId(location.hash.substring(1));
+        }
+    }, [location.hash]);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (!token) return;
+            try {
+                const fetchedStats = await googleSheetsService.getExamStats(token);
+                setStats(fetchedStats);
+            } catch (error) {
+                console.error("Could not load exam stats", error);
+            }
+        };
+        fetchStats();
+    }, [token]);
+
+    const programData = useMemo(() => {
+        if (!activeOrg) return [];
+        const data = (activeOrg.examProductCategories || []).map(cat => {
+            if (!cat) return null;
+            const practiceExam = activeOrg.exams.find(e => e && e.id === cat.practiceExamId);
+            const certExam = activeOrg.exams.find(e => e && e.id === cat.certificationExamId);
+            const stat = stats?.find(s => s.id === certExam?.id);
+            return { category: cat, practiceExam, certExam, stat };
+        }).filter(Boolean);
+        data.sort((a,b) => (a!.category.name || '').localeCompare(b!.category.name || ''));
+        return data as { category: ExamProductCategory; practiceExam?: Exam; certExam?: Exam; stat?: ExamStat }[];
+    }, [activeOrg, stats]);
+    
+    const unlinkedProducts = useMemo(() => {
+        if (!examPrices || !activeOrg) return [];
+        const linkedSkus = new Set(activeOrg.exams.map(e => e.productSku).filter(Boolean));
+        return Object.entries(examPrices)
+            .filter(([sku, data]: [string, any]) => !sku.startsWith('sub-') && !data.isBundle && !linkedSkus.has(sku))
+            .map(([sku, data]: [string, any]) => ({ sku, name: data.name }));
+    }, [examPrices, activeOrg]);
+
+    const handleSave = async (programId: string, data: EditableProgramData) => {
+        if (!token) { toast.error("Authentication Error"); return; }
+        setIsSaving(true);
+        try {
+            const result = await googleSheetsService.adminUpdateExamProgram(token, programId, data);
+            updateConfigData(result.organizations, result.examPrices);
+            toast.success("Program updated successfully!");
+            setExpandedProgramId(null);
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to update program.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    const handleCreate = async () => {
+        if (!token || !newProgramName) {
+            toast.error("Program Name is required.");
+            return;
+        }
+        setIsCreating(true);
+        try {
+            const result = await googleSheetsService.adminCreateExamProgram(token, newProgramName, { sku: newProgramProductLink });
+            updateConfigData(result.organizations, result.examPrices);
+            toast.success(`Program "${newProgramName}" created!`);
+            setIsCreateModalOpen(false);
+            setNewProgramName('');
+            setNewProgramProductLink('');
+        } catch(error: any) {
+            toast.error(error.message || 'Failed to create program.');
+        } finally {
+            setIsCreating(false);
+        }
+    };
+    
+    const handleDelete = async (programId: string, programName: string) => {
+        if (!token) { toast.error("Authentication Error"); return; }
+        if (!window.confirm(`Are you sure you want to delete the "${programName}" program? This action will also move the associated exams to the trash and cannot be undone.`)) {
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const result = await googleSheetsService.adminDeletePost(token, programId, 'mco_exam_program');
+            updateConfigData(result.organizations, result.examPrices);
+            toast.success(`Program "${programName}" deleted.`);
+        } catch(error: any) {
+            toast.error(error.message || 'Failed to delete program.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    const handleBulkSave = async (updateData: any) => {
+        if (!token || selectedProgramIds.length === 0) return;
+        setIsBulkSaving(true);
+        const toastId = toast.loading(`Updating ${selectedProgramIds.length} programs...`);
+        try {
+            for (const programId of selectedProgramIds) {
+                await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
+            }
+            toast.success(`${selectedProgramIds.length} programs updated successfully! Refreshing data...`, { id: toastId, duration: 4000 });
+            setSelectedProgramIds([]);
+            setTimeout(() => window.location.reload(), 1000);
+        } catch (error: any) {
+            toast.error(error.message || "An error occurred during bulk update.", { id: toastId });
+        } finally {
+            setIsBulkSaving(false);
+        }
+    };
+
+    const toggleProgram = (programId: string) => {
+        const newId = expandedProgramId === programId ? null : programId;
+        setExpandedProgramId(newId);
+        if (newId) {
+            navigate(`#${newId}`);
+        } else {
+            navigate(location.pathname, { replace: true });
+        }
+    };
+    
+     const handleSelectAll = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedProgramIds(programData.map(p => p.category.id));
+        } else {
+            setSelectedProgramIds([]);
+        }
+    }, [programData]);
+
+    const handleSelectOne = useCallback((programId: string, isSelected: boolean) => {
+        setSelectedProgramIds(currentIds => {
+            const newIds = new Set(currentIds);
+            if (isSelected) {
+                newIds.add(programId);
+            } else {
+                newIds.delete(programId);
+            }
+            return Array.from(newIds);
+        });
+    }, []);
+
+    const isAllSelected = programData.length > 0 && selectedProgramIds.length === programData.length;
+
+    return (
+        <div className="space-y-8">
+             {isCreateModalOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-lg w-full max-w-lg p-6">
+                        <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">Create New Exam Program</h2>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-sm font-medium">Program Name</label>
+                                <input type="text" value={newProgramName} onChange={e => setNewProgramName(e.target.value)} placeholder="e.g. CPC Certification Program" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
+                            </div>
+                             <div>
+                                <label className="text-sm font-medium">Link to Product (Optional)</label>
+                                <select value={newProgramProductLink} onChange={e => setNewProgramProductLink(e.target.value)} className="w-full p-2 mt-1 border rounded bg-white">
+                                    <option value="">Create a new product automatically</option>
+                                    {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 mt-6">
+                            <button onClick={() => setIsCreateModalOpen(false)} disabled={isCreating} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition">Cancel</button>
+                            <button onClick={handleCreate} disabled={isCreating} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition">
+                                {isCreating ? <Spinner /> : <PlusCircle size={16} />} Create Program
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3"><Settings /> Exam Program Customizer</h1>
+            
+            {selectedProgramIds.length > 0 && (
+                <BulkEditPanel 
+                    onSave={handleBulkSave}
+                    onCancel={() => setSelectedProgramIds([])}
+                    isSaving={isBulkSaving}
+                    selectedCount={selectedProgramIds.length}
+                />
+            )}
+            
+            <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold">All Programs ({programData.length})</h2>
+                    <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition">
+                        <PlusCircle size={18}/> Create New Program
+                    </button>
+                </div>
+
+                <div className="border-t border-[rgb(var(--color-border-rgb))] pt-2">
+                     {programData.length > 0 && (
+                        <div className="flex items-center px-4 py-2">
+                            <label className="flex items-center gap-4 cursor-pointer">
+                                <input type="checkbox" onChange={handleSelectAll} checked={isAllSelected} className="h-4 w-4 rounded text-[rgb(var(--color-primary-rgb))] focus:ring-[rgb(var(--color-primary-rgb))]"/>
+                                <span className="font-semibold text-sm">Select All</span>
+                            </label>
+                        </div>
+                     )}
+                    <div className="space-y-2">
+                        {programData.map(p => (
+                            <div key={p.category.id} id={p.category.id} className="bg-[rgb(var(--color-muted-rgb))] rounded-lg">
+                                <div className="flex items-center p-4">
+                                     <input
+                                        type="checkbox"
+                                        checked={selectedProgramIds.includes(p.category.id)}
+                                        onChange={e => handleSelectOne(p.category.id, e.target.checked)}
+                                        className="h-4 w-4 mr-4 rounded text-[rgb(var(--color-primary-rgb))] focus:ring-[rgb(var(--color-primary-rgb))]"
+                                        onClick={e => e.stopPropagation()}
+                                    />
+                                    <div className="flex-grow">
+                                        <p className="font-bold text-[rgb(var(--color-text-strong-rgb))]">{p.category.name}</p>
+                                        <p className="text-xs text-[rgb(var(--color-text-muted-rgb))] font-mono">ID: {p.category.id}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-muted-rgb))]">
+                                        {p.certExam?.productSku && <span className="flex items-center gap-1.5 bg-[rgb(var(--color-card-rgb))] px-2 py-1 rounded-md text-xs"><ShoppingCart size={12}/> {p.certExam.productSku}</span>}
+                                        {p.stat && <span className="flex items-center gap-1.5 bg-[rgb(var(--color-card-rgb))] px-2 py-1 rounded-md text-xs"><BarChart3 size={12}/> {p.stat.totalSales} sales</span>}
+                                    </div>
+                                    <div className="flex items-center gap-1 ml-4">
+                                         <button onClick={() => handleDelete(p.category.id, p.category.name || 'this program')} className="p-2 rounded-full text-red-500 hover:bg-red-100"><Trash2 size={16}/></button>
+                                         <button onClick={() => toggleProgram(p.category.id)} className="flex items-center gap-2 px-3 py-2 bg-[rgb(var(--color-card-rgb))] rounded-md text-sm font-semibold hover:bg-[rgb(var(--color-border-rgb))]">
+                                            <Edit size={16}/> Edit {expandedProgramId === p.category.id ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                                        </button>
+                                    </div>
+                                </div>
+                                {expandedProgramId === p.category.id && (
+                                    <ExamEditor 
+                                        program={p} 
+                                        onSave={handleSave} 
+                                        onCancel={() => toggleProgram(p.category.id)} 
+                                        isSaving={isSaving}
+                                        unlinkedProducts={unlinkedProducts}
+                                        suggestedBooks={suggestedBooks || []}
+                                        examPrices={examPrices}
+                                    />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default ExamProgramCustomizer;
