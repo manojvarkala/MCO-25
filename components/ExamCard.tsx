@@ -35,6 +35,11 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
     }
 
     const handleButtonClick = async () => {
+        // Fire and forget engagement logging
+        if (token) {
+            googleSheetsService.logEngagement(token, exam.id);
+        }
+        
         if (canTake) {
             navigate(`/test/${exam.id}`);
         } else if (exam.productSku) {

@@ -1,6 +1,6 @@
 import React, { FC, ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Settings, ShoppingCart, Code, ArrowLeft, History, BarChart3, Sparkles, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Settings, ShoppingCart, Code, ArrowLeft, History, BarChart3, Sparkles, BookOpen, TrendingUp } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -23,6 +23,10 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
                     <NavLink to="/admin/analytics" className={({ isActive }) => `${navLinkClass} ${isActive ? activeNavLinkClass : ''}`}>
                         <BarChart3 size={18} />
                         <span>Sales Analytics</span>
+                    </NavLink>
+                    <NavLink to="/admin/exam-analytics" className={({ isActive }) => `${navLinkClass} ${isActive ? activeNavLinkClass : ''}`}>
+                        <TrendingUp size={18} />
+                        <span>Exam Analytics</span>
                     </NavLink>
                     {/* FIX: Replaced react-router-dom v5 `activeClassName` prop with v6 className function. */}
                     <NavLink to="/admin/programs" className={({ isActive }) => `${navLinkClass} ${isActive ? activeNavLinkClass : ''}`}>

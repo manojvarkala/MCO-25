@@ -275,6 +275,7 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/submit-feedback', ['methods' => 'POST', 'callback' => 'mco_api_submit_feedback', 'permission_callback' => 'mco_api_permission_check']);
     register_rest_route($namespace, '/submit-review', ['methods' => 'POST', 'callback' => 'mco_api_submit_review', 'permission_callback' => 'mco_api_permission_check']);
     register_rest_route($namespace, '/notify-admin', ['methods' => 'POST', 'callback' => 'mco_api_notify_admin', 'permission_callback' => 'mco_api_permission_check']);
+    register_rest_route($namespace, '/log-engagement', ['methods' => 'POST', 'callback' => 'mco_api_log_engagement', 'permission_callback' => 'mco_api_permission_check']);
 
     // ADMIN-ONLY ENDPOINTS (JWT-PROTECTED)
     register_rest_route($namespace, '/exam-stats', ['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
@@ -724,53 +725,120 @@ function mco_api_notify_admin(WP_REST_Request $request) {
     return new WP_REST_Response(['success' => true], 200);
 }
 
+function mco_api_log_engagement(WP_REST_Request $request) {
+    $exam_id = sanitize_text_field($request->get_param('examId'));
+    if (empty($exam_id)) {
+        return new WP_Error('bad_request', 'examId is required.', ['status' => 400]);
+    }
+
+    $post_id = 0;
+    if (preg_match('/^exam-prod-(\d+)-practice$/', $exam_id, $matches)) {
+        $post_id = (int)$matches[1];
+    } else {
+        $posts = get_posts([
+            'post_type' => 'mco_exam_program',
+            'meta_key' => '_mco_certification_exam_sku',
+            'meta_value' => $exam_id,
+            'posts_per_page' => 1,
+            'fields' => 'ids'
+        ]);
+        if (!empty($posts)) {
+            $post_id = $posts[0];
+        }
+    }
+
+    if ($post_id > 0) {
+        $count = (int)get_post_meta($post_id, '_mco_engagement_count', true);
+        $count++;
+        update_post_meta($post_id, '_mco_engagement_count', $count);
+        return new WP_REST_Response(['success' => true, 'message' => 'Engagement logged.'], 200);
+    }
+
+    return new WP_Error('not_found', 'Could not find a program for the given examId.', ['status' => 404]);
+}
+
 // --- ADMIN-ONLY ENDPOINT CALLBACKS ---
 
 function mco_api_get_exam_stats(WP_REST_Request $request) {
-    $stats = [];
-    if (class_exists('WooCommerce')) {
-        $exam_posts = get_posts([ 'post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish' ]);
-        foreach ($exam_posts as $post) {
-            $sku = get_post_meta($post->ID, '_mco_certification_exam_sku', true);
-            if (!$sku) continue;
+    $exam_definitions = [];
+    $stats_aggregator = [];
 
-            $product_id = wc_get_product_id_by_sku($sku);
-            $product = $product_id ? wc_get_product($product_id) : null;
-            if (!$product) continue;
-            
-            $all_results_for_exam = [];
-            $all_users = get_users(['fields' => ['ID']]);
-            foreach($all_users as $user) {
-                $user_results = get_user_meta($user->ID, 'mco_exam_results', true) ?: [];
-                foreach ($user_results as $result) {
-                    if ($result['examId'] === $sku) {
-                        $all_results_for_exam[] = $result;
-                    }
-                }
-            }
-            
-            $pass_score = get_post_meta($post->ID, '_mco_pass_score', true) ?: mco_get_single_term($post->ID, 'exam_pass_score', 'name');
-            $pass_count = 0;
-            $total_score = 0;
-            
-            foreach($all_results_for_exam as $res) {
-                if($res['score'] >= (int)$pass_score) $pass_count++;
-                $total_score += $res['score'];
-            }
-            
-            $stats[] = [
-                'id' => $sku,
-                'name' => $post->post_title,
-                'totalSales' => $product->get_total_sales(),
-                'totalRevenue' => $product->get_total_sales() * $product->get_price(),
-                'attempts' => count($all_results_for_exam),
-                'averageScore' => count($all_results_for_exam) > 0 ? $total_score / count($all_results_for_exam) : 0,
-                'passRate' => count($all_results_for_exam) > 0 ? ($pass_count / count($all_results_for_exam)) * 100 : 0,
+    // Step 1: Build definitions for all exams (practice and cert)
+    $exam_posts = get_posts([ 'post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish' ]);
+    foreach ($exam_posts as $post) {
+        $program_id = 'prod-' . $post->ID;
+        $program_name = $post->post_title;
+        $pass_score = (int)(get_post_meta($post->ID, '_mco_pass_score', true) ?: 70);
+
+        // Practice Exam
+        $practice_id = 'exam-' . $program_id . '-practice';
+        $practice_name_override = get_post_meta($post->ID, '_mco_practice_exam_title_override', true);
+        $practice_name = !empty($practice_name_override) ? $practice_name_override : $program_name . ' Practice';
+        $exam_definitions[$practice_id] = [
+            'name' => $practice_name, 'isPractice' => true, 'programId' => $program_id, 
+            'programName' => $program_name, 'passScore' => $pass_score, 'postId' => $post->ID
+        ];
+        $stats_aggregator[$practice_id] = ['attempts' => 0, 'total_score' => 0, 'pass_count' => 0];
+
+        // Cert Exam
+        $cert_sku = get_post_meta($post->ID, '_mco_certification_exam_sku', true);
+        if ($cert_sku) {
+            $cert_name_override = get_post_meta($post->ID, '_mco_cert_exam_title_override', true);
+            $cert_name = !empty($cert_name_override) ? $cert_name_override : $program_name;
+            $exam_definitions[$cert_sku] = [
+                'name' => $cert_name, 'isPractice' => false, 'programId' => $program_id, 
+                'programName' => $program_name, 'passScore' => $pass_score, 'postId' => $post->ID
             ];
+            $stats_aggregator[$cert_sku] = ['attempts' => 0, 'total_score' => 0, 'pass_count' => 0];
         }
     }
-    return new WP_REST_Response($stats, 200);
+
+    // Step 2: Aggregate results by looping through users once
+    $all_users = get_users(['fields' => ['ID']]);
+    foreach($all_users as $user) {
+        $user_results = get_user_meta($user->ID, 'mco_exam_results', true) ?: [];
+        foreach ($user_results as $result) {
+            $exam_id = $result['examId'] ?? null;
+            if ($exam_id && isset($stats_aggregator[$exam_id])) {
+                $stats_aggregator[$exam_id]['attempts']++;
+                $stats_aggregator[$exam_id]['total_score'] += $result['score'];
+                if ($result['score'] >= $exam_definitions[$exam_id]['passScore']) {
+                    $stats_aggregator[$exam_id]['pass_count']++;
+                }
+            }
+        }
+    }
+
+    // Step 3: Finalize stats array
+    $final_stats = [];
+    foreach ($exam_definitions as $id => $def) {
+        $agg = $stats_aggregator[$id];
+        $stat_item = [
+            'id' => $id,
+            'name' => $def['name'],
+            'isPractice' => $def['isPractice'],
+            'programId' => $def['programId'],
+            'programName' => $def['programName'],
+            'attempts' => $agg['attempts'],
+            'averageScore' => $agg['attempts'] > 0 ? $agg['total_score'] / $agg['attempts'] : 0,
+            'passRate' => $agg['attempts'] > 0 ? ($agg['pass_count'] / $agg['attempts']) * 100 : 0,
+            'engagements' => (int)get_post_meta($def['postId'], '_mco_engagement_count', true) ?: 0,
+        ];
+
+        // Add sales data for cert exams
+        if (!$def['isPractice'] && class_exists('WooCommerce')) {
+            $product_id = wc_get_product_id_by_sku($id);
+            $product = $product_id ? wc_get_product($product_id) : null;
+            $stat_item['totalSales'] = $product ? $product->get_total_sales() : 0;
+            $stat_item['totalRevenue'] = $product ? $product->get_total_sales() * (float)$product->get_price() : 0;
+        }
+
+        $final_stats[] = $stat_item;
+    }
+
+    return new WP_REST_Response($final_stats, 200);
 }
+
 
 function mco_api_get_debug_details(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');

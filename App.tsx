@@ -3,6 +3,8 @@
 
 
 
+
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Updated react-router-dom imports for v6. `Switch` is now `Routes`, `Redirect` is `Navigate`.
 // FIX: Standardize react-router-dom import to use single quotes to resolve module export errors.
@@ -44,6 +46,7 @@ import AdminLayout from './components/AdminLayout.tsx';
 import FAQ from './components/FAQ.tsx';
 import DevelopmentHistory from './components/DevelopmentHistory.tsx';
 import SalesAnalytics from './components/SalesAnalytics.tsx';
+import ExamAnalytics from './components/ExamAnalytics.tsx';
 import ContentEngine from './components/ContentEngine.tsx';
 import Handbook from './components/handbook/Handbook.tsx';
 import VerifyCertificate from './components/VerifyCertificate.tsx';
@@ -150,6 +153,7 @@ const AppContent: FC = () => {
                         
                         {/* Admin Routes with dedicated layout */}
                         <Route path="/admin/analytics" element={<ProtectedRoute adminOnly={true}><AdminLayout><SalesAnalytics /></AdminLayout></ProtectedRoute>} />
+                        <Route path="/admin/exam-analytics" element={<ProtectedRoute adminOnly={true}><AdminLayout><ExamAnalytics /></AdminLayout></ProtectedRoute>} />
                         <Route path="/admin/products" element={<ProtectedRoute adminOnly={true}><AdminLayout><ProductCustomizer /></AdminLayout></ProtectedRoute>} />
                         <Route path="/admin/programs" element={<ProtectedRoute adminOnly={true}><AdminLayout><ExamProgramCustomizer /></AdminLayout></ProtectedRoute>} />
                         <Route path="/admin/content-engine" element={<ProtectedRoute adminOnly={true}><AdminLayout><ContentEngine /></AdminLayout></ProtectedRoute>} />

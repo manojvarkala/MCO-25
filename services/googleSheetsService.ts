@@ -333,6 +333,11 @@ export const googleSheetsService = {
     verifyCertificate: async (certId: string): Promise<VerificationData> => {
         return await apiFetch(`/verify-certificate/${certId}`, 'GET', null);
     },
+    logEngagement: async (token: string, examId: string): Promise<void> => {
+        apiFetch('/log-engagement', 'POST', token, { examId }).catch(error => {
+            console.warn(`Failed to log engagement for exam ${examId}:`, error);
+        });
+    },
     
     // --- ADMIN ENDPOINTS ---
     getDebugDetails: async (token: string): Promise<DebugData> => {

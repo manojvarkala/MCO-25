@@ -184,11 +184,15 @@ export interface PostCreationData {
 export interface ExamStat {
     id: string;
     name: string;
+    isPractice: boolean;
+    programId: string;
+    programName: string;
     attempts: number;
     averageScore: number;
     passRate: number;
-    totalSales: number;
-    totalRevenue: number;
+    engagements: number;
+    totalSales?: number;
+    totalRevenue?: number;
 }
 
 export interface InProgressExamInfo {
