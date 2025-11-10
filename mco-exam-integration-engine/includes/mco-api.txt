@@ -1152,6 +1152,8 @@ function mco_api_create_post_from_app(WP_REST_Request $request) {
     if (isset($data['hashtags'])) {
         update_post_meta($post_id, '_mco_ai_hashtags', sanitize_text_field($data['hashtags']));
     }
+    
+    do_action('mco_ai_post_created', $post_id);
 
     return new WP_REST_Response([
         'success' => true,

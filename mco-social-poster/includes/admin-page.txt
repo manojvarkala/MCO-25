@@ -1,0 +1,50 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+function mco_social_render_admin_page() {
+    ?>
+    <div class="wrap">
+        <h1>Social Poster Settings</h1>
+        <p>Connect your social media accounts to automatically share new AI-generated blog posts.</p>
+        
+        <form method="post" action="options.php">
+            <?php
+            settings_fields('mco_social_options_group');
+            do_settings_sections('mco-social-poster');
+            submit_button();
+            ?>
+        </form>
+    </div>
+    <?php
+}
+
+function mco_social_register_settings() {
+    register_setting('mco_social_options_group', 'mco_social_settings');
+
+    add_settings_section(
+        'mco_social_facebook_section',
+        'Facebook Settings',
+        null,
+        'mco-social-poster'
+    );
+
+    add_settings_field(
+        'mco_social_facebook_enabled',
+        'Enable Facebook Posting',
+        'mco_social_facebook_enabled_callback',
+        'mco-social-poster',
+        'mco_social_facebook_section'
+    );
+
+    // Placeholder fields for API keys etc.
+}
+add_action('admin_init', 'mco_social_register_settings');
+
+function mco_social_facebook_enabled_callback() {
+    $options = get_option('mco_social_settings');
+    $html = '<input type="checkbox" id="mco_social_facebook_enabled" name="mco_social_settings[facebook_enabled]" value="1"' . checked(1, $options['facebook_enabled'] ?? 0, false) . '/>';
+    echo $html;
+}
+
+// Add similar sections and fields for LinkedIn
+?>
