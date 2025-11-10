@@ -16,6 +16,19 @@ const StatCard: FC<{ title: string; value: string | number; icon: React.ReactNod
     </div>
 );
 
+// Utility to strip HTML tags and decode entities.
+const stripHtml = (html: string): string => {
+    if (!html || typeof html !== 'string') return html || '';
+    try {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        return tempDiv.textContent || tempDiv.innerText || '';
+    } catch (e) {
+        console.error("Could not parse HTML string for stripping", e);
+        return html;
+    }
+};
+
 const ExamAnalytics: FC = () => {
     const { token } = useAuth();
     const [stats, setStats] = useState<ExamStat[]>([]);
@@ -27,7 +40,13 @@ const ExamAnalytics: FC = () => {
             setIsLoadingStats(true);
             try {
                 const fetchedStats = await googleSheetsService.getExamStats(token);
-                setStats(fetchedStats);
+                // FIX: Decode HTML entities from names coming from the backend.
+                const cleanedStats = fetchedStats.map(stat => ({
+                    ...stat,
+                    name: stripHtml(stat.name),
+                    programName: stripHtml(stat.programName),
+                }));
+                setStats(cleanedStats);
             } catch (error: any) {
                 toast.error("Could not load exam analytics: " + error.message);
             } finally {
