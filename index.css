@@ -350,7 +350,7 @@ body {
 .cert-container-classic .cert-signature-block { flex: 1; min-width: 150px; display: flex; flex-direction: column; }
 .cert-container-classic .cert-qr-footer { position: absolute; bottom: 8px; left: 8px; display: flex; align-items: center; gap: 0.5rem; font-size: 0.5rem; color: #64748b; text-align: left; }
 .cert-container-classic .cert-qr-footer p { line-height: 1.2; }
-.cert-container-classic .cert-qr-code { width: 40px; height: 40px; flex-shrink: 0; }
+.cert-container-classic .cert-qr-code { width: 40px; height: 40px; flex-shrink-0; }
 
 /* MODERN CERTIFICATE THEME v2 */
 .cert-container-modern { background-color: #f8fafc; display: grid; grid-template-columns: 260px 1fr; font-family: var(--font-main); color: #1e293b; height: 100%; position: relative; }

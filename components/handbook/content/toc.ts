@@ -18,7 +18,7 @@ export const tocContent = `
             </ol>
         </div>
         <div>
-            <h3 class="text-lg font-semibold">Part III: Administrator's Guide (WordPress Backend)</h3>
+            <h3 class="text-lg font-semibold">Part III: Administrator's Guide (WordPress)</h3>
             <ol class="list-decimal list-inside space-y-1 pl-4 mt-1" start="6">
                 <li><a href="#ch6" data-chapter-index="8">Plugin Setup & Admin Menu Overview</a></li>
                 <li><a href="#ch7" data-chapter-index="9">Managing Content: CPTs & Bulk Import</a></li>
@@ -26,7 +26,7 @@ export const tocContent = `
             </ol>
         </div>
         <div>
-            <h3 class="text-lg font-semibold">Part IV: Administrator's Guide (In-App Tools)</h3>
+            <h3 class="text-lg font-semibold">Part IV: Administrator's Guide (In-App)</h3>
             <ol class="list-decimal list-inside space-y-1 pl-4 mt-1" start="9">
                 <li><a href="#ch9" data-chapter-index="11">In-App Admin Panel & Debug Sidebar</a></li>
                 <li><a href="#ch10" data-chapter-index="12">Sales Analytics</a></li>

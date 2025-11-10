@@ -1,10 +1,11 @@
 import React, { FC } from 'react';
-import { HelpCircle, ChevronDown } from 'lucide-react';
+import { HelpCircle, ChevronDown, UserCheck } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
+import { useAuth } from '../context/AuthContext.tsx';
 import { Link } from 'react-router-dom';
 
 const FAQItem: FC<{ question: string; children: React.ReactNode }> = ({ question, children }) => (
-    <details className="group border-b border-slate-200 py-4">
+    <details className="group border-b border-slate-200 py-4" open>
         <summary className="flex cursor-pointer items-center justify-between text-lg font-semibold text-slate-800 hover:text-cyan-600">
             {question}
             <ChevronDown className="h-5 w-5 transition-transform duration-200 group-open:rotate-180" />
@@ -17,6 +18,7 @@ const FAQItem: FC<{ question: string; children: React.ReactNode }> = ({ question
 
 const FAQ: FC = () => {
     const { activeOrg } = useAppContext();
+    const { isEffectivelyAdmin } = useAuth();
     const orgName = activeOrg ? activeOrg.name : 'our company';
     const websiteUrl = activeOrg ? `https://${activeOrg.website}` : '#';
 
@@ -59,28 +61,6 @@ const FAQ: FC = () => {
                         <li>Click "Resume Exam" to continue right where you left off. Your timer will also have paused and will resume from where it was.</li>
                     </ol>
                 </FAQItem>
-
-                <FAQItem question="Why do I need to be in fullscreen for some exams?">
-                    <p>
-                        For our official certification exams, we use browser-based proctoring to ensure the integrity of the test environment. This involves:
-                    </p>
-                    <ul>
-                        <li><strong>Fullscreen Mode:</strong> Prevents distractions and access to other materials on your computer.</li>
-                        <li><strong>Focus Monitoring:</strong> The system checks if you switch to another browser tab or application.</li>
-                    </ul>
-                    <p>Exiting fullscreen or switching tabs is considered a "violation." You will receive a warning, and after 3 violations, your exam may be automatically terminated.</p>
-                </FAQItem>
-
-                <FAQItem question="My certificate is not available, but I passed. Why?">
-                     <p>
-                        This happens when the system detects proctoring violations during your exam. While your score is shown immediately, we place the certificate on a brief hold for an integrity review.
-                    </p>
-                    <ul>
-                        <li>You will see a message about a <strong>"Provisional Pass"</strong>.</li>
-                        <li>Our team will review the session flags. For legitimate passes, your certificate will be issued within 24 hours.</li>
-                        <li>You will receive an email notification as soon as your certificate is ready.</li>
-                    </ul>
-                </FAQItem>
                 
                 <FAQItem question="Why can't I get AI Feedback for my exam?">
                     <p>
@@ -93,6 +73,47 @@ const FAQ: FC = () => {
                     <p>AI feedback is not generated for exams that you have passed.</p>
                 </FAQItem>
             </div>
+
+            {isEffectivelyAdmin && (
+                <div className="mt-12">
+                    <div className="text-center mb-8">
+                        <UserCheck className="mx-auto h-12 w-12 text-cyan-500" />
+                        <h2 className="text-3xl font-bold text-slate-800 mt-4">Administrator FAQ</h2>
+                        <p className="text-slate-500 mt-2">Common questions for platform administrators.</p>
+                    </div>
+                    <div className="space-y-4">
+                        <FAQItem question="How are Sales Analytics calculated?">
+                            <p>The analytics dashboard combines data from two sources:</p>
+                            <ul>
+                                <li><strong>Sales & Revenue:</strong> This data is pulled directly from WooCommerce. "Sales" is the total unit count sold for a product SKU. "Revenue" is an <strong>estimate</strong> calculated by multiplying the unit count by the product's <em>current</em> price. It does not account for historical price changes or coupons.</li>
+                                <li><strong>Attempts, Scores & Pass Rates:</strong> This data is aggregated from all user exam results stored in your WordPress database.</li>
+                            </ul>
+                        </FAQItem>
+                        <FAQItem question="Why don't my WordPress changes appear in the app immediately?">
+                             <p>
+                                The platform uses multiple layers of caching for performance. If your changes aren't appearing:
+                            </p>
+                            <ol>
+                                <li>Go to <strong>Admin → Admin Dashboard → System Health Check</strong>.</li>
+                                <li>Under "Cache & Data Management," click the <strong>"Clear Config Cache"</strong> button. This clears the server-side cache.</li>
+                                <li>If you've updated a Google Sheet with questions, click the <strong>"Clear Question Caches"</strong> button.</li>
+                                <li>After clearing the cache, hard-refresh the app in your browser (Ctrl+Shift+R or Cmd+Shift+R) to bypass your browser's local cache.</li>
+                            </ol>
+                        </FAQItem>
+                        <FAQItem question="How does the AI Content Engine work?">
+                             <p>
+                                The Content Engine uses the Google Gemini API to write blog posts.
+                            </p>
+                            <ul>
+                                <li>It takes the name and description from one of your existing Exam Programs to use as a topic.</li>
+                                <li>It sends a detailed prompt to the AI, instructing it to write an SEO-friendly article with specific sections (like "Career Opportunities") and to format it using WordPress block editor syntax.</li>
+                                <li>It automatically adds a pre-styled Call-To-Action (CTA) block at the end of the post, linking directly back to that Exam Program in the app.</li>
+                                <li>Finally, it sends the completed post to your WordPress site and schedules it for future publication based on the date and interval you set.</li>
+                            </ul>
+                        </FAQItem>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
