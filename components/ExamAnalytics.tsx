@@ -60,14 +60,27 @@ const ExamAnalytics: FC = () => {
         return stats.reduce((acc, stat) => {
             acc.totalAttempts += stat.attempts;
             acc.totalEngagements += stat.engagements;
+            acc.totalPasses += stat.passCount || 0;
+            acc.totalScoreSum += stat.totalScoreSum || 0;
             return acc;
-        }, { totalAttempts: 0, totalEngagements: 0 });
+        }, { totalAttempts: 0, totalEngagements: 0, totalPasses: 0, totalScoreSum: 0 });
     }, [stats]);
 
     const overallCTR = useMemo(() => {
         if (summaryStats.totalEngagements === 0) return 0;
         return (summaryStats.totalAttempts / summaryStats.totalEngagements) * 100;
     }, [summaryStats]);
+
+    const overallPassRate = useMemo(() => {
+        if (summaryStats.totalAttempts === 0) return 0;
+        return (summaryStats.totalPasses / summaryStats.totalAttempts) * 100;
+    }, [summaryStats]);
+
+    const overallAverageScore = useMemo(() => {
+        if (summaryStats.totalAttempts === 0) return 0;
+        return summaryStats.totalScoreSum / summaryStats.totalAttempts;
+    }, [summaryStats]);
+
 
     const sortedStats = useMemo(() => {
         return [...stats].sort((a, b) => {
@@ -147,6 +160,23 @@ const ExamAnalytics: FC = () => {
                                     );
                                 })}
                             </tbody>
+                             <tfoot>
+                                <tr className="bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-strong-rgb))] font-bold">
+                                    <td className="px-6 py-4" colSpan={2}>Total</td>
+                                    <td className="px-6 py-4 text-center">{summaryStats.totalAttempts.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-center">{overallAverageScore.toFixed(1)}%</td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-full bg-[rgb(var(--color-border-rgb))] rounded-full h-2.5">
+                                                <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${overallPassRate}%` }}></div>
+                                            </div>
+                                            <span className="font-semibold w-12 text-right">{overallPassRate.toFixed(1)}%</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-center">{summaryStats.totalEngagements.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-center">{overallCTR.toFixed(1)}%</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 ) : (

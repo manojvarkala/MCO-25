@@ -823,6 +823,8 @@ function mco_api_get_exam_stats(WP_REST_Request $request) {
             'averageScore' => $agg['attempts'] > 0 ? $agg['total_score'] / $agg['attempts'] : 0,
             'passRate' => $agg['attempts'] > 0 ? ($agg['pass_count'] / $agg['attempts']) * 100 : 0,
             'engagements' => (int)get_post_meta($def['postId'], '_mco_engagement_count', true) ?: 0,
+            'passCount' => $agg['pass_count'],
+            'totalScoreSum' => $agg['total_score'],
         ];
 
         // Add sales data for cert exams

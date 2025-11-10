@@ -72,14 +72,27 @@ const SalesAnalytics: FC = () => {
             acc.totalRevenue += stat.totalRevenue || 0;
             acc.totalAttempts += stat.attempts;
             acc.totalEngagements += stat.engagements;
+            acc.totalPasses += stat.passCount || 0;
+            acc.totalScoreSum += stat.totalScoreSum || 0;
             return acc;
-        }, { totalSales: 0, totalRevenue: 0, totalAttempts: 0, totalEngagements: 0 });
+        }, { totalSales: 0, totalRevenue: 0, totalAttempts: 0, totalEngagements: 0, totalPasses: 0, totalScoreSum: 0 });
     }, [certStats]);
     
     const overallCTR = useMemo(() => {
         if (summaryStats.totalEngagements === 0) return 0;
         return (summaryStats.totalAttempts / summaryStats.totalEngagements) * 100;
     }, [summaryStats]);
+    
+    const overallPassRate = useMemo(() => {
+        if (summaryStats.totalAttempts === 0) return 0;
+        return (summaryStats.totalPasses / summaryStats.totalAttempts) * 100;
+    }, [summaryStats]);
+
+    const overallAverageScore = useMemo(() => {
+        if (summaryStats.totalAttempts === 0) return 0;
+        return summaryStats.totalScoreSum / summaryStats.totalAttempts;
+    }, [summaryStats]);
+
 
     return (
         <div className="space-y-8">
@@ -142,6 +155,24 @@ const SalesAnalytics: FC = () => {
                                     );
                                 })}
                             </tbody>
+                             <tfoot>
+                                <tr className="bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-strong-rgb))] font-bold">
+                                    <td className="px-6 py-4">Total</td>
+                                    <td className="px-6 py-4 text-center">{summaryStats.totalSales.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-center">{summaryStats.totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
+                                    <td className="px-6 py-4 text-center">{summaryStats.totalAttempts.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-center">{overallAverageScore.toFixed(1)}%</td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-full bg-[rgb(var(--color-border-rgb))] rounded-full h-2.5">
+                                                <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${overallPassRate}%` }}></div>
+                                            </div>
+                                            <span className="font-semibold">{overallPassRate.toFixed(1)}%</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-center">{overallCTR.toFixed(1)}%</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 ) : (

@@ -193,6 +193,8 @@ export interface ExamStat {
     engagements: number;
     totalSales?: number;
     totalRevenue?: number;
+    passCount?: number;
+    totalScoreSum?: number;
 }
 
 export interface InProgressExamInfo {
