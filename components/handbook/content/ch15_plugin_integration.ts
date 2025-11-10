@@ -23,10 +23,7 @@ export const ch15_plugin_integration = `
         <li><strong>Functionality:</strong> The shortcode fetches live data from your Exam Programs and WooCommerce products to display up-to-date titles, descriptions, pricing, and "Add to Cart" links.</li>
     </ul>
 
-    <h3 class="text-xl font-bold mt-6">15.3 The Book Showcase Shortcode: <code>[mco_book_showcase]</code></h3>
-    <p>Similar to the exam showcase, this shortcode embeds a grid of your recommended books onto any page.</p>
-    <ul>
-        <li><strong>Purpose:</strong> To create a "Book Store" or "Resources" page on your main website.</li>
-        <li><strong>Functionality:</strong> It displays each book with its cover (either from a URL or procedurally generated), description, and geo-targeted affiliate links for Amazon.</li>
-    </ul>
+    <h3 class="text-xl font-bold mt-6">15.3 The Purchase Notifier Script</h3>
+    <p>While the React app has a built-in live purchase notifier, you might want to add this social proof element to your main WordPress site as well. The plugin does not automatically inject this for theme compatibility reasons.</p>
+    <p>A standalone, dependency-free HTML/CSS/JS snippet is available in the React app's admin panel under <strong>Admin → Integration</strong>. You can copy this code and paste it into a "Custom HTML" block in your site's footer using the block editor or a theme options panel.</p>
 `;
