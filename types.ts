@@ -195,6 +195,7 @@ export interface ExamStat {
     totalRevenue?: number;
     passCount?: number;
     totalScoreSum?: number;
+    ctr?: number;
 }
 
 export interface InProgressExamInfo {

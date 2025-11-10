@@ -4,7 +4,7 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
 import Spinner from './Spinner.tsx';
-import { TrendingUp, MousePointerClick, Check, Repeat, BarChart, Percent } from 'lucide-react';
+import { TrendingUp, MousePointerClick, Check, Repeat, BarChart, Percent, ArrowUp, ArrowDown } from 'lucide-react';
 
 const StatCard: FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
     <div className="bg-[rgb(var(--color-muted-rgb))] p-4 rounded-lg flex items-center border border-[rgb(var(--color-border-rgb))]">
@@ -16,15 +16,15 @@ const StatCard: FC<{ title: string; value: string | number; icon: React.ReactNod
     </div>
 );
 
-// Utility to strip HTML tags and decode entities.
-const stripHtml = (html: string): string => {
+// Utility to decode HTML entities.
+const decodeHtmlEntities = (html: string): string => {
     if (!html || typeof html !== 'string') return html || '';
     try {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
         return tempDiv.textContent || tempDiv.innerText || '';
     } catch (e) {
-        console.error("Could not parse HTML string for stripping", e);
+        console.error("Could not parse HTML string for decoding", e);
         return html;
     }
 };
@@ -33,6 +33,7 @@ const ExamAnalytics: FC = () => {
     const { token } = useAuth();
     const [stats, setStats] = useState<ExamStat[]>([]);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
+    const [sortConfig, setSortConfig] = useState<{ key: keyof ExamStat | null; direction: 'asc' | 'desc' }>({ key: 'attempts', direction: 'desc' });
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -43,8 +44,8 @@ const ExamAnalytics: FC = () => {
                 // FIX: Decode HTML entities from names coming from the backend.
                 const cleanedStats = fetchedStats.map(stat => ({
                     ...stat,
-                    name: stripHtml(stat.name),
-                    programName: stripHtml(stat.programName),
+                    name: decodeHtmlEntities(stat.name),
+                    programName: decodeHtmlEntities(stat.programName),
                 }));
                 setStats(cleanedStats);
             } catch (error: any) {
@@ -55,6 +56,50 @@ const ExamAnalytics: FC = () => {
         };
         fetchStats();
     }, [token]);
+
+    const statsWithCtr = useMemo(() => {
+        return stats.map(stat => ({
+            ...stat,
+            ctr: stat.engagements > 0 ? (stat.attempts / stat.engagements) * 100 : 0,
+        }));
+    }, [stats]);
+
+    const handleSort = (key: keyof ExamStat) => {
+        setSortConfig(currentConfig => {
+            if (currentConfig.key === key) {
+                return { key, direction: currentConfig.direction === 'asc' ? 'desc' : 'asc' };
+            }
+            const numericKeys: (keyof ExamStat)[] = ['attempts', 'averageScore', 'passRate', 'engagements', 'ctr', 'passCount', 'totalScoreSum'];
+            const isNumeric = numericKeys.includes(key as any);
+            return { key, direction: isNumeric ? 'desc' : 'asc' };
+        });
+    };
+    
+    const sortedStats = useMemo(() => {
+        if (!sortConfig.key) return statsWithCtr;
+
+        const sortableData = [...statsWithCtr];
+        sortableData.sort((a, b) => {
+            const aValue = a[sortConfig.key!];
+            const bValue = b[sortConfig.key!];
+
+            const numA = (typeof aValue === 'number') ? aValue : 0;
+            const numB = (typeof bValue === 'number') ? bValue : 0;
+            const strA = (typeof aValue === 'string') ? aValue : '';
+            const strB = (typeof bValue === 'string') ? bValue : '';
+            
+            const numericKeys: (keyof ExamStat)[] = ['attempts', 'averageScore', 'passRate', 'engagements', 'ctr', 'passCount', 'totalScoreSum'];
+
+            if (numericKeys.includes(sortConfig.key as any)) {
+                 if (sortConfig.direction === 'asc') return numA - numB;
+                 return numB - numA;
+            }
+            
+            if (sortConfig.direction === 'asc') return strA.localeCompare(strB);
+            return strB.localeCompare(strA);
+        });
+        return sortableData;
+    }, [statsWithCtr, sortConfig]);
 
     const summaryStats = useMemo(() => {
         return stats.reduce((acc, stat) => {
@@ -81,16 +126,6 @@ const ExamAnalytics: FC = () => {
         return summaryStats.totalScoreSum / summaryStats.totalAttempts;
     }, [summaryStats]);
 
-
-    const sortedStats = useMemo(() => {
-        return [...stats].sort((a, b) => {
-            if (a.programName < b.programName) return -1;
-            if (a.programName > b.programName) return 1;
-            if (a.isPractice) return -1; // Practice exams first within a program
-            return 1;
-        });
-    }, [stats]);
-
     return (
         <div className="space-y-8">
             <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3">
@@ -115,13 +150,27 @@ const ExamAnalytics: FC = () => {
                         <table className="w-full text-sm text-left">
                             <thead className="text-xs text-[rgb(var(--color-text-muted-rgb))] uppercase bg-[rgb(var(--color-muted-rgb))]">
                                 <tr>
-                                    <th scope="col" className="px-6 py-3">Exam Name</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Type</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Attempts</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Avg. Score</th>
-                                    <th scope="col" className="px-6 py-3">Pass Rate</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Clicks</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Click-to-Attempt Rate</th>
+                                    <th scope="col" className="px-6 py-3 cursor-pointer" onClick={() => handleSort('name')}>
+                                        <div className="flex items-center gap-2">Exam Name {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('isPractice')}>
+                                         <div className="flex items-center justify-center gap-2">Type {sortConfig.key === 'isPractice' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('attempts')}>
+                                        <div className="flex items-center justify-center gap-2">Attempts {sortConfig.key === 'attempts' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('averageScore')}>
+                                        <div className="flex items-center justify-center gap-2">Avg. Score {sortConfig.key === 'averageScore' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 cursor-pointer" onClick={() => handleSort('passRate')}>
+                                        <div className="flex items-center gap-2">Pass Rate {sortConfig.key === 'passRate' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('engagements')}>
+                                        <div className="flex items-center justify-center gap-2">Clicks {sortConfig.key === 'engagements' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('ctr')}>
+                                        <div className="flex items-center justify-center gap-2">Click-to-Attempt Rate {sortConfig.key === 'ctr' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -131,7 +180,7 @@ const ExamAnalytics: FC = () => {
                                     if (passRate > 70) progressBarColor = 'bg-green-500';
                                     else if (passRate > 50) progressBarColor = 'bg-yellow-500';
                                     
-                                    const ctr = stat.engagements > 0 ? (stat.attempts / stat.engagements) * 100 : 0;
+                                    const ctr = stat.ctr || 0;
                                     
                                     return (
                                         <tr key={stat.id} className="border-b border-[rgb(var(--color-border-rgb))]">

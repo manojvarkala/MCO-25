@@ -5,17 +5,17 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
 import Spinner from './Spinner.tsx';
-import { BarChart3, DollarSign, Percent, Repeat, ShoppingCart } from 'lucide-react';
+import { BarChart3, DollarSign, Percent, Repeat, ShoppingCart, ArrowUp, ArrowDown } from 'lucide-react';
 
-// Utility to strip HTML tags and decode entities.
-const stripHtml = (html: string): string => {
+// Utility to decode HTML entities.
+const decodeHtmlEntities = (html: string): string => {
     if (!html || typeof html !== 'string') return html || '';
     try {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
         return tempDiv.textContent || tempDiv.innerText || '';
     } catch (e) {
-        console.error("Could not parse HTML string for stripping", e);
+        console.error("Could not parse HTML string for decoding", e);
         return html;
     }
 };
@@ -35,6 +35,7 @@ const SalesAnalytics: FC = () => {
     const { activeOrg } = useAppContext();
     const [stats, setStats] = useState<ExamStat[]>([]);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
+    const [sortConfig, setSortConfig] = useState<{ key: keyof ExamStat | null; direction: 'asc' | 'desc' }>({ key: 'totalSales', direction: 'desc' });
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -42,10 +43,9 @@ const SalesAnalytics: FC = () => {
             setIsLoadingStats(true);
             try {
                 const fetchedStats: ExamStat[] = await googleSheetsService.getExamStats(token);
-                // No longer need to filter here, as we can filter in useMemo
                 const cleanedStats = fetchedStats.map(stat => ({
                     ...stat,
-                    name: stripHtml(stat.name)
+                    name: decodeHtmlEntities(stat.name)
                 }));
                 setStats(cleanedStats);
             } catch (error: any) {
@@ -65,6 +65,44 @@ const SalesAnalytics: FC = () => {
                 ctr: stat.engagements > 0 ? (stat.attempts / stat.engagements) * 100 : 0
             }));
     }, [stats]);
+    
+    const handleSort = (key: keyof ExamStat) => {
+        setSortConfig(currentConfig => {
+            if (currentConfig.key === key) {
+                return { key, direction: currentConfig.direction === 'asc' ? 'desc' : 'asc' };
+            }
+            const numericKeys: (keyof ExamStat)[] = ['attempts', 'averageScore', 'passRate', 'engagements', 'totalSales', 'totalRevenue', 'passCount', 'totalScoreSum', 'ctr'];
+            const isNumeric = numericKeys.includes(key as any);
+            return { key, direction: isNumeric ? 'desc' : 'asc' };
+        });
+    };
+
+    const sortedCertStats = useMemo(() => {
+        if (!sortConfig.key) return certStats;
+
+        const sortableData = [...certStats];
+        sortableData.sort((a, b) => {
+            const aValue = a[sortConfig.key!];
+            const bValue = b[sortConfig.key!];
+
+            const numA = (typeof aValue === 'number') ? aValue : 0;
+            const numB = (typeof bValue === 'number') ? bValue : 0;
+            const strA = (typeof aValue === 'string') ? aValue : '';
+            const strB = (typeof bValue === 'string') ? bValue : '';
+            
+            const numericKeys: (keyof ExamStat)[] = ['attempts', 'averageScore', 'passRate', 'engagements', 'totalSales', 'totalRevenue', 'passCount', 'totalScoreSum', 'ctr'];
+
+            if (numericKeys.includes(sortConfig.key as any)) {
+                 if (sortConfig.direction === 'asc') return numA - numB;
+                 return numB - numA;
+            }
+            
+            if (sortConfig.direction === 'asc') return strA.localeCompare(strB);
+            return strB.localeCompare(strA);
+        });
+        return sortableData;
+    }, [certStats, sortConfig]);
+
 
     const summaryStats = useMemo(() => {
         return certStats.reduce((acc, stat) => {
@@ -119,17 +157,31 @@ const SalesAnalytics: FC = () => {
                         <table className="w-full text-sm text-left">
                             <thead className="text-xs text-[rgb(var(--color-text-muted-rgb))] uppercase bg-[rgb(var(--color-muted-rgb))]">
                                 <tr>
-                                    <th scope="col" className="px-6 py-3">Exam Program</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Sales</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Revenue</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Attempts</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Avg. Score</th>
-                                    <th scope="col" className="px-6 py-3">Pass Rate</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Click-to-Attempt Rate</th>
+                                    <th scope="col" className="px-6 py-3 cursor-pointer" onClick={() => handleSort('name')}>
+                                        <div className="flex items-center gap-2">Exam Program {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('totalSales')}>
+                                        <div className="flex items-center justify-center gap-2">Sales {sortConfig.key === 'totalSales' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('totalRevenue')}>
+                                        <div className="flex items-center justify-center gap-2">Revenue {sortConfig.key === 'totalRevenue' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('attempts')}>
+                                        <div className="flex items-center justify-center gap-2">Attempts {sortConfig.key === 'attempts' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('averageScore')}>
+                                        <div className="flex items-center justify-center gap-2">Avg. Score {sortConfig.key === 'averageScore' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 cursor-pointer" onClick={() => handleSort('passRate')}>
+                                        <div className="flex items-center gap-2">Pass Rate {sortConfig.key === 'passRate' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('ctr')}>
+                                        <div className="flex items-center justify-center gap-2">Click-to-Attempt Rate {sortConfig.key === 'ctr' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {certStats.map(stat => {
+                                {sortedCertStats.map(stat => {
                                     const passRate = stat.passRate || 0;
                                     let progressBarColor = 'bg-red-500';
                                     if (passRate > 70) progressBarColor = 'bg-green-500';
@@ -138,7 +190,7 @@ const SalesAnalytics: FC = () => {
                                     return (
                                         <tr key={stat.id} className="border-b border-[rgb(var(--color-border-rgb))]">
                                             <th scope="row" className="px-6 py-4 font-medium text-[rgb(var(--color-text-strong-rgb))] whitespace-nowrap">{stat.name}</th>
-                                            <td className="px-6 py-4 text-center">{stat.totalSales}</td>
+                                            <td className="px-6 py-4 text-center">{stat.totalSales?.toLocaleString()}</td>
                                             <td className="px-6 py-4 text-center font-semibold">{(stat.totalRevenue || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
                                             <td className="px-6 py-4 text-center">{stat.attempts}</td>
                                             <td className="px-6 py-4 text-center font-semibold">{stat.averageScore.toFixed(1)}%</td>
@@ -150,7 +202,7 @@ const SalesAnalytics: FC = () => {
                                                     <span className="font-semibold">{passRate.toFixed(1)}%</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-center font-semibold">{stat.ctr.toFixed(1)}%</td>
+                                            <td className="px-6 py-4 text-center font-semibold">{(stat.ctr || 0).toFixed(1)}%</td>
                                         </tr>
                                     );
                                 })}
