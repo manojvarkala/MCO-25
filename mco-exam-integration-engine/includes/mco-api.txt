@@ -413,17 +413,21 @@ function mco_api_verify_certificate(WP_REST_Request $request) {
     $user_results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
     $matching_result = null;
 
-    $exam_sku = get_post_meta($exam_post_id, '_mco_certification_exam_sku', true);
-    if (!$exam_sku) return new WP_Error('not_found', 'Invalid exam reference.', ['status' => 404]);
+    // FIX: To support practice exam certificates, we now check for both the certification SKU and the practice exam ID.
+    $cert_exam_sku = get_post_meta($exam_post_id, '_mco_certification_exam_sku', true);
+    $practice_exam_id = 'exam-prod-' . $exam_post_id . '-practice';
 
     foreach ($user_results as $result) {
         // Compare timestamps with a 5-second tolerance window for JS/PHP timing differences
         if (isset($result['userId'], $result['examId'], $result['timestamp']) &&
             $result['userId'] == $user_id &&
-            $result['examId'] === $exam_sku &&
             abs($result['timestamp'] - $timestamp_ms) < 5000) {
-            $matching_result = $result;
-            break;
+            
+            // Check if the examId from the result matches either the cert SKU or the practice ID
+            if ( (!empty($cert_exam_sku) && $result['examId'] === $cert_exam_sku) || $result['examId'] === $practice_exam_id ) {
+                $matching_result = $result;
+                break;
+            }
         }
     }
 
@@ -431,10 +435,20 @@ function mco_api_verify_certificate(WP_REST_Request $request) {
 
     $user_data = get_userdata($user_id);
     if (!$user_data) return new WP_Error('not_found', 'Candidate not found.', ['status' => 404]);
+    
+    // FIX: Determine the correct exam name based on whether it was a practice or certification exam result.
+    $exam_name = '';
+    if ($matching_result['examId'] === $practice_exam_id) {
+        $practice_name_override = get_post_meta($exam_post_id, '_mco_practice_exam_title_override', true);
+        $exam_name = !empty($practice_name_override) ? $practice_name_override : get_the_title($exam_post_id) . ' Practice';
+    } else {
+        $cert_name_override = get_post_meta($exam_post_id, '_mco_cert_exam_title_override', true);
+        $exam_name = !empty($cert_name_override) ? $cert_name_override : get_the_title($exam_post_id);
+    }
 
     return new WP_REST_Response([
         'candidateName' => $user_data->display_name,
-        'examName' => get_the_title($exam_post_id),
+        'examName' => $exam_name,
         'finalScore' => $matching_result['score'],
         'date' => date('F j, Y', $timestamp_sec),
     ], 200);
