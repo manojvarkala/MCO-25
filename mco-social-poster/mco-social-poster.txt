@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name:       MCO Social Poster
+ * Plugin Name:       MCO-Social Poster
  * Description:       A companion plugin to the MCO Exam Engine that posts new AI-generated blog content to social media.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Author:            Annapoorna Infotech
  */
 
@@ -16,8 +16,8 @@ require_once MCO_SOCIAL_PLUGIN_PATH . 'includes/post-handler.php';
 
 function mco_social_add_admin_menu() {
     add_menu_page(
-        'Social Poster',
-        'Social Poster',
+        'MCO-Social Poster',
+        'MCO-Social Poster',
         'manage_options',
         'mco-social-poster',
         'mco_social_render_admin_page',

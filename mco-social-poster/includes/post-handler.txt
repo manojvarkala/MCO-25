@@ -8,17 +8,18 @@ function mco_social_handle_new_post($post_id) {
     if (get_post_meta($post_id, '_mco_linked_exam_program_id', true)) {
 
         // Placeholder for Facebook Logic
-        if (!empty($options['facebook_enabled'])) {
+        if (!empty($options['facebook_enabled']) && !empty($options['facebook_page_id']) && !empty($options['facebook_access_token'])) {
             // In a real implementation, you would use the Facebook Graph API here
             // to post the link to the new blog post.
             // For now, we'll just log it for debugging.
-            error_log("MCO Social Poster: Would post Post ID {$post_id} to Facebook.");
+            error_log("MCO Social Poster: Would post Post ID {$post_id} to Facebook Page ID: " . $options['facebook_page_id']);
         }
 
         // Placeholder for LinkedIn Logic
-        // ...
+        if (!empty($options['linkedin_enabled']) && !empty($options['linkedin_page_id']) && !empty($options['linkedin_access_token'])) {
+            error_log("MCO Social Poster: Would post Post ID {$post_id} to LinkedIn Page ID: " . $options['linkedin_page_id']);
+        }
     }
 }
 add_action('mco_ai_post_created', 'mco_social_handle_new_post');
-
 ?>
