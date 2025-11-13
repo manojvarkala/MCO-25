@@ -92,7 +92,7 @@ if (!function_exists('mco_base64url_decode')) {
 }
 
 if (!function_exists('mco_generate_exam_jwt')) {
-    function mco_generate_exam_jwt($user_id) {
+    function mco_generate_exam_jwt($user_id, $beta_status_override = null) {
         if (!defined('MCO_JWT_SECRET')) {
             error_log('MCO_JWT_SECRET is not defined in wp-config.php. Cannot generate token.');
             return false;
@@ -151,6 +151,23 @@ if (!function_exists('mco_generate_exam_jwt')) {
             'isSubscribed' => (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($user_id, '', 'active')),
             'subscriptionInfo' => $subscription_info,
         ];
+        
+        // Determine Beta Tester status
+        $is_beta_tester = false;
+        if ($beta_status_override !== null) {
+            // Admin override takes highest priority
+            $is_beta_tester = (bool)$beta_status_override;
+        } else {
+            // Check for beta access expiry timestamp for regular beta testers
+            $expiry_timestamp = get_user_meta($user_id, '_beta_access_expiry_timestamp', true);
+            if (!empty($expiry_timestamp) && $expiry_timestamp > time()) {
+                $is_beta_tester = true;
+            }
+        }
+        // Add the flag to the payload if true
+        if ($is_beta_tester) {
+            $payload['isBetaTester'] = true;
+        }
 
         $header = mco_base64url_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
         $payload_encoded = mco_base64url_encode(json_encode($payload));
@@ -264,6 +281,8 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/config', ['methods' => 'GET', 'callback' => 'mco_api_get_full_config', 'permission_callback' => '__return_true']);
     register_rest_route($namespace, '/hit', ['methods' => 'POST', 'callback' => 'mco_api_record_hit', 'permission_callback' => '__return_true']);
     register_rest_route($namespace, '/verify-certificate/(?P<certId>.+)', ['methods' => 'GET', 'callback' => 'mco_api_verify_certificate', 'permission_callback' => '__return_true', 'args' => ['certId' => ['required' => true]]]);
+    register_rest_route($namespace, '/register-tester', ['methods' => 'POST', 'callback' => 'mco_api_register_tester', 'permission_callback' => '__return_true']);
+    register_rest_route($namespace, '/redeem-tester-token', ['methods' => 'POST', 'callback' => 'mco_api_redeem_tester_token', 'permission_callback' => '__return_true']);
 
     // USER-PROTECTED ENDPOINTS
     register_rest_route($namespace, '/create-checkout-session', ['methods' => 'POST', 'callback' => 'mco_api_create_checkout_session', 'permission_callback' => 'mco_api_permission_check']);
@@ -292,6 +311,7 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/admin/create-exam-program', ['methods' => 'POST', 'callback' => 'mco_api_admin_create_exam_program', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/delete-post', ['methods' => 'POST', 'callback' => 'mco_api_admin_delete_post', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/set-intro-video', ['methods' => 'POST', 'callback' => 'mco_api_admin_set_intro_video', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/toggle-beta-status', ['methods' => 'POST', 'callback' => 'mco_api_admin_toggle_beta_status', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
 }
 
 function mco_api_permission_check(WP_REST_Request $request) {
@@ -1182,5 +1202,98 @@ function mco_api_admin_set_intro_video(WP_REST_Request $request) {
     } else {
         return new WP_Error('upload_error', $movefile['error'], ['status' => 500]);
     }
+}
+
+// --- BETA TESTER ENDPOINTS ---
+function mco_api_register_tester(WP_REST_Request $request) {
+    $params = $request->get_json_params();
+    $email = sanitize_email($params['email']);
+    $full_name = sanitize_text_field($params['fullName']);
+
+    if (empty($email) || empty($full_name)) {
+        return new WP_Error('bad_request', 'Email and full name are required.', ['status' => 400]);
+    }
+    if (email_exists($email)) {
+        return new WP_Error('email_exists', 'This email address is already registered.', ['status' => 400]);
+    }
+
+    $username = sanitize_user(explode('@', $email)[0]);
+    $password = wp_generate_password();
+    $user_id = wp_create_user($username, $password, $email);
+
+    if (is_wp_error($user_id)) {
+        return $user_id;
+    }
+
+    wp_update_user(['ID' => $user_id, 'display_name' => $full_name]);
+    $token = wp_generate_password(32, false);
+    update_user_meta($user_id, '_tester_onboarding_token', $token);
+    update_user_meta($user_id, '_tester_token_redeemed', false);
+    
+    // Send email to user
+    $app_url = mco_get_exam_app_url();
+    $onboarding_url = rtrim($app_url, '/') . '/onboard/' . $token;
+    $subject = 'Your Invitation to the ' . get_bloginfo('name') . ' Beta Program';
+    $message = "Hello {$full_name},\n\n";
+    $message .= "Thank you for volunteering to test our new examination portal! Your feedback is incredibly valuable.\n\n";
+    $message .= "To get started, please click the unique link below to activate your one-month premium access:\n";
+    $message .= $onboarding_url . "\n\n";
+    $message .= "We look forward to your feedback!\n\n";
+    $message .= "Sincerely,\nThe " . get_bloginfo('name') . " Team";
+
+    wp_mail($email, $subject, $message);
+
+    return new WP_REST_Response(['success' => true, 'message' => 'Registration successful! Please check your email for your unique access link.'], 200);
+}
+
+function mco_api_redeem_tester_token(WP_REST_Request $request) {
+    $token = sanitize_text_field($request->get_param('testerToken'));
+    if (empty($token)) {
+        return new WP_Error('bad_request', 'Tester token is required.', ['status' => 400]);
+    }
+
+    $users = get_users([
+        'meta_key' => '_tester_onboarding_token',
+        'meta_value' => $token,
+        'number' => 1,
+        'fields' => 'ID',
+    ]);
+
+    if (empty($users)) {
+        return new WP_Error('not_found', 'Invalid or expired tester token.', ['status' => 404]);
+    }
+
+    $user_id = $users[0];
+    if (get_user_meta($user_id, '_tester_token_redeemed', true)) {
+        return new WP_Error('already_redeemed', 'This token has already been used.', ['status' => 403]);
+    }
+
+    // Grant 1 month of premium access
+    $expiry_timestamp = time() + (30 * DAY_IN_SECONDS);
+    update_user_meta($user_id, '_beta_access_expiry_timestamp', $expiry_timestamp);
+    update_user_meta($user_id, '_tester_token_redeemed', true);
+
+    // Generate a new JWT with the beta flag
+    $new_token = mco_generate_exam_jwt($user_id);
+    if (!$new_token) {
+        return new WP_Error('token_generation_failed', 'Could not generate authentication token.', ['status' => 500]);
+    }
+
+    return new WP_REST_Response(['token' => $new_token], 200);
+}
+
+function mco_api_admin_toggle_beta_status(WP_REST_Request $request) {
+    $payload = $request->get_param('jwt_payload');
+    $user_id = $payload['user']['id'];
+    $is_beta_tester = (bool)$request->get_param('isBetaTester');
+
+    // Generate a new token with the beta status override
+    $new_token = mco_generate_exam_jwt($user_id, $is_beta_tester);
+
+    if (!$new_token) {
+        return new WP_Error('token_generation_failed', 'Could not generate a new authentication token.', ['status' => 500]);
+    }
+
+    return new WP_REST_Response(['token' => $new_token], 200);
 }
 ?>
