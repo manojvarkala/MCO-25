@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
-import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook, Theme } from '../types.ts';
+import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook, Theme, FeedbackContext } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
 import { getTenantConfig, TenantConfig } from '../services/apiConfig.ts';
@@ -23,6 +23,9 @@ interface AppContextType {
   setActiveTheme: (themeId: string) => void;
   subscriptionsEnabled: boolean;
   bundlesEnabled: boolean;
+  feedbackRequiredForExam: FeedbackContext | null;
+  setFeedbackRequiredForExam: (context: FeedbackContext) => void;
+  clearFeedbackRequired: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -126,6 +129,8 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [subscriptionsEnabled, setSubscriptionsEnabled] = useState<boolean>(true);
   const [bundlesEnabled, setBundlesEnabled] = useState<boolean>(true);
 
+  const [feedbackRequiredForExam, setFeedbackRequiredForExamState] = useState<FeedbackContext | null>(null);
+  
   const setActiveTheme = (themeId: string) => {
       setActiveThemeState(themeId);
       try {
@@ -133,6 +138,14 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       } catch(e) { console.error("Could not save theme to local storage", e); }
   };
 
+  const setFeedbackRequiredForExam = (context: FeedbackContext) => {
+    setFeedbackRequiredForExamState(context);
+    localStorage.setItem('feedbackRequiredForExam', JSON.stringify(context));
+  };
+  const clearFeedbackRequired = () => {
+    setFeedbackRequiredForExamState(null);
+    localStorage.removeItem('feedbackRequiredForExam');
+  };
   
   const [hitCount, setHitCount] = useState<number | null>(() => {
     try {
@@ -288,6 +301,18 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   }, [user, activeOrg]);
 
+  // Effect to load persisted feedback requirement
+  useEffect(() => {
+    const storedFeedback = localStorage.getItem('feedbackRequiredForExam');
+    if (storedFeedback) {
+        try {
+            setFeedbackRequiredForExamState(JSON.parse(storedFeedback));
+        } catch (e) {
+            localStorage.removeItem('feedbackRequiredForExam');
+        }
+    }
+  }, []);
+
 
   const setActiveOrgById = useCallback((orgId: string) => {
     const org = organizations.find(o => o.id === orgId);
@@ -341,10 +366,14 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setActiveTheme,
     subscriptionsEnabled,
     bundlesEnabled,
+    feedbackRequiredForExam,
+    setFeedbackRequiredForExam,
+    clearFeedbackRequired,
   }), [
     organizations, activeOrg, isInitializing, setActiveOrgById,
     updateActiveOrg, updateConfigData, updateExamInOrg, inProgressExam, examPrices, suggestedBooks,
-    hitCount, availableThemes, activeTheme, setActiveTheme, subscriptionsEnabled, bundlesEnabled
+    hitCount, availableThemes, activeTheme, setActiveTheme, subscriptionsEnabled, bundlesEnabled,
+    feedbackRequiredForExam, setFeedbackRequiredForExam, clearFeedbackRequired
   ]);
 
   return (

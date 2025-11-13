@@ -344,8 +344,14 @@ export const googleSheetsService = {
     updateUserName: async (token: string, fullName: string): Promise<{ message: string }> => {
         return await apiFetch('/update-name', 'POST', token, { fullName });
     },
-    submitFeedback: async (token: string, category: string, message: string): Promise<{ success: boolean }> => {
-        return await apiFetch('/submit-feedback', 'POST', token, { category, message });
+    submitFeedback: async (token: string, category: string, message: string, examId?: string, examName?: string): Promise<{ success: boolean }> => {
+        const payload: { category: string; message: string; examId?: string; examName?: string } = {
+            category,
+            message,
+        };
+        if (examId) payload.examId = examId;
+        if (examName) payload.examName = examName;
+        return await apiFetch('/submit-feedback', 'POST', token, payload);
     },
     submitReview: async (token: string, examId: string, rating: number, reviewText: string): Promise<{ success: boolean }> => {
         return await apiFetch('/submit-review', 'POST', token, { examId, rating, reviewText });

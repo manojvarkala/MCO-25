@@ -683,12 +683,23 @@ function mco_api_submit_result(WP_REST_Request $request) {
 function mco_api_submit_feedback(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
     $user = $payload['user'];
-    $category = sanitize_text_field($request->get_param('category'));
-    $message = sanitize_textarea_field($request->get_param('message'));
+    $params = $request->get_json_params();
+    
+    $category = sanitize_text_field($params['category']);
+    $message = sanitize_textarea_field($params['message']);
+    $exam_name = isset($params['examName']) ? sanitize_text_field($params['examName']) : null;
+    $exam_id = isset($params['examId']) ? sanitize_text_field($params['examId']) : null;
     
     $admin_email = get_option('admin_email');
     $subject = "Exam App Feedback: " . $category;
-    $body = "Feedback from: {$user['name']} ({$user['email']})\n\n" . $message;
+    $body = "Feedback from: {$user['name']} ({$user['email']})\n\n";
+
+    if ($exam_name) {
+        $body .= "Regarding Exam: {$exam_name} (ID: {$exam_id})\n";
+        $body .= "--------------------------------------------------\n\n";
+    }
+
+    $body .= $message;
     $headers = ['From: ' . $user['name'] . ' <' . $user['email'] . '>'];
     
     wp_mail($admin_email, $subject, $body, $headers);
@@ -1272,6 +1283,11 @@ function mco_api_redeem_tester_token(WP_REST_Request $request) {
     $expiry_timestamp = time() + (30 * DAY_IN_SECONDS);
     update_user_meta($user_id, '_beta_access_expiry_timestamp', $expiry_timestamp);
     update_user_meta($user_id, '_tester_token_redeemed', true);
+    
+    // Create affiliate account if Coupon Affiliates is active
+    if (function_exists('wcam_create_affiliate')) {
+        wcam_create_affiliate($user_id);
+    }
 
     // Generate a new JWT with the beta flag
     $new_token = mco_generate_exam_jwt($user_id);

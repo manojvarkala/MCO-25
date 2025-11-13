@@ -27,7 +27,7 @@ const Test: FC = () => {
   // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
   const navigate = useNavigate();
   const { user, isSubscribed, token, isBetaTester } = useAuth();
-  const { activeOrg, isInitializing } = useAppContext();
+  const { activeOrg, isInitializing, setFeedbackRequiredForExam } = useAppContext();
 
   const [examConfig, setExamConfig] = useState<Exam | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -66,7 +66,7 @@ const Test: FC = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    if (!user || !examId || !token || questions.length === 0) {
+    if (!user || !examId || !token || questions.length === 0 || !examConfig) {
         toast.error("Cannot submit: user or exam context is missing.");
         // FIX: Replaced `history.push` with `navigate`.
         navigate('/');
@@ -85,6 +85,11 @@ const Test: FC = () => {
     try {
         const userAnswers: UserAnswer[] = Array.from(answers.entries()).map(([questionId, answer]) => ({ questionId, answer }));
         const result = await googleSheetsService.submitTest(user, examId, userAnswers, questions, token, focusViolationCount);
+        
+        if (isBetaTester) {
+            setFeedbackRequiredForExam({ examId: examConfig.id, examName: examConfig.name });
+        }
+        
         toast.success("Test submitted successfully!");
         // FIX: Replaced `history.push` with `navigate`.
         navigate(`/results/${result.testId}`);
@@ -93,7 +98,7 @@ const Test: FC = () => {
         setIsSubmitting(false);
         hasSubmittedRef.current = false; // Reset submit lock
     }
-  }, [examId, navigate, token, user, isSubmitting, questions, answers, progressKey, focusViolationCount]);
+  }, [examId, navigate, token, user, isSubmitting, questions, answers, progressKey, focusViolationCount, isBetaTester, examConfig, setFeedbackRequiredForExam]);
   
   // Effect 1: Load questions and saved progress.
   useEffect(() => {

@@ -235,3 +235,8 @@ export interface VerificationData {
     finalScore: number;
     date: string;
 }
+
+export interface FeedbackContext {
+    examId: string;
+    examName: string;
+}

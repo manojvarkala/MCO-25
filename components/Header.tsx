@@ -2,7 +2,7 @@ import React, { FC, useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
-import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, Tag, Users, Gift, Star, List, BookOpen, Menu, MessageSquare } from 'lucide-react';
+import { LogOut, UserCircle, UserPlus, LogIn, User, Shield, Tag, Users, Gift, Star, List, BookOpen, Menu, MessageSquare, Beaker } from 'lucide-react';
 
 const Header: FC = () => {
   const { user, logout, isSubscribed, isEffectivelyAdmin } = useAuth();
@@ -181,6 +181,14 @@ const Header: FC = () => {
             </>
           ) : (
              <div className="flex items-center space-x-2">
+                <Link 
+                    to="/beta-signup"
+                    className={`flex items-center space-x-2 transition duration-200 ${linkClasses} text-purple-400 hover:text-purple-300`}
+                    title="Become a Beta Tester"
+                >
+                    <Beaker size={20} />
+                    <span className="hidden sm:inline font-semibold">Beta Tester</span>
+                </Link>
                 <a
                     href={loginUrl}
                     className="flex items-center space-x-2 bg-[rgb(var(--color-muted-rgb))] hover:bg-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-default-rgb))] font-semibold py-2 px-4 rounded-lg transition duration-200"

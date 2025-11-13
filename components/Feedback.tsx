@@ -7,8 +7,8 @@ import Spinner from './Spinner.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 
 const Feedback: FC = () => {
-    const { token } = useAuth();
-    const { activeOrg } = useAppContext();
+    const { token, isBetaTester } = useAuth();
+    const { activeOrg, feedbackRequiredForExam, clearFeedbackRequired } = useAppContext();
     const [category, setCategory] = useState('General Feedback');
     const [message, setMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,8 +30,19 @@ const Feedback: FC = () => {
         const toastId = toast.loading('Submitting your feedback...');
 
         try {
-            await googleSheetsService.submitFeedback(token, category, message);
+            await googleSheetsService.submitFeedback(
+                token,
+                category,
+                message,
+                feedbackRequiredForExam?.examId,
+                feedbackRequiredForExam?.examName
+            );
+
             toast.success("Thank you! Your feedback has been sent.", { id: toastId });
+            if (feedbackRequiredForExam) {
+                clearFeedbackRequired();
+            }
+
             setMessage('');
             setCategory('General Feedback');
         } catch (error: any) {
@@ -48,6 +59,13 @@ const Feedback: FC = () => {
                 <h1 className="text-3xl font-bold text-slate-800 mt-4">Share Your Feedback</h1>
                 <p className="text-slate-500 mt-2">We value your opinion. Let us know how we can improve.</p>
             </div>
+
+            {isBetaTester && feedbackRequiredForExam && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 mb-6 rounded-r-lg" role="alert">
+                    <p className="font-bold">Feedback Required</p>
+                    <p>Please provide your feedback for the <strong>{feedbackRequiredForExam.examName}</strong> to unlock other tests.</p>
+                </div>
+            )}
             
             <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 mb-6 rounded-r-lg" role="alert">
                 <div className="flex">
