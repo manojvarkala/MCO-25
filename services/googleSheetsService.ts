@@ -89,6 +89,17 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     }
 };
 export const googleSheetsService = {
+    // --- ONBOARDING ---
+    redeemTesterToken: async (testerToken: string): Promise<{ token: string }> => {
+        try {
+            // Public endpoint, but sends a specific one-time token for verification
+            return await apiFetch('/redeem-tester-token', 'POST', null, { testerToken });
+        } catch (error) {
+            console.error("Failed to redeem tester token:", error);
+            throw error;
+        }
+    },
+
     // --- CHECKOUT SESSION ---
     createCheckoutSession: async (token: string, sku: string): Promise<{ checkoutUrl: string }> => {
         try {

@@ -47,6 +47,7 @@ import VerifyPage from './components/VerifyPage.tsx';
 import LogoSpinner from './components/LogoSpinner.tsx';
 import AdminToolbar from './components/AdminToolbar.tsx';
 import DebugSidebar from './components/DebugSidebar.tsx';
+import VolunteerOnboarding from './components/VolunteerOnboarding.tsx';
 
 // FIX: Helper component for routes requiring authentication, updated for react-router-dom v6.
 const ProtectedRoute: FC<{ children: ReactNode; adminOnly?: boolean }> = ({ children, adminOnly = false }) => {
@@ -123,6 +124,7 @@ const AppContent: FC = () => {
                         <Route path="/checkout/:productSlug" element={<Checkout />} />
                         <Route path="/verify" element={<VerifyPage />} />
                         <Route path="/verify/:certId" element={<VerifyCertificate />} />
+                        <Route path="/onboard/:token" element={<VolunteerOnboarding />} />
                         
                         <Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
                         <Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
