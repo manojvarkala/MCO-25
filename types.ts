@@ -17,6 +17,7 @@ export interface TokenPayload {
   isSubscribed: boolean;
   subscriptionInfo?: SubscriptionInfo | null;
   exp?: number;
+  isBetaTester?: boolean;
 }
 
 export interface Question {

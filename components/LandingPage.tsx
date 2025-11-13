@@ -1,12 +1,9 @@
-
-
-
 import React, { FC, useEffect, useRef } from 'react';
 // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
-import { LogIn, UserPlus, FileText, Award, Sparkles } from 'lucide-react';
+import { LogIn, UserPlus, FileText, Award, Sparkles, Beaker } from 'lucide-react';
 import LogoSpinner from './LogoSpinner.tsx';
 
 const LandingPage: FC = () => {
@@ -128,6 +125,24 @@ const LandingPage: FC = () => {
                         Create an Account
                     </a>
                 </div>
+
+                <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                        <div className="w-full border-t border-[rgb(var(--color-border-rgb))]"></div>
+                    </div>
+                    <div className="relative flex justify-center">
+                        <span className="bg-[rgb(var(--color-card-rgb))] px-2 text-sm text-[rgb(var(--color-text-muted-rgb))]">Or</span>
+                    </div>
+                </div>
+
+                <Link
+                    to="/beta-signup"
+                    className="w-full flex items-center justify-center bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-3 px-8 rounded-lg text-lg hover:from-purple-600 hover:to-indigo-700 transition-all transform hover:scale-105"
+                >
+                    <Beaker size={20} className="mr-2"/>
+                    Become a Beta Tester
+                </Link>
+
                 <p className="text-xs text-[rgb(var(--color-text-muted-rgb))] opacity-50 text-center mt-6">
                     All accounts are managed through our main site, {activeOrg.website}, for your security and convenience.
                 </p>

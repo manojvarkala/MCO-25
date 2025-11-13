@@ -11,6 +11,7 @@ interface AuthState {
     paidExamIds: string[];
     isSubscribed: boolean;
     subscriptionInfo: SubscriptionInfo | null;
+    isBetaTester: boolean;
 }
 
 interface AuthContextType extends AuthState {
@@ -78,6 +79,15 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         return null;
     }
   });
+  const [isBetaTester, setIsBetaTester] = useState<boolean>(() => {
+    try {
+        const stored = localStorage.getItem('isBetaTester');
+        return stored ? JSON.parse(stored) : false;
+    } catch (error) {
+        console.error("Failed to parse isBetaTester from localStorage", error);
+        return false;
+    }
+  });
 
   const [masqueradeAs, setMasqueradeAs] = useState<MasqueradeMode>('none');
   const [originalAuthState, setOriginalAuthState] = useState<AuthState | null>(null);
@@ -94,6 +104,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setToken(null);
     setIsSubscribed(false);
     setSubscriptionInfo(null);
+    setIsBetaTester(false);
     setMasqueradeAs('none');
     setOriginalAuthState(null);
     localStorage.removeItem('examUser');
@@ -101,6 +112,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('isSubscribed');
     localStorage.removeItem('subscriptionInfo');
+    localStorage.removeItem('isBetaTester');
     localStorage.removeItem('activeOrg');
     Object.keys(localStorage).forEach(key => {
         if (key.startsWith('exam_timer_') || key.startsWith('exam_results_')) {
@@ -169,6 +181,14 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             localStorage.setItem('paidExamIds', JSON.stringify(payload.paidExamIds));
             localStorage.setItem('authToken', jwtToken);
 
+            if (payload.isBetaTester) {
+                setIsBetaTester(true);
+                localStorage.setItem('isBetaTester', 'true');
+            } else {
+                setIsBetaTester(false);
+                localStorage.removeItem('isBetaTester');
+            }
+
             if (payload.isSubscribed) {
                 setIsSubscribed(payload.isSubscribed);
                 localStorage.setItem('isSubscribed', JSON.stringify(payload.isSubscribed));
@@ -219,7 +239,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const startMasquerade = (as: 'user' | 'visitor') => {
         if (masqueradeAs !== 'none' || !user?.isAdmin) return;
     
-        setOriginalAuthState({ user, token, paidExamIds, isSubscribed, subscriptionInfo });
+        setOriginalAuthState({ user, token, paidExamIds, isSubscribed, subscriptionInfo, isBetaTester });
         setMasqueradeAs(as);
 
         if (as === 'user') {
@@ -230,6 +250,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setPaidExamIds([]);
             setIsSubscribed(false);
             setSubscriptionInfo(null);
+            setIsBetaTester(false);
             toast('Masquerade mode enabled. Viewing as a visitor.', { icon: '👻' });
         }
     };
@@ -242,6 +263,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setPaidExamIds(originalAuthState.paidExamIds);
         setIsSubscribed(originalAuthState.isSubscribed);
         setSubscriptionInfo(originalAuthState.subscriptionInfo);
+        setIsBetaTester(originalAuthState.isBetaTester);
         setOriginalAuthState(null);
         setMasqueradeAs('none');
         toast.success('Returned to Admin view.');
@@ -266,6 +288,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     isEffectivelyAdmin,
     isMasquerading,
     masqueradeAs,
+    isBetaTester,
     loginWithToken,
     logout,
     updateUserName,
@@ -273,7 +296,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     stopMasquerade,
   }), [
     user, token, paidExamIds, isSubscribed, subscriptionInfo,
-    isEffectivelyAdmin, isMasquerading, masqueradeAs, loginWithToken,
+    isEffectivelyAdmin, isMasquerading, masqueradeAs, isBetaTester, loginWithToken,
     logout, updateUserName, startMasquerade, stopMasquerade
   ]);
 

@@ -1,6 +1,3 @@
-
-
-
 import React, { FC, useState, useEffect, useRef } from 'react';
 // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -33,7 +30,7 @@ const Certificate: FC = () => {
     // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
     const navigate = useNavigate();
     const location = useLocation();
-    const { user, token, isEffectivelyAdmin } = useAuth();
+    const { user, token, isEffectivelyAdmin, isBetaTester } = useAuth();
     const { activeOrg } = useAppContext();
     const [certData, setCertData] = useState<CertificateData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -361,6 +358,9 @@ const Certificate: FC = () => {
             </div>
             
             <div ref={certificatePrintRef} className="cert-base">
+                {isBetaTester && testId !== 'sample' && (
+                    <div className="watermark-overlay">BETA TESTER COPY</div>
+                )}
                 {effectiveTheme === 'modern' ? modernCertificate : classicCertificate}
             </div>
         </div>

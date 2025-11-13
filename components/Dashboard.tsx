@@ -1,6 +1,3 @@
-
-
-
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
 // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
 import { useNavigate, Link } from 'react-router-dom';
@@ -9,7 +6,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam } from '../types.ts';
-import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit, CreditCard } from 'lucide-react';
+import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit, CreditCard, Gift, X } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';
@@ -39,7 +36,7 @@ const stripHtml = (html: string): string => {
 };
 
 const Dashboard: FC = () => {
-    const { user, token, paidExamIds, isSubscribed, subscriptionInfo, loginWithToken, isEffectivelyAdmin } = useAuth();
+    const { user, token, paidExamIds, isSubscribed, subscriptionInfo, loginWithToken, isEffectivelyAdmin, isBetaTester } = useAuth();
     const { activeOrg, isInitializing, inProgressExam, examPrices, subscriptionsEnabled, bundlesEnabled } = useAppContext();
     // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
     const navigate = useNavigate();
@@ -47,6 +44,7 @@ const Dashboard: FC = () => {
     const [results, setResults] = useState<TestResult[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isTesterBannerVisible, setIsTesterBannerVisible] = useState(isBetaTester);
     
     const handleSync = useCallback(async () => {
         if (!token) return;
@@ -124,6 +122,17 @@ const Dashboard: FC = () => {
 
     return (
         <div className="space-y-8">
+            {isBetaTester && isTesterBannerVisible && (
+                <div className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-4 rounded-lg shadow-lg flex justify-between items-center">
+                    <div>
+                        <h3 className="font-bold flex items-center gap-2"><Gift size={16} /> Welcome to the Beta Program!</h3>
+                        <p className="text-sm opacity-90 mt-1">Thank you for your help. You have 1-month of premium access. Please <Link to="/feedback" className="font-bold underline hover:text-yellow-200">submit your feedback</Link> to help us improve!</p>
+                    </div>
+                    <button onClick={() => setIsTesterBannerVisible(false)} className="p-1 rounded-full hover:bg-white/20 transition-colors" aria-label="Dismiss">
+                        <X size={20} />
+                    </button>
+                </div>
+            )}
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-[rgb(var(--color-text-strong-rgb))]">

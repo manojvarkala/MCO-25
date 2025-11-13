@@ -90,6 +90,15 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
 };
 export const googleSheetsService = {
     // --- ONBOARDING ---
+    registerBetaTester: async (registrationData: any): Promise<{ success: boolean; message: string }> => {
+        try {
+            // Public endpoint for new user registration
+            return await apiFetch('/register-tester', 'POST', null, registrationData);
+        } catch (error) {
+            console.error("Failed to register beta tester:", error);
+            throw error;
+        }
+    },
     redeemTesterToken: async (testerToken: string): Promise<{ token: string }> => {
         try {
             // Public endpoint, but sends a specific one-time token for verification
@@ -394,5 +403,8 @@ export const googleSheetsService = {
         const formData = new FormData();
         formData.append('video', videoBlob, 'intro-video.mp4');
         return await apiFetch('/admin/set-intro-video', 'POST', token, formData as any, true);
-    }
+    },
+    adminToggleBetaStatus: async (token: string, status: boolean): Promise<{ token: string }> => {
+        return await apiFetch('/admin/toggle-beta-status', 'POST', token, { isBetaTester: status });
+    },
 };

@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
 import { useParams, useNavigate } from 'react-router-dom';
@@ -25,7 +26,7 @@ const Test: FC = () => {
   const { examId } = useParams<{ examId: string }>();
   // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
   const navigate = useNavigate();
-  const { user, isSubscribed, token } = useAuth();
+  const { user, isSubscribed, token, isBetaTester } = useAuth();
   const { activeOrg, isInitializing } = useAppContext();
 
   const [examConfig, setExamConfig] = useState<Exam | null>(null);
@@ -111,7 +112,7 @@ const Test: FC = () => {
         try {
             const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
             if (config.isPractice) {
-                if (!isSubscribed) {
+                if (!isSubscribed && !isBetaTester) {
                     const practiceAttempts = userResults.filter(r => r.examId === config.id).length;
                     if (practiceAttempts >= 10) throw new Error("You have used all 10 free practice attempts.");
                 }
@@ -145,7 +146,7 @@ const Test: FC = () => {
         }
     };
     loadTest();
-  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, progressKey]);
+  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, progressKey, isBetaTester]);
 
   // Effect 2: Manage the timer.
   useEffect(() => {

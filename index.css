@@ -320,7 +320,22 @@ body {
   100% { transform: scale(1); opacity: 1; }
 }
 .animate-countdown-pop { animation: countdown-pop 0.8s ease-out forwards; }
-.cert-base { padding: 10px; background-color: #e2e8f0; box-sizing: border-box; aspect-ratio: 1.414 / 1; width: 100%; }
+.cert-base { padding: 10px; background-color: #e2e8f0; box-sizing: border-box; aspect-ratio: 1.414 / 1; width: 100%; position: relative; overflow: hidden; }
+
+/* BETA TESTER WATERMARK */
+.watermark-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 8rem;
+    font-weight: bold;
+    color: rgba(220, 38, 38, 0.1); /* Semi-transparent red-600 */
+    pointer-events: none;
+    z-index: 1000;
+    white-space: nowrap;
+    opacity: 0.8;
+}
 
 /* CLASSIC CERTIFICATE THEME */
 .cert-container-classic { border: 1px solid #94a3b8; height: 100%; background: #fff; position: relative; padding: 10px; }

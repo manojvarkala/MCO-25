@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam } from '../types.ts';
-import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight, Gift, Star, Paintbrush, Check } from 'lucide-react';
+import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight, Gift, Star, Paintbrush, Check, Shield } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 // FIX: Define theme colors directly in the component for robust rendering.
@@ -44,7 +44,7 @@ const themeColors: { [key: string]: { [key: string]: string } } = {
 };
 
 const Profile: FC = () => {
-    const { user, token, updateUserName, isSubscribed, isEffectivelyAdmin } = useAuth();
+    const { user, token, updateUserName, isSubscribed, isEffectivelyAdmin, isBetaTester, loginWithToken } = useAuth();
     const { activeOrg, availableThemes, activeTheme, setActiveTheme } = useAppContext();
     const navigate = useNavigate();
 
@@ -53,6 +53,7 @@ const Profile: FC = () => {
     const [isSavingName, setIsSavingName] = useState(false);
     const [name, setName] = useState(user?.name || '');
     const [isLoadingResults, setIsLoadingResults] = useState(true);
+    const [isSavingBetaStatus, setIsSavingBetaStatus] = useState(false);
 
     useEffect(() => {
         if (user && token) {
@@ -113,6 +114,27 @@ const Profile: FC = () => {
         }
     };
     
+    const handleBetaToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!token) { toast.error("Authentication Error"); return; }
+        const newStatus = e.target.checked;
+        setIsSavingBetaStatus(true);
+        const toastId = toast.loading(newStatus ? 'Enabling Beta Tester Mode...' : 'Disabling Beta Tester Mode...');
+        try {
+            const response = await googleSheetsService.adminToggleBetaStatus(token, newStatus);
+            if (response.token) {
+                // Use loginWithToken to refresh the session state without a full page reload
+                await loginWithToken(response.token, true);
+                toast.success(newStatus ? 'Beta Tester Mode Enabled' : 'Beta Tester Mode Disabled', { id: toastId });
+            } else {
+                throw new Error("Server did not return an updated token.");
+            }
+        } catch (error: any) {
+            toast.error(error.message || "Failed to toggle beta status.", { id: toastId });
+        } finally {
+            setIsSavingBetaStatus(false);
+        }
+    };
+
     const getExamDetails = (examId: string): Exam | undefined => {
         return activeOrg?.exams.find(e => e.id === examId);
     };
@@ -174,6 +196,37 @@ const Profile: FC = () => {
                     <p className="text-center text-slate-500">Could not load user profile.</p>
                 )}
             </div>
+            
+            {isEffectivelyAdmin && (
+                <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                    <h2 className="text-2xl font-bold text-slate-800 flex items-center mb-4">
+                        <Shield className="mr-3 text-cyan-500" />
+                        Administrator Tools
+                    </h2>
+                    <div className="bg-slate-50 p-4 rounded-lg">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h4 className="font-semibold">Beta Tester Mode</h4>
+                                <p className="text-xs text-slate-500">Simulate the beta tester experience (e.g., watermarked certificates).</p>
+                            </div>
+                            <label htmlFor="toggle-beta-mode" className="flex items-center cursor-pointer">
+                                <div className="relative">
+                                    <input
+                                        type="checkbox"
+                                        id="toggle-beta-mode"
+                                        className="sr-only"
+                                        checked={isBetaTester}
+                                        onChange={handleBetaToggle}
+                                        disabled={isSavingBetaStatus}
+                                    />
+                                    <div className={`block w-14 h-8 rounded-full ${isBetaTester ? 'bg-cyan-600' : 'bg-slate-300'}`}></div>
+                                    <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${isBetaTester ? 'transform translate-x-6' : ''}`}></div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             {(availableThemes || []).length > 0 && (
                 <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
