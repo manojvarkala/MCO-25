@@ -16,9 +16,10 @@ export interface ExamCardProps {
     examPrices: { [key: string]: any } | null;
     hideDetailsLink?: boolean;
     attemptsMade?: number;
+    isDisabled?: boolean;
 }
 
-const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, activeOrg, examPrices, hideDetailsLink = false, attemptsMade }) => {
+const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, activeOrg, examPrices, hideDetailsLink = false, attemptsMade, isDisabled = false }) => {
     const navigate = useNavigate();
     const { user, token, isSubscribed, isBetaTester } = useAuth();
     const [isRedirecting, setIsRedirecting] = useState(false);
@@ -65,9 +66,14 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
     const Icon = isPractice ? BookOpen : Award;
     const headerText = isPractice ? "Practice Exam" : (exam.certificateEnabled ? "Certification Exam" : "Proficiency Exam");
     const themeGradientClass = isPractice ? 'exam-card--practice' : 'exam-card--cert';
+    
+    const buttonTitle = isDisabled 
+        ? "Please submit feedback for your last exam before starting a new one."
+        : (isPractice ? "Start a free practice exam" : (canTake ? "Start your certification exam" : "Purchase this exam"));
+
 
     return (
-        <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col text-white relative ${themeGradientClass}`}>
+        <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col text-white relative ${themeGradientClass} ${isDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
             <div className="p-6 flex flex-col flex-grow">
                 <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">
@@ -110,12 +116,15 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                 <div className="mt-auto space-y-2">
                     <button
                         onClick={handleButtonClick}
-                        disabled={isRedirecting}
+                        disabled={isRedirecting || isDisabled}
                         className={`w-full flex items-center justify-center gap-2 font-bold py-3 px-4 rounded-lg transition-all transform hover:scale-105 disabled:opacity-75 ${
-                            canTake
-                                ? 'bg-white text-slate-800 hover:bg-slate-200'
-                                : 'bg-yellow-400 hover:bg-yellow-500 text-slate-800'
+                            isDisabled 
+                                ? 'bg-slate-400 text-slate-800 cursor-not-allowed'
+                                : (canTake
+                                    ? 'bg-white text-slate-800 hover:bg-slate-200'
+                                    : 'bg-yellow-400 hover:bg-yellow-500 text-slate-800')
                         }`}
+                        title={buttonTitle}
                     >
                         {isRedirecting ? <Spinner /> : (isPractice ? <PlayCircle size={18} /> : (canTake ? <PlayCircle size={18} /> : <ShoppingCart size={18} />))}
                         {buttonText}
@@ -123,7 +132,7 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                     {!hideDetailsLink && (
                         <Link
                             to={`/program/${programId}`}
-                            className="block w-full text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-3 rounded-lg text-sm transition">
+                            className={`block w-full text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-3 rounded-lg text-sm transition ${isDisabled ? 'pointer-events-none' : ''}`}>
                             View Details
                         </Link>
                     )}

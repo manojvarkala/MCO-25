@@ -37,7 +37,7 @@ const stripHtml = (html: string): string => {
 
 const Dashboard: FC = () => {
     const { user, token, paidExamIds, isSubscribed, subscriptionInfo, loginWithToken, isEffectivelyAdmin, isBetaTester } = useAuth();
-    const { activeOrg, isInitializing, inProgressExam, examPrices, subscriptionsEnabled, bundlesEnabled } = useAppContext();
+    const { activeOrg, isInitializing, inProgressExam, examPrices, subscriptionsEnabled, bundlesEnabled, feedbackRequiredForExam } = useAppContext();
     // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
     const navigate = useNavigate();
 
@@ -122,7 +122,7 @@ const Dashboard: FC = () => {
 
     return (
         <div className="space-y-8">
-            {isBetaTester && isTesterBannerVisible && (
+            {isBetaTester && isTesterBannerVisible && !feedbackRequiredForExam && (
                 <div className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-4 rounded-lg shadow-lg flex justify-between items-center">
                     <div>
                         <h3 className="font-bold flex items-center gap-2"><Gift size={16} /> Welcome to the Beta Program!</h3>
@@ -131,6 +131,12 @@ const Dashboard: FC = () => {
                     <button onClick={() => setIsTesterBannerVisible(false)} className="p-1 rounded-full hover:bg-white/20 transition-colors" aria-label="Dismiss">
                         <X size={20} />
                     </button>
+                </div>
+            )}
+            {isBetaTester && feedbackRequiredForExam && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 rounded-r-lg" role="alert">
+                    <p className="font-bold">Feedback Required</p>
+                    <p>Please <Link to="/feedback" className="font-semibold underline">submit your feedback</Link> for the <strong>{feedbackRequiredForExam.examName}</strong> exam to unlock other tests.</p>
                 </div>
             )}
             <div className="flex flex-wrap justify-between items-center gap-4">
@@ -267,6 +273,7 @@ const Dashboard: FC = () => {
                          const shareUrl = `${window.location.origin}/program/${category.id}`;
                          const shareTitle = stripHtml(category.name);
                          const shareText = `Check out the ${shareTitle} program on ${activeOrg.name}! Great for certification prep.`;
+                         const isDisabled = isBetaTester && !!feedbackRequiredForExam;
 
                          return (
                             <div key={category.id} id={category.id} className="bg-[rgb(var(--color-muted-rgb))] p-6 rounded-xl border border-[rgb(var(--color-border-rgb))]">
@@ -290,8 +297,8 @@ const Dashboard: FC = () => {
                                 </div>
                                 <div className="text-[rgb(var(--color-text-muted-rgb))] mb-4 text-sm" dangerouslySetInnerHTML={{ __html: category.description }} />
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} />}
-                                    {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} attemptsMade={certAttempts}/>}
+                                    {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} isDisabled={isDisabled} />}
+                                    {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} attemptsMade={certAttempts} isDisabled={isDisabled}/>}
                                     {bundlesEnabled && category.certExam && bundleTypeToShow && (
                                         <ExamBundleCard
                                             type={bundleTypeToShow}
