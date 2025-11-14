@@ -20,10 +20,10 @@ export interface ExamCardProps {
 
 const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, activeOrg, examPrices, hideDetailsLink = false, attemptsMade }) => {
     const navigate = useNavigate();
-    const { user, token, isSubscribed } = useAuth();
+    const { user, token, isSubscribed, isBetaTester } = useAuth();
     const [isRedirecting, setIsRedirecting] = useState(false);
 
-    const canTake = isPractice || isPurchased || isSubscribed;
+    const canTake = isPractice || isPurchased || isSubscribed || isBetaTester;
     
     let buttonText = 'Start Practice';
     if (!isPractice) {

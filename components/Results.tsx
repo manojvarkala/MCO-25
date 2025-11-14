@@ -1,6 +1,3 @@
-
-
-
 import React, { FC, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
 import { useParams, useNavigate } from 'react-router-dom';
@@ -67,7 +64,7 @@ const Results: FC = () => {
     const { testId } = useParams<{ testId: string }>();
     // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
     const navigate = useNavigate();
-    const { user, token, isSubscribed, paidExamIds, isEffectivelyAdmin } = useAuth();
+    const { user, token, isSubscribed, paidExamIds, isEffectivelyAdmin, isBetaTester } = useAuth();
     const { activeOrg, suggestedBooks } = useAppContext();
 
     const [result, setResult] = useState<TestResult | null>(null);
@@ -144,9 +141,9 @@ const Results: FC = () => {
     
     const canGetAIFeedback = useMemo(() => {
         if (!exam || !result || isPassed) return false;
-        if (isSubscribed) return true;
+        if (isSubscribed || isBetaTester) return true;
         return paidExamIds.includes(exam.productSku);
-    }, [exam, result, isPassed, isSubscribed, paidExamIds]);
+    }, [exam, result, isPassed, isSubscribed, paidExamIds, isBetaTester]);
 
     const recommendedBooksForExam = useMemo(() => {
         if (!exam || !exam.recommendedBookIds || !suggestedBooks) return [];

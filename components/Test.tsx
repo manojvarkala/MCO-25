@@ -1,5 +1,3 @@
-
-
 import React, { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
 import { useParams, useNavigate } from 'react-router-dom';
@@ -26,7 +24,7 @@ const Test: FC = () => {
   const { examId } = useParams<{ examId: string }>();
   // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
   const navigate = useNavigate();
-  const { user, isSubscribed, token, isBetaTester } = useAuth();
+  const { user, isSubscribed, token, isBetaTester, paidExamIds } = useAuth();
   const { activeOrg, isInitializing, setFeedbackRequiredForExam } = useAppContext();
 
   const [examConfig, setExamConfig] = useState<Exam | null>(null);
@@ -115,6 +113,12 @@ const Test: FC = () => {
 
     const loadTest = async () => {
         try {
+            // Robust access check before loading any data
+            const hasAccess = config.isPractice || isSubscribed || isBetaTester || paidExamIds.includes(config.productSku);
+            if (!hasAccess) {
+                throw new Error("You do not have access to this exam. Please purchase it first.");
+            }
+
             const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
             if (config.isPractice) {
                 if (!isSubscribed && !isBetaTester) {
@@ -151,7 +155,7 @@ const Test: FC = () => {
         }
     };
     loadTest();
-  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, progressKey, isBetaTester]);
+  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, progressKey, isBetaTester, paidExamIds]);
 
   // Effect 2: Manage the timer.
   useEffect(() => {
@@ -479,5 +483,4 @@ const Test: FC = () => {
         </div>
     );
 };
-
 export default Test;
