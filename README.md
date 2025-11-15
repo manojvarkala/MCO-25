@@ -53,6 +53,7 @@ Before installing the engine plugin, ensure the following plugins are installed 
 -   **Recommended:**
     -   **WooCommerce Subscriptions:** Required if you plan to sell subscription-based access to your exams.
     -   **Affiliates Manager:** A free plugin required for the beta tester affiliate program to function.
+    -   **WP Mail SMTP (or similar):** Strongly recommended to ensure reliable email delivery for beta tester invitations and other notifications.
 
 ### Part 1: WordPress Backend Setup (Manual)
 
@@ -108,3 +109,17 @@ The application should now be running locally, proxying all API requests to your
     `npm run build`
 2.  **Deploy**:
     The command will create a `dist` directory containing the optimized, static production build. Deploy the contents of this directory to any static hosting provider (e.g., Vercel, Netlify, AWS S3).
+    
+---
+## Troubleshooting
+
+### Email Delivery Failures (SMTP Errors)
+If beta testers or users report not receiving emails (e.g., welcome emails, password resets), the issue is almost always with your server's email configuration. WordPress's default mail function is often unreliable or blocked.
+
+-   **Error:** `SMTP Error: Could not authenticate.`
+-   **Meaning:** This specific error comes from your SMTP plugin (like WP Mail SMTP). It means the credentials it's using (hostname, username, password, API key) are incorrect or have been rejected by your email provider (e.g., Google Workspace, SendGrid).
+-   **Solution:**
+    1.  Install and activate a dedicated SMTP plugin like **WP Mail SMTP**.
+    2.  Carefully follow the plugin's setup guide to connect it to a reliable email service.
+    3.  Go into the SMTP plugin's settings and **send a test email**.
+    4.  If the test fails, check the plugin's error logs. The logs will provide a detailed reason for the failure, which is almost always incorrect credentials or an issue with your email provider's account setup. This is a server configuration issue, not a bug in the exam engine.

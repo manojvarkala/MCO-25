@@ -5,6 +5,11 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import LogoSpinner from './LogoSpinner.tsx';
 import { Beaker, Send } from 'lucide-react';
 
+interface OnboardingInfo {
+    token: string;
+    email: string;
+}
+
 const BetaRegistration: FC = () => {
     const [formData, setFormData] = useState({
         fullName: '',
@@ -16,6 +21,8 @@ const BetaRegistration: FC = () => {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [onboardingInfo, setOnboardingInfo] = useState<OnboardingInfo | null>(null);
+    const [isResending, setIsResending] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -31,6 +38,9 @@ const BetaRegistration: FC = () => {
             if (response.success) {
                 toast.success(response.message || 'Registration successful! Please check your email.', { id: toastId });
                 setIsSuccess(true);
+                if (response.onboarding_token && response.user_email) {
+                    setOnboardingInfo({ token: response.onboarding_token, email: response.user_email });
+                }
             } else {
                 throw new Error(response.message || 'An unknown error occurred.');
             }
@@ -41,15 +51,43 @@ const BetaRegistration: FC = () => {
         }
     };
 
+    const handleResend = async () => {
+        if (!onboardingInfo) return;
+        setIsResending(true);
+        try {
+            await googleSheetsService.publicResendOnboardingEmail(onboardingInfo.token, onboardingInfo.email);
+            toast.success("Welcome email has been resent!");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to resend email.");
+        } finally {
+            setIsResending(false);
+        }
+    };
+
     if (isSuccess) {
         return (
             <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg text-center">
                 <Beaker className="mx-auto h-12 w-12 text-green-500" />
                 <h1 className="text-3xl font-bold text-slate-800 mt-4">Thank You for Registering!</h1>
                 <p className="text-slate-600 mt-2">
-                    We have received your application. If you are selected, you will receive an email within the next 24-48 hours with your unique link to access the beta program.
+                    We've sent a welcome email with your unique access link. Please check your inbox (and spam folder) to get started.
                 </p>
-                <Link to="/" className="inline-block mt-6 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-6 rounded-lg">
+                
+                {onboardingInfo && (
+                    <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                        <p className="text-sm text-slate-600">Didn't receive the email?</p>
+                        <button 
+                            onClick={handleResend}
+                            disabled={isResending}
+                            className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 disabled:opacity-50 disabled:cursor-wait"
+                        >
+                            {isResending ? <LogoSpinner /> : <Send size={16} />}
+                            {isResending ? 'Resending...' : 'Click to Resend Email'}
+                        </button>
+                    </div>
+                )}
+                
+                <Link to="/" className="inline-block mt-8 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-6 rounded-lg">
                     Back to Home
                 </Link>
             </div>

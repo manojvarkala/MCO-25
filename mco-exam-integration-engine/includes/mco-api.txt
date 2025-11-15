@@ -283,6 +283,8 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/verify-certificate/(?P<certId>.+)', ['methods' => 'GET', 'callback' => 'mco_api_verify_certificate', 'permission_callback' => '__return_true', 'args' => ['certId' => ['required' => true]]]);
     register_rest_route($namespace, '/register-tester', ['methods' => 'POST', 'callback' => 'mco_api_register_tester', 'permission_callback' => '__return_true']);
     register_rest_route($namespace, '/redeem-tester-token', ['methods' => 'POST', 'callback' => 'mco_api_redeem_tester_token', 'permission_callback' => '__return_true']);
+    register_rest_route($namespace, '/resend-onboarding-email', ['methods' => 'POST', 'callback' => 'mco_api_public_resend_onboarding_email', 'permission_callback' => '__return_true']);
+
 
     // USER-PROTECTED ENDPOINTS
     register_rest_route($namespace, '/create-checkout-session', ['methods' => 'POST', 'callback' => 'mco_api_create_checkout_session', 'permission_callback' => 'mco_api_permission_check']);
@@ -928,6 +930,9 @@ function mco_api_get_system_status(WP_REST_Request $request) {
         }
     }
     
+    $smtp_active = is_plugin_active('wp-mail-smtp/wp_mail_smtp.php');
+    $smtp_data = 'If you are having email delivery issues (like beta tester invitations not sending), you must install and configure a dedicated SMTP plugin (e.g., WP Mail SMTP). An error like "Could not authenticate" means your SMTP plugin\'s settings (hostname, username, password/API key) are incorrect and have been rejected by your email provider.';
+
     return new WP_REST_Response([
         'api_connection' => ['success' => true, 'message' => 'OK'],
         'jwt_secret' => ['success' => defined('MCO_JWT_SECRET'), 'message' => defined('MCO_JWT_SECRET') ? 'Defined' : 'Not Defined in wp-config.php'],
@@ -935,6 +940,7 @@ function mco_api_get_system_status(WP_REST_Request $request) {
         'wc_subscriptions' => ['success' => class_exists('WC_Subscriptions'), 'message' => class_exists('WC_Subscriptions') ? 'Active' : 'Not Active (Optional)'],
         'app_url_config' => ['success' => !empty(get_option('mco_exam_app_url')), 'message' => !empty(get_option('mco_exam_app_url')) ? 'Configured' : 'Not Configured'],
         'google_sheet' => $sheet_test_result,
+        'email_delivery' => ['success' => $smtp_active, 'message' => $smtp_active ? 'Detected' : 'Not Detected', 'data' => $smtp_data],
         'nonces' => [
             'generate_programs_csv' => wp_create_nonce('mco_generate_programs_csv_nonce'),
             'generate_products_csv' => wp_create_nonce('mco_generate_products_csv_nonce'),
@@ -1248,14 +1254,24 @@ function mco_api_register_tester(WP_REST_Request $request) {
         return new WP_Error('email_exists', 'This email address is already registered.', ['status' => 400]);
     }
 
-    $country = sanitize_text_field($params['country']);
+    $country = 'N/A';
+    $ip_address = '';
+    if (!empty($_SERVER['HTTP_CLIENT_IP'])) { $ip_address = $_SERVER['HTTP_CLIENT_IP']; } 
+    elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { $ip_address = $_SERVER['HTTP_X_FORWARDED_FOR']; } 
+    else { $ip_address = $_SERVER['REMOTE_ADDR']; }
+    if ($ip_address) {
+        $geo_response = wp_remote_get("http://ip-api.com/json/{$ip_address}?fields=country");
+        if (!is_wp_error($geo_response) && wp_remote_retrieve_response_code($geo_response) === 200) {
+            $geo_data = json_decode(wp_remote_retrieve_body($geo_response), true);
+            if (isset($geo_data['country'])) $country = sanitize_text_field($geo_data['country']);
+        }
+    }
+    
     $username = sanitize_user(explode('@', $email)[0]);
     $password = wp_generate_password();
     $user_id = wp_create_user($username, $password, $email);
 
-    if (is_wp_error($user_id)) {
-        return $user_id;
-    }
+    if (is_wp_error($user_id)) return $user_id;
 
     wp_update_user(['ID' => $user_id, 'display_name' => $full_name]);
     $token = wp_generate_password(32, false);
@@ -1276,8 +1292,55 @@ function mco_api_register_tester(WP_REST_Request $request) {
 
     wp_mail($email, $subject, $message);
 
-    return new WP_REST_Response(['success' => true, 'message' => 'Registration successful! Please check your email for your unique access link.'], 200);
+    return new WP_REST_Response([
+        'success' => true, 
+        'message' => 'Registration successful! Please check your email for your unique access link.',
+        'onboarding_token' => $token,
+        'user_email' => $email
+    ], 200);
 }
+
+
+function mco_api_public_resend_onboarding_email(WP_REST_Request $request) {
+    $params = $request->get_json_params();
+    $token = sanitize_text_field($params['token']);
+    $email = sanitize_email($params['email']);
+
+    if (empty($token) || empty($email)) {
+        return new WP_Error('bad_request', 'Token and email are required.', ['status' => 400]);
+    }
+    
+    $user = get_user_by('email', $email);
+    if (!$user) {
+        return new WP_Error('not_found', 'User not found.', ['status' => 404]);
+    }
+
+    $stored_token = get_user_meta($user->ID, '_tester_onboarding_token', true);
+    if ($stored_token !== $token) {
+        return new WP_Error('invalid_token', 'Invalid token for this user.', ['status' => 403]);
+    }
+
+    if (get_user_meta($user->ID, '_tester_token_redeemed', true)) {
+        return new WP_Error('already_redeemed', 'This token has already been redeemed.', ['status' => 400]);
+    }
+
+    $app_url = mco_get_exam_app_url();
+    $onboarding_url = rtrim($app_url, '/') . '/onboard/' . $token;
+    $subject = 'Your Invitation to the ' . get_bloginfo('name') . ' Beta Program';
+    $message = "Hello {$user->display_name},\n\n";
+    $message .= "Here is your unique access link again to activate your one-month premium access for our beta program:\n";
+    $message .= $onboarding_url . "\n\n";
+    $message .= "Sincerely,\nThe " . get_bloginfo('name') . " Team";
+
+    $sent = wp_mail($user->user_email, $subject, $message);
+
+    if ($sent) {
+        return new WP_REST_Response(['success' => true, 'message' => 'Welcome email has been resent.'], 200);
+    } else {
+        return new WP_Error('email_failed', 'Could not send the email. This might be a server configuration issue.', ['status' => 500]);
+    }
+}
+
 
 function mco_api_redeem_tester_token(WP_REST_Request $request) {
     $token = sanitize_text_field($request->get_param('testerToken'));

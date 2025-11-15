@@ -90,12 +90,20 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
 };
 export const googleSheetsService = {
     // --- ONBOARDING ---
-    registerBetaTester: async (registrationData: any): Promise<{ success: boolean; message: string }> => {
+    registerBetaTester: async (registrationData: any): Promise<{ success: boolean; message: string; onboarding_token?: string; user_email?: string; }> => {
         try {
             // Public endpoint for new user registration
             return await apiFetch('/register-tester', 'POST', null, registrationData);
         } catch (error) {
             console.error("Failed to register beta tester:", error);
+            throw error;
+        }
+    },
+    publicResendOnboardingEmail: async (token: string, email: string): Promise<{ success: boolean; message: string }> => {
+        try {
+            return await apiFetch('/resend-onboarding-email', 'POST', null, { token, email });
+        } catch (error) {
+            console.error("Failed to resend onboarding email:", error);
             throw error;
         }
     },
