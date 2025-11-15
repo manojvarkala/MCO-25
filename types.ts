@@ -197,6 +197,7 @@ export interface ExamStat {
     passCount?: number;
     totalScoreSum?: number;
     ctr?: number;
+    country?: string;
 }
 
 export interface InProgressExamInfo {
@@ -239,4 +240,13 @@ export interface VerificationData {
 export interface FeedbackContext {
     examId: string;
     examName: string;
+}
+
+export interface BetaTester {
+    id: string;
+    name: string;
+    email: string;
+    country: string;
+    registrationDate: string; // ISO Date string
+    expiryTimestamp: number; // Unix timestamp
 }

@@ -156,6 +156,9 @@ const ExamAnalytics: FC = () => {
                                     <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('isPractice')}>
                                          <div className="flex items-center justify-center gap-2">Type {sortConfig.key === 'isPractice' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                     </th>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('country')}>
+                                        <div className="flex items-center justify-center gap-2">Country {sortConfig.key === 'country' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
                                     <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('attempts')}>
                                         <div className="flex items-center justify-center gap-2">Attempts {sortConfig.key === 'attempts' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                     </th>
@@ -163,77 +166,4 @@ const ExamAnalytics: FC = () => {
                                         <div className="flex items-center justify-center gap-2">Avg. Score {sortConfig.key === 'averageScore' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                     </th>
                                     <th scope="col" className="px-6 py-3 cursor-pointer" onClick={() => handleSort('passRate')}>
-                                        <div className="flex items-center gap-2">Pass Rate {sortConfig.key === 'passRate' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('engagements')}>
-                                        <div className="flex items-center justify-center gap-2">Clicks {sortConfig.key === 'engagements' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('ctr')}>
-                                        <div className="flex items-center justify-center gap-2">Click-to-Attempt Rate {sortConfig.key === 'ctr' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sortedStats.map(stat => {
-                                    const passRate = stat.passRate || 0;
-                                    let progressBarColor = 'bg-red-500';
-                                    if (passRate > 70) progressBarColor = 'bg-green-500';
-                                    else if (passRate > 50) progressBarColor = 'bg-yellow-500';
-                                    
-                                    const ctr = stat.ctr || 0;
-                                    
-                                    return (
-                                        <tr key={stat.id} className="border-b border-[rgb(var(--color-border-rgb))]">
-                                            <th scope="row" className="px-6 py-4 font-medium text-[rgb(var(--color-text-strong-rgb))] whitespace-nowrap">
-                                                {stat.name}
-                                                <span className="block text-xs font-normal text-[rgb(var(--color-text-muted-rgb))]">{stat.programName}</span>
-                                            </th>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${stat.isPractice ? 'bg-blue-200 text-blue-800' : 'bg-green-200 text-green-800'}`}>
-                                                    {stat.isPractice ? 'Practice' : 'Certificate'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">{stat.attempts}</td>
-                                            <td className="px-6 py-4 text-center font-semibold">{stat.averageScore.toFixed(1)}%</td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-full bg-[rgb(var(--color-muted-rgb))] rounded-full h-2.5">
-                                                        <div className={`${progressBarColor} h-2.5 rounded-full`} style={{ width: `${passRate}%` }}></div>
-                                                    </div>
-                                                    <span className="font-semibold w-12 text-right">{passRate.toFixed(1)}%</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">{stat.engagements}</td>
-                                            <td className="px-6 py-4 text-center font-semibold">{ctr.toFixed(1)}%</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                             <tfoot>
-                                <tr className="bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-strong-rgb))] font-bold">
-                                    <td className="px-6 py-4" colSpan={2}>Total</td>
-                                    <td className="px-6 py-4 text-center">{summaryStats.totalAttempts.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-center">{overallAverageScore.toFixed(1)}%</td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-full bg-[rgb(var(--color-border-rgb))] rounded-full h-2.5">
-                                                <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${overallPassRate}%` }}></div>
-                                            </div>
-                                            <span className="font-semibold w-12 text-right">{overallPassRate.toFixed(1)}%</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">{summaryStats.totalEngagements.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-center">{overallCTR.toFixed(1)}%</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                ) : (
-                    <p className="text-center p-8 text-[rgb(var(--color-text-muted-rgb))]">No analytics data available yet.</p>
-                )}
-            </div>
-        </div>
-    );
-};
-
-export default ExamAnalytics;
+                                        <div className

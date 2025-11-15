@@ -1,4 +1,4 @@
-import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, Organization, PostCreationData, ExamStat, VerificationData } from '../types.ts';
+import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, Organization, PostCreationData, ExamStat, VerificationData, BetaTester } from '../types.ts';
 import toast from 'react-hot-toast';
 import { GoogleGenAI, Type } from "@google/genai";
 import { getApiBaseUrl } from './apiConfig.ts';
@@ -371,6 +371,9 @@ export const googleSheetsService = {
     },
     getExamStats: async (token: string): Promise<ExamStat[]> => {
         return await apiFetch('/exam-stats', 'GET', token);
+    },
+    adminGetBetaTesters: async (token: string): Promise<BetaTester[]> => {
+        return await apiFetch('/admin/beta-testers', 'GET', token);
     },
     adminGetSystemStatus: async (token: string): Promise<any> => {
         return await apiFetch('/admin/system-status', 'GET', token);

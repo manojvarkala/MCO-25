@@ -160,6 +160,9 @@ const SalesAnalytics: FC = () => {
                                     <th scope="col" className="px-6 py-3 cursor-pointer" onClick={() => handleSort('name')}>
                                         <div className="flex items-center gap-2">Exam Program {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                     </th>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('country')}>
+                                        <div className="flex items-center justify-center gap-2">Country {sortConfig.key === 'country' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    </th>
                                     <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('totalSales')}>
                                         <div className="flex items-center justify-center gap-2">Sales {sortConfig.key === 'totalSales' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                     </th>
@@ -188,8 +191,9 @@ const SalesAnalytics: FC = () => {
                                     else if (passRate > 50) progressBarColor = 'bg-yellow-500';
                                     
                                     return (
-                                        <tr key={stat.id} className="border-b border-[rgb(var(--color-border-rgb))]">
+                                        <tr key={stat.id + (stat.country || '')} className="border-b border-[rgb(var(--color-border-rgb))]">
                                             <th scope="row" className="px-6 py-4 font-medium text-[rgb(var(--color-text-strong-rgb))] whitespace-nowrap">{stat.name}</th>
+                                            <td className="px-6 py-4 text-center">{stat.country || 'N/A'}</td>
                                             <td className="px-6 py-4 text-center">{stat.totalSales?.toLocaleString()}</td>
                                             <td className="px-6 py-4 text-center font-semibold">{(stat.totalRevenue || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
                                             <td className="px-6 py-4 text-center">{stat.attempts}</td>
@@ -210,6 +214,7 @@ const SalesAnalytics: FC = () => {
                              <tfoot>
                                 <tr className="bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-strong-rgb))] font-bold">
                                     <td className="px-6 py-4">Total</td>
+                                    <td className="px-6 py-4"></td>
                                     <td className="px-6 py-4 text-center">{summaryStats.totalSales.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-center">{summaryStats.totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
                                     <td className="px-6 py-4 text-center">{summaryStats.totalAttempts.toLocaleString()}</td>
