@@ -222,6 +222,9 @@ if (!function_exists('mco_register_shortcode_hooks')) {
         add_shortcode('mco_book_showcase', 'mco_book_showcase_shortcode');
         add_shortcode('mco_single_book', 'mco_single_book_shortcode');
         
+        // FIX: Hook to process the login form submission before the page renders.
+        add_action('template_redirect', 'mco_handle_login_form_post');
+        
         add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles');
         add_action('wp', 'mco_prevent_caching_on_shortcode_pages');
 
@@ -233,6 +236,38 @@ if (!function_exists('mco_register_shortcode_hooks')) {
         add_action('user_register', 'mco_save_fullname_on_registration');
     }
 }
+
+// FIX: New function to handle login form post on the template_redirect hook.
+if (!function_exists('mco_handle_login_form_post')) {
+    function mco_handle_login_form_post() {
+        global $post;
+        // Only run on a page with our shortcode, for POST requests from non-logged-in users.
+        if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_login') && $_SERVER['REQUEST_METHOD'] === 'POST' && !is_user_logged_in()) {
+            
+            if (isset($_POST['mco_login_nonce']) && wp_verify_nonce($_POST['mco_login_nonce'], 'mco_login_action')) {
+                $creds = [
+                    'user_login'    => sanitize_user($_POST['log']),
+                    'user_password' => $_POST['pwd'],
+                    'remember'      => isset($_POST['rememberme']),
+                ];
+                $user = wp_signon($creds, is_ssl());
+        
+                if (is_wp_error($user)) {
+                    // Redirect back to the login page with an error code.
+                    $error_code = $user->get_error_code();
+                    $redirect_url = add_query_arg('login_error', $error_code, get_permalink($post->ID));
+                    wp_redirect($redirect_url);
+                    exit;
+                } else {
+                    // Success! Redirect to the same page without an error to trigger the logged-in logic.
+                    wp_redirect(get_permalink($post->ID));
+                    exit;
+                }
+            }
+        }
+    }
+}
+
 
 if (!function_exists('mco_auto_apply_single_book_style')) {
     function mco_auto_apply_single_book_style($content) {
@@ -295,9 +330,10 @@ if (!function_exists('mco_enqueue_shortcode_styles')) {
 }
 
 // --- SHORTCODE IMPLEMENTATIONS ---
-
+// FIX: Refactored shortcode to separate form display from form processing.
 function mco_exam_login_shortcode() {
-    // 1. Handle name update for logged-in user
+    // 1. Handle name update for logged-in user. This still needs to be a POST handler within the shortcode
+    // because it only appears *after* a user is logged in.
     if (is_user_logged_in() && isset($_POST['mco_update_name_nonce']) && wp_verify_nonce($_POST['mco_update_name_nonce'], 'mco_update_name_action')) {
         $full_name = sanitize_text_field($_POST['full_name']);
         if (!empty($full_name) && strpos(trim($full_name), ' ') !== false) {
@@ -314,41 +350,46 @@ function mco_exam_login_shortcode() {
         }
     }
 
-    // 2. Handle login attempt from logged-out user
-    if (!is_user_logged_in() && isset($_POST['mco_login_nonce']) && wp_verify_nonce($_POST['mco_login_nonce'], 'mco_login_action')) {
-        $creds = [
-            'user_login'    => sanitize_user($_POST['log']),
-            'user_password' => $_POST['pwd'],
-            'remember'      => isset($_POST['rememberme']),
-        ];
-        $user = wp_signon($creds, is_ssl());
+    // 2. The main login POST logic is now handled in the 'template_redirect' hook via mco_handle_login_form_post.
 
-        if (is_wp_error($user)) {
-            $login_error = $user->get_error_message();
-        } else {
-            // Success! The page will reload, and the logged-in user logic below will run.
-            wp_redirect(remove_query_arg('login_error', get_permalink()));
-            exit;
-        }
-    }
-
-    // 3. Check logged-in user's status (runs after successful login/redirect or on initial page load)
+    // 3. Check if user is logged in (either initially or after a successful login redirect).
     if (is_user_logged_in()) {
         $user = wp_get_current_user();
         if (strpos($user->display_name, ' ') !== false) {
+            // Name is good, redirect to the app.
             return mco_redirect_to_app_with_token();
         } else {
+            // Name needs to be updated, show the name update form.
             return mco_render_name_update_form();
         }
     }
 
-    // 4. Render login form for logged-out user
+    // 4. Render login form for logged-out users, including any errors from the redirect.
+    $login_error = '';
+    if (isset($_GET['login_error'])) {
+        $error_code = sanitize_key($_GET['login_error']);
+        switch ($error_code) {
+            case 'invalid_username':
+            case 'incorrect_password':
+                $login_error = '<strong>ERROR</strong>: The username or password you entered is incorrect.';
+                break;
+            case 'empty_username':
+                $login_error = '<strong>ERROR</strong>: The username field is empty.';
+                break;
+            case 'empty_password':
+                $login_error = '<strong>ERROR</strong>: The password field is empty.';
+                break;
+            default:
+                $login_error = 'An unknown login error occurred. Please try again.';
+        }
+    }
+
     ob_start();
     ?>
     <div class="mco-form-container" id="mco-login-form-custom">
         <h2>Login to Your Account</h2>
-        <?php if (isset($login_error)): ?>
-            <p class="mco-error"><?php echo esc_html($login_error); ?></p>
+        <?php if (!empty($login_error)): ?>
+            <p class="mco-error"><?php echo $login_error; // This is a safe string. ?></p>
         <?php endif; ?>
         <form name="loginform" id="loginform" action="<?php echo esc_url(get_permalink()); ?>" method="post">
             <p class="login-username">
