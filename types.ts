@@ -249,4 +249,5 @@ export interface BetaTester {
     country: string;
     registrationDate: string; // ISO Date string
     expiryTimestamp: number; // Unix timestamp
+    tokenRedeemed: boolean;
 }

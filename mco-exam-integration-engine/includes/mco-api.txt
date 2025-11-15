@@ -311,9 +311,9 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/admin/create-exam-program', ['methods' => 'POST', 'callback' => 'mco_api_admin_create_exam_program', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/delete-post', ['methods' => 'POST', 'callback' => 'mco_api_admin_delete_post', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/set-intro-video', ['methods' => 'POST', 'callback' => 'mco_api_admin_set_intro_video', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
-    // FIX: Add route for fetching beta tester analytics data.
     register_rest_route($namespace, '/admin/beta-testers', ['methods' => 'GET', 'callback' => 'mco_api_admin_get_beta_testers', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/toggle-beta-status', ['methods' => 'POST', 'callback' => 'mco_api_admin_toggle_beta_status', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/resend-beta-email', ['methods' => 'POST', 'callback' => 'mco_api_resend_beta_email', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
 }
 
 function mco_api_permission_check(WP_REST_Request $request) {
@@ -1236,7 +1236,6 @@ function mco_api_admin_set_intro_video(WP_REST_Request $request) {
 }
 
 // --- BETA TESTER ENDPOINTS ---
-// FIX: Updated to automatically detect country via IP, removing it from the form.
 function mco_api_register_tester(WP_REST_Request $request) {
     $params = $request->get_json_params();
     $email = sanitize_email($params['email']);
@@ -1249,27 +1248,7 @@ function mco_api_register_tester(WP_REST_Request $request) {
         return new WP_Error('email_exists', 'This email address is already registered.', ['status' => 400]);
     }
 
-    // IP-based Geolocation to automatically get the user's country.
-    $country = 'Unknown';
-    $ip_address = '';
-    if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-        $ip_address = $_SERVER['HTTP_CLIENT_IP'];
-    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-        $ip_address = $_SERVER['HTTP_X_FORWARDED_FOR'];
-    } else {
-        $ip_address = $_SERVER['REMOTE_ADDR'];
-    }
-
-    if ($ip_address) {
-        $geo_response = wp_remote_get("http://ip-api.com/json/{$ip_address}?fields=country");
-        if (!is_wp_error($geo_response) && wp_remote_retrieve_response_code($geo_response) === 200) {
-            $geo_data = json_decode(wp_remote_retrieve_body($geo_response), true);
-            if (isset($geo_data['country'])) {
-                $country = sanitize_text_field($geo_data['country']);
-            }
-        }
-    }
-
+    $country = sanitize_text_field($params['country']);
     $username = sanitize_user(explode('@', $email)[0]);
     $password = wp_generate_password();
     $user_id = wp_create_user($username, $password, $email);
@@ -1356,11 +1335,10 @@ function mco_api_admin_toggle_beta_status(WP_REST_Request $request) {
     return new WP_REST_Response(['token' => $new_token], 200);
 }
 
-// FIX: Add callback function for the new `/admin/beta-testers` route.
 function mco_api_admin_get_beta_testers(WP_REST_Request $request) {
     $testers = [];
     $users = get_users([
-        'meta_key' => '_tester_onboarding_token', // Query for users who have a tester token, indicating they registered.
+        'meta_key' => '_tester_onboarding_token',
         'fields' => ['ID', 'display_name', 'user_email', 'user_registered'],
     ]);
 
@@ -1370,12 +1348,46 @@ function mco_api_admin_get_beta_testers(WP_REST_Request $request) {
             'id' => (string) $user->ID,
             'name' => $user->display_name,
             'email' => $user->user_email,
-            'country' => get_user_meta($user->ID, 'mco_beta_country', true) ?: 'Unknown',
+            'country' => get_user_meta($user->ID, 'mco_beta_country', true) ?: 'N/A',
             'registrationDate' => $user->user_registered,
             'expiryTimestamp' => $expiry_timestamp ? (int)$expiry_timestamp : 0,
+            'tokenRedeemed' => (bool) get_user_meta($user->ID, '_tester_token_redeemed', true),
         ];
     }
 
     return new WP_REST_Response($testers, 200);
+}
+
+function mco_api_resend_beta_email(WP_REST_Request $request) {
+    $user_id = (int)$request->get_param('userId');
+    if (!$user_id) {
+        return new WP_Error('bad_request', 'User ID is required.', ['status' => 400]);
+    }
+
+    $user = get_userdata($user_id);
+    if (!$user) {
+        return new WP_Error('not_found', 'User not found.', ['status' => 404]);
+    }
+
+    if (get_user_meta($user_id, '_tester_token_redeemed', true)) {
+        return new WP_Error('already_redeemed', 'This user has already redeemed their token.', ['status' => 400]);
+    }
+
+    $token = get_user_meta($user_id, '_tester_onboarding_token', true);
+    if (empty($token)) {
+        return new WP_Error('no_token', 'No onboarding token found for this user.', ['status' => 404]);
+    }
+
+    $app_url = mco_get_exam_app_url();
+    $onboarding_url = rtrim($app_url, '/') . '/onboard/' . $token;
+    $subject = 'Your Invitation to the ' . get_bloginfo('name') . ' Beta Program';
+    $message = "Hello {$user->display_name},\n\n";
+    $message .= "Here is your unique access link again to activate your one-month premium access for our beta program:\n";
+    $message .= $onboarding_url . "\n\n";
+    $message .= "Sincerely,\nThe " . get_bloginfo('name') . " Team";
+
+    wp_mail($user->user_email, $subject, $message);
+
+    return new WP_REST_Response(['success' => true, 'message' => 'Welcome email has been resent.'], 200);
 }
 ?>

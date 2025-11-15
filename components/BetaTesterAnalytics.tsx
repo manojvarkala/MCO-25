@@ -4,13 +4,14 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { BetaTester } from '../types.ts';
 import toast from 'react-hot-toast';
 import Spinner from './Spinner.tsx';
-import { Users, ArrowUp, ArrowDown, CheckCircle, XCircle } from 'lucide-react';
+import { Users, ArrowUp, ArrowDown, CheckCircle, XCircle, Send } from 'lucide-react';
 
 const BetaTesterAnalytics: FC = () => {
     const { token } = useAuth();
     const [testers, setTesters] = useState<BetaTester[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [sortConfig, setSortConfig] = useState<{ key: keyof BetaTester | 'status'; direction: 'asc' | 'desc' }>({ key: 'registrationDate', direction: 'desc' });
+    const [resendingEmailId, setResendingEmailId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchTesters = async () => {
@@ -28,13 +29,26 @@ const BetaTesterAnalytics: FC = () => {
         fetchTesters();
     }, [token]);
 
-    const handleSort = (key: keyof BetaTester | 'status') => {
+    const handleSort = (key: keyof BetaTester | 'status' | 'tokenRedeemed') => {
         setSortConfig(currentConfig => {
             if (currentConfig.key === key) {
                 return { key, direction: currentConfig.direction === 'asc' ? 'desc' : 'asc' };
             }
             return { key, direction: 'desc' };
         });
+    };
+
+    const handleResendEmail = async (testerId: string, testerEmail: string) => {
+        if (!token) return;
+        setResendingEmailId(testerId);
+        try {
+            await googleSheetsService.adminResendBetaEmail(token, testerId);
+            toast.success(`Welcome email resent to ${testerEmail}`);
+        } catch (error: any) {
+            toast.error(`Failed to resend email: ${error.message}`);
+        } finally {
+            setResendingEmailId(null);
+        }
     };
     
     const sortedTesters = useMemo(() => {
@@ -45,15 +59,15 @@ const BetaTesterAnalytics: FC = () => {
             let aValue, bValue;
             
             if (sortConfig.key === 'status') {
-                aValue = new Date(a.expiryTimestamp * 1000) > new Date() ? 1 : 0;
-                bValue = new Date(b.expiryTimestamp * 1000) > new Date() ? 1 : 0;
+                aValue = a.tokenRedeemed ? (new Date(a.expiryTimestamp * 1000) > new Date() ? 2 : 1) : 0;
+                bValue = b.tokenRedeemed ? (new Date(b.expiryTimestamp * 1000) > new Date() ? 2 : 1) : 0;
             } else {
                  aValue = a[sortConfig.key as keyof BetaTester];
                  bValue = b[sortConfig.key as keyof BetaTester];
             }
 
-            if (typeof aValue === 'number' && typeof bValue === 'number') {
-                return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+            if (typeof aValue === 'number' || typeof aValue === 'boolean') {
+                return sortConfig.direction === 'asc' ? (aValue as any) - (bValue as any) : (bValue as any) - (aValue as any);
             }
             
             const strA = aValue?.toString() || '';
@@ -85,25 +99,59 @@ const BetaTesterAnalytics: FC = () => {
                                     <th scope="col" className="px-6 py-3 cursor-pointer" onClick={() => handleSort('email')}>Email {sortConfig.key === 'email' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} className="inline"/> : <ArrowDown size={12} className="inline"/>)}</th>
                                     <th scope="col" className="px-6 py-3 cursor-pointer" onClick={() => handleSort('country')}>Country {sortConfig.key === 'country' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} className="inline"/> : <ArrowDown size={12} className="inline"/>)}</th>
                                     <th scope="col" className="px-6 py-3 cursor-pointer" onClick={() => handleSort('registrationDate')}>Reg. Date {sortConfig.key === 'registrationDate' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} className="inline"/> : <ArrowDown size={12} className="inline"/>)}</th>
+                                    <th scope="col" className="px-6 py-3 cursor-pointer" onClick={() => handleSort('tokenRedeemed')}>Redeemed {sortConfig.key === 'tokenRedeemed' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} className="inline"/> : <ArrowDown size={12} className="inline"/>)}</th>
                                     <th scope="col" className="px-6 py-3 cursor-pointer" onClick={() => handleSort('expiryTimestamp')}>Expiry Date {sortConfig.key === 'expiryTimestamp' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} className="inline"/> : <ArrowDown size={12} className="inline"/>)}</th>
                                     <th scope="col" className="px-6 py-3 cursor-pointer" onClick={() => handleSort('status')}>Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} className="inline"/> : <ArrowDown size={12} className="inline"/>)}</th>
+                                    <th scope="col" className="px-6 py-3">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {sortedTesters.map(tester => {
-                                    const isExpired = new Date(tester.expiryTimestamp * 1000) < new Date();
+                                    const hasRedeemed = tester.tokenRedeemed;
+                                    const isExpired = hasRedeemed && new Date(tester.expiryTimestamp * 1000) < new Date();
+                                    
+                                    let statusText = 'Pending';
+                                    let statusClass = 'bg-yellow-100 text-yellow-800';
+                                    let statusIcon = <XCircle size={12} />;
+
+                                    if (hasRedeemed) {
+                                        if (isExpired) {
+                                            statusText = 'Expired';
+                                            statusClass = 'bg-red-100 text-red-800';
+                                        } else {
+                                            statusText = 'Active';
+                                            statusClass = 'bg-green-100 text-green-800';
+                                            statusIcon = <CheckCircle size={12} />;
+                                        }
+                                    }
+                                    
                                     return (
                                         <tr key={tester.id} className="border-b border-[rgb(var(--color-border-rgb))]">
                                             <td className="px-6 py-4 font-medium text-[rgb(var(--color-text-strong-rgb))]">{tester.name}</td>
                                             <td className="px-6 py-4">{tester.email}</td>
                                             <td className="px-6 py-4">{tester.country || 'N/A'}</td>
                                             <td className="px-6 py-4">{new Date(tester.registrationDate).toLocaleDateString()}</td>
-                                            <td className="px-6 py-4">{new Date(tester.expiryTimestamp * 1000).toLocaleDateString()}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                {hasRedeemed ? <CheckCircle className="text-green-500 mx-auto" /> : <XCircle className="text-slate-400 mx-auto" />}
+                                            </td>
+                                            <td className="px-6 py-4">{hasRedeemed ? new Date(tester.expiryTimestamp * 1000).toLocaleDateString() : 'Pending'}</td>
                                             <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${isExpired ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                                                    {isExpired ? <XCircle size={12} /> : <CheckCircle size={12} />}
-                                                    {isExpired ? 'Expired' : 'Active'}
+                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
+                                                    {statusIcon}
+                                                    {statusText}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {!hasRedeemed && (
+                                                    <button 
+                                                        onClick={() => handleResendEmail(tester.id, tester.email)} 
+                                                        disabled={resendingEmailId === tester.id}
+                                                        className="flex items-center gap-1 text-sm font-semibold text-cyan-600 hover:text-cyan-800 disabled:opacity-50"
+                                                    >
+                                                        {resendingEmailId === tester.id ? <Spinner size="sm"/> : <Send size={14}/>}
+                                                        Resend Email
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     );

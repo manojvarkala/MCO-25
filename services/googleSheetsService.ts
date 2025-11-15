@@ -375,6 +375,9 @@ export const googleSheetsService = {
     adminGetBetaTesters: async (token: string): Promise<BetaTester[]> => {
         return await apiFetch('/admin/beta-testers', 'GET', token);
     },
+    adminResendBetaEmail: async (token: string, userId: string): Promise<{ success: boolean, message: string }> => {
+        return await apiFetch('/admin/resend-beta-email', 'POST', token, { userId });
+    },
     adminGetSystemStatus: async (token: string): Promise<any> => {
         return await apiFetch('/admin/system-status', 'GET', token);
     },
