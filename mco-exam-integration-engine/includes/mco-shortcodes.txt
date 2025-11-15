@@ -169,6 +169,28 @@ if (!function_exists('mco_save_fullname_on_registration')) {
             $name_parts = explode(' ', $full_name, 2);
             update_user_meta($user_id, 'first_name', $name_parts[0]);
             update_user_meta($user_id, 'last_name', $name_parts[1] ?? '');
+
+            // FIX: Add IP to country detection for regular user registration to populate analytics.
+            $country = 'Unknown';
+            $ip_address = '';
+            if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+                $ip_address = $_SERVER['HTTP_CLIENT_IP'];
+            } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+                $ip_address = $_SERVER['HTTP_X_FORWARDED_FOR'];
+            } else {
+                $ip_address = $_SERVER['REMOTE_ADDR'];
+            }
+
+            if ($ip_address) {
+                $geo_response = wp_remote_get("http://ip-api.com/json/{$ip_address}?fields=country");
+                if (!is_wp_error($geo_response) && wp_remote_retrieve_response_code($geo_response) === 200) {
+                    $geo_data = json_decode(wp_remote_retrieve_body($geo_response), true);
+                    if (isset($geo_data['country'])) {
+                        $country = sanitize_text_field($geo_data['country']);
+                    }
+                }
+            }
+            update_user_meta($user_id, 'mco_user_country', $country);
         }
     }
 }

@@ -105,11 +105,18 @@ const SalesAnalytics: FC = () => {
 
 
     const summaryStats = useMemo(() => {
+        if (!certStats) return { totalSales: 0, totalRevenue: 0, totalAttempts: 0, totalEngagements: 0, totalPasses: 0, totalScoreSum: 0 };
+        const processedSkus = new Set<string>();
         return certStats.reduce((acc, stat) => {
-            acc.totalSales += stat.totalSales || 0;
-            acc.totalRevenue += stat.totalRevenue || 0;
+            // Only add global, per-product metrics once per unique exam SKU to avoid double-counting.
+            if (!processedSkus.has(stat.id)) {
+                acc.totalSales += stat.totalSales || 0;
+                acc.totalRevenue += stat.totalRevenue || 0;
+                acc.totalEngagements += stat.engagements;
+                processedSkus.add(stat.id);
+            }
+            // Per-country metrics can be summed normally.
             acc.totalAttempts += stat.attempts;
-            acc.totalEngagements += stat.engagements;
             acc.totalPasses += stat.passCount || 0;
             acc.totalScoreSum += stat.totalScoreSum || 0;
             return acc;
@@ -224,7 +231,7 @@ const SalesAnalytics: FC = () => {
                                             <div className="w-full bg-[rgb(var(--color-border-rgb))] rounded-full h-2.5">
                                                 <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${overallPassRate}%` }}></div>
                                             </div>
-                                            <span className="font-semibold">{overallPassRate.toFixed(1)}%</span>
+                                            <span className="font-semibold w-12 text-right">{overallPassRate.toFixed(1)}%</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-center">{overallCTR.toFixed(1)}%</td>

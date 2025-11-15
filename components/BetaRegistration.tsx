@@ -9,7 +9,6 @@ const BetaRegistration: FC = () => {
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
-        country: '',
         deviceType: '',
         os: '',
         browser: '',
@@ -77,10 +76,6 @@ const BetaRegistration: FC = () => {
                         <label htmlFor="email" className="block text-sm font-medium text-slate-700">Email Address</label>
                         <input type="email" name="email" id="email" required onChange={handleChange} className="mt-1 block w-full" />
                     </div>
-                </div>
-                <div>
-                    <label htmlFor="country" className="block text-sm font-medium text-slate-700">Country</label>
-                    <input type="text" name="country" id="country" required onChange={handleChange} className="mt-1 block w-full" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>

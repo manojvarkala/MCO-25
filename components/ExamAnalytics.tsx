@@ -102,9 +102,16 @@ const ExamAnalytics: FC = () => {
     }, [statsWithCtr, sortConfig]);
 
     const summaryStats = useMemo(() => {
+        if (!stats) return { totalAttempts: 0, totalEngagements: 0, totalPasses: 0, totalScoreSum: 0 };
+        const processedSkus = new Set<string>();
         return stats.reduce((acc, stat) => {
+            // Only add global, per-product metrics once per unique exam SKU to avoid double-counting.
+            if (!processedSkus.has(stat.id)) {
+                acc.totalEngagements += stat.engagements;
+                processedSkus.add(stat.id);
+            }
+            // Per-country metrics can be summed normally.
             acc.totalAttempts += stat.attempts;
-            acc.totalEngagements += stat.engagements;
             acc.totalPasses += stat.passCount || 0;
             acc.totalScoreSum += stat.totalScoreSum || 0;
             return acc;
