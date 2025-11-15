@@ -1327,9 +1327,9 @@ function mco_api_redeem_tester_token(WP_REST_Request $request) {
     update_user_meta($user_id, '_beta_access_expiry_timestamp', $expiry_timestamp);
     update_user_meta($user_id, '_tester_token_redeemed', true);
     
-    // Create affiliate account if Coupon Affiliates is active
-    if (function_exists('wcam_create_affiliate')) {
-        wcam_create_affiliate($user_id);
+    // Create affiliate account if Affiliates Manager is active
+    if (function_exists('affiliates_add_affiliate')) {
+        affiliates_add_affiliate(array('affiliate_id' => $user_id, 'status' => 'active'));
     }
 
     // Generate a new JWT with the beta flag

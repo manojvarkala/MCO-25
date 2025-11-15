@@ -44,6 +44,16 @@ The platform's strength lies in its headless architecture, which separates the a
 
 Setting up a local development environment involves two main parts: the WordPress backend and the React frontend.
 
+### Prerequisite Plugins
+
+Before installing the engine plugin, ensure the following plugins are installed and activated on your WordPress site:
+
+-   **Required:**
+    -   **WooCommerce:** Essential for all e-commerce functionality, including product management and checkout.
+-   **Recommended:**
+    -   **WooCommerce Subscriptions:** Required if you plan to sell subscription-based access to your exams.
+    -   **Affiliates Manager:** A free plugin required for the beta tester affiliate program to function.
+
 ### Part 1: WordPress Backend Setup (Manual)
 
 1.  **Install Prerequisites**: Set up a WordPress site with the WooCommerce and WooCommerce Subscriptions plugins installed and activated.

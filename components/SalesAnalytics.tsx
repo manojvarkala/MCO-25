@@ -170,11 +170,11 @@ const SalesAnalytics: FC = () => {
                                     <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('country')}>
                                         <div className="flex items-center justify-center gap-2">Country {sortConfig.key === 'country' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                     </th>
-                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('totalSales')}>
-                                        <div className="flex items-center justify-center gap-2">Sales {sortConfig.key === 'totalSales' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('totalSales')} title="This is the total number of global sales for this product, not specific to the country in this row.">
+                                        <div className="flex items-center justify-center gap-2">Total Sales (Global) {sortConfig.key === 'totalSales' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                     </th>
-                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('totalRevenue')}>
-                                        <div className="flex items-center justify-center gap-2">Revenue {sortConfig.key === 'totalRevenue' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('totalRevenue')} title="This is the total estimated global revenue for this product, not specific to the country in this row.">
+                                        <div className="flex items-center justify-center gap-2">Total Revenue (Global) {sortConfig.key === 'totalRevenue' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                     </th>
                                     <th scope="col" className="px-6 py-3 text-center cursor-pointer" onClick={() => handleSort('attempts')}>
                                         <div className="flex items-center justify-center gap-2">Attempts {sortConfig.key === 'attempts' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
