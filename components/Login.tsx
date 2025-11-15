@@ -1,9 +1,61 @@
+import React, { FC, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.tsx';
+import toast from 'react-hot-toast';
+import LogoSpinner from './LogoSpinner.tsx';
+import { useAppContext } from '../context/AppContext.tsx';
 
+const Login: FC = () => {
+    const { loginWithToken, user } = useAuth();
+    const { activeOrg, isInitializing } = useAppContext();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const hasProcessed = useRef(false);
 
+    useEffect(() => {
+        if (isInitializing || hasProcessed.current) return;
+        
+        const mainSiteBaseUrl = activeOrg ? `https://${activeOrg.website}` : '';
+        const loginUrl = mainSiteBaseUrl ? `${mainSiteBaseUrl}/exam-login/` : '/';
 
+        hasProcessed.current = true;
 
+        if (user) {
+            navigate('/dashboard', { replace: true });
+            return;
+        }
 
-import React, { FC, useRef, useEffect } from 'react';
-// FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
-// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
-import { useLocation, useNavigate
+        const params = new URLSearchParams(location.search);
+        const token = params.get('token');
+
+        if (token) {
+            const toastId = toast.loading('Authenticating your session...');
+            loginWithToken(token)
+                .then(() => {
+                    toast.dismiss(toastId);
+                    navigate('/dashboard', { replace: true });
+                })
+                .catch((e) => {
+                    toast.error(e.message || 'Authentication failed. Please try again.', { id: toastId });
+                    window.location.href = loginUrl;
+                });
+        } else {
+            toast.error('No authentication token found. Redirecting to login.');
+            window.location.href = loginUrl;
+        }
+    }, [loginWithToken, navigate, location.search, user, activeOrg, isInitializing]);
+
+    return (
+        <div className="flex flex-col items-center justify-center py-20 px-4">
+            <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg text-center">
+                <h2 className="text-2xl font-bold text-slate-900">Authenticating...</h2>
+                <LogoSpinner />
+                <p className="text-slate-500">
+                    Please wait while we securely log you in to the examination portal.
+                </p>
+            </div>
+        </div>
+    );
+};
+
+export default Login;
