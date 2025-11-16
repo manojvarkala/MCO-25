@@ -295,7 +295,7 @@ const Dashboard: FC = () => {
                                         <ShareButtons shareUrl={shareUrl} shareText={shareText} shareTitle={shareTitle} />
                                     </div>
                                 </div>
-                                <div className="text-[rgb(var(--color-text-muted-rgb))] mb-4 text-sm" dangerouslySetInnerHTML={{ __html: category.description }} />
+                                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-4 text-sm">{stripHtml(category.description)}</p>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} isDisabled={isDisabled} />}
                                     {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} attemptsMade={certAttempts} isDisabled={isDisabled}/>}

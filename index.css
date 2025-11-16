@@ -284,7 +284,7 @@ body {
     background-color: white;
     color: black;
     font-family: 'Times New Roman', serif;
-    width: 515pt;
+    width: 515pt; /* A4 width minus margins for jsPDF */
 }
 .handbook-pdf-content h1, .handbook-pdf-content h2, .handbook-pdf-content h3, .handbook-pdf-content h4 {
     color: black;
@@ -313,6 +313,7 @@ body {
 .handbook-pdf-content strong { font-weight: bold; }
 .handbook-pdf-content code { font-family: 'Courier New', monospace; background-color: #f0f0f0; padding: 2pt 4pt; border-radius: 3pt; font-size: 9pt; }
 .handbook-pdf-content pre { background-color: #f0f0f0; padding: 10pt; border-radius: 5pt; font-size: 9pt; white-space: pre-wrap; word-wrap: break-word; page-break-inside: avoid; }
+
 
 @keyframes countdown-pop {
   0% { transform: scale(0.5); opacity: 0; }
@@ -394,3 +395,37 @@ body {
 .cert-container-modern .cert-signature-name { font-weight: 700; font-size: 0.875rem; }
 .cert-container-modern .cert-signature-title { font-size: 0.7rem; color: #64748b; }
 .cert-container-modern .cert-modern-seal { position: absolute; right: 32px; bottom: 24px; width: 90px; height: 90px; opacity: 0.9; }
+
+/* --- LIVE PURCHASE NOTIFIER STYLES --- */
+@keyframes mco-slide-in-up {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+@keyframes mco-fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+.mco-purchase-notifier {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    z-index: 9999;
+    background-color: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1);
+    border: 1px solid #e5e7eb;
+    width: 100%;
+    max-width: 320px;
+    font-family: sans-serif;
+    transform: translateY(100%);
+    opacity: 0;
+    visibility: hidden;
+    transition: visibility 0.5s, opacity 0.5s, transform 0.5s;
+}
+.mco-purchase-notifier.visible {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+}
