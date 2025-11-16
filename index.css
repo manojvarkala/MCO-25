@@ -229,6 +229,13 @@ body {
     border-radius: 0.5rem;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
+.flipbook-page-container.single-page-view {
+    grid-template-columns: 1fr;
+    aspect-ratio: 1 / 1.414;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
 .flipbook-page {
     background-color: rgb(var(--color-background-rgb));
     border: 1px solid rgb(var(--color-border-rgb));
@@ -287,7 +294,8 @@ body {
     background-color: white;
     color: black;
     font-family: 'Times New Roman', serif;
-    width: 515pt; /* A4 width minus margins for jsPDF */
+    width: 595pt;
+    padding: 40pt;
     box-sizing: border-box;
 }
 .handbook-pdf-content h1, .handbook-pdf-content h2, .handbook-pdf-content h3, .handbook-pdf-content h4 {
@@ -434,3 +442,32 @@ body {
     opacity: 1;
     visibility: visible;
 }
+
+/* For Ads */
+.google-revocation-no-ad {
+    padding-top: 0 !important;
+}
+.google-revocation-no-ad .py-8 {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+.google-revocation-no-ad main.py-8 {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+.google-revocation-no-ad #root > div {
+  min-height: 100vh;
+}
+.google-revocation-no-ad main.container {
+  max-width: 100%;
+  padding: 0;
+}
+
+
+/* TEST COUNTDOWN */
+@keyframes countdown-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-countdown-pop { animation: countdown-pop 0.8s ease-out forwards; }

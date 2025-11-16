@@ -11,8 +11,8 @@ const Handbook: FC = () => {
     const pdfPrintRef = useRef<HTMLDivElement>(null);
 
     // --- Flipbook State ---
-    const [currentPage, setCurrentPage] = useState(0);
-    const [pageJumpMap, setPageJumpMap] = useState<Map<string, number>>(new Map());
+    const [currentPageIndex, setCurrentPageIndex] = useState(0); // Index for the left page of the spread
+    const pageJumpMap = useRef<Map<string, number>>(new Map());
 
     const displayPages = allChaptersData.filter(c => !c.isCover);
     const tocPageIndex = displayPages.findIndex(p => p.isToc);
@@ -26,7 +26,7 @@ const Handbook: FC = () => {
                 map.set(match[1], index);
             }
         });
-        setPageJumpMap(map);
+        pageJumpMap.current = map;
     }, [displayPages]);
 
     const handleTocClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -35,28 +35,38 @@ const Handbook: FC = () => {
         if (link && link.hash) {
             e.preventDefault();
             const targetId = link.hash.substring(1);
-            if (pageJumpMap.has(targetId)) {
-                let pageIndex = pageJumpMap.get(targetId)!;
+            if (pageJumpMap.current.has(targetId)) {
+                let pageIndex = pageJumpMap.current.get(targetId)!;
                 // If the target page is on the right side of a spread, show the left page.
                 if (pageIndex > 0 && pageIndex % 2 !== 0) {
                     pageIndex -= 1;
                 }
-                setCurrentPage(pageIndex);
+                setCurrentPageIndex(pageIndex);
             }
         }
     };
-    
+
     const handleNextPage = () => {
-        const nextPageIndex = currentPage === 0 ? 1 : currentPage + 2;
+        // Special case for cover page to TOC
+        if (currentPageIndex === 0 && tocPageIndex === 1) {
+            setCurrentPageIndex(1);
+            return;
+        }
+        const nextPageIndex = currentPageIndex + 2;
         if (nextPageIndex < displayPages.length) {
-            setCurrentPage(nextPageIndex);
+            setCurrentPageIndex(nextPageIndex);
         }
     };
 
     const handlePrevPage = () => {
-        const prevPageIndex = currentPage === 1 ? 0 : currentPage - 2;
+        // Special case for TOC back to title page
+        if (currentPageIndex === 1) {
+            setCurrentPageIndex(0);
+            return;
+        }
+        const prevPageIndex = currentPageIndex - 2;
         if (prevPageIndex >= 0) {
-            setCurrentPage(prevPageIndex);
+            setCurrentPageIndex(prevPageIndex);
         }
     };
 
@@ -70,56 +80,54 @@ const Handbook: FC = () => {
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
             const margin = 40;
-
+            const contentWidth = pageWidth - margin * 2;
+            
+            const renderAndAddPage = async (content: string, containerClass: string) => {
+                const container = document.createElement('div');
+                container.className = containerClass;
+                container.innerHTML = content;
+                if (pdfPrintRef.current) {
+                    pdfPrintRef.current.appendChild(container);
+                    const canvas = await html2canvas(container, { scale: 2, useCORS: true });
+                    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pageWidth, pageHeight);
+                    pdfPrintRef.current.innerHTML = ''; // Clean up
+                }
+            };
+            
             // --- 1. Cover Page ---
             const coverContent = allChaptersData.find(c => c.isCover)?.content;
             if (coverContent) {
-                const coverContainer = document.createElement('div');
-                coverContainer.className = 'handbook-pdf-cover-container';
-                coverContainer.innerHTML = coverContent;
-                pdfPrintRef.current.appendChild(coverContainer);
-                const coverCanvas = await html2canvas(coverContainer, { scale: 2, useCORS: true });
-                pdf.addImage(coverCanvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, pageWidth, pageHeight);
-                pdfPrintRef.current.innerHTML = ''; // Clean up
-            }
-
-            // --- 2. Table of Contents ---
-            toast.loading('Step 2/4: Generating table of contents...', { id: toastId });
-            const tocContentHtml = allChaptersData.find(c => c.isToc)?.content;
-            if (tocContentHtml) {
-                pdf.addPage();
-                const tocContainer = document.createElement('div');
-                tocContainer.className = 'handbook-pdf-content';
-                tocContainer.innerHTML = tocContentHtml;
-                pdfPrintRef.current.appendChild(tocContainer);
-                await pdf.html(tocContainer, {
-                    callback: (doc) => { if (pdfPrintRef.current) pdfPrintRef.current.innerHTML = ''; return doc; },
-                    margin: [margin, margin, margin, margin],
-                    autoPaging: 'text',
-                });
+                await renderAndAddPage(coverContent, 'handbook-pdf-cover-container');
             }
             
-            // --- 3. Content Chapters ---
-            const contentChapters = allChaptersData.filter(c => !c.isCover && !c.isToc && !c.isTitlePage);
-            for (let i = 0; i < contentChapters.length; i++) {
-                toast.loading(`Step 3/4: Processing Chapter ${i + 1} of ${contentChapters.length}...`, { id: toastId });
+            const contentChaptersForPdf = allChaptersData.filter(c => !c.isCover);
+
+            // --- 2 & 3. TOC and Content Chapters ---
+            for (let i = 0; i < contentChaptersForPdf.length; i++) {
+                toast.loading(`Step ${i < tocPageIndex ? 2 : 3}/${contentChaptersForPdf.length + 1}: Processing "${contentChaptersForPdf[i].title}"...`, { id: toastId });
                 pdf.addPage();
                 const chapterContainer = document.createElement('div');
                 chapterContainer.className = 'handbook-pdf-content';
-                chapterContainer.innerHTML = contentChapters[i].content;
+                chapterContainer.style.width = `${contentWidth}pt`;
+                chapterContainer.innerHTML = contentChaptersForPdf[i].content;
                 pdfPrintRef.current.appendChild(chapterContainer);
-
+                
                 await pdf.html(chapterContainer, {
-                    callback: (doc) => { if (pdfPrintRef.current) pdfPrintRef.current.innerHTML = ''; return doc; },
+                    callback: (doc) => {
+                        if (pdfPrintRef.current) pdfPrintRef.current.innerHTML = '';
+                        return doc;
+                    },
                     margin: [margin, margin, margin, margin],
                     autoPaging: 'text',
+                    width: contentWidth,
+                    windowWidth: contentWidth,
                 });
             }
-            
+
             // --- 4. Add Headers and Footers ---
-            toast.loading('Step 4/4: Adding pagination...', { id: toastId });
+            toast.loading('Step 4/4: Finalizing with pagination...', { id: toastId });
             const pageCount = pdf.getNumberOfPages();
-            for (let i = 2; i <= pageCount; i++) { 
+            for (let i = 2; i <= pageCount; i++) {
                 pdf.setPage(i);
                 pdf.setFontSize(8);
                 pdf.setTextColor('#64748b');
@@ -139,8 +147,22 @@ const Handbook: FC = () => {
         }
     };
     
-    const LeftPageComponent = displayPages[currentPage];
-    const RightPageComponent = (currentPage > 0 && currentPage + 1 < displayPages.length) ? displayPages[currentPage + 1] : null;
+    // Determine which pages to show on the left and right of the spread
+    let LeftPageComponent: typeof displayPages[0] | null = null;
+    let RightPageComponent: typeof displayPages[0] | null = null;
+    
+    if (currentPageIndex === 0) { // Title page is a single page view
+        LeftPageComponent = displayPages[0];
+        RightPageComponent = null;
+    } else if (currentPageIndex === 1 && tocPageIndex === 1) { // TOC is on the left
+        LeftPageComponent = displayPages[1];
+        RightPageComponent = displayPages[2] || null;
+    }
+    else {
+        LeftPageComponent = displayPages[currentPageIndex] || null;
+        RightPageComponent = displayPages[currentPageIndex + 1] || null;
+    }
+
 
     return (
         <div className="space-y-4">
@@ -164,31 +186,32 @@ const Handbook: FC = () => {
             </div>
 
             <div className="flipbook-container">
-                <div className="flipbook-page-container">
+                <div className={`flipbook-page-container ${!RightPageComponent ? 'single-page-view' : ''}`}>
                     {/* Left Page */}
-                    <div className="flipbook-page left" onClick={tocPageIndex === currentPage ? handleTocClick : undefined}>
-                        <div className="handbook-page-content">
-                            {LeftPageComponent && <div className="handbook-content" dangerouslySetInnerHTML={{ __html: LeftPageComponent.content }} />}
+                    {LeftPageComponent && (
+                         <div className="flipbook-page left" onClick={tocPageIndex === currentPageIndex ? handleTocClick : undefined}>
+                            <div className="handbook-page-content">
+                                <div className="handbook-content" dangerouslySetInnerHTML={{ __html: LeftPageComponent.content }} />
+                            </div>
                         </div>
-                    </div>
+                    )}
+                   
                     {/* Right Page */}
-                    <div className="flipbook-page right" onClick={tocPageIndex === currentPage + 1 ? handleTocClick : undefined}>
-                        <div className="handbook-page-content">
-                            {RightPageComponent ? (
+                     {RightPageComponent && (
+                        <div className="flipbook-page right" onClick={tocPageIndex === currentPageIndex + 1 ? handleTocClick : undefined}>
+                            <div className="handbook-page-content">
                                 <div className="handbook-content" dangerouslySetInnerHTML={{ __html: RightPageComponent.content }} />
-                            ) : (
-                                <div className="flex items-center justify-center h-full text-slate-400">End of Book</div>
-                            )}
+                            </div>
                         </div>
-                    </div>
+                     )}
                 </div>
 
                 <div className="flipbook-nav">
-                    <button onClick={handlePrevPage} disabled={currentPage === 0}>
+                    <button onClick={handlePrevPage} disabled={currentPageIndex === 0}>
                         <ChevronLeft /> Previous
                     </button>
-                    <span>Page {currentPage + 1} / {displayPages.length}</span>
-                    <button onClick={handleNextPage} disabled={currentPage + 2 >= displayPages.length}>
+                    <span>Page {currentPageIndex + 1} / {displayPages.length}</span>
+                    <button onClick={handleNextPage} disabled={currentPageIndex + 2 >= displayPages.length}>
                         Next <ChevronRight />
                     </button>
                 </div>
