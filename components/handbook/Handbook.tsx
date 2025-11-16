@@ -1,61 +1,77 @@
 import React, { FC, useState, useRef, useEffect } from 'react';
-import { BookOpen, Download } from 'lucide-react';
+import { BookOpen, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import Spinner from '../Spinner.tsx';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { chapters as allChaptersData } from './chapters.ts';
 
-// Helper to extract the ID from a chapter's content
-const getIdFromHtml = (html: string): string | null => {
-    const match = html.match(/id="([^"]+)"/);
-    return match ? match[1] : null;
-};
-
 const Handbook: FC = () => {
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-    const [activeChapterId, setActiveChapterId] = useState('');
     const pdfPrintRef = useRef<HTMLDivElement>(null);
-    const contentRef = useRef<HTMLDivElement>(null);
-    const chapterRefs = useRef<{ [key: string]: HTMLElement | null }>({});
 
-    const chaptersForDisplay = allChaptersData.filter(c => !c.isCover);
-    const tocChapters = chaptersForDisplay.filter(c => !c.isTitlePage && !c.isToc);
+    // --- Flipbook State ---
+    const [currentPage, setCurrentPage] = useState(0);
+    const [pageJumpMap, setPageJumpMap] = useState<Map<string, number>>(new Map());
 
+    const displayPages = allChaptersData.filter(c => !c.isCover);
+    const tocPageIndex = displayPages.findIndex(p => p.isToc);
+
+    // Create a map for TOC jumps on mount
     useEffect(() => {
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        setActiveChapterId(entry.target.id);
-                    }
-                });
-            },
-            { root: contentRef.current, rootMargin: "0px 0px -80% 0px", threshold: 0 }
-        );
-
-        Object.values(chapterRefs.current).forEach(el => {
-            if (el) observer.observe(el);
+        const map = new Map<string, number>();
+        displayPages.forEach((page, index) => {
+            const match = page.content.match(/id="([^"]+)"/);
+            if (match) {
+                map.set(match[1], index);
+            }
         });
+        setPageJumpMap(map);
+    }, [displayPages]);
 
-        return () => observer.disconnect();
-    }, [chaptersForDisplay]);
+    const handleTocClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        const link = target.closest('a');
+        if (link && link.hash) {
+            e.preventDefault();
+            const targetId = link.hash.substring(1);
+            if (pageJumpMap.has(targetId)) {
+                let pageIndex = pageJumpMap.get(targetId)!;
+                // If the target page is on the right side of a spread, show the left page.
+                if (pageIndex > 0 && pageIndex % 2 !== 0) {
+                    pageIndex -= 1;
+                }
+                setCurrentPage(pageIndex);
+            }
+        }
+    };
     
+    const handleNextPage = () => {
+        const nextPageIndex = currentPage === 0 ? 1 : currentPage + 2;
+        if (nextPageIndex < displayPages.length) {
+            setCurrentPage(nextPageIndex);
+        }
+    };
+
+    const handlePrevPage = () => {
+        const prevPageIndex = currentPage === 1 ? 0 : currentPage - 2;
+        if (prevPageIndex >= 0) {
+            setCurrentPage(prevPageIndex);
+        }
+    };
+
     const generatePdf = async () => {
         if (!pdfPrintRef.current) return;
-
         setIsGeneratingPdf(true);
-        const toastId = toast.loading('Initializing PDF generator...');
+        const toastId = toast.loading('Step 1/4: Initializing PDF generator...');
 
         try {
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
             const margin = 40;
-            const contentWidth = pageWidth - margin * 2;
-            
-            // --- Cover Page ---
-            toast.loading('Step 1/3: Generating cover page...', { id: toastId });
+
+            // --- 1. Cover Page ---
             const coverContent = allChaptersData.find(c => c.isCover)?.content;
             if (coverContent) {
                 const coverContainer = document.createElement('div');
@@ -64,42 +80,53 @@ const Handbook: FC = () => {
                 pdfPrintRef.current.appendChild(coverContainer);
                 const coverCanvas = await html2canvas(coverContainer, { scale: 2, useCORS: true });
                 pdf.addImage(coverCanvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, pageWidth, pageHeight);
-                pdfPrintRef.current.innerHTML = '';
+                pdfPrintRef.current.innerHTML = ''; // Clean up
             }
 
-            // --- Main Content & TOC ---
-            toast.loading('Step 2/3: Rendering handbook content...', { id: toastId });
-            pdf.addPage();
+            // --- 2. Table of Contents ---
+            toast.loading('Step 2/4: Generating table of contents...', { id: toastId });
+            const tocContentHtml = allChaptersData.find(c => c.isToc)?.content;
+            if (tocContentHtml) {
+                pdf.addPage();
+                const tocContainer = document.createElement('div');
+                tocContainer.className = 'handbook-pdf-content';
+                tocContainer.innerHTML = tocContentHtml;
+                pdfPrintRef.current.appendChild(tocContainer);
+                await pdf.html(tocContainer, {
+                    callback: (doc) => { if (pdfPrintRef.current) pdfPrintRef.current.innerHTML = ''; return doc; },
+                    margin: [margin, margin, margin, margin],
+                    autoPaging: 'text',
+                });
+            }
             
-            const fullHtmlContent = chaptersForDisplay.map(c => c.content).join('<div style="page-break-before: always;"></div>');
-            const contentContainer = document.createElement('div');
-            contentContainer.className = 'handbook-pdf-content';
-            contentContainer.style.width = `${contentWidth}pt`;
-            contentContainer.innerHTML = fullHtmlContent;
-            pdfPrintRef.current.appendChild(contentContainer);
+            // --- 3. Content Chapters ---
+            const contentChapters = allChaptersData.filter(c => !c.isCover && !c.isToc && !c.isTitlePage);
+            for (let i = 0; i < contentChapters.length; i++) {
+                toast.loading(`Step 3/4: Processing Chapter ${i + 1} of ${contentChapters.length}...`, { id: toastId });
+                pdf.addPage();
+                const chapterContainer = document.createElement('div');
+                chapterContainer.className = 'handbook-pdf-content';
+                chapterContainer.innerHTML = contentChapters[i].content;
+                pdfPrintRef.current.appendChild(chapterContainer);
+
+                await pdf.html(chapterContainer, {
+                    callback: (doc) => { if (pdfPrintRef.current) pdfPrintRef.current.innerHTML = ''; return doc; },
+                    margin: [margin, margin, margin, margin],
+                    autoPaging: 'text',
+                });
+            }
             
-            await pdf.html(contentContainer, {
-                callback: (doc) => {
-                    if(pdfPrintRef.current) pdfPrintRef.current.innerHTML = ''; // Clean up DOM
-                    return doc;
-                },
-                margin: [margin, margin, margin, margin],
-                autoPaging: 'text',
-                html2canvas: { scale: 0.75, useCORS: true }
-            });
-            
-            toast.loading('Step 3/3: Adding headers and footers...', { id: toastId });
+            // --- 4. Add Headers and Footers ---
+            toast.loading('Step 4/4: Adding pagination...', { id: toastId });
             const pageCount = pdf.getNumberOfPages();
             for (let i = 2; i <= pageCount; i++) { 
                 pdf.setPage(i);
-                const pageNumText = `Page ${i - 1}`;
-                const headerText = "Annapoorna Infotech Examination Engine Handbook";
                 pdf.setFontSize(8);
                 pdf.setTextColor('#64748b');
-                pdf.text(headerText, margin, margin / 2);
-                pdf.text(pageNumText, pageWidth - margin, pageHeight - margin / 2, { align: 'right' });
+                pdf.text("Annapoorna Infotech Handbook", margin, margin / 2);
+                pdf.text(`Page ${i - 1}`, pageWidth - margin, pageHeight - margin / 2, { align: 'right' });
             }
-            
+
             pdf.save('Annapoorna_Infotech_Handbook.pdf');
             toast.success('Handbook downloaded successfully!', { id: toastId });
 
@@ -112,20 +139,8 @@ const Handbook: FC = () => {
         }
     };
     
-    const handleTocClick = (e: React.MouseEvent<HTMLElement>) => {
-        const target = e.target as HTMLElement;
-        const link = target.closest('a');
-        if (link && link.hash) {
-            e.preventDefault();
-            const targetId = link.hash.substring(1);
-            const targetElement = document.getElementById(targetId);
-            if (targetElement) {
-                targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-    };
-    
-    const tocContentForSidebar = allChaptersData.find(c => c.isToc)?.content || '';
+    const LeftPageComponent = displayPages[currentPage];
+    const RightPageComponent = (currentPage > 0 && currentPage + 1 < displayPages.length) ? displayPages[currentPage + 1] : null;
 
     return (
         <div className="space-y-4">
@@ -148,29 +163,35 @@ const Handbook: FC = () => {
                 </button>
             </div>
 
-            <div className="ebook-container" onClick={handleTocClick}>
-                <aside className="ebook-toc-sidebar">
-                    <nav>
-                         <div dangerouslySetInnerHTML={{ __html: tocContentForSidebar.replace(/<h2.*?>.*?<\/h2>/, '') }} />
-                    </nav>
-                </aside>
-                <main className="ebook-content-main" ref={contentRef}>
-                    {chaptersForDisplay.map((chapter) => {
-                        const id = getIdFromHtml(chapter.content);
-                        if (!id) return null;
-                        return (
-                            <section 
-                                key={id} 
-                                id={id} 
-                                ref={(el) => { chapterRefs.current[id] = el; }} 
-                                className="handbook-chapter"
-                                aria-labelledby={id}
-                            >
-                                <div className="handbook-content" dangerouslySetInnerHTML={{ __html: chapter.content }} />
-                            </section>
-                        )
-                    })}
-                </main>
+            <div className="flipbook-container">
+                <div className="flipbook-page-container">
+                    {/* Left Page */}
+                    <div className="flipbook-page left" onClick={tocPageIndex === currentPage ? handleTocClick : undefined}>
+                        <div className="handbook-page-content">
+                            {LeftPageComponent && <div className="handbook-content" dangerouslySetInnerHTML={{ __html: LeftPageComponent.content }} />}
+                        </div>
+                    </div>
+                    {/* Right Page */}
+                    <div className="flipbook-page right" onClick={tocPageIndex === currentPage + 1 ? handleTocClick : undefined}>
+                        <div className="handbook-page-content">
+                            {RightPageComponent ? (
+                                <div className="handbook-content" dangerouslySetInnerHTML={{ __html: RightPageComponent.content }} />
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-slate-400">End of Book</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flipbook-nav">
+                    <button onClick={handlePrevPage} disabled={currentPage === 0}>
+                        <ChevronLeft /> Previous
+                    </button>
+                    <span>Page {currentPage + 1} / {displayPages.length}</span>
+                    <button onClick={handleNextPage} disabled={currentPage + 2 >= displayPages.length}>
+                        Next <ChevronRight />
+                    </button>
+                </div>
             </div>
         </div>
     );

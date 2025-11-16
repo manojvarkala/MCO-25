@@ -149,7 +149,7 @@ body {
     padding: 0.75rem;
 }
 
-/* --- On-Screen Handbook Content Styles (Improved Readability) --- */
+/* --- Handbook Content Styles (Used by both App & PDF) --- */
 .handbook-content {
     color: rgb(var(--color-text-default-rgb));
 }
@@ -213,85 +213,67 @@ body {
     padding: 0;
 }
 
-/* --- NEW: Ebook Style Handbook --- */
-.ebook-container {
+/* --- NEW: Flipbook Style Handbook --- */
+.flipbook-container {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+.flipbook-page-container {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 2rem;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    aspect-ratio: 2 / 1.414; /* Two A4 pages side-by-side */
+    background-color: rgb(var(--color-card-rgb));
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
-@media (min-width: 1024px) {
-    .ebook-container {
-        grid-template-columns: 280px 1fr;
-        height: calc(100vh - 12rem); /* Adjust based on your header/footer total height */
-    }
+.flipbook-page {
+    background-color: rgb(var(--color-background-rgb));
+    border: 1px solid rgb(var(--color-border-rgb));
+    padding: 2rem;
+    position: relative;
+    display: flex;
+    flex-direction: column;
 }
-
-.ebook-toc-sidebar {
-    position: sticky;
-    top: 6rem; /* Adjust based on header height if header is sticky */
-    max-height: calc(100vh - 14rem);
+.handbook-page-content {
+    flex-grow: 1;
     overflow-y: auto;
-    padding-right: 1rem;
-    border-right: 1px solid rgb(var(--color-border-rgb));
 }
-.ebook-toc-sidebar::-webkit-scrollbar { width: 4px; }
-.ebook-toc-sidebar::-webkit-scrollbar-track { background: transparent; }
-.ebook-toc-sidebar::-webkit-scrollbar-thumb { background-color: rgb(var(--color-border-rgb)); border-radius: 2px; }
+.handbook-page-content::-webkit-scrollbar { width: 4px; }
+.handbook-page-content::-webkit-scrollbar-track { background: transparent; }
+.handbook-page-content::-webkit-scrollbar-thumb { background-color: rgb(var(--color-border-rgb)); border-radius: 2px; }
 
-.ebook-toc-sidebar .handbook-toc h3 {
-    margin-top: 1.5rem;
-    margin-bottom: 0.5rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+/* Special styling for TOC page */
+.handbook-toc ol { list-style: none; padding-left: 0; }
+.handbook-toc li a { display: block; padding: 0.25rem 0; }
+
+.flipbook-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding: 0 1rem;
     color: rgb(var(--color-text-muted-rgb));
 }
-.ebook-toc-sidebar .handbook-toc ol {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-.ebook-toc-sidebar .handbook-toc li {
-    margin: 0;
-}
-.ebook-toc-sidebar .handbook-toc a {
-    display: block;
+.flipbook-nav button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     padding: 0.5rem 1rem;
-    margin-left: -1rem;
-    border-left: 2px solid transparent;
-    text-decoration: none;
-    color: rgb(var(--color-text-muted-rgb));
-    transition: all 0.2s ease-in-out;
-    font-weight: 500;
-    font-size: 0.875rem;
-    line-height: 1.4;
-}
-.ebook-toc-sidebar .handbook-toc a:hover {
-    color: rgb(var(--color-text-strong-rgb));
-}
-.ebook-toc-sidebar .handbook-toc a.active {
-    border-left-color: rgb(var(--color-primary-rgb));
-    color: rgb(var(--color-primary-rgb));
+    border-radius: 0.5rem;
+    background-color: rgb(var(--color-muted-rgb));
+    color: rgb(var(--color-text-default-rgb));
     font-weight: 600;
+    transition: background-color 0.2s;
 }
-.ebook-content-main {
-    height: 100%;
-    overflow-y: auto;
-    scroll-behavior: smooth;
-    padding-right: 1rem;
+.flipbook-nav button:hover:not(:disabled) {
+    background-color: rgb(var(--color-border-rgb));
 }
-.ebook-content-main::-webkit-scrollbar { width: 8px; }
-.ebook-content-main::-webkit-scrollbar-track { background: transparent; }
-.ebook-content-main::-webkit-scrollbar-thumb { background-color: rgb(var(--color-border-rgb)); border-radius: 4px; }
-
-.handbook-chapter {
-    padding-top: 1rem;
-    padding-bottom: 2rem;
-    border-bottom: 1px solid rgb(var(--color-border-rgb));
-}
-.handbook-chapter:last-child {
-    border-bottom: none;
+.flipbook-nav button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* --- PDF-Specific Handbook Styles --- */
