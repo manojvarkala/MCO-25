@@ -931,7 +931,7 @@ function mco_api_get_system_status(WP_REST_Request $request) {
     }
     
     $smtp_active = is_plugin_active('wp-mail-smtp/wp_mail_smtp.php');
-    $smtp_data = 'If you are having email delivery issues (like beta tester invitations not sending), you must install and configure a dedicated SMTP plugin (e.g., WP Mail SMTP). An error like "Could not authenticate" means your SMTP plugin\'s settings (hostname, username, password/API key) are incorrect and have been rejected by your email provider.';
+    $smtp_data = 'If you are having email delivery issues (e.g., beta tester invitations not sending), you must install and configure a dedicated SMTP plugin (like WP Mail SMTP). An error like "Could not authenticate" means your SMTP plugin\'s settings (hostname, username, password/API key) are incorrect and have been rejected by your email provider.';
 
     return new WP_REST_Response([
         'api_connection' => ['success' => true, 'message' => 'OK'],

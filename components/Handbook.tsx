@@ -3,11 +3,15 @@ import { BookOpen, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
-interface Chapter {
-    title: string;
-    content: string;
-}
+// Placeholder for chapters - this would typically be imported
+const chapters = [
+    { title: 'Cover', content: '<h1 class="text-4xl font-bold">Administrator Handbook</h1><p>Version 2.2.0</p>', isCover: true },
+    { title: 'Introduction', content: '<h2>Chapter 1: Introduction</h2><p>Welcome to the handbook...</p>' },
+    { title: 'Table of Contents', content: '<h2>Table of Contents</h2><ul><li><a href="#ch1" data-chapter-index="1">Chapter 1</a></li></ul>' }
+];
+
 
 const Handbook: FC = () => {
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -15,11 +19,6 @@ const Handbook: FC = () => {
     const pdfPrintRef = useRef<HTMLDivElement>(null);
     const rightPageRef = useRef<HTMLDivElement>(null);
 
-    const chapters: Chapter[] = [
-        { title: 'Part I: Core Concepts', content: '<h2>Chapter 1: Intro</h2><p>Content...</p>' },
-        { title: 'Chapter 2: Architecture', content: '<h2>Chapter 2: Arch</h2><p>Content...</p>' },
-        // ... more chapters
-    ];
 
     useEffect(() => {
         if (rightPageRef.current) {

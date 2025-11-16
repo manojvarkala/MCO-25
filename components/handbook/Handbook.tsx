@@ -29,13 +29,12 @@ const Handbook: FC = () => {
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
             const margin = 40;
-            const contentWidth = pageWidth - (margin * 2);
 
             const renderContainer = pdfPrintRef.current;
-            renderContainer.innerHTML = '';
+            renderContainer.innerHTML = ''; // Clear previous content
 
-            // Step 1: Render Cover Page
-            toast.loading('Step 1/5: Generating cover page...', { id: toastId });
+            // Step 1: Render Cover Page using html2canvas to preserve its unique layout
+            toast.loading('Step 1/3: Generating cover page...', { id: toastId });
             const coverElement = document.createElement('div');
             coverElement.style.width = `${pageWidth}pt`;
             coverElement.style.height = `${pageHeight}pt`;
@@ -43,49 +42,46 @@ const Handbook: FC = () => {
             renderContainer.appendChild(coverElement);
             const coverCanvas = await html2canvas(coverElement, { scale: 2, useCORS: true });
             pdf.addImage(coverCanvas.toDataURL('image/png'), 'PNG', 0, 0, pageWidth, pageHeight);
-            renderContainer.removeChild(coverElement);
+            renderContainer.innerHTML = ''; // Clean up
 
-            // Step 2: Loop through content chapters, adding a new page for each
+            // Step 2: Combine all other chapters into a single HTML block for jsPDF to paginate
+            toast.loading('Step 2/3: Processing handbook content...', { id: toastId });
+            let allContentHtml = '';
             for (let i = 1; i < chapters.length; i++) {
-                toast.loading(`Step ${i + 1}/${chapters.length + 1}: Processing Chapter "${chapters[i].title}"...`, { id: toastId });
-                pdf.addPage();
-                const chapterElement = document.createElement('div');
-                chapterElement.className = 'handbook-pdf-content';
-                chapterElement.innerHTML = `<div style="padding: ${margin}pt;">${chapters[i].content}</div>`;
-                renderContainer.appendChild(chapterElement);
-                
-                await pdf.html(chapterElement, {
-                    callback: () => {},
-                    x: 0,
-                    y: 0,
-                    width: pageWidth,
-                    windowWidth: contentWidth + (margin * 2),
-                    autoPaging: 'text'
-                });
-                renderContainer.innerHTML = '';
-            }
-            // Remove the blank page added at the start of the loop
-            pdf.deletePage(2);
-            
-
-            // Step 3: Add Page Numbers
-            toast.loading(`Step ${chapters.length + 1}/${chapters.length + 1}: Finalizing document...`, { id: toastId });
-            const pageCount = pdf.getNumberOfPages();
-            pdf.setFontSize(8);
-            pdf.setTextColor('#64748b'); // slate-500
-            for (let i = 2; i <= pageCount; i++) { // Skip cover page
-                pdf.setPage(i);
-                const pageNumText = `Page ${i - 1} of ${pageCount - 1}`;
-                pdf.text(pageNumText, pageWidth / 2, pageHeight - 20, { align: 'center' });
+                allContentHtml += `<div style="page-break-before: always;">${chapters[i].content}</div>`;
             }
             
-            pdf.save('Annapoorna_Examination_Engine_Handbook.pdf');
-            toast.success('Handbook downloaded successfully!', { id: toastId });
+            const contentEl = document.createElement('div');
+            contentEl.className = 'handbook-pdf-content';
+            contentEl.innerHTML = allContentHtml;
+            renderContainer.appendChild(contentEl);
+            
+            await pdf.html(contentEl, {
+                callback: (doc) => {
+                    // Step 3: Add Page Numbers
+                    toast.loading('Step 3/3: Finalizing document...', { id: toastId });
+                    const pageCount = doc.getNumberOfPages();
+                    doc.setFontSize(8);
+                    doc.setTextColor('#64748b');
+                    for (let i = 2; i <= pageCount; i++) { // Skip cover page
+                        doc.setPage(i);
+                        doc.text(`Page ${i - 1} of ${pageCount - 1}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
+                    }
+                    doc.save('Administrator_Handbook.pdf');
+                    toast.success('Handbook downloaded successfully!', { id: toastId });
+                    renderContainer.innerHTML = ''; // Final cleanup
+                    setIsGeneratingPdf(false);
+                },
+                margin: [margin, margin, margin, margin],
+                autoPaging: 'text',
+                html2canvas: { scale: 0.7, useCORS: true },
+                x: 0,
+                y: 0
+            });
 
         } catch (error) {
             console.error("PDF generation failed:", error);
             toast.error('Failed to generate PDF.', { id: toastId });
-        } finally {
             setIsGeneratingPdf(false);
         }
     };
