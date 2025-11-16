@@ -313,7 +313,8 @@ body {
 .handbook-pdf-content strong { font-weight: bold; }
 .handbook-pdf-content code { font-family: 'Courier New', monospace; background-color: #f0f0f0; padding: 2pt 4pt; border-radius: 3pt; font-size: 9pt; }
 .handbook-pdf-content pre { background-color: #f0f0f0; padding: 10pt; border-radius: 5pt; font-size: 9pt; white-space: pre-wrap; word-wrap: break-word; page-break-inside: avoid; }
-
+.handbook-toc a { text-decoration: none; }
+.handbook-toc a:hover { text-decoration: underline; }
 
 @keyframes countdown-pop {
   0% { transform: scale(0.5); opacity: 0; }

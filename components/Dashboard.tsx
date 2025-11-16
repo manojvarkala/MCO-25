@@ -93,8 +93,16 @@ const Dashboard: FC = () => {
         return activeOrg.examProductCategories
             .filter(Boolean)
             .map(category => {
-                const practiceExam = activeOrg.exams.find(e => e && e.id === category.practiceExamId);
-                const certExam = activeOrg.exams.find(e => e && e.id === category.certificationExamId);
+                const practiceExamRaw = activeOrg.exams.find(e => e && e.id === category.practiceExamId);
+                const practiceExam = practiceExamRaw 
+                    ? { ...practiceExamRaw, description: stripHtml(practiceExamRaw.description) } 
+                    : undefined;
+
+                const certExamRaw = activeOrg.exams.find(e => e && e.id === category.certificationExamId);
+                const certExam = certExamRaw
+                    ? { ...certExamRaw, description: stripHtml(certExamRaw.description) }
+                    : undefined;
+                    
                 return { ...category, practiceExam, certExam };
             });
     }, [activeOrg]);
