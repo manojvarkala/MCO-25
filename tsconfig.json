@@ -18,5 +18,23 @@
     "types": ["vite/client"]
   },
   "include": ["."],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules", 
+    "dist",
+    "components/handbook/content/ch1.ts",
+    "components/handbook/content/ch2.ts",
+    "components/handbook/content/ch3.ts",
+    "components/handbook/content/ch4.ts",
+    "components/handbook/content/ch5.ts",
+    "components/handbook/content/ch6.ts",
+    "components/handbook/content/ch7.ts",
+    "components/handbook/content/ch8.ts",
+    "components/handbook/content/ch9.ts",
+    "components/handbook/content/ch10.ts",
+    "components/handbook/content/ch11.ts",
+    "components/handbook/content/ch12.ts",
+    "components/handbook/content/ch13.ts",
+    "components/handbook/content/ch14.ts",
+    "components/handbook/content/ch15.ts"
+  ]
 }
