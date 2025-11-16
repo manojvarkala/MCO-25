@@ -213,78 +213,100 @@ body {
     padding: 0;
 }
 
-/* --- Handbook "Flipbook" Layout --- */
-.flipbook-container {
-    background-color: rgb(var(--color-card-rgb));
-    padding: 2rem;
-    border-radius: 1rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-    border: 1px solid rgb(var(--color-border-rgb));
+/* --- NEW: Ebook Style Handbook --- */
+.ebook-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
 }
-.flipbook-spread {
-    display: flex;
-    gap: 1rem;
-    background-color: rgb(var(--color-muted-rgb));
-    padding: 1rem;
-    border-radius: 0.5rem;
-    position: relative;
+@media (min-width: 1024px) {
+    .ebook-container {
+        grid-template-columns: 280px 1fr;
+        height: calc(100vh - 12rem); /* Adjust based on your header/footer total height */
+    }
 }
-.flipbook-spine {
-    position: absolute;
-    left: 50%;
-    top: 1rem;
-    bottom: 1rem;
-    width: 0.5rem;
-    background: linear-gradient(to right, rgba(0,0,0,0.4), rgba(0,0,0,0), rgba(0,0,0,0.4));
-    transform: translateX(-50%);
-    z-index: 10;
-}
-.flipbook-page {
-    width: 50%;
-    height: 70vh;
+
+.ebook-toc-sidebar {
+    position: sticky;
+    top: 6rem; /* Adjust based on header height if header is sticky */
+    max-height: calc(100vh - 14rem);
     overflow-y: auto;
-    padding: 2rem;
-    background-color: rgb(var(--color-background-rgb));
-    border-radius: 0.25rem;
-    box-shadow: inset 0 0 15px rgba(0,0,0,0.2);
+    padding-right: 1rem;
+    border-right: 1px solid rgb(var(--color-border-rgb));
 }
-.flipbook-page::-webkit-scrollbar { width: 8px; }
-.flipbook-page::-webkit-scrollbar-track { background: transparent; }
-.flipbook-page::-webkit-scrollbar-thumb { background-color: rgb(var(--color-border-rgb)); border-radius: 4px; }
-.flipbook-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.ebook-toc-sidebar::-webkit-scrollbar { width: 4px; }
+.ebook-toc-sidebar::-webkit-scrollbar-track { background: transparent; }
+.ebook-toc-sidebar::-webkit-scrollbar-thumb { background-color: rgb(var(--color-border-rgb)); border-radius: 2px; }
+
+.ebook-toc-sidebar .handbook-toc h3 {
     margin-top: 1.5rem;
-    padding: 0 1rem;
-}
-.flipbook-nav button {
-    background-color: rgb(var(--color-muted-rgb));
-    color: rgb(var(--color-text-default-rgb));
-    font-weight: 600;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    transition: background-color 0.2s;
-}
-.flipbook-nav button:hover:not(:disabled) {
-    background-color: rgb(var(--color-border-rgb));
-}
-.flipbook-nav button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-.flipbook-nav span {
-    font-size: 0.875rem;
-    font-weight: 500;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: rgb(var(--color-text-muted-rgb));
+}
+.ebook-toc-sidebar .handbook-toc ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.ebook-toc-sidebar .handbook-toc li {
+    margin: 0;
+}
+.ebook-toc-sidebar .handbook-toc a {
+    display: block;
+    padding: 0.5rem 1rem;
+    margin-left: -1rem;
+    border-left: 2px solid transparent;
+    text-decoration: none;
+    color: rgb(var(--color-text-muted-rgb));
+    transition: all 0.2s ease-in-out;
+    font-weight: 500;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+.ebook-toc-sidebar .handbook-toc a:hover {
+    color: rgb(var(--color-text-strong-rgb));
+}
+.ebook-toc-sidebar .handbook-toc a.active {
+    border-left-color: rgb(var(--color-primary-rgb));
+    color: rgb(var(--color-primary-rgb));
+    font-weight: 600;
+}
+.ebook-content-main {
+    height: 100%;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    padding-right: 1rem;
+}
+.ebook-content-main::-webkit-scrollbar { width: 8px; }
+.ebook-content-main::-webkit-scrollbar-track { background: transparent; }
+.ebook-content-main::-webkit-scrollbar-thumb { background-color: rgb(var(--color-border-rgb)); border-radius: 4px; }
+
+.handbook-chapter {
+    padding-top: 1rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid rgb(var(--color-border-rgb));
+}
+.handbook-chapter:last-child {
+    border-bottom: none;
 }
 
 /* --- PDF-Specific Handbook Styles --- */
+.handbook-pdf-cover-container {
+    width: 595pt; /* A4 width */
+    height: 842pt; /* A4 height */
+    background-color: white;
+    box-sizing: border-box;
+}
 .handbook-pdf-content {
     background-color: white;
     color: black;
     font-family: 'Times New Roman', serif;
     width: 515pt; /* A4 width minus margins for jsPDF */
+    box-sizing: border-box;
 }
 .handbook-pdf-content h1, .handbook-pdf-content h2, .handbook-pdf-content h3, .handbook-pdf-content h4 {
     color: black;

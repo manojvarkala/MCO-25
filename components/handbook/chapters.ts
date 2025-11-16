@@ -22,12 +22,17 @@ export interface Chapter {
     title: string;
     content: string;
     isCover?: boolean;
+    // FIX: Add missing optional properties to the Chapter interface.
+    isTitlePage?: boolean;
+    isToc?: boolean;
 }
 
 export const chapters: Chapter[] = [
     { title: "Cover", content: coverContent, isCover: true },
-    { title: "Title Page", content: titlePageContent },
-    { title: "Table of Contents", content: tocContent },
+    // FIX: Add `isTitlePage` property to correctly identify the title page chapter.
+    { title: "Title Page", content: titlePageContent, isTitlePage: true },
+    // FIX: Add `isToc` property to correctly identify the table of contents chapter.
+    { title: "Table of Contents", content: tocContent, isToc: true },
     { title: "Part I: Core Concepts", content: ch1_introduction },
     { title: "Chapter 2: Architecture & Multi-Tenancy", content: ch2_architecture },
     { title: "Chapter 3: The Golden Workflow", content: ch3_golden_workflow },
