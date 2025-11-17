@@ -83,16 +83,22 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
         const payload: any = {
             name: name.trim(),
             sku: sku.trim(),
-            price: parseFloat(price),
+            sale_price: parseFloat(price),
             isBundle: true,
             bundled_skus,
         };
 
         const regPriceNum = parseFloat(regularPrice);
-        if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
-            payload.regularPrice = regPriceNum;
-        } else if (productToEdit) {
-            payload.regularPrice = '';
+        if (productToEdit?.sku) { // Editing
+            if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
+                payload.regular_price = regPriceNum;
+            } else {
+                payload.regular_price = '';
+            }
+        } else { // Creating
+            if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
+                payload.regular_price = regPriceNum;
+            }
         }
 
         onSave(payload);
@@ -238,17 +244,26 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
             toast.error("Name, SKU, and a valid Sale Price are required.");
             return;
         }
-        const payload: any = { 
-            name: name.trim(), 
-            sku: sku.trim(), 
-            price: parseFloat(price) 
+        const payload: any = {
+            name: name.trim(),
+            sku: sku.trim(),
+            sale_price: parseFloat(price)
         };
-
+    
         const regPriceNum = parseFloat(regularPrice);
-        if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
-            payload.regularPrice = regPriceNum;
-        } else if (productToEdit) { 
-            payload.regularPrice = '';
+    
+        if (productToEdit?.sku) { // Editing
+            if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
+                payload.regular_price = regPriceNum;
+            } else {
+                // Explicitly clear the price if the field is emptied on edit
+                payload.regular_price = '';
+            }
+        } else { // Creating
+            if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
+                // Only include regular_price on create if it has a value
+                payload.regular_price = regPriceNum;
+            }
         }
         
         onSave(payload);
@@ -340,17 +355,24 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
         const payload: any = {
             name: name.trim(), 
             sku: sku.trim(),
-            price: parseFloat(price),
+            sale_price: parseFloat(price),
             subscription_period: period,
             subscription_period_interval: interval,
             subscription_length: length,
         };
-
+    
         const regPriceNum = parseFloat(regularPrice);
-        if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
-            payload.regularPrice = regPriceNum;
-        } else if (productToEdit) { 
-            payload.regularPrice = '';
+    
+        if (productToEdit?.sku) { // Editing
+            if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
+                payload.regular_price = regPriceNum;
+            } else {
+                payload.regular_price = '';
+            }
+        } else { // Creating
+            if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
+                payload.regular_price = regPriceNum;
+            }
         }
         
         onSave(payload);
@@ -578,21 +600,27 @@ const ProductCustomizer: FC = () => {
                     name: product.name, // Preserve existing name
                 };
     
+                // Handle Sale Price
                 if (salePrice.trim() !== '' && !isNaN(parseFloat(salePrice))) {
-                    productData.price = parseFloat(salePrice);
+                    productData.sale_price = parseFloat(salePrice);
                 } else {
-                    productData.price = parseFloat(product.salePrice);
+                    // Preserve existing sale price if bulk field is empty
+                    productData.sale_price = parseFloat(product.salePrice);
                 }
     
+                // Handle Regular Price
                 const regPriceNum = parseFloat(regularPrice);
                 if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
-                    productData.regularPrice = regPriceNum;
+                    // A new regular price is provided
+                    productData.regular_price = regPriceNum;
                 } else if (regularPrice.trim() === '') {
-                    productData.regularPrice = '';
+                    // Field is explicitly cleared, so send empty string to clear it on the backend
+                    productData.regular_price = '';
                 } else {
+                    // Field is left untouched, so preserve existing regular price
                     const oldRegular = parseFloat(product.regularPrice);
                     if (!isNaN(oldRegular)) {
-                        productData.regularPrice = oldRegular;
+                        productData.regular_price = oldRegular;
                     }
                 }
     
