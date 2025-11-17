@@ -322,8 +322,8 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                 setInterval(productToEdit.subscriptionPeriodInterval || '1');
                 setLength(productToEdit.subscriptionLength || '0');
             } else {
-                setName('');
-                setSku('');
+                setName('New Subscription');
+                setSku('sub-new');
                 setPrice('');
                 setRegularPrice('');
                 setPeriod('month');
