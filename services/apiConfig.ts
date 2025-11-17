@@ -1,5 +1,3 @@
-
-
 import type { Organization } from '../types.ts';
 
 // FIX: Declare a global constant for development mode, defined in vite.config.ts, to avoid issues with vite/client types.
@@ -37,7 +35,6 @@ const tenantMap: { [key: string]: TenantConfig } = {
     'coding-online.net': medicalCodingConfig,
     'exams.coding-online.net': medicalCodingConfig, // Corrected domain as per user's troubleshooting guide
     'exam.coding-online.net': medicalCodingConfig, // Keep old one for compatibility
-    'mco-25.vercel.app': medicalCodingConfig,
 
     // Indian Certs Tenant
     'bharatcerts.in': indianCertsConfig,
