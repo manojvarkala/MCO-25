@@ -441,7 +441,6 @@ const ProductCustomizer: FC = () => {
         if (!token) { toast.error("Authentication Error"); return; }
         setIsSaving(true);
         try {
-            // This is the definitive fix. Using post_title, sale_price, regular_price.
             const result = await googleSheetsService.adminUpsertProduct(token, productData);
             updateConfigData(result.organizations, result.examPrices);
             toast.success(`Product "${productData.post_title}" saved successfully!`);
@@ -474,6 +473,7 @@ const ProductCustomizer: FC = () => {
         if (!examPrices || !activeOrg) return { all: [], simple: [], subscription: [], bundle: [] };
         
         const allProducts = Object.entries(examPrices).map(([sku, data]: [string, any]): ProductVariation => {
+            // Correctly identify bundles
             const isActuallyBundle = data.isBundle || (Array.isArray(data.bundledSkus) && data.bundledSkus.length > 0);
             return {
                 id: data.productId?.toString(),
