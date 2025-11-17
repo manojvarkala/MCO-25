@@ -1,5 +1,4 @@
 
-
 import React, { FC, useState, useMemo, useCallback, ReactNode, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -67,7 +66,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
                 setSelectedSimpleSkus(simple);
                 setSelectedSubscriptionSku(sub || '');
             } else { // Creating new bundle
-                setName('');
+                setName('New Exam Bundle');
                 setSku('');
                 setPrice('');
                 setRegularPrice('');
@@ -239,7 +238,7 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
                 setPrice(productToEdit.salePrice?.toString() || '');
                 setRegularPrice(productToEdit.regularPrice?.toString() || '');
             } else { // We are creating
-                setName('');
+                setName('New Simple Product');
                 setSku('');
                 setPrice('');
                 setRegularPrice('');
@@ -336,9 +335,9 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                 setBillingInterval(productToEdit.subscriptionPeriodInterval || '1');
                 setSubscriptionLength(productToEdit.subscriptionLength || '0');
             } else {
-                setName('');
+                setName('New Subscription');
                 setSku('');
-                setPrice('');
+                setPrice('9.99');
                 setRegularPrice('');
                 setBillingPeriod('month');
                 setBillingInterval('1');
@@ -477,7 +476,7 @@ const ProductCustomizer: FC = () => {
             id: data.productId?.toString(),
             name: data.name,
             sku,
-            type: data.type || 'simple',
+            type: data.isBundle ? 'bundle' : (data.type || 'simple'),
             regularPrice: data.regularPrice?.toString() ?? '',
             salePrice: data.price?.toString() ?? '',
             isBundle: data.isBundle || false,
