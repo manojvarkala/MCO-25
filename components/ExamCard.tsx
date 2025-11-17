@@ -1,3 +1,4 @@
+
 import React, { FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Exam, Organization } from '../types.ts';
@@ -15,6 +16,18 @@ export interface ExamCardProps {
     attemptsMade?: number;
     isDisabled?: boolean;
 }
+
+const stripHtml = (html: string): string => {
+    if (!html || typeof html !== 'string') return html || '';
+    try {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        return tempDiv.textContent || tempDiv.innerText || '';
+    } catch (e) {
+        console.error("Could not parse HTML string for stripping", e);
+        return html;
+    }
+};
 
 const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, examPrices, hideDetailsLink = false, attemptsMade, isDisabled = false }) => {
     const navigate = useNavigate();
@@ -97,7 +110,7 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                 </div>
             )}
             <div className="flex justify-between items-start">
-                <h3 className="text-xl font-bold">{exam.name}</h3>
+                <h3 className="text-xl font-bold">{stripHtml(exam.name)}</h3>
                 {hasAccess && !isPractice && (
                     <div className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded-full">
                         {isSubscribed ? 'SUBSCRIBED' : 'PURCHASED'}
@@ -105,7 +118,9 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                 )}
             </div>
             
-            <div className="text-sm mt-2 opacity-90 flex-grow prose prose-sm prose-invert max-w-none text-white/90" dangerouslySetInnerHTML={{ __html: exam.description }} />
+            <div className="text-sm mt-2 opacity-90 flex-grow prose prose-sm prose-invert max-w-none text-white/90">
+                {stripHtml(exam.description)}
+            </div>
             
             <div className="mt-4 pt-4 border-t border-white/20 text-sm space-y-2">
                 <div className="flex justify-between">

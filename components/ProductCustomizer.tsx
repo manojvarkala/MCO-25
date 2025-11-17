@@ -54,7 +54,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     useEffect(() => {
         if (isOpen) {
             if (productToEdit && productToEdit.sku) { // Editing existing bundle
-                setName(productToEdit.name || '');
+                setName(stripHtml(productToEdit.name || ''));
                 setSku(productToEdit.sku || '');
                 setPrice(productToEdit.salePrice?.toString() || '');
                 setRegularPrice(productToEdit.regularPrice?.toString() || '');
@@ -233,7 +233,7 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
     useEffect(() => {
         if (isOpen) {
             if (productToEdit && productToEdit.sku) { // Check if we are editing
-                setName(productToEdit.name || '');
+                setName(stripHtml(productToEdit.name || ''));
                 setSku(productToEdit.sku || '');
                 setPrice(productToEdit.salePrice?.toString() || '');
                 setRegularPrice(productToEdit.regularPrice?.toString() || '');
@@ -327,7 +327,7 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
     useEffect(() => {
         if (isOpen) {
             if (productToEdit && productToEdit.sku) {
-                setName(productToEdit.name || '');
+                setName(stripHtml(productToEdit.name || ''));
                 setSku(productToEdit.sku || '');
                 setPrice(productToEdit.salePrice?.toString() || '');
                 setRegularPrice(productToEdit.regularPrice?.toString() || '');
@@ -441,6 +441,7 @@ const ProductCustomizer: FC = () => {
         if (!token) { toast.error("Authentication Error"); return; }
         setIsSaving(true);
         try {
+            // This is the definitive fix. Using post_title, sale_price, regular_price.
             const result = await googleSheetsService.adminUpsertProduct(token, productData);
             updateConfigData(result.organizations, result.examPrices);
             toast.success(`Product "${productData.post_title}" saved successfully!`);
@@ -488,7 +489,7 @@ const ProductCustomizer: FC = () => {
                 subscriptionLength: data._subscription_length,
             };
         });
-        allProducts.sort((a,b) => a.name.localeCompare(b.name));
+        allProducts.sort((a,b) => (stripHtml(a.name) || '').localeCompare(stripHtml(b.name) || ''));
 
         return {
             all: allProducts,
@@ -535,12 +536,12 @@ const ProductCustomizer: FC = () => {
                             <div key={product.sku} className="editable-card">
                                 <div className="editable-card__header">
                                     <div className="flex-grow">
-                                        <h3 className="font-bold text-lg text-[rgb(var(--color-text-strong-rgb))]">{product.name}</h3>
+                                        <h3 className="font-bold text-lg text-[rgb(var(--color-text-strong-rgb))]">{stripHtml(product.name)}</h3>
                                         <p className="text-xs font-mono text-[rgb(var(--color-text-muted-rgb))]">{product.sku}</p>
                                     </div>
                                     <div className="flex items-center gap-1 flex-shrink-0">
-                                        <button onClick={() => handleDelete(product.id, product.name)} disabled={isSaving} className="p-2 rounded-full text-red-500 hover:bg-red-100"><Trash2 size={16}/></button>
-                                        <button onClick={() => openModal(product.type || 'simple', product)} className="p-2 rounded-full text-[rgb(var(--color-primary-rgb))] hover:bg-cyan-100"><Edit size={16}/></button>
+                                        <button onClick={() => handleDelete(product.id, stripHtml(product.name))} disabled={isSaving} className="p-2 rounded-full text-red-500 hover:bg-red-100"><Trash2 size={16}/></button>
+                                        <button onClick={() => openModal(product.isBundle ? 'bundle' : (product.type || 'simple'), product)} className="p-2 rounded-full text-[rgb(var(--color-primary-rgb))] hover:bg-cyan-100"><Edit size={16}/></button>
                                     </div>
                                 </div>
                                 <div className="editable-card__content text-sm">

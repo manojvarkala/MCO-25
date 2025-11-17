@@ -1,3 +1,4 @@
+
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
 // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
 import { useNavigate, Link } from 'react-router-dom';
@@ -104,7 +105,7 @@ const Dashboard: FC = () => {
     const { monthlyPrice, monthlyRegularPrice, yearlyPrice, yearlyRegularPrice, monthlySubUrl, yearlySubUrl } = useMemo(() => {
         const monthlyData = examPrices?.['sub-monthly'];
         const yearlyData = examPrices?.['sub-yearly'];
-        const website = activeOrg ? `https://www.${activeOrg.website}` : '';
+        const website = activeOrg ? `https://${activeOrg.website}` : '';
 
         return {
             monthlyPrice: monthlyData?.price ?? 19.99,
@@ -330,7 +331,9 @@ const Dashboard: FC = () => {
                                         <ShareButtons shareUrl={shareUrl} shareText={shareText} shareTitle={shareTitle} />
                                     </div>
                                 </div>
-                                <div className="prose prose-sm max-w-none text-[rgb(var(--color-text-muted-rgb))] mb-4" dangerouslySetInnerHTML={{ __html: category.description }} />
+                                <div className="prose prose-sm max-w-none text-[rgb(var(--color-text-muted-rgb))] mb-4">
+                                    {stripHtml(category.description)}
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} isDisabled={isDisabled} />}
                                     {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} attemptsMade={certAttempts} isDisabled={isDisabled}/>}
