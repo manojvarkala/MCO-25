@@ -93,15 +93,8 @@ const Dashboard: FC = () => {
         return activeOrg.examProductCategories
             .filter(Boolean)
             .map(category => {
-                const practiceExamRaw = activeOrg.exams.find(e => e && e.id === category.practiceExamId);
-                const practiceExam = practiceExamRaw 
-                    ? { ...practiceExamRaw, description: stripHtml(practiceExamRaw.description) } 
-                    : undefined;
-
-                const certExamRaw = activeOrg.exams.find(e => e && e.id === category.certificationExamId);
-                const certExam = certExamRaw
-                    ? { ...certExamRaw, description: stripHtml(certExamRaw.description) }
-                    : undefined;
+                const practiceExam = activeOrg.exams.find(e => e && e.id === category.practiceExamId);
+                const certExam = activeOrg.exams.find(e => e && e.id === category.certificationExamId);
                     
                 return { ...category, practiceExam, certExam };
             });
@@ -303,7 +296,7 @@ const Dashboard: FC = () => {
                                         <ShareButtons shareUrl={shareUrl} shareText={shareText} shareTitle={shareTitle} />
                                     </div>
                                 </div>
-                                <p className="text-[rgb(var(--color-text-muted-rgb))] mb-4 text-sm">{stripHtml(category.description)}</p>
+                                <div className="prose prose-sm max-w-none text-[rgb(var(--color-text-muted-rgb))] mb-4" dangerouslySetInnerHTML={{ __html: category.description }} />
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} isDisabled={isDisabled} />}
                                     {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} attemptsMade={certAttempts} isDisabled={isDisabled}/>}

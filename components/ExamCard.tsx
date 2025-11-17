@@ -105,7 +105,7 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                 )}
             </div>
             
-            <p className="text-sm mt-2 opacity-90 flex-grow">{exam.description}</p>
+            <div className="text-sm mt-2 opacity-90 flex-grow prose prose-sm prose-invert max-w-none text-white/90" dangerouslySetInnerHTML={{ __html: exam.description }} />
             
             <div className="mt-4 pt-4 border-t border-white/20 text-sm space-y-2">
                 <div className="flex justify-between">
