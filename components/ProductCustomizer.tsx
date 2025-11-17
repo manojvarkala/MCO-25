@@ -67,13 +67,8 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if (!name || !sku) {
-            toast.error("Name and SKU are required.");
-            return;
-        }
-        // A price of 0 is valid, so check for empty string instead of just !price
-        if (price.trim() === '' || isNaN(parseFloat(price))) {
-            toast.error("A valid Sale Price is required.");
+        if (!name || !sku || price.trim() === '' || isNaN(parseFloat(price))) {
+            toast.error("Name, SKU, and a valid Sale Price are required.");
             return;
         }
         if (selectedSimpleSkus.length === 0) {
@@ -120,7 +115,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     }, [selectedSimpleSkus, selectedSubscriptionSku, simpleProducts, subscriptionProducts]);
 
     const totalRegularPrice = useMemo(() => {
-        return selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || 0), 0);
+        return selectedItems.reduce((acc, item) => acc + (parseFloat(item.regularPrice) || parseFloat(item.salePrice) || 0), 0);
     }, [selectedItems]);
 
 
@@ -175,7 +170,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
                                 {selectedItems.map(item => (
                                     <li key={item.sku} className="flex justify-between">
                                         <span className="truncate" title={item.name}>{item.name} <span className="text-xs font-mono text-[rgb(var(--color-text-muted-rgb))]">({item.sku})</span></span>
-                                        <span className="font-mono">${parseFloat(item.regularPrice).toFixed(2)}</span>
+                                        <span className="font-mono">${(parseFloat(item.regularPrice) || parseFloat(item.salePrice)).toFixed(2)}</span>
                                     </li>
                                 ))}
                              </ul>
@@ -238,16 +233,10 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if (!name || !sku) {
-            toast.error("Name and SKU are required.");
+        if (!name || !sku || price.trim() === '' || isNaN(parseFloat(price))) {
+            toast.error("Name, SKU, and a valid Sale Price are required.");
             return;
         }
-        // A price of 0 is valid, so check for empty string instead of just !price
-        if (price.trim() === '' || isNaN(parseFloat(price))) {
-            toast.error("A valid Sale Price is required.");
-            return;
-        }
-
         const payload: any = { 
             name, 
             sku, 
@@ -327,8 +316,8 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
             } else {
                 setName('Monthly Subscription');
                 setSku('sub-monthly');
-                setPrice('19.99');
-                setRegularPrice('29.99');
+                setPrice('');
+                setRegularPrice('');
                 setPeriod('month');
                 setInterval('1');
                 setLength('0');
@@ -340,7 +329,7 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
 
     const handleSave = () => {
         if (!name || !sku || price.trim() === '' || isNaN(parseFloat(price)) || !period || !interval) {
-            toast.error("All fields except regular price & length are required.");
+            toast.error("All fields except regular price & length are required for a subscription.");
             return;
         }
         
@@ -570,7 +559,7 @@ const ProductCustomizer: FC = () => {
         setIsBulkSaving(true);
         const toastId = toast.loading(`Updating ${selectedSkus.length} products...`);
         let lastResult: { organizations: Organization[], examPrices: any } | null = null;
-    
+        
         try {
             for (const sku of selectedSkus) {
                 const product = allProducts.find(p => p.sku === sku);
@@ -585,7 +574,8 @@ const ProductCustomizer: FC = () => {
                 if (salePrice.trim() !== '' && !isNaN(parseFloat(salePrice))) {
                     productData.price = parseFloat(salePrice);
                 } else {
-                    productData.price = parseFloat(product.salePrice); // Preserve old price
+                    // Preserve old price by parsing it, as the backend expects a number
+                    productData.price = parseFloat(product.salePrice);
                 }
     
                 if (regularPrice.trim() !== '' && !isNaN(parseFloat(regularPrice))) {
@@ -593,12 +583,16 @@ const ProductCustomizer: FC = () => {
                 } else if (regularPrice.trim() === '') {
                     productData.regularPrice = ''; // Clear regular price
                 } else {
-                    productData.regularPrice = parseFloat(product.regularPrice); // Preserve old regular price
+                    // Preserve old regular price if it's a valid number
+                    const oldRegular = parseFloat(product.regularPrice);
+                    if (!isNaN(oldRegular)) {
+                        productData.regularPrice = oldRegular;
+                    }
                 }
     
                 lastResult = await googleSheetsService.adminUpsertProduct(token, productData);
             }
-    
+            
             if (lastResult) {
                 updateConfigData(lastResult.organizations, lastResult.examPrices);
             }
