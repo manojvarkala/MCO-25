@@ -799,7 +799,7 @@ const ProductCustomizer: FC = () => {
             </div>
         );
     };
-
+    
     const getModalForProduct = () => {
         if (!modalState.type) return null;
         
