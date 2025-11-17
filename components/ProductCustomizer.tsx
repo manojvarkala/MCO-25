@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useMemo, useCallback, ReactNode, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -441,7 +442,6 @@ const ProductCustomizer: FC = () => {
         if (!token) { toast.error("Authentication Error"); return; }
         setIsSaving(true);
         try {
-            console.log('Sending payload:', productData); // Debug log to inspect payload
             const result = await googleSheetsService.adminUpsertProduct(token, productData);
             updateConfigData(result.organizations, result.examPrices);
             toast.success(`Product "${productData.post_title}" saved successfully!`);
