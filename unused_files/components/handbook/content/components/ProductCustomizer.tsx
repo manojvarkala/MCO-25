@@ -67,8 +67,8 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if (!name || !sku || !price) {
-            toast.error("Name, SKU, and Sale Price are required.");
+        if (!name || !sku || price === '' || isNaN(parseFloat(price))) {
+            toast.error("Name, SKU, and a valid Sale Price are required.");
             return;
         }
         if (selectedSimpleSkus.length === 0) {
@@ -79,15 +79,22 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
         if (selectedSubscriptionSku) {
             bundled_skus.push(selectedSubscriptionSku);
         }
-
-        onSave({
+        
+        const payload: any = {
             name,
             sku,
             price: parseFloat(price),
-            regularPrice: parseFloat(regularPrice) || parseFloat(price),
             isBundle: true,
             bundled_skus,
-        });
+        };
+
+        if (regularPrice !== '' && !isNaN(parseFloat(regularPrice))) {
+            payload.regularPrice = parseFloat(regularPrice);
+        } else {
+            payload.regularPrice = '';
+        }
+
+        onSave(payload);
     };
     
     const handleSimpleProductToggle = (selectedSku: string) => {
@@ -226,11 +233,22 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if (!name || !sku || !price) {
-            toast.error("Name, SKU, and Sale Price are required.");
+        if (!name || !sku || price === '' || isNaN(parseFloat(price))) {
+            toast.error("Name, SKU, and a valid Sale Price are required.");
             return;
         }
-        onSave({ name, sku, price: parseFloat(price), regularPrice: parseFloat(regularPrice) || parseFloat(price) });
+        const payload: any = { 
+            name, 
+            sku, 
+            price: parseFloat(price) 
+        };
+        // Send regular price only if it's a valid number, or an empty string to clear it
+        if (regularPrice !== '' && !isNaN(parseFloat(regularPrice))) {
+            payload.regularPrice = parseFloat(regularPrice);
+        } else {
+            payload.regularPrice = '';
+        }
+        onSave(payload);
     };
 
     return (
@@ -310,18 +328,25 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if (!name || !sku || !price || !period || !interval) {
+        if (!name || !sku || price === '' || isNaN(parseFloat(price)) || !period || !interval) {
             toast.error("All fields except regular price & length are required.");
             return;
         }
-        onSave({
+        
+        const payload: any = {
             name, sku,
             price: parseFloat(price),
-            regularPrice: parseFloat(regularPrice) || parseFloat(price),
             subscription_period: period,
             subscription_period_interval: interval,
             subscription_length: length,
-        });
+        };
+
+        if (regularPrice !== '' && !isNaN(parseFloat(regularPrice))) {
+            payload.regularPrice = parseFloat(regularPrice);
+        } else {
+            payload.regularPrice = '';
+        }
+        onSave(payload);
     };
 
     return (
@@ -538,8 +563,12 @@ const ProductCustomizer: FC = () => {
         try {
             for (const sku of selectedSkus) {
                 const productData: any = { sku };
-                if (salePrice !== '') productData.price = parseFloat(salePrice);
-                if (regularPrice !== '') productData.regularPrice = parseFloat(regularPrice);
+                if (salePrice !== '' && !isNaN(parseFloat(salePrice))) productData.price = parseFloat(salePrice);
+                if (regularPrice !== '' && !isNaN(parseFloat(regularPrice))) {
+                     productData.regularPrice = parseFloat(regularPrice);
+                } else if (regularPrice === '') {
+                    productData.regularPrice = '';
+                }
                 lastResult = await googleSheetsService.adminUpsertProduct(token, productData);
             }
             
@@ -607,7 +636,10 @@ const ProductCustomizer: FC = () => {
     };
 
     const handleOpenCreator = () => {
-        if (activeTab === 'all') return;
+        if (activeTab === 'all') {
+            toast.error("Please select a specific product type tab (Simple, Subscription, Bundle) to create a new product.");
+            return;
+        };
         setModalState({ type: activeTab });
     };
 

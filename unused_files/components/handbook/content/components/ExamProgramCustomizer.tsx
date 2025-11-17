@@ -389,7 +389,7 @@ const ExamProgramCustomizer: FC = () => {
         }
         setIsCreating(true);
         try {
-            const result = await googleSheetsService.adminCreateExamProgram(token, newProgramName, { sku: newProgramProductLink });
+            const result = await googleSheetsService.adminCreateExamProgram(token, newProgramName, { type: 'auto', sku: newProgramProductLink });
             updateConfigData(result.organizations, result.examPrices);
             toast.success(`Program "${newProgramName}" created!`);
             setIsCreateModalOpen(false);
@@ -426,7 +426,7 @@ const ExamProgramCustomizer: FC = () => {
         let lastResult: { organizations: Organization[], examPrices: any } | null = null;
         try {
             for (const programId of selectedProgramIds) {
-                lastResult = await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
+                lastResult = await googleSheetsService.adminUpdateExamProgram(token, programId, { category: updateData });
             }
             if (lastResult) {
                 updateConfigData(lastResult.organizations, lastResult.examPrices);
