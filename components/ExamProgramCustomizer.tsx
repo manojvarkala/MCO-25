@@ -409,7 +409,7 @@ const ExamProgramCustomizer: FC = () => {
         }
         setIsSaving(true);
         try {
-            const result = await googleSheetsService.adminDeletePost(token, programId, 'mco_exam_program');
+            const result = await googleSheetsService.adminDeletePost(token, programId.replace('prod-', ''), 'mco_exam_program');
             updateConfigData(result.organizations, result.examPrices);
             toast.success(`Program "${programName}" deleted.`);
         } catch(error: any) {
@@ -423,13 +423,16 @@ const ExamProgramCustomizer: FC = () => {
         if (!token || selectedProgramIds.length === 0) return;
         setIsBulkSaving(true);
         const toastId = toast.loading(`Updating ${selectedProgramIds.length} programs...`);
+        let lastResult: { organizations: Organization[], examPrices: any } | null = null;
         try {
             for (const programId of selectedProgramIds) {
-                await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
+                lastResult = await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
             }
-            toast.success(`${selectedProgramIds.length} programs updated successfully! Refreshing data...`, { id: toastId, duration: 4000 });
+            if (lastResult) {
+                updateConfigData(lastResult.organizations, lastResult.examPrices);
+            }
+            toast.success(`${selectedProgramIds.length} programs updated successfully!`, { id: toastId });
             setSelectedProgramIds([]);
-            setTimeout(() => window.location.reload(), 1000);
         } catch (error: any) {
             toast.error(error.message || "An error occurred during bulk update.", { id: toastId });
         } finally {

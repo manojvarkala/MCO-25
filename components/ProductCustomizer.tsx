@@ -2,7 +2,7 @@ import React, { FC, useState, useMemo, useCallback, ReactNode, useEffect } from 
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { ProductVariation, ProductVariationType, BillingPeriod } from '../types.ts';
+import type { ProductVariation, ProductVariationType, BillingPeriod, Organization } from '../types.ts';
 import toast from 'react-hot-toast';
 import { Edit, Save, X, ShoppingCart, RefreshCw, Trash2, PlusCircle } from 'lucide-react';
 import Spinner from './Spinner.tsx';
@@ -509,10 +509,10 @@ const ProductCustomizer: FC = () => {
 
         setIsSaving(true);
         try {
-            await googleSheetsService.adminUpsertProduct(token, productData);
-            toast.success(`${type} "${productData.name}" saved successfully! Refreshing data...`, { duration: 4000 });
+            const result = await googleSheetsService.adminUpsertProduct(token, productData);
+            updateConfigData(result.organizations, result.examPrices);
+            toast.success(`${type} "${productData.name}" saved successfully!`);
             setModalState({ type: null });
-            setTimeout(() => window.location.reload(), 1000);
         } catch (error: any) {
             toast.error(error.message || `Failed to save ${type.toLowerCase()}.`);
         } finally {
@@ -526,25 +526,29 @@ const ProductCustomizer: FC = () => {
             return;
         }
         if (selectedSkus.length === 0) return;
-        if (!salePrice && !regularPrice) {
+        if (salePrice === '' && regularPrice === '') {
             toast.error("Please enter a sale price or a regular price to update.");
             return;
         }
 
         setIsBulkSaving(true);
         const toastId = toast.loading(`Updating ${selectedSkus.length} products...`);
+        let lastResult: { organizations: Organization[], examPrices: any } | null = null;
         
         try {
             for (const sku of selectedSkus) {
                 const productData: any = { sku };
-                if (salePrice) productData.price = parseFloat(salePrice);
-                if (regularPrice) productData.regularPrice = parseFloat(regularPrice);
-                await googleSheetsService.adminUpsertProduct(token, productData);
+                if (salePrice !== '') productData.price = parseFloat(salePrice);
+                if (regularPrice !== '') productData.regularPrice = parseFloat(regularPrice);
+                lastResult = await googleSheetsService.adminUpsertProduct(token, productData);
+            }
+            
+            if (lastResult) {
+                updateConfigData(lastResult.organizations, lastResult.examPrices);
             }
 
-            toast.success(`${selectedSkus.length} products updated! Refreshing data...`, { id: toastId, duration: 4000 });
+            toast.success(`${selectedSkus.length} products updated!`, { id: toastId });
             setSelectedSkus([]);
-            setTimeout(() => window.location.reload(), 1000);
         } catch (error: any) {
             toast.error(error.message || "An error occurred during bulk update.", { id: toastId });
         } finally {
@@ -563,9 +567,9 @@ const ProductCustomizer: FC = () => {
 
         setIsSaving(true);
         try {
-            await googleSheetsService.adminDeletePost(token, product.id, 'product');
-            toast.success(`Product "${product.name}" was moved to trash. Refreshing data...`, { duration: 4000 });
-            setTimeout(() => window.location.reload(), 1000);
+            const result = await googleSheetsService.adminDeletePost(token, product.id, 'product');
+            updateConfigData(result.organizations, result.examPrices);
+            toast.success(`Product "${product.name}" was moved to trash.`);
         } catch (error: any) {
             toast.error(error.message || "Failed to delete product.");
         } finally {
