@@ -1,7 +1,6 @@
 
 
 import React, { FC } from 'react';
-// FIX: Standardize react-router-dom import to use single quotes to resolve module export errors.
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';

@@ -11,7 +11,7 @@ import { Download, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppContext } from '../context/AppContext.tsx';
-import Seal from '../assets/Seal.tsx';
+import Seal from './Seal.tsx';
 
 const decodeHtmlEntities = (text: string | undefined): string => {
     if (!text || typeof text !== 'string') return text || '';
