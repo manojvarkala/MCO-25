@@ -66,7 +66,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
                 setSelectedSimpleSkus(simple);
                 setSelectedSubscriptionSku(sub || '');
             } else { // Creating new bundle
-                setName('New Exam Bundle');
+                setName('');
                 setSku('');
                 setPrice('');
                 setRegularPrice('');
@@ -238,7 +238,7 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
                 setPrice(productToEdit.salePrice?.toString() || '');
                 setRegularPrice(productToEdit.regularPrice?.toString() || '');
             } else { // We are creating
-                setName('New Simple Product');
+                setName('');
                 setSku('');
                 setPrice('');
                 setRegularPrice('');
@@ -335,9 +335,9 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                 setBillingInterval(productToEdit.subscriptionPeriodInterval || '1');
                 setSubscriptionLength(productToEdit.subscriptionLength || '0');
             } else {
-                setName('New Subscription');
+                setName('');
                 setSku('');
-                setPrice('9.99');
+                setPrice('');
                 setRegularPrice('');
                 setBillingPeriod('month');
                 setBillingInterval('1');
@@ -472,24 +472,27 @@ const ProductCustomizer: FC = () => {
     const products = useMemo(() => {
         if (!examPrices || !activeOrg) return { all: [], simple: [], subscription: [], bundle: [] };
         
-        const allProducts = Object.entries(examPrices).map(([sku, data]: [string, any]): ProductVariation => ({
-            id: data.productId?.toString(),
-            name: data.name,
-            sku,
-            type: data.isBundle ? 'bundle' : (data.type || 'simple'),
-            regularPrice: data.regularPrice?.toString() ?? '',
-            salePrice: data.price?.toString() ?? '',
-            isBundle: data.isBundle || false,
-            bundledSkus: data.bundledSkus || [],
-            subscriptionPeriod: data._subscription_period,
-            subscriptionPeriodInterval: data._subscription_period_interval,
-            subscriptionLength: data._subscription_length,
-        }));
+        const allProducts = Object.entries(examPrices).map(([sku, data]: [string, any]): ProductVariation => {
+            const isActuallyBundle = data.isBundle || (Array.isArray(data.bundledSkus) && data.bundledSkus.length > 0);
+            return {
+                id: data.productId?.toString(),
+                name: data.name,
+                sku,
+                type: isActuallyBundle ? 'bundle' : (data.type || 'simple'),
+                regularPrice: data.regularPrice?.toString() ?? '',
+                salePrice: data.price?.toString() ?? '',
+                isBundle: isActuallyBundle,
+                bundledSkus: data.bundledSkus || [],
+                subscriptionPeriod: data._subscription_period,
+                subscriptionPeriodInterval: data._subscription_period_interval,
+                subscriptionLength: data._subscription_length,
+            };
+        });
         allProducts.sort((a,b) => a.name.localeCompare(b.name));
 
         return {
             all: allProducts,
-            simple: allProducts.filter(p => !p.type || p.type === 'simple'),
+            simple: allProducts.filter(p => p.type === 'simple' && !p.isBundle),
             subscription: allProducts.filter(p => p.type === 'subscription'),
             bundle: allProducts.filter(p => p.isBundle),
         };
