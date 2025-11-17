@@ -90,11 +90,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
 
         const regPriceNum = parseFloat(regularPrice);
         if (productToEdit?.sku) { // Editing
-            if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
-                payload.regular_price = regPriceNum;
-            } else {
-                payload.regular_price = '';
-            }
+            payload.regular_price = (regularPrice.trim() !== '' && !isNaN(regPriceNum)) ? regPriceNum : '';
         } else { // Creating
             if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
                 payload.regular_price = regPriceNum;
@@ -253,15 +249,9 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
         const regPriceNum = parseFloat(regularPrice);
     
         if (productToEdit?.sku) { // Editing
-            if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
-                payload.regular_price = regPriceNum;
-            } else {
-                // Explicitly clear the price if the field is emptied on edit
-                payload.regular_price = '';
-            }
+            payload.regular_price = (regularPrice.trim() !== '' && !isNaN(regPriceNum)) ? regPriceNum : '';
         } else { // Creating
             if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
-                // Only include regular_price on create if it has a value
                 payload.regular_price = regPriceNum;
             }
         }
@@ -332,7 +322,6 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                 setInterval(productToEdit.subscriptionPeriodInterval || '1');
                 setLength(productToEdit.subscriptionLength || '0');
             } else {
-                // FIX: Fields are now empty by default for creation, not hardcoded.
                 setName('');
                 setSku('');
                 setPrice('');
@@ -364,11 +353,7 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
         const regPriceNum = parseFloat(regularPrice);
     
         if (productToEdit?.sku) { // Editing
-            if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
-                payload.regular_price = regPriceNum;
-            } else {
-                payload.regular_price = '';
-            }
+            payload.regular_price = (regularPrice.trim() !== '' && !isNaN(regPriceNum)) ? regPriceNum : '';
         } else { // Creating
             if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
                 payload.regular_price = regPriceNum;
@@ -611,13 +596,13 @@ const ProductCustomizer: FC = () => {
                 // Handle Regular Price
                 const regPriceNum = parseFloat(regularPrice);
                 if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
-                    // A new regular price is provided
+                    // A new regular price is provided, send it.
                     productData.regular_price = regPriceNum;
                 } else if (regularPrice.trim() === '') {
-                    // Field is explicitly cleared, so send empty string to clear it on the backend
+                    // Field is explicitly cleared, send empty string to clear it on backend
                     productData.regular_price = '';
                 } else {
-                    // Field is left untouched, so preserve existing regular price
+                    // Field is left untouched, preserve existing regular price
                     const oldRegular = parseFloat(product.regularPrice);
                     if (!isNaN(oldRegular)) {
                         productData.regular_price = oldRegular;
