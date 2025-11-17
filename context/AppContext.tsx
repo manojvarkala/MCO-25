@@ -50,6 +50,23 @@ const decodeHtmlEntities = (text: string | undefined): string => {
     }
 };
 
+const cleanPluginHtml = (html: string | undefined): string => {
+    if (!html || typeof html !== 'string') return html || '';
+    try {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        
+        // Find and remove Jetpack 'Like' widgets which have the 'sharedaddy' class
+        const jetpackWidgets = tempDiv.querySelectorAll('.sharedaddy');
+        jetpackWidgets.forEach(widget => widget.remove());
+        
+        return tempDiv.innerHTML.trim();
+    } catch (e) {
+        console.error("Could not parse HTML for cleaning:", e);
+        return html;
+    }
+};
+
 
 // This function processes a raw config object (either static or from the API)
 // and prepares it for the application state by decoding entities and mapping data.
@@ -63,7 +80,7 @@ const processConfigData = (configData: any) => {
         
         (org.examProductCategories || []).forEach((cat: ExamProductCategory) => {
             cat.name = decodeHtmlEntities(cat.name);
-            cat.description = decodeHtmlEntities(cat.description);
+            cat.description = cleanPluginHtml(decodeHtmlEntities(cat.description));
         });
 
         // FIX: Re-implemented a robust URL mapping for full backward compatibility with older plugin versions.
@@ -80,7 +97,7 @@ const processConfigData = (configData: any) => {
             return {
                 ...exam,
                 name: decodeHtmlEntities(exam.name),
-                description: decodeHtmlEntities(exam.description),
+                description: cleanPluginHtml(decodeHtmlEntities(exam.description)),
                 questionSourceUrl: exam.questionSourceUrl || categoryUrl,
             };
         }).filter(Boolean) as Exam[]; // filter out any null entries
