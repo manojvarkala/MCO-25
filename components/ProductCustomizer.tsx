@@ -10,6 +10,18 @@ import Spinner from './Spinner.tsx';
 
 type TabType = 'all' | 'simple' | 'subscription' | 'bundle';
 
+const stripHtml = (html: string): string => {
+    if (!html || typeof html !== 'string') return html || '';
+    try {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        return tempDiv.textContent || tempDiv.innerText || '';
+    } catch (e) {
+        console.error("Could not parse HTML string for stripping", e);
+        return html;
+    }
+};
+
 const TabButton: FC<{ active: boolean; onClick: () => void; children: ReactNode }> = ({ active, onClick, children }) => (
     <button
         onClick={onClick}
@@ -48,8 +60,8 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
                 setRegularPrice(productToEdit.regularPrice?.toString() || '');
 
                 const bundled = productToEdit.bundledSkus || [];
-                const simple = bundled.filter(s => !s.startsWith('sub-'));
-                const sub = bundled.find(s => s.startsWith('sub-'));
+                const simple = bundled.filter(s => simpleProducts.some(p => p.sku === s));
+                const sub = bundled.find(s => subscriptionProducts.some(p => p.sku === s));
 
                 setSelectedSimpleSkus(simple);
                 setSelectedSubscriptionSku(sub || '');
@@ -62,7 +74,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
                 setSelectedSubscriptionSku('');
             }
         }
-    }, [isOpen, productToEdit]);
+    }, [isOpen, productToEdit, simpleProducts, subscriptionProducts]);
 
 
     if (!isOpen) return null;
@@ -72,8 +84,8 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
             toast.error("Name, SKU, and a valid Sale Price are required.");
             return;
         }
-        if (selectedSimpleSkus.length === 0) {
-            toast.error("Please select at least one exam for the bundle.");
+        if (selectedSimpleSkus.length === 0 && !selectedSubscriptionSku) {
+            toast.error("Please select at least one item for the bundle.");
             return;
         }
         const bundled_skus = [...selectedSimpleSkus];
@@ -82,7 +94,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
         }
         
         const payload: any = {
-            name: name.trim(),
+            post_title: name.trim(),
             sku: sku.trim(),
             sale_price: parseFloat(price),
             isBundle: true,
@@ -150,7 +162,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
                                     <label key={p.sku} className="flex items-center justify-between gap-2 p-2 rounded bg-[rgb(var(--color-card-rgb))] cursor-pointer">
                                         <div className="flex items-center gap-2">
                                             <input type="checkbox" checked={selectedSimpleSkus.includes(p.sku)} onChange={() => handleSimpleProductToggle(p.sku)} />
-                                            <span className="truncate" title={p.name}>{p.name}</span>
+                                            <span className="truncate" title={p.name}>{stripHtml(p.name)}</span>
                                         </div>
                                         <span className="text-xs font-mono text-[rgb(var(--color-text-muted-rgb))] flex-shrink-0">{p.sku}</span>
                                     </label>
@@ -161,7 +173,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
                              <h3 className="font-semibold mb-2">Included Subscription</h3>
                             <select value={selectedSubscriptionSku} onChange={e => setSelectedSubscriptionSku(e.target.value)} className="w-full p-2 border rounded bg-white">
                                 <option value="">None</option>
-                                {subscriptionProducts.map(s => <option key={s.sku} value={s.sku}>{s.name} ({s.sku})</option>)}
+                                {subscriptionProducts.map(s => <option key={s.sku} value={s.sku}>{stripHtml(s.name)} ({s.sku})</option>)}
                             </select>
                         </div>
                     </div>
@@ -173,7 +185,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
                              <ul className="text-sm space-y-1">
                                 {selectedItems.map(item => (
                                     <li key={item.sku} className="flex justify-between">
-                                        <span className="truncate" title={item.name}>{item.name} <span className="text-xs font-mono text-[rgb(var(--color-text-muted-rgb))]">({item.sku})</span></span>
+                                        <span className="truncate" title={item.name}>{stripHtml(item.name)} <span className="text-xs font-mono text-[rgb(var(--color-text-muted-rgb))]">({item.sku})</span></span>
                                         <span className="font-mono">${(parseFloat(item.regularPrice) || parseFloat(item.salePrice) || 0).toFixed(2)}</span>
                                     </li>
                                 ))}
@@ -242,7 +254,7 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
             return;
         }
         const payload: any = {
-            name: name.trim(),
+            post_title: name.trim(),
             sku: sku.trim(),
             sale_price: parseFloat(price)
         };
@@ -308,9 +320,9 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
     const [sku, setSku] = useState('');
     const [price, setPrice] = useState('');
     const [regularPrice, setRegularPrice] = useState('');
-    const [period, setPeriod] = useState<BillingPeriod>('month');
-    const [interval, setInterval] = useState('1');
-    const [length, setLength] = useState('0');
+    const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('month');
+    const [billingInterval, setBillingInterval] = useState('1');
+    const [subscriptionLength, setSubscriptionLength] = useState('0');
 
     useEffect(() => {
         if (isOpen) {
@@ -319,17 +331,17 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                 setSku(productToEdit.sku || '');
                 setPrice(productToEdit.salePrice?.toString() || '');
                 setRegularPrice(productToEdit.regularPrice?.toString() || '');
-                setPeriod(productToEdit.subscriptionPeriod || 'month');
-                setInterval(productToEdit.subscriptionPeriodInterval || '1');
-                setLength(productToEdit.subscriptionLength || '0');
+                setBillingPeriod(productToEdit.subscriptionPeriod || 'month');
+                setBillingInterval(productToEdit.subscriptionPeriodInterval || '1');
+                setSubscriptionLength(productToEdit.subscriptionLength || '0');
             } else {
                 setName('');
                 setSku('');
                 setPrice('');
                 setRegularPrice('');
-                setPeriod('month');
-                setInterval('1');
-                setLength('0');
+                setBillingPeriod('month');
+                setBillingInterval('1');
+                setSubscriptionLength('0');
             }
         }
     }, [isOpen, productToEdit]);
@@ -337,26 +349,25 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if (!name.trim() || !sku.trim() || price.trim() === '' || isNaN(parseFloat(price)) || !period || !interval) {
-            toast.error("All fields except regular price & length are required for a subscription.");
+        if (!name.trim() || !sku.trim() || price.trim() === '' || isNaN(parseFloat(price))) {
+            toast.error("Name, SKU, and a valid Sale Price are required.");
             return;
         }
-        
         const payload: any = {
-            name: name.trim(), 
+            post_title: name.trim(),
             sku: sku.trim(),
             sale_price: parseFloat(price),
-            subscription_period: period,
-            subscription_period_interval: interval,
-            subscription_length: length,
+            type: 'subscription',
+            _subscription_period: billingPeriod,
+            _subscription_period_interval: billingInterval,
+            _subscription_length: subscriptionLength,
         };
-    
+
         const regPriceNum = parseFloat(regularPrice);
-    
-        if (productToEdit?.sku) { // Editing
+        if (productToEdit?.sku) {
             payload.regular_price = (regularPrice.trim() !== '' && !isNaN(regPriceNum)) ? regPriceNum : '';
-        } else { // Creating
-            if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
+        } else {
+             if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
                 payload.regular_price = regPriceNum;
             }
         }
@@ -365,19 +376,17 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-lg w-full max-w-2xl p-6">
+         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-lg w-full max-w-lg p-6">
                 <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">{productToEdit?.sku ? 'Edit Subscription' : 'Create New Subscription'}</h2>
                 <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-sm font-medium">Subscription Name</label>
-                            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Monthly Premium Access" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium">SKU</label>
-                            <input type="text" value={sku} onChange={e => setSku(e.target.value)} disabled={!!productToEdit?.sku} placeholder="e.g. sub-monthly-premium" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))] disabled:opacity-70" />
-                        </div>
+                     <div>
+                        <label className="text-sm font-medium">Subscription Name</label>
+                        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Monthly Premium Access" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
+                    </div>
+                     <div>
+                        <label className="text-sm font-medium">SKU</label>
+                        <input type="text" value={sku} onChange={e => setSku(e.target.value)} disabled={!!productToEdit?.sku} placeholder="e.g., sub-monthly" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))] disabled:opacity-70" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -389,10 +398,14 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                             <input type="number" value={regularPrice} onChange={e => setRegularPrice(e.target.value)} placeholder="e.g., 29.99" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
                         </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+                     <div className="grid grid-cols-3 gap-4">
                         <div>
-                            <label className="text-sm font-medium">Billing Period</label>
-                            <select value={period} onChange={e => setPeriod(e.target.value as BillingPeriod)} className="w-full p-2 mt-1 border rounded bg-white">
+                            <label className="text-sm font-medium">Interval</label>
+                            <input type="number" value={billingInterval} onChange={e => setBillingInterval(e.target.value)} className="w-full p-2 mt-1 border rounded bg-white" />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium">Period</label>
+                            <select value={billingPeriod} onChange={e => setBillingPeriod(e.target.value as BillingPeriod)} className="w-full p-2 mt-1 border rounded bg-white">
                                 <option value="day">Day</option>
                                 <option value="week">Week</option>
                                 <option value="month">Month</option>
@@ -400,12 +413,8 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                             </select>
                         </div>
                         <div>
-                            <label className="text-sm font-medium">Billing Interval</label>
-                            <input type="number" value={interval} onChange={e => setInterval(e.target.value)} className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium">Length (0=forever)</label>
-                            <input type="number" value={length} onChange={e => setLength(e.target.value)} className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
+                            <label className="text-sm font-medium">Length</label>
+                            <input type="number" value={subscriptionLength} onChange={e => setSubscriptionLength(e.target.value)} placeholder="0 for forever" className="w-full p-2 mt-1 border rounded bg-white" />
                         </div>
                     </div>
                 </div>
@@ -420,442 +429,137 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
     );
 };
 
-
-const BulkEditPanel: FC<{
-    selectedCount: number;
-    onSave: (salePrice: string, regularPrice: string) => void;
-    onCancel: () => void;
-    isSaving: boolean;
-}> = ({ selectedCount, onSave, onCancel, isSaving }) => {
-    const [salePrice, setSalePrice] = useState('');
-    const [regularPrice, setRegularPrice] = useState('');
-
-    return (
-        <div className="bg-[rgb(var(--color-muted-rgb))] p-4 rounded-lg border border-[rgb(var(--color-primary-rgb))] space-y-4 mb-4">
-            <h3 className="font-bold text-lg">Bulk Edit {selectedCount} Products</h3>
-            <p className="text-sm text-[rgb(var(--color-text-muted-rgb))] -mt-2">Enter a value to update it for all selected items. Leave a field blank to keep its current value unchanged.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label className="text-sm font-bold">New Sale Price</label>
-                    <input
-                        type="number"
-                        value={salePrice}
-                        onChange={e => setSalePrice(e.target.value)}
-                        placeholder="-- Unchanged --"
-                        className="w-full p-2 mt-1 border rounded bg-white"
-                    />
-                </div>
-                <div>
-                    <label className="text-sm font-bold">New Regular Price</label>
-                    <input
-                        type="number"
-                        value={regularPrice}
-                        onChange={e => setRegularPrice(e.target.value)}
-                        placeholder="Leave blank or enter 0 to clear"
-                        className="w-full p-2 mt-1 border rounded bg-white"
-                    />
-                </div>
-            </div>
-            <div className="flex justify-end gap-2">
-                <button onClick={onCancel} className="px-4 py-2 bg-slate-200 rounded-lg font-semibold text-slate-700 hover:bg-slate-300">Cancel</button>
-                <button onClick={() => onSave(salePrice, regularPrice)} disabled={isSaving} className="flex items-center gap-2 px-4 py-2 bg-green-500 rounded-lg font-semibold text-white hover:bg-green-600 disabled:bg-slate-400">
-                    {isSaving ? <Spinner /> : <Save size={16} />} Apply Changes
-                </button>
-            </div>
-        </div>
-    );
-};
-
-
 const ProductCustomizer: FC = () => {
-    const { examPrices, updateConfigData } = useAppContext();
+    const { activeOrg, examPrices, updateConfigData } = useAppContext();
     const { token } = useAuth();
     const [activeTab, setActiveTab] = useState<TabType>('all');
-    
-    const [modalState, setModalState] = useState<{ type: TabType | null; product?: ProductVariation }>({ type: null });
     const [isSaving, setIsSaving] = useState(false);
-
-    const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
-    const [isBulkSaving, setIsBulkSaving] = useState(false);
-
-    useEffect(() => {
-        setSelectedSkus([]);
-    }, [activeTab]);
     
-    const { allProducts, simpleProducts, subscriptionProducts, bundleProducts } = useMemo(() => {
-        if (!examPrices) {
-            return { allProducts: [], simpleProducts: [], subscriptionProducts: [], bundleProducts: [] };
-        }
-
-        const all: ProductVariation[] = [];
-        const simples: ProductVariation[] = [];
-        const subs: ProductVariation[] = [];
-        const bundles: ProductVariation[] = [];
-
-        Object.entries(examPrices).forEach(([sku, priceData]: [string, any]) => {
-            if (!priceData || typeof priceData !== 'object') {
-                console.warn('Skipping invalid product data entry for SKU:', sku);
-                return;
-            }
-
-            const product: ProductVariation = {
-                id: priceData.productId?.toString() || sku,
-                sku: sku,
-                name: priceData.name || 'Unknown Product',
-                type: 'simple',
-                salePrice: priceData.price?.toString() || '0',
-                regularPrice: priceData.regularPrice?.toString() || '0',
-                isBundle: priceData.isBundle,
-                bundledSkus: priceData.bundledSkus,
-                subscriptionPeriod: priceData.subscription_period,
-                subscriptionPeriodInterval: priceData.subscription_period_interval?.toString(),
-                subscriptionLength: priceData.subscription_length?.toString(),
-            };
-            
-            all.push(product);
-
-            if (product.isBundle) {
-                product.type = 'bundle';
-                bundles.push(product);
-            } else if (priceData.type?.includes('subscription') || product.sku.startsWith('sub-')) {
-                product.type = 'subscription';
-                subs.push(product);
-            } else {
-                product.type = 'simple';
-                simples.push(product);
-            }
-        });
-        
-        const sortByName = (a: ProductVariation, b: ProductVariation) => (a.name || '').localeCompare(b.name || '');
-
-        return { 
-            allProducts: all.sort(sortByName), 
-            simpleProducts: simples.sort(sortByName), 
-            subscriptionProducts: subs.sort(sortByName), 
-            bundleProducts: bundles.sort(sortByName)
-        };
-    }, [examPrices]);
+    const [modalState, setModalState] = useState<{ type: ProductVariationType | null; product: Partial<ProductVariation> | null }>({ type: null, product: null });
     
-    const productMap = useMemo(() => {
-        const map = new Map<string, ProductVariation>();
-        allProducts.forEach(p => map.set(p.sku, p));
-        return map;
-    }, [allProducts]);
-
-    const handleUpsert = async (productData: any, type: 'Bundle' | 'Product' | 'Subscription') => {
-        if (!token) {
-            toast.error("Authentication error.");
-            return;
-        }
-
-        console.log(`[ADMIN DEBUG] Upserting ${type}`, { ...productData });
-        toast.loading(`[ADMIN DEBUG] Payload sent to API. Check browser console for details.`, { duration: 5000 });
-
+    const handleSave = async (productData: any) => {
+        if (!token) { toast.error("Authentication Error"); return; }
         setIsSaving(true);
         try {
+            console.log('Sending payload:', productData); // Debug log to inspect payload
             const result = await googleSheetsService.adminUpsertProduct(token, productData);
             updateConfigData(result.organizations, result.examPrices);
-            toast.success(`${type} "${productData.name}" saved successfully!`);
-            setModalState({ type: null });
+            toast.success(`Product "${productData.post_title}" saved successfully!`);
+            setModalState({ type: null, product: null });
         } catch (error: any) {
-            toast.error(error.message || `Failed to save ${type.toLowerCase()}.`);
+            toast.error(error.message || 'Failed to save product.');
         } finally {
             setIsSaving(false);
         }
     };
     
-    const handleBulkUpdate = async (salePrice: string, regularPrice: string) => {
-        if (!token) {
-            toast.error("Authentication error.");
-            return;
-        }
-        if (selectedSkus.length === 0) return;
-        if (salePrice.trim() === '' && regularPrice.trim() === '') {
-            toast.error("Please enter a sale price or a regular price to update.");
-            return;
-        }
-    
-        setIsBulkSaving(true);
-        const toastId = toast.loading(`Updating ${selectedSkus.length} products...`);
-        let lastResult: { organizations: Organization[], examPrices: any } | null = null;
+    const handleDelete = async (productId: string, productName: string) => {
+        if (!token) { toast.error("Authentication Error"); return; }
+        if (!window.confirm(`Are you sure you want to delete "${productName}"? This will move the product to the trash and cannot be undone.`)) return;
         
-        try {
-            for (const sku of selectedSkus) {
-                const product = allProducts.find(p => p.sku === sku);
-                if (!product) continue;
-    
-                const productData: any = { 
-                    sku: product.sku,
-                    name: product.name, // Preserve existing name
-                };
-    
-                // Handle Sale Price
-                if (salePrice.trim() !== '' && !isNaN(parseFloat(salePrice))) {
-                    productData.sale_price = parseFloat(salePrice);
-                } else {
-                    // Preserve existing sale price if bulk field is empty
-                    productData.sale_price = parseFloat(product.salePrice);
-                }
-    
-                // Handle Regular Price
-                const regPriceNum = parseFloat(regularPrice);
-                if (regularPrice.trim() !== '' && !isNaN(regPriceNum)) {
-                    // A new regular price is provided, send it.
-                    productData.regular_price = regPriceNum;
-                } else if (regularPrice.trim() === '') {
-                    // Field is explicitly cleared, send empty string to clear it on backend
-                    productData.regular_price = '';
-                } else {
-                    // Field is left untouched, preserve existing regular price
-                    const oldRegular = parseFloat(product.regularPrice);
-                    if (!isNaN(oldRegular)) {
-                        productData.regular_price = oldRegular;
-                    }
-                }
-    
-                lastResult = await googleSheetsService.adminUpsertProduct(token, productData);
-            }
-            
-            if (lastResult) {
-                updateConfigData(lastResult.organizations, lastResult.examPrices);
-            }
-    
-            toast.success(`${selectedSkus.length} products updated!`, { id: toastId });
-            setSelectedSkus([]);
-        } catch (error: any) {
-            toast.error(error.message || "An error occurred during bulk update.", { id: toastId });
-        } finally {
-            setIsBulkSaving(false);
-        }
-    };
-
-    const handleDeleteProduct = async (product: ProductVariation) => {
-        if (!token) {
-            toast.error("Authentication error.");
-            return;
-        }
-        if (!window.confirm(`Are you sure you want to delete "${product.name}"? This action will move the product to the trash in WooCommerce.`)) {
-            return;
-        }
-
         setIsSaving(true);
+        const toastId = toast.loading(`Deleting "${productName}"...`);
         try {
-            const result = await googleSheetsService.adminDeletePost(token, product.id, 'product');
+            const result = await googleSheetsService.adminDeletePost(token, productId, 'product');
             updateConfigData(result.organizations, result.examPrices);
-            toast.success(`Product "${product.name}" was moved to trash.`);
+            toast.success(`Product "${productName}" deleted.`, { id: toastId });
         } catch (error: any) {
-            toast.error(error.message || "Failed to delete product.");
+            toast.error(error.message || 'Failed to delete product.', { id: toastId });
         } finally {
             setIsSaving(false);
         }
     };
 
-    const handleSelectAll = useCallback((e: React.ChangeEvent<HTMLInputElement>, products: ProductVariation[]) => {
-        if (e.target.checked) {
-            setSelectedSkus(products.map(p => p.sku));
-        } else {
-            setSelectedSkus([]);
-        }
-    }, []);
+    const products = useMemo(() => {
+        if (!examPrices || !activeOrg) return { all: [], simple: [], subscription: [], bundle: [] };
+        
+        const allProducts = Object.entries(examPrices).map(([sku, data]: [string, any]): ProductVariation => ({
+            id: data.productId?.toString(),
+            name: data.name,
+            sku,
+            type: data.type || 'simple',
+            regularPrice: data.regularPrice?.toString() ?? '',
+            salePrice: data.price?.toString() ?? '',
+            isBundle: data.isBundle || false,
+            bundledSkus: data.bundledSkus || [],
+            subscriptionPeriod: data._subscription_period,
+            subscriptionPeriodInterval: data._subscription_period_interval,
+            subscriptionLength: data._subscription_length,
+        }));
+        allProducts.sort((a,b) => a.name.localeCompare(b.name));
 
-    const handleSelectOne = useCallback((sku: string, isSelected: boolean) => {
-        setSelectedSkus(currentSkus => {
-            const newSkus = new Set(currentSkus);
-            if (isSelected) {
-                newSkus.add(sku);
-            } else {
-                newSkus.delete(sku);
-            }
-            return Array.from(newSkus);
-        });
-    }, []);
-
-    const handleDoubleClickSelect = useCallback((sku: string) => {
-        const isCurrentlySelected = selectedSkus.includes(sku);
-        handleSelectOne(sku, !isCurrentlySelected);
-    }, [selectedSkus, handleSelectOne]);
-    
-    const handleOpenEditor = (product: ProductVariation) => {
-        setModalState({ type: product.type as TabType, product });
-    };
-
-    const handleOpenCreator = () => {
-        if (activeTab === 'all') {
-            toast.error("Please select a specific product type tab (Simple, Subscription, Bundle) to create a new product.");
-            return;
+        return {
+            all: allProducts,
+            simple: allProducts.filter(p => !p.type || p.type === 'simple'),
+            subscription: allProducts.filter(p => p.type === 'subscription'),
+            bundle: allProducts.filter(p => p.isBundle),
         };
-        setModalState({ type: activeTab });
-    };
+    }, [examPrices, activeOrg]);
 
-    const renderProducts = (products: ProductVariation[]) => {
-        return (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {products.map(product => (
-                    <div
-                        key={product.sku}
-                        className={`editable-card ${selectedSkus.includes(product.sku) ? 'editable-card--selected' : ''}`}
-                        onDoubleClick={() => handleDoubleClickSelect(product.sku)}
-                    >
-                        <div className="editable-card__header">
-                            <div className="flex items-center gap-3 flex-grow">
-                                <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded text-[rgb(var(--color-primary-rgb))] focus:ring-[rgb(var(--color-primary-rgb))]"
-                                    checked={selectedSkus.includes(product.sku)}
-                                    onChange={e => handleSelectOne(product.sku, e.target.checked)}
-                                />
-                                <div className="flex-grow cursor-pointer group" onClick={() => handleOpenEditor(product)}>
-                                    <h3 className="font-bold text-base text-[rgb(var(--color-text-strong-rgb))] leading-tight group-hover:text-[rgb(var(--color-primary-rgb))] transition-colors">{product.name}</h3>
-                                    <p className="text-xs text-[rgb(var(--color-text-muted-rgb))]">SKU: {product.sku}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <button onClick={() => handleOpenEditor(product)} className="p-2 rounded-full hover:bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))]">
-                                    <Edit size={16} />
-                                </button>
-                                <button onClick={() => handleDeleteProduct(product)} className="p-2 rounded-full text-red-500 hover:bg-red-100" title="Delete Product">
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        </div>
-                        <div className="editable-card__content !p-4">
-                            <div className="flex justify-between items-baseline">
-                                <span className="text-sm text-[rgb(var(--color-text-muted-rgb))]">Price</span>
-                                <div className="text-right">
-                                    {parseFloat(product.regularPrice) > 0 && parseFloat(product.regularPrice) > parseFloat(product.salePrice) && (
-                                        <span className="text-base line-through text-[rgb(var(--color-text-muted-rgb))]">${parseFloat(product.regularPrice).toFixed(2)}</span>
-                                    )}
-                                    <span className="font-bold text-2xl text-[rgb(var(--color-text-strong-rgb))] ml-2">${parseFloat(product.salePrice).toFixed(2)}</span>
-                                </div>
-                            </div>
-                            {product.type === 'bundle' && product.bundledSkus && product.bundledSkus.length > 0 && (
-                                <div className="mt-3 pt-3 border-t border-[rgb(var(--color-border-rgb))]">
-                                    <h4 className="text-xs font-bold text-[rgb(var(--color-text-muted-rgb))] mb-2 uppercase tracking-wider">Includes:</h4>
-                                    <ul className="text-sm space-y-1.5 text-[rgb(var(--color-text-default-rgb))]">
-                                        {product.bundledSkus.map(sku => {
-                                            const bundledProduct = productMap.get(sku);
-                                            const isSub = bundledProduct?.type === 'subscription';
-                                            return (
-                                                <li key={sku} className="flex items-center gap-2">
-                                                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isSub ? 'bg-purple-500' : 'bg-blue-500'}`}></span>
-                                                    <span className="flex-grow truncate" title={bundledProduct ? bundledProduct.name : sku}>
-                                                        {bundledProduct ? bundledProduct.name : sku}
-                                                    </span>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        );
-    };
-    
-    const renderContent = () => {
-        let products: ProductVariation[] = [];
-        let title = '';
-        
-        switch (activeTab) {
-            case 'all': products = allProducts; title = 'All Products'; break;
-            case 'simple': products = simpleProducts; title = 'Simple Products'; break;
-            case 'subscription': products = subscriptionProducts; title = 'Subscription Products'; break;
-            case 'bundle': products = bundleProducts; title = 'Bundle Products'; break;
-        }
-        
-        const isAllSelected = products.length > 0 && selectedSkus.length === products.length;
-        const canCreateNew = activeTab !== 'all';
+    const productsToDisplay = activeTab === 'all' ? products.all : products[activeTab];
 
-        return (
-            <div>
-                 {selectedSkus.length > 0 && (
-                    <BulkEditPanel
-                        selectedCount={selectedSkus.length}
-                        onSave={handleBulkUpdate}
-                        onCancel={() => setSelectedSkus([])}
-                        isSaving={isBulkSaving}
-                    />
-                 )}
-                <div className="flex justify-between items-center mb-4">
-                     <h3 className="text-lg font-bold">{title} ({products.length})</h3>
-                    <button 
-                        onClick={handleOpenCreator} 
-                        className={`flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600 ${!canCreateNew ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        disabled={!canCreateNew}
-                        title={!canCreateNew ? 'Please select a specific tab to create a new product' : 'Create New'}
-                    >
-                        <PlusCircle size={16}/> Create New
-                    </button>
-                </div>
-                
-                 {products.length > 0 && (
-                     <div className="flex items-center p-2 mb-4 border-b border-[rgb(var(--color-border-rgb))]">
-                        <label className="flex items-center gap-4 cursor-pointer">
-                            <input type="checkbox" onChange={(e) => handleSelectAll(e, products)} checked={isAllSelected} className="h-4 w-4 rounded text-[rgb(var(--color-primary-rgb))] focus:ring-[rgb(var(--color-primary-rgb))]"/>
-                            <span className="font-semibold text-sm">Select All ({selectedSkus.length} / {products.length})</span>
-                        </label>
-                    </div>
-                 )}
-
-                {products.length > 0 ? renderProducts(products) : <p className="text-center p-4 text-slate-500">No {activeTab} products found.</p>}
-            </div>
-        );
+    const openModal = (type: ProductVariationType, product: Partial<ProductVariation> | null = null) => {
+        setModalState({ type, product });
     };
-    
-    const getModalForProduct = () => {
-        if (!modalState.type) return null;
-        
-        switch (modalState.type) {
-            case 'simple':
-                return <UpsertSimpleProductModal 
-                    isOpen={true}
-                    onClose={() => setModalState({ type: null })}
-                    onSave={(data) => handleUpsert(data, 'Product')}
-                    isSaving={isSaving}
-                    productToEdit={modalState.product}
-                />;
-            case 'subscription':
-                return <UpsertSubscriptionModal
-                    isOpen={true}
-                    onClose={() => setModalState({ type: null })}
-                    onSave={(data) => handleUpsert(data, 'Subscription')}
-                    isSaving={isSaving}
-                    productToEdit={modalState.product}
-                />;
-            case 'bundle':
-                 return <UpsertBundleModal 
-                    isOpen={true}
-                    onClose={() => setModalState({ type: null })}
-                    onSave={(data) => handleUpsert(data, 'Bundle')}
-                    isSaving={isSaving}
-                    productToEdit={modalState.product}
-                    simpleProducts={simpleProducts}
-                    subscriptionProducts={subscriptionProducts}
-                />;
-            default:
-                return null;
-        }
-    }
 
     return (
-         <div className="space-y-8">
-            {getModalForProduct()}
+        <>
+            {modalState.type === 'simple' && <UpsertSimpleProductModal isOpen={true} onClose={() => setModalState({ type: null, product: null })} onSave={handleSave} isSaving={isSaving} productToEdit={modalState.product} />}
+            {modalState.type === 'subscription' && <UpsertSubscriptionModal isOpen={true} onClose={() => setModalState({ type: null, product: null })} onSave={handleSave} isSaving={isSaving} productToEdit={modalState.product} />}
+            {modalState.type === 'bundle' && <UpsertBundleModal isOpen={true} onClose={() => setModalState({ type: null, product: null })} onSave={handleSave} isSaving={isSaving} productToEdit={modalState.product} simpleProducts={products.simple} subscriptionProducts={products.subscription} />}
 
-            <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3"><ShoppingCart /> Product Customizer</h1>
-            <p className="text-[rgb(var(--color-text-muted-rgb))]">Manage your exam products and pricing. Changes made here are saved live to your WooCommerce store.</p>
-            
-            <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <div className="flex space-x-2 mb-4">
-                    <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>All Products</TabButton>
-                    <TabButton active={activeTab === 'simple'} onClick={() => setActiveTab('simple')}>Simple Products</TabButton>
-                    <TabButton active={activeTab === 'subscription'} onClick={() => setActiveTab('subscription')}>Subscriptions</TabButton>
-                    <TabButton active={activeTab === 'bundle'} onClick={() => setActiveTab('bundle')}>Bundles</TabButton>
+            <div className="space-y-8">
+                <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3">
+                    <ShoppingCart />
+                    Product Customizer
+                </h1>
+                
+                <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
+                        <div className="flex items-center gap-2">
+                            <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>All ({products.all.length})</TabButton>
+                            <TabButton active={activeTab === 'simple'} onClick={() => setActiveTab('simple')}>Simple ({products.simple.length})</TabButton>
+                            <TabButton active={activeTab === 'subscription'} onClick={() => setActiveTab('subscription')}>Subscriptions ({products.subscription.length})</TabButton>
+                            <TabButton active={activeTab === 'bundle'} onClick={() => setActiveTab('bundle')}>Bundles ({products.bundle.length})</TabButton>
+                        </div>
+                         <div className="flex items-center gap-2">
+                            <button onClick={() => openModal('simple')} className="text-sm font-semibold text-white bg-green-600 hover:bg-green-700 px-3 py-2 rounded-md flex items-center gap-2"><PlusCircle size={16}/> New Simple Product</button>
+                            <button onClick={() => openModal('subscription')} className="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-md flex items-center gap-2"><PlusCircle size={16}/> New Subscription</button>
+                            <button onClick={() => openModal('bundle')} className="text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded-md flex items-center gap-2"><PlusCircle size={16}/> New Bundle</button>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {productsToDisplay.map(product => (
+                            <div key={product.sku} className="editable-card">
+                                <div className="editable-card__header">
+                                    <div className="flex-grow">
+                                        <h3 className="font-bold text-lg text-[rgb(var(--color-text-strong-rgb))]">{product.name}</h3>
+                                        <p className="text-xs font-mono text-[rgb(var(--color-text-muted-rgb))]">{product.sku}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                        <button onClick={() => handleDelete(product.id, product.name)} disabled={isSaving} className="p-2 rounded-full text-red-500 hover:bg-red-100"><Trash2 size={16}/></button>
+                                        <button onClick={() => openModal(product.type || 'simple', product)} className="p-2 rounded-full text-[rgb(var(--color-primary-rgb))] hover:bg-cyan-100"><Edit size={16}/></button>
+                                    </div>
+                                </div>
+                                <div className="editable-card__content text-sm">
+                                    <div className="flex justify-between"><span>Type:</span> <span className="font-semibold capitalize">{product.type || 'simple'}</span></div>
+                                    <div className="flex justify-between"><span>Price:</span> <span className="font-semibold">${product.salePrice}</span></div>
+                                    {product.regularPrice && <div className="flex justify-between"><span>Regular Price:</span> <span className="font-semibold">${product.regularPrice}</span></div>}
+                                    {product.isBundle && product.bundledSkus && (
+                                        <div className="mt-2 pt-2 border-t border-[rgb(var(--color-border-rgb))]">
+                                            <p className="font-semibold text-xs mb-1">Bundled SKUs:</p>
+                                            <div className="flex flex-wrap gap-1">
+                                                {product.bundledSkus.map(sku => <span key={sku} className="text-xs font-mono bg-[rgb(var(--color-card-rgb))] px-1.5 py-0.5 rounded">{sku}</span>)}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-                <div>{renderContent()}</div>
             </div>
-        </div>
+        </>
     );
 };
 
