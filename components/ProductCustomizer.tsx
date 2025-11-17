@@ -1,3 +1,4 @@
+
 import React, { FC, useState, useMemo, useCallback, ReactNode, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -322,8 +323,8 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                 setInterval(productToEdit.subscriptionPeriodInterval || '1');
                 setLength(productToEdit.subscriptionLength || '0');
             } else {
-                setName('New Subscription');
-                setSku('sub-new');
+                setName('');
+                setSku('');
                 setPrice('');
                 setRegularPrice('');
                 setPeriod('month');
