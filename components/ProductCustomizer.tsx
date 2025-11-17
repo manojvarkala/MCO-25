@@ -67,7 +67,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if (!name || !sku || price.trim() === '' || isNaN(parseFloat(price))) {
+        if (!name.trim() || !sku.trim() || price.trim() === '' || isNaN(parseFloat(price))) {
             toast.error("Name, SKU, and a valid Sale Price are required.");
             return;
         }
@@ -81,8 +81,8 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
         }
         
         const payload: any = {
-            name,
-            sku,
+            name: name.trim(),
+            sku: sku.trim(),
             price: parseFloat(price),
             isBundle: true,
             bundled_skus,
@@ -233,13 +233,13 @@ const UpsertSimpleProductModal: FC<UpsertSimpleProductModalProps> = ({ isOpen, o
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if (!name || !sku || price.trim() === '' || isNaN(parseFloat(price))) {
+        if (!name.trim() || !sku.trim() || price.trim() === '' || isNaN(parseFloat(price))) {
             toast.error("Name, SKU, and a valid Sale Price are required.");
             return;
         }
         const payload: any = { 
-            name, 
-            sku, 
+            name: name.trim(), 
+            sku: sku.trim(), 
             price: parseFloat(price) 
         };
         // Send regular price only if it's a valid number, or an empty string to clear it
@@ -328,13 +328,14 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if (!name || !sku || price.trim() === '' || isNaN(parseFloat(price)) || !period || !interval) {
+        if (!name.trim() || !sku.trim() || price.trim() === '' || isNaN(parseFloat(price)) || !period || !interval) {
             toast.error("All fields except regular price & length are required for a subscription.");
             return;
         }
         
         const payload: any = {
-            name, sku,
+            name: name.trim(), 
+            sku: sku.trim(),
             price: parseFloat(price),
             subscription_period: period,
             subscription_period_interval: interval,
