@@ -547,6 +547,9 @@ const ProductCustomizer: FC = () => {
             return;
         }
 
+        console.log(`[ADMIN DEBUG] Upserting ${type}`, { ...productData });
+        toast.loading(`[ADMIN DEBUG] Payload sent to API. Check browser console for details.`, { duration: 5000 });
+
         setIsSaving(true);
         try {
             const result = await googleSheetsService.adminUpsertProduct(token, productData);
@@ -793,7 +796,7 @@ const ProductCustomizer: FC = () => {
                             <span className="font-semibold text-sm">Select All ({selectedSkus.length} / {products.length})</span>
                         </label>
                     </div>
-                )}
+                 )}
 
                 {products.length > 0 ? renderProducts(products) : <p className="text-center p-4 text-slate-500">No {activeTab} products found.</p>}
             </div>

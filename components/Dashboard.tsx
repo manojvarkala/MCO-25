@@ -5,13 +5,14 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { TestResult, Exam } from '../types.ts';
+import type { TestResult, Exam, ProductVariation } from '../types.ts';
 import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit, CreditCard, Gift, X } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';
 import SubscriptionOfferCard from './SubscriptionOfferCard.tsx';
 import ShareButtons from './ShareButtons.tsx';
+import FeaturedBundleCard from './FeaturedBundleCard.tsx';
 
 const StatCard: FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
     <div className="bg-[rgb(var(--color-muted-rgb))] p-4 rounded-lg flex items-center border border-[rgb(var(--color-border-rgb))]">
@@ -114,6 +115,23 @@ const Dashboard: FC = () => {
             yearlySubUrl: yearlyData?.productId ? `${website}/cart/?add-to-cart=${yearlyData.productId}` : `${website}/product/yearly-subscription/`,
         };
     }, [examPrices, activeOrg]);
+
+    const featuredBundles = useMemo(() => {
+        if (!bundlesEnabled || !examPrices) return [];
+        return Object.values(examPrices)
+            .filter((p: any) => p.isBundle && p.bundledSkus && p.bundledSkus.length > 1)
+            .map((p: any): ProductVariation => ({
+                id: p.productId?.toString() || p.sku,
+                sku: p.sku,
+                name: p.name,
+                type: 'bundle',
+                salePrice: p.price?.toString() || '0',
+                regularPrice: p.regularPrice?.toString() || '0',
+                isBundle: true,
+                bundledSkus: p.bundledSkus,
+            }))
+            .sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+    }, [examPrices, bundlesEnabled]);
 
     if (isInitializing || isLoading || !activeOrg || !Array.isArray(activeOrg.examProductCategories) || !Array.isArray(activeOrg.exams)) {
         return <div className="text-center py-10"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading dashboard data...</p></div>;
@@ -238,6 +256,22 @@ const Dashboard: FC = () => {
                             isBestValue={true}
                             gradientClass="bg-gradient-to-br from-purple-600 to-indigo-700"
                         />
+                    </div>
+                </div>
+            )}
+
+            {featuredBundles.length > 0 && (
+                <div>
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2">Well Curated Exam Bundles</h2>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-4">Get the best value with our comprehensive study packages.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {featuredBundles.map(bundle => (
+                            <FeaturedBundleCard
+                                key={bundle.sku}
+                                bundle={bundle}
+                                activeOrg={activeOrg}
+                            />
+                        ))}
                     </div>
                 </div>
             )}
