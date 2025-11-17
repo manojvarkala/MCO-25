@@ -170,7 +170,7 @@ const UpsertBundleModal: FC<UpsertBundleModalProps> = ({ isOpen, onClose, onSave
                                 {selectedItems.map(item => (
                                     <li key={item.sku} className="flex justify-between">
                                         <span className="truncate" title={item.name}>{item.name} <span className="text-xs font-mono text-[rgb(var(--color-text-muted-rgb))]">({item.sku})</span></span>
-                                        <span className="font-mono">${(parseFloat(item.regularPrice) || parseFloat(item.salePrice)).toFixed(2)}</span>
+                                        <span className="font-mono">${(parseFloat(item.regularPrice) || parseFloat(item.salePrice) || 0).toFixed(2)}</span>
                                     </li>
                                 ))}
                              </ul>
@@ -314,8 +314,8 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                 setInterval(productToEdit.subscriptionPeriodInterval || '1');
                 setLength(productToEdit.subscriptionLength || '0');
             } else {
-                setName('Monthly Subscription');
-                setSku('sub-monthly');
+                setName('');
+                setSku('');
                 setPrice('');
                 setRegularPrice('');
                 setPeriod('month');
@@ -357,21 +357,21 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="text-sm font-medium">Subscription Name</label>
-                            <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
+                            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Monthly Premium Access" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
                         </div>
                         <div>
                             <label className="text-sm font-medium">SKU</label>
-                            <input type="text" value={sku} onChange={e => setSku(e.target.value)} disabled={!!productToEdit?.sku} className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))] disabled:opacity-70" />
+                            <input type="text" value={sku} onChange={e => setSku(e.target.value)} disabled={!!productToEdit?.sku} placeholder="e.g. sub-monthly-premium" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))] disabled:opacity-70" />
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="text-sm font-medium">Sale Price</label>
-                            <input type="number" value={price} onChange={e => setPrice(e.target.value)} className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
+                            <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="e.g., 19.99" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
                         </div>
                         <div>
                             <label className="text-sm font-medium">Regular Price (Optional)</label>
-                            <input type="number" value={regularPrice} onChange={e => setRegularPrice(e.target.value)} className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
+                            <input type="number" value={regularPrice} onChange={e => setRegularPrice(e.target.value)} placeholder="e.g., 29.99" className="w-full p-2 mt-1 border rounded bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-border-rgb))]" />
                         </div>
                     </div>
                     <div className="grid grid-cols-3 gap-4">
@@ -435,7 +435,7 @@ const BulkEditPanel: FC<{
                         type="number"
                         value={regularPrice}
                         onChange={e => setRegularPrice(e.target.value)}
-                        placeholder="Leave blank to keep unchanged"
+                        placeholder="Leave blank to clear, or unchanged"
                         className="w-full p-2 mt-1 border rounded bg-white"
                     />
                 </div>

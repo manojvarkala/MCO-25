@@ -56,5 +56,4 @@ const RefundPolicy: FC = () => {
     );
 };
 
-// FIX: Added missing default export.
 export default RefundPolicy;
