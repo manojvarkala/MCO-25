@@ -1,29 +1,24 @@
 <?php
 /**
- * Plugin Name:       MCO-Social Poster
- * Description:       A companion plugin to the MCO Exam Engine that posts new AI-generated blog content to social media.
- * Version:           1.1.0
+ * Plugin Name:       MCO Social Poster
+ * Description:       Companion plugin for the MCO Exam Engine to automatically post to social media.
+ * Version:           1.0.0
  * Author:            Annapoorna Infotech
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('MCO_SOCIAL_PLUGIN_FILE', __FILE__);
-define('MCO_SOCIAL_PLUGIN_PATH', plugin_dir_path(MCO_SOCIAL_PLUGIN_FILE));
+define('MCO_SOCIAL_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
-require_once MCO_SOCIAL_PLUGIN_PATH . 'includes/admin-page.php';
-require_once MCO_SOCIAL_PLUGIN_PATH . 'includes/post-handler.php';
+require_once MCO_SOCIAL_PLUGIN_DIR . 'includes/admin-page.php';
+require_once MCO_SOCIAL_PLUGIN_DIR . 'includes/post-handler.php';
 
-function mco_social_add_admin_menu() {
-    add_menu_page(
-        'MCO-Social Poster',
-        'MCO-Social Poster',
-        'manage_options',
-        'mco-social-poster',
-        'mco_social_render_admin_page',
-        'dashicons-share',
-        30
-    );
+// Add action links
+function mco_social_add_action_links($links) {
+    $settings_link = '<a href="' . admin_url('admin.php?page=mco-social-poster') . '">Settings</a>';
+    array_unshift($links, $settings_link);
+    return $links;
 }
-add_action('admin_menu', 'mco_social_add_admin_menu');
+add_filter('plugin_action_links_' . plugin_basename(__FILE__), 'mco_social_add_action_links');
+
 ?>

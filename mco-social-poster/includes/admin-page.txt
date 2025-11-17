@@ -1,92 +1,54 @@
 <?php
-if (!defined('ABSPATH')) exit;
+// Add admin menu for the Social Poster
+function mco_social_admin_menu() {
+    add_submenu_page(
+        'mco-exam-settings',
+        'Social Poster',
+        'Social Poster',
+        'manage_options',
+        'mco-social-poster',
+        'mco_social_settings_page'
+    );
+}
+add_action('admin_menu', 'mco_social_admin_menu');
 
-function mco_social_render_admin_page() {
+// Settings page content
+function mco_social_settings_page() {
     ?>
     <div class="wrap">
-        <h1>MCO-Social Poster Settings</h1>
-        <p>Connect your social media accounts to automatically share new AI-generated blog posts.</p>
-        
+        <h1>MCO Social Poster Settings</h1>
+        <p>Configure your social media API keys and settings here.</p>
         <form method="post" action="options.php">
             <?php
-            settings_fields('mco_social_options_group');
-            do_settings_sections('mco-social-poster');
-            submit_button();
+                settings_fields('mco-social-settings-group');
+                do_settings_sections('mco-social-poster');
+                submit_button();
             ?>
         </form>
     </div>
     <?php
 }
 
+// Register settings
 function mco_social_register_settings() {
-    register_setting('mco_social_options_group', 'mco_social_settings', 'mco_social_sanitize_settings');
+    register_setting('mco-social-settings-group', 'mco_facebook_api_key');
+    register_setting('mco-social-settings-group', 'mco_twitter_api_key');
 
-    // --- Facebook Section ---
-    add_settings_section(
-        'mco_social_facebook_section',
-        'Facebook Settings',
-        null,
-        'mco-social-poster'
-    );
-    add_settings_field('mco_social_facebook_enabled', 'Enable Facebook Posting', 'mco_social_facebook_enabled_callback', 'mco-social-poster', 'mco_social_facebook_section');
-    add_settings_field('mco_social_facebook_page_id', 'Facebook Page ID', 'mco_social_facebook_page_id_callback', 'mco-social-poster', 'mco_social_facebook_section');
-    add_settings_field('mco_social_facebook_access_token', 'Access Token', 'mco_social_facebook_access_token_callback', 'mco-social-poster', 'mco_social_facebook_section');
+    add_settings_section('mco_social_api_section', 'API Keys', null, 'mco-social-poster');
 
-    // --- LinkedIn Section ---
-    add_settings_section(
-        'mco_social_linkedin_section',
-        'LinkedIn Settings',
-        null,
-        'mco-social-poster'
-    );
-    add_settings_field('mco_social_linkedin_enabled', 'Enable LinkedIn Posting', 'mco_social_linkedin_enabled_callback', 'mco-social-poster', 'mco_social_linkedin_section');
-    add_settings_field('mco_social_linkedin_page_id', 'LinkedIn Page ID (Organization ID)', 'mco_social_linkedin_page_id_callback', 'mco-social-poster', 'mco_social_linkedin_section');
-    add_settings_field('mco_social_linkedin_access_token', 'Access Token', 'mco_social_linkedin_access_token_callback', 'mco-social-poster', 'mco_social_linkedin_section');
-
+    add_settings_field('mco_facebook_api_key', 'Facebook API Key', 'mco_facebook_api_key_callback', 'mco-social-poster', 'mco_social_api_section');
+    add_settings_field('mco_twitter_api_key', 'Twitter API Key', 'mco_twitter_api_key_callback', 'mco-social-poster', 'mco_social_api_section');
 }
 add_action('admin_init', 'mco_social_register_settings');
 
-// --- Sanitize Callback ---
-function mco_social_sanitize_settings($input) {
-    $new_input = [];
-    if (isset($input['facebook_enabled'])) $new_input['facebook_enabled'] = absint($input['facebook_enabled']);
-    if (isset($input['facebook_page_id'])) $new_input['facebook_page_id'] = sanitize_text_field($input['facebook_page_id']);
-    if (isset($input['facebook_access_token'])) $new_input['facebook_access_token'] = sanitize_text_field($input['facebook_access_token']);
-    if (isset($input['linkedin_enabled'])) $new_input['linkedin_enabled'] = absint($input['linkedin_enabled']);
-    if (isset($input['linkedin_page_id'])) $new_input['linkedin_page_id'] = sanitize_text_field($input['linkedin_page_id']);
-    if (isset($input['linkedin_access_token'])) $new_input['linkedin_access_token'] = sanitize_text_field($input['linkedin_access_token']);
-    return $new_input;
+// Field callbacks
+function mco_facebook_api_key_callback() {
+    $option = get_option('mco_facebook_api_key');
+    echo "<input type='text' name='mco_facebook_api_key' value='" . esc_attr($option) . "' class='regular-text' />";
 }
 
-
-// --- Field Callbacks ---
-function mco_social_facebook_enabled_callback() {
-    $options = get_option('mco_social_settings');
-    echo '<input type="checkbox" id="mco_social_facebook_enabled" name="mco_social_settings[facebook_enabled]" value="1"' . checked(1, $options['facebook_enabled'] ?? 0, false) . '/>';
-}
-function mco_social_facebook_page_id_callback() {
-    $options = get_option('mco_social_settings');
-    echo '<input type="text" id="mco_social_facebook_page_id" name="mco_social_settings[facebook_page_id]" value="' . esc_attr($options['facebook_page_id'] ?? '') . '" class="regular-text" />';
-    echo '<p class="description">Your numeric Facebook Page ID.</p>';
-}
-function mco_social_facebook_access_token_callback() {
-    $options = get_option('mco_social_settings');
-    echo '<textarea id="mco_social_facebook_access_token" name="mco_social_settings[facebook_access_token]" class="large-text" rows="3">' . esc_attr($options['facebook_access_token'] ?? '') . '</textarea>';
-    echo '<p class="description">A long-lived Page Access Token. You will need to create a Facebook App to generate this.</p>';
-}
-
-function mco_social_linkedin_enabled_callback() {
-    $options = get_option('mco_social_settings');
-    echo '<input type="checkbox" id="mco_social_linkedin_enabled" name="mco_social_settings[linkedin_enabled]" value="1"' . checked(1, $options['linkedin_enabled'] ?? 0, false) . '/>';
-}
-function mco_social_linkedin_page_id_callback() {
-    $options = get_option('mco_social_settings');
-    echo '<input type="text" id="mco_social_linkedin_page_id" name="mco_social_settings[linkedin_page_id]" value="' . esc_attr($options['linkedin_page_id'] ?? '') . '" class="regular-text" />';
-    echo '<p class="description">Your LinkedIn Organization ID (e.g., urn:li:organization:1234567).</p>';
-}
-function mco_social_linkedin_access_token_callback() {
-    $options = get_option('mco_social_settings');
-    echo '<textarea id="mco_social_linkedin_access_token" name="mco_social_settings[linkedin_access_token]" class="large-text" rows="3">' . esc_attr($options['linkedin_access_token'] ?? '') . '</textarea>';
-    echo '<p class="description">An OAuth 2.0 Access Token with the necessary permissions (e.g., <code>w_organization_social</code>). You will need to create a LinkedIn App.</p>';
+function mco_twitter_api_key_callback() {
+    $option = get_option('mco_twitter_api_key');
+    echo "<input type='text' name='mco_twitter_api_key' value='" . esc_attr($option) . "' class='regular-text' />";
 }
 ?>

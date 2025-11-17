@@ -5,7 +5,8 @@ import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { RecommendedBook, TestResult } from '../types.ts';
 import { BookOpen, ChevronLeft, ChevronRight, Edit } from 'lucide-react';
-import BookCover from '../assets/BookCover.tsx';
+// FIX: Corrected the import path for the BookCover component.
+import BookCover from './BookCover.tsx';
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';

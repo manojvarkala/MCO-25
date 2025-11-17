@@ -1,96 +1,21 @@
 <?php
-if (!defined('ABSPATH')) exit;
-
-function mco_social_handle_new_post($post_id) {
-    $options = get_option('mco_social_settings');
-    $post = get_post($post_id);
-
-    if (!$post) {
-        error_log("MCO Social Poster: Could not retrieve post for ID {$post_id}");
-        return;
-    }
-
-    $post_title = get_the_title($post_id);
-    $post_url = get_permalink($post_id);
-    $post_excerpt = has_excerpt($post_id) ? get_the_excerpt($post_id) : wp_trim_words($post->post_content, 25, '...');
-
-    // --- Facebook Posting Logic ---
-    if (!empty($options['facebook_enabled']) && !empty($options['facebook_page_id']) && !empty($options['facebook_access_token'])) {
-        $fb_page_id = $options['facebook_page_id'];
-        $fb_token = $options['facebook_access_token'];
-        $fb_api_url = "https://graph.facebook.com/v19.0/{$fb_page_id}/feed";
+// Hook into post publishing
+function mco_social_handle_publish($new_status, $old_status, $post) {
+    if ('publish' === $new_status && 'publish' !== $old_status && 'post' === $post->post_type) {
+        $fb_key = get_option('mco_facebook_api_key');
+        $twitter_key = get_option('mco_twitter_api_key');
         
-        $fb_body = [
-            'access_token' => $fb_token,
-            'message' => "New Blog Post: {$post_title}\n\n{$post_excerpt}",
-            'link' => $post_url,
-        ];
-        
-        $response = wp_remote_post($fb_api_url, ['body' => $fb_body, 'timeout' => 15]);
-        
-        if (is_wp_error($response)) {
-            error_log("MCO Social Poster (Facebook): Failed to post. WP_Error: " . $response->get_error_message());
-        } else {
-            $response_code = wp_remote_retrieve_response_code($response);
-            if ($response_code >= 200 && $response_code < 300) {
-                error_log("MCO Social Poster (Facebook): Successfully posted Post ID {$post_id}.");
-            } else {
-                $response_body = wp_remote_retrieve_body($response);
-                error_log("MCO Social Poster (Facebook): Failed to post. Status: {$response_code}. Body: " . $response_body);
-            }
+        $post_title = $post->post_title;
+        $post_url = get_permalink($post->ID);
+
+        // Example: Post to a hypothetical "log" for demonstration
+        if (!empty($fb_key)) {
+            error_log("MCO Social Poster: Firing to Facebook for post: " . $post_title . " at " . $post_url);
         }
-    }
-
-    // --- LinkedIn Posting Logic ---
-    if (!empty($options['linkedin_enabled']) && !empty($options['linkedin_page_id']) && !empty($options['linkedin_access_token'])) {
-        $li_org_id = $options['linkedin_page_id'];
-        $li_token = $options['linkedin_access_token'];
-        $li_api_url = "https://api.linkedin.com/v2/ugcPosts";
-        
-        $li_body = json_encode([
-            'author' => $li_org_id,
-            'lifecycleState' => 'PUBLISHED',
-            'specificContent' => [
-                'com.linkedin.ugc.ShareContent' => [
-                    'shareCommentary' => [
-                        'text' => "New Blog Post: {$post_title}\n\n{$post_excerpt}",
-                    ],
-                    'shareMediaCategory' => 'ARTICLE',
-                    'media' => [
-                        [
-                            'status' => 'READY',
-                            'description' => [ 'text' => $post_excerpt ],
-                            'originalUrl' => $post_url,
-                            'title' => [ 'text' => $post_title ],
-                        ],
-                    ],
-                ],
-            ],
-            'visibility' => [
-                'com.linkedin.ugc.MemberNetworkVisibility' => 'PUBLIC'
-            ],
-        ]);
-        
-        $li_headers = [
-            'Authorization' => "Bearer {$li_token}",
-            'Content-Type' => 'application/json',
-            'X-Restli-Protocol-Version' => '2.0.0', // Recommended by LinkedIn docs
-        ];
-        
-        $response = wp_remote_post($li_api_url, ['headers' => $li_headers, 'body' => $li_body, 'timeout' => 15]);
-        
-        if (is_wp_error($response)) {
-            error_log("MCO Social Poster (LinkedIn): Failed to post. WP_Error: " . $response->get_error_message());
-        } else {
-            $response_code = wp_remote_retrieve_response_code($response);
-            if ($response_code >= 200 && $response_code < 300) {
-                error_log("MCO Social Poster (LinkedIn): Successfully posted Post ID {$post_id}.");
-            } else {
-                $response_body = wp_remote_retrieve_body($response);
-                error_log("MCO Social Poster (LinkedIn): Failed to post. Status: {$response_code}. Body: " . $response_body);
-            }
+        if (!empty($twitter_key)) {
+             error_log("MCO Social Poster: Firing to Twitter for post: " . $post_title . " at " . $post_url);
         }
     }
 }
-add_action('mco_ai_post_created', 'mco_social_handle_new_post');
+add_action('transition_post_status', 'mco_social_handle_publish', 10, 3);
 ?>
