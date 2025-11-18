@@ -38,16 +38,19 @@ const ProductEditorModal: FC<ProductEditorModalProps> = ({ product, allProducts,
         if (formData.type !== 'bundle') return 0;
         return (formData.bundledSkus || []).reduce((acc, sku) => {
             const item = simpleAndSubProducts.find(p => p.sku === sku);
+            // Prioritize regular price for calculation, fall back to sale price
             const price = parseFloat(item?.regularPrice || item?.salePrice || '0');
             return acc + price;
         }, 0);
     }, [formData.bundledSkus, simpleAndSubProducts, formData.type]);
 
+    // ** FIX: Automatically calculate and set regular price for bundles **
     useEffect(() => {
         if (formData.type === 'bundle') {
             const newRegularPrice = totalBundleValue.toFixed(2);
+            // Update formData ONLY if the price is different to avoid infinite loops
             if (newRegularPrice !== formData.regularPrice) {
-                setFormData(prev => ({ ...prev, regularPrice: newRegularPrice }));
+                setFormData(prev => ({ ...prev, regular_price: newRegularPrice, regularPrice: newRegularPrice }));
             }
         }
     }, [formData.type, totalBundleValue, formData.regularPrice]);
@@ -209,7 +212,9 @@ const ProductCustomizer: FC = () => {
                 subscriptionLength: data.subscription_length,
             };
         });
-        allProducts.sort((a,b) => (stripHtml(a.name) || '').localeCompare(stripHtml(b.name) || ''));
+        
+        // ** FIX: Sort by SKU to group related products together (e.g., exam-code, exam-code-1, exam-code-addon) **
+        allProducts.sort((a, b) => a.sku.localeCompare(b.sku));
 
         return {
             all: allProducts,
@@ -251,14 +256,16 @@ const ProductCustomizer: FC = () => {
         if (!token) { toast.error("Authentication Error"); return; }
         setIsSaving(true);
 
+        // ** FIX: Ensure correct data format for the API **
         const apiPayload: any = {
             name: productData.name,
             sku: productData.sku,
             type: productData.type,
-            regular_price: productData.regularPrice,
-            sale_price: productData.salePrice,
+            regular_price: productData.regularPrice, // Use snake_case for API
+            sale_price: productData.salePrice,       // Use snake_case for API
             isBundle: productData.type === 'bundle',
             bundledSkus: productData.type === 'bundle' ? (productData.bundledSkus || []) : undefined,
+            // Add subscription fields if applicable
             ... (productData.type === 'subscription' && {
                 subscription_price: productData.subscriptionPrice,
                 subscription_period: productData.subscriptionPeriod,
@@ -266,7 +273,7 @@ const ProductCustomizer: FC = () => {
                 subscription_length: productData.subscriptionLength,
             })
         };
-
+        
         // Only add the ID if we are editing an existing product
         if (productData.id) {
             apiPayload.id = productData.id;
