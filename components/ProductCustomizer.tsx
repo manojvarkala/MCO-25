@@ -44,13 +44,11 @@ const ProductEditorModal: FC<ProductEditorModalProps> = ({ product, allProducts,
         }, 0);
     }, [formData.bundledSkus, simpleAndSubProducts, formData.type]);
 
-    // ** FIX: Automatically calculate and set regular price for bundles **
     useEffect(() => {
         if (formData.type === 'bundle') {
             const newRegularPrice = totalBundleValue.toFixed(2);
-            // Update formData ONLY if the price is different to avoid infinite loops
             if (newRegularPrice !== formData.regularPrice) {
-                setFormData(prev => ({ ...prev, regular_price: newRegularPrice, regularPrice: newRegularPrice }));
+                setFormData(prev => ({ ...prev, regularPrice: newRegularPrice }));
             }
         }
     }, [formData.type, totalBundleValue, formData.regularPrice]);
@@ -96,13 +94,13 @@ const ProductEditorModal: FC<ProductEditorModalProps> = ({ product, allProducts,
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="text-sm font-bold block mb-1">Regular Price ($)</label>
-                                <input type="number" name="regular_price" value={formData.regularPrice || ''} onChange={handleChange} required 
+                                <input type="number" name="regularPrice" value={formData.regularPrice || ''} onChange={handleChange} required 
                                 readOnly={formData.type === 'bundle'}
                                 className="w-full p-2 border rounded-md read-only:bg-slate-200" step="0.01" min="0" />
                             </div>
                             <div>
                                 <label className="text-sm font-bold block mb-1">Sale Price ($)</label>
-                                <input type="number" name="sale_price" value={formData.salePrice || ''} onChange={handleChange} placeholder="Optional" className="w-full p-2 border rounded-md" step="0.01" min="0" />
+                                <input type="number" name="salePrice" value={formData.salePrice || ''} onChange={handleChange} placeholder="Optional" className="w-full p-2 border rounded-md" step="0.01" min="0" />
                             </div>
                         </div>
 
@@ -253,18 +251,16 @@ const ProductCustomizer: FC = () => {
     const handleSave = async (productData: EditorState) => {
         if (!token) { toast.error("Authentication Error"); return; }
         setIsSaving(true);
-
-        // ** FIX: Ensure correct data format for the API **
-        const apiPayload: any = {
+        
+        const apiPayload = {
             id: productData.id,
             name: productData.name,
             sku: productData.sku,
             type: productData.type,
-            regular_price: productData.regularPrice, // Use snake_case for API
-            sale_price: productData.salePrice,       // Use snake_case for API
+            regular_price: productData.regularPrice,
+            sale_price: productData.salePrice,
             isBundle: productData.type === 'bundle',
             bundledSkus: productData.type === 'bundle' ? (productData.bundledSkus || []) : undefined,
-            // Add subscription fields if applicable
             ... (productData.type === 'subscription' && {
                 subscription_price: productData.subscriptionPrice,
                 subscription_period: productData.subscriptionPeriod,
