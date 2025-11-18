@@ -44,4 +44,105 @@ function mco_exam_settings_page() {
     </div>
     <?php
 }
+
+// Handler for generating Exam Programs CSV
+function mco_handle_generate_programs_csv() {
+    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'generate_programs_csv') || !current_user_can('manage_options')) {
+        wp_die('Security check failed');
+    }
+
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="exam-programs-export-' . date('Y-m-d') . '.csv"');
+
+    $output = fopen('php://output', 'w');
+
+    $header = ['program_title', 'program_description', 'practice_exam_name_override', 'cert_exam_name_override', 'question_source_url', 'certification_exam_sku', 'is_proctored', 'certificate_enabled', 'recommended_book_id', 'practice_questions', 'practice_duration', 'cert_questions', 'cert_duration', 'pass_score', 'status'];
+    fputcsv($output, $header);
+
+    $query = new WP_Query([
+        'post_type' => 'mco_exam_program',
+        'posts_per_page' => -1,
+        'post_status' => 'any',
+    ]);
+
+    if ($query->have_posts()) {
+        while ($query->have_posts()) {
+            $query->the_post();
+            $post_id = get_the_ID();
+            $row = [
+                get_the_title(),
+                get_the_content(),
+                get_post_meta($post_id, 'mco_practice_exam_name_override', true),
+                get_post_meta($post_id, 'mco_cert_exam_name_override', true),
+                get_post_meta($post_id, 'mco_question_source_url', true),
+                get_post_meta($post_id, 'mco_cert_exam_sku', true),
+                get_post_meta($post_id, 'mco_cert_is_proctored', true) ? '1' : '0',
+                get_post_meta($post_id, 'mco_cert_certificate_enabled', true) ? '1' : '0',
+                implode(',', get_post_meta($post_id, 'mco_recommended_book_ids', true) ?: []),
+                get_post_meta($post_id, 'mco_practice_questions', true),
+                get_post_meta($post_id, 'mco_practice_duration', true),
+                get_post_meta($post_id, 'mco_cert_questions', true),
+                get_post_meta($post_id, 'mco_cert_duration', true),
+                get_post_meta($post_id, 'mco_cert_pass_score', true),
+                get_post_status(),
+            ];
+            fputcsv($output, $row);
+        }
+    }
+    wp_reset_postdata();
+
+    fclose($output);
+    exit;
+}
+add_action('admin_post_mco_generate_programs_csv', 'mco_handle_generate_programs_csv');
+
+
+// Handler for generating WooCommerce Products CSV
+function mco_handle_generate_products_csv() {
+    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'generate_products_csv') || !current_user_can('manage_options')) {
+        wp_die('Security check failed');
+    }
+
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="woo-products-from-programs-' . date('Y-m-d') . '.csv"');
+
+    $output = fopen('php://output', 'w');
+
+    $header = ['Type', 'SKU', 'Name', 'Published', 'Virtual', 'Regular price', 'Sale price'];
+    fputcsv($output, $header);
+
+    $query = new WP_Query([
+        'post_type' => 'mco_exam_program',
+        'posts_per_page' => -1,
+        'post_status' => 'publish',
+    ]);
+
+    if ($query->have_posts()) {
+        while ($query->have_posts()) {
+            $query->the_post();
+            $post_id = get_the_ID();
+            
+            $cert_sku = get_post_meta($post_id, 'mco_cert_exam_sku', true);
+            $cert_name = get_post_meta($post_id, 'mco_cert_exam_name_override', true) ?: get_the_title();
+
+            if (!empty($cert_sku)) {
+                $row = [
+                    'simple',
+                    $cert_sku,
+                    $cert_name,
+                    '1',
+                    '1',
+                    get_post_meta($post_id, 'mco_cert_regular_price', true) ?: '49.99', // Default price
+                    get_post_meta($post_id, 'mco_cert_sale_price', true) ?: '',
+                ];
+                fputcsv($output, $row);
+            }
+        }
+    }
+    wp_reset_postdata();
+
+    fclose($output);
+    exit;
+}
+add_action('admin_post_mco_generate_products_csv', 'mco_handle_generate_products_csv');
 ?>

@@ -38,7 +38,6 @@ const ProductEditorModal: FC<ProductEditorModalProps> = ({ product, allProducts,
         if (formData.type !== 'bundle') return 0;
         return (formData.bundledSkus || []).reduce((acc, sku) => {
             const item = simpleAndSubProducts.find(p => p.sku === sku);
-            // Prioritize regular price for calculation, fall back to sale price
             const price = parseFloat(item?.regularPrice || item?.salePrice || '0');
             return acc + price;
         }, 0);
@@ -47,7 +46,6 @@ const ProductEditorModal: FC<ProductEditorModalProps> = ({ product, allProducts,
     useEffect(() => {
         if (formData.type === 'bundle') {
             const newRegularPrice = totalBundleValue.toFixed(2);
-            // Update formData ONLY if the price is different to avoid infinite loops
             if (newRegularPrice !== formData.regularPrice) {
                 setFormData(prev => ({ ...prev, regularPrice: newRegularPrice }));
             }
@@ -254,7 +252,6 @@ const ProductCustomizer: FC = () => {
         setIsSaving(true);
 
         const apiPayload: any = {
-            id: productData.id,
             name: productData.name,
             sku: productData.sku,
             type: productData.type,
@@ -262,7 +259,6 @@ const ProductCustomizer: FC = () => {
             sale_price: productData.salePrice,
             isBundle: productData.type === 'bundle',
             bundledSkus: productData.type === 'bundle' ? (productData.bundledSkus || []) : undefined,
-            // Add subscription fields if applicable
             ... (productData.type === 'subscription' && {
                 subscription_price: productData.subscriptionPrice,
                 subscription_period: productData.subscriptionPeriod,
@@ -270,6 +266,11 @@ const ProductCustomizer: FC = () => {
                 subscription_length: productData.subscriptionLength,
             })
         };
+
+        // Only add the ID if we are editing an existing product
+        if (productData.id) {
+            apiPayload.id = productData.id;
+        }
 
         try {
             const result = await googleSheetsService.adminUpsertProduct(token, apiPayload);
