@@ -120,7 +120,7 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
             </div>
             
             <div className="text-sm mt-2 opacity-90 flex-grow prose prose-sm prose-invert max-w-none text-white/90">
-                {stripHtml(exam.description)}
+                <p>{stripHtml(exam.description)}</p>
             </div>
             
             <div className="mt-4 pt-4 border-t border-white/20 text-sm space-y-2">

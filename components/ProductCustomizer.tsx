@@ -501,7 +501,8 @@ const ProductCustomizer: FC = () => {
 
     const productsToDisplay = activeTab === 'all' ? products.all : products[activeTab];
 
-    const openModal = (type: ProductVariationType, product: Partial<ProductVariation> | null = null) => {
+    const openModal = (product: Partial<ProductVariation>) => {
+        const type = product.isBundle ? 'bundle' : product.type || 'simple';
         setModalState({ type, product });
     };
 
@@ -526,9 +527,9 @@ const ProductCustomizer: FC = () => {
                             <TabButton active={activeTab === 'bundle'} onClick={() => setActiveTab('bundle')}>Bundles ({products.bundle.length})</TabButton>
                         </div>
                          <div className="flex items-center gap-2">
-                            <button onClick={() => openModal('simple')} className="text-sm font-semibold text-white bg-green-600 hover:bg-green-700 px-3 py-2 rounded-md flex items-center gap-2"><PlusCircle size={16}/> New Simple Product</button>
-                            <button onClick={() => openModal('subscription')} className="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-md flex items-center gap-2"><PlusCircle size={16}/> New Subscription</button>
-                            <button onClick={() => openModal('bundle')} className="text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded-md flex items-center gap-2"><PlusCircle size={16}/> New Bundle</button>
+                            <button onClick={() => setModalState({ type: 'simple', product: null })} className="text-sm font-semibold text-white bg-green-600 hover:bg-green-700 px-3 py-2 rounded-md flex items-center gap-2"><PlusCircle size={16}/> New Simple Product</button>
+                            <button onClick={() => setModalState({ type: 'subscription', product: null })} className="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-md flex items-center gap-2"><PlusCircle size={16}/> New Subscription</button>
+                            <button onClick={() => setModalState({ type: 'bundle', product: null })} className="text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded-md flex items-center gap-2"><PlusCircle size={16}/> New Bundle</button>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -541,7 +542,7 @@ const ProductCustomizer: FC = () => {
                                     </div>
                                     <div className="flex items-center gap-1 flex-shrink-0">
                                         <button onClick={() => handleDelete(product.id, stripHtml(product.name))} disabled={isSaving} className="p-2 rounded-full text-red-500 hover:bg-red-100"><Trash2 size={16}/></button>
-                                        <button onClick={() => openModal(product.isBundle ? 'bundle' : (product.type || 'simple'), product)} className="p-2 rounded-full text-[rgb(var(--color-primary-rgb))] hover:bg-cyan-100"><Edit size={16}/></button>
+                                        <button onClick={() => openModal(product)} className="p-2 rounded-full text-[rgb(var(--color-primary-rgb))] hover:bg-cyan-100"><Edit size={16}/></button>
                                     </div>
                                 </div>
                                 <div className="editable-card__content text-sm">
