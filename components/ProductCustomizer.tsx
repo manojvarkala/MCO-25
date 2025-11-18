@@ -50,7 +50,7 @@ const ProductEditorModal: FC<ProductEditorModalProps> = ({ product, allProducts,
             const newRegularPrice = totalBundleValue.toFixed(2);
             // Update formData ONLY if the price is different to avoid infinite loops
             if (newRegularPrice !== formData.regularPrice) {
-                setFormData(prev => ({ ...prev, regularPrice: newRegularPrice }));
+                setFormData(prev => ({ ...prev, regular_price: newRegularPrice, regularPrice: newRegularPrice }));
             }
         }
     }, [formData.type, totalBundleValue, formData.regularPrice]);
@@ -96,13 +96,13 @@ const ProductEditorModal: FC<ProductEditorModalProps> = ({ product, allProducts,
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="text-sm font-bold block mb-1">Regular Price ($)</label>
-                                <input type="number" name="regularPrice" value={formData.regularPrice || ''} onChange={handleChange} required 
+                                <input type="number" name="regular_price" value={formData.regularPrice || ''} onChange={handleChange} required 
                                 readOnly={formData.type === 'bundle'}
                                 className="w-full p-2 border rounded-md read-only:bg-slate-200" step="0.01" min="0" />
                             </div>
                             <div>
                                 <label className="text-sm font-bold block mb-1">Sale Price ($)</label>
-                                <input type="number" name="salePrice" value={formData.salePrice || ''} onChange={handleChange} placeholder="Optional" className="w-full p-2 border rounded-md" step="0.01" min="0" />
+                                <input type="number" name="sale_price" value={formData.salePrice || ''} onChange={handleChange} placeholder="Optional" className="w-full p-2 border rounded-md" step="0.01" min="0" />
                             </div>
                         </div>
 
@@ -253,14 +253,28 @@ const ProductCustomizer: FC = () => {
     const handleSave = async (productData: EditorState) => {
         if (!token) { toast.error("Authentication Error"); return; }
         setIsSaving(true);
-        try {
-            const finalData = {
-                ...productData,
-                isBundle: productData.type === 'bundle',
-                bundledSkus: productData.type === 'bundle' ? (productData.bundledSkus || []) : undefined,
-            };
 
-            const result = await googleSheetsService.adminUpsertProduct(token, finalData);
+        // ** FIX: Ensure correct data format for the API **
+        const apiPayload: any = {
+            id: productData.id,
+            name: productData.name,
+            sku: productData.sku,
+            type: productData.type,
+            regular_price: productData.regularPrice, // Use snake_case for API
+            sale_price: productData.salePrice,       // Use snake_case for API
+            isBundle: productData.type === 'bundle',
+            bundledSkus: productData.type === 'bundle' ? (productData.bundledSkus || []) : undefined,
+            // Add subscription fields if applicable
+            ... (productData.type === 'subscription' && {
+                subscription_price: productData.subscriptionPrice,
+                subscription_period: productData.subscriptionPeriod,
+                subscription_period_interval: productData.subscriptionPeriodInterval,
+                subscription_length: productData.subscriptionLength,
+            })
+        };
+
+        try {
+            const result = await googleSheetsService.adminUpsertProduct(token, apiPayload);
             updateConfigData(result.organizations, result.examPrices);
             toast.success("Product saved successfully!");
             setIsModalOpen(false);
@@ -271,6 +285,7 @@ const ProductCustomizer: FC = () => {
             setIsSaving(false);
         }
     };
+
 
     return (
         <>
