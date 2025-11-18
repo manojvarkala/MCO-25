@@ -47,6 +47,7 @@ const ProductEditorModal: FC<ProductEditorModalProps> = ({ product, allProducts,
     useEffect(() => {
         if (formData.type === 'bundle') {
             const newRegularPrice = totalBundleValue.toFixed(2);
+            // Update formData ONLY if the price is different to avoid infinite loops
             if (newRegularPrice !== formData.regularPrice) {
                 setFormData(prev => ({ ...prev, regularPrice: newRegularPrice }));
             }
@@ -251,8 +252,8 @@ const ProductCustomizer: FC = () => {
     const handleSave = async (productData: EditorState) => {
         if (!token) { toast.error("Authentication Error"); return; }
         setIsSaving(true);
-        
-        const apiPayload = {
+
+        const apiPayload: any = {
             id: productData.id,
             name: productData.name,
             sku: productData.sku,
@@ -261,6 +262,7 @@ const ProductCustomizer: FC = () => {
             sale_price: productData.salePrice,
             isBundle: productData.type === 'bundle',
             bundledSkus: productData.type === 'bundle' ? (productData.bundledSkus || []) : undefined,
+            // Add subscription fields if applicable
             ... (productData.type === 'subscription' && {
                 subscription_price: productData.subscriptionPrice,
                 subscription_period: productData.subscriptionPeriod,
