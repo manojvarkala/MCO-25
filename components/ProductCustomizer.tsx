@@ -440,6 +440,7 @@ const ProductCustomizer: FC = () => {
     const handleSave = async (productData: any) => {
         if (!token) { toast.error("Authentication Error"); return; }
         setIsSaving(true);
+        console.log("Sending payload to backend:", JSON.stringify(productData, null, 2)); // Debugging line
         try {
             const result = await googleSheetsService.adminUpsertProduct(token, productData);
             updateConfigData(result.organizations, result.examPrices);
@@ -473,7 +474,6 @@ const ProductCustomizer: FC = () => {
         if (!examPrices || !activeOrg) return { all: [], simple: [], subscription: [], bundle: [] };
         
         const allProducts = Object.entries(examPrices).map(([sku, data]: [string, any]): ProductVariation => {
-            // Correctly identify bundles
             const isActuallyBundle = data.isBundle || (Array.isArray(data.bundledSkus) && data.bundledSkus.length > 0);
             return {
                 id: data.productId?.toString(),
