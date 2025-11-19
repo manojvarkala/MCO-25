@@ -1,3 +1,4 @@
+
 <?php
 // Register API routes
 function mco_register_api_routes() {
@@ -11,18 +12,98 @@ add_action('rest_api_init', 'mco_register_api_routes');
 
 // Callback to get all configuration data
 function mco_get_config_data() {
-    // Attempt to get from transient
     $cached_config = get_transient('mco_app_config');
     if ($cached_config !== false) {
         return new WP_REST_Response($cached_config, 200);
     }
     
-    // If not cached, generate it
     $config_data = mco_fetch_and_prepare_data();
-    
-    // Set transient for 1 hour
     set_transient('mco_app_config', $config_data, HOUR_IN_SECONDS);
 
     return new WP_REST_Response($config_data, 200);
+}
+
+// --- JWT & AUTHENTICATION FUNCTIONS ---
+
+function mco_generate_jwt($user) {
+    // Use a defined secret or fallback (fallback should be changed in production)
+    $secret = defined('MCO_JWT_SECRET') ? MCO_JWT_SECRET : 'default_secret_please_change_in_wp_config';
+    
+    $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
+    
+    $payload = json_encode([
+        'iss' => get_site_url(),
+        'iat' => time(),
+        'exp' => time() + (60 * 60 * 24 * 7), // Token valid for 7 days
+        'user' => [
+            'id' => (string)$user->ID,
+            'name' => $user->display_name,
+            'email' => $user->user_email,
+            'isAdmin' => user_can($user, 'manage_options')
+        ],
+        'paidExamIds' => mco_get_user_paid_products($user->ID),
+        'isSubscribed' => mco_is_user_subscribed($user->ID),
+        // Custom fields
+        'isBetaTester' => get_user_meta($user->ID, 'mco_is_beta_tester', true) === '1'
+    ]);
+
+    $base64UrlHeader = mco_base64url_encode($header);
+    $base64UrlPayload = mco_base64url_encode($payload);
+    $signature = hash_hmac('sha256', $base64UrlHeader . "." . $base64UrlPayload, $secret, true);
+    $base64UrlSignature = mco_base64url_encode($signature);
+
+    return $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
+}
+
+function mco_base64url_encode($data) {
+    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+}
+
+// Helper to get purchased product SKUs from WooCommerce
+function mco_get_user_paid_products($user_id) {
+    if (!class_exists('WooCommerce')) return [];
+
+    $paid_skus = [];
+    
+    // Get all orders for the user that are completed or processing
+    $args = [
+        'customer_id' => $user_id,
+        'limit' => -1,
+        'status' => ['completed', 'processing'],
+        'type' => 'shop_order'
+    ];
+    
+    $orders = wc_get_orders($args);
+    
+    foreach ($orders as $order) {
+        foreach ($order->get_items() as $item) {
+            $product = $item->get_product();
+            if ($product) {
+                $sku = $product->get_sku();
+                if ($sku) $paid_skus[] = $sku;
+                
+                // Check for bundles (if product is a bundle, get children)
+                if ($product->is_type('bundle')) {
+                    $bundled_items = $product->get_bundled_items();
+                    foreach ($bundled_items as $bundled_item) {
+                        $child_product = $bundled_item->get_product();
+                        if ($child_product && $child_product->get_sku()) {
+                            $paid_skus[] = $child_product->get_sku();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    return array_unique($paid_skus);
+}
+
+// Helper to check subscription status
+function mco_is_user_subscribed($user_id) {
+    if (!function_exists('wcs_user_has_subscription')) return false;
+    
+    // Check for any active subscription
+    return wcs_user_has_subscription($user_id, '', 'active');
 }
 ?>

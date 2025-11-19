@@ -51,6 +51,8 @@ function mco_handle_generate_programs_csv() {
         wp_die('Security check failed');
     }
 
+    if (ob_get_length()) ob_end_clean();
+
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="exam-programs-export-' . date('Y-m-d') . '.csv"');
 
@@ -102,6 +104,8 @@ function mco_handle_generate_products_csv() {
     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'generate_products_csv') || !current_user_can('manage_options')) {
         wp_die('Security check failed');
     }
+
+    if (ob_get_length()) ob_end_clean();
 
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="woo-products-from-programs-' . date('Y-m-d') . '.csv"');

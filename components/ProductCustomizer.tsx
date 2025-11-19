@@ -50,7 +50,7 @@ const ProductEditorModal: FC<ProductEditorModalProps> = ({ product, allProducts,
             const newRegularPrice = totalBundleValue.toFixed(2);
             // Update formData ONLY if the price is different to avoid infinite loops
             if (newRegularPrice !== formData.regularPrice) {
-                setFormData(prev => ({ ...prev, regular_price: newRegularPrice, regularPrice: newRegularPrice }));
+                setFormData(prev => ({ ...prev, regularPrice: newRegularPrice }));
             }
         }
     }, [formData.type, totalBundleValue, formData.regularPrice]);
@@ -212,9 +212,7 @@ const ProductCustomizer: FC = () => {
                 subscriptionLength: data.subscription_length,
             };
         });
-        
-        // ** FIX: Sort by SKU to group related products together (e.g., exam-code, exam-code-1, exam-code-addon) **
-        allProducts.sort((a, b) => a.sku.localeCompare(b.sku));
+        allProducts.sort((a,b) => (stripHtml(a.name) || '').localeCompare(stripHtml(b.name) || ''));
 
         return {
             all: allProducts,
@@ -258,6 +256,8 @@ const ProductCustomizer: FC = () => {
 
         // ** FIX: Ensure correct data format for the API **
         const apiPayload: any = {
+            // Only include id if it exists (for edits)
+            ...(productData.id ? { id: productData.id } : {}),
             name: productData.name,
             sku: productData.sku,
             type: productData.type,
@@ -273,11 +273,6 @@ const ProductCustomizer: FC = () => {
                 subscription_length: productData.subscriptionLength,
             })
         };
-        
-        // Only add the ID if we are editing an existing product
-        if (productData.id) {
-            apiPayload.id = productData.id;
-        }
 
         try {
             const result = await googleSheetsService.adminUpsertProduct(token, apiPayload);

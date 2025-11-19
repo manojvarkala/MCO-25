@@ -1,3 +1,4 @@
+
 <?php
 // [mco_exam_login] shortcode
 function mco_exam_login_shortcode() {
@@ -8,14 +9,37 @@ function mco_exam_login_shortcode() {
 
     $app_url = get_option('mco_app_url', '');
     if (empty($app_url)) {
-        return '<p>Error: Exam application URL is not configured in plugin settings.</p>';
+        return '<div style="padding: 20px; background: #fee; border: 1px solid #fcc; color: #c00;">Error: Exam application URL is not configured in the plugin settings. Please contact the site administrator.</div>';
+    }
+    
+    if (!function_exists('mco_generate_jwt')) {
+        return '<div style="padding: 20px; background: #fee; border: 1px solid #fcc; color: #c00;">Error: Security token generation failed. The API module may not be loaded correctly.</div>';
     }
 
-    $token = mco_generate_jwt(wp_get_current_user());
-    $redirect_url = rtrim($app_url, '/') . '/auth?token=' . $token;
+    try {
+        $token = mco_generate_jwt(wp_get_current_user());
+        if (!$token) {
+             throw new Exception("Failed to generate token");
+        }
+        $redirect_url = rtrim($app_url, '/') . '/auth?token=' . $token;
 
-    // Use JavaScript for a smoother redirect
-    return '<p>Redirecting to the exam portal...</p><script>window.location.href="' . esc_url_raw($redirect_url) . '";</script>';
+        // Use JavaScript for a smoother redirect with a fallback link
+        return '
+            <div style="text-align: center; padding: 50px;">
+                <p>Redirecting you to the exam portal...</p>
+                <div class="mco-spinner" style="margin: 20px auto; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <p><small>If you are not redirected automatically, <a href="' . esc_url($redirect_url) . '">click here</a>.</small></p>
+            </div>
+            <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+            <script>
+                setTimeout(function() {
+                    window.location.href = "' . esc_url_raw($redirect_url) . '";
+                }, 1000);
+            </script>
+        ';
+    } catch (Exception $e) {
+        return '<div style="padding: 20px; background: #fee; border: 1px solid #fcc; color: #c00;">Login Error: ' . esc_html($e->getMessage()) . '</div>';
+    }
 }
 add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
 ?>
