@@ -18,7 +18,9 @@ export default defineConfig(({ mode }) => {
         '__DEV__': mode === 'development',
       },
       resolve: {
-        
+        alias: {
+          "@": path.resolve(__dirname, "./"),
+        },
       }
     };
 
