@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       MCO Exam Integration Engine
  * Description:       Provides the core data API, CPTs, and SSO functionality for the Annapoorna Infotech headless examination app.
- * Version:           2.7.1
+ * Version:           2.7.2
  * Author:            Annapoorna Infotech (Manoj Balakrishnan)
  * Author URI:        https://annapoornainfo.com/
  * Text Domain:       mco-exam-integration
@@ -17,7 +17,7 @@ define('MCO_EXAM_PLUGIN_URL', plugin_dir_url(__FILE__));
 // Include necessary files
 require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-cpts.php';
 require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-admin.php';
-require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-data.php'; // Load data helpers before API
+require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-data.php';
 require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-api.php';
 require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-shortcodes.php';
 
