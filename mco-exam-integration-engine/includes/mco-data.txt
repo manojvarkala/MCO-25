@@ -1,7 +1,7 @@
 <?php
 function mco_fetch_and_prepare_data() {
     $data = [
-        'version' => '2.7.2', // Bumped version to trigger update
+        'version' => '2.7.2', // Bumped version
         'organizations' => [],
         'examPrices' => [],
     ];
