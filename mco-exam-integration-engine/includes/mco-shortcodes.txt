@@ -2,10 +2,11 @@
 if (!defined('ABSPATH')) exit;
 
 // --- COMPATIBILITY LAYER ---
-// Bridges the gap between these shortcodes and the core API/Data functions
 if (!function_exists('mco_get_exam_app_url')) {
     function mco_get_exam_app_url() {
-        return get_option('mco_app_url', '');
+        $urls = get_option('mco_app_url', '');
+        $url_list = explode("\n", $urls);
+        return trim($url_list[0]); // Return the first configured URL
     }
 }
 if (!function_exists('mco_get_app_config_data')) {
@@ -313,10 +314,24 @@ if (!function_exists('mco_prevent_caching_on_shortcode_pages')) {
 }
 
 // --- STYLES ---
+// FIX: Only enqueue styles if the shortcode is present or we are on a relevant single post type
 if (!function_exists('mco_enqueue_shortcode_styles')) {
     function mco_enqueue_shortcode_styles() {
-        if (defined('MCO_EXAM_PLUGIN_URL')) {
-             wp_enqueue_style('mco-styles', MCO_EXAM_PLUGIN_URL . 'assets/mco-styles.css', [], '2.7.1');
+        global $post;
+        if (!is_a($post, 'WP_Post')) return;
+
+        $has_shortcode = has_shortcode($post->post_content, 'mco_exam_showcase') ||
+                         has_shortcode($post->post_content, 'exam_program') ||
+                         has_shortcode($post->post_content, 'mco_book_showcase') ||
+                         has_shortcode($post->post_content, 'mco_single_book') ||
+                         has_shortcode($post->post_content, 'mco_exam_login');
+        
+        $is_cpt = is_singular('mco_exam_program') || is_singular('mco_recommended_book');
+
+        if ($has_shortcode || $is_cpt) {
+            if (defined('MCO_EXAM_PLUGIN_URL')) {
+                 wp_enqueue_style('mco-styles', MCO_EXAM_PLUGIN_URL . 'assets/mco-styles.css', [], '2.7.2');
+            }
         }
     }
 }
