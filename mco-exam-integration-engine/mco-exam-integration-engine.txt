@@ -17,8 +17,8 @@ define('MCO_EXAM_PLUGIN_URL', plugin_dir_url(__FILE__));
 // Include necessary files
 require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-cpts.php';
 require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-admin.php';
+require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-data.php'; // Load data helpers before API
 require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-api.php';
-require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-data.php';
 require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-shortcodes.php';
 
 // Add plugin action links

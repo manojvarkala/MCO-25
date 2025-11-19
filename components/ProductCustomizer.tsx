@@ -1,3 +1,4 @@
+
 import React, { FC, useState, useMemo, useCallback, ReactNode, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -256,13 +257,13 @@ const ProductCustomizer: FC = () => {
 
         // ** FIX: Ensure correct data format for the API **
         const apiPayload: any = {
-            // Only include id if it exists (for edits)
+            // Only include id if it exists (for edits). Sending 'undefined' or null ID for creation causes errors.
             ...(productData.id ? { id: productData.id } : {}),
             name: productData.name,
             sku: productData.sku,
             type: productData.type,
-            regular_price: productData.regularPrice, // Use snake_case for API
-            sale_price: productData.salePrice,       // Use snake_case for API
+            regular_price: productData.regularPrice, // Map camelCase state to snake_case API
+            sale_price: productData.salePrice,       // Map camelCase state to snake_case API
             isBundle: productData.type === 'bundle',
             bundledSkus: productData.type === 'bundle' ? (productData.bundledSkus || []) : undefined,
             // Add subscription fields if applicable

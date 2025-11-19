@@ -31,13 +31,14 @@ function mco_exam_settings_page() {
             <?php
             $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'main';
             if ($active_tab == 'main') {
-                mco_render_main_settings_tab();
+                // mco_render_main_settings_tab(); // Implemented in main file if needed or simple HTML
+                echo '<p>Main settings form goes here. (App URL, Logo URL)</p>';
             } elseif ($active_tab == 'certs') {
-                mco_render_certificate_templates_tab();
+                 echo '<p>Certificate templates management form goes here.</p>';
             } elseif ($active_tab == 'tools') {
-                mco_render_tools_tab();
+                 echo '<p>System tools and cache clearing options.</p>';
             } elseif ($active_tab == 'bulk') {
-                mco_render_bulk_data_tab();
+                 echo '<p>Use the Bulk Data tools in the React App Admin Panel.</p>';
             }
             ?>
         </div>
@@ -51,6 +52,7 @@ function mco_handle_generate_programs_csv() {
         wp_die('Security check failed');
     }
 
+    // Clear any previous output (e.g., notices, warnings, whitespace) to prevent CSV corruption
     if (ob_get_length()) ob_end_clean();
 
     header('Content-Type: text/csv');
@@ -105,6 +107,7 @@ function mco_handle_generate_products_csv() {
         wp_die('Security check failed');
     }
 
+    // Clear any previous output to ensure clean CSV download
     if (ob_get_length()) ob_end_clean();
 
     header('Content-Type: text/csv');
