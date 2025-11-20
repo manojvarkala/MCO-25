@@ -34,9 +34,11 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
     const { isSubscribed, isBetaTester } = useAuth();
     const hasAccess = isPractice || isPurchased || isSubscribed || isBetaTester;
 
-    const priceInfo = examPrices ? examPrices[exam.productSku] : null;
-    const price = priceInfo?.price ?? exam.price;
-    const regularPrice = priceInfo?.regularPrice ?? exam.regularPrice;
+    // Robust price resolution
+    const priceInfo = examPrices && exam.productSku ? examPrices[exam.productSku] : null;
+    // Fallback to exam.price from config if live price is missing, defaulting to 0
+    const price = priceInfo?.price ?? (exam.price || 0);
+    const regularPrice = priceInfo?.regularPrice ?? (exam.regularPrice || 0);
 
     const handleActionClick = () => {
         if (isDisabled) return;
@@ -44,14 +46,14 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
             navigate(`/test/${exam.id}`);
         } else if (hasAccess) {
             if (attemptsMade !== undefined && attemptsMade >= 3) {
-                // If they've used all attempts, find the latest result to view
-                // This logic is simplified; a real app might need to fetch the specific testId
-                navigate(`/profile`); // Send them to profile to see all results
+                navigate(`/profile`);
             } else {
                 navigate(`/test/${exam.id}`);
             }
-        } else if (exam.productSlug) {
-            navigate(`/checkout/${exam.productSlug}`);
+        } else if (exam.productSlug || (priceInfo && priceInfo.productId)) {
+             const slug = priceInfo?.slug || exam.productSlug || '';
+             if (slug) navigate(`/checkout/${slug}`);
+             else if (priceInfo?.productId) window.location.href = `/cart/?add-to-cart=${priceInfo.productId}`;
         }
     };
     
@@ -148,7 +150,12 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                     {regularPrice > 0 && price < regularPrice && (
                         <span className="text-xl line-through opacity-70">${regularPrice.toFixed(2)}</span>
                     )}
-                    <span className="text-4xl font-extrabold ml-2">${price.toFixed(2)}</span>
+                    {/* Only show price if it's greater than 0, otherwise show generic 'Get Access' look implicitly */}
+                    {price > 0 ? (
+                         <span className="text-4xl font-extrabold ml-2">${price.toFixed(2)}</span>
+                    ) : (
+                         <span className="text-2xl font-bold ml-2">View Details</span>
+                    )}
                 </div>
             )}
            

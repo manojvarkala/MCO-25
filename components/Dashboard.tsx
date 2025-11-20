@@ -1,6 +1,5 @@
 
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
-// FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -40,7 +39,6 @@ const stripHtml = (html: string): string => {
 const Dashboard: FC = () => {
     const { user, token, paidExamIds, isSubscribed, subscriptionInfo, loginWithToken, isEffectivelyAdmin, isBetaTester } = useAuth();
     const { activeOrg, isInitializing, inProgressExam, examPrices, subscriptionsEnabled, bundlesEnabled, feedbackRequiredForExam } = useAppContext();
-    // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
     const navigate = useNavigate();
 
     const [results, setResults] = useState<TestResult[]>([]);
@@ -68,10 +66,9 @@ const Dashboard: FC = () => {
             setResults(userResults);
             setIsLoading(false);
         } else {
-            // If no user, we're not loading user-specific data
             setIsLoading(false);
         }
-    }, [user, token]); // Re-run if token changes (after sync)
+    }, [user, token]);
 
     const stats = useMemo(() => {
         if (!user || results.length === 0) {
@@ -186,7 +183,6 @@ const Dashboard: FC = () => {
                         <h3 className="font-bold text-[rgb(var(--color-secondary-hover-rgb))]">You have an exam in progress!</h3>
                         <p className="text-sm text-[rgb(var(--color-secondary-hover-rgb))] opacity-80">"{inProgressExam.examName}"</p>
                     </div>
-                    {/* FIX: Replaced `history.push` with `navigate` */}
                     <button onClick={() => navigate(`/test/${inProgressExam.examId}`)} className="bg-[rgb(var(--color-secondary-rgb))] hover:bg-[rgb(var(--color-secondary-hover-rgb))] text-white font-bold py-2 px-4 rounded-lg">
                         Resume Exam
                     </button>
@@ -369,7 +365,6 @@ const Dashboard: FC = () => {
                                     <div className="flex items-center gap-4">
                                         <span className={`font-bold text-lg ${isPass ? 'text-[rgb(var(--color-success-rgb))]' : 'text-[rgb(var(--color-danger-rgb))]'}`}>{result.score.toFixed(0)}%</span>
                                         {isPass ? <CheckCircle size={20} className="text-[rgb(var(--color-success-rgb))]" /> : <XCircle size={20} className="text-[rgb(var(--color-danger-rgb))]" />}
-                                        {/* FIX: Replaced `history.push` with `navigate` */}
                                         <button onClick={() => navigate(`/results/${result.testId}`)} className="text-[rgb(var(--color-primary-rgb))] hover:text-[rgb(var(--color-primary-hover-rgb))]">
                                             <ChevronRight size={20} />
                                         </button>
