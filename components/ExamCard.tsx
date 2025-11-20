@@ -1,4 +1,3 @@
-
 import React, { FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Exam, Organization } from '../types.ts';
