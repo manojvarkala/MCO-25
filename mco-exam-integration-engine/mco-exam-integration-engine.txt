@@ -3,42 +3,54 @@
  * Plugin Name:       MCO Exam Integration Engine
  * Description:       Provides the core data API, CPTs, and SSO functionality for the Annapoorna Infotech headless examination app.
  * Version:           2.7.2
- * Author:            Annapoorna Infotech (Manoj Balakrishnan)
- * Author URI:        https://annapoornainfo.com/
- * Text Domain:       mco-exam-integration
+* Author:            Annapoorna Infotech
+ * Author URI:        https://annapoornainfo.com
+ * License:           GPL v2 or later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain:       mco-exam-engine
  */
-
 if (!defined('ABSPATH')) exit;
 
-// Define plugin constants
-define('MCO_EXAM_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('MCO_EXAM_PLUGIN_URL', plugin_dir_url(__FILE__));
+// --- CONSTANTS ---
+define('MCO_PLUGIN_FILE', __FILE__);
+define('MCO_PLUGIN_PATH', plugin_dir_path(MCO_PLUGIN_FILE));
+define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
+$plugin_data = get_file_data(MCO_PLUGIN_FILE, array('Version' => 'Version'));
+define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 
-// Include necessary files
-require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-cpts.php';
-require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-admin.php';
-require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-data.php';
-require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-api.php';
-require_once MCO_EXAM_PLUGIN_DIR . 'includes/mco-shortcodes.php';
+// --- INCLUDES ---
+// FIX: Corrected the include order to resolve fatal errors from dependency issues.
+// API functions must be loaded before admin pages or shortcodes that use them.
+require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-data.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-api.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
 
-// Add plugin action links
-function mco_add_action_links($links) {
-    $settings_link = '<a href="' . admin_url('admin.php?page=mco-exam-settings') . '">Settings</a>';
-    array_unshift($links, $settings_link);
-    return $links;
+// --- MAIN HOOKS ---
+add_action('init', 'mco_register_custom_post_types');
+add_action('rest_api_init', 'mco_register_rest_routes');
+add_action('rest_pre_serve_request', 'mco_add_cors_and_nocache_headers', 10, 4);
+add_action('rest_api_init', 'mco_set_api_nocache_constants', 10, 1);
+mco_register_admin_hooks();
+mco_register_shortcode_hooks();
+
+// --- SINGLE SIGN-ON REDIRECT ---
+function mco_sso_login_redirect() {
+    if (is_user_logged_in() && isset($_GET['mco_sso_trigger'])) {
+        $app_url = mco_get_exam_app_url();
+        if (!$app_url) {
+            wp_die('Exam application URL is not configured.');
+        }
+        $token = mco_generate_exam_jwt(get_current_user_id());
+        if (!$token) {
+            wp_die('Could not generate authentication token. Please ensure MCO_JWT_SECRET is defined in wp-config.php.');
+        }
+        $redirect_url = add_query_arg('token', $token, rtrim($app_url, '/') . '/auth');
+        wp_redirect($redirect_url);
+        exit;
+    }
 }
-add_filter('plugin_action_links_' . plugin_basename(__FILE__), 'mco_add_action_links');
+add_action('template_redirect', 'mco_sso_login_redirect');
 
-// Activation hook for rewrite rules
-function mco_plugin_activate() {
-    mco_register_custom_post_types();
-    flush_rewrite_rules();
-}
-register_activation_hook(__FILE__, 'mco_plugin_activate');
-
-// Deactivation hook for rewrite rules
-function mco_plugin_deactivate() {
-    flush_rewrite_rules();
-}
-register_deactivation_hook(__FILE__, 'mco_plugin_deactivate');
 ?>

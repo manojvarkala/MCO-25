@@ -1,27 +1,29 @@
-
 <?php
 if (!defined('ABSPATH')) exit;
 
-// --- COMPATIBILITY LAYER ---
+// --- COMPATIBILITY & DATA FETCHING LAYER ---
 if (!function_exists('mco_get_exam_app_url')) {
     function mco_get_exam_app_url() {
-        $urls = get_option('mco_app_url', '');
-        $url_list = explode("\n", $urls);
-        return trim($url_list[0]); // Return the first configured URL
+        $urls = get_option('mco_exam_app_url', '');
+        $url_list = preg_split('/\r\n|\r|\n/', $urls);
+        return trim($url_list[0]); 
     }
 }
-if (!function_exists('mco_get_app_config_data')) {
-    function mco_get_app_config_data() {
+
+if (!function_exists('mco_get_shortcode_data')) {
+    function mco_get_shortcode_data() {
         if (function_exists('mco_fetch_and_prepare_data')) {
             return mco_fetch_and_prepare_data();
         }
         return [];
     }
 }
+
 if (!function_exists('mco_generate_exam_jwt')) {
     function mco_generate_exam_jwt($user_id) {
         if (function_exists('mco_generate_jwt')) {
-            return mco_generate_jwt(get_user_by('ID', $user_id));
+            $user = get_user_by('ID', $user_id);
+            if ($user) return mco_generate_jwt($user);
         }
         return null;
     }
@@ -41,9 +43,6 @@ function mco_get_svg_icon($name) {
         'lock' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
         'unlock' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>',
         'search' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
-        'filter' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>',
-        'arrow-right' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
-        'chevron-down' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
     ];
     return $icons[$name] ?? '';
 }
@@ -323,10 +322,10 @@ if (!function_exists('mco_prevent_caching_on_shortcode_pages')) {
 }
 
 // --- STYLES ---
-// FIX: Only enqueue styles if the shortcode is present or we are on a relevant single post type
 if (!function_exists('mco_enqueue_shortcode_styles')) {
     function mco_enqueue_shortcode_styles() {
         global $post;
+        // Ensure $post is available and valid
         if (!is_a($post, 'WP_Post')) return;
 
         // Check for shortcodes or specific post types before enqueueing
@@ -339,8 +338,8 @@ if (!function_exists('mco_enqueue_shortcode_styles')) {
         $is_cpt = is_singular('mco_exam_program') || is_singular('mco_recommended_book');
 
         if ($has_shortcode || $is_cpt) {
-             if (defined('MCO_EXAM_PLUGIN_URL')) {
-                 wp_enqueue_style('mco-styles', MCO_EXAM_PLUGIN_URL . 'assets/mco-styles.css', [], '2.7.2');
+             if (defined('MCO_PLUGIN_URL')) {
+                 wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
              }
         }
     }
@@ -438,19 +437,29 @@ function mco_exam_showcase_shortcode($atts) {
     $atts = shortcode_atts(['id' => ''], $atts, 'exam_program');
     $program_id_str = sanitize_text_field($atts['id']);
     
-    $query_args = ['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC'];
+    // Get the global config data (flat arrays)
+    $config_data = mco_get_shortcode_data();
+    if (empty($config_data) || empty($config_data['examProductCategories'])) return '<p>Application is not configured correctly.</p>';
+    $app_url = mco_get_exam_app_url();
+
+    // Determine which programs to show
+    $programs_to_show = [];
     if (!empty($program_id_str)) {
-        $post_id_from_app_id = (int) str_replace('prod-', '', $program_id_str);
-        if ($post_id_from_app_id > 0) $query_args['p'] = $post_id_from_app_id;
-        else { $query_args['name'] = $program_id_str; $query_args['posts_per_page'] = 1; }
+         // Show single program
+         $found = false;
+         foreach ($config_data['examProductCategories'] as $cat) {
+             if ($cat['id'] === $program_id_str) {
+                 $programs_to_show[] = $cat;
+                 $found = true;
+                 break;
+             }
+         }
+    } else {
+        // Show all programs
+        $programs_to_show = $config_data['examProductCategories'];
     }
     
-    $programs = get_posts($query_args);
-    if (empty($programs)) return '<p>No exam programs found.</p>';
-    
-    $config_data = mco_get_app_config_data();
-    $app_url = mco_get_exam_app_url();
-    if (!$config_data || !$app_url) return '<p>Application is not configured correctly.</p>';
+    if (empty($programs_to_show)) return '<p>No exam programs found.</p>';
 
     ob_start();
     
@@ -483,13 +492,16 @@ function mco_exam_showcase_shortcode($atts) {
     }
 
     echo '<div class="mco-showcase-grid">';
-    foreach ($programs as $program_post) {
-        $app_program_id = 'prod-' . $program_post->ID;
-        $program_category = current(array_filter($config_data['examProductCategories'], function($c) use ($app_program_id) { return $c['id'] === $app_program_id; }));
-        if (!$program_category) continue;
+    foreach ($programs_to_show as $program_category) {
+        $app_program_id = $program_category['id'];
         
-        $practice_exam = current(array_filter($config_data['exams'], function($e) use ($program_category) { return $e['id'] === $program_category['practiceExamId']; }));
-        $cert_exam = current(array_filter($config_data['exams'], function($e) use ($program_category) { return $e['id'] === $program_category['certificationExamId']; }));
+        // Find matching exams in the flattened array
+        $practice_exam = null;
+        $cert_exam = null;
+        foreach ($config_data['exams'] as $e) {
+            if ($e['id'] === $program_category['practiceExamId']) $practice_exam = $e;
+            if ($e['id'] === $program_category['certificationExamId']) $cert_exam = $e;
+        }
         
         $program_link_url = rtrim($app_url, '/') . '/program/' . $app_program_id;
 
@@ -500,7 +512,12 @@ function mco_exam_showcase_shortcode($atts) {
         }
 
         if ($cert_exam) {
-            $product_id = wc_get_product_id_by_sku($cert_exam['productSku']);
+            // Need to get fresh price data from examPrices array
+            $price_data = $config_data['examPrices'][$cert_exam['productSku']] ?? null;
+            $price = $price_data['price'] ?? 0;
+            $regular_price = $price_data['regularPrice'] ?? 0;
+            $product_id = $price_data['productId'] ?? 0;
+
             $is_purchased = false;
             if (is_user_logged_in()) {
                 $user_id = get_current_user_id();
@@ -512,10 +529,10 @@ function mco_exam_showcase_shortcode($atts) {
             $button_class = $is_purchased ? 'mco-card__button--primary' : 'mco-card__button--purchase';
 
             echo '<div class="mco-card mco-gradient--cert-1"><div class="mco-card__header"><span>' . mco_get_svg_icon('cert') . '</span> Certification Exam</div><div class="mco-card__body"><h3 class="mco-card__subtitle">' . esc_html($cert_exam['name']) . '</h3>';
-            if (!$is_purchased && $cert_exam['price'] > 0) {
+            if (!$is_purchased && $price > 0) {
                 echo '<div style="text-align: center; margin-bottom: 1rem;">';
-                if ($cert_exam['regularPrice'] > $cert_exam['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($cert_exam['regularPrice'], 2) . '</span>';
-                echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($cert_exam['price'], 2) . '</span></div>';
+                if ($regular_price > $price) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($regular_price, 2) . '</span>';
+                echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($price, 2) . '</span></div>';
             }
             echo '<div class="mco-card__stats"><span>' . esc_html($cert_exam['numberOfQuestions']) . ' Qs</span><span>' . esc_html($cert_exam['durationMinutes']) . ' Mins</span><span>' . esc_html($cert_exam['passScore']) . '% Pass</span></div></div><div class="mco-card__footer"><a href="' . esc_url($button_url) . '" class="mco-card__button ' . $button_class . '">' . $button_icon . ' ' . $button_text . '</a></div></div>';
 
@@ -559,7 +576,7 @@ function mco_exam_showcase_shortcode($atts) {
 }
 
 function mco_book_showcase_shortcode() {
-    $config_data = mco_get_app_config_data();
+    $config_data = mco_get_shortcode_data();
     if (empty($config_data['suggestedBooks'])) return '<p>No recommended books found.</p>';
 
     ob_start();
@@ -609,9 +626,15 @@ function mco_single_book_shortcode() {
     global $post;
     if (!$post || $post->post_type !== 'mco_recommended_book') return '<p>This shortcode must be used on a "Recommended Book" post.</p>';
 
-    $config_data = mco_get_app_config_data();
+    $config_data = mco_get_shortcode_data();
     $book_id_meta = get_post_meta($post->ID, '_mco_book_id', true);
-    $book = current(array_filter($config_data['suggestedBooks'], function($b) use ($book_id_meta) { return $b['id'] === $book_id_meta; }));
+    $book = null;
+    foreach($config_data['suggestedBooks'] as $b) {
+        if ($b['id'] === $book_id_meta) {
+            $book = $b;
+            break;
+        }
+    }
 
     if (!$book) return '<p>Book data not found in application configuration.</p>';
 
@@ -677,7 +700,7 @@ function mco_single_book_shortcode() {
 }
 
 function mco_render_study_hall_sidebar() {
-    $config_data = mco_get_app_config_data();
+    $config_data = mco_get_shortcode_data();
     if (empty($config_data['suggestedBooks'])) return '';
 
     $all_books = $config_data['suggestedBooks'];
