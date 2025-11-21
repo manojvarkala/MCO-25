@@ -16,7 +16,7 @@ function mco_fetch_and_prepare_data() {
 
     // Return a flat structure for internal use (API and Shortcodes)
     return [
-        'version' => '2.7.6',
+        'version' => '2.7.7',
         'exams' => $all_exams,
         'examProductCategories' => $exam_programs,
         'suggestedBooks' => $suggested_books,

@@ -1,9 +1,9 @@
+
 <?php
 if (!defined('ABSPATH')) exit;
 
 // Custom sanitizer to allow data URIs for images or sanitize as a URL
 function mco_sanitize_data_uri_or_url($input) {
-    // FIX: Add wp_unslash to prevent backslashes from being added to base64 strings on save.
     $unslashed_input = wp_unslash(trim($input));
     // Allow data URIs for common image types
     if (preg_match('/^data:image\/(svg\+xml|png|jpeg|gif|webp);base64,/', $unslashed_input)) {
@@ -38,7 +38,9 @@ function mco_admin_enqueue_scripts($hook) {
     if (!$screen || ($screen->post_type !== 'mco_exam_program' && $screen->base !== 'toplevel_page_mco-exam-engine' && $screen->base !== 'exam-app-engine_page_mco-exam-engine')) {
         return;
     }
-    wp_enqueue_style('mco-admin-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
+    if (defined('MCO_PLUGIN_URL')) {
+        wp_enqueue_style('mco-admin-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
+    }
 }
 
 function mco_exam_engine_admin_page() {
@@ -50,17 +52,21 @@ function mco_exam_engine_admin_page() {
             update_option('mco_custom_logo_url', sanitize_textarea_field($_POST['mco_custom_logo_url']));
             update_option('mco_intro_video_url', esc_url_raw($_POST['mco_intro_video_url']));
             update_option('mco_disclaimer_text', wp_kses_post($_POST['mco_disclaimer_text']));
-            // FIX: Save the user registration option as 1 or 0 to align with WordPress core behavior.
-            update_option('users_can_register', isset($_POST['mco_users_can_register']) ? 1 : 0);
+            
+            // Direct update of users_can_register option
+            $reg_val = isset($_POST['mco_users_can_register']) ? 1 : 0;
+            update_option('users_can_register', $reg_val);
+            
             update_option('mco_subscriptions_enabled', isset($_POST['mco_subscriptions_enabled']) ? '1' : '0');
             update_option('mco_bundles_enabled', isset($_POST['mco_bundles_enabled']) ? '1' : '0');
             update_option('mco_purchase_notifier_enabled', isset($_POST['mco_purchase_notifier_enabled']) ? '1' : '0');
             update_option('mco_purchase_notifier_delay', sanitize_text_field($_POST['mco_purchase_notifier_delay']));
             update_option('mco_purchase_notifier_min_gap', sanitize_text_field($_POST['mco_purchase_notifier_min_gap']));
             update_option('mco_purchase_notifier_max_gap', sanitize_text_field($_POST['mco_purchase_notifier_max_gap']));
+            
             delete_transient('mco_app_config_data');
             update_option('mco_config_version', current_time('YmdHis'));
-            echo '<div class="notice notice-success is-dismissible"><p>Settings saved and config cache cleared.</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>Settings saved.</p></div>';
 
         } elseif ($form_action === 'save_theme_settings') {
             update_option('mco_active_theme_id', sanitize_text_field($_POST['mco_active_theme_id']));
@@ -159,33 +165,8 @@ function mco_render_main_settings_tab() { ?>
             <tr>
                 <th><label for="mco_users_can_register">Enable User Registration</label></th>
                 <td>
-                    <?php
-                    $is_multisite = is_multisite();
-                    $registration_constant_defined = defined('USERS_CAN_REGISTER');
-                    $is_disabled_by_multisite = $is_multisite && !get_site_option('registration', 'user');
-                    $is_disabled_by_constant = $registration_constant_defined && USERS_CAN_REGISTER === false;
-                    $is_disabled = $is_disabled_by_multisite || $is_disabled_by_constant;
-                    $current_setting = get_option('users_can_register');
-                    ?>
-                    <input type="checkbox" id="mco_users_can_register" name="mco_users_can_register" value="1" <?php checked($current_setting, 1); ?> <?php disabled($is_disabled, true); ?>>
-                    <p class="description">Allow new users to register an account from the WordPress login page. This is required for new customers to sign up.</p>
-                    <?php if ($is_disabled_by_multisite): ?>
-                        <p class="mco-admin-notice mco-admin-notice--warning">
-                            <strong>Setting Disabled:</strong> This is a multisite installation. User registration is controlled globally from the <a href="<?php echo esc_url(network_admin_url('settings.php')); ?>">Network Settings</a> page.
-                        </p>
-                    <?php elseif ($is_disabled_by_constant): ?>
-                        <p class="mco-admin-notice mco-admin-notice--warning">
-                            <strong>Setting Disabled:</strong> User registration is hardcoded to 'false' by the <code>USERS_CAN_REGISTER</code> constant in your <code>wp-config.php</code> file. This setting cannot be changed here until that line is removed.
-                        </p>
-                    <?php elseif ($registration_constant_defined && USERS_CAN_REGISTER === true): ?>
-                         <p class="mco-admin-notice mco-admin-notice--info">
-                            <strong>Note:</strong> User registration is hardcoded to 'true' by the <code>USERS_CAN_REGISTER</code> constant in your <code>wp-config.php</code> file. This setting is currently forced on.
-                        </p>
-                    <?php elseif (!$current_setting && !$is_disabled): ?>
-                        <p class="mco-admin-notice mco-admin-notice--warning">
-                            <strong>Warning:</strong> User registration is currently disabled. If you are trying to enable it here and the setting does not save, another plugin or your theme may be overriding this option. Check for plugins that manage security or login/registration, or check your theme's functions.php file.
-                        </p>
-                    <?php endif; ?>
+                    <input type="checkbox" id="mco_users_can_register" name="mco_users_can_register" value="1" <?php checked(get_option('users_can_register'), 1); ?>>
+                    <p class="description">Allow new users to register an account from the WordPress login page. This toggles the global WordPress 'users_can_register' option.</p>
                 </td>
             </tr>
             <tr>
@@ -359,7 +340,6 @@ function mco_render_theme_selector_tab() {
     ];
     $active_theme = get_option('mco_active_theme_id', 'default');
     
-    // FIX: Define theme colors directly in PHP for robust rendering, matching the React app fix.
     $theme_colors = [
         'default' => [
             'primary' => 'rgb(6, 182, 212)', 'secondary' => 'rgb(219, 39, 119)',
