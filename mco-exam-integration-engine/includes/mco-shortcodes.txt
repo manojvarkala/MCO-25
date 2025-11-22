@@ -260,17 +260,14 @@ if (!function_exists('mco_register_shortcode_hooks')) {
     }
 }
 
-// FIX: Ensure styles are loaded unconditionally on the frontend to fix display issues for guest users
-// who might be seeing a cached version of the page without the stylesheet.
 if (!function_exists('mco_enqueue_shortcode_styles')) {
     function mco_enqueue_shortcode_styles() {
-        // Register and enqueue in one go to ensure it loads.
         // Using version MCO_PLUGIN_VERSION forces cache refresh when plugin updates.
         wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
     }
 }
-// Hook into wp_enqueue_scripts with high priority (20) to load after themes
-add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles', 20);
+// FIX: Significantly increased priority to 9999 to override theme styles and optimization plugins.
+add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles', 9999);
 
 
 if (!function_exists('mco_handle_login_form_post')) {
@@ -455,6 +452,9 @@ function mco_exam_login_shortcode() {
 
 
 function mco_exam_showcase_shortcode($atts) {
+    // FIX: Force enqueue the style to ensure it loads even if the header hook was stripped by cache plugins.
+    wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
+
     $atts = shortcode_atts(['id' => ''], $atts, 'exam_program');
     $program_id_str = sanitize_text_field($atts['id']);
     
@@ -579,6 +579,9 @@ function mco_exam_showcase_shortcode($atts) {
 }
 
 function mco_book_showcase_shortcode() {
+    // FIX: Force enqueue styles here too
+    wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
+
     $config_data = mco_get_app_config_data();
     if (empty($config_data['suggestedBooks'])) return '<p>No recommended books found.</p>';
 
@@ -628,6 +631,9 @@ function mco_book_showcase_shortcode() {
 function mco_single_book_shortcode() {
     global $post;
     if (!$post || $post->post_type !== 'mco_recommended_book') return '<p>This shortcode must be used on a "Recommended Book" post.</p>';
+    
+    // FIX: Force enqueue styles here too
+    wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
 
     $config_data = mco_get_app_config_data();
     $book_id_meta = get_post_meta($post->ID, '_mco_book_id', true);

@@ -28,7 +28,7 @@ const Integration: FC = () => {
     const [isGeneratingSocial, setIsGeneratingSocial] = useState(false);
     
     const engineVersionMatch = mainPluginFile.match(/Version:\s*([0-9.]+)/);
-    const engineVersion = engineVersionMatch ? engineVersionMatch[1] : "2.7.4";
+    const engineVersion = engineVersionMatch ? engineVersionMatch[1] : "2.7.5";
     
     const socialVersionMatch = socialPluginMain.match(/Version:\s*([0-9.]+)/);
     const socialVersion = socialVersionMatch ? socialVersionMatch[1] : "1.0.0";
