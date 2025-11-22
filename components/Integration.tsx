@@ -1,3 +1,4 @@
+
 import React, { FC, useState } from 'react';
 import toast from 'react-hot-toast';
 import JSZip from 'jszip';
@@ -28,7 +29,7 @@ const Integration: FC = () => {
     const [isGeneratingSocial, setIsGeneratingSocial] = useState(false);
     
     const engineVersionMatch = mainPluginFile.match(/Version:\s*([0-9.]+)/);
-    const engineVersion = engineVersionMatch ? engineVersionMatch[1] : "2.7.5";
+    const engineVersion = engineVersionMatch ? engineVersionMatch[1] : "2.7.6";
     
     const socialVersionMatch = socialPluginMain.match(/Version:\s*([0-9.]+)/);
     const socialVersion = socialVersionMatch ? socialVersionMatch[1] : "1.0.0";
