@@ -132,29 +132,35 @@ const Pricing: FC = () => {
                         <p className="text-slate-500">Get the certification exam PLUS study access for one low price.</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {bundles.map((bundle: any) => (
-                            <div key={bundle.sku} className="bg-white rounded-xl shadow-md border border-purple-100 p-6 hover:shadow-lg transition-shadow flex flex-col">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
-                                        <ShoppingBag size={24} />
+                        {bundles.map((bundle: any) => {
+                            // Fix: Ensure prices are numbers. The backend sends 'price', not 'salePrice' for raw objects.
+                            const salePrice = Number(bundle.price || 0);
+                            const regularPrice = Number(bundle.regularPrice || 0);
+                            
+                            return (
+                                <div key={bundle.sku} className="bg-white rounded-xl shadow-md border border-purple-100 p-6 hover:shadow-lg transition-shadow flex flex-col">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
+                                            <ShoppingBag size={24} />
+                                        </div>
+                                        <h4 className="font-bold text-lg leading-tight">{bundle.name}</h4>
                                     </div>
-                                    <h4 className="font-bold text-lg leading-tight">{bundle.name}</h4>
+                                    <div className="flex items-baseline gap-2 mb-4">
+                                        <span className="text-2xl font-bold text-slate-800">${salePrice.toFixed(2)}</span>
+                                        {regularPrice > salePrice && (
+                                            <span className="text-sm line-through text-slate-400">${regularPrice.toFixed(2)}</span>
+                                        )}
+                                    </div>
+                                    <ul className="space-y-2 mb-6 text-sm text-slate-600 flex-grow">
+                                        <li className="flex items-center"><Award size={16} className="text-purple-500 mr-2"/> Certification Exam Attempt</li>
+                                        <li className="flex items-center"><Zap size={16} className="text-purple-500 mr-2"/> 1-Month Premium Access</li>
+                                    </ul>
+                                    <a href={bundle.buyUrl} className="w-full block text-center bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition">
+                                        Purchase Bundle
+                                    </a>
                                 </div>
-                                <div className="flex items-baseline gap-2 mb-4">
-                                    <span className="text-2xl font-bold text-slate-800">${parseFloat(bundle.salePrice).toFixed(2)}</span>
-                                    {parseFloat(bundle.regularPrice) > parseFloat(bundle.salePrice) && (
-                                        <span className="text-sm line-through text-slate-400">${parseFloat(bundle.regularPrice).toFixed(2)}</span>
-                                    )}
-                                </div>
-                                <ul className="space-y-2 mb-6 text-sm text-slate-600 flex-grow">
-                                     <li className="flex items-center"><Award size={16} className="text-purple-500 mr-2"/> Certification Exam Attempt</li>
-                                     <li className="flex items-center"><Zap size={16} className="text-purple-500 mr-2"/> 1-Month Premium Access</li>
-                                </ul>
-                                <a href={bundle.buyUrl} className="w-full block text-center bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition">
-                                    Purchase Bundle
-                                </a>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
