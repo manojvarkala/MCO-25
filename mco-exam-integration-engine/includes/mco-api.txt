@@ -1,6 +1,28 @@
-
 <?php
 if (!defined('ABSPATH')) exit;
+
+/*
+ * =================================================================================================
+ * TROUBLESHOOTING: API CONNECTION FAILED or AUTHORIZATION HEADER MISSING
+ * =================================================================================================
+ * If the exam application cannot connect to the API (CORS errors, fetch errors, or "Authorization
+ * header missing" messages), it's almost always a server configuration issue. Many shared hosting
+ * environments (like Apache/LiteSpeed) strip the necessary 'Authorization' header from requests by default.
+ *
+ * THE FIX:
+ * Add the following code to the VERY TOP of your WordPress root .htaccess file, before the
+ * # BEGIN WordPress block.
+ *
+ * <IfModule mod_rewrite.c>
+ *   RewriteEngine On
+ *   RewriteCond %{HTTP:Authorization} .
+ *   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+ * </IfModule>
+ * 
+ * After adding this, you MUST clear all server and plugin caches (e.g., LiteSpeed Cache).
+ * Caching plugins can interfere with API routes and CORS headers.
+ * =================================================================================================
+ */
 
 // --- New Universal Fetcher Function ---
 if (!function_exists('mco_fetch_remote_csv_content')) {
@@ -133,13 +155,16 @@ if (!function_exists('mco_generate_exam_jwt')) {
         // Determine Beta Tester status
         $is_beta_tester = false;
         if ($beta_status_override !== null) {
+            // Admin override takes highest priority
             $is_beta_tester = (bool)$beta_status_override;
         } else {
+            // Check for beta access expiry timestamp for regular beta testers
             $expiry_timestamp = get_user_meta($user_id, '_beta_access_expiry_timestamp', true);
             if (!empty($expiry_timestamp) && $expiry_timestamp > time()) {
                 $is_beta_tester = true;
             }
         }
+        // Add the flag to the payload if true
         if ($is_beta_tester) {
             $payload['isBetaTester'] = true;
         }
@@ -258,6 +283,8 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/verify-certificate/(?P<certId>.+)', ['methods' => 'GET', 'callback' => 'mco_api_verify_certificate', 'permission_callback' => '__return_true', 'args' => ['certId' => ['required' => true]]]);
     register_rest_route($namespace, '/register-tester', ['methods' => 'POST', 'callback' => 'mco_api_register_tester', 'permission_callback' => '__return_true']);
     register_rest_route($namespace, '/redeem-tester-token', ['methods' => 'POST', 'callback' => 'mco_api_redeem_tester_token', 'permission_callback' => '__return_true']);
+    register_rest_route($namespace, '/resend-onboarding-email', ['methods' => 'POST', 'callback' => 'mco_api_public_resend_onboarding_email', 'permission_callback' => '__return_true']);
+
 
     // USER-PROTECTED ENDPOINTS
     register_rest_route($namespace, '/create-checkout-session', ['methods' => 'POST', 'callback' => 'mco_api_create_checkout_session', 'permission_callback' => 'mco_api_permission_check']);
@@ -286,14 +313,14 @@ function mco_register_rest_routes() {
     register_rest_route($namespace, '/admin/create-exam-program', ['methods' => 'POST', 'callback' => 'mco_api_admin_create_exam_program', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/delete-post', ['methods' => 'POST', 'callback' => 'mco_api_admin_delete_post', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/set-intro-video', ['methods' => 'POST', 'callback' => 'mco_api_admin_set_intro_video', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
-    register_rest_route($namespace, '/admin/toggle-beta-status', ['methods' => 'POST', 'callback' => 'mco_api_admin_toggle_beta_status', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
     register_rest_route($namespace, '/admin/beta-testers', ['methods' => 'GET', 'callback' => 'mco_api_admin_get_beta_testers', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
-    register_rest_route($namespace, '/admin/resend-beta-email', ['methods' => 'POST', 'callback' => 'mco_api_admin_resend_beta_email', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/toggle-beta-status', ['methods' => 'POST', 'callback' => 'mco_api_admin_toggle_beta_status', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
+    register_rest_route($namespace, '/admin/resend-beta-email', ['methods' => 'POST', 'callback' => 'mco_api_resend_beta_email', 'permission_callback' => 'mco_api_jwt_admin_permission_check']);
 }
 
 function mco_api_permission_check(WP_REST_Request $request) {
     $auth_header = $request->get_header('authorization');
-    if (empty($auth_header) || !preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) return new WP_Error('jwt_auth_missing_token', 'Authorization header missing.', ['status' => 401]);
+    if (empty($auth_header) || !preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) return new WP_Error('jwt_auth_missing_token', 'Authorization header missing. Check server configuration (e.g., .htaccess).', ['status' => 401]);
     $payload = mco_verify_exam_jwt($matches[1]);
     if (!$payload || !isset($payload['user']['id'])) return new WP_Error('jwt_auth_invalid_token', 'Invalid or expired token.', ['status' => 403]);
     
@@ -342,7 +369,19 @@ function mco_api_get_full_config(WP_REST_Request $request) {
     $bundles_enabled = get_option('mco_bundles_enabled', '1') === '1';
     $exam_prices = $dynamic_data['examPrices'] ?? null;
 
-    // Build the structure expected by the React App
+    if ($exam_prices) {
+        if (!$subscriptions_enabled) {
+            $exam_prices = array_filter($exam_prices, function($key) {
+                return strpos($key, 'sub-') !== 0;
+            }, ARRAY_FILTER_USE_KEY);
+        }
+        if (!$bundles_enabled) {
+            $exam_prices = array_filter($exam_prices, function($product_data) {
+                return !($product_data['isBundle'] ?? false);
+            }, ARRAY_FILTER_USE_BOTH);
+        }
+    }
+
     $config_object = [
         "version" => get_option('mco_config_version', current_time('YmdHis')),
         "organizations" => [
@@ -376,7 +415,7 @@ function mco_api_get_full_config(WP_REST_Request $request) {
 function mco_api_record_hit(WP_REST_Request $request) {
     $count = (int) get_option('mco_site_hit_count', 0);
     if ($count === 0) {
-        $count = 24567;
+        $count = 24567; // Set initial value if not set
     }
     $count++;
     update_option('mco_site_hit_count', $count);
@@ -399,14 +438,17 @@ function mco_api_verify_certificate(WP_REST_Request $request) {
     $user_results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
     $matching_result = null;
 
+    // FIX: To support practice exam certificates, we now check for both the certification SKU and the practice exam ID.
     $cert_exam_sku = get_post_meta($exam_post_id, '_mco_certification_exam_sku', true);
     $practice_exam_id = 'exam-prod-' . $exam_post_id . '-practice';
 
     foreach ($user_results as $result) {
+        // Compare timestamps with a 5-second tolerance window for JS/PHP timing differences
         if (isset($result['userId'], $result['examId'], $result['timestamp']) &&
             $result['userId'] == $user_id &&
             abs($result['timestamp'] - $timestamp_ms) < 5000) {
             
+            // Check if the examId from the result matches either the cert SKU or the practice ID
             if ( (!empty($cert_exam_sku) && $result['examId'] === $cert_exam_sku) || $result['examId'] === $practice_exam_id ) {
                 $matching_result = $result;
                 break;
@@ -419,6 +461,7 @@ function mco_api_verify_certificate(WP_REST_Request $request) {
     $user_data = get_userdata($user_id);
     if (!$user_data) return new WP_Error('not_found', 'Candidate not found.', ['status' => 404]);
     
+    // FIX: Determine the correct exam name based on whether it was a practice or certification exam result.
     $exam_name = '';
     if ($matching_result['examId'] === $practice_exam_id) {
         $practice_name_override = get_post_meta($exam_post_id, '_mco_practice_exam_title_override', true);
@@ -475,6 +518,7 @@ function mco_api_get_certificate_data(WP_REST_Request $request) {
     }
     $result = $user_results[$test_id];
     
+    // Authorization check
     $user_can_view = $result['userId'] == $user_id;
     if (!$user_can_view && !$is_admin_view) {
         return new WP_Error('forbidden', 'You do not have permission to view this certificate.', ['status' => 403]);
@@ -483,11 +527,13 @@ function mco_api_get_certificate_data(WP_REST_Request $request) {
     $exam_id_from_result = $result['examId'];
     $exam_post_arr = [];
 
+    // FIX: Admins can view certs for draft/trashed programs.
     $post_status_arg = $is_admin_view ? ['publish', 'pending', 'draft', 'trash'] : 'publish';
 
     $is_practice_exam = preg_match('/^exam-prod-(\d+)-practice$/', $exam_id_from_result, $matches);
     if ($is_practice_exam) {
         $exam_post_id = (int)$matches[1];
+        // Use get_posts to be explicit about post status for admins.
         $exam_post_arr = get_posts([
             'p' => $exam_post_id,
             'post_type' => 'mco_exam_program',
@@ -495,6 +541,7 @@ function mco_api_get_certificate_data(WP_REST_Request $request) {
             'posts_per_page' => 1
         ]);
     } else {
+        // Assume it's a certification exam SKU
         $exam_post_arr = get_posts([
             'post_type' => 'mco_exam_program',
             'meta_key' => '_mco_certification_exam_sku',
@@ -670,7 +717,7 @@ function mco_api_submit_review(WP_REST_Request $request) {
     }
     $payload = $request->get_param('jwt_payload');
     $user = $payload['user'];
-    $exam_id = sanitize_text_field($request->get_param('examId'));
+    $exam_id = sanitize_text_field($request->get_param('examId')); // This is the SKU
     $rating = (int) $request->get_param('rating');
     $review_text = sanitize_textarea_field($request->get_param('reviewText'));
 
@@ -747,10 +794,12 @@ function mco_api_log_engagement(WP_REST_Request $request) {
 
 // --- ADMIN-ONLY ENDPOINT CALLBACKS ---
 
+// FIX: Re-architected the exam stats function to group results by country for more granular analytics.
 function mco_api_get_exam_stats(WP_REST_Request $request) {
     $exam_definitions = [];
     $stats_aggregator = [];
 
+    // Step 1: Build definitions for all exams (practice and cert)
     $exam_posts = get_posts([ 'post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish' ]);
     foreach ($exam_posts as $post) {
         $program_id = 'prod-' . $post->ID;
@@ -765,7 +814,6 @@ function mco_api_get_exam_stats(WP_REST_Request $request) {
             'name' => $practice_name, 'isPractice' => true, 'programId' => $program_id, 
             'programName' => $program_name, 'passScore' => $pass_score, 'postId' => $post->ID
         ];
-        $stats_aggregator[$practice_id] = ['attempts' => 0, 'total_score' => 0, 'pass_count' => 0];
 
         // Cert Exam
         $cert_sku = get_post_meta($post->ID, '_mco_certification_exam_sku', true);
@@ -776,50 +824,71 @@ function mco_api_get_exam_stats(WP_REST_Request $request) {
                 'name' => $cert_name, 'isPractice' => false, 'programId' => $program_id, 
                 'programName' => $program_name, 'passScore' => $pass_score, 'postId' => $post->ID
             ];
-            $stats_aggregator[$cert_sku] = ['attempts' => 0, 'total_score' => 0, 'pass_count' => 0];
         }
     }
 
+    // Step 2: Aggregate results by looping through users once
     $all_users = get_users(['fields' => ['ID']]);
     foreach($all_users as $user) {
+        // Get user country, with a fallback to the beta tester meta key for backward compatibility.
+        $country = get_user_meta($user->ID, 'mco_user_country', true);
+        if (empty($country)) {
+            $country = get_user_meta($user->ID, 'mco_beta_country', true);
+        }
+        if (empty($country)) {
+            $country = 'N/A';
+        }
+
         $user_results = get_user_meta($user->ID, 'mco_exam_results', true) ?: [];
         foreach ($user_results as $result) {
             $exam_id = $result['examId'] ?? null;
-            if ($exam_id && isset($stats_aggregator[$exam_id])) {
-                $stats_aggregator[$exam_id]['attempts']++;
-                $stats_aggregator[$exam_id]['total_score'] += $result['score'];
+            if ($exam_id && isset($exam_definitions[$exam_id])) {
+                // Initialize nested aggregator if it doesn't exist
+                if (!isset($stats_aggregator[$exam_id])) $stats_aggregator[$exam_id] = [];
+                if (!isset($stats_aggregator[$exam_id][$country])) {
+                    $stats_aggregator[$exam_id][$country] = ['attempts' => 0, 'total_score' => 0, 'pass_count' => 0];
+                }
+
+                $stats_aggregator[$exam_id][$country]['attempts']++;
+                $stats_aggregator[$exam_id][$country]['total_score'] += $result['score'];
                 if ($result['score'] >= $exam_definitions[$exam_id]['passScore']) {
-                    $stats_aggregator[$exam_id]['pass_count']++;
+                    $stats_aggregator[$exam_id][$country]['pass_count']++;
                 }
             }
         }
     }
 
+    // Step 3: Finalize stats array, now flattened from the nested aggregator
     $final_stats = [];
-    foreach ($exam_definitions as $id => $def) {
-        $agg = $stats_aggregator[$id];
-        $stat_item = [
-            'id' => $id,
-            'name' => $def['name'],
-            'isPractice' => $def['isPractice'],
-            'programId' => $def['programId'],
-            'programName' => $def['programName'],
-            'attempts' => $agg['attempts'],
-            'averageScore' => $agg['attempts'] > 0 ? $agg['total_score'] / $agg['attempts'] : 0,
-            'passRate' => $agg['attempts'] > 0 ? ($agg['pass_count'] / $agg['attempts']) * 100 : 0,
-            'engagements' => (int)get_post_meta($def['postId'], '_mco_engagement_count', true) ?: 0,
-            'passCount' => $agg['pass_count'],
-            'totalScoreSum' => $agg['total_score'],
-        ];
+    foreach ($stats_aggregator as $exam_id => $country_data) {
+        foreach ($country_data as $country => $agg) {
+            $def = $exam_definitions[$exam_id];
+            $stat_item = [
+                'id' => $exam_id,
+                'name' => $def['name'],
+                'isPractice' => $def['isPractice'],
+                'programId' => $def['programId'],
+                'programName' => $def['programName'],
+                'attempts' => $agg['attempts'],
+                'averageScore' => $agg['attempts'] > 0 ? $agg['total_score'] / $agg['attempts'] : 0,
+                'passRate' => $agg['attempts'] > 0 ? ($agg['pass_count'] / $agg['attempts']) * 100 : 0,
+                'engagements' => (int)get_post_meta($def['postId'], '_mco_engagement_count', true) ?: 0,
+                'passCount' => $agg['pass_count'],
+                'totalScoreSum' => $agg['total_score'],
+                'country' => $country,
+            ];
 
-        if (!$def['isPractice'] && class_exists('WooCommerce')) {
-            $product_id = wc_get_product_id_by_sku($id);
-            $product = $product_id ? wc_get_product($product_id) : null;
-            $stat_item['totalSales'] = $product ? $product->get_total_sales() : 0;
-            $stat_item['totalRevenue'] = $product ? $product->get_total_sales() * (float)$product->get_price() : 0;
+            // Add sales data for cert exams. This data is global to the product, not country-specific,
+            // so it will be duplicated for each country row but handled on the frontend.
+            if (!$def['isPractice'] && class_exists('WooCommerce')) {
+                $product_id = wc_get_product_id_by_sku($exam_id);
+                $product = $product_id ? wc_get_product($product_id) : null;
+                $stat_item['totalSales'] = $product ? $product->get_total_sales() : 0;
+                $stat_item['totalRevenue'] = $product ? $product->get_total_sales() * (float)$product->get_price() : 0;
+            }
+
+            $final_stats[] = $stat_item;
         }
-
-        $final_stats[] = $stat_item;
     }
 
     return new WP_REST_Response($final_stats, 200);
@@ -861,6 +930,9 @@ function mco_api_get_system_status(WP_REST_Request $request) {
         }
     }
     
+    $smtp_active = is_plugin_active('wp-mail-smtp/wp_mail_smtp.php');
+    $smtp_data = 'If you are having email delivery issues (e.g., beta tester invitations not sending), you must install and configure a dedicated SMTP plugin (like WP Mail SMTP). An error like "Could not authenticate" means your SMTP plugin\'s settings (hostname, username, password/API key) are incorrect and have been rejected by your email provider.';
+
     return new WP_REST_Response([
         'api_connection' => ['success' => true, 'message' => 'OK'],
         'jwt_secret' => ['success' => defined('MCO_JWT_SECRET'), 'message' => defined('MCO_JWT_SECRET') ? 'Defined' : 'Not Defined in wp-config.php'],
@@ -868,6 +940,7 @@ function mco_api_get_system_status(WP_REST_Request $request) {
         'wc_subscriptions' => ['success' => class_exists('WC_Subscriptions'), 'message' => class_exists('WC_Subscriptions') ? 'Active' : 'Not Active (Optional)'],
         'app_url_config' => ['success' => !empty(get_option('mco_exam_app_url')), 'message' => !empty(get_option('mco_exam_app_url')) ? 'Configured' : 'Not Configured'],
         'google_sheet' => $sheet_test_result,
+        'email_delivery' => ['success' => $smtp_active, 'message' => $smtp_active ? 'Detected' : 'Not Detected', 'data' => $smtp_data],
         'nonces' => [
             'generate_programs_csv' => wp_create_nonce('mco_generate_programs_csv_nonce'),
             'generate_products_csv' => wp_create_nonce('mco_generate_products_csv_nonce'),
@@ -875,6 +948,7 @@ function mco_api_get_system_status(WP_REST_Request $request) {
     ], 200);
 }
 
+// FIX: Full implementation for previously truncated admin endpoints
 function mco_api_admin_test_sheet_url(WP_REST_Request $request) {
     $sheet_url = esc_url_raw($request->get_param('sheetUrl'));
     if (empty($sheet_url)) {
@@ -916,6 +990,7 @@ function mco_api_admin_update_exam_program(WP_REST_Request $request) {
     if (isset($data['description'])) $post_update_args['post_content'] = wp_kses_post($data['description']);
     if (!empty($post_update_args)) {
         $post_update_args['ID'] = $post_id;
+        // FIX: Temporarily remove the hook that saves meta data from the post editor to prevent conflicts.
         remove_action('save_post', 'mco_save_exam_program_meta_data');
         wp_update_post($post_update_args);
         add_action('save_post', 'mco_save_exam_program_meta_data');
@@ -974,7 +1049,6 @@ function mco_api_admin_delete_post(WP_REST_Request $request) {
     mco_api_clear_config_cache($request);
     return new WP_REST_Response(mco_api_get_full_config($request)->get_data(), 200);
 }
-
 function mco_api_admin_create_exam_program(WP_REST_Request $request) {
     $params = $request->get_json_params();
     $program_name = sanitize_text_field($params['programName']);
@@ -982,6 +1056,7 @@ function mco_api_admin_create_exam_program(WP_REST_Request $request) {
     
     if (empty($program_name)) return new WP_Error('bad_request', 'Program Name is required.', ['status' => 400]);
     
+    // FIX: Temporarily remove the save_post hook to prevent conflicts when creating a post programmatically.
     remove_action('save_post', 'mco_save_exam_program_meta_data');
     $post_id = wp_insert_post([
         'post_title' => $program_name,
@@ -995,6 +1070,7 @@ function mco_api_admin_create_exam_program(WP_REST_Request $request) {
     $sku_to_link = '';
     if ($link_data['type'] === 'auto') {
         $sku_to_link = 'exam-' . sanitize_title($program_name);
+        // Create the product
         $product_id = wc_get_product_id_by_sku($sku_to_link);
         if (!$product_id) {
             $product = new WC_Product_Simple();
@@ -1007,6 +1083,7 @@ function mco_api_admin_create_exam_program(WP_REST_Request $request) {
         }
     } elseif ($link_data['type'] === 'new') {
         $sku_to_link = sanitize_text_field($link_data['sku']);
+        // Create the product
          $product_id = wc_get_product_id_by_sku($sku_to_link);
         if (!$product_id) {
             $product = new WC_Product_Simple();
@@ -1045,33 +1122,13 @@ function mco_api_admin_upsert_product(WP_REST_Request $request) {
     
     if (isset($data['name'])) $product->set_name(sanitize_text_field($data['name']));
     if (!$is_update) $product->set_sku($sku);
-
-    // Pricing Logic
-    if (isset($data['regular_price'])) {
-        $product->set_regular_price($data['regular_price']);
-    }
-    if (isset($data['sale_price'])) {
-        $product->set_sale_price($data['sale_price']);
-    }
-    
-    $regular_price = isset($data['regular_price']) ? $data['regular_price'] : $product->get_regular_price();
-    $sale_price = isset($data['sale_price']) ? $data['sale_price'] : $product->get_sale_price();
-    
-    if (is_numeric($sale_price) && $sale_price < $regular_price) {
-         $product->set_price($sale_price);
-    } else {
-         $product->set_price($regular_price);
-    }
+    if (isset($data['price'])) $product->set_price($data['price']);
+    if (isset($data['regularPrice'])) $product->set_regular_price($data['regularPrice']);
     
     $product->set_virtual(true);
     if (!$is_update) $product->set_status('publish');
 
     if ($product_type === 'subscription') {
-        if (isset($data['subscription_price'])) {
-             $product->update_meta_data('_subscription_price', $data['subscription_price']);
-             $product->set_regular_price($data['subscription_price']);
-             $product->set_price($data['subscription_price']);
-        }
         if (isset($data['subscription_period'])) WC_Subscriptions_Product::update_meta_data($product, ['_subscription_period' => sanitize_text_field($data['subscription_period'])]);
         if (isset($data['subscription_period_interval'])) WC_Subscriptions_Product::update_meta_data($product, ['_subscription_period_interval' => sanitize_text_field($data['subscription_period_interval'])]);
         if (isset($data['subscription_length'])) WC_Subscriptions_Product::update_meta_data($product, ['_subscription_length' => sanitize_text_field($data['subscription_length'])]);
@@ -1089,7 +1146,7 @@ function mco_api_admin_upsert_product(WP_REST_Request $request) {
     mco_api_clear_config_cache($request);
     return new WP_REST_Response(mco_api_get_full_config($request)->get_data(), 200);
 }
-
+// Helper for sheet testing
 function mco_test_sheet_url_access($url) {
     $response = mco_fetch_remote_csv_content($url);
     if (is_wp_error($response)) {
@@ -1142,6 +1199,7 @@ function mco_api_create_post_from_app(WP_REST_Request $request) {
         return $post_id;
     }
 
+    // Add meta for linking back to the exam program
     if (isset($data['program_id'])) {
         update_post_meta($post_id, '_mco_linked_exam_program_id', (int)$data['program_id']);
     }
@@ -1183,6 +1241,7 @@ function mco_api_admin_set_intro_video(WP_REST_Request $request) {
     }
 }
 
+// --- BETA TESTER ENDPOINTS ---
 function mco_api_register_tester(WP_REST_Request $request) {
     $params = $request->get_json_params();
     $email = sanitize_email($params['email']);
@@ -1195,19 +1254,32 @@ function mco_api_register_tester(WP_REST_Request $request) {
         return new WP_Error('email_exists', 'This email address is already registered.', ['status' => 400]);
     }
 
+    $country = 'N/A';
+    $ip_address = '';
+    if (!empty($_SERVER['HTTP_CLIENT_IP'])) { $ip_address = $_SERVER['HTTP_CLIENT_IP']; } 
+    elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { $ip_address = $_SERVER['HTTP_X_FORWARDED_FOR']; } 
+    else { $ip_address = $_SERVER['REMOTE_ADDR']; }
+    if ($ip_address) {
+        $geo_response = wp_remote_get("http://ip-api.com/json/{$ip_address}?fields=country");
+        if (!is_wp_error($geo_response) && wp_remote_retrieve_response_code($geo_response) === 200) {
+            $geo_data = json_decode(wp_remote_retrieve_body($geo_response), true);
+            if (isset($geo_data['country'])) $country = sanitize_text_field($geo_data['country']);
+        }
+    }
+    
     $username = sanitize_user(explode('@', $email)[0]);
     $password = wp_generate_password();
     $user_id = wp_create_user($username, $password, $email);
 
-    if (is_wp_error($user_id)) {
-        return $user_id;
-    }
+    if (is_wp_error($user_id)) return $user_id;
 
     wp_update_user(['ID' => $user_id, 'display_name' => $full_name]);
     $token = wp_generate_password(32, false);
     update_user_meta($user_id, '_tester_onboarding_token', $token);
     update_user_meta($user_id, '_tester_token_redeemed', false);
+    update_user_meta($user_id, 'mco_beta_country', $country);
     
+    // Send email to user
     $app_url = mco_get_exam_app_url();
     $onboarding_url = rtrim($app_url, '/') . '/onboard/' . $token;
     $subject = 'Your Invitation to the ' . get_bloginfo('name') . ' Beta Program';
@@ -1220,8 +1292,55 @@ function mco_api_register_tester(WP_REST_Request $request) {
 
     wp_mail($email, $subject, $message);
 
-    return new WP_REST_Response(['success' => true, 'message' => 'Registration successful! Please check your email for your unique access link.'], 200);
+    return new WP_REST_Response([
+        'success' => true, 
+        'message' => 'Registration successful! Please check your email for your unique access link.',
+        'onboarding_token' => $token,
+        'user_email' => $email
+    ], 200);
 }
+
+
+function mco_api_public_resend_onboarding_email(WP_REST_Request $request) {
+    $params = $request->get_json_params();
+    $token = sanitize_text_field($params['token']);
+    $email = sanitize_email($params['email']);
+
+    if (empty($token) || empty($email)) {
+        return new WP_Error('bad_request', 'Token and email are required.', ['status' => 400]);
+    }
+    
+    $user = get_user_by('email', $email);
+    if (!$user) {
+        return new WP_Error('not_found', 'User not found.', ['status' => 404]);
+    }
+
+    $stored_token = get_user_meta($user->ID, '_tester_onboarding_token', true);
+    if ($stored_token !== $token) {
+        return new WP_Error('invalid_token', 'Invalid token for this user.', ['status' => 403]);
+    }
+
+    if (get_user_meta($user->ID, '_tester_token_redeemed', true)) {
+        return new WP_Error('already_redeemed', 'This token has already been redeemed.', ['status' => 400]);
+    }
+
+    $app_url = mco_get_exam_app_url();
+    $onboarding_url = rtrim($app_url, '/') . '/onboard/' . $token;
+    $subject = 'Your Invitation to the ' . get_bloginfo('name') . ' Beta Program';
+    $message = "Hello {$user->display_name},\n\n";
+    $message .= "Here is your unique access link again to activate your one-month premium access for our beta program:\n";
+    $message .= $onboarding_url . "\n\n";
+    $message .= "Sincerely,\nThe " . get_bloginfo('name') . " Team";
+
+    $sent = wp_mail($user->user_email, $subject, $message);
+
+    if ($sent) {
+        return new WP_REST_Response(['success' => true, 'message' => 'Welcome email has been resent.'], 200);
+    } else {
+        return new WP_Error('email_failed', 'Could not send the email. This might be a server configuration issue.', ['status' => 500]);
+    }
+}
+
 
 function mco_api_redeem_tester_token(WP_REST_Request $request) {
     $token = sanitize_text_field($request->get_param('testerToken'));
@@ -1245,14 +1364,17 @@ function mco_api_redeem_tester_token(WP_REST_Request $request) {
         return new WP_Error('already_redeemed', 'This token has already been used.', ['status' => 403]);
     }
 
+    // Grant 1 month of premium access
     $expiry_timestamp = time() + (30 * DAY_IN_SECONDS);
     update_user_meta($user_id, '_beta_access_expiry_timestamp', $expiry_timestamp);
     update_user_meta($user_id, '_tester_token_redeemed', true);
     
-    if (function_exists('wcam_create_affiliate')) {
-        wcam_create_affiliate($user_id);
+    // Create affiliate account if Affiliates Manager is active
+    if (function_exists('affiliates_add_affiliate')) {
+        affiliates_add_affiliate(array('affiliate_id' => $user_id, 'status' => 'active'));
     }
 
+    // Generate a new JWT with the beta flag
     $new_token = mco_generate_exam_jwt($user_id);
     if (!$new_token) {
         return new WP_Error('token_generation_failed', 'Could not generate authentication token.', ['status' => 500]);
@@ -1266,6 +1388,7 @@ function mco_api_admin_toggle_beta_status(WP_REST_Request $request) {
     $user_id = $payload['user']['id'];
     $is_beta_tester = (bool)$request->get_param('isBetaTester');
 
+    // Generate a new token with the beta status override
     $new_token = mco_generate_exam_jwt($user_id, $is_beta_tester);
 
     if (!$new_token) {
@@ -1276,51 +1399,58 @@ function mco_api_admin_toggle_beta_status(WP_REST_Request $request) {
 }
 
 function mco_api_admin_get_beta_testers(WP_REST_Request $request) {
-    $args = [
-        'meta_key' => '_tester_onboarding_token',
-        'number' => -1,
-        'fields' => 'all_with_meta',
-    ];
-    $users = get_users($args);
     $testers = [];
+    $users = get_users([
+        'meta_key' => '_tester_onboarding_token',
+        'fields' => ['ID', 'display_name', 'user_email', 'user_registered'],
+    ]);
 
     foreach ($users as $user) {
-        $expiry = get_user_meta($user->ID, '_beta_access_expiry_timestamp', true);
-        $redeemed = get_user_meta($user->ID, '_tester_token_redeemed', true);
-        $country = 'Unknown'; // Placeholder - GeoIP implementation would go here if needed.
-
+        $expiry_timestamp = get_user_meta($user->ID, '_beta_access_expiry_timestamp', true);
         $testers[] = [
-            'id' => strval($user->ID),
+            'id' => (string) $user->ID,
             'name' => $user->display_name,
             'email' => $user->user_email,
-            'country' => $country,
+            'country' => get_user_meta($user->ID, 'mco_beta_country', true) ?: 'N/A',
             'registrationDate' => $user->user_registered,
-            'expiryTimestamp' => $expiry ? (int)$expiry : 0,
-            'tokenRedeemed' => (bool)$redeemed
+            'expiryTimestamp' => $expiry_timestamp ? (int)$expiry_timestamp : 0,
+            'tokenRedeemed' => (bool) get_user_meta($user->ID, '_tester_token_redeemed', true),
         ];
     }
+
     return new WP_REST_Response($testers, 200);
 }
 
-function mco_api_admin_resend_beta_email(WP_REST_Request $request) {
+function mco_api_resend_beta_email(WP_REST_Request $request) {
     $user_id = (int)$request->get_param('userId');
+    if (!$user_id) {
+        return new WP_Error('bad_request', 'User ID is required.', ['status' => 400]);
+    }
+
     $user = get_userdata($user_id);
-    
-    if (!$user) return new WP_Error('not_found', 'User not found.', ['status' => 404]);
+    if (!$user) {
+        return new WP_Error('not_found', 'User not found.', ['status' => 404]);
+    }
+
+    if (get_user_meta($user_id, '_tester_token_redeemed', true)) {
+        return new WP_Error('already_redeemed', 'This user has already redeemed their token.', ['status' => 400]);
+    }
 
     $token = get_user_meta($user_id, '_tester_onboarding_token', true);
-    if (!$token) return new WP_Error('no_token', 'User does not have an onboarding token.', ['status' => 400]);
+    if (empty($token)) {
+        return new WP_Error('no_token', 'No onboarding token found for this user.', ['status' => 404]);
+    }
 
     $app_url = mco_get_exam_app_url();
     $onboarding_url = rtrim($app_url, '/') . '/onboard/' . $token;
-    $subject = 'Reminder: Your Invitation to the Beta Program';
+    $subject = 'Your Invitation to the ' . get_bloginfo('name') . ' Beta Program';
     $message = "Hello {$user->display_name},\n\n";
-    $message .= "This is a reminder about your beta access invitation. We'd love for you to test our new platform.\n\n";
-    $message .= "Click here to activate your one-month premium access:\n";
+    $message .= "Here is your unique access link again to activate your one-month premium access for our beta program:\n";
     $message .= $onboarding_url . "\n\n";
-    
+    $message .= "Sincerely,\nThe " . get_bloginfo('name') . " Team";
+
     wp_mail($user->user_email, $subject, $message);
 
-    return new WP_REST_Response(['success' => true, 'message' => 'Email resent successfully.'], 200);
+    return new WP_REST_Response(['success' => true, 'message' => 'Welcome email has been resent.'], 200);
 }
 ?>

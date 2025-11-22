@@ -1,34 +1,5 @@
-
 <?php
 if (!defined('ABSPATH')) exit;
-
-// --- COMPATIBILITY & DATA FETCHING LAYER ---
-if (!function_exists('mco_get_exam_app_url')) {
-    function mco_get_exam_app_url() {
-        $urls = get_option('mco_exam_app_url', '');
-        $url_list = preg_split('/\r\n|\r|\n/', $urls);
-        return trim($url_list[0]); 
-    }
-}
-
-if (!function_exists('mco_get_shortcode_data')) {
-    function mco_get_shortcode_data() {
-        if (function_exists('mco_fetch_and_prepare_data')) {
-            return mco_fetch_and_prepare_data();
-        }
-        return [];
-    }
-}
-
-if (!function_exists('mco_generate_exam_jwt')) {
-    function mco_generate_exam_jwt($user_id) {
-        if (function_exists('mco_generate_jwt')) {
-            $user = get_user_by('ID', $user_id);
-            if ($user) return mco_generate_jwt($user);
-        }
-        return null;
-    }
-}
 
 // --- ICON HELPER ---
 function mco_get_svg_icon($name) {
@@ -39,11 +10,6 @@ function mco_get_svg_icon($name) {
         'bundle' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
         'check' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
         'star' => '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
-        'book' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
-        'user' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-        'lock' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
-        'unlock' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>',
-        'search' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
     ];
     return $icons[$name] ?? '';
 }
@@ -203,6 +169,28 @@ if (!function_exists('mco_save_fullname_on_registration')) {
             $name_parts = explode(' ', $full_name, 2);
             update_user_meta($user_id, 'first_name', $name_parts[0]);
             update_user_meta($user_id, 'last_name', $name_parts[1] ?? '');
+
+            // FIX: Add IP to country detection for regular user registration to populate analytics.
+            $country = 'Unknown';
+            $ip_address = '';
+            if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+                $ip_address = $_SERVER['HTTP_CLIENT_IP'];
+            } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+                $ip_address = $_SERVER['HTTP_X_FORWARDED_FOR'];
+            } else {
+                $ip_address = $_SERVER['REMOTE_ADDR'];
+            }
+
+            if ($ip_address) {
+                $geo_response = wp_remote_get("http://ip-api.com/json/{$ip_address}?fields=country");
+                if (!is_wp_error($geo_response) && wp_remote_retrieve_response_code($geo_response) === 200) {
+                    $geo_data = json_decode(wp_remote_retrieve_body($geo_response), true);
+                    if (isset($geo_data['country'])) {
+                        $country = sanitize_text_field($geo_data['country']);
+                    }
+                }
+            }
+            update_user_meta($user_id, 'mco_user_country', $country);
         }
     }
 }
@@ -215,10 +203,14 @@ if (!function_exists('mco_redirect_to_app_with_token')) {
         $token = mco_generate_exam_jwt(get_current_user_id());
         if (!$token) return '<p>Could not generate authentication token.</p>';
         $redirect_url = add_query_arg('token', $token, rtrim($app_url, '/') . '/auth');
+        
+        // Attempt server-side redirect first if headers not sent
         if (!headers_sent()) {
             wp_redirect($redirect_url);
             exit;
         }
+        
+        // Fallback to JS redirect if used inside shortcode where headers are already gone
         return '<div class="mco-redirect-message">Redirecting you to the exam portal... <a href="' . esc_url($redirect_url) . '">Click here if you are not redirected</a>.</div><script>window.location.href="' . esc_url($redirect_url) . '";</script>';
     }
 }
@@ -256,6 +248,9 @@ if (!function_exists('mco_register_shortcode_hooks')) {
         add_shortcode('mco_book_showcase', 'mco_book_showcase_shortcode');
         add_shortcode('mco_single_book', 'mco_single_book_shortcode');
         
+        // FIX: Hook to process the login form submission before the page renders to avoid "headers already sent" errors.
+        add_action('template_redirect', 'mco_handle_login_form_post');
+        
         add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles');
         add_action('wp', 'mco_prevent_caching_on_shortcode_pages');
 
@@ -267,7 +262,39 @@ if (!function_exists('mco_register_shortcode_hooks')) {
         add_action('user_register', 'mco_save_fullname_on_registration');
     }
 }
-add_action('init', 'mco_register_shortcode_hooks');
+
+// FIX: New function to handle login form post on the template_redirect hook.
+if (!function_exists('mco_handle_login_form_post')) {
+    function mco_handle_login_form_post() {
+        global $post;
+        // Only run on a page with our shortcode, for POST requests from non-logged-in users.
+        if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_login') && $_SERVER['REQUEST_METHOD'] === 'POST' && !is_user_logged_in()) {
+            
+            if (isset($_POST['mco_login_nonce']) && wp_verify_nonce($_POST['mco_login_nonce'], 'mco_login_action')) {
+                $creds = [
+                    'user_login'    => sanitize_user($_POST['log']),
+                    'user_password' => $_POST['pwd'],
+                    'remember'      => isset($_POST['rememberme']),
+                ];
+                $user = wp_signon($creds, is_ssl());
+        
+                if (is_wp_error($user)) {
+                    // Redirect back to the login page with an error code.
+                    $error_code = $user->get_error_code();
+                    $redirect_url = add_query_arg('login_error', $error_code, get_permalink($post->ID));
+                    wp_redirect($redirect_url);
+                    exit;
+                } else {
+                    // Success! Redirect to the same page without an error. 
+                    // The mco_sso_login_redirect function (hooked to template_redirect) will then pick up the logged-in user and forward them to the React app.
+                    wp_redirect(get_permalink($post->ID));
+                    exit;
+                }
+            }
+        }
+    }
+}
+
 
 if (!function_exists('mco_auto_apply_single_book_style')) {
     function mco_auto_apply_single_book_style($content) {
@@ -318,6 +345,8 @@ if (!function_exists('mco_prevent_caching_on_shortcode_pages')) {
             is_singular('mco_recommended_book')
         )) {
             if (!defined('DONOTCACHEPAGE')) define('DONOTCACHEPAGE', true);
+            // Force no-cache headers on these dynamic pages
+            nocache_headers();
         }
     }
 }
@@ -325,31 +354,15 @@ if (!function_exists('mco_prevent_caching_on_shortcode_pages')) {
 // --- STYLES ---
 if (!function_exists('mco_enqueue_shortcode_styles')) {
     function mco_enqueue_shortcode_styles() {
-        global $post;
-        // Ensure $post is available and valid
-        if (!is_a($post, 'WP_Post')) return;
-
-        // Check for shortcodes or specific post types before enqueueing
-        $has_shortcode = has_shortcode($post->post_content, 'mco_exam_showcase') ||
-                         has_shortcode($post->post_content, 'exam_program') ||
-                         has_shortcode($post->post_content, 'mco_book_showcase') ||
-                         has_shortcode($post->post_content, 'mco_single_book') ||
-                         has_shortcode($post->post_content, 'mco_exam_login');
-        
-        $is_cpt = is_singular('mco_exam_program') || is_singular('mco_recommended_book');
-
-        if ($has_shortcode || $is_cpt) {
-             if (defined('MCO_PLUGIN_URL')) {
-                 wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
-             }
-        }
+        wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
     }
 }
 
 // --- SHORTCODE IMPLEMENTATIONS ---
-
+// FIX: Refactored shortcode to separate form display from form processing.
 function mco_exam_login_shortcode() {
-    // 1. Handle name update for logged-in user
+    // 1. Handle name update for logged-in user. This still needs to be a POST handler within the shortcode
+    // because it only appears *after* a user is logged in.
     if (is_user_logged_in() && isset($_POST['mco_update_name_nonce']) && wp_verify_nonce($_POST['mco_update_name_nonce'], 'mco_update_name_action')) {
         $full_name = sanitize_text_field($_POST['full_name']);
         if (!empty($full_name) && strpos(trim($full_name), ' ') !== false) {
@@ -366,41 +379,46 @@ function mco_exam_login_shortcode() {
         }
     }
 
-    // 2. Handle login attempt from logged-out user
-    if (!is_user_logged_in() && isset($_POST['mco_login_nonce']) && wp_verify_nonce($_POST['mco_login_nonce'], 'mco_login_action')) {
-        $creds = [
-            'user_login'    => sanitize_user($_POST['log']),
-            'user_password' => $_POST['pwd'],
-            'remember'      => isset($_POST['rememberme']),
-        ];
-        $user = wp_signon($creds, is_ssl());
+    // 2. The main login POST logic is now handled in the 'template_redirect' hook via mco_handle_login_form_post.
 
-        if (is_wp_error($user)) {
-            $login_error = $user->get_error_message();
-        } else {
-            // Success! The page will reload, and the logged-in user logic below will run.
-            wp_redirect(remove_query_arg('login_error', get_permalink()));
-            exit;
-        }
-    }
-
-    // 3. Check logged-in user's status (runs after successful login/redirect or on initial page load)
+    // 3. Check if user is logged in (either initially or after a successful login redirect).
     if (is_user_logged_in()) {
         $user = wp_get_current_user();
         if (strpos($user->display_name, ' ') !== false) {
+            // Name is good, redirect to the app.
             return mco_redirect_to_app_with_token();
         } else {
+            // Name needs to be updated, show the name update form.
             return mco_render_name_update_form();
         }
     }
 
-    // 4. Render login form for logged-out user
+    // 4. Render login form for logged-out users, including any errors from the redirect.
+    $login_error = '';
+    if (isset($_GET['login_error'])) {
+        $error_code = sanitize_key($_GET['login_error']);
+        switch ($error_code) {
+            case 'invalid_username':
+            case 'incorrect_password':
+                $login_error = '<strong>ERROR</strong>: The username or password you entered is incorrect.';
+                break;
+            case 'empty_username':
+                $login_error = '<strong>ERROR</strong>: The username field is empty.';
+                break;
+            case 'empty_password':
+                $login_error = '<strong>ERROR</strong>: The password field is empty.';
+                break;
+            default:
+                $login_error = 'An unknown login error occurred. Please try again.';
+        }
+    }
+
     ob_start();
     ?>
     <div class="mco-form-container" id="mco-login-form-custom">
         <h2>Login to Your Account</h2>
-        <?php if (isset($login_error)): ?>
-            <p class="mco-error"><?php echo esc_html($login_error); ?></p>
+        <?php if (!empty($login_error)): ?>
+            <p class="mco-error"><?php echo $login_error; // This is a safe string. ?></p>
         <?php endif; ?>
         <form name="loginform" id="loginform" action="<?php echo esc_url(get_permalink()); ?>" method="post">
             <p class="login-username">
@@ -438,29 +456,19 @@ function mco_exam_showcase_shortcode($atts) {
     $atts = shortcode_atts(['id' => ''], $atts, 'exam_program');
     $program_id_str = sanitize_text_field($atts['id']);
     
-    // Get the global config data (flat arrays)
-    $config_data = mco_get_shortcode_data();
-    if (empty($config_data) || empty($config_data['examProductCategories'])) return '<p>Application is not configured correctly.</p>';
-    $app_url = mco_get_exam_app_url();
-
-    // Determine which programs to show
-    $programs_to_show = [];
+    $query_args = ['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC'];
     if (!empty($program_id_str)) {
-         // Show single program
-         $found = false;
-         foreach ($config_data['examProductCategories'] as $cat) {
-             if ($cat['id'] === $program_id_str) {
-                 $programs_to_show[] = $cat;
-                 $found = true;
-                 break;
-             }
-         }
-    } else {
-        // Show all programs
-        $programs_to_show = $config_data['examProductCategories'];
+        $post_id_from_app_id = (int) str_replace('prod-', '', $program_id_str);
+        if ($post_id_from_app_id > 0) $query_args['p'] = $post_id_from_app_id;
+        else { $query_args['name'] = $program_id_str; $query_args['posts_per_page'] = 1; }
     }
     
-    if (empty($programs_to_show)) return '<p>No exam programs found.</p>';
+    $programs = get_posts($query_args);
+    if (empty($programs)) return '<p>No exam programs found.</p>';
+    
+    $config_data = mco_get_app_config_data();
+    $app_url = mco_get_exam_app_url();
+    if (!$config_data || !$app_url) return '<p>Application is not configured correctly.</p>';
 
     ob_start();
     
@@ -493,16 +501,13 @@ function mco_exam_showcase_shortcode($atts) {
     }
 
     echo '<div class="mco-showcase-grid">';
-    foreach ($programs_to_show as $program_category) {
-        $app_program_id = $program_category['id'];
+    foreach ($programs as $program_post) {
+        $app_program_id = 'prod-' . $program_post->ID;
+        $program_category = current(array_filter($config_data['examProductCategories'], function($c) use ($app_program_id) { return $c['id'] === $app_program_id; }));
+        if (!$program_category) continue;
         
-        // Find matching exams in the flattened array
-        $practice_exam = null;
-        $cert_exam = null;
-        foreach ($config_data['exams'] as $e) {
-            if ($e['id'] === $program_category['practiceExamId']) $practice_exam = $e;
-            if ($e['id'] === $program_category['certificationExamId']) $cert_exam = $e;
-        }
+        $practice_exam = current(array_filter($config_data['exams'], function($e) use ($program_category) { return $e['id'] === $program_category['practiceExamId']; }));
+        $cert_exam = current(array_filter($config_data['exams'], function($e) use ($program_category) { return $e['id'] === $program_category['certificationExamId']; }));
         
         $program_link_url = rtrim($app_url, '/') . '/program/' . $app_program_id;
 
@@ -513,12 +518,7 @@ function mco_exam_showcase_shortcode($atts) {
         }
 
         if ($cert_exam) {
-            // Need to get fresh price data from examPrices array
-            $price_data = $config_data['examPrices'][$cert_exam['productSku']] ?? null;
-            $price = $price_data['price'] ?? 0;
-            $regular_price = $price_data['regularPrice'] ?? 0;
-            $product_id = $price_data['productId'] ?? 0;
-
+            $product_id = wc_get_product_id_by_sku($cert_exam['productSku']);
             $is_purchased = false;
             if (is_user_logged_in()) {
                 $user_id = get_current_user_id();
@@ -530,10 +530,10 @@ function mco_exam_showcase_shortcode($atts) {
             $button_class = $is_purchased ? 'mco-card__button--primary' : 'mco-card__button--purchase';
 
             echo '<div class="mco-card mco-gradient--cert-1"><div class="mco-card__header"><span>' . mco_get_svg_icon('cert') . '</span> Certification Exam</div><div class="mco-card__body"><h3 class="mco-card__subtitle">' . esc_html($cert_exam['name']) . '</h3>';
-            if (!$is_purchased && $price > 0) {
+            if (!$is_purchased && $cert_exam['price'] > 0) {
                 echo '<div style="text-align: center; margin-bottom: 1rem;">';
-                if ($regular_price > $price) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($regular_price, 2) . '</span>';
-                echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($price, 2) . '</span></div>';
+                if ($cert_exam['regularPrice'] > $cert_exam['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($cert_exam['regularPrice'], 2) . '</span>';
+                echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($cert_exam['price'], 2) . '</span></div>';
             }
             echo '<div class="mco-card__stats"><span>' . esc_html($cert_exam['numberOfQuestions']) . ' Qs</span><span>' . esc_html($cert_exam['durationMinutes']) . ' Mins</span><span>' . esc_html($cert_exam['passScore']) . '% Pass</span></div></div><div class="mco-card__footer"><a href="' . esc_url($button_url) . '" class="mco-card__button ' . $button_class . '">' . $button_icon . ' ' . $button_text . '</a></div></div>';
 
@@ -577,7 +577,7 @@ function mco_exam_showcase_shortcode($atts) {
 }
 
 function mco_book_showcase_shortcode() {
-    $config_data = mco_get_shortcode_data();
+    $config_data = mco_get_app_config_data();
     if (empty($config_data['suggestedBooks'])) return '<p>No recommended books found.</p>';
 
     ob_start();
@@ -627,15 +627,9 @@ function mco_single_book_shortcode() {
     global $post;
     if (!$post || $post->post_type !== 'mco_recommended_book') return '<p>This shortcode must be used on a "Recommended Book" post.</p>';
 
-    $config_data = mco_get_shortcode_data();
+    $config_data = mco_get_app_config_data();
     $book_id_meta = get_post_meta($post->ID, '_mco_book_id', true);
-    $book = null;
-    foreach($config_data['suggestedBooks'] as $b) {
-        if ($b['id'] === $book_id_meta) {
-            $book = $b;
-            break;
-        }
-    }
+    $book = current(array_filter($config_data['suggestedBooks'], function($b) use ($book_id_meta) { return $b['id'] === $book_id_meta; }));
 
     if (!$book) return '<p>Book data not found in application configuration.</p>';
 
@@ -701,7 +695,7 @@ function mco_single_book_shortcode() {
 }
 
 function mco_render_study_hall_sidebar() {
-    $config_data = mco_get_shortcode_data();
+    $config_data = mco_get_app_config_data();
     if (empty($config_data['suggestedBooks'])) return '';
 
     $all_books = $config_data['suggestedBooks'];

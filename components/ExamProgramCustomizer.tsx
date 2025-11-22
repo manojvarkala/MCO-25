@@ -9,24 +9,10 @@ import { Settings, Edit, Save, X, ChevronDown, ChevronUp, FileText, Award, PlusC
 import Spinner from './Spinner.tsx';
 
 interface EditableProgramData {
-    name?: string;
-    description?: string;
-    questionSourceUrl?: string;
-    practice_name?: string;
-    practice_numberOfQuestions?: number;
-    practice_durationMinutes?: number;
-    practice_certificateEnabled?: boolean;
-    cert_name?: string;
-    cert_productSku?: string;
-    cert_certificateTemplateId?: string;
-    cert_numberOfQuestions?: number;
-    cert_durationMinutes?: number;
-    cert_passScore?: number;
-    cert_isProctored?: boolean;
-    cert_certificateEnabled?: boolean;
-    cert_recommendedBookIds?: string[];
+    category?: Partial<ExamProductCategory>;
+    practiceExam?: Partial<Exam>;
+    certExam?: Partial<Exam>;
 }
-
 
 const BulkEditPanel: FC<{
     onSave: (update: any) => Promise<void>;
@@ -146,43 +132,49 @@ interface ExamEditorProps {
 
 const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, unlinkedProducts, suggestedBooks, examPrices }) => {
     const { activeOrg } = useAppContext();
-    const [data, setData] = useState<EditableProgramData>({});
+    const [data, setData] = useState<EditableProgramData>({
+        category: { ...program.category },
+        practiceExam: program.practiceExam ? { ...program.practiceExam } : undefined,
+        certExam: program.certExam ? { ...program.certExam } : undefined,
+    });
     
     useEffect(() => {
-        const flattenedData: EditableProgramData = {
-            name: program.category.name,
-            description: program.category.description,
-            questionSourceUrl: program.category.questionSourceUrl,
-            practice_name: program.practiceExam?.name,
-            practice_numberOfQuestions: program.practiceExam?.numberOfQuestions,
-            practice_durationMinutes: program.practiceExam?.durationMinutes,
-            practice_certificateEnabled: program.practiceExam?.certificateEnabled,
-            cert_name: program.certExam?.name,
-            cert_productSku: program.certExam?.productSku,
-            cert_certificateTemplateId: program.certExam?.certificateTemplateId,
-            cert_numberOfQuestions: program.certExam?.numberOfQuestions,
-            cert_durationMinutes: program.certExam?.durationMinutes,
-            cert_passScore: program.certExam?.passScore,
-            cert_isProctored: program.certExam?.isProctored,
-            cert_certificateEnabled: program.certExam?.certificateEnabled,
-            cert_recommendedBookIds: program.certExam?.recommendedBookIds,
-        };
-        setData(flattenedData);
+        setData({
+            category: { ...program.category },
+            practiceExam: program.practiceExam ? { ...program.practiceExam } : undefined,
+            certExam: program.certExam ? { ...program.certExam } : undefined,
+        });
     }, [program]);
 
-    const handleChange = (field: keyof EditableProgramData, value: string | number | boolean) => {
-        setData(prev => ({ ...prev, [field]: value }));
+    const handleCategoryChange = (field: keyof ExamProductCategory, value: string) => {
+        setData(prev => ({ ...prev, category: { ...prev.category, [field]: value } }));
+    };
+
+    const handleExamChange = (examType: 'practiceExam' | 'certExam', field: keyof Exam, value: string | number | boolean) => {
+        setData(prev => ({
+            ...prev,
+            [examType]: prev[examType] ? { ...prev[examType], [field]: value } : undefined
+        }));
     };
 
     const handleBookSelectionChange = (bookId: string) => {
         setData(prev => {
-            const currentBookIds = prev.cert_recommendedBookIds || [];
+            if (!prev.certExam) return prev;
+            const currentBookIds = prev.certExam.recommendedBookIds || [];
             const newBookIds = currentBookIds.includes(bookId)
                 ? currentBookIds.filter(id => id !== bookId)
                 : [...currentBookIds, bookId];
-            return { ...prev, cert_recommendedBookIds: newBookIds };
+            return {
+                ...prev,
+                certExam: {
+                    ...prev.certExam,
+                    recommendedBookIds: newBookIds,
+                }
+            };
         });
     };
+    
+    const { category, practiceExam, certExam } = data;
     
     const initialLinkedProductInfo = useMemo(() => {
         if (!program.certExam?.productSku || !examPrices) return null;
@@ -198,40 +190,40 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
         <div className="bg-[rgb(var(--color-muted-rgb))] p-4 rounded-b-lg space-y-4">
             <div>
                 <label className="text-xs font-bold">Program Name</label>
-                <input type="text" value={data.name || ''} onChange={e => handleChange('name', e.target.value)} className="w-full p-2 border rounded bg-white" />
+                <input type="text" value={category.name || ''} onChange={e => handleCategoryChange('name', e.target.value)} className="w-full p-2 border rounded bg-white" />
             </div>
             <div>
                 <label className="text-xs font-bold">Program Description</label>
-                <textarea value={data.description || ''} onChange={e => handleChange('description', e.target.value)} className="w-full p-2 border rounded bg-white" rows={3} />
+                <textarea value={category.description || ''} onChange={e => handleCategoryChange('description', e.target.value)} className="w-full p-2 border rounded bg-white" rows={3} />
             </div>
              <div>
                 <label className="text-xs font-bold">Question Source URL</label>
-                <input type="text" value={data.questionSourceUrl || ''} onChange={e => handleChange('questionSourceUrl', e.target.value)} className="w-full p-2 border rounded bg-white" />
+                <input type="text" value={category?.questionSourceUrl || ''} onChange={e => handleCategoryChange('questionSourceUrl', e.target.value)} className="w-full p-2 border rounded bg-white" />
             </div>
             
-            {program.practiceExam && (
+            {practiceExam && (
                 <div className="p-4 border rounded-lg bg-white/50 space-y-4">
                     <h4 className="font-bold flex items-center gap-2"><FileText size={16} /> Practice Exam</h4>
                     <div>
                         <label className="text-xs font-bold">Name Override</label>
-                        <input type="text" value={data.practice_name || ''} onChange={e => handleChange('practice_name', e.target.value)} className="w-full p-2 border rounded bg-white" />
+                        <input type="text" value={practiceExam.name || ''} onChange={e => handleExamChange('practiceExam', 'name', e.target.value)} className="w-full p-2 border rounded bg-white" />
                     </div>
                      <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="text-xs font-bold">No. of Questions</label>
-                            <input type="number" value={data.practice_numberOfQuestions || ''} onChange={e => handleChange('practice_numberOfQuestions', parseInt(e.target.value))} className="w-full p-2 border rounded bg-white" />
+                            <input type="number" value={practiceExam.numberOfQuestions || ''} onChange={e => handleExamChange('practiceExam', 'numberOfQuestions', parseInt(e.target.value))} className="w-full p-2 border rounded bg-white" />
                         </div>
                          <div>
                             <label className="text-xs font-bold">Duration (Mins)</label>
-                            <input type="number" value={data.practice_durationMinutes || ''} onChange={e => handleChange('practice_durationMinutes', parseInt(e.target.value))} className="w-full p-2 border rounded bg-white" />
+                            <input type="number" value={practiceExam.durationMinutes || ''} onChange={e => handleExamChange('practiceExam', 'durationMinutes', parseInt(e.target.value))} className="w-full p-2 border rounded bg-white" />
                         </div>
                     </div>
                     <div className="flex items-center gap-4 pt-2">
                         <label className="flex items-center gap-2">
                             <input
                                 type="checkbox"
-                                checked={data.practice_certificateEnabled || false}
-                                onChange={e => handleChange('practice_certificateEnabled', e.target.checked)}
+                                checked={practiceExam.certificateEnabled || false}
+                                onChange={e => handleExamChange('practiceExam', 'certificateEnabled', e.target.checked)}
                             />
                             Enable Certificate
                         </label>
@@ -239,16 +231,16 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
                 </div>
             )}
 
-            {program.certExam && (
+            {certExam && (
                 <div className="p-4 border rounded-lg bg-white/50 space-y-4">
                     <h4 className="font-bold flex items-center gap-2"><Award size={16} /> Certification Exam</h4>
                      <div>
                         <label className="text-xs font-bold">Name Override</label>
-                        <input type="text" value={data.cert_name || ''} onChange={e => handleChange('cert_name', e.target.value)} className="w-full p-2 border rounded bg-white" />
+                        <input type="text" value={certExam.name || ''} onChange={e => handleExamChange('certExam', 'name', e.target.value)} className="w-full p-2 border rounded bg-white" />
                     </div>
                     <div>
                         <label className="text-xs font-bold">Linked Product</label>
-                        <select value={data.cert_productSku || ''} onChange={e => handleChange('cert_productSku', e.target.value)} className="w-full p-2 border rounded bg-white">
+                        <select value={certExam.productSku || ''} onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} className="w-full p-2 border rounded bg-white">
                             <option value="">-- No Product Linked --</option>
                             {initialLinkedProductInfo && (
                                 <option value={initialLinkedProductInfo.sku}>
@@ -261,8 +253,8 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
                     <div>
                         <label className="text-xs font-bold">Certificate Template</label>
                         <select
-                            value={data.cert_certificateTemplateId || ''}
-                            onChange={e => handleChange('cert_certificateTemplateId', e.target.value)}
+                            value={certExam.certificateTemplateId || ''}
+                            onChange={e => handleExamChange('certExam', 'certificateTemplateId', e.target.value)}
                             className="w-full p-2 border rounded bg-white"
                         >
                             <option value="">-- Use Default Template --</option>
@@ -276,20 +268,20 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
                      <div className="grid grid-cols-3 gap-2">
                         <div>
                             <label className="text-xs font-bold">Questions</label>
-                            <input type="number" value={data.cert_numberOfQuestions || ''} onChange={e => handleChange('cert_numberOfQuestions', parseInt(e.target.value))} className="w-full p-2 border rounded bg-white" />
+                            <input type="number" value={certExam.numberOfQuestions || ''} onChange={e => handleExamChange('certExam', 'numberOfQuestions', parseInt(e.target.value))} className="w-full p-2 border rounded bg-white" />
                         </div>
                          <div>
                             <label className="text-xs font-bold">Duration (Mins)</label>
-                            <input type="number" value={data.cert_durationMinutes || ''} onChange={e => handleChange('cert_durationMinutes', parseInt(e.target.value))} className="w-full p-2 border rounded bg-white" />
+                            <input type="number" value={certExam.durationMinutes || ''} onChange={e => handleExamChange('certExam', 'durationMinutes', parseInt(e.target.value))} className="w-full p-2 border rounded bg-white" />
                         </div>
                         <div>
                             <label className="text-xs font-bold">Pass Score (%)</label>
-                            <input type="number" value={data.cert_passScore || ''} onChange={e => handleChange('cert_passScore', parseInt(e.target.value))} className="w-full p-2 border rounded bg-white" />
+                            <input type="number" value={certExam.passScore || ''} onChange={e => handleExamChange('certExam', 'passScore', parseInt(e.target.value))} className="w-full p-2 border rounded bg-white" />
                         </div>
                     </div>
                      <div className="flex items-center gap-4 pt-2">
-                        <label className="flex items-center gap-2"><input type="checkbox" checked={data.cert_isProctored || false} onChange={e => handleChange('cert_isProctored', e.target.checked)} /> Enable Proctoring</label>
-                        <label className="flex items-center gap-2"><input type="checkbox" checked={data.cert_certificateEnabled || false} onChange={e => handleChange('cert_certificateEnabled', e.target.checked)} /> Enable Certificate</label>
+                        <label className="flex items-center gap-2"><input type="checkbox" checked={certExam.isProctored || false} onChange={e => handleExamChange('certExam', 'isProctored', e.target.checked)} /> Enable Proctoring</label>
+                        <label className="flex items-center gap-2"><input type="checkbox" checked={certExam.certificateEnabled || false} onChange={e => handleExamChange('certExam', 'certificateEnabled', e.target.checked)} /> Enable Certificate</label>
                     </div>
                      <div>
                         <label className="text-xs font-bold">Recommended Study Materials</label>
@@ -298,7 +290,7 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
                                 <label key={book.id} className="flex items-center gap-2 text-sm">
                                     <input
                                         type="checkbox"
-                                        checked={(data.cert_recommendedBookIds || []).includes(book.id)}
+                                        checked={(certExam.recommendedBookIds || []).includes(book.id)}
                                         onChange={() => handleBookSelectionChange(book.id)}
                                     />
                                     <span className="truncate" title={book.title}>{book.title}</span>
@@ -330,7 +322,7 @@ const ExamProgramCustomizer: FC = () => {
     const [isBulkSaving, setIsBulkSaving] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [newProgramName, setNewProgramName] = useState('');
-    const [newProgramProductLink, setNewProgramProductLink] = useState('auto');
+    const [newProgramProductLink, setNewProgramProductLink] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
     const [stats, setStats] = useState<ExamStat[] | null>(null);
@@ -397,12 +389,12 @@ const ExamProgramCustomizer: FC = () => {
         }
         setIsCreating(true);
         try {
-            const result = await googleSheetsService.adminCreateExamProgram(token, newProgramName, { type: newProgramProductLink === 'auto' ? 'auto' : 'existing', sku: newProgramProductLink });
+            const result = await googleSheetsService.adminCreateExamProgram(token, newProgramName, { sku: newProgramProductLink });
             updateConfigData(result.organizations, result.examPrices);
             toast.success(`Program "${newProgramName}" created!`);
             setIsCreateModalOpen(false);
             setNewProgramName('');
-            setNewProgramProductLink('auto');
+            setNewProgramProductLink('');
         } catch(error: any) {
             toast.error(error.message || 'Failed to create program.');
         } finally {
@@ -417,7 +409,7 @@ const ExamProgramCustomizer: FC = () => {
         }
         setIsSaving(true);
         try {
-            const result = await googleSheetsService.adminDeletePost(token, programId.replace('prod-', ''), 'mco_exam_program');
+            const result = await googleSheetsService.adminDeletePost(token, programId, 'mco_exam_program');
             updateConfigData(result.organizations, result.examPrices);
             toast.success(`Program "${programName}" deleted.`);
         } catch(error: any) {
@@ -431,16 +423,13 @@ const ExamProgramCustomizer: FC = () => {
         if (!token || selectedProgramIds.length === 0) return;
         setIsBulkSaving(true);
         const toastId = toast.loading(`Updating ${selectedProgramIds.length} programs...`);
-        let lastResult: { organizations: Organization[], examPrices: any } | null = null;
         try {
             for (const programId of selectedProgramIds) {
-                lastResult = await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
+                await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
             }
-            if (lastResult) {
-                updateConfigData(lastResult.organizations, lastResult.examPrices);
-            }
-            toast.success(`${selectedProgramIds.length} programs updated successfully!`, { id: toastId });
+            toast.success(`${selectedProgramIds.length} programs updated successfully! Refreshing data...`, { id: toastId, duration: 4000 });
             setSelectedProgramIds([]);
+            setTimeout(() => window.location.reload(), 1000);
         } catch (error: any) {
             toast.error(error.message || "An error occurred during bulk update.", { id: toastId });
         } finally {
@@ -494,7 +483,7 @@ const ExamProgramCustomizer: FC = () => {
                              <div>
                                 <label className="text-sm font-medium">Link to Product (Optional)</label>
                                 <select value={newProgramProductLink} onChange={e => setNewProgramProductLink(e.target.value)} className="w-full p-2 mt-1 border rounded bg-white">
-                                    <option value="auto">Create a new product automatically</option>
+                                    <option value="">Create a new product automatically</option>
                                     {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
                                 </select>
                             </div>

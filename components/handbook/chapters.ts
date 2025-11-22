@@ -22,14 +22,12 @@ export interface Chapter {
     title: string;
     content: string;
     isCover?: boolean;
-    isTitlePage?: boolean;
-    isToc?: boolean;
 }
 
 export const chapters: Chapter[] = [
     { title: "Cover", content: coverContent, isCover: true },
-    { title: "Title Page", content: titlePageContent, isTitlePage: true },
-    { title: "Table of Contents", content: tocContent, isToc: true },
+    { title: "Title Page", content: titlePageContent },
+    { title: "Table of Contents", content: tocContent },
     { title: "Part I: Core Concepts", content: ch1_introduction },
     { title: "Chapter 2: Architecture & Multi-Tenancy", content: ch2_architecture },
     { title: "Chapter 3: The Golden Workflow", content: ch3_golden_workflow },

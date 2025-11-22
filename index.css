@@ -149,7 +149,7 @@ body {
     padding: 0.75rem;
 }
 
-/* --- Handbook Content Styles (Used by both App & PDF) --- */
+/* --- On-Screen Handbook Content Styles (Improved Readability) --- */
 .handbook-content {
     color: rgb(var(--color-text-default-rgb));
 }
@@ -213,66 +213,57 @@ body {
     padding: 0;
 }
 
-/* --- NEW: Flipbook Style Handbook --- */
+/* --- Handbook "Flipbook" Layout --- */
 .flipbook-container {
-    width: 100%;
-    max-width: 1400px;
-    margin: 0 auto;
-}
-.flipbook-page-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    aspect-ratio: 2 / 1.414; /* Two A4 pages side-by-side */
     background-color: rgb(var(--color-card-rgb));
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgb(var(--color-border-rgb));
+}
+.flipbook-spread {
+    display: flex;
+    gap: 1rem;
+    background-color: rgb(var(--color-muted-rgb));
     padding: 1rem;
     border-radius: 0.5rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
-.flipbook-page-container.single-page-view {
-    grid-template-columns: 1fr;
-    aspect-ratio: 1 / 1.414;
-    max-width: 700px;
-    margin: 0 auto;
-}
-
-.flipbook-page {
-    background-color: rgb(var(--color-background-rgb));
-    border: 1px solid rgb(var(--color-border-rgb));
-    padding: 2rem;
     position: relative;
-    display: flex;
-    flex-direction: column;
 }
-.handbook-page-content {
-    flex-grow: 1;
+.flipbook-spine {
+    position: absolute;
+    left: 50%;
+    top: 1rem;
+    bottom: 1rem;
+    width: 0.5rem;
+    background: linear-gradient(to right, rgba(0,0,0,0.4), rgba(0,0,0,0), rgba(0,0,0,0.4));
+    transform: translateX(-50%);
+    z-index: 10;
+}
+.flipbook-page {
+    width: 50%;
+    height: 70vh;
     overflow-y: auto;
+    padding: 2rem;
+    background-color: rgb(var(--color-background-rgb));
+    border-radius: 0.25rem;
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.2);
 }
-.handbook-page-content::-webkit-scrollbar { width: 4px; }
-.handbook-page-content::-webkit-scrollbar-track { background: transparent; }
-.handbook-page-content::-webkit-scrollbar-thumb { background-color: rgb(var(--color-border-rgb)); border-radius: 2px; }
-
-/* Special styling for TOC page */
-.handbook-toc ol { list-style: none; padding-left: 0; }
-.handbook-toc li a { display: block; padding: 0.25rem 0; }
-
+.flipbook-page::-webkit-scrollbar { width: 8px; }
+.flipbook-page::-webkit-scrollbar-track { background: transparent; }
+.flipbook-page::-webkit-scrollbar-thumb { background-color: rgb(var(--color-border-rgb)); border-radius: 4px; }
 .flipbook-nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 1rem;
+    margin-top: 1.5rem;
     padding: 0 1rem;
-    color: rgb(var(--color-text-muted-rgb));
 }
 .flipbook-nav button {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
     background-color: rgb(var(--color-muted-rgb));
     color: rgb(var(--color-text-default-rgb));
     font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
     transition: background-color 0.2s;
 }
 .flipbook-nav button:hover:not(:disabled) {
@@ -282,21 +273,18 @@ body {
     opacity: 0.5;
     cursor: not-allowed;
 }
+.flipbook-nav span {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgb(var(--color-text-muted-rgb));
+}
 
 /* --- PDF-Specific Handbook Styles --- */
-.handbook-pdf-cover-container {
-    width: 595pt; /* A4 width */
-    height: 842pt; /* A4 height */
-    background-color: white;
-    box-sizing: border-box;
-}
 .handbook-pdf-content {
     background-color: white;
     color: black;
     font-family: 'Times New Roman', serif;
-    width: 595pt;
-    padding: 40pt;
-    box-sizing: border-box;
+    width: 515pt;
 }
 .handbook-pdf-content h1, .handbook-pdf-content h2, .handbook-pdf-content h3, .handbook-pdf-content h4 {
     color: black;
@@ -325,8 +313,6 @@ body {
 .handbook-pdf-content strong { font-weight: bold; }
 .handbook-pdf-content code { font-family: 'Courier New', monospace; background-color: #f0f0f0; padding: 2pt 4pt; border-radius: 3pt; font-size: 9pt; }
 .handbook-pdf-content pre { background-color: #f0f0f0; padding: 10pt; border-radius: 5pt; font-size: 9pt; white-space: pre-wrap; word-wrap: break-word; page-break-inside: avoid; }
-.handbook-toc a { text-decoration: none; }
-.handbook-toc a:hover { text-decoration: underline; }
 
 @keyframes countdown-pop {
   0% { transform: scale(0.5); opacity: 0; }
@@ -408,66 +394,3 @@ body {
 .cert-container-modern .cert-signature-name { font-weight: 700; font-size: 0.875rem; }
 .cert-container-modern .cert-signature-title { font-size: 0.7rem; color: #64748b; }
 .cert-container-modern .cert-modern-seal { position: absolute; right: 32px; bottom: 24px; width: 90px; height: 90px; opacity: 0.9; }
-
-/* --- LIVE PURCHASE NOTIFIER STYLES --- */
-@keyframes mco-slide-in-up {
-    from { transform: translateY(100%); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-@keyframes mco-fade-out {
-    from { opacity: 1; }
-    to { opacity: 0; }
-}
-
-.mco-purchase-notifier {
-    position: fixed;
-    bottom: 1.5rem;
-    left: 1.5rem;
-    z-index: 9999;
-    background-color: white;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1);
-    border: 1px solid #e5e7eb;
-    width: 100%;
-    max-width: 320px;
-    font-family: sans-serif;
-    transform: translateY(100%);
-    opacity: 0;
-    visibility: hidden;
-    transition: visibility 0.5s, opacity 0.5s, transform 0.5s;
-}
-.mco-purchase-notifier.visible {
-    transform: translateY(0);
-    opacity: 1;
-    visibility: visible;
-}
-
-/* For Ads */
-.google-revocation-no-ad {
-    padding-top: 0 !important;
-}
-.google-revocation-no-ad .py-8 {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-}
-.google-revocation-no-ad main.py-8 {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-}
-.google-revocation-no-ad #root > div {
-  min-height: 100vh;
-}
-.google-revocation-no-ad main.container {
-  max-width: 100%;
-  padding: 0;
-}
-
-
-/* TEST COUNTDOWN */
-@keyframes countdown-pop {
-  0% { transform: scale(0.5); opacity: 0; }
-  50% { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-.animate-countdown-pop { animation: countdown-pop 0.8s ease-out forwards; }

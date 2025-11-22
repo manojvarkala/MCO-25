@@ -18,23 +18,5 @@
     "types": ["vite/client"]
   },
   "include": ["."],
-  "exclude": [
-    "node_modules", 
-    "dist",
-    "components/handbook/content/ch1_introduction.ts",
-    "components/handbook/content/ch2_architecture.ts",
-    "components/handbook/content/ch3_golden_workflow.ts",
-    "components/handbook/content/ch4_user_guide_dashboard.ts",
-    "components/handbook/content/ch5_user_guide_exams.ts",
-    "components/handbook/content/ch6_wp_admin_setup.ts",
-    "components/handbook/content/ch7_wp_admin_content.ts",
-    "components/handbook/content/ch8_wp_admin_tools.ts",
-    "components/handbook/content/ch9_in_app_admin_overview.ts",
-    "components/handbook/content/ch10_in_app_admin_analytics.ts",
-    "components/handbook/content/ch11_in_app_admin_programs.ts",
-    "components/handbook/content/ch12_in_app_admin_products.ts",
-    "components/handbook/content/ch13_in_app_admin_content_engine.ts",
-    "components/handbook/content/ch14_onboarding_workflow.ts",
-    "components/handbook/content/ch15_plugin_integration.ts"
-  ]
+  "exclude": ["node_modules", "dist"]
 }

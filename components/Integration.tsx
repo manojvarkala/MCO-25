@@ -1,4 +1,3 @@
-
 import React, { FC, useState } from 'react';
 import toast from 'react-hot-toast';
 import JSZip from 'jszip';
@@ -29,7 +28,7 @@ const Integration: FC = () => {
     const [isGeneratingSocial, setIsGeneratingSocial] = useState(false);
     
     const engineVersionMatch = mainPluginFile.match(/Version:\s*([0-9.]+)/);
-    const engineVersion = engineVersionMatch ? engineVersionMatch[1] : "2.7.1";
+    const engineVersion = engineVersionMatch ? engineVersionMatch[1] : "2.7.2";
     
     const socialVersionMatch = socialPluginMain.match(/Version:\s*([0-9.]+)/);
     const socialVersion = socialVersionMatch ? socialVersionMatch[1] : "1.0.0";
@@ -138,6 +137,10 @@ const Integration: FC = () => {
                 <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">
                     This is the main plugin that provides the backend API, user authentication (SSO), and content management for the React app.
                 </p>
+                <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6 text-amber-800 text-sm">
+                    <p className="font-bold">Important Update (v{engineVersion})</p>
+                    <p>We have patched issues with user registration and login redirection. Please download the latest version and update your WordPress plugin.</p>
+                </div>
                 <div className="space-y-4 p-4 bg-[rgb(var(--color-muted-rgb))] rounded-lg border border-[rgb(var(--color-border-rgb))]">
                      <ol className="list-decimal list-inside space-y-4 text-[rgb(var(--color-text-muted-rgb))]">
                         <li>
@@ -156,7 +159,7 @@ const Integration: FC = () => {
                         </li>
                         <li>
                              <strong className="text-[rgb(var(--color-text-strong-rgb))]">Step 2: Install or Update in WordPress</strong><br />
-                             Go to your WordPress admin dashboard, navigate to <strong>Plugins &rarr; Add New &rarr; Upload Plugin</strong>, and upload the <code>.zip</code> file.
+                             Go to your WordPress admin dashboard, navigate to <strong>Plugins &rarr; Add New &rarr; Upload Plugin</strong>, and upload the <code>.zip</code> file. If an older version exists, WordPress will ask if you want to replace it. Choose "Replace current with uploaded".
                         </li>
                      </ol>
                 </div>

@@ -1,4 +1,3 @@
-
 import React, { FC, useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -6,8 +5,7 @@ import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { RecommendedBook, TestResult } from '../types.ts';
 import { BookOpen, ChevronLeft, ChevronRight, Edit } from 'lucide-react';
-// FIX: Corrected the import path for the BookCover component.
-import BookCover from './BookCover.tsx';
+import BookCover from '../assets/BookCover.tsx';
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';

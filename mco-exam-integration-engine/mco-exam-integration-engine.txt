@@ -1,9 +1,10 @@
 <?php
 /**
  * Plugin Name:       MCO Exam Integration Engine
- * Description:       Provides the core data API, CPTs, and SSO functionality for the Annapoorna Infotech headless examination app.
+ * Plugin URI:        https://annapoornainfo.com
+ * Description:       Provides the backend API, user authentication (SSO), and content management for the React-based examination app.
  * Version:           2.7.2
-* Author:            Annapoorna Infotech
+ * Author:            Annapoorna Infotech
  * Author URI:        https://annapoornainfo.com
  * License:           GPL v2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -37,16 +38,33 @@ mco_register_shortcode_hooks();
 
 // --- SINGLE SIGN-ON REDIRECT ---
 function mco_sso_login_redirect() {
-    if (is_user_logged_in() && isset($_GET['mco_sso_trigger'])) {
+    // Check if we have the specific trigger from our form handler OR if we're just on the login page and already logged in
+    global $post;
+    if (is_user_logged_in() && (isset($_GET['mco_sso_trigger']) || (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_login')))) {
+        
+        // If we are on the login page and logged in, let's verify the user has a full name first
+        $user = wp_get_current_user();
+        if (strpos($user->display_name, ' ') === false && !isset($_POST['mco_update_name_action'])) {
+            // Name not set, let the shortcode render the name update form instead of redirecting
+            return;
+        }
+
         $app_url = mco_get_exam_app_url();
         if (!$app_url) {
-            wp_die('Exam application URL is not configured.');
+            // If no app URL configured, we can't redirect. 
+            return; 
         }
+        
         $token = mco_generate_exam_jwt(get_current_user_id());
         if (!$token) {
             wp_die('Could not generate authentication token. Please ensure MCO_JWT_SECRET is defined in wp-config.php.');
         }
+        
         $redirect_url = add_query_arg('token', $token, rtrim($app_url, '/') . '/auth');
+        
+        // Prevent caching of this redirect to avoid infinite loops
+        nocache_headers();
+        
         wp_redirect($redirect_url);
         exit;
     }

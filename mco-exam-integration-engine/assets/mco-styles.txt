@@ -1,184 +1,184 @@
-/* MCO Exam Integration Admin Styles */
-.mco-admin-wrapper {
-    margin-top: 20px;
-}
-.mco-admin-wrapper .nav-tab-wrapper {
-    margin-bottom: 20px;
-}
-.mco-tab-content {
-    background: #fff;
-    padding: 20px;
-    border: 1px solid #c3c4c7;
-    border-top: none;
-}
-.mco-admin-wrapper .form-table th {
-    width: 250px;
-}
-.mco-admin-wrapper .form-table p.description {
-    font-size: 13px;
-}
-.mco-admin-wrapper .button-primary {
-    margin-top: 10px;
+/* --- MCO Admin Page General Styles --- */
+.mco-admin-wrap .nav-tab-wrapper { margin-bottom: 20px; }
+.mco-admin-wrap .form-table th { width: 200px; }
+.mco-admin-wrap .button.delete { color: #fff; background: #d63638; border-color: #d63638; }
+.mco-admin-wrap .button.delete:hover { background: #b02a2c; border-color: #b02a2c; }
+.mco-accordion-item { border: 1px solid #ddd; margin-bottom: -1px; }
+.mco-accordion-title { background-color: #f5f5f5; padding: 10px 15px; cursor: pointer; font-size: 14px; font-weight: bold; margin: 0; border-bottom: 1px solid #ddd; }
+.mco-accordion-title:hover { background-color: #f0f0f0; }
+.mco-accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background: #fff; padding: 0 15px; }
+.mco-accordion-title.active + .mco-accordion-content { padding: 15px; }
+.mco-theme-selector-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-top: 1rem; }
+.mco-theme-card { position: relative; display: block; padding: 1rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s ease-in-out; background-color: #fff; }
+.mco-theme-card:hover { border-color: #3b82f6; }
+.mco-theme-card.mco-theme-card--selected { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); }
+.mco-theme-radio { position: absolute; opacity: 0; width: 0; height: 0; }
+.mco-theme-swatches { display: flex; justify-content: center; gap: 0.25rem; height: 2rem; pointer-events: none; margin-bottom: 0.75rem; }
+.mco-theme-swatch { width: 25%; border-radius: 0.25rem; }
+.mco-theme-name { font-weight: 600; text-align: center; pointer-events: none; color: #1e293b; }
+
+/* --- Procedural Book Cover Styles --- */
+.mco-book-cover { position: relative; overflow: hidden; width: 100%; height: 100%; }
+.mco-proc-cover-annapoorna-a { display: flex; align-items: center; justify-content: center; text-align: center; padding: 1rem; }
+.mco-proc-cover-annapoorna-a__bg, .mco-proc-cover-annapoorna-a__pattern-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.mco-proc-cover-annapoorna-a__pattern-bg { clip-path: polygon(0 0, 100% 0, 0 100%); }
+.mco-proc-cover-annapoorna-a__pattern-svg { position: absolute; inset: 0; opacity: 0.1; }
+.mco-proc-cover-annapoorna-a__content { position: relative; z-index: 1; }
+.mco-proc-cover-annapoorna-a__super-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; }
+.mco-proc-cover-annapoorna-a__title { font-weight: 700; font-size: 1.125rem; line-height: 1.2; margin-top: 0.25rem; }
+.mco-proc-cover-annapoorna-b { display: flex; flex-direction: column; justify-content: flex-end; text-align: left; padding: 1rem; }
+.mco-proc-cover-annapoorna-b__shape { position: absolute; right: -25%; top: -25%; width: 75%; height: 75%; border-radius: 9999px; opacity: 0.5; mix-blend-mode: multiply; }
+.mco-proc-cover-annapoorna-b__content { position: relative; z-index: 1; }
+.mco-proc-cover-annapoorna-b__title { font-weight: 700; font-size: 1.5rem; line-height: 1.2; }
+.mco-proc-cover-annapoorna-b__super-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; }
+.mco-proc-cover-mco-a { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; padding: 1rem; }
+.mco-proc-cover-mco-a__bg-word { position: absolute; bottom: -1rem; right: -0.5rem; font-size: 6rem; font-weight: 900; line-height: 1; z-index: 0; user-select: none; }
+.mco-proc-cover-mco-a__content { position: relative; z-index: 1; }
+.mco-proc-cover-mco-a__title { font-weight: 800; font-size: 1.5rem; line-height: 1.2; }
+.mco-proc-cover-mco-b { display: flex; flex-direction: column; justify-content: space-between; padding: 1rem; }
+.mco-proc-cover-mco-b__accent { position: absolute; top: 1rem; left: 0; width: 0.25rem; height: 25%; }
+.mco-proc-cover-mco-b__super-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; }
+.mco-proc-cover-mco-b__title { font-weight: 700; font-size: 1.125rem; line-height: 1.2; margin-top: 0.25rem; }
+.mco-proc-cover-mco-b__logo-mark { align-self: flex-end; font-size: 3rem; font-weight: 900; opacity: 0.1; user-select: none; }
+.mco-proc-cover-mco-a--color-0 { background-color: #334155; color: #f1f5f9; } .mco-proc-cover-mco-a--color-0 .mco-proc-cover-mco-a__bg-word { color: #475569; }
+.mco-proc-cover-mco-a--color-1 { background-color: #0891b2; color: #cffafe; } .mco-proc-cover-mco-a--color-1 .mco-proc-cover-mco-a__bg-word { color: #155e75; }
+.mco-proc-cover-mco-a--color-2 { background-color: #115e59; color: #ccfbf1; } .mco-proc-cover-mco-a--color-2 .mco-proc-cover-mco-a__bg-word { color: #134e4a; }
+.mco-proc-cover-mco-a--color-3 { background-color: #0369a1; color: #e0f2fe; } .mco-proc-cover-mco-a--color-3 .mco-proc-cover-mco-a__bg-word { color: #0c4a6e; }
+.mco-proc-cover-mco-b--color-0 { background-color: #1e293b; color: #ffffff; } .mco-proc-cover-mco-b--color-0 .mco-proc-cover-mco-b__accent { background-color: #38bdf8; }
+.mco-proc-cover-mco-b--color-1 { background-color: #44403c; color: #ffffff; } .mco-proc-cover-mco-b--color-1 .mco-proc-cover-mco-b__accent { background-color: #facc15; }
+.mco-proc-cover-mco-b--color-2 { background-color: #0c4a6e; color: #ffffff; } .mco-proc-cover-mco-b--color-2 .mco-proc-cover-mco-b__accent { background-color: #fb7185; }
+.mco-proc-cover-mco-b--color-3 { background-color: #065f46; color: #ffffff; } .mco-proc-cover-mco-b--color-3 .mco-proc-cover-mco-b__accent { background-color: #a3e635; }
+
+/* NEW: Layout styles for showcase page */
+.mco-showcase-layout { display: grid; grid-template-columns: 1fr; gap: 2rem; }
+@media(min-width: 1024px) { .mco-showcase-layout { grid-template-columns: 3fr 1fr; } }
+.mco-showcase-main { display: flex; flex-direction: column; gap: 1.5rem; }
+
+/* NEW: Styles for Exam Showcase (Uniform App Dashboard Style) */
+.mco-showcase-grid { display: flex; flex-direction: column; gap: 1.5rem; }
+.mco-program-group { background-color: #30415B; border: 1px solid #475569; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; }
+.mco-program-group__title { font-size: 1.25rem; font-weight: 700; margin: 0 0 0.25rem 0; color: #f8fafc; }
+.mco-program-group__title a { text-decoration: none; color: inherit; transition: color 0.2s; }
+.mco-program-group__title a:hover { color: #06b6d4; }
+.mco-program-group__description { color: #94a3b8; margin-bottom: 1.5rem; font-size: 0.875rem; line-height: 1.6; }
+.mco-program-group__description p { margin: 0; }
+.mco-program-group__cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+.mco-card { display: flex; flex-direction: column; color: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05); }
+.mco-card__header { display: flex; align-items: center; gap: 0.75rem; padding: 1rem 1.5rem; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; background: rgba(0,0,0,0.1); }
+.mco-card__body { padding: 1.5rem; display: flex; flex-direction: column; flex-grow: 1; }
+.mco-card__subtitle { font-size: 1.25rem; font-weight: 700; line-height: 1.3; flex-grow: 1; }
+.mco-card__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center; font-size: 0.875rem; color: rgba(255,255,255,0.8); margin-top: 1.5rem; background: rgba(0,0,0,0.1); padding: 0.75rem; border-radius: 0.5rem; }
+.mco-card__footer { margin-top: auto; padding: 1.5rem; }
+.mco-card__button { display: flex; align-items: center; justify-content: center; gap: 0.75rem; width: 100%; padding: 0.75rem 1rem; border-radius: 0.5rem; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+.mco-card__button--primary { background-color: white; color: #1e293b; }
+.mco-card__button--primary:hover { background-color: #e2e8f0; }
+.mco-card__button--purchase { background-color: #facc15; color: #1e293b; }
+.mco-card__button--purchase:hover { background-color: #f59e0b; }
+
+/* NEW: Gradient Styles to match app */
+.mco-gradient--practice-1 { background-image: linear-gradient(to top right, #3b82f6, #60a5fa); }
+.mco-gradient--cert-1 { background-image: linear-gradient(to top right, #059669, #10b981); }
+.mco-gradient--bundle-practice { background-image: linear-gradient(to top right, #f97316, #fb923c); }
+.mco-gradient--bundle-sub { background-image: linear-gradient(to top right, #0d9488, #2dd4bf); }
+.mco-gradient--sub-monthly { background-image: linear-gradient(to top right, #0891b2, #22d3ee); }
+.mco-gradient--sub-yearly { background-image: linear-gradient(to top right, #6d28d9, #8b5cf6); }
+
+
+/* NEW: Subscription Grid Styles */
+.mco-subscription-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+.mco-subscription-grid .mco-card { position: relative; padding: 1.5rem; }
+.mco-card--best-value { transform: scale(1.05); }
+.mco-best-value-tag { position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); background-color: #facc15; color: #1e293b; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 0.25rem; }
+.mco-sub-card__title { font-size: 1.5rem; font-weight: 700; text-align: center; }
+.mco-sub-card__description { text-align: center; color: rgba(255,255,255,0.8); margin-top: 1rem; }
+.mco-sub-card__price { text-align: center; margin: 1.5rem 0; }
+.mco-sub-card__price-value { font-size: 3rem; font-weight: 800; }
+.mco-sub-card__price-unit { color: rgba(255,255,255,0.8); }
+.mco-sub-card__features { list-style: none; padding: 0; margin: 0 0 1.5rem 0; display: flex; flex-direction: column; gap: 0.75rem; }
+.mco-sub-card__features li { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.875rem; }
+
+/* NEW: Styles for Study Hall Sidebar */
+.mco-study-hall-sidebar { background-color: #fff; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05); }
+.mco-study-hall-sidebar__title { font-size: 1.25rem; font-weight: 700; color: #1e293b; margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.75rem; }
+.mco-study-hall-sidebar__grid { display: flex; flex-direction: column; gap: 1.5rem; }
+.mco-book-card-sidebar { background-color: #fff; border-radius: 0.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; transform: translateY(0); transition: transform 0.2s ease-in-out; }
+.mco-book-card-sidebar:hover { transform: translateY(-4px); }
+.mco-book-card-sidebar__cover { width: 100%; height: 8rem; }
+.mco-book-card-sidebar__cover .mco-book-cover { border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; }
+.mco-book-card-sidebar__content { padding: 1rem; }
+.mco-book-card-sidebar__title { font-weight: 700; font-size: 0.875rem; color: #1e293b; margin: 0 0 0.75rem 0; line-height: 1.4; }
+.mco-book-card-sidebar__button { display: block; width: 100%; text-align: center; font-size: 0.875rem; color: #fff; background-color: #f59e0b; font-weight: 600; border-radius: 0.375rem; padding: 0.5rem 0.75rem; transition: background-color 0.2s; text-decoration: none; }
+.mco-book-card-sidebar__button:hover { background-color: #d97706; }
+.mco-study-hall-sidebar__disclaimer { font-size: 0.75rem; color: #94a3b8; margin-top: 1.5rem; text-align: center; line-height: 1.5; }
+
+/* Styles for Book Showcase */
+.mco-book-grid { display: grid; grid-template-columns: 1fr; gap: 2rem; }
+@media (min-width: 640px) { .mco-book-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .mco-book-grid { grid-template-columns: repeat(3, 1fr); } }
+.mco-book-grid .mco-card { display: flex; flex-direction: column; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05); overflow: hidden; }
+.mco-book-grid .mco-book-cover { width: 100%; height: 14rem; }
+.mco-book-grid .mco-card__body { padding: 1.5rem; display: flex; flex-direction: column; flex-grow: 1; }
+.mco-book-grid .mco-card__title { font-size: 1.125rem; font-weight: 700; color: #1e293b; margin: 0 0 0.75rem 0; line-height: 1.4; transition: color 0.2s ease-in-out; }
+.mco-book-grid .mco-card__body a { text-decoration: none; }
+.mco-book-grid .mco-card__body a:hover .mco-card__title { color: #0891b2; }
+.mco-book-grid .mco-card__description { font-size: 0.875rem; color: #475569; line-height: 1.6; flex-grow: 1; }
+.mco-book-grid .mco-card__footer { margin-top: auto; padding: 1.5rem; border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.5rem; }
+.mco-book-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.75rem 1rem; border-radius: 0.5rem; font-weight: 600; text-decoration: none; transition: all 0.2s; }
+.mco-book-button, .mco-book-button--secondary { border: 1px solid #e2e8f0; background-color: #f1f5f9; color: #475569; }
+.mco-book-button:hover, .mco-book-button--secondary:hover { background-color: #e2e8f0; border-color: #cbd5e1; }
+.mco-book-grid .mco-card__footer .mco-book-button--primary { background-color: #facc15; color: #1e293b; border-color: #facc15; }
+.mco-book-grid .mco-card__footer .mco-book-button--primary:hover { background-color: #f59e0b; border-color: #f59e0b; }
+
+/* --- Single Book Card Styles --- */
+.mco-single-book-card { display: grid; grid-template-columns: 300px 1fr; gap: 2.5rem; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 2.5rem; margin: 2rem auto; max-width: 900px; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); }
+.mco-single-book-card__cover { width: 300px; height: 450px; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1); }
+.mco-single-book-card__cover img, .mco-single-book-card__cover .mco-book-cover { width: 100%; height: 100%; }
+.mco-single-book-card__cover img { object-fit: cover; }
+.mco-single-book-card__details { display: flex; flex-direction: column; }
+.mco-single-book-card__details h1 { font-size: 2.5rem; font-weight: 800; color: #1e293b; margin-top: 0; margin-bottom: 1rem; line-height: 1.2; }
+.mco-single-book-card__description { color: #475569; flex-grow: 1; font-size: 1rem; line-height: 1.6; }
+.mco-single-book-card__description p:first-child { margin-top: 0; }
+.mco-single-book-card__buttons { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.75rem; }
+.mco-single-book-card__buttons-label { font-size: 0.875rem; font-weight: 600; color: #64748b; margin-bottom: 0.25rem; }
+.mco-single-book-card__button { display: inline-flex; align-items: center; justify-content: center; gap: 0.75rem; width: 100%; padding: 0.875rem 1.5rem; border-radius: 0.5rem; font-weight: 700; text-decoration: none; transition: all 0.2s; border: 1px solid transparent; }
+.mco-single-book-card__button svg { width: 20px; height: 20px; }
+.mco-single-book-card__button--primary { background-color: #facc15; color: #1e293b; border-color: #facc15; }
+.mco-single-book-card__button--primary:hover { background-color: #f59e0b; border-color: #f59e0b; }
+.mco-single-book-card__button--secondary { background-color: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+.mco-single-book-card__button--secondary:hover { background-color: #e2e8f0; border-color: #cbd5e1; }
+@media (max-width: 768px) {
+    .mco-single-book-card { grid-template-columns: 1fr; padding: 1.5rem; gap: 1.5rem; }
+    .mco-single-book-card__cover { width: 100%; max-width: 250px; height: auto; aspect-ratio: 2 / 3; margin: 0 auto; }
+    .mco-single-book-card__details h1 { font-size: 1.75rem; text-align: center; }
+    .mco-single-book-card__description { text-align: center; }
+    .mco-single-book-card__buttons-label { text-align: center; }
 }
 
-/* Frontend Styles - Scoped to MCO components */
-/* Card Grid */
-.mco-showcase-grid, .mco-book-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-top: 2rem;
-}
+/* --- Diagnostic Notices for Admin Page --- */
+.mco-admin-notice { margin-top: 8px; padding: 10px 15px; border-left-width: 4px; border-left-style: solid; border-radius: 3px; font-size: 13px; }
+.mco-admin-notice--warning { background-color: #fff8e5; border-color: #ffb900; }
+.mco-admin-notice--info { background-color: #f0f6fc; border-color: #72aee6; }
+.mco-admin-notice a { text-decoration: underline; }
+.mco-admin-notice strong { font-weight: 600; }
 
-/* Exam Cards */
-.mco-card {
-    background: #fff;
-    border-radius: 0.75rem;
-    overflow: hidden;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-    transition: transform 0.2s;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid #e2e8f0;
-}
-.mco-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-}
-.mco-card__header {
-    padding: 1rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-size: 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #fff;
-}
-.mco-card__body {
-    padding: 1.5rem;
-    flex-grow: 1;
-}
-.mco-card__subtitle {
-    font-size: 1.25rem;
-    font-weight: 800;
-    color: #1e293b;
-    margin-bottom: 0.5rem;
-    line-height: 1.3;
-}
-.mco-card__stats {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.875rem;
-    color: #64748b;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #f1f5f9;
-}
-.mco-card__footer {
-    padding: 1rem;
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
-}
-.mco-card__button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    width: 100%;
-    padding: 0.75rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: background-color 0.2s;
-}
-.mco-card__button--primary {
-    background-color: #0891b2; /* cyan-600 */
-    color: white;
-}
-.mco-card__button--primary:hover {
-    background-color: #0e7490; /* cyan-700 */
-}
-.mco-card__button--purchase {
-    background-color: #2563eb; /* blue-600 */
-    color: white;
-}
-.mco-card__button--purchase:hover {
-    background-color: #1d4ed8; /* blue-700 */
-}
+/* --- Styles for Login & Name Update Forms on exam-login page --- */
+.mco-form-container { max-width: 480px; margin: 4rem auto; padding: 2.5rem; background-color: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; }
+.mco-form-container h2 { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin-top: 0; margin-bottom: 0.5rem; text-align: center; }
+.mco-form-container > p { font-size: 1rem; color: #475569; margin-bottom: 1.5rem; text-align: center; }
+.mco-form-container .mco-error { color: #991b1b; background-color: #fee2e2; border: 1px solid #fca5a5; padding: 0.75rem 1rem; border-radius: 0.5rem; margin-bottom: 1rem; }
+.mco-form-container form p { margin-bottom: 1rem; }
+.mco-form-container form label { font-weight: 600; color: #334155; display: block; margin-bottom: 0.5rem; }
+.mco-form-container form input[type="text"],
+.mco-form-container form input[type="password"] { width: 100%; padding: 0.75rem 1rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; box-sizing: border-box; }
+.mco-form-container form .login-remember label { font-weight: normal; color: #475569; }
+.mco-form-container form button[type="submit"],
+.mco-form-container form input[type="submit"] { width: 100%; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; background-color: #0891b2; color: white; font-weight: 600; font-size: 1rem; cursor: pointer; transition: background-color 0.2s; }
+.mco-form-container form button[type="submit"]:hover,
+.mco-form-container form input[type="submit"]:hover { background-color: #0e7490; }
+.mco-form-container .mco-login-links,
+.mco-form-container .mco-register-disabled-notice { text-align: center; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; font-size: 0.875rem; }
+.mco-form-container .mco-login-links a { color: #0891b2; text-decoration: none; }
+.mco-form-container .mco-login-links a:hover { text-decoration: underline; }
+.mco-form-container .mco-register-disabled-notice { font-style: italic; color: #64748b; border-top: none; margin-top: 0.5rem; padding-top: 0; }
 
-/* Gradients for Specific Card Types */
-.mco-gradient--practice-1 .mco-card__header { background: linear-gradient(135deg, #f43f5e, #e11d48); }
-.mco-gradient--cert-1 .mco-card__header { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
-.mco-gradient--bundle-sub .mco-card__header { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
-.mco-gradient--bundle-practice .mco-card__header { background: linear-gradient(135deg, #10b981, #059669); }
-.mco-gradient--sub-monthly { background: linear-gradient(135deg, #06b6d4, #0284c7); color: white; }
-.mco-gradient--sub-yearly { background: linear-gradient(135deg, #7c3aed, #4f46e5); color: white; }
-
-/* Subscription Cards */
-.mco-sub-card__title { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; }
-.mco-sub-card__description { opacity: 0.9; margin-bottom: 1.5rem; }
-.mco-sub-card__price { font-size: 3rem; font-weight: 800; margin-bottom: 1.5rem; }
-.mco-sub-card__price-unit { font-size: 1rem; font-weight: 500; opacity: 0.8; }
-.mco-sub-card__features { list-style: none; padding: 0; margin: 0 0 2rem 0; text-align: left; }
-.mco-sub-card__features li { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
-.mco-sub-card__features svg { width: 20px; height: 20px; color: #86efac; }
-
-/* Login Form */
-.mco-form-container {
-    max-width: 400px;
-    margin: 2rem auto;
-    padding: 2rem;
-    background: #fff;
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-    border: 1px solid #e2e8f0;
-}
-.mco-form-container h2 { text-align: center; margin-bottom: 1.5rem; color: #1e293b; }
-.mco-form-container label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #475569; }
-.mco-form-container input[type="text"], .mco-form-container input[type="password"] {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 0.375rem;
-    margin-bottom: 1rem;
-}
-.mco-form-container input[type="submit"], .mco-form-container button {
-    width: 100%;
-    padding: 0.75rem;
-    background: #0891b2;
-    color: white;
-    border: none;
-    border-radius: 0.375rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-.mco-form-container input[type="submit"]:hover, .mco-form-container button:hover { background: #0e7490; }
-.mco-redirect-message { text-align: center; padding: 2rem; font-size: 1.125rem; color: #0f172a; }
-
-/* Book Cards */
-.mco-book-cover { height: 200px; overflow: hidden; background: #f1f5f9; display: flex; align-items: center; justify-content: center; }
-.mco-book-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    width: 100%;
-    padding: 0.5rem;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    text-decoration: none;
-    margin-top: 0.5rem;
-}
-.mco-book-button--primary { background: #facc15; color: #451a03; }
-.mco-book-button--primary:hover { background: #eab308; }
-.mco-book-button--secondary { background: #f1f5f9; color: #475569; }
-.mco-book-button--secondary:hover { background: #e2e8f0; }
-
-/* Procedural Covers */
-.mco-proc-cover-mco-a { height: 100%; width: 100%; display: flex; flex-direction: column; justify-content: center; padding: 1rem; position: relative; }
-.mco-proc-cover-mco-a__bg-word { position: absolute; bottom: -10px; right: -10px; font-size: 5rem; font-weight: 900; opacity: 0.1; line-height: 1; pointer-events: none; }
-.mco-proc-cover-mco-a__title { position: relative; z-index: 10; font-weight: 800; font-size: 1.25rem; line-height: 1.1; }
+.mco-redirect-message { text-align: center; padding: 2rem; font-size: 1.1rem; font-family: sans-serif; }

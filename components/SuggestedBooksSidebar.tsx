@@ -2,7 +2,7 @@ import React, { FC, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { RecommendedBook } from '../types.ts';
 import { BookUp, BookOpen } from 'lucide-react';
-import BookCover from './BookCover.tsx';
+import BookCover from '../assets/BookCover.tsx';
 
 const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } | null => {
     // FIX: Added a bulletproof safety check. If the affiliateLinks object is missing,

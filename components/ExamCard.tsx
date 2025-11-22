@@ -1,9 +1,11 @@
-
-import React, { FC } from 'react';
-import { useNavigate } from 'react-router-dom';
-import type { Exam, Organization } from '../types.ts';
+import React, { FC, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
-import { PlayCircle, ShoppingCart, BarChart2, Lock, Info, Clock, CheckCircle } from 'lucide-react';
+import { googleSheetsService } from '../services/googleSheetsService.ts';
+import type { Exam, Organization } from '../types.ts';
+import { Award, BookOpen, CheckCircle, Clock, HelpCircle, History, PlayCircle, ShoppingCart } from 'lucide-react';
+import Spinner from './Spinner.tsx';
 
 export interface ExamCardProps {
     exam: Exam;
@@ -17,159 +19,127 @@ export interface ExamCardProps {
     isDisabled?: boolean;
 }
 
-const stripHtml = (html: string): string => {
-    if (!html || typeof html !== 'string') return html || '';
-    try {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-        return tempDiv.textContent || tempDiv.innerText || '';
-    } catch (e) {
-        console.error("Could not parse HTML string for stripping", e);
-        return html;
-    }
-};
-
-const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, examPrices, hideDetailsLink = false, attemptsMade, isDisabled = false }) => {
+const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, activeOrg, examPrices, hideDetailsLink = false, attemptsMade, isDisabled = false }) => {
     const navigate = useNavigate();
-    const { isSubscribed, isBetaTester } = useAuth();
-    const hasAccess = isPractice || isPurchased || isSubscribed || isBetaTester;
+    const { user, token, isSubscribed, isBetaTester } = useAuth();
+    const [isRedirecting, setIsRedirecting] = useState(false);
 
-    // Robust price resolution
-    const priceInfo = examPrices && exam.productSku ? examPrices[exam.productSku] : null;
-    // Fallback to exam.price from config if live price is missing, defaulting to 0
-    const price = priceInfo?.price ?? (exam.price || 0);
-    const regularPrice = priceInfo?.regularPrice ?? (exam.regularPrice || 0);
+    const canTake = isPractice || isPurchased || isSubscribed || isBetaTester;
+    
+    let buttonText = 'Start Practice';
+    if (!isPractice) {
+        if (canTake) {
+            buttonText = 'Start Exam';
+        } else {
+            buttonText = isRedirecting ? 'Preparing...' : 'Add to Cart';
+        }
+    }
 
-    const handleActionClick = () => {
-        if (isDisabled) return;
-        if (isPractice) {
+    const handleButtonClick = async () => {
+        // Fire and forget engagement logging
+        if (token) {
+            googleSheetsService.logEngagement(token, exam.id);
+        }
+        
+        if (canTake) {
             navigate(`/test/${exam.id}`);
-        } else if (hasAccess) {
-            if (attemptsMade !== undefined && attemptsMade >= 3) {
-                navigate(`/profile`);
-            } else {
-                navigate(`/test/${exam.id}`);
+        } else if (exam.productSku) {
+            if (!user || !token) {
+                toast.error("Please log in to make a purchase.");
+                const loginUrl = `https://www.${activeOrg.website}/exam-login/`;
+                window.location.href = loginUrl;
+                return;
             }
-        } else if (exam.productSlug || (priceInfo && priceInfo.productId)) {
-             const slug = priceInfo?.slug || exam.productSlug || '';
-             if (slug) navigate(`/checkout/${slug}`);
-             else if (priceInfo?.productId) window.location.href = `/cart/?add-to-cart=${priceInfo.productId}`;
+            setIsRedirecting(true);
+            try {
+                const { checkoutUrl } = await googleSheetsService.createCheckoutSession(token, exam.productSku);
+                window.location.href = checkoutUrl;
+            } catch (error: any) {
+                toast.error(`Could not prepare checkout: ${error.message}`);
+                setIsRedirecting(false);
+            }
+        } else {
+            toast.error("This exam is not available for purchase at the moment.");
         }
     };
-    
-    let actionButton;
-    if (isPractice) {
-        actionButton = (
-            <button
-                onClick={handleActionClick}
-                disabled={isDisabled}
-                className="w-full mt-4 flex items-center justify-center gap-2 bg-[rgb(var(--color-secondary-rgb))] text-white font-bold py-2 px-4 rounded-lg hover:bg-[rgb(var(--color-secondary-hover-rgb))] transition disabled:bg-slate-400"
-            >
-                <PlayCircle size={18} /> Start Practice
-            </button>
-        );
-    } else if (hasAccess) {
-        if (attemptsMade !== undefined && attemptsMade >= 3) {
-             actionButton = (
-                <button
-                    onClick={handleActionClick}
-                    disabled={isDisabled}
-                    className="w-full mt-4 flex items-center justify-center gap-2 bg-slate-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-600 transition disabled:bg-slate-400"
-                >
-                    <BarChart2 size={18} /> View Results
-                </button>
-            );
-        } else {
-            actionButton = (
-                <button
-                    onClick={handleActionClick}
-                    disabled={isDisabled}
-                    className="w-full mt-4 flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition disabled:bg-slate-400"
-                >
-                    <PlayCircle size={18} /> Start Exam
-                </button>
-            );
-        }
-    } else {
-         actionButton = (
-            <button
-                onClick={handleActionClick}
-                disabled={isDisabled}
-                className="w-full mt-4 flex items-center justify-center gap-2 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition disabled:bg-slate-400"
-            >
-                <ShoppingCart size={18} /> Buy Now
-            </button>
-        );
-    }
 
-    const cardGradient = isPractice ? 'exam-card--practice' : 'exam-card--cert';
+    const Icon = isPractice ? BookOpen : Award;
+    const headerText = isPractice ? "Practice Exam" : (exam.certificateEnabled ? "Certification Exam" : "Proficiency Exam");
+    const themeGradientClass = isPractice ? 'exam-card--practice' : 'exam-card--cert';
+    
+    const buttonTitle = isDisabled 
+        ? "Please submit feedback for your last exam before starting a new one."
+        : (isPractice ? "Start a free practice exam" : (canTake ? "Start your certification exam" : "Purchase this exam"));
+
 
     return (
-        <div className={`relative flex flex-col p-6 rounded-xl text-white shadow-lg ${cardGradient} ${isDisabled ? 'opacity-60 grayscale' : ''}`}>
-            {isDisabled && (
-                <div className="absolute inset-0 bg-black/30 rounded-xl z-10 flex items-center justify-center" title="Please submit feedback for your last exam to unlock this.">
-                    <Lock size={24}/>
+        <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col text-white relative ${themeGradientClass} ${isDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
+            <div className="p-6 flex flex-col flex-grow">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white/10 p-2 rounded-full">
+                            <Icon size={20} />
+                        </div>
+                        <span className="font-bold text-sm uppercase tracking-wider">{headerText}</span>
+                    </div>
+                    {isPractice && (
+                        <span className="bg-green-500 text-white text-xs font-bold uppercase px-3 py-1 rounded-full shadow-md">
+                            Free
+                        </span>
+                    )}
                 </div>
-            )}
-            <div className="flex justify-between items-start">
-                <h3 className="text-xl font-bold">{stripHtml(exam.name)}</h3>
-                {hasAccess && !isPractice && (
-                    <div className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded-full">
-                        {isSubscribed ? 'SUBSCRIBED' : 'PURCHASED'}
+                
+                <h3 className="text-lg font-bold mb-2 leading-tight flex-grow">{exam.name}</h3>
+
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-white/80 my-4 p-3 bg-black/10 rounded-md">
+                    <span><HelpCircle size={14} className="inline mr-1" />{exam.numberOfQuestions} Qs</span>
+                    <span><Clock size={14} className="inline mr-1" />{exam.durationMinutes} Mins</span>
+                    <span><CheckCircle size={14} className="inline mr-1" />{exam.passScore}% Pass</span>
+                    {typeof attemptsMade === 'number' && !isPractice && (
+                         <span><History size={14} className="inline mr-1" />{attemptsMade}/3 Attempts</span>
+                    )}
+                </div>
+                
+                {!canTake && exam.price > 0 && (
+                    <div className="text-center mb-4">
+                        {exam.regularPrice && exam.regularPrice > exam.price ? (
+                            <div className="flex items-baseline justify-center gap-2">
+                                <span className="text-xl line-through text-white/70">${exam.regularPrice.toFixed(2)}</span>
+                                <span className="text-4xl font-extrabold text-white">${exam.price.toFixed(2)}</span>
+                            </div>
+                        ) : (
+                            <span className="text-4xl font-extrabold text-white">${exam.price.toFixed(2)}</span>
+                        )}
                     </div>
                 )}
-            </div>
-            
-            <div className="text-sm mt-2 opacity-90 flex-grow prose prose-sm prose-invert max-w-none text-white/90">
-                <p>{stripHtml(exam.description)}</p>
-            </div>
-            
-            <div className="mt-4 pt-4 border-t border-white/20 text-sm space-y-2">
-                <div className="flex justify-between">
-                    <span className="opacity-80">Questions:</span>
-                    <span className="font-semibold">{exam.numberOfQuestions}</span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="opacity-80">Duration:</span>
-                    <span className="font-semibold">{exam.durationMinutes > 0 ? `${exam.durationMinutes} mins` : 'Untimed'}</span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="opacity-80">Pass Score:</span>
-                    <span className="font-semibold">{exam.passScore}%</span>
-                </div>
-                 {!isPractice && attemptsMade !== undefined && (
-                    <div className="flex justify-between">
-                        <span className="opacity-80">Attempts Used:</span>
-                        <span className={`font-semibold ${attemptsMade >= 3 ? 'text-yellow-300' : ''}`}>{attemptsMade} / 3</span>
-                    </div>
-                 )}
-            </div>
 
-            {!hasAccess && !isPractice && (
-                 <div className="mt-4 text-right">
-                    {regularPrice > 0 && price < regularPrice && (
-                        <span className="text-xl line-through opacity-70">${regularPrice.toFixed(2)}</span>
-                    )}
-                    {/* Only show price if it's greater than 0, otherwise show generic 'Get Access' look implicitly */}
-                    {price > 0 ? (
-                         <span className="text-4xl font-extrabold ml-2">${price.toFixed(2)}</span>
-                    ) : (
-                         <span className="text-2xl font-bold ml-2">View Details</span>
+                <div className="mt-auto space-y-2">
+                    <button
+                        onClick={handleButtonClick}
+                        disabled={isRedirecting || isDisabled}
+                        className={`w-full flex items-center justify-center gap-2 font-bold py-3 px-4 rounded-lg transition-all transform hover:scale-105 disabled:opacity-75 ${
+                            isDisabled 
+                                ? 'bg-slate-400 text-slate-800 cursor-not-allowed'
+                                : (canTake
+                                    ? 'bg-white text-slate-800 hover:bg-slate-200'
+                                    : 'bg-yellow-400 hover:bg-yellow-500 text-slate-800')
+                        }`}
+                        title={buttonTitle}
+                    >
+                        {isRedirecting ? <Spinner /> : (isPractice ? <PlayCircle size={18} /> : (canTake ? <PlayCircle size={18} /> : <ShoppingCart size={18} />))}
+                        {buttonText}
+                    </button>
+                    {!hideDetailsLink && (
+                        <Link
+                            to={`/program/${programId}`}
+                            className={`block w-full text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-3 rounded-lg text-sm transition ${isDisabled ? 'pointer-events-none' : ''}`}>
+                            View Details
+                        </Link>
                     )}
                 </div>
-            )}
-           
-            {actionButton}
-            
-            {!hideDetailsLink && (
-                <button 
-                    onClick={() => navigate(`/program/${programId}`)} 
-                    className="w-full mt-2 text-center text-xs text-white/70 hover:text-white hover:underline transition"
-                >
-                    View Program Details
-                </button>
-            )}
+            </div>
         </div>
     );
 };
+
 export default ExamCard;

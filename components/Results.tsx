@@ -12,7 +12,7 @@ import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-import BookCover from './BookCover.tsx';
+import BookCover from '../assets/BookCover.tsx';
 import ShareableResult from './ShareableResult.tsx';
 import ShareButtons from './ShareButtons.tsx';
 

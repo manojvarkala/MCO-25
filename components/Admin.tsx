@@ -9,16 +9,8 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
 
-// FIX: Corrected HealthStatus interface to resolve TypeScript index signature error.
-// The new interface is more explicit, improving type safety and allowing removal of `as any` casts below.
 interface HealthStatus {
-    [key: string]: { success: boolean; message: string; data?: any } | { [key: string]: string } | undefined;
-    api_connection?: { success: boolean; message: string; data?: any };
-    jwt_secret?: { success: boolean; message: string; data?: any };
-    woocommerce?: { success: boolean; message: string; data?: any };
-    wc_subscriptions?: { success: boolean; message: string; data?: any };
-    app_url_config?: { success: boolean; message: string; data?: any };
-    google_sheet?: { success: boolean; message: string; data?: any };
+    [key: string]: { success: boolean; message: string; data?: any } | { [key: string]: string };
     nonces?: { [key: string]: string };
 }
 
@@ -145,8 +137,8 @@ const Admin: FC = () => {
     const summaryStats = useMemo(() => {
         if (!examStats) return { totalSales: 0, totalRevenue: 0, totalAttempts: 0 };
         return examStats.reduce((acc, stat) => {
-            acc.totalSales += stat.totalSales ?? 0;
-            acc.totalRevenue += stat.totalRevenue ?? 0;
+            acc.totalSales += stat.totalSales;
+            acc.totalRevenue += stat.totalRevenue;
             acc.totalAttempts += stat.attempts;
             return acc;
         }, { totalSales: 0, totalRevenue: 0, totalAttempts: 0 });
@@ -279,13 +271,12 @@ const Admin: FC = () => {
                     </h2>
                     {isLoadingData ? <div className="flex justify-center"><Spinner /></div> : (
                         <div className="space-y-2">
-                            {/* FIX: Removed `as any` casts due to improved HealthStatus type definition. */}
-                            <HealthListItem title="Backend API Connection" status={healthStatus?.api_connection} onDetails={setDetailsModalData} />
-                            <HealthListItem title="JWT Secret Key" status={healthStatus?.jwt_secret} onDetails={setDetailsModalData} />
-                            <HealthListItem title="WooCommerce Plugin" status={healthStatus?.woocommerce} onDetails={setDetailsModalData} />
-                            <HealthListItem title="WooCommerce Subscriptions" status={healthStatus?.wc_subscriptions} onDetails={setDetailsModalData} />
-                            <HealthListItem title="App URL Configuration" status={healthStatus?.app_url_config} onDetails={setDetailsModalData} />
-                            <HealthListItem title="Google Sheet Accessibility" status={healthStatus?.google_sheet} onDetails={setDetailsModalData} />
+                            <HealthListItem title="Backend API Connection" status={healthStatus?.api_connection as any} onDetails={setDetailsModalData} />
+                            <HealthListItem title="JWT Secret Key" status={healthStatus?.jwt_secret as any} onDetails={setDetailsModalData} />
+                            <HealthListItem title="WooCommerce Plugin" status={healthStatus?.woocommerce as any} onDetails={setDetailsModalData} />
+                            <HealthListItem title="WooCommerce Subscriptions" status={healthStatus?.wc_subscriptions as any} onDetails={setDetailsModalData} />
+                            <HealthListItem title="App URL Configuration" status={healthStatus?.app_url_config as any} onDetails={setDetailsModalData} />
+                            <HealthListItem title="Google Sheet Accessibility" status={healthStatus?.google_sheet as any} onDetails={setDetailsModalData} />
                         </div>
                     )}
                 </div>
