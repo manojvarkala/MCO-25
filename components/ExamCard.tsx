@@ -1,3 +1,4 @@
+
 import React, { FC, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -18,6 +19,18 @@ export interface ExamCardProps {
     attemptsMade?: number;
     isDisabled?: boolean;
 }
+
+const decodeHtml = (html: string): string => {
+    if (!html || typeof html !== 'string') return html || '';
+    try {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        return tempDiv.textContent || tempDiv.innerText || '';
+    } catch (e) {
+        console.error("Could not parse HTML string for stripping", e);
+        return html;
+    }
+};
 
 const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, activeOrg, examPrices, hideDetailsLink = false, attemptsMade, isDisabled = false }) => {
     const navigate = useNavigate();
@@ -89,7 +102,7 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                     )}
                 </div>
                 
-                <h3 className="text-lg font-bold mb-2 leading-tight flex-grow">{exam.name}</h3>
+                <h3 className="text-lg font-bold mb-2 leading-tight flex-grow">{decodeHtml(exam.name)}</h3>
 
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-white/80 my-4 p-3 bg-black/10 rounded-md">
                     <span><HelpCircle size={14} className="inline mr-1" />{exam.numberOfQuestions} Qs</span>

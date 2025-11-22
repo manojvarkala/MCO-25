@@ -28,7 +28,7 @@ const Integration: FC = () => {
     const [isGeneratingSocial, setIsGeneratingSocial] = useState(false);
     
     const engineVersionMatch = mainPluginFile.match(/Version:\s*([0-9.]+)/);
-    const engineVersion = engineVersionMatch ? engineVersionMatch[1] : "2.7.2";
+    const engineVersion = engineVersionMatch ? engineVersionMatch[1] : "2.7.3";
     
     const socialVersionMatch = socialPluginMain.match(/Version:\s*([0-9.]+)/);
     const socialVersion = socialVersionMatch ? socialVersionMatch[1] : "1.0.0";
@@ -139,7 +139,7 @@ const Integration: FC = () => {
                 </p>
                 <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6 text-amber-800 text-sm">
                     <p className="font-bold">Important Update (v{engineVersion})</p>
-                    <p>We have patched issues with user registration and login redirection. Please download the latest version and update your WordPress plugin.</p>
+                    <p>We have patched CSS loading issues for guest users and improved login redirection. Please download the latest version and update your WordPress plugin.</p>
                 </div>
                 <div className="space-y-4 p-4 bg-[rgb(var(--color-muted-rgb))] rounded-lg border border-[rgb(var(--color-border-rgb))]">
                      <ol className="list-decimal list-inside space-y-4 text-[rgb(var(--color-text-muted-rgb))]">

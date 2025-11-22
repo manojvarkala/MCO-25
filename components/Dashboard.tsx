@@ -121,7 +121,7 @@ const Dashboard: FC = () => {
             .map((p: any): ProductVariation => ({
                 id: p.productId?.toString() || p.sku,
                 sku: p.sku,
-                name: p.name,
+                name: stripHtml(p.name), // Ensure bundle names are decoded
                 type: 'bundle',
                 salePrice: p.price?.toString() || '0',
                 regularPrice: p.regularPrice?.toString() || '0',
@@ -359,7 +359,7 @@ const Dashboard: FC = () => {
                             return (
                                 <div key={result.testId} className="bg-[rgb(var(--color-muted-rgb))] p-3 rounded-lg flex justify-between items-center hover:bg-[rgb(var(--color-border-rgb))] transition">
                                     <div>
-                                        <p className="font-semibold text-[rgb(var(--color-text-strong-rgb))]">{exam.name}</p>
+                                        <p className="font-semibold text-[rgb(var(--color-text-strong-rgb))]">{stripHtml(exam.name)}</p>
                                         <p className="text-xs text-[rgb(var(--color-text-muted-rgb))]">{new Date(result.timestamp).toLocaleString()}</p>
                                     </div>
                                     <div className="flex items-center gap-4">

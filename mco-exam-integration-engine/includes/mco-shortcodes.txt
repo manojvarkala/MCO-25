@@ -251,7 +251,9 @@ if (!function_exists('mco_register_shortcode_hooks')) {
         // FIX: Hook to process the login form submission before the page renders to avoid "headers already sent" errors.
         add_action('template_redirect', 'mco_handle_login_form_post');
         
-        add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles');
+        // FIX: Add a higher priority (20) to ensure styles are loaded after the theme's styles, preventing overrides or missing styles for non-logged-in users.
+        add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles', 20);
+        
         add_action('wp', 'mco_prevent_caching_on_shortcode_pages');
 
         add_filter('the_content', 'mco_auto_apply_single_book_style', 999);
@@ -354,7 +356,9 @@ if (!function_exists('mco_prevent_caching_on_shortcode_pages')) {
 // --- STYLES ---
 if (!function_exists('mco_enqueue_shortcode_styles')) {
     function mco_enqueue_shortcode_styles() {
-        wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
+        // Always register the style first.
+        wp_register_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
+        wp_enqueue_style('mco-styles');
     }
 }
 

@@ -13,6 +13,18 @@ interface FeaturedBundleCardProps {
     activeOrg: Organization;
 }
 
+const decodeHtml = (html: string): string => {
+    if (!html || typeof html !== 'string') return html || '';
+    try {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        return tempDiv.textContent || tempDiv.innerText || '';
+    } catch (e) {
+        console.error("Could not parse HTML string for stripping", e);
+        return html;
+    }
+};
+
 const FeaturedBundleCard: FC<FeaturedBundleCardProps> = ({ bundle, activeOrg }) => {
     const { user, token } = useAuth();
     const { examPrices } = useAppContext();
@@ -32,7 +44,7 @@ const FeaturedBundleCard: FC<FeaturedBundleCardProps> = ({ bundle, activeOrg }) 
             
             return {
                 sku,
-                name: name || sku,
+                name: decodeHtml(name || sku),
                 type: product.type
             };
         }).filter(Boolean);
@@ -76,7 +88,7 @@ const FeaturedBundleCard: FC<FeaturedBundleCardProps> = ({ bundle, activeOrg }) 
                         <ShoppingBag size={24} />
                     </div>
                     <div>
-                        <h3 className="font-bold text-lg text-slate-900 leading-tight">{bundle.name}</h3>
+                        <h3 className="font-bold text-lg text-slate-900 leading-tight">{decodeHtml(bundle.name)}</h3>
                         <p className="text-xs text-slate-500 mt-1">Comprehensive Package</p>
                     </div>
                 </div>
