@@ -248,12 +248,7 @@ if (!function_exists('mco_register_shortcode_hooks')) {
         add_shortcode('mco_book_showcase', 'mco_book_showcase_shortcode');
         add_shortcode('mco_single_book', 'mco_single_book_shortcode');
         
-        // FIX: Hook to process the login form submission before the page renders to avoid "headers already sent" errors.
         add_action('template_redirect', 'mco_handle_login_form_post');
-        
-        // FIX: Add a higher priority (20) to ensure styles are loaded after the theme's styles, preventing overrides or missing styles for non-logged-in users.
-        add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles', 20);
-        
         add_action('wp', 'mco_prevent_caching_on_shortcode_pages');
 
         add_filter('the_content', 'mco_auto_apply_single_book_style', 999);
@@ -265,7 +260,19 @@ if (!function_exists('mco_register_shortcode_hooks')) {
     }
 }
 
-// FIX: New function to handle login form post on the template_redirect hook.
+// FIX: Ensure styles are loaded unconditionally on the frontend to fix display issues for guest users
+// who might be seeing a cached version of the page without the stylesheet.
+if (!function_exists('mco_enqueue_shortcode_styles')) {
+    function mco_enqueue_shortcode_styles() {
+        // Register and enqueue in one go to ensure it loads.
+        // Using version MCO_PLUGIN_VERSION forces cache refresh when plugin updates.
+        wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
+    }
+}
+// Hook into wp_enqueue_scripts with high priority (20) to load after themes
+add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles', 20);
+
+
 if (!function_exists('mco_handle_login_form_post')) {
     function mco_handle_login_form_post() {
         global $post;
@@ -353,17 +360,8 @@ if (!function_exists('mco_prevent_caching_on_shortcode_pages')) {
     }
 }
 
-// --- STYLES ---
-if (!function_exists('mco_enqueue_shortcode_styles')) {
-    function mco_enqueue_shortcode_styles() {
-        // Always register the style first.
-        wp_register_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
-        wp_enqueue_style('mco-styles');
-    }
-}
 
 // --- SHORTCODE IMPLEMENTATIONS ---
-// FIX: Refactored shortcode to separate form display from form processing.
 function mco_exam_login_shortcode() {
     // 1. Handle name update for logged-in user. This still needs to be a POST handler within the shortcode
     // because it only appears *after* a user is logged in.
