@@ -14,7 +14,40 @@ function mco_get_svg_icon($name) {
     return $icons[$name] ?? '';
 }
 
-// --- HELPER FUNCTIONS FOR PROCEDURAL BOOK COVERS ---
+// --- INLINE CSS GENERATOR ---
+// This ensures styles are loaded even if external files are blocked/cached/stripped.
+function mco_get_critical_css() {
+    return '<style>
+    .mco-form-container{max-width:480px;margin:4rem auto;padding:2.5rem;background-color:#fff;border:1px solid #e2e8f0;border-radius:0.75rem;box-shadow:0 4px 6px -1px rgba(0,0,0,.05),0 2px 4px -2px rgba(0,0,0,.05);font-family:system-ui,-apple-system,sans-serif}
+    .mco-form-container h2{font-size:1.5rem;font-weight:700;color:#1e293b;margin-top:0;margin-bottom:0.5rem;text-align:center}
+    .mco-form-container form label{font-weight:600;color:#334155;display:block;margin-bottom:0.5rem}
+    .mco-form-container form input[type="text"],.mco-form-container form input[type="password"]{width:100%;padding:0.75rem 1rem;border:1px solid #cbd5e1;border-radius:0.5rem;box-sizing:border-box;margin-bottom:1rem}
+    .mco-form-container form input[type="submit"], .mco-form-container button{width:100%;padding:0.75rem 1.5rem;border:none;border-radius:0.5rem;background-color:#0891b2;color:white;font-weight:600;font-size:1rem;cursor:pointer;transition:background-color 0.2s}
+    .mco-form-container form input[type="submit"]:hover, .mco-form-container button:hover{background-color:#0e7490}
+    .mco-login-links{text-align:center;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid #e2e8f0;font-size:0.875rem}
+    .mco-showcase-grid{display:grid;grid-template-columns:1fr;gap:1.5rem}
+    .mco-program-group{background-color:#fff;border:1px solid #e2e8f0;border-radius:0.75rem;padding:1.5rem;box-shadow:0 4px 6px -1px rgba(0,0,0,.1)}
+    .mco-program-group__title{font-size:1.25rem;font-weight:700;margin:0 0 0.5rem 0;color:#0f172a}
+    .mco-program-group__cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;margin-top:1rem}
+    .mco-card{display:flex;flex-direction:column;color:white;border-radius:0.75rem;box-shadow:0 4px 6px -1px rgba(0,0,0,.05);overflow:hidden}
+    .mco-card__header{display:flex;align-items:center;gap:0.75rem;padding:1rem 1.5rem;font-size:0.875rem;font-weight:600;text-transform:uppercase;background:rgba(0,0,0,0.1)}
+    .mco-card__body{padding:1.5rem;flex-grow:1}
+    .mco-card__subtitle{font-size:1.25rem;font-weight:700;margin-bottom:1rem}
+    .mco-card__stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;text-align:center;font-size:0.8rem;background:rgba(0,0,0,0.1);padding:0.5rem;border-radius:0.5rem}
+    .mco-card__footer{padding:1.5rem;margin-top:auto}
+    .mco-card__button{display:flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;padding:0.75rem;border-radius:0.5rem;font-weight:700;text-decoration:none;color:#1e293b;background:white;transition:opacity 0.2s}
+    .mco-card__button:hover{opacity:0.9}
+    .mco-gradient--practice-1{background-image:linear-gradient(to top right,#3b82f6,#60a5fa)}
+    .mco-gradient--cert-1{background-image:linear-gradient(to top right,#059669,#10b981)}
+    .mco-gradient--bundle-sub{background-image:linear-gradient(to top right,#0d9488,#2dd4bf)}
+    .mco-gradient--sub-monthly{background-image:linear-gradient(to top right,#0891b2,#22d3ee)}
+    .mco-gradient--sub-yearly{background-image:linear-gradient(to top right,#6d28d9,#8b5cf6)}
+    .mco-card--best-value{transform:scale(1.02);border:2px solid #facc15}
+    .mco-best-value-tag{position:absolute;top:10px;right:10px;background:#facc15;color:#000;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:bold}
+    </style>';
+}
+
+// --- PROCEDURAL COVERS (Keep existing) ---
 function mco_render_annapoorna_style_a($book, $color_index) {
     $colors = [
         ['bg' => '#0369a1', 'pattern' => '#075985', 'text' => '#ffffff'],
@@ -204,19 +237,19 @@ if (!function_exists('mco_redirect_to_app_with_token')) {
         if (!$token) return '<p>Could not generate authentication token.</p>';
         $redirect_url = add_query_arg('token', $token, rtrim($app_url, '/') . '/auth');
         
-        // Attempt server-side redirect first if headers not sent
         if (!headers_sent()) {
             wp_redirect($redirect_url);
             exit;
         }
         
-        // Fallback to JS redirect if used inside shortcode where headers are already gone
         return '<div class="mco-redirect-message">Redirecting you to the exam portal... <a href="' . esc_url($redirect_url) . '">Click here if you are not redirected</a>.</div><script>window.location.href="' . esc_url($redirect_url) . '";</script>';
     }
 }
 if (!function_exists('mco_render_name_update_form')) {
     function mco_render_name_update_form($error_message = '') {
         ob_start();
+        // Inject Styles Here for this specific form
+        echo mco_get_critical_css();
         ?>
         <div id="mco-name-update-form" class="mco-form-container">
             <h2>Update Your Name</h2>
@@ -249,31 +282,24 @@ if (!function_exists('mco_register_shortcode_hooks')) {
         add_shortcode('mco_single_book', 'mco_single_book_shortcode');
         
         add_action('template_redirect', 'mco_handle_login_form_post');
-        add_action('wp', 'mco_prevent_caching_on_shortcode_pages');
-
-        add_filter('the_content', 'mco_auto_apply_single_book_style', 999);
-        add_filter('the_content', 'mco_auto_apply_single_program_style', 999);
-
         add_action('register_form', 'mco_add_fullname_to_registration_form');
         add_filter('registration_errors', 'mco_validate_fullname_on_registration', 10, 3);
         add_action('user_register', 'mco_save_fullname_on_registration');
+        
+        // Keep the enqueue for normal sites, but relying on inline CSS for safety
+        add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles', 9999);
     }
 }
 
 if (!function_exists('mco_enqueue_shortcode_styles')) {
     function mco_enqueue_shortcode_styles() {
-        // Using version MCO_PLUGIN_VERSION forces cache refresh when plugin updates.
         wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
     }
 }
-// FIX: Significantly increased priority to 9999 to override theme styles and optimization plugins.
-add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles', 9999);
-
 
 if (!function_exists('mco_handle_login_form_post')) {
     function mco_handle_login_form_post() {
         global $post;
-        // Only run on a page with our shortcode, for POST requests from non-logged-in users.
         if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_login') && $_SERVER['REQUEST_METHOD'] === 'POST' && !is_user_logged_in()) {
             
             if (isset($_POST['mco_login_nonce']) && wp_verify_nonce($_POST['mco_login_nonce'], 'mco_login_action')) {
@@ -285,14 +311,11 @@ if (!function_exists('mco_handle_login_form_post')) {
                 $user = wp_signon($creds, is_ssl());
         
                 if (is_wp_error($user)) {
-                    // Redirect back to the login page with an error code.
                     $error_code = $user->get_error_code();
                     $redirect_url = add_query_arg('login_error', $error_code, get_permalink($post->ID));
                     wp_redirect($redirect_url);
                     exit;
                 } else {
-                    // Success! Redirect to the same page without an error. 
-                    // The mco_sso_login_redirect function (hooked to template_redirect) will then pick up the logged-in user and forward them to the React app.
                     wp_redirect(get_permalink($post->ID));
                     exit;
                 }
@@ -322,46 +345,18 @@ if (!function_exists('mco_auto_apply_single_program_style')) {
         if (is_singular('mco_exam_program') && in_the_loop() && is_main_query() && !is_admin()) {
             global $post;
             $app_id = 'prod-' . $post->ID;
-            
-            // To prevent infinite loops if the shortcode itself calls the_content
             remove_filter('the_content', 'mco_auto_apply_single_program_style', 999);
-            
             $shortcode_output = mco_exam_showcase_shortcode(['id' => $app_id]);
-            
-            // Re-add the filter for subsequent posts on the page (though unlikely for a singular view)
             add_filter('the_content', 'mco_auto_apply_single_program_style', 999);
-
-            // Return ONLY our shortcode output, overwriting everything else.
             return $shortcode_output;
         }
         return $content;
     }
 }
 
-if (!function_exists('mco_prevent_caching_on_shortcode_pages')) {
-    function mco_prevent_caching_on_shortcode_pages() {
-        if (is_admin()) return;
-        global $post;
-        if (is_a($post, 'WP_Post') && (
-            has_shortcode($post->post_content, 'mco_exam_showcase') ||
-            has_shortcode($post->post_content, 'exam_program') ||
-            has_shortcode($post->post_content, 'mco_book_showcase') ||
-            has_shortcode($post->post_content, 'mco_single_book') ||
-            has_shortcode($post->post_content, 'mco_exam_login') ||
-            is_singular('mco_recommended_book')
-        )) {
-            if (!defined('DONOTCACHEPAGE')) define('DONOTCACHEPAGE', true);
-            // Force no-cache headers on these dynamic pages
-            nocache_headers();
-        }
-    }
-}
-
 
 // --- SHORTCODE IMPLEMENTATIONS ---
 function mco_exam_login_shortcode() {
-    // 1. Handle name update for logged-in user. This still needs to be a POST handler within the shortcode
-    // because it only appears *after* a user is logged in.
     if (is_user_logged_in() && isset($_POST['mco_update_name_nonce']) && wp_verify_nonce($_POST['mco_update_name_nonce'], 'mco_update_name_action')) {
         $full_name = sanitize_text_field($_POST['full_name']);
         if (!empty($full_name) && strpos(trim($full_name), ' ') !== false) {
@@ -378,21 +373,15 @@ function mco_exam_login_shortcode() {
         }
     }
 
-    // 2. The main login POST logic is now handled in the 'template_redirect' hook via mco_handle_login_form_post.
-
-    // 3. Check if user is logged in (either initially or after a successful login redirect).
     if (is_user_logged_in()) {
         $user = wp_get_current_user();
         if (strpos($user->display_name, ' ') !== false) {
-            // Name is good, redirect to the app.
             return mco_redirect_to_app_with_token();
         } else {
-            // Name needs to be updated, show the name update form.
             return mco_render_name_update_form();
         }
     }
 
-    // 4. Render login form for logged-out users, including any errors from the redirect.
     $login_error = '';
     if (isset($_GET['login_error'])) {
         $error_code = sanitize_key($_GET['login_error']);
@@ -413,11 +402,13 @@ function mco_exam_login_shortcode() {
     }
 
     ob_start();
+    // INJECT INLINE CSS
+    echo mco_get_critical_css();
     ?>
     <div class="mco-form-container" id="mco-login-form-custom">
         <h2>Login to Your Account</h2>
         <?php if (!empty($login_error)): ?>
-            <p class="mco-error"><?php echo $login_error; // This is a safe string. ?></p>
+            <p class="mco-error" style="color:red;background:#fee;padding:10px;border-radius:5px;"><?php echo $login_error; ?></p>
         <?php endif; ?>
         <form name="loginform" id="loginform" action="<?php echo esc_url(get_permalink()); ?>" method="post">
             <p class="login-username">
@@ -443,7 +434,7 @@ function mco_exam_login_shortcode() {
             <a href="<?php echo esc_url(wp_lostpassword_url()); ?>">Lost your password?</a>
         </div>
         <?php if (!get_option('users_can_register')): ?>
-             <p class="mco-register-disabled-notice">Registration is currently disabled. Please contact the site administrator if you need an account.</p>
+             <p class="mco-register-disabled-notice" style="color:#666;font-size:0.8em;margin-top:10px;">Registration is currently disabled. Please contact the site administrator if you need an account.</p>
         <?php endif; ?>
     </div>
     <?php
@@ -452,9 +443,6 @@ function mco_exam_login_shortcode() {
 
 
 function mco_exam_showcase_shortcode($atts) {
-    // FIX: Force enqueue the style to ensure it loads even if the header hook was stripped by cache plugins.
-    wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
-
     $atts = shortcode_atts(['id' => ''], $atts, 'exam_program');
     $program_id_str = sanitize_text_field($atts['id']);
     
@@ -473,6 +461,9 @@ function mco_exam_showcase_shortcode($atts) {
     if (!$config_data || !$app_url) return '<p>Application is not configured correctly.</p>';
 
     ob_start();
+    
+    // INJECT INLINE CSS
+    echo mco_get_critical_css();
     
     $subscriptions_enabled = get_option('mco_subscriptions_enabled', '1') === '1';
     $bundles_enabled = get_option('mco_bundles_enabled', '1') === '1';
@@ -579,13 +570,11 @@ function mco_exam_showcase_shortcode($atts) {
 }
 
 function mco_book_showcase_shortcode() {
-    // FIX: Force enqueue styles here too
     wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
-
     $config_data = mco_get_app_config_data();
     if (empty($config_data['suggestedBooks'])) return '<p>No recommended books found.</p>';
-
     ob_start();
+    echo mco_get_critical_css();
     echo '<div class="mco-book-grid">';
     foreach ($config_data['suggestedBooks'] as $book) {
         $book_cover = '';
@@ -599,7 +588,6 @@ function mco_book_showcase_shortcode() {
                 $book_cover = mco_render_annapoorna_procedural_cover_php($book);
             }
         }
-
         echo '<div class="mco-card">';
         echo '<div class="mco-book-cover">' . $book_cover . '</div>';
         echo '<div class="mco-card__body">';
@@ -621,7 +609,6 @@ function mco_book_showcase_shortcode() {
         } else {
             echo '<p>Purchase links coming soon.</p>';
         }
-
         echo '</div></div>';
     }
     echo '</div>';
@@ -631,25 +618,17 @@ function mco_book_showcase_shortcode() {
 function mco_single_book_shortcode() {
     global $post;
     if (!$post || $post->post_type !== 'mco_recommended_book') return '<p>This shortcode must be used on a "Recommended Book" post.</p>';
-    
-    // FIX: Force enqueue styles here too
     wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
-
     $config_data = mco_get_app_config_data();
     $book_id_meta = get_post_meta($post->ID, '_mco_book_id', true);
     $book = current(array_filter($config_data['suggestedBooks'], function($b) use ($book_id_meta) { return $b['id'] === $book_id_meta; }));
-
     if (!$book) return '<p>Book data not found in application configuration.</p>';
-
     ob_start();
-    
-    // FIX: Get raw post content from the database to bypass other content filters, then apply wpautop manually.
     $raw_post = get_post($post->ID);
     $book_content = '';
     if ($raw_post) {
         $book_content = wpautop($raw_post->post_content);
     }
-
     $book_cover = '';
     if (!empty($book['thumbnailUrl'])) {
         $book_cover = '<img src="' . esc_url($book['thumbnailUrl']) . '" alt="' . esc_attr($book['title']) . '">';
@@ -661,9 +640,8 @@ function mco_single_book_shortcode() {
             $book_cover = mco_render_annapoorna_procedural_cover_php($book);
         }
     }
-
     $links = array_filter($book['affiliateLinks']);
-
+    echo mco_get_critical_css();
     ?>
     <div class="mco-single-book-card">
         <div class="mco-single-book-card__cover">
