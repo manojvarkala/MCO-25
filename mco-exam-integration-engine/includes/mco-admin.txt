@@ -1,3 +1,4 @@
+
 <?php
 if (!defined('ABSPATH')) exit;
 
@@ -50,10 +51,12 @@ function mco_exam_engine_admin_page() {
             update_option('mco_intro_video_url', esc_url_raw($_POST['mco_intro_video_url']));
             update_option('mco_disclaimer_text', wp_kses_post($_POST['mco_disclaimer_text']));
             
-            // FIX: Forced update of users_can_register without checking capabilities or multisite restrictions
-            // We assume the admin knows what they are doing if they click the box.
+            // Handle Registration Toggle with Force Override
             $enable_reg = isset($_POST['mco_users_can_register']) ? 1 : 0;
+            // Save to standard WP option
             update_option('users_can_register', $enable_reg);
+            // Save to custom override option (ensures persistence if WP option is locked by host)
+            update_option('mco_force_enable_registration', $enable_reg);
             
             update_option('mco_subscriptions_enabled', isset($_POST['mco_subscriptions_enabled']) ? '1' : '0');
             update_option('mco_bundles_enabled', isset($_POST['mco_bundles_enabled']) ? '1' : '0');
@@ -163,11 +166,13 @@ function mco_render_main_settings_tab() { ?>
                 <th><label for="mco_users_can_register">Enable User Registration</label></th>
                 <td>
                     <?php
-                    $current_setting = get_option('users_can_register');
-                    // NOTE: Removed disabled() attribute to allow forcing the setting even on Multisite/Restricted hosts.
+                    // Logic to check either standard or force option
+                    $core_reg = get_option('users_can_register');
+                    $mco_reg = get_option('mco_force_enable_registration');
+                    $is_reg_enabled = $core_reg || $mco_reg;
                     ?>
-                    <input type="checkbox" id="mco_users_can_register" name="mco_users_can_register" value="1" <?php checked($current_setting, 1); ?>>
-                    <p class="description">Allow new users to register an account. If this unchecks itself after saving, your hosting provider or a security plugin may be forcing it off in <code>wp-config.php</code>.</p>
+                    <input type="checkbox" id="mco_users_can_register" name="mco_users_can_register" value="1" <?php checked($is_reg_enabled, 1); ?>>
+                    <p class="description">Allow new users to register an account. If your host forces this off, this setting will now override it for the Exam Engine.</p>
                 </td>
             </tr>
             <tr>

@@ -1,3 +1,4 @@
+
 <?php
 if (!defined('ABSPATH')) exit;
 
@@ -400,6 +401,9 @@ function mco_exam_login_shortcode() {
                 $login_error = 'An unknown login error occurred. Please try again.';
         }
     }
+    
+    // Check both the standard option AND our force override
+    $show_register = get_option('users_can_register') || get_option('mco_force_enable_registration');
 
     ob_start();
     // INJECT INLINE CSS
@@ -428,12 +432,12 @@ function mco_exam_login_shortcode() {
             <?php wp_nonce_field('mco_login_action', 'mco_login_nonce'); ?>
         </form>
         <div class="mco-login-links">
-            <?php if (get_option('users_can_register')): ?>
+            <?php if ($show_register): ?>
                 <a href="<?php echo esc_url(wp_registration_url()); ?>">Register</a> | 
             <?php endif; ?>
             <a href="<?php echo esc_url(wp_lostpassword_url()); ?>">Lost your password?</a>
         </div>
-        <?php if (!get_option('users_can_register')): ?>
+        <?php if (!$show_register): ?>
              <p class="mco-register-disabled-notice" style="color:#666;font-size:0.8em;margin-top:10px;">Registration is currently disabled. Please contact the site administrator if you need an account.</p>
         <?php endif; ?>
     </div>

@@ -4,7 +4,7 @@
  * Plugin Name:       MCO Exam Integration Engine
  * Plugin URI:        https://annapoornainfo.com
  * Description:       Provides the backend API, user authentication (SSO), and content management for the React-based examination app.
- * Version:           2.7.7
+ * Version:           2.7.8
  * Author:            Annapoorna Infotech
  * Author URI:        https://annapoornainfo.com
  * License:           GPL v2 or later
@@ -36,6 +36,17 @@ add_action('rest_pre_serve_request', 'mco_add_cors_and_nocache_headers', 10, 4);
 add_action('rest_api_init', 'mco_set_api_nocache_constants', 10, 1);
 mco_register_admin_hooks();
 mco_register_shortcode_hooks();
+
+// --- FORCE REGISTRATION OPTION FILTER ---
+// This ensures that if the admin enabled registration in MCO settings, it stays enabled
+// even if other plugins or host settings try to turn it off.
+add_filter('option_users_can_register', 'mco_force_registration_option');
+function mco_force_registration_option($value) {
+    if (get_option('mco_force_enable_registration')) {
+        return 1;
+    }
+    return $value;
+}
 
 // --- SINGLE SIGN-ON REDIRECT ---
 function mco_sso_login_redirect() {
