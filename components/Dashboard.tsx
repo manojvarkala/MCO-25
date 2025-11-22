@@ -1,17 +1,18 @@
+
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
-// FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { TestResult, Exam } from '../types.ts';
+import type { TestResult, Exam, ProductVariation } from '../types.ts';
 import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit, CreditCard, Gift, X } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';
 import SubscriptionOfferCard from './SubscriptionOfferCard.tsx';
 import ShareButtons from './ShareButtons.tsx';
+import FeaturedBundleCard from './FeaturedBundleCard.tsx';
 
 const StatCard: FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
     <div className="bg-[rgb(var(--color-muted-rgb))] p-4 rounded-lg flex items-center border border-[rgb(var(--color-border-rgb))]">
@@ -38,7 +39,6 @@ const stripHtml = (html: string): string => {
 const Dashboard: FC = () => {
     const { user, token, paidExamIds, isSubscribed, subscriptionInfo, loginWithToken, isEffectivelyAdmin, isBetaTester } = useAuth();
     const { activeOrg, isInitializing, inProgressExam, examPrices, subscriptionsEnabled, bundlesEnabled, feedbackRequiredForExam } = useAppContext();
-    // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
     const navigate = useNavigate();
 
     const [results, setResults] = useState<TestResult[]>([]);
@@ -66,10 +66,9 @@ const Dashboard: FC = () => {
             setResults(userResults);
             setIsLoading(false);
         } else {
-            // If no user, we're not loading user-specific data
             setIsLoading(false);
         }
-    }, [user, token]); // Re-run if token changes (after sync)
+    }, [user, token]);
 
     const stats = useMemo(() => {
         if (!user || results.length === 0) {
@@ -95,6 +94,7 @@ const Dashboard: FC = () => {
             .map(category => {
                 const practiceExam = activeOrg.exams.find(e => e && e.id === category.practiceExamId);
                 const certExam = activeOrg.exams.find(e => e && e.id === category.certificationExamId);
+                    
                 return { ...category, practiceExam, certExam };
             });
     }, [activeOrg]);
@@ -102,7 +102,7 @@ const Dashboard: FC = () => {
     const { monthlyPrice, monthlyRegularPrice, yearlyPrice, yearlyRegularPrice, monthlySubUrl, yearlySubUrl } = useMemo(() => {
         const monthlyData = examPrices?.['sub-monthly'];
         const yearlyData = examPrices?.['sub-yearly'];
-        const website = activeOrg ? `https://www.${activeOrg.website}` : '';
+        const website = activeOrg ? `https://${activeOrg.website}` : '';
 
         return {
             monthlyPrice: monthlyData?.price ?? 19.99,
@@ -113,6 +113,23 @@ const Dashboard: FC = () => {
             yearlySubUrl: yearlyData?.productId ? `${website}/cart/?add-to-cart=${yearlyData.productId}` : `${website}/product/yearly-subscription/`,
         };
     }, [examPrices, activeOrg]);
+
+    const featuredBundles = useMemo(() => {
+        if (!bundlesEnabled || !examPrices) return [];
+        return Object.values(examPrices)
+            .filter((p: any) => p.isBundle && p.bundledSkus && p.bundledSkus.length > 1)
+            .map((p: any): ProductVariation => ({
+                id: p.productId?.toString() || p.sku,
+                sku: p.sku,
+                name: p.name,
+                type: 'bundle',
+                salePrice: p.price?.toString() || '0',
+                regularPrice: p.regularPrice?.toString() || '0',
+                isBundle: true,
+                bundledSkus: p.bundledSkus,
+            }))
+            .sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+    }, [examPrices, bundlesEnabled]);
 
     if (isInitializing || isLoading || !activeOrg || !Array.isArray(activeOrg.examProductCategories) || !Array.isArray(activeOrg.exams)) {
         return <div className="text-center py-10"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading dashboard data...</p></div>;
@@ -166,7 +183,6 @@ const Dashboard: FC = () => {
                         <h3 className="font-bold text-[rgb(var(--color-secondary-hover-rgb))]">You have an exam in progress!</h3>
                         <p className="text-sm text-[rgb(var(--color-secondary-hover-rgb))] opacity-80">"{inProgressExam.examName}"</p>
                     </div>
-                    {/* FIX: Replaced `history.push` with `navigate` */}
                     <button onClick={() => navigate(`/test/${inProgressExam.examId}`)} className="bg-[rgb(var(--color-secondary-rgb))] hover:bg-[rgb(var(--color-secondary-hover-rgb))] text-white font-bold py-2 px-4 rounded-lg">
                         Resume Exam
                     </button>
@@ -241,6 +257,22 @@ const Dashboard: FC = () => {
                 </div>
             )}
 
+            {featuredBundles.length > 0 && (
+                <div>
+                    <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2">Well Curated Exam Bundles</h2>
+                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-4">Get the best value with our comprehensive study packages.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {featuredBundles.map(bundle => (
+                            <FeaturedBundleCard
+                                key={bundle.sku}
+                                bundle={bundle}
+                                activeOrg={activeOrg}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {user && (
                 <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
                     <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">My Stats</h2>
@@ -295,7 +327,9 @@ const Dashboard: FC = () => {
                                         <ShareButtons shareUrl={shareUrl} shareText={shareText} shareTitle={shareTitle} />
                                     </div>
                                 </div>
-                                <div className="text-[rgb(var(--color-text-muted-rgb))] mb-4 text-sm" dangerouslySetInnerHTML={{ __html: category.description }} />
+                                <div className="prose prose-sm max-w-none text-[rgb(var(--color-text-muted-rgb))] mb-4">
+                                    {stripHtml(category.description)}
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} isDisabled={isDisabled} />}
                                     {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} attemptsMade={certAttempts} isDisabled={isDisabled}/>}
@@ -331,7 +365,6 @@ const Dashboard: FC = () => {
                                     <div className="flex items-center gap-4">
                                         <span className={`font-bold text-lg ${isPass ? 'text-[rgb(var(--color-success-rgb))]' : 'text-[rgb(var(--color-danger-rgb))]'}`}>{result.score.toFixed(0)}%</span>
                                         {isPass ? <CheckCircle size={20} className="text-[rgb(var(--color-success-rgb))]" /> : <XCircle size={20} className="text-[rgb(var(--color-danger-rgb))]" />}
-                                        {/* FIX: Replaced `history.push` with `navigate` */}
                                         <button onClick={() => navigate(`/results/${result.testId}`)} className="text-[rgb(var(--color-primary-rgb))] hover:text-[rgb(var(--color-primary-hover-rgb))]">
                                             <ChevronRight size={20} />
                                         </button>
