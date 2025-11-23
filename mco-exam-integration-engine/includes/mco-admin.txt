@@ -58,7 +58,6 @@ function mco_exam_engine_admin_page() {
             update_option('mco_config_version', current_time('YmdHis'));
             echo '<div class="notice notice-success is-dismissible"><p>Settings saved.</p></div>';
         } elseif ($form_action === 'save_certificate_templates') {
-            // ... (Certificate saving logic - kept concise)
              $templates_data = $_POST['mco_templates'] ?? [];
              $sanitized = [];
              foreach ($templates_data as $id => $t) {
@@ -124,12 +123,76 @@ function mco_render_main_settings_tab() { ?>
 <?php }
 
 function mco_render_certificate_templates_tab() {
-    // ... (Previous logic for cert templates - assumed present or simplified here for brevity)
-    echo '<p>Certificate Template Editor (Load previous code if needed)</p>';
-}
+    $saved_templates = get_option('mco_certificate_templates');
+    $templates = (empty($saved_templates) || !is_array($saved_templates)) ? mco_get_default_certificate_templates() : $saved_templates;
+    $cert_theme = get_option('mco_certificate_theme_id', 'classic');
+    ?>
+    <form method="post" action="?page=mco-exam-engine&tab=certificate_templates">
+        <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
+        <input type="hidden" name="mco_form_action" value="save_certificate_templates">
+        <h2>Certificate Templates</h2>
+        <table class="form-table">
+            <tr><th>Default Certificate Theme</th><td>
+                <select name="mco_certificate_theme_id">
+                    <option value="classic" <?php selected($cert_theme, 'classic'); ?>>Classic</option>
+                    <option value="modern" <?php selected($cert_theme, 'modern'); ?>>Modern</option>
+                </select>
+            </td></tr>
+        </table>
+        <div id="mco-certificate-accordion">
+            <?php foreach ($templates as $id => $template): $is_default = in_array($id, ['cert-practice', 'cert-completion']); ?>
+            <div class="mco-accordion-item" id="template-item-<?php echo esc_attr($id); ?>">
+                <h3 class="mco-accordion-title"><?php echo esc_html($template['name'] ?? 'Untitled Template'); ?></h3>
+                <div class="mco-accordion-content">
+                    <input type="hidden" name="mco_templates[<?php echo esc_attr($id); ?>][delete]" value="0" class="delete-flag">
+                    <table class="form-table">
+                        <tr><th>Template Name</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][name]" value="<?php echo esc_attr($template['name'] ?? ''); ?>" <?php if ($is_default) echo 'readonly'; ?>></td></tr>
+                        <tr><th>Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][title]" value="<?php echo esc_attr($template['title'] ?? ''); ?>"></td></tr>
+                        <tr><th>Body Text</th><td><textarea class="widefat" rows="4" name="mco_templates[<?php echo esc_attr($id); ?>][body]"><?php echo esc_textarea($template['body'] ?? ''); ?></textarea></td></tr>
+                        <tr><th>Signature 1 Name</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature1Name]" value="<?php echo esc_attr($template['signature1Name'] ?? ''); ?>"></td></tr>
+                        <tr><th>Signature 1 Title</th><td><input type="text" class="widefat" name="mco_templates[<?php echo esc_attr($id); ?>][signature1Title]" value="<?php echo esc_attr($template['signature1Title'] ?? ''); ?>"></td></tr>
+                        <tr><th>Signature 1 Image URL</th><td><textarea class="widefat" rows="5" name="mco_templates[<?php echo esc_attr($id); ?>][signature1ImageUrl]"><?php echo esc_textarea($template['signature1ImageUrl'] ?? ''); ?></textarea></td></tr>
+                    </table>
+                     <?php if (!$is_default): ?><p class="submit"><button type="button" class="button delete mco-delete-template">Delete Template</button></p><?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <div style="margin-top: 20px;"><button type="button" id="mco-add-template" class="button button-secondary">Add New Template</button></div>
+        <?php submit_button(); ?>
+    </form>
+    <script>
+    jQuery(document).ready(function($) {
+        var accordion = $('#mco-certificate-accordion');
+        accordion.on('click', '.mco-accordion-title', function() {
+            $(this).toggleClass('active');
+            var content = $(this).next('.mco-accordion-content');
+            content.css('max-height', content.css('max-height') !== '0px' ? '0px' : content.get(0).scrollHeight + 'px');
+        });
+        $('#mco-add-template').on('click', function() {
+            var newId = 'new_template_' + Date.now();
+            var html = '<div class="mco-accordion-item"><h3 class="mco-accordion-title active">New Custom Template</h3><div class="mco-accordion-content" style="max-height: 1000px;"><input type="hidden" name="mco_templates[' + newId + '][delete]" value="0" class="delete-flag"><table class="form-table"><tr><th>Template Name</th><td><input type="text" class="widefat" name="mco_templates[' + newId + '][name]" value="New Template"></td></tr><tr><th>Title</th><td><input type="text" class="widefat" name="mco_templates[' + newId + '][title]" value="Certificate"></td></tr><tr><th>Body Text</th><td><textarea class="widefat" rows="4" name="mco_templates[' + newId + '][body]"></textarea></td></tr></table></div></div>';
+            accordion.append(html);
+        });
+        accordion.on('click', '.mco-delete-template', function() {
+            if (confirm('Are you sure?')) { var item = $(this).closest('.mco-accordion-item'); item.find('.delete-flag').val('1'); item.slideUp(); }
+        });
+    });
+    </script>
+<?php }
+
 function mco_render_theme_selector_tab() {
-    // ... (Previous logic for themes)
-    echo '<p>Theme Selector (Load previous code if needed)</p>';
+    $themes = [['id'=>'default','name'=>'Cyberpunk'],['id'=>'professional','name'=>'Professional'],['id'=>'serene','name'=>'Serene'],['id'=>'academic','name'=>'Academic'],['id'=>'noir','name'=>'Noir']];
+    $active = get_option('mco_active_theme_id', 'default');
+    $colors = ['default'=>['#06b6d4','#db2777','#fde047','#0f172a'],'professional'=>['#047857','#3b82f6','#eab308','#f1f5f9'],'serene'=>['#60a5fa','#34d399','#fb923c','#f0fdfa'],'academic'=>['#7f1d1d','#a16207','#d97706','#fafaf9'],'noir'=>['#e5e7eb','#8b5cf6','#eab308','#1f2937']];
+    echo '<form method="post" action="?page=mco-exam-engine&tab=theme_selector">';
+    wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce');
+    echo '<input type="hidden" name="mco_form_action" value="save_theme_settings"><h2>Application Theme</h2><div class="mco-theme-selector-grid">';
+    foreach ($themes as $t) {
+        $c = $colors[$t['id']];
+        echo '<label class="mco-theme-card '.($active===$t['id']?'mco-theme-card--selected':'').'"><input type="radio" name="mco_active_theme_id" value="'.$t['id'].'" class="mco-theme-radio" '.checked($active,$t['id'],false).'><div class="mco-theme-swatches"><div class="mco-theme-swatch" style="background:'.$c[0].'"></div><div class="mco-theme-swatch" style="background:'.$c[1].'"></div><div class="mco-theme-swatch" style="background:'.$c[2].'"></div><div class="mco-theme-swatch" style="background:'.$c[3].'"></div></div><p class="mco-theme-name">'.$t['name'].'</p></label>';
+    }
+    echo '</div>'; submit_button(); echo '</form>';
 }
 
 function mco_render_bulk_data_tab() {
@@ -185,8 +248,13 @@ function mco_render_bulk_data_tab() {
 }
 
 function mco_render_tools_tab() {
-    // ... (Previous logic for tools)
-    echo '<p>Tools Tab (Load previous code)</p>';
+    echo '<h2>Maintenance Tools</h2><form method="post" action="?page=mco-exam-engine&tab=tools">';
+    wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce');
+    echo '<input type="hidden" name="mco_form_action" value="clear_caches"><table class="form-table"><tr><th>Clear App Config Cache</th><td><button type="submit" name="clear_config_cache" class="button">Clear Cache</button></td></tr><tr><th>Clear Question Caches</th><td><button type="submit" name="clear_question_caches" class="button">Clear Caches</button></td></tr></table></form><hr><h2>Onboarding & Backup</h2><table class="form-table"><tr><th>Generate Tenant Blueprint</th><td><form method="post" action="'.esc_url(admin_url('admin-post.php')).'"><input type="hidden" name="action" value="mco_generate_tenant_blueprint">';
+    wp_nonce_field('mco_generate_tenant_blueprint_nonce');
+    echo '<button type="submit" class="button">Generate Blueprint</button></form></td></tr><tr><th>Generate Full Snapshot</th><td><form method="post" action="'.esc_url(admin_url('admin-post.php')).'"><input type="hidden" name="action" value="mco_generate_full_snapshot">';
+    wp_nonce_field('mco_generate_full_snapshot_nonce');
+    echo '<button type="submit" class="button">Generate Snapshot</button></form></td></tr></table>';
 }
 
 // --- HANDLERS ---
