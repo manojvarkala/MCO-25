@@ -57,9 +57,12 @@ function mco_get_scoped_css() {
     .mco-wrapper h2 { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin: 0 0 1rem 0; text-align: center; }
     .mco-wrapper label { font-weight: 600; color: var(--mco-text); display: block; margin-bottom: 0.5rem; }
     .mco-wrapper input[type="text"], .mco-wrapper input[type="password"] { width: 100%; padding: 0.75rem 1rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 1rem; }
-    .mco-wrapper button { width: 100%; padding: 0.75rem; border: none; border-radius: 0.5rem; background-color: var(--mco-primary); color: white; font-weight: 600; cursor: pointer; transition: 0.2s; }
-    .mco-wrapper button:hover { background-color: var(--mco-primary-hover); }
-    
+    .mco-wrapper input[type="submit"], .mco-wrapper button { width: 100%; padding: 0.75rem; border: none; border-radius: 0.5rem; background-color: var(--mco-primary); color: white; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .mco-wrapper input[type="submit"]:hover, .mco-wrapper button:hover { background-color: var(--mco-primary-hover); }
+    .mco-wrapper .mco-login-links { text-align: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--mco-border); font-size: 0.875rem; }
+    .mco-wrapper a { color: var(--mco-primary); text-decoration: none; }
+    .mco-wrapper a:hover { text-decoration: underline; }
+
     .mco-wrapper .mco-showcase-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
     .mco-wrapper .mco-program-group { background: #fff; border: 1px solid var(--mco-border); border-radius: 0.75rem; padding: 1.5rem; }
     .mco-wrapper .mco-program-group__title { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem; }
@@ -71,7 +74,7 @@ function mco_get_scoped_css() {
     .mco-wrapper .mco-card__subtitle { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: white; }
     .mco-wrapper .mco-card__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; font-size: 0.8rem; background: rgba(0,0,0,0.1); padding: 0.5rem; border-radius: 0.5rem; text-align: center; }
     .mco-wrapper .mco-card__footer { padding: 1rem; margin-top: auto; }
-    .mco-wrapper .mco-card__button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.75rem 1rem; background: white; color: #1e293b; font-weight: 700; border-radius: 0.5rem; text-align: center; text-decoration: none;}
+    .mco-wrapper .mco-card__button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.75rem 1rem; background: white; color: #1e293b; font-weight: 700; border-radius: 0.5rem; text-align: center; text-decoration: none; }
     
     .mco-wrapper .mco-gradient--practice-1 { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
     .mco-wrapper .mco-gradient--cert-1 { background: linear-gradient(135deg, #059669, #10b981); }
@@ -278,7 +281,7 @@ function mco_render_study_hall_sidebar() {
 
 // --- LOGIN SHORTCODE ---
 function mco_exam_login_shortcode() {
-    // Handle Name Update
+    // Handle Name Update Post-Login
     if (is_user_logged_in() && isset($_POST['mco_update_name_nonce']) && wp_verify_nonce($_POST['mco_update_name_nonce'], 'mco_update_name_action')) {
         $full_name = sanitize_text_field($_POST['full_name']);
         if (!empty($full_name) && strpos(trim($full_name), ' ') !== false) {
@@ -291,6 +294,7 @@ function mco_exam_login_shortcode() {
         }
     }
 
+    // If Logged In, Check Name & Redirect
     if (is_user_logged_in()) {
         $user = wp_get_current_user();
         if (strpos($user->display_name, ' ') !== false) {
@@ -334,4 +338,3 @@ if (!function_exists('mco_save_fullname_on_registration')) {
         }
     }
 }
-?>

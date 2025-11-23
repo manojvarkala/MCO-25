@@ -34,7 +34,8 @@ if (!function_exists('mco_get_default_certificate_templates')) {
 
 function mco_get_app_config_data() {
     $cached_data = get_transient('mco_app_config_data');
-    if ($cached_data !== false) {
+    // Ensure cache has new structure
+    if ($cached_data !== false && isset($cached_data['exams']) && isset($cached_data['examPrices'])) {
         return $cached_data;
     }
 
