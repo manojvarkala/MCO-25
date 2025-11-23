@@ -48,50 +48,58 @@ function mco_get_svg_icon($name) {
 }
 
 // --- SCOPED CSS GENERATOR ---
+// Using a very specific ID selector to prevent conflicts with theme styles
 function mco_get_scoped_css() {
     return '<style>
-    .mco-wrapper { font-family: system-ui, -apple-system, sans-serif; --mco-primary: #0891b2; --mco-primary-hover: #0e7490; --mco-text: #334155; --mco-bg: #fff; --mco-border: #e2e8f0; }
-    .mco-wrapper *, .mco-wrapper *::before, .mco-wrapper *::after { box-sizing: border-box; }
+    #mco-app-root { font-family: system-ui, -apple-system, sans-serif; --mco-primary: #0891b2; --mco-primary-hover: #0e7490; --mco-text: #334155; --mco-bg: #fff; --mco-border: #e2e8f0; color: #334155; line-height: 1.5; }
+    #mco-app-root *, #mco-app-root *::before, #mco-app-root *::after { box-sizing: border-box; }
     
-    .mco-wrapper .mco-form-container { max-width: 480px; margin: 2rem auto; padding: 2.5rem; background-color: var(--mco-bg); border: 1px solid var(--mco-border); border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05); }
-    .mco-wrapper h2 { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin: 0 0 1rem 0; text-align: center; }
-    .mco-wrapper label { font-weight: 600; color: var(--mco-text); display: block; margin-bottom: 0.5rem; }
-    .mco-wrapper input[type="text"], .mco-wrapper input[type="password"] { width: 100%; padding: 0.75rem 1rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 1rem; }
-    .mco-wrapper input[type="submit"], .mco-wrapper button { width: 100%; padding: 0.75rem; border: none; border-radius: 0.5rem; background-color: var(--mco-primary); color: white; font-weight: 600; cursor: pointer; transition: 0.2s; }
-    .mco-wrapper input[type="submit"]:hover, .mco-wrapper button:hover { background-color: var(--mco-primary-hover); }
-    .mco-wrapper .mco-login-links { text-align: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--mco-border); font-size: 0.875rem; }
-    .mco-wrapper a { color: var(--mco-primary); text-decoration: none; }
-    .mco-wrapper a:hover { text-decoration: underline; }
+    /* Form Container */
+    #mco-app-root .mco-form-container { max-width: 480px; margin: 2rem auto; padding: 2.5rem; background-color: var(--mco-bg); border: 1px solid var(--mco-border); border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05); }
+    #mco-app-root h2 { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin: 0 0 1rem 0; text-align: center; border: none; }
+    #mco-app-root label { font-weight: 600; color: var(--mco-text); display: block; margin-bottom: 0.5rem; font-size: 1rem; }
+    #mco-app-root input[type="text"], #mco-app-root input[type="password"] { width: 100%; padding: 0.75rem 1rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 1rem; background: #fff; color: #333; }
+    #mco-app-root input[type="submit"], #mco-app-root button, #mco-app-root .mco-button { width: 100%; padding: 0.75rem; border: none; border-radius: 0.5rem; background-color: var(--mco-primary); color: white; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-block; text-decoration: none; text-align: center; font-size: 1rem; line-height: 1.5; }
+    #mco-app-root input[type="submit"]:hover, #mco-app-root button:hover, #mco-app-root .mco-button:hover { background-color: var(--mco-primary-hover); color: white; }
+    #mco-app-root .mco-button--secondary { background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+    #mco-app-root .mco-button--secondary:hover { background-color: #e2e8f0; color: #1e293b; }
 
-    .mco-wrapper .mco-showcase-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
-    .mco-wrapper .mco-program-group { background: #fff; border: 1px solid var(--mco-border); border-radius: 0.75rem; padding: 1.5rem; }
-    .mco-wrapper .mco-program-group__title { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem; }
-    .mco-wrapper .mco-program-group__cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1rem; }
+    /* Showcase Grid */
+    #mco-app-root .mco-showcase-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+    #mco-app-root .mco-program-group { background: #fff; border: 1px solid var(--mco-border); border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    #mco-app-root .mco-program-group__title { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0 0 0.5rem 0; border: none; }
+    #mco-app-root .mco-program-group__desc { color: #64748b; margin-bottom: 1.5rem; font-size: 0.875rem; }
+    #mco-app-root .mco-program-group__cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1rem; }
     
-    .mco-wrapper .mco-card { display: flex; flex-direction: column; color: white; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .mco-wrapper .mco-card__header { padding: 1rem; font-weight: 600; text-transform: uppercase; background: rgba(0,0,0,0.1); display: flex; align-items: center; gap: 0.5rem; }
-    .mco-wrapper .mco-card__body { padding: 1.5rem; flex: 1; }
-    .mco-wrapper .mco-card__subtitle { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: white; }
-    .mco-wrapper .mco-card__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; font-size: 0.8rem; background: rgba(0,0,0,0.1); padding: 0.5rem; border-radius: 0.5rem; text-align: center; }
-    .mco-wrapper .mco-card__footer { padding: 1rem; margin-top: auto; }
-    .mco-wrapper .mco-card__button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.75rem 1rem; background: white; color: #1e293b; font-weight: 700; border-radius: 0.5rem; text-align: center; text-decoration: none; }
+    /* Cards */
+    #mco-app-root .mco-card { display: flex; flex-direction: column; color: white; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.06); }
+    #mco-app-root .mco-card__header { padding: 1rem; font-weight: 600; text-transform: uppercase; background: rgba(0,0,0,0.1); display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; letter-spacing: 0.05em; }
+    #mco-app-root .mco-card__body { padding: 1.5rem; flex: 1; }
+    #mco-app-root .mco-card__subtitle { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: white; line-height: 1.3; }
+    #mco-app-root .mco-card__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; font-size: 0.8rem; background: rgba(0,0,0,0.15); padding: 0.5rem; border-radius: 0.5rem; text-align: center; margin-top: 1rem; }
+    #mco-app-root .mco-card__footer { padding: 1rem; margin-top: auto; background: rgba(0,0,0,0.05); }
+    #mco-app-root .mco-card__action-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.75rem; background: white; color: #1e293b; font-weight: 700; border-radius: 0.5rem; text-align: center; text-decoration: none; transition: all 0.2s; border: none; font-size: 0.9rem; }
+    #mco-app-root .mco-card__action-btn:hover { background-color: #f8fafc; transform: translateY(-1px); }
     
-    .mco-wrapper .mco-gradient--practice-1 { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
-    .mco-wrapper .mco-gradient--cert-1 { background: linear-gradient(135deg, #059669, #10b981); }
-    .mco-wrapper .mco-gradient--bundle-sub { background: linear-gradient(135deg, #0d9488, #2dd4bf); }
-    .mco-wrapper .mco-gradient--bundle-practice { background: linear-gradient(135deg, #f97316, #fb923c); }
-    .mco-wrapper .mco-gradient--sub-monthly { background: linear-gradient(135deg, #0891b2, #22d3ee); }
-    .mco-wrapper .mco-gradient--sub-yearly { background: linear-gradient(135deg, #6d28d9, #8b5cf6); }
+    /* Gradients */
+    #mco-app-root .mco-gradient--practice-1 { background-image: linear-gradient(to top right, #3b82f6, #60a5fa); }
+    #mco-app-root .mco-gradient--cert-1 { background-image: linear-gradient(to top right, #059669, #10b981); }
+    #mco-app-root .mco-gradient--bundle-sub { background-image: linear-gradient(to top right, #0d9488, #2dd4bf); }
+    #mco-app-root .mco-gradient--bundle-practice { background-image: linear-gradient(to top right, #f97316, #fb923c); }
+    #mco-app-root .mco-gradient--sub-monthly { background-image: linear-gradient(to top right, #0891b2, #22d3ee); }
+    #mco-app-root .mco-gradient--sub-yearly { background-image: linear-gradient(to top right, #6d28d9, #8b5cf6); }
 
-    .mco-wrapper .mco-book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; }
-    .mco-wrapper .mco-book-card { background: #fff; border: 1px solid var(--mco-border); border-radius: 0.75rem; overflow: hidden; display: flex; flex-direction: column; }
-    .mco-wrapper .mco-book-cover { height: 200px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-    .mco-wrapper .mco-book-card__body { padding: 1rem; flex: 1; }
-    .mco-wrapper .mco-book-card__title { font-weight: 700; color: #1e293b; margin-bottom: 0.5rem; font-size: 1rem; }
-    .mco-wrapper .mco-book-card__desc { font-size: 0.875rem; color: #64748b; line-height: 1.5; }
-    .mco-wrapper .mco-book-card__footer { padding: 1rem; border-top: 1px solid var(--mco-border); }
-    .mco-wrapper .mco-book-btn { display: block; width: 100%; padding: 0.5rem; text-align: center; background: #f1f5f9; color: #475569; border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem; text-decoration: none; }
-    .mco-wrapper .mco-book-btn--primary { background: #facc15; color: #1e293b; }
+    /* Book Grid */
+    #mco-app-root .mco-book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; }
+    #mco-app-root .mco-book-card { background: #fff; border: 1px solid var(--mco-border); border-radius: 0.75rem; overflow: hidden; display: flex; flex-direction: column; }
+    #mco-app-root .mco-book-cover { height: 200px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    #mco-app-root .mco-book-card__body { padding: 1rem; flex: 1; }
+    #mco-app-root .mco-book-card__title { font-weight: 700; color: #1e293b; margin-bottom: 0.5rem; font-size: 1rem; margin-top: 0; border: none; }
+    #mco-app-root .mco-book-card__desc { font-size: 0.875rem; color: #64748b; line-height: 1.5; margin-bottom: 0; }
+    #mco-app-root .mco-book-card__footer { padding: 1rem; border-top: 1px solid var(--mco-border); }
+    #mco-app-root .mco-book-btn { display: block; width: 100%; padding: 0.6rem; text-align: center; background: #f1f5f9; color: #475569; border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem; text-decoration: none; border: 1px solid #e2e8f0; }
+    #mco-app-root .mco-book-btn--primary { background: #facc15; color: #1e293b; border-color: #facc15; }
+    #mco-app-root .mco-book-btn:hover { opacity: 0.9; }
     </style>';
 }
 
@@ -102,7 +110,7 @@ function mco_render_procedural_cover($book) {
     return '<div style="width:100%;height:100%;background:'.$bg.';color:white;display:flex;align-items:center;justify-content:center;padding:10px;text-align:center;font-weight:bold;">'.esc_html($book['title']).'</div>';
 }
 
-// --- GEO LINKS ---
+// --- NEW HELPER FOR GEO-TARGETED LINKS ---
 function mco_get_geo_primary_link_info($links) {
     if (empty($links) || !is_array($links)) return null;
     $links = array_filter($links);
@@ -122,73 +130,81 @@ function mco_get_geo_primary_link_info($links) {
         $store_map = ['com' => 'Amazon.com', 'in' => 'Amazon.in', 'ae' => 'Amazon.ae'];
         return [ 'key' => $first_key, 'url' => $links[$first_key], 'domainName' => $store_map[$first_key] ?? 'Amazon.com' ];
     }
+    
     return null;
 }
+
+// --- LOGIN SHORTCODE ---
+function mco_exam_login_shortcode() {
+    // Handle Name Update Post-Login
+    if (is_user_logged_in() && isset($_POST['mco_update_name_nonce']) && wp_verify_nonce($_POST['mco_update_name_nonce'], 'mco_update_name_action')) {
+        $full_name = sanitize_text_field($_POST['full_name']);
+        if (!empty($full_name) && strpos(trim($full_name), ' ') !== false) {
+            $user_id = get_current_user_id();
+            wp_update_user(['ID' => $user_id, 'display_name' => $full_name]);
+            $name_parts = explode(' ', $full_name, 2);
+            update_user_meta($user_id, 'first_name', $name_parts[0]);
+            if (isset($name_parts[1])) {
+                update_user_meta($user_id, 'last_name', $name_parts[1]);
+            }
+            return mco_redirect_to_app_with_token();
+        } else {
+            return mco_render_name_update_form('Please enter your full first and last name.');
+        }
+    }
+
+    // If Logged In, Check Name & Redirect
+    if (is_user_logged_in()) {
+        $user = wp_get_current_user();
+        if (strpos($user->display_name, ' ') !== false) {
+            return mco_redirect_to_app_with_token();
+        } else {
+            return mco_render_name_update_form();
+        }
+    }
+
+    // Logged Out Logic: IMMEDIATELY REDIRECT TO WP LOGIN
+    // Using JS redirect for safety if headers are already sent
+    $login_url = wp_login_url(get_permalink());
+    
+    if (!headers_sent()) {
+        wp_redirect($login_url);
+        exit;
+    }
+
+    return '<script>window.location.href="' . esc_url($login_url) . '";</script><div id="mco-app-root"><div class="mco-form-container" style="text-align:center;"><p>Redirecting to login...</p><a href="' . esc_url($login_url) . '" class="mco-button">Click here if not redirected</a></div></div>';
+}
+
 
 // --- HOOKS ---
 if (!function_exists('mco_register_shortcode_hooks')) {
     function mco_register_shortcode_hooks() {
         add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
         add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
-        add_shortcode('exam_program', 'mco_exam_showcase_shortcode'); 
+        add_shortcode('exam_program', 'mco_exam_showcase_shortcode'); // Alias
         add_shortcode('mco_book_showcase', 'mco_book_showcase_shortcode');
         add_shortcode('mco_single_book', 'mco_single_book_shortcode');
         
         add_action('register_form', 'mco_add_fullname_to_registration_form');
         add_filter('registration_errors', 'mco_validate_fullname_on_registration', 10, 3);
         add_action('user_register', 'mco_save_fullname_on_registration');
-        add_action('wp_enqueue_scripts', 'mco_enqueue_shortcode_styles', 9999);
     }
 }
 
-if (!function_exists('mco_enqueue_shortcode_styles')) {
-    function mco_enqueue_shortcode_styles() {
-        global $post;
-        if (is_a($post, 'WP_Post') && (
-            has_shortcode($post->post_content, 'mco_exam_showcase') ||
-            has_shortcode($post->post_content, 'exam_program') ||
-            has_shortcode($post->post_content, 'mco_book_showcase') ||
-            has_shortcode($post->post_content, 'mco_single_book') ||
-            has_shortcode($post->post_content, 'mco_exam_login') ||
-            is_singular('mco_exam_program') || 
-            is_singular('mco_recommended_book')
-        )) {
-             wp_enqueue_style('mco-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
-        }
-    }
-}
-
-if (!function_exists('mco_auto_apply_single_book_style')) {
-    function mco_auto_apply_single_book_style($content) {
-        if (is_singular('mco_recommended_book') && in_the_loop() && is_main_query() && !is_admin()) {
-            if (has_shortcode($content, 'mco_single_book')) return $content;
-            remove_filter('the_content', 'mco_auto_apply_single_book_style', 999);
-            $new_content = mco_single_book_shortcode([]);
-            add_filter('the_content', 'mco_auto_apply_single_book_style', 999);
-            return $new_content;
-        }
-        return $content;
-    }
-}
-
-if (!function_exists('mco_auto_apply_single_program_style')) {
-    function mco_auto_apply_single_program_style($content) {
-        if (is_singular('mco_exam_program') && in_the_loop() && is_main_query() && !is_admin()) {
-            global $post;
-            $app_id = 'prod-' . $post->ID;
-            remove_filter('the_content', 'mco_auto_apply_single_program_style', 999);
-            $shortcode_output = mco_exam_showcase_shortcode(['id' => $app_id]);
-            add_filter('the_content', 'mco_auto_apply_single_program_style', 999);
-            return $shortcode_output;
-        }
-        return $content;
-    }
-}
-
-// --- EXAM SHOWCASE ---
+// --- EXAM SHOWCASE SHORTCODE ---
 function mco_exam_showcase_shortcode($atts) {
     $atts = shortcode_atts(['id' => ''], $atts, 'exam_program');
     $program_id_str = sanitize_text_field($atts['id']);
+    
+    $query_args = ['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC'];
+    if (!empty($program_id_str)) {
+        $post_id_from_app_id = (int) str_replace('prod-', '', $program_id_str);
+        if ($post_id_from_app_id > 0) $query_args['p'] = $post_id_from_app_id;
+        else { $query_args['name'] = $program_id_str; $query_args['posts_per_page'] = 1; }
+    }
+    
+    $programs = get_posts($query_args);
+    if (empty($programs)) return '<p>No exam programs found.</p>';
     
     $config_data = mco_get_app_config_data();
     $app_url = mco_get_exam_app_url();
@@ -196,42 +212,43 @@ function mco_exam_showcase_shortcode($atts) {
 
     ob_start();
     echo mco_get_scoped_css();
-    echo '<div class="mco-wrapper"><div class="mco-showcase-grid">';
+    echo '<div id="mco-app-root"><div class="mco-wrapper"><div class="mco-showcase-grid">';
     
     foreach ($config_data['examProductCategories'] as $cat) {
-        if (!empty($program_id_str) && $cat['id'] !== $program_id_str) continue;
-        
+        // If ID param is set, only show matching category
+        if (!empty($program_id_str) && $cat['id'] !== $program_id_str && 'prod-'.$cat['id'] !== $program_id_str) continue;
+
         $cert_exam = current(array_filter($config_data['exams'], function($e) use ($cat) { return $e['id'] === $cat['certificationExamId']; }));
         $practice_exam = current(array_filter($config_data['exams'], function($e) use ($cat) { return $e['id'] === $cat['practiceExamId']; }));
         
         echo '<div class="mco-program-group">';
         echo '<h3 class="mco-program-group__title">' . esc_html($cat['name']) . '</h3>';
-        echo '<p>' . wp_strip_all_tags($cat['description']) . '</p>';
+        echo '<p class="mco-program-group__desc">' . wp_strip_all_tags($cat['description']) . '</p>';
         echo '<div class="mco-program-group__cards">';
         
         if ($practice_exam) {
-            echo '<div class="mco-card mco-gradient--practice-1"><div class="mco-card__header">'.mco_get_svg_icon('practice').' Practice</div><div class="mco-card__body"><div class="mco-card__subtitle">Free Practice Exam</div><div class="mco-card__stats"><span>'.$practice_exam['numberOfQuestions'].' Qs</span><span>'.$practice_exam['durationMinutes'].' Mins</span><span>Free</span></div></div><div class="mco-card__footer"><a href="'.esc_url(mco_get_exam_app_url().'/test/'.$practice_exam['id']).'" class="mco-card__button">Start Practice</a></div></div>';
+            echo '<div class="mco-card mco-gradient--practice-1"><div class="mco-card__header">'.mco_get_svg_icon('practice').' Practice</div><div class="mco-card__body"><div class="mco-card__subtitle">Free Practice Exam</div><div class="mco-card__stats"><span>'.$practice_exam['numberOfQuestions'].' Qs</span><span>'.$practice_exam['durationMinutes'].' Mins</span><span>Free</span></div></div><div class="mco-card__footer"><a href="'.esc_url(mco_get_exam_app_url().'/test/'.$practice_exam['id']).'" class="mco-card__action-btn">Start Practice</a></div></div>';
         }
 
         if ($cert_exam) {
             $prod_id = wc_get_product_id_by_sku($cert_exam['productSku']);
             $url = $prod_id ? '?add-to-cart='.$prod_id : '#';
-            echo '<div class="mco-card mco-gradient--cert-1"><div class="mco-card__header">'.mco_get_svg_icon('cert').' Certification</div><div class="mco-card__body"><div class="mco-card__subtitle">Full Exam</div><div class="mco-card__stats"><span>'.$cert_exam['numberOfQuestions'].' Qs</span><span>'.$cert_exam['durationMinutes'].' Mins</span><span>$'.$cert_exam['price'].'</span></div></div><div class="mco-card__footer"><a href="'.$url.'" class="mco-card__button">Buy Now</a></div></div>';
+            echo '<div class="mco-card mco-gradient--cert-1"><div class="mco-card__header">'.mco_get_svg_icon('cert').' Certification</div><div class="mco-card__body"><div class="mco-card__subtitle">Full Exam</div><div class="mco-card__stats"><span>'.$cert_exam['numberOfQuestions'].' Qs</span><span>'.$cert_exam['durationMinutes'].' Mins</span><span>$'.$cert_exam['price'].'</span></div></div><div class="mco-card__footer"><a href="'.$url.'" class="mco-card__action-btn mco-card__button--purchase">Buy Now</a></div></div>';
         }
         echo '</div></div>';
     }
-    echo '</div></div>';
+    echo '</div></div></div>';
     return ob_get_clean();
 }
 
-// --- BOOK SHOWCASE ---
+// --- BOOK SHOWCASE SHORTCODE ---
 function mco_book_showcase_shortcode() {
     $config_data = mco_get_app_config_data();
     if (empty($config_data['suggestedBooks'])) return '';
 
     ob_start();
     echo mco_get_scoped_css();
-    echo '<div class="mco-wrapper"><div class="mco-book-grid">';
+    echo '<div id="mco-app-root"><div class="mco-wrapper"><div class="mco-book-grid">';
     
     foreach ($config_data['suggestedBooks'] as $book) {
         $cover = !empty($book['thumbnailUrl']) ? '<img src="'.esc_url($book['thumbnailUrl']).'" style="width:100%;height:100%;object-fit:cover;">' : mco_render_procedural_cover($book);
@@ -244,7 +261,7 @@ function mco_book_showcase_shortcode() {
         echo '<div class="mco-book-card__footer">'.$btn.'</div>';
         echo '</div>';
     }
-    echo '</div></div>';
+    echo '</div></div></div>';
     return ob_get_clean();
 }
 
@@ -263,59 +280,18 @@ function mco_single_book_shortcode() {
     $link = mco_get_geo_primary_link_info($book['affiliateLinks']);
     $btn = $link ? '<a href="'.$link['url'].'" class="mco-book-btn mco-book-btn--primary" target="_blank">Buy on '.$link['domainName'].'</a>' : '';
 
-    echo '<div class="mco-wrapper"><div class="mco-single-book-card">';
+    echo '<div id="mco-app-root"><div class="mco-wrapper"><div class="mco-single-book-card">';
     echo '<div class="mco-single-book-card__cover">'.$cover.'</div>';
     echo '<div class="mco-single-book-card__details">';
     echo '<h1>'.esc_html($book['title']).'</h1>';
     echo '<div class="mco-single-book-card__description">'.wp_kses_post(get_post($post->ID)->post_content).'</div>';
     echo '<div class="mco-single-book-card__buttons">'.$btn.'</div>';
-    echo '</div></div></div>';
+    echo '</div></div></div></div>';
     
     return ob_get_clean();
 }
 
-function mco_render_study_hall_sidebar() {
-    // Implementation moved to React app
-    return '';
-}
-
-// --- LOGIN SHORTCODE ---
-function mco_exam_login_shortcode() {
-    // Handle Name Update Post-Login
-    if (is_user_logged_in() && isset($_POST['mco_update_name_nonce']) && wp_verify_nonce($_POST['mco_update_name_nonce'], 'mco_update_name_action')) {
-        $full_name = sanitize_text_field($_POST['full_name']);
-        if (!empty($full_name) && strpos(trim($full_name), ' ') !== false) {
-            $user_id = get_current_user_id();
-            wp_update_user(['ID' => $user_id, 'display_name' => $full_name]);
-            update_user_meta($user_id, 'first_name', explode(' ', $full_name)[0]);
-            return mco_redirect_to_app_with_token();
-        } else {
-            return mco_render_name_update_form('Please enter your full first and last name.');
-        }
-    }
-
-    // If Logged In, Check Name & Redirect
-    if (is_user_logged_in()) {
-        $user = wp_get_current_user();
-        if (strpos($user->display_name, ' ') !== false) {
-            return mco_redirect_to_app_with_token();
-        } else {
-            return mco_render_name_update_form();
-        }
-    }
-
-    // LOGGED OUT: Redirect to WP Login
-    if (!headers_sent()) {
-        $current_url = get_permalink();
-        $login_url = wp_login_url($current_url);
-        wp_redirect($login_url);
-        exit;
-    } else {
-        $current_url = get_permalink();
-        $login_url = wp_login_url($current_url);
-        return '<script>window.location.href="' . esc_url($login_url) . '";</script>';
-    }
-}
+function mco_render_study_hall_sidebar() { return ''; }
 
 // REGISTRATION HELPERS
 if (!function_exists('mco_add_fullname_to_registration_form')) {
@@ -338,3 +314,4 @@ if (!function_exists('mco_save_fullname_on_registration')) {
         }
     }
 }
+?>
