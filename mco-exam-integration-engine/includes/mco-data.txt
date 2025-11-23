@@ -1,7 +1,6 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-// Moved from mco-admin.php to be accessible by other files if needed.
 if (!function_exists('mco_get_default_certificate_templates')) {
     function mco_get_default_certificate_templates() { 
         return [
@@ -12,10 +11,10 @@ if (!function_exists('mco_get_default_certificate_templates')) {
                 'body' => "This certifies that <strong>{candidateName}</strong> has successfully demonstrated proficiency in the <strong>{examName}</strong> practice exam, achieving a score of <strong>{finalScore}%</strong>.", 
                 'signature1Name' => 'Amelia Reed', 
                 'signature1Title' => 'Program Director', 
-                'signature1ImageUrl' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw1My4zMjYxQzE2Ljg2NDcsNDcuMjQzNyAyOC43MjQ3LDQwLjM0NDIgNDEuMzQzOCw0NS4xMTM4QzUzLjM2Niw0OS42Njc3IDU5Ljk0ODksNTguNDg4NyA3Mi4zNDM4LDYxLjUxMTRDODQuNzM4OCw2NC41MzQgOTkuNDUwNCw2MC4zODI0IDExMS4yNSw1NC43MkMxMjMuMDQ5Niw0OS4wNTc2IDEzNi44OTYsNDQuNjE4NCAxNDguOTIyLDQ1LjExMzhDMTYwLjk0Niw0NS42MDkzIDE2Ny44OTksNTEuMzMzNyAxNzkuNTgsNDkuNjY3N0MxOTEuMjYsNDggMTk4LjgzNCwzNi4xNzQzIDIxMC43NSwzNi4xNzQzQzIyMi42NjYsMzYuMTc0MyAyMjguODEzLDQ4LjA4NjYgMjM5LjUsNDkuNjY3N0MyNTAuMTg3LDUxLjI0ODkgMjU4LjU5OCw0NC4wMzIxIDI2OS41LDQ1LjExMzhDMjgwLjQwMSw0Ni4xOTU1IDI4Ni41LDUzLjA5NSAyOTEsNjEuNTExNCIgc3Ryb2tlPSIjMWUyOTJiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==', 
-                'signature2Name' => 'Quinn Casey, CPC', 
-                'signature2Title' => 'Lead Instructor',
-                'signature2ImageUrl' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw0Mi4xNDQ4QzE2Ljg2NDcsMzYuMDYyNCAyOC43MjQ3LDI5LjE2MyA0MS4zNDM4LDMzLjkyMjdDNTMuMzY2LDM4LjQ4NjQgNTkuOTQ4OSw0Ny4zMDc1IDcyLjM0MzgsNTAuMzMyMkM4NC43Mzg4LDUzLjM1MjggOTkuNDUwNCw0OS4yMDEyIDExMS4yNSw0My41Mzg4QzEyMy4wNDk2LDM3Ljg3NjQgMTM2Ljg5NiwzMy40Mzc0IDE0OC45MjIsMzMuOTMyN0MxNjAuOTQ2LDM0LjQyNzkgMTY3Ljg5OSw0MC4xNTI1IDE3OS41OCwzOC40ODY3QzE5MS4yNiwzNi44MjA2IDE5OC44MzQsMjQuOTkzMSAyMTAuNzUsMjQuOTkzMUMyMjIuNjY2LDI0Ljk5MzEgMjI4LjgxMywzNi45MDkyIDIzOS41LDM4LjQ4NjdDMjUwLjE4Nyw0MC4wNjczIDI1OC41OTgsMzIuODUwMSAyNjkuNSwzMy45MzI3QzI4MC40MDEsMzUuMDE0MyAyODYuNSw0MS45MTM4IDI5MSw1MC4zMzIyIiBzdHJva2U9IiMxZTI5MmIiIGZpbGw9Im5vbmUiIHN0cm9rZS1waWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+'
+                'signature1ImageUrl' => '', 
+                'signature2Name' => '', 
+                'signature2Title' => '',
+                'signature2ImageUrl' => ''
             ], 
             'cert-completion' => [
                 'id' => 'cert-completion', 
@@ -24,80 +23,15 @@ if (!function_exists('mco_get_default_certificate_templates')) {
                 'body' => "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", 
                 'signature1Name' => 'Amelia Reed', 
                 'signature1Title' => 'Program Director', 
-                'signature1ImageUrl' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw1My4zMjYxQzE2Ljg2NDcsNDcuMjQzNyAyOC43MjQ3LDQwLjM0NDIgNDEuMzQzOCw0NS4xMTM4QzUzLjM2Niw0OS42Njc3IDU5Ljk0ODksNTguNDg4NyA3Mi4zNDM4LDYxLjUxMTRDODQuNzM4OCw2NC41MzQgOTkuNDUwNCw2MC4zODI0IDExMS4yNSw1NC43MkMxMjMuMDQ5Niw0OS4wNTc2IDEzNi44OTYsNDQuNjE4NCAxNDguOTIyLDQ1LjExMzhDMTYwLjk0Niw0NS42MDkzIDE2Ny44OTksNTEuMzMzNyAxNzkuNTgsNDkuNjY3N0MxOTEuMjYsNDggMTk4LjgzNCwzNi4xNzQzIDIxMC43NSwzNi4xNzQzQzIyMi42NjYsMzYuMTc0MyAyMjguODEzLDQ4LjA4NjYgMjM5LjUsNDkuNjY3N0MyNTAuMTg3LDUxLjI0ODkgMjU4LjU5OCw0NC4wMzIxIDI2OS41LDQ1LjExMzhDMjgwLjQwMSw0Ni4xOTU1IDI4Ni41LDUzLjA5NSAyOTEsNjEuNTExNCIgc3Ryb2tlPSIjMWUyOTJiIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==', 
-                'signature2Name' => 'Quinn Casey, CPC', 
-                'signature2Title' => 'Lead Instructor',
-                'signature2ImageUrl' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxwYXRoIGQ9Ik0xMiw0Mi4xNDQ4QzE2Ljg2NDcsMzYuMDYyNCAyOC43MjQ3LDI5LjE2MyA0MS4zNDM4LDMzLjkyMjdDNTMuMzY2LDM4LjQ4NjQgNTkuOTQ4OSw0Ny4zMDc1IDcyLjM0MzgsNTAuMzMyMkM4NC43Mzg4LDUzLjM1MjggOTkuNDUwNCw0OS4yMDEyIDExMS4yNSw0My41Mzg4QzEyMy4wNDk2LDM3Ljg3NjQgMTM2Ljg5NiwzMy40Mzc0IDE0OC45MjIsMzMuOTMyN0MxNjAuOTQ2LDM0LjQyNzkgMTY3Ljg5OSw0MC4xNTI1IDE3OS41OCwzOC40ODY3QzE5MS4yNiwzNi44MjA2IDE5OC44MzQsMjQuOTkzMSAyMTAuNzUsMjQuOTkzMUMyMjIuNjY2LDI0Ljk5MzEgMjI4LjgxMywzNi45MDkyIDIzOS41LDM4LjQ4NjdDMjUwLjE4Nyw0MC4wNjczIDI1OC41OTgsMzIuODUwMSAyNjkuNSwzMy45MzI3QzI4MC40MDEsMzUuMDE0MyAyODYuNSw0MS45MTM4IDI5MSw1MC4zMzIyIiBzdHJva2U9IiMxZTI5MmIiIGZpbGw9Im5vbmUiIHN0cm9rZS1waWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+'
+                'signature1ImageUrl' => '', 
+                'signature2Name' => '', 
+                'signature2Title' => '',
+                'signature2ImageUrl' => ''
             ]
         ]; 
     }
 }
 
-// NEW: A unified function to generate either an empty blueprint or a full content snapshot.
-function mco_get_full_snapshot_data($is_blueprint = false) {
-    $site_name = get_bloginfo('name');
-    $site_url_parts = parse_url(home_url());
-    $site_host = $site_url_parts['host'] ?? 'default-site.com';
-    $custom_logo_url = get_option('mco_custom_logo_url', '');
-    $logo_url = !empty($custom_logo_url) ? $custom_logo_url : (get_site_icon_url(512) ?: '');
-
-    // FIX: This forces the `www.` prefix for the specified domain, correcting the login link bug.
-    if ($site_host === 'coding-online.net') {
-        $site_host = 'www.coding-online.net';
-    }
-
-    $available_themes = [
-        [ 'id' => 'default', 'name' => 'Cyberpunk' ],
-        [ 'id' => 'professional', 'name' => 'Professional' ],
-        [ 'id' => 'serene', 'name' => 'Serene' ],
-        [ 'id' => 'academic', 'name' => 'Academic' ],
-        [ 'id' => 'noir', 'name' => 'Noir' ],
-    ];
-
-    $configured_templates = get_option('mco_certificate_templates');
-    if (empty($configured_templates) || !is_array($configured_templates)) {
-        $configured_templates = mco_get_default_certificate_templates();
-    }
-
-
-    // If it's just a blueprint, we return empty arrays for content.
-    if ($is_blueprint) {
-        $dynamic_data = [
-            'exams' => [],
-            'examProductCategories' => [],
-            'suggestedBooks' => [],
-            'examPrices' => new stdClass()
-        ];
-    } else {
-        // Otherwise, we fetch all live data.
-        $dynamic_data = mco_get_app_config_data();
-    }
-
-    $snapshot_object = [
-        "version" => current_time('YmdHis'),
-        "organizations" => [
-            [
-                "id" => "org-" . sanitize_title($site_name),
-                "name" => $site_name,
-                "website" => $site_host,
-                "logo" => $logo_url,
-                "availableThemes" => $available_themes,
-                "activeThemeId" => "default",
-                "exams" => $dynamic_data['exams'],
-                "examProductCategories" => $dynamic_data['examProductCategories'],
-                "certificateTemplates" => array_values($configured_templates),
-                "suggestedBooks" => $dynamic_data['suggestedBooks']
-            ]
-        ],
-        "examPrices" => $dynamic_data['examPrices'] ?? new stdClass()
-    ];
-    
-    return $snapshot_object;
-}
-
-
-// This function is the single source of truth for all dynamic data passed to the React app.
-// It uses a transient for caching to improve performance on high-traffic sites.
 function mco_get_app_config_data() {
     $cached_data = get_transient('mco_app_config_data');
     if ($cached_data !== false) {
@@ -109,7 +43,6 @@ function mco_get_app_config_data() {
     $all_suggested_books = [];
     $exam_product_categories = [];
 
-    // --- Step 1: Process Exam Programs to build the app's core exam structure ---
     $exam_program_posts = get_posts([
         'post_type' => 'mco_exam_program',
         'posts_per_page' => -1,
@@ -124,8 +57,6 @@ function mco_get_app_config_data() {
         $pass_score = get_post_meta($post->ID, '_mco_pass_score', true) ?: mco_get_single_term($post->ID, 'exam_pass_score', 'name');
         
         $cert_sku = get_post_meta($post->ID, '_mco_certification_exam_sku', true);
-        
-        // FIX: Add a fallback for the question source URL to support older data structures (e.g., taxonomy-based storage).
         $question_source = get_post_meta($post->ID, '_mco_question_source_url', true) ?: mco_get_single_term($post->ID, 'exam_source_url', 'name');
 
         $is_proctored = (bool) get_post_meta($post->ID, '_mco_is_proctored', true);
@@ -178,7 +109,6 @@ function mco_get_app_config_data() {
         $practice_exam_name = !empty($practice_name_override) ? $practice_name_override : $clean_title . ' Practice';
         $cert_exam_name = !empty($cert_name_override) ? $cert_name_override : $clean_title;
 
-        // Practice Exam
         $all_exams[] = [
             'id' => $practice_exam_id_for_app,
             'name' => $practice_exam_name,
@@ -198,7 +128,6 @@ function mco_get_app_config_data() {
             'sections' => $exam_sections,
         ];
         
-        // Certification Exam
         if ($cert_sku && class_exists('WooCommerce')) {
             $product_id = wc_get_product_id_by_sku($cert_sku);
             $product = $product_id ? wc_get_product($product_id) : null;
@@ -227,7 +156,6 @@ function mco_get_app_config_data() {
         }
     }
 
-    // --- Step 2: Get ALL products from WooCommerce and build the price list ---
     if (class_exists('WooCommerce')) {
         $all_wc_products = wc_get_products(['limit' => -1]);
         foreach ($all_wc_products as $product) {
@@ -245,20 +173,16 @@ function mco_get_app_config_data() {
                     'reviewCount' => (int)$product->get_review_count()
                 ];
 
-                // If it's a subscription product, get subscription-specific data
                 if (class_exists('WC_Product_Subscription') && $product->is_type('subscription')) {
                     $product_data['subscription_period'] = $product->get_subscription_period();
                     $product_data['subscription_period_interval'] = $product->get_subscription_period_interval();
                     $product_data['subscription_length'] = $product->get_subscription_length();
                 }
-
                 $all_prices[$sku] = $product_data;
             }
         }
     }
 
-
-    // --- Step 3: Get all suggested books ---
     $book_posts = get_posts([
         'post_type' => 'mco_recommended_book',
         'posts_per_page' => -1,

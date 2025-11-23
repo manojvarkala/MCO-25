@@ -1,3 +1,4 @@
+
 import React, { FC, useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -74,7 +75,7 @@ const ExamProgram: FC = () => {
             const userResults = googleSheetsService.getLocalTestResultsForUser(user.id);
             setResults(userResults);
         } else {
-            setResults([]); // Clear results if user logs out
+            setResults([]); 
         }
     }, [user]);
 

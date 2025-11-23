@@ -39,6 +39,10 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
 
     const canTake = isPractice || isPurchased || isSubscribed || isBetaTester;
     
+    const priceInfo = examPrices && exam.productSku ? examPrices[exam.productSku] : null;
+    const price = priceInfo?.price ?? (exam.price || 0);
+    const regularPrice = priceInfo?.regularPrice ?? (exam.regularPrice || 0);
+    
     let buttonText = 'Start Practice';
     if (!isPractice) {
         if (canTake) {
@@ -49,7 +53,6 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
     }
 
     const handleButtonClick = async () => {
-        // Fire and forget engagement logging
         if (token) {
             googleSheetsService.logEngagement(token, exam.id);
         }
@@ -113,15 +116,15 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                     )}
                 </div>
                 
-                {!canTake && exam.price > 0 && (
+                {!canTake && price > 0 && (
                     <div className="text-center mb-4">
-                        {exam.regularPrice && exam.regularPrice > exam.price ? (
+                        {regularPrice > price ? (
                             <div className="flex items-baseline justify-center gap-2">
-                                <span className="text-xl line-through text-white/70">${exam.regularPrice.toFixed(2)}</span>
-                                <span className="text-4xl font-extrabold text-white">${exam.price.toFixed(2)}</span>
+                                <span className="text-xl line-through text-white/70">${regularPrice.toFixed(2)}</span>
+                                <span className="text-4xl font-extrabold text-white">${price.toFixed(2)}</span>
                             </div>
                         ) : (
-                            <span className="text-4xl font-extrabold text-white">${exam.price.toFixed(2)}</span>
+                            <span className="text-4xl font-extrabold text-white">${price.toFixed(2)}</span>
                         )}
                     </div>
                 )}

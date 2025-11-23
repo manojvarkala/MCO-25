@@ -100,6 +100,7 @@ const Dashboard: FC = () => {
     }, [activeOrg]);
     
     const { monthlyPrice, monthlyRegularPrice, yearlyPrice, yearlyRegularPrice, monthlySubUrl, yearlySubUrl } = useMemo(() => {
+        // With new flat structure, look for SKU keys directly
         const monthlyData = examPrices?.['sub-monthly'];
         const yearlyData = examPrices?.['sub-yearly'];
         const website = activeOrg ? `https://${activeOrg.website}` : '';
@@ -121,7 +122,7 @@ const Dashboard: FC = () => {
             .map((p: any): ProductVariation => ({
                 id: p.productId?.toString() || p.sku,
                 sku: p.sku,
-                name: stripHtml(p.name), // Ensure bundle names are decoded
+                name: stripHtml(p.name),
                 type: 'bundle',
                 salePrice: p.price?.toString() || '0',
                 regularPrice: p.regularPrice?.toString() || '0',
