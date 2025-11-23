@@ -45,9 +45,12 @@ function mco_exam_engine_admin_page() {
             update_option('mco_custom_logo_url', sanitize_textarea_field($_POST['mco_custom_logo_url']));
             update_option('mco_intro_video_url', esc_url_raw($_POST['mco_intro_video_url']));
             update_option('mco_disclaimer_text', wp_kses_post($_POST['mco_disclaimer_text']));
+            
+            // Handle Registration Toggle with Force Override
             $enable_reg = isset($_POST['mco_users_can_register']) ? 1 : 0;
             update_option('users_can_register', $enable_reg);
             update_option('mco_force_enable_registration', $enable_reg);
+            
             update_option('mco_subscriptions_enabled', isset($_POST['mco_subscriptions_enabled']) ? '1' : '0');
             update_option('mco_bundles_enabled', isset($_POST['mco_bundles_enabled']) ? '1' : '0');
             update_option('mco_purchase_notifier_enabled', isset($_POST['mco_purchase_notifier_enabled']) ? '1' : '0');
@@ -56,28 +59,53 @@ function mco_exam_engine_admin_page() {
             update_option('mco_purchase_notifier_max_gap', sanitize_text_field($_POST['mco_purchase_notifier_max_gap']));
             delete_transient('mco_app_config_data');
             update_option('mco_config_version', current_time('YmdHis'));
-            echo '<div class="notice notice-success is-dismissible"><p>Settings saved.</p></div>';
-        } elseif ($form_action === 'save_certificate_templates') {
-             $templates_data = $_POST['mco_templates'] ?? [];
-             $sanitized = [];
-             foreach ($templates_data as $id => $t) {
-                 if (isset($t['delete']) && $t['delete'] == '1' && !in_array($id, ['cert-practice', 'cert-completion'])) continue;
-                 $new_id = $id;
-                 if (strpos($id, 'new_') === 0 && !empty($t['name'])) $new_id = 'cert-' . sanitize_title($t['name']);
-                 $sanitized[$new_id] = array_map('sanitize_text_field', $t);
-                 $sanitized[$new_id]['body'] = wp_kses_post($t['body']);
-             }
-             update_option('mco_certificate_templates', $sanitized);
-             update_option('mco_certificate_theme_id', sanitize_text_field($_POST['mco_certificate_theme_id']));
-             delete_transient('mco_app_config_data');
-             echo '<div class="notice notice-success is-dismissible"><p>Templates saved.</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>Settings saved and config cache cleared.</p></div>';
+
         } elseif ($form_action === 'save_theme_settings') {
             update_option('mco_active_theme_id', sanitize_text_field($_POST['mco_active_theme_id']));
             delete_transient('mco_app_config_data');
-            echo '<div class="notice notice-success is-dismissible"><p>Theme saved.</p></div>';
+            update_option('mco_config_version', current_time('YmdHis'));
+            echo '<div class="notice notice-success is-dismissible"><p>Theme settings saved.</p></div>';
+
+        } elseif ($form_action === 'save_certificate_templates') {
+            $templates_data = $_POST['mco_templates'] ?? [];
+            $sanitized_templates = [];
+            foreach ($templates_data as $id => $template) {
+                if (isset($template['delete']) && $template['delete'] === '1' && !in_array($id, ['cert-practice', 'cert-completion'])) continue;
+                $new_id = $id;
+                if (strpos($id, 'new_template_') === 0 && isset($template['name']) && !empty($template['name'])) {
+                    $new_id = 'cert-' . sanitize_title($template['name']);
+                }
+                $sanitized_templates[$new_id] = [
+                    'id' => $new_id,
+                    'name' => isset($template['name']) ? sanitize_text_field($template['name']) : 'Untitled',
+                    'title' => isset($template['title']) ? sanitize_text_field($template['title']) : '',
+                    'body' => isset($template['body']) ? wp_kses_post($template['body']) : '',
+                    'signature1Name' => isset($template['signature1Name']) ? sanitize_text_field($template['signature1Name']) : '',
+                    'signature1Title' => isset($template['signature1Title']) ? sanitize_text_field($template['signature1Title']) : '',
+                    'signature1ImageUrl' => isset($template['signature1ImageUrl']) ? mco_sanitize_data_uri_or_url($template['signature1ImageUrl']) : '',
+                    'signature2Name' => isset($template['signature2Name']) ? sanitize_text_field($template['signature2Name']) : '',
+                    'signature2Title' => isset($template['signature2Title']) ? sanitize_text_field($template['signature2Title']) : '',
+                    'signature2ImageUrl' => isset($template['signature2ImageUrl']) ? mco_sanitize_data_uri_or_url($template['signature2ImageUrl']) : '',
+                ];
+            }
+            update_option('mco_certificate_templates', $sanitized_templates);
+            update_option('mco_certificate_theme_id', sanitize_text_field($_POST['mco_certificate_theme_id']));
+            delete_transient('mco_app_config_data');
+            update_option('mco_config_version', current_time('YmdHis'));
+            echo '<div class="notice notice-success is-dismissible"><p>Certificate templates saved and cache cleared.</p></div>';
+        
         } elseif ($form_action === 'clear_caches') {
-             if (isset($_POST['clear_config_cache'])) { delete_transient('mco_app_config_data'); echo '<div class="notice notice-success"><p>Config cache cleared.</p></div>'; }
-             if (isset($_POST['clear_question_caches'])) { global $wpdb; $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '\_transient\_mco\_sheet\_%' OR option_name LIKE '\_transient\_timeout\_mco\_sheet\_%'"); echo '<div class="notice notice-success"><p>Question caches cleared.</p></div>'; }
+             if (isset($_POST['clear_config_cache'])) {
+                delete_transient('mco_app_config_data');
+                update_option('mco_config_version', current_time('YmdHis'));
+                echo '<div class="notice notice-success is-dismissible"><p>Application config cache cleared.</p></div>';
+            }
+            if (isset($_POST['clear_question_caches'])) {
+                global $wpdb;
+                $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '\_transient\_mco\_sheet\_%' OR option_name LIKE '\_transient\_timeout\_mco\_sheet\_%'");
+                echo '<div class="notice notice-success is-dismissible"><p>All question sheet caches cleared.</p></div>';
+            }
         }
     }
 
@@ -108,9 +136,9 @@ function mco_render_main_settings_tab() { ?>
         <input type="hidden" name="mco_form_action" value="save_main_settings">
         <table class="form-table">
             <tr><th>App URL(s)</th><td><textarea name="mco_exam_app_url" rows="3" class="widefat"><?php echo esc_textarea(get_option('mco_exam_app_url')); ?></textarea><p class="description">Enter the full URL of your React app. Add multiple URLs on new lines for different environments.</p></td></tr>
-            <tr><th>Custom Logo URL</th><td><textarea name="mco_custom_logo_url" class="widefat" rows="5"><?php echo esc_textarea(get_option('mco_custom_logo_url')); ?></textarea></td></tr>
-            <tr><th>Intro Video URL</th><td><input type="text" name="mco_intro_video_url" value="<?php echo esc_attr(get_option('mco_intro_video_url')); ?>" class="widefat"></td></tr>
-            <tr><th>Disclaimer Text</th><td><textarea name="mco_disclaimer_text" rows="3" class="widefat"><?php echo esc_textarea(get_option('mco_disclaimer_text')); ?></textarea></td></tr>
+            <tr><th>Custom Logo URL</th><td><textarea name="mco_custom_logo_url" class="widefat" rows="5"><?php echo esc_textarea(get_option('mco_custom_logo_url')); ?></textarea><p class="description">Optional. Can be a URL or a base64 data URI. If empty, uses the Site Icon from Customizer.</p></td></tr>
+            <tr><th>Intro Video URL</th><td><input type="text" name="mco_intro_video_url" value="<?php echo esc_attr(get_option('mco_intro_video_url')); ?>" class="widefat"><p class="description">Optional. URL for the intro video on the landing page.</p></td></tr>
+            <tr><th>Disclaimer Text</th><td><textarea name="mco_disclaimer_text" rows="3" class="widefat"><?php echo esc_textarea(get_option('mco_disclaimer_text')); ?></textarea><p class="description">Optional. A short disclaimer to be displayed in the application footer.</p></td></tr>
             <tr><th>JWT Secret</th><td><code><?php echo defined('MCO_JWT_SECRET') ? 'Defined' : '<strong>Not Defined!</strong>'; ?></code></td></tr>
             <tr><th colspan="2"><h4>Feature Toggles</h4></th></tr>
             <tr><th>Enable Registration</th><td><input type="checkbox" name="mco_users_can_register" value="1" <?php checked(get_option('mco_force_enable_registration'), 1); ?>></td></tr>
