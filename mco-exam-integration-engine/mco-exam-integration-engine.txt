@@ -1,10 +1,9 @@
-
 <?php
 /**
  * Plugin Name:       MCO Exam Integration Engine
  * Plugin URI:        https://annapoornainfo.com
  * Description:       Provides the backend API, user authentication (SSO), and content management for the React-based examination app.
- * Version:           2.7.8
+ * Version:           2.8.0
  * Author:            Annapoorna Infotech
  * Author URI:        https://annapoornainfo.com
  * License:           GPL v2 or later
@@ -21,8 +20,6 @@ $plugin_data = get_file_data(MCO_PLUGIN_FILE, array('Version' => 'Version'));
 define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 
 // --- INCLUDES ---
-// FIX: Corrected the include order to resolve fatal errors from dependency issues.
-// API functions must be loaded before admin pages or shortcodes that use them.
 require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-data.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-api.php';
@@ -37,9 +34,7 @@ add_action('rest_api_init', 'mco_set_api_nocache_constants', 10, 1);
 mco_register_admin_hooks();
 mco_register_shortcode_hooks();
 
-// --- FORCE REGISTRATION OPTION FILTER ---
-// This ensures that if the admin enabled registration in MCO settings, it stays enabled
-// even if other plugins or host settings try to turn it off.
+// --- FORCE REGISTRATION OPTION ---
 add_filter('option_users_can_register', 'mco_force_registration_option');
 function mco_force_registration_option($value) {
     if (get_option('mco_force_enable_registration')) {
@@ -48,35 +43,46 @@ function mco_force_registration_option($value) {
     return $value;
 }
 
-// --- SINGLE SIGN-ON REDIRECT ---
+// --- SINGLE SIGN-ON & LOGIN REDIRECTS ---
 function mco_sso_login_redirect() {
-    // Check if we have the specific trigger from our form handler OR if we're just on the login page and already logged in
     global $post;
-    if (is_user_logged_in() && (isset($_GET['mco_sso_trigger']) || (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_login')))) {
+    
+    // Detect if we are on the exam login page (via shortcode)
+    $is_login_page = is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_login');
+    
+    // 1. HANDLE LOGGED OUT USERS (Force Redirect to WP Login)
+    if ($is_login_page && !is_user_logged_in()) {
+        // Prevent caching
+        nocache_headers();
+        // Redirect to WP Login, set return URL to this page
+        $current_url = get_permalink();
+        $login_url = wp_login_url($current_url);
+        wp_redirect($login_url);
+        exit;
+    }
+
+    // 2. HANDLE LOGGED IN USERS (SSO Redirect to App)
+    if (is_user_logged_in() && (isset($_GET['mco_sso_trigger']) || $is_login_page)) {
         
-        // If we are on the login page and logged in, let's verify the user has a full name first
         $user = wp_get_current_user();
+        
+        // If user hasn't set a full name yet, stop here.
+        // The shortcode will render the "Update Name" form.
         if (strpos($user->display_name, ' ') === false && !isset($_POST['mco_update_name_action'])) {
-            // Name not set, let the shortcode render the name update form instead of redirecting
             return;
         }
 
         $app_url = mco_get_exam_app_url();
-        if (!$app_url) {
-            // If no app URL configured, we can't redirect. 
-            return; 
-        }
+        if (!$app_url) return; // Config missing
         
         $token = mco_generate_exam_jwt(get_current_user_id());
         if (!$token) {
-            wp_die('Could not generate authentication token. Please ensure MCO_JWT_SECRET is defined in wp-config.php.');
+            wp_die('Could not generate authentication token. Ensure MCO_JWT_SECRET is defined in wp-config.php.');
         }
         
         $redirect_url = add_query_arg('token', $token, rtrim($app_url, '/') . '/auth');
         
-        // Prevent caching of this redirect to avoid infinite loops
         nocache_headers();
-        
         wp_redirect($redirect_url);
         exit;
     }

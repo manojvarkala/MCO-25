@@ -1,4 +1,3 @@
-
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -190,6 +189,7 @@ const Dashboard: FC = () => {
                 </div>
             )}
             
+            {/* Show Subscription Status if User HAS a subscription OR if subscriptions are ENABLED */}
             {user && subscriptionInfo && (
                  <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
                      <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4 flex items-center gap-2"><CreditCard className="text-[rgb(var(--color-primary-rgb))]" /> Subscription Status</h2>
@@ -222,6 +222,7 @@ const Dashboard: FC = () => {
             )}
 
 
+            {/* CONDITIONAL RENDERING: Only show subscription offers if enabled in backend */}
             {subscriptionsEnabled && !isSubscribed && !subscriptionInfo && (
                 <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
                     <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2 flex items-center gap-2"><Star className="text-yellow-400" /> Unlock Your Full Potential</h2>
@@ -293,10 +294,14 @@ const Dashboard: FC = () => {
                          const certAttempts = user && category.certExam ? results.filter(r => r.examId === category.certExam.id).length : undefined;
                          
                          let bundleTypeToShow: 'practice' | 'subscription' | null = null;
+                         
+                         // FIX: Added check for subscriptionsEnabled. 
+                         // Only show subscription bundles if subscriptions are enabled globally.
                          if (bundlesEnabled && category.certExam && examPrices) {
                              const subBundleSku = `${category.certExam.productSku}-1mo-addon`;
                              const practiceBundleSku = `${category.certExam.productSku}-1`;
-                             if (examPrices[subBundleSku]) {
+                             
+                             if (subscriptionsEnabled && examPrices[subBundleSku]) {
                                  bundleTypeToShow = 'subscription';
                              } else if (examPrices[practiceBundleSku]) {
                                  bundleTypeToShow = 'practice';

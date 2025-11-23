@@ -1,4 +1,3 @@
-
 import React, { FC, useMemo } from 'react';
 import { Check, Star, ShoppingBag, BookOpen, Award, Zap } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -55,7 +54,7 @@ const Pricing: FC = () => {
                 </p>
             </div>
 
-            {/* 1. Subscriptions Section */}
+            {/* 1. Subscriptions Section - CONDITIONAL RENDER */}
             {subscriptionsEnabled && (
                 <div className="relative">
                     <div className="text-center mb-8">
@@ -123,7 +122,7 @@ const Pricing: FC = () => {
                 </div>
             )}
 
-            {/* 2. Bundles Section */}
+            {/* 2. Bundles Section - CONDITIONAL RENDER */}
             {bundlesEnabled && bundles.length > 0 && (
                 <div className="border-t border-slate-200 pt-16">
                     <div className="text-center mb-8">

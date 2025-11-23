@@ -1,4 +1,3 @@
-
 import React, { FC, useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -137,10 +136,11 @@ const ExamProgram: FC = () => {
         const subBundleSku = `${programData.certExam.productSku}-1mo-addon`;
         const practiceBundleSku = `${programData.certExam.productSku}-1`;
 
-        if (examPrices[subBundleSku]) return 'subscription';
+        // FIX: Check if subscriptions are enabled before showing a subscription bundle
+        if (subscriptionsEnabled && examPrices[subBundleSku]) return 'subscription';
         if (examPrices[practiceBundleSku]) return 'practice';
         return null;
-    }, [programData, examPrices, bundlesEnabled]);
+    }, [programData, examPrices, bundlesEnabled, subscriptionsEnabled]);
 
     if (isInitializing || !activeOrg || !activeOrg.exams) {
         return <div className="text-center py-10"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading program details...</p></div>;
@@ -249,6 +249,7 @@ const ExamProgram: FC = () => {
                 )}
             </div>
 
+            {/* Check subscription toggle */}
             {subscriptionsEnabled && !isSubscribed && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
                     <SubscriptionOfferCard
