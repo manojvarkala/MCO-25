@@ -10,6 +10,17 @@ function mco_sanitize_data_uri_or_url($input) {
 }
 
 // --- ADMIN MENU & HOOKS ---
+add_action('admin_menu', 'mco_add_admin_menu');
+add_action('admin_enqueue_scripts', 'mco_admin_enqueue_scripts');
+
+// Register POST handlers for CSV tools
+add_action('admin_post_mco_bulk_import_csv', 'mco_handle_csv_upload');
+add_action('admin_post_mco_generate_tenant_blueprint', 'mco_handle_generate_tenant_blueprint');
+add_action('admin_post_mco_generate_full_snapshot', 'mco_handle_generate_full_snapshot');
+add_action('admin_post_mco_generate_programs_csv', 'mco_handle_generate_programs_csv');
+add_action('admin_post_mco_generate_books_csv', 'mco_handle_generate_books_csv');
+add_action('admin_post_mco_generate_products_csv', 'mco_handle_generate_products_csv');
+
 function mco_add_admin_menu() {
     add_menu_page('Exam App Engine', 'Exam App Engine', 'manage_options', 'mco-exam-engine', 'mco_exam_engine_admin_page', 'dashicons-welcome-learn-more', 25);
     add_submenu_page('mco-exam-engine', 'Exam Programs', 'Exam Programs', 'manage_options', 'edit.php?post_type=mco_exam_program');
@@ -17,23 +28,14 @@ function mco_add_admin_menu() {
     add_submenu_page('mco-exam-engine', 'Settings & Tools', 'Settings & Tools', 'manage_options', 'mco-exam-engine', 'mco_exam_engine_admin_page');
 }
 
-function mco_register_admin_hooks() {
-    add_action('admin_menu', 'mco_add_admin_menu');
-    add_action('admin_enqueue_scripts', 'mco_admin_enqueue_scripts');
-    add_action('admin_post_mco_bulk_import_csv', 'mco_handle_csv_upload');
-    add_action('admin_post_mco_generate_tenant_blueprint', 'mco_handle_generate_tenant_blueprint');
-    add_action('admin_post_mco_generate_full_snapshot', 'mco_handle_generate_full_snapshot');
-    add_action('admin_post_mco_generate_programs_csv', 'mco_handle_generate_programs_csv');
-    add_action('admin_post_mco_generate_books_csv', 'mco_handle_generate_books_csv');
-    add_action('admin_post_mco_generate_products_csv', 'mco_handle_generate_products_csv');
-}
-
 function mco_admin_enqueue_scripts($hook) {
     $screen = get_current_screen();
     if (!$screen || ($screen->post_type !== 'mco_exam_program' && $screen->base !== 'toplevel_page_mco-exam-engine' && $screen->base !== 'exam-app-engine_page_mco-exam-engine')) {
         return;
     }
-    wp_enqueue_style('mco-admin-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
+    if (defined('MCO_PLUGIN_URL')) {
+        wp_enqueue_style('mco-admin-styles', MCO_PLUGIN_URL . 'assets/mco-styles.css', [], MCO_PLUGIN_VERSION);
+    }
 }
 
 function mco_exam_engine_admin_page() {
@@ -46,7 +48,6 @@ function mco_exam_engine_admin_page() {
             update_option('mco_intro_video_url', esc_url_raw($_POST['mco_intro_video_url']));
             update_option('mco_disclaimer_text', wp_kses_post($_POST['mco_disclaimer_text']));
             
-            // Handle Registration Toggle with Force Override
             $enable_reg = isset($_POST['mco_users_can_register']) ? 1 : 0;
             update_option('users_can_register', $enable_reg);
             update_option('mco_force_enable_registration', $enable_reg);

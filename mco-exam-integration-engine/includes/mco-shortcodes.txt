@@ -307,7 +307,7 @@ function mco_exam_showcase_shortcode($atts) {
 
     return ob_get_clean();
 }
-
+// --- BOOK SHOWCASE SHORTCODE ---
 function mco_book_showcase_shortcode() {
     $config_data = mco_get_app_config_data();
     if (empty($config_data['suggestedBooks'])) return '<p>No recommended books found.</p>';

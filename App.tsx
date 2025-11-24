@@ -1,7 +1,4 @@
-
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
-// FIX: Updated react-router-dom imports for v6. `Switch` is now `Routes`, `Redirect` is `Navigate`.
-// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { Routes, Route, BrowserRouter, Navigate, useLocation } from "react-router-dom";
 import { Toaster, ToastBar, toast } from 'react-hot-toast';
 import { X, AlertTriangle } from 'lucide-react';
@@ -52,7 +49,7 @@ import DebugSidebar from './components/DebugSidebar.tsx';
 import VolunteerOnboarding from './components/VolunteerOnboarding.tsx';
 import BetaRegistration from './components/BetaRegistration.tsx';
 
-// FIX: Helper component for routes requiring authentication, updated for react-router-dom v6.
+// Helper component for routes requiring authentication
 const ProtectedRoute: FC<{ children: ReactNode; adminOnly?: boolean }> = ({ children, adminOnly = false }) => {
     const { user, isEffectivelyAdmin } = useAuth();
     const location = useLocation();
@@ -120,7 +117,6 @@ const AppContent: FC = () => {
             )}
             <div className="flex-grow w-full relative">
                 <main className={mainClasses}>
-                    {/* FIX: Replaced Switch with Routes and updated Route syntax for react-router-dom v6 */}
                     <Routes>
                         <Route path="/" element={<LandingPage />} />
                         <Route path="/auth" element={<Login />} />

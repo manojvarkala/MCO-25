@@ -1,30 +1,12 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-/*
- * =================================================================================================
- * TROUBLESHOOTING: API CONNECTION FAILED or AUTHORIZATION HEADER MISSING
- * =================================================================================================
- * If the exam application cannot connect to the API (CORS errors, fetch errors, or "Authorization
- * header missing" messages), it's almost always a server configuration issue. Many shared hosting
- * environments (like Apache/LiteSpeed) strip the necessary 'Authorization' header from requests by default.
- *
- * THE FIX:
- * Add the following code to the VERY TOP of your WordPress root .htaccess file, before the
- * # BEGIN WordPress block.
- *
- * <IfModule mod_rewrite.c>
- *   RewriteEngine On
- *   RewriteCond %{HTTP:Authorization} .
- *   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
- * </IfModule>
- * 
- * After adding this, you MUST clear all server and plugin caches (e.g., LiteSpeed Cache).
- * Caching plugins can interfere with API routes and CORS headers.
- * =================================================================================================
- */
+// --- API REGISTRATION ---
+add_action('rest_api_init', 'mco_register_rest_routes');
+add_action('rest_pre_serve_request', 'mco_add_cors_and_nocache_headers', 10, 4);
+add_action('rest_api_init', 'mco_set_api_nocache_constants', 10, 1);
 
-// --- New Universal Fetcher Function ---
+// --- FETCHERS ---
 if (!function_exists('mco_fetch_remote_csv_content')) {
     function mco_fetch_remote_csv_content($url) {
         if (function_exists('curl_init')) {
