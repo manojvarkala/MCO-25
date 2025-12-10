@@ -290,11 +290,22 @@ function mco_render_tools_tab() {
 
 function mco_handle_generate_programs_csv() {
     if (!current_user_can('manage_options')) wp_die('Permission denied');
+    check_admin_referer('mco_generate_programs_csv_nonce');
     header('Content-Type: text/csv'); header('Content-Disposition: attachment; filename="exam-programs.csv"');
     $output = fopen('php://output', 'w');
-    fputcsv($output, ['program_title','program_description','practice_exam_name_override','cert_exam_name_override','question_source_url','certification_exam_sku','is_proctored','certificate_enabled','recommended_book_id','practice_questions','practice_duration','cert_questions','cert_duration','pass_score','status']);
+    fputcsv($output, ['program_title','program_description','practice_exam_name_override','cert_exam_name_override','question_source_url','certification_exam_sku','is_proctored','certificate_enabled','recommended_book_ids','practice_questions','practice_duration','cert_questions','cert_duration','pass_score','status']);
     $posts = get_posts(['post_type'=>'mco_exam_program','posts_per_page'=>-1]);
     foreach ($posts as $p) {
+        // Convert book post IDs back to string IDs for export
+        $book_post_ids = get_post_meta($p->ID,'_mco_recommended_book_ids',true) ?: [];
+        $book_string_ids = [];
+        if (is_array($book_post_ids)) {
+            foreach($book_post_ids as $bpid) {
+                $s_id = get_post_meta($bpid, '_mco_book_id', true);
+                if($s_id) $book_string_ids[] = $s_id;
+            }
+        }
+
         fputcsv($output, [
             $p->post_title, $p->post_content,
             get_post_meta($p->ID,'_mco_practice_exam_title_override',true),
@@ -303,7 +314,7 @@ function mco_handle_generate_programs_csv() {
             get_post_meta($p->ID,'_mco_certification_exam_sku',true),
             get_post_meta($p->ID,'_mco_is_proctored',true),
             get_post_meta($p->ID,'_mco_certificate_enabled',true),
-            implode(',', get_post_meta($p->ID,'_mco_recommended_book_ids',true)?:[]),
+            implode(',', $book_string_ids),
             get_post_meta($p->ID,'_mco_practice_questions',true),
             get_post_meta($p->ID,'_mco_practice_duration',true),
             get_post_meta($p->ID,'_mco_cert_questions',true),
@@ -317,6 +328,7 @@ function mco_handle_generate_programs_csv() {
 
 function mco_handle_generate_books_csv() {
     if (!current_user_can('manage_options')) wp_die('Permission denied');
+    check_admin_referer('mco_generate_books_csv_nonce');
     header('Content-Type: text/csv'); header('Content-Disposition: attachment; filename="books.csv"');
     $output = fopen('php://output', 'w');
     fputcsv($output, ['book_id','title','description','status','thumbnail_url','link_com','link_in','link_ae']);
@@ -335,6 +347,7 @@ function mco_handle_generate_books_csv() {
 
 function mco_handle_generate_products_csv() {
     if (!current_user_can('manage_options')) wp_die('Permission denied');
+    check_admin_referer('mco_generate_products_csv_nonce');
     header('Content-Type: text/csv'); header('Content-Disposition: attachment; filename="woo-products-import.csv"');
     $output = fopen('php://output', 'w');
     fputcsv($output, ['Type','SKU','Name','Published','Virtual','Regular price','Sale price']);
@@ -348,6 +361,7 @@ function mco_handle_generate_products_csv() {
 
 function mco_handle_csv_upload() {
     if (!current_user_can('manage_options')) wp_die('Permission denied');
+    check_admin_referer('mco_bulk_import_nonce');
     if (empty($_FILES['csv_file']['tmp_name'])) wp_die('No file uploaded');
     
     $type = $_POST['import_type'];
@@ -356,24 +370,59 @@ function mco_handle_csv_upload() {
     
     while (($row = fgetcsv($handle)) !== FALSE) {
         if ($type === 'programs') {
-            // Basic implementation: Create posts from CSV
             $post_data = ['post_title'=>$row[0], 'post_content'=>$row[1], 'post_status'=>$row[14]??'publish', 'post_type'=>'mco_exam_program'];
+            // Check if exists by title to update instead of duplicate
+            $existing = get_page_by_title($row[0], OBJECT, 'mco_exam_program');
+            if ($existing) $post_data['ID'] = $existing->ID;
+
             $pid = wp_insert_post($post_data);
-            if($pid) {
+            
+            if($pid && !is_wp_error($pid)) {
                 update_post_meta($pid, '_mco_practice_exam_title_override', $row[2]);
                 update_post_meta($pid, '_mco_cert_exam_title_override', $row[3]);
                 update_post_meta($pid, '_mco_question_source_url', $row[4]);
                 update_post_meta($pid, '_mco_certification_exam_sku', $row[5]);
-                // ... add other meta fields mapping ...
+                update_post_meta($pid, '_mco_is_proctored', $row[6]);
+                update_post_meta($pid, '_mco_certificate_enabled', $row[7]);
+
+                // Handle Book ID lookup
+                $book_str_ids = explode(',', $row[8]);
+                $book_post_ids = [];
+                foreach($book_str_ids as $bsid) {
+                    $bsid = trim($bsid);
+                    if(empty($bsid)) continue;
+                    $args = [
+                        'post_type' => 'mco_recommended_book',
+                        'meta_key' => '_mco_book_id',
+                        'meta_value' => $bsid,
+                        'posts_per_page' => 1,
+                        'fields' => 'ids'
+                    ];
+                    $found = get_posts($args);
+                    if(!empty($found)) $book_post_ids[] = $found[0];
+                }
+                update_post_meta($pid, '_mco_recommended_book_ids', $book_post_ids);
+                
+                update_post_meta($pid, '_mco_practice_questions', $row[9]);
+                update_post_meta($pid, '_mco_practice_duration', $row[10]);
+                update_post_meta($pid, '_mco_cert_questions', $row[11]);
+                update_post_meta($pid, '_mco_cert_duration', $row[12]);
+                update_post_meta($pid, '_mco_pass_score', $row[13]);
             }
         } elseif ($type === 'books') {
             $post_data = ['post_title'=>$row[1], 'post_content'=>$row[2], 'post_status'=>$row[3]??'publish', 'post_type'=>'mco_recommended_book'];
+            // Check existing by Book ID meta
+            $args = ['post_type'=>'mco_recommended_book', 'meta_key'=>'_mco_book_id', 'meta_value'=>$row[0], 'posts_per_page'=>1, 'fields'=>'ids'];
+            $existing = get_posts($args);
+            if (!empty($existing)) $post_data['ID'] = $existing[0];
+
             $pid = wp_insert_post($post_data);
-            if($pid) {
+            if($pid && !is_wp_error($pid)) {
                 update_post_meta($pid, '_mco_book_id', $row[0]);
                 update_post_meta($pid, '_mco_thumbnail_url', $row[4]);
                 update_post_meta($pid, '_mco_link_com', $row[5]);
-                // ... add other meta fields ...
+                update_post_meta($pid, '_mco_link_in', $row[6]);
+                update_post_meta($pid, '_mco_link_ae', $row[7]);
             }
         }
     }
@@ -384,11 +433,13 @@ function mco_handle_csv_upload() {
 
 function mco_handle_generate_tenant_blueprint() {
     if (!current_user_can('manage_options')) wp_die('Permission denied.');
+    check_admin_referer('mco_generate_tenant_blueprint_nonce');
     $data = mco_get_full_snapshot_data(true);
     header('Content-Type: application/json'); header('Content-Disposition: attachment; filename="tenant-blueprint.json"'); echo json_encode($data, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES); exit;
 }
 function mco_handle_generate_full_snapshot() {
     if (!current_user_can('manage_options')) wp_die('Permission denied.');
+    check_admin_referer('mco_generate_full_snapshot_nonce');
     $data = mco_get_full_snapshot_data(false);
     header('Content-Type: application/json'); header('Content-Disposition: attachment; filename="content-snapshot.json"'); echo json_encode($data, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES); exit;
 }
