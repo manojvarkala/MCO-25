@@ -61,15 +61,14 @@ if (!function_exists('mco_exam_program_meta_box_callback')) {
         $sections = get_post_meta($post->ID, '_mco_exam_sections', true) ?: array();
         $template_id = get_post_meta($post->ID, '_mco_certificate_template_id', true);
         
-        // FIX: Add variables for new meta fields, with fallback to old taxonomy data
-        $practice_questions = get_post_meta($post->ID, '_mco_practice_questions', true) ?: mco_get_single_term($post->ID, 'exam_practice_questions', 'name');
-        $practice_duration = get_post_meta($post->ID, '_mco_practice_duration', true) ?: mco_get_single_term($post->ID, 'exam_practice_duration', 'name');
-        $cert_questions = get_post_meta($post->ID, '_mco_cert_questions', true) ?: mco_get_single_term($post->ID, 'exam_cert_questions', 'name');
-        $cert_duration = get_post_meta($post->ID, '_mco_cert_duration', true) ?: mco_get_single_term($post->ID, 'exam_cert_duration', 'name');
-        $pass_score = get_post_meta($post->ID, '_mco_pass_score', true) ?: mco_get_single_term($post->ID, 'exam_pass_score', 'name');
+        $practice_questions = get_post_meta($post->ID, '_mco_practice_questions', true);
+        $practice_duration = get_post_meta($post->ID, '_mco_practice_duration', true);
+        $cert_questions = get_post_meta($post->ID, '_mco_cert_questions', true);
+        $cert_duration = get_post_meta($post->ID, '_mco_cert_duration', true);
+        $pass_score = get_post_meta($post->ID, '_mco_pass_score', true);
 
         $all_books = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
-        $all_templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
+        $all_templates = get_option('mco_certificate_templates', []);
 
         ?>
         <table class="form-table">
@@ -205,7 +204,6 @@ if (!function_exists('mco_save_exam_program_meta_data')) {
             '_mco_is_proctored' => 'sanitize_text_field',
             '_mco_certificate_enabled' => 'sanitize_text_field',
             '_mco_practice_certificate_enabled' => 'sanitize_text_field',
-            // FIX: Add new meta fields for exam parameters to the save handler.
             '_mco_practice_questions' => 'sanitize_text_field',
             '_mco_practice_duration' => 'sanitize_text_field',
             '_mco_cert_questions' => 'sanitize_text_field',
@@ -218,7 +216,6 @@ if (!function_exists('mco_save_exam_program_meta_data')) {
             if (isset($_POST[$post_key])) {
                 update_post_meta($post_id, $key, call_user_func($sanitize_func, $_POST[$post_key]));
             } else {
-                // Handle checkboxes being unchecked
                 if (in_array($key, ['_mco_is_proctored', '_mco_certificate_enabled', '_mco_practice_certificate_enabled'])) {
                     update_post_meta($post_id, $key, '0');
                 }

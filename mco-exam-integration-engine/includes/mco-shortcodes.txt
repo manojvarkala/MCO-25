@@ -106,10 +106,102 @@ function mco_get_scoped_css() {
 
 // --- PROCEDURAL COVER LOGIC ---
 function mco_render_procedural_cover($book) {
-    $colors = ['#0369a1', '#059669', '#be185d', '#7e22ce', '#334155'];
-    $bg = $colors[rand(0, 4)];
-    return '<div style="width:100%;height:100%;background:'.$bg.';color:white;display:flex;align-items:center;justify-content:center;padding:10px;text-align:center;font-weight:bold;">'.esc_html($book['title']).'</div>';
+    // This is a simple fallback. The specific functions are defined below.
+    return mco_render_annapoorna_procedural_cover_php($book);
 }
+
+function mco_get_hash_of_string($str) {
+    $hash = 0;
+    $len = strlen($str);
+    for ($i = 0; $i < $len; $i++) {
+        $hash = ord($str[$i]) + (($hash << 5) - $hash);
+    }
+    return $hash;
+}
+
+function mco_render_annapoorna_procedural_cover_php($book) {
+    $title = $book['title'];
+    $hash = mco_get_hash_of_string($title);
+    $styleIndex = abs($hash) % 2;
+    $colorIndex = floor(abs($hash) / 2) % 5;
+
+    $colorsA = [
+        ['bg' => 'background-color: #4338ca;', 'pattern' => 'background-color: #3730a3;', 'text' => 'color: #ffffff;'],
+        ['bg' => 'background-color: #0f766e;', 'pattern' => 'background-color: #115e59;', 'text' => 'color: #ffffff;'],
+        ['bg' => 'background-color: #334155;', 'pattern' => 'background-color: #1e293b;', 'text' => 'color: #ffffff;'],
+        ['bg' => 'background-color: #1e40af;', 'pattern' => 'background-color: #1e3a8a;', 'text' => 'color: #ffffff;'],
+        ['bg' => 'background-color: #374151;', 'pattern' => 'background-color: #1f2937;', 'text' => 'color: #ffffff;'],
+    ];
+
+    $colorsB = [
+        ['bg' => 'background-color: #dbeafe;', 'shape' => 'background-color: #93c5fd;', 'text' => 'color: #1e3a8a;'],
+        ['bg' => 'background-color: #d1fae5;', 'shape' => 'background-color: #6ee7b7;', 'text' => 'color: #064e3b;'],
+        ['bg' => 'background-color: #ffe4e6;', 'shape' => 'background-color: #fda4af;', 'text' => 'color: #881337;'],
+        ['bg' => 'background-color: #ede9fe;', 'shape' => 'background-color: #c4b5fd;', 'text' => 'color: #4c1d95;'],
+        ['bg' => 'background-color: #f1f5f9;', 'shape' => 'background-color: #cbd5e1;', 'text' => 'color: #0f172a;'],
+    ];
+
+    if ($styleIndex === 0) {
+        $c = $colorsA[$colorIndex];
+        return '<div class="mco-proc-cover-annapoorna-a ' . '" style="' . $c['bg'] . $c['text'] . '">' .
+            '<div class="mco-proc-cover-annapoorna-a__pattern-bg" style="' . $c['pattern'] . '"></div>' .
+            '<div class="mco-proc-cover-annapoorna-a__content">' .
+            '<span class="mco-proc-cover-annapoorna-a__super-title">Study Material</span>' .
+            '<h4 class="mco-proc-cover-annapoorna-a__title">' . esc_html($title) . '</h4>' .
+            '</div></div>';
+    } else {
+        $c = $colorsB[$colorIndex];
+        return '<div class="mco-proc-cover-annapoorna-b" style="' . $c['bg'] . $c['text'] . '">' .
+            '<div class="mco-proc-cover-annapoorna-b__shape" style="' . $c['shape'] . '"></div>' .
+            '<div class="mco-proc-cover-annapoorna-b__content">' .
+            '<h4 class="mco-proc-cover-annapoorna-b__title">' . esc_html($title) . '</h4>' .
+            '<span class="mco-proc-cover-annapoorna-b__super-title">Official Guide</span>' .
+            '</div></div>';
+    }
+}
+
+function mco_render_mco_procedural_cover_php($book) {
+    $title = $book['title'];
+    $hash = mco_get_hash_of_string($title);
+    $styleIndex = abs($hash) % 2;
+    $colorIndex = floor(abs($hash) / 2) % 4;
+
+    $colorsA = [
+        ['bg' => 'mco-proc-cover-mco-a--color-0'],
+        ['bg' => 'mco-proc-cover-mco-a--color-1'],
+        ['bg' => 'mco-proc-cover-mco-a--color-2'],
+        ['bg' => 'mco-proc-cover-mco-a--color-3'],
+    ];
+    $colorsB = [
+        ['bg' => 'mco-proc-cover-mco-b--color-0'],
+        ['bg' => 'mco-proc-cover-mco-b--color-1'],
+        ['bg' => 'mco-proc-cover-mco-b--color-2'],
+        ['bg' => 'mco-proc-cover-mco-b--color-3'],
+    ];
+
+    if ($styleIndex === 0) {
+        $c = $colorsA[$colorIndex];
+        $words = explode(' ', $title);
+        $bgWord = '';
+        foreach($words as $w) { if(strlen($w) > 4) { $bgWord = strtoupper($w); break; } }
+        if(!$bgWord) $bgWord = strtoupper($words[0]);
+
+        return '<div class="mco-proc-cover-mco-a ' . $c['bg'] . '">' .
+            '<div class="mco-proc-cover-mco-a__bg-word">' . esc_html($bgWord) . '</div>' .
+            '<div class="mco-proc-cover-mco-a__content">' .
+            '<h4 class="mco-proc-cover-mco-a__title">' . esc_html($title) . '</h4>' .
+            '</div></div>';
+    } else {
+        $c = $colorsB[$colorIndex];
+        return '<div class="mco-proc-cover-mco-b ' . $c['bg'] . '">' .
+            '<div class="mco-proc-cover-mco-b__accent"></div>' .
+            '<div><span class="mco-proc-cover-mco-b__super-title">Reference Material</span>' .
+            '<h4 class="mco-proc-cover-mco-b__title">' . esc_html($title) . '</h4></div>' .
+            '<div class="mco-proc-cover-mco-b__logo-mark">MCO</div>' .
+            '</div>';
+    }
+}
+
 
 // --- NEW HELPER FOR GEO-TARGETED LINKS ---
 function mco_get_geo_primary_link_info($links) {
@@ -413,43 +505,50 @@ function mco_render_study_hall_sidebar() {
     return ob_get_clean();
 }
 
-function mco_exam_login_shortcode() {
-    // Handle Name Update Post-Login
-    if (is_user_logged_in() && isset($_POST['mco_update_name_nonce']) && wp_verify_nonce($_POST['mco_update_name_nonce'], 'mco_update_name_action')) {
-        $full_name = sanitize_text_field($_POST['full_name']);
-        if (!empty($full_name) && strpos(trim($full_name), ' ') !== false) {
-            $user_id = get_current_user_id();
-            wp_update_user(['ID' => $user_id, 'display_name' => $full_name]);
-            $name_parts = explode(' ', $full_name, 2);
-            update_user_meta($user_id, 'first_name', $name_parts[0]);
-            if (isset($name_parts[1])) {
-                update_user_meta($user_id, 'last_name', $name_parts[1]);
-            }
-            return mco_redirect_to_app_with_token();
-        } else {
-            return mco_render_name_update_form('Please enter your full first and last name.');
-        }
-    }
-
-    // If Logged In, Check Name & Redirect
-    if (is_user_logged_in()) {
-        $user = wp_get_current_user();
-        if (strpos($user->display_name, ' ') !== false) {
-            return mco_redirect_to_app_with_token();
-        } else {
-            return mco_render_name_update_form();
-        }
-    }
-
-    // Logged Out Logic: IMMEDIATELY REDIRECT TO WP LOGIN
-    // Using JS redirect for safety if headers are already sent
-    $login_url = wp_login_url(get_permalink());
-    
-    if (!headers_sent()) {
-        wp_redirect($login_url);
-        exit;
-    }
-
-    return '<script>window.location.href="' . esc_url($login_url) . '";</script><div id="mco-app-root"><div class="mco-form-container" style="text-align:center;"><p>Redirecting to login...</p><a href="' . esc_url($login_url) . '" class="mco-button">Click here if not redirected</a></div></div>';
+function mco_render_name_update_form($error_msg = '') {
+    $redirect_to = isset($_GET['redirect_to']) ? $_GET['redirect_to'] : '';
+    ob_start();
+    echo mco_get_scoped_css();
+    ?>
+    <div id="mco-app-root">
+        <div class="mco-form-container">
+            <h2>Complete Your Profile</h2>
+            <p>Please enter your full First and Last Name. This will be used for your certificates.</p>
+            <?php if ($error_msg): ?>
+                <div class="mco-error"><?php echo esc_html($error_msg); ?></div>
+            <?php endif; ?>
+            <form method="post" action="">
+                <?php wp_nonce_field('mco_update_name_action', 'mco_update_name_nonce'); ?>
+                <input type="hidden" name="redirect_to" value="<?php echo esc_attr($redirect_to); ?>">
+                <label for="full_name">Full Name</label>
+                <input type="text" name="full_name" id="full_name" required placeholder="e.g. John Doe">
+                <button type="submit" class="mco-button">Save & Continue</button>
+            </form>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
 }
+
+function mco_redirect_to_app_with_token() {
+    $token = mco_generate_exam_jwt(get_current_user_id());
+    if (!$token) {
+        return '<p>Error: Could not generate authentication token.</p>';
+    }
+    $app_url = mco_get_exam_app_url();
+    if (!$app_url) return '<p>Error: App URL not configured.</p>';
+    
+    $redirect_url = add_query_arg('token', $token, rtrim($app_url, '/') . '/auth');
+    
+    // JS redirect is safer if headers are sent, but meta refresh is a good fallback
+    return '<meta http-equiv="refresh" content="0;url=' . esc_url($redirect_url) . '">' .
+           '<script>window.location.href="' . esc_url($redirect_url) . '";</script>' .
+           '<div id="mco-app-root"><div class="mco-form-container" style="text-align:center;"><p>Redirecting to exam portal...</p><a href="' . esc_url($redirect_url) . '" class="mco-button">Click here if not redirected</a></div></div>';
+}
+
+// --- SHORTCODE REGISTRATION ---
+add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
+add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
+add_shortcode('mco_book_showcase', 'mco_book_showcase_shortcode');
+add_shortcode('mco_single_book', 'mco_single_book_shortcode');
 ?>
