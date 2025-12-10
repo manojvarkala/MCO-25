@@ -357,8 +357,33 @@ function mco_render_single_book_content($book, $content_override = '') {
     mco_load_shortcode_css();
     
     $cover = !empty($book['thumbnailUrl']) ? '<img src="'.esc_url($book['thumbnailUrl']).'" style="width:100%;height:100%;object-fit:cover;">' : mco_render_procedural_cover($book);
-    $link = mco_get_geo_primary_link_info($book['affiliateLinks']);
-    $btn = $link ? '<a href="'.$link['url'].'" class="mco-book-btn mco-book-btn--primary" target="_blank">Buy on '.$link['domainName'].'</a>' : '<span class="mco-book-btn">Links Coming Soon</span>';
+    $links = $book['affiliateLinks'];
+    $buttons_html = '';
+    
+    $stores = [
+        ['key' => 'com', 'name' => 'Amazon.com'],
+        ['key' => 'in', 'name' => 'Amazon.in'],
+        ['key' => 'ae', 'name' => 'Amazon.ae']
+    ];
+    
+    // Determine user preference for highlighting
+    // (This is a simplified version of the logic, could be expanded to use IP-based geo detection or browser locale in PHP if desired, 
+    // but for now we list all valid links and maybe highlight one if we want.)
+    // For this implementation, we will list ALL valid links as buttons.
+
+    $has_links = false;
+    foreach($stores as $store) {
+        if (!empty($links[$store['key']])) {
+            $has_links = true;
+            // Primary style for the first valid link found, or basic for others? 
+            // Let's make them all visible buttons.
+            $buttons_html .= '<a href="'.esc_url($links[$store['key']]).'" class="mco-book-btn mco-book-btn--primary" style="margin-bottom:10px;" target="_blank">Buy on '.$store['name'].'</a>';
+        }
+    }
+    
+    if (!$has_links) {
+        $buttons_html = '<span class="mco-book-btn">Links Coming Soon</span>';
+    }
 
     $description = !empty($content_override) ? $content_override : $book['description'];
 
@@ -367,7 +392,7 @@ function mco_render_single_book_content($book, $content_override = '') {
     echo '<div class="mco-single-book-card__details">';
     echo '<h1>'.esc_html($book['title']).'</h1>';
     echo '<div class="mco-single-book-card__description">'.wp_kses_post($description).'</div>';
-    echo '<div class="mco-single-book-card__buttons">'.$btn.'</div>';
+    echo '<div class="mco-single-book-card__buttons">'.$buttons_html.'</div>';
     echo '</div></div></div></div>';
     
     return ob_get_clean();
