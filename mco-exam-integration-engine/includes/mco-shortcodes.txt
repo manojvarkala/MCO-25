@@ -331,6 +331,16 @@ function mco_book_showcase_shortcode() {
             return 'com';
         }
         
+        // Simple hash function for consistent procedural covers
+        function getHash(str) {
+            var hash = 0;
+            if (!str || str.length === 0) return hash;
+            for (var i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return hash;
+        }
+
         var stores = {
             'com': 'Amazon.com',
             'in': 'Amazon.in',
@@ -363,12 +373,30 @@ function mco_book_showcase_shortcode() {
             if (hasOthers) buttonsHtml += otherHtml;
             if (!buttonsHtml) buttonsHtml = '<span class="mco-book-btn">Coming Soon</span>';
             
-            // Basic procedural cover fallback if no image (simplified for JS)
+            // Procedural cover logic
             var coverHtml = '';
             if (book.thumbnailUrl) {
                 coverHtml = '<img src="' + book.thumbnailUrl + '" style="width:100%;height:100%;object-fit:cover;">';
             } else {
-                 coverHtml = '<div style="width:100%;height:100%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;color:#64748b;font-weight:bold;text-align:center;padding:20px;">' + book.title + '</div>';
+                 var hash = getHash(book.title);
+                 var colorIndex = Math.floor(Math.abs(hash) / 2) % 5;
+                 
+                 var colorsA = [
+                    {bg:'background-color: #4338ca;', pattern:'background-color: #3730a3;', text:'color: #ffffff;'},
+                    {bg:'background-color: #0f766e;', pattern:'background-color: #115e59;', text:'color: #ffffff;'},
+                    {bg:'background-color: #334155;', pattern:'background-color: #1e293b;', text:'color: #ffffff;'},
+                    {bg:'background-color: #1e40af;', pattern:'background-color: #1e3a8a;', text:'color: #ffffff;'},
+                    {bg:'background-color: #374151;', pattern:'background-color: #1f2937;', text:'color: #ffffff;'}
+                 ];
+                 
+                 var c = colorsA[colorIndex];
+                 
+                 coverHtml = '<div class="mco-proc-cover-annapoorna-a" style="' + c.bg + c.text + '">' +
+                            '<div class="mco-proc-cover-annapoorna-a__pattern-bg" style="' + c.pattern + '"></div>' +
+                            '<div class="mco-proc-cover-annapoorna-a__content">' +
+                            '<span class="mco-proc-cover-annapoorna-a__super-title">Study Material</span>' +
+                            '<h4 class="mco-proc-cover-annapoorna-a__title">' + book.title + '</h4>' +
+                            '</div></div>';
             }
 
             var titleHtml = '<h4 class="mco-book-card__title">' + book.title + '</h4>';
