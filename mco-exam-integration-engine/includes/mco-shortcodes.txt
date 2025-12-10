@@ -27,6 +27,29 @@ if (!function_exists('mco_generate_exam_jwt')) {
     }
 }
 
+// --- CSS LOADER HELPER ---
+function mco_load_shortcode_css() {
+    // If the stylesheet is registered (via admin.php enqueue), use it.
+    // Otherwise, we output critical styles inline to prevent FOUC and layout crashes.
+    // The specific CSS rules are defined in mco-styles.css and mirrored in mco_get_scoped_css() for fallback.
+    if (wp_style_is('mco-admin-styles', 'enqueued')) {
+        return; 
+    }
+    
+    // Check if the CSS file exists and print it inline if not enqueued
+    // This ensures styles work even if the theme doesn't load plugin assets correctly
+    $css_path = MCO_PLUGIN_PATH . 'assets/mco-styles.css';
+    if (file_exists($css_path)) {
+        $css = file_get_contents($css_path);
+        // Minify simply for inline output
+        $css = preg_replace('/\s+/', ' ', $css);
+        echo '<style>' . $css . '</style>';
+    } else {
+        // Fallback if file missing
+        echo mco_get_scoped_css();
+    }
+}
+
 // --- ICON HELPER ---
 function mco_get_svg_icon($name) {
     $icons = [
@@ -48,65 +71,23 @@ function mco_get_svg_icon($name) {
     return $icons[$name] ?? '';
 }
 
-// --- SCOPED CSS GENERATOR ---
-// Using a very specific ID selector to prevent conflicts with theme styles
+// --- SCOPED CSS GENERATOR (Fallback) ---
 function mco_get_scoped_css() {
     return '<style>
+    /* Scoped to prevent global WP conflicts */
     #mco-app-root { font-family: system-ui, -apple-system, sans-serif; --mco-primary: #0891b2; --mco-primary-hover: #0e7490; --mco-text: #334155; --mco-bg: #fff; --mco-border: #e2e8f0; color: #334155; line-height: 1.5; }
     #mco-app-root *, #mco-app-root *::before, #mco-app-root *::after { box-sizing: border-box; }
-    
-    /* Form Container */
     #mco-app-root .mco-form-container { max-width: 480px; margin: 2rem auto; padding: 2.5rem; background-color: var(--mco-bg); border: 1px solid var(--mco-border); border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05); }
     #mco-app-root h2 { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin: 0 0 1rem 0; text-align: center; border: none; }
     #mco-app-root label { font-weight: 600; color: var(--mco-text); display: block; margin-bottom: 0.5rem; font-size: 1rem; }
     #mco-app-root input[type="text"], #mco-app-root input[type="password"] { width: 100%; padding: 0.75rem 1rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 1rem; background: #fff; color: #333; }
     #mco-app-root input[type="submit"], #mco-app-root button, #mco-app-root .mco-button { width: 100%; padding: 0.75rem; border: none; border-radius: 0.5rem; background-color: var(--mco-primary); color: white; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-block; text-decoration: none; text-align: center; font-size: 1rem; line-height: 1.5; }
     #mco-app-root input[type="submit"]:hover, #mco-app-root button:hover, #mco-app-root .mco-button:hover { background-color: var(--mco-primary-hover); color: white; }
-    #mco-app-root .mco-button--secondary { background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
-    #mco-app-root .mco-button--secondary:hover { background-color: #e2e8f0; color: #1e293b; }
-
-    /* Showcase Grid */
-    #mco-app-root .mco-showcase-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
-    #mco-app-root .mco-program-group { background: #fff; border: 1px solid var(--mco-border); border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    #mco-app-root .mco-program-group__title { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0 0 0.5rem 0; border: none; }
-    #mco-app-root .mco-program-group__desc { color: #64748b; margin-bottom: 1.5rem; font-size: 0.875rem; }
-    #mco-app-root .mco-program-group__cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1rem; }
-    
-    /* Cards */
-    #mco-app-root .mco-card { display: flex; flex-direction: column; color: white; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.06); }
-    #mco-app-root .mco-card__header { padding: 1rem; font-weight: 600; text-transform: uppercase; background: rgba(0,0,0,0.1); display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; letter-spacing: 0.05em; }
-    #mco-app-root .mco-card__body { padding: 1.5rem; flex: 1; }
-    #mco-app-root .mco-card__subtitle { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: white; line-height: 1.3; }
-    #mco-app-root .mco-card__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; font-size: 0.8rem; background: rgba(0,0,0,0.15); padding: 0.5rem; border-radius: 0.5rem; text-align: center; margin-top: 1rem; }
-    #mco-app-root .mco-card__footer { padding: 1rem; margin-top: auto; background: rgba(0,0,0,0.05); }
-    #mco-app-root .mco-card__action-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.75rem; background: white; color: #1e293b; font-weight: 700; border-radius: 0.5rem; text-align: center; text-decoration: none; transition: all 0.2s; border: none; font-size: 0.9rem; }
-    #mco-app-root .mco-card__action-btn:hover { background-color: #f8fafc; transform: translateY(-1px); }
-    
-    /* Gradients */
-    #mco-app-root .mco-gradient--practice-1 { background-image: linear-gradient(to top right, #3b82f6, #60a5fa); }
-    #mco-app-root .mco-gradient--cert-1 { background-image: linear-gradient(to top right, #059669, #10b981); }
-    #mco-app-root .mco-gradient--bundle-sub { background-image: linear-gradient(to top right, #0d9488, #2dd4bf); }
-    #mco-app-root .mco-gradient--bundle-practice { background-image: linear-gradient(to top right, #f97316, #fb923c); }
-    #mco-app-root .mco-gradient--sub-monthly { background-image: linear-gradient(to top right, #0891b2, #22d3ee); }
-    #mco-app-root .mco-gradient--sub-yearly { background-image: linear-gradient(to top right, #6d28d9, #8b5cf6); }
-
-    /* Book Grid */
-    #mco-app-root .mco-book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; }
-    #mco-app-root .mco-book-card { background: #fff; border: 1px solid var(--mco-border); border-radius: 0.75rem; overflow: hidden; display: flex; flex-direction: column; }
-    #mco-app-root .mco-book-cover { height: 200px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-    #mco-app-root .mco-book-card__body { padding: 1rem; flex: 1; }
-    #mco-app-root .mco-book-card__title { font-weight: 700; color: #1e293b; margin-bottom: 0.5rem; font-size: 1rem; margin-top: 0; border: none; }
-    #mco-app-root .mco-book-card__desc { font-size: 0.875rem; color: #64748b; line-height: 1.5; margin-bottom: 0; }
-    #mco-app-root .mco-book-card__footer { padding: 1rem; border-top: 1px solid var(--mco-border); }
-    #mco-app-root .mco-book-btn { display: block; width: 100%; padding: 0.6rem; text-align: center; background: #f1f5f9; color: #475569; border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem; text-decoration: none; border: 1px solid #e2e8f0; }
-    #mco-app-root .mco-book-btn--primary { background: #facc15; color: #1e293b; border-color: #facc15; }
-    #mco-app-root .mco-book-btn:hover { opacity: 0.9; }
     </style>';
 }
 
 // --- PROCEDURAL COVER LOGIC ---
 function mco_render_procedural_cover($book) {
-    // This is a simple fallback. The specific functions are defined below.
     return mco_render_annapoorna_procedural_cover_php($book);
 }
 
@@ -265,8 +246,11 @@ function mco_exam_login_shortcode() {
         exit;
     }
 
+    // Fallback if redirection fails
+    mco_load_shortcode_css();
     return '<script>window.location.href="' . esc_url($login_url) . '";</script><div id="mco-app-root"><div class="mco-form-container" style="text-align:center;"><p>Redirecting to login...</p><a href="' . esc_url($login_url) . '" class="mco-button">Click here if not redirected</a></div></div>';
 }
+
 // --- EXAM SHOWCASE SHORTCODE ---
 function mco_exam_showcase_shortcode($atts) {
     $atts = shortcode_atts(['id' => ''], $atts, 'exam_program');
@@ -287,14 +271,7 @@ function mco_exam_showcase_shortcode($atts) {
     if (!$config_data || !$app_url) return '<p>Application is not configured correctly.</p>';
 
     ob_start();
-    
-    // Ensure CSS is loaded
-    if (function_exists('mco_enqueue_shortcode_styles')) {
-         $css_path = MCO_PLUGIN_PATH . 'assets/mco-styles.css';
-         if (file_exists($css_path)) {
-             echo '<style>' . file_get_contents($css_path) . '</style>';
-         }
-    }
+    mco_load_shortcode_css();
     
     $subscriptions_enabled = get_option('mco_subscriptions_enabled', '1') === '1';
     $bundles_enabled = get_option('mco_bundles_enabled', '1') === '1';
@@ -405,13 +382,7 @@ function mco_book_showcase_shortcode() {
     if (empty($config_data['suggestedBooks'])) return '<p>No recommended books found.</p>';
 
     ob_start();
-    // Ensure CSS is loaded
-    if (function_exists('mco_enqueue_shortcode_styles')) {
-         $css_path = MCO_PLUGIN_PATH . 'assets/mco-styles.css';
-         if (file_exists($css_path)) {
-             echo '<style>' . file_get_contents($css_path) . '</style>';
-         }
-    }
+    mco_load_shortcode_css();
     
     echo '<div id="mco-app-root"><div class="mco-wrapper"><div class="mco-book-grid">';
     
@@ -439,7 +410,7 @@ function mco_single_book_shortcode() {
     if (!$book) return '';
 
     ob_start();
-    echo mco_get_scoped_css();
+    mco_load_shortcode_css();
     
     $cover = !empty($book['thumbnailUrl']) ? '<img src="'.esc_url($book['thumbnailUrl']).'" style="width:100%;height:100%;object-fit:cover;">' : mco_render_procedural_cover($book);
     $link = mco_get_geo_primary_link_info($book['affiliateLinks']);
@@ -508,7 +479,7 @@ function mco_render_study_hall_sidebar() {
 function mco_render_name_update_form($error_msg = '') {
     $redirect_to = isset($_GET['redirect_to']) ? $_GET['redirect_to'] : '';
     ob_start();
-    echo mco_get_scoped_css();
+    mco_load_shortcode_css();
     ?>
     <div id="mco-app-root">
         <div class="mco-form-container">
