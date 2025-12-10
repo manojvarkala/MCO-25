@@ -1,4 +1,3 @@
-
 <?php
 if (!defined('ABSPATH')) exit;
 
@@ -92,7 +91,6 @@ function mco_render_annapoorna_procedural_cover_php($book) {
     $styleIndex = abs($hash) % 2;
     $colorIndex = floor(abs($hash) / 2) % 5;
     
-    // Style logic simplified for brevity - assumes same structure as previous answer
     $colorsA = [
         ['bg' => 'background-color: #4338ca;', 'pattern' => 'background-color: #3730a3;', 'text' => 'color: #ffffff;'],
         ['bg' => 'background-color: #0f766e;', 'pattern' => 'background-color: #115e59;', 'text' => 'color: #ffffff;'],
@@ -111,13 +109,12 @@ function mco_render_annapoorna_procedural_cover_php($book) {
 }
 
 function mco_render_mco_procedural_cover_php($book) {
-   // (Logic same as previous, omitted for brevity)
    return mco_render_annapoorna_procedural_cover_php($book);
 }
 
-
-// --- NEW HELPER FOR GEO-TARGETED LINKS ---
+// --- GEO-CODING HELPER ---
 function mco_get_geo_primary_link_info($links) {
+    // This function is kept for legacy compatibility but is superseded by client-side JS logic
     if (empty($links) || !is_array($links)) return null;
     $links = array_filter($links);
     if (empty($links)) return null;
@@ -259,7 +256,6 @@ function mco_exam_showcase_shortcode($atts) {
                 $subscription_bundle_sku = $cert_exam['productSku'] . '-1mo-addon';
                 $practice_bundle_sku = $cert_exam['productSku'] . '-1';
                 
-                // Show bundles if they exist, defaulting to 'subscription' preference but falling back
                 $bundle_data = null;
                 $bundle_type = null;
 
@@ -306,94 +302,206 @@ function mco_book_showcase_shortcode() {
     ob_start();
     mco_load_shortcode_css();
     
-    echo '<div id="mco-app-root"><div class="mco-wrapper"><div class="mco-book-grid">';
+    // Inject JS array of books for geo-coding
+    $books_json = json_encode($config_data['suggestedBooks']);
+    $unique_id = 'mco-books-grid-' . uniqid();
     
-    foreach ($config_data['suggestedBooks'] as $book) {
-        $cover = !empty($book['thumbnailUrl']) ? '<img src="'.esc_url($book['thumbnailUrl']).'" style="width:100%;height:100%;object-fit:cover;">' : mco_render_procedural_cover($book);
-        $links = $book['affiliateLinks'];
-        $permalink = $book['permalink'] ?? '';
-        $buttons_html = '';
+    ?>
+    <div id="mco-app-root">
+        <div class="mco-wrapper">
+            <div id="<?php echo $unique_id; ?>" class="mco-book-grid">
+                <!-- Books will be injected here via JS -->
+                 <p class="mco-loading-text" style="grid-column: 1/-1; text-align: center;">Loading books...</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    (function() {
+        var books = <?php echo $books_json; ?>;
+        var container = document.getElementById('<?php echo $unique_id; ?>');
         
-        $stores = [
-            ['key' => 'com', 'name' => 'Amazon.com'],
-            ['key' => 'in', 'name' => 'Amazon.in'],
-            ['key' => 'ae', 'name' => 'Amazon.ae']
-        ];
-        
-        $has_links = false;
-        foreach($stores as $store) {
-            if (!empty($links[$store['key']])) {
-                $has_links = true;
-                $buttons_html .= '<a href="'.esc_url($links[$store['key']]).'" class="mco-book-btn" target="_blank">Buy on '.$store['name'].'</a>';
-            }
+        function getGeoStore() {
+            try {
+                var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (tz.indexOf('Asia/Kolkata') !== -1 || tz.indexOf('Asia/Calcutta') !== -1) return 'in';
+                var gcc = ['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat'];
+                if (gcc.indexOf(tz) !== -1) return 'ae';
+            } catch(e) {}
+            return 'com';
         }
         
-        if (!$has_links) {
-            $buttons_html = '<span class="mco-book-btn">Coming Soon</span>';
+        var stores = {
+            'com': 'Amazon.com',
+            'in': 'Amazon.in',
+            'ae': 'Amazon.ae'
+        };
+        
+        function renderBook(book) {
+            var preferred = getGeoStore();
+            var links = book.affiliateLinks;
+            var buttonsHtml = '';
+            
+            // 1. Primary Button
+            if (links[preferred]) {
+                buttonsHtml += '<a href="' + links[preferred] + '" class="mco-book-btn mco-book-btn--primary" target="_blank">Buy on ' + stores[preferred] + '</a>';
+            }
+            
+            // 2. Secondary Buttons
+            var others = ['com', 'in', 'ae'].filter(function(k) { return k !== preferred; });
+            var hasOthers = false;
+            var otherHtml = '<div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">';
+            
+            others.forEach(function(k) {
+                if (links[k]) {
+                    hasOthers = true;
+                    otherHtml += '<a href="' + links[k] + '" class="mco-book-btn mco-book-btn--secondary" target="_blank" style="flex:1; font-size:0.85em; padding:8px;">' + stores[k] + '</a>';
+                }
+            });
+            otherHtml += '</div>';
+            
+            if (hasOthers) buttonsHtml += otherHtml;
+            if (!buttonsHtml) buttonsHtml = '<span class="mco-book-btn">Coming Soon</span>';
+            
+            // Basic procedural cover fallback if no image (simplified for JS)
+            var coverHtml = '';
+            if (book.thumbnailUrl) {
+                coverHtml = '<img src="' + book.thumbnailUrl + '" style="width:100%;height:100%;object-fit:cover;">';
+            } else {
+                 coverHtml = '<div style="width:100%;height:100%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;color:#64748b;font-weight:bold;text-align:center;padding:20px;">' + book.title + '</div>';
+            }
+
+            var titleHtml = '<h4 class="mco-book-card__title">' + book.title + '</h4>';
+            if (book.permalink) {
+                titleHtml = '<a href="' + book.permalink + '" style="text-decoration:none;">' + titleHtml + '</a>';
+            }
+
+            // Simple text truncation for description
+            var desc = book.description.split(' ').slice(0, 20).join(' ') + '...';
+
+            return `
+            <div class="mco-book-card">
+                <div class="mco-book-cover">${coverHtml}</div>
+                <div class="mco-book-card__body">
+                    ${titleHtml}
+                    <p class="mco-book-card__desc">${desc}</p>
+                </div>
+                <div class="mco-book-card__footer">
+                    <div class="mco-store-buttons">${buttonsHtml}</div>
+                </div>
+            </div>
+            `;
+        }
+        
+        if (books && books.length > 0) {
+            container.innerHTML = books.map(renderBook).join('');
+        } else {
+            container.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">No books found.</p>';
         }
 
-        echo '<div class="mco-book-card">';
-        echo '<div class="mco-book-cover">'.$cover.'</div>';
-        echo '<div class="mco-book-card__body">';
-        
-        if ($permalink) {
-             echo '<a href="'.esc_url($permalink).'" style="text-decoration:none;"><h4 class="mco-book-card__title">'.esc_html($book['title']).'</h4></a>';
-        } else {
-             echo '<h4 class="mco-book-card__title">'.esc_html($book['title']).'</h4>';
-        }
-        
-        echo '<p class="mco-book-card__desc">'.wp_trim_words($book['description'], 15).'</p></div>';
-        echo '<div class="mco-book-card__footer"><div class="mco-store-buttons">'.$buttons_html.'</div></div>';
-        echo '</div>';
-    }
-    echo '</div></div></div>';
+    })();
+    </script>
+    <style>
+        .mco-book-btn--secondary { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        .mco-book-btn--secondary:hover { background: #e2e8f0; color: #1e293b; }
+        .mco-loading-text { color: #94a3b8; font-size: 0.9rem; font-style: italic; }
+    </style>
+    <?php
+    
     return ob_get_clean();
 }
 
-// --- SINGLE BOOK RENDERER (Shared Logic) ---
+// --- SINGLE BOOK RENDERER ---
 function mco_render_single_book_content($book, $content_override = '') {
     if (!$book) return '';
     ob_start();
     mco_load_shortcode_css();
     
     $cover = !empty($book['thumbnailUrl']) ? '<img src="'.esc_url($book['thumbnailUrl']).'" style="width:100%;height:100%;object-fit:cover;">' : mco_render_procedural_cover($book);
-    $links = $book['affiliateLinks'];
-    $buttons_html = '';
     
-    $stores = [
-        ['key' => 'com', 'name' => 'Amazon.com'],
-        ['key' => 'in', 'name' => 'Amazon.in'],
-        ['key' => 'ae', 'name' => 'Amazon.ae']
-    ];
-    
-    // Determine user preference for highlighting
-    // (This is a simplified version of the logic, could be expanded to use IP-based geo detection or browser locale in PHP if desired, 
-    // but for now we list all valid links and maybe highlight one if we want.)
-    // For this implementation, we will list ALL valid links as buttons.
-
-    $has_links = false;
-    foreach($stores as $store) {
-        if (!empty($links[$store['key']])) {
-            $has_links = true;
-            // Primary style for the first valid link found, or basic for others? 
-            // Let's make them all visible buttons.
-            $buttons_html .= '<a href="'.esc_url($links[$store['key']]).'" class="mco-book-btn mco-book-btn--primary" style="margin-bottom:10px;" target="_blank">Buy on '.$store['name'].'</a>';
-        }
-    }
-    
-    if (!$has_links) {
-        $buttons_html = '<span class="mco-book-btn">Links Coming Soon</span>';
-    }
+    // Pass link data to JS
+    $links_json = json_encode($book['affiliateLinks']);
+    $book_title = esc_html($book['title']);
+    $unique_id = 'mco-book-' . uniqid();
 
     $description = !empty($content_override) ? $content_override : $book['description'];
 
     echo '<div id="mco-app-root"><div class="mco-wrapper"><div class="mco-single-book-card">';
     echo '<div class="mco-single-book-card__cover">'.$cover.'</div>';
     echo '<div class="mco-single-book-card__details">';
-    echo '<h1>'.esc_html($book['title']).'</h1>';
+    echo '<h1>'.$book_title.'</h1>';
     echo '<div class="mco-single-book-card__description">'.wp_kses_post($description).'</div>';
-    echo '<div class="mco-single-book-card__buttons">'.$buttons_html.'</div>';
+    
+    // Container for dynamic buttons
+    echo '<div id="'.$unique_id.'" class="mco-single-book-card__buttons">
+            <span class="mco-loading-text">Loading purchasing options...</span>
+          </div>';
+    
     echo '</div></div></div></div>';
+
+    // Inline JS for Geo-Coding
+    ?>
+    <script>
+    (function() {
+        var links = <?php echo $links_json; ?>;
+        var container = document.getElementById('<?php echo $unique_id; ?>');
+        
+        function getGeoStore() {
+            try {
+                var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (tz.indexOf('Asia/Kolkata') !== -1 || tz.indexOf('Asia/Calcutta') !== -1) return 'in';
+                var gcc = ['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat'];
+                if (gcc.indexOf(tz) !== -1) return 'ae';
+            } catch(e) {}
+            return 'com';
+        }
+        
+        var stores = {
+            'com': 'Amazon.com',
+            'in': 'Amazon.in',
+            'ae': 'Amazon.ae'
+        };
+        
+        var preferred = getGeoStore();
+        var html = '';
+        
+        // 1. Primary Button (Preferred Store)
+        if (links[preferred]) {
+            html += '<a href="' + links[preferred] + '" class="mco-book-btn mco-book-btn--primary" target="_blank">Buy on ' + stores[preferred] + '</a>';
+        }
+        
+        // 2. Secondary Buttons (Other Stores)
+        var others = ['com', 'in', 'ae'].filter(function(k) { return k !== preferred; });
+        var hasOthers = false;
+        var otherHtml = '<div style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">';
+        
+        others.forEach(function(k) {
+            if (links[k]) {
+                hasOthers = true;
+                otherHtml += '<a href="' + links[k] + '" class="mco-book-btn mco-book-btn--secondary" target="_blank" style="flex:1; font-size:0.9em;">Also on ' + stores[k] + '</a>';
+            }
+        });
+        otherHtml += '</div>';
+        
+        if (hasOthers) html += otherHtml;
+        
+        if (!html) html = '<span class="mco-book-btn">Links Coming Soon</span>';
+        
+        container.innerHTML = html;
+    })();
+    </script>
+    <style>
+        .mco-book-btn--secondary {
+            background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;
+        }
+        .mco-book-btn--secondary:hover {
+            background: #e2e8f0; color: #1e293b;
+        }
+        .mco-loading-text {
+            color: #94a3b8; font-size: 0.9rem; font-style: italic;
+        }
+    </style>
+    <?php
     
     return ob_get_clean();
 }
