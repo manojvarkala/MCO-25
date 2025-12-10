@@ -1,3 +1,4 @@
+
 <?php
 if (!defined('ABSPATH')) exit;
 
@@ -349,30 +350,65 @@ function mco_book_showcase_shortcode() {
     return ob_get_clean();
 }
 
-function mco_single_book_shortcode() {
-    global $post;
-    $config_data = mco_get_app_config_data();
-    $book_id_meta = get_post_meta($post->ID, '_mco_book_id', true);
-    $book = current(array_filter($config_data['suggestedBooks'], function($b) use ($book_id_meta) { return $b['id'] === $book_id_meta; }));
-
+// --- SINGLE BOOK RENDERER (Shared Logic) ---
+function mco_render_single_book_content($book, $content_override = '') {
     if (!$book) return '';
-
     ob_start();
     mco_load_shortcode_css();
     
     $cover = !empty($book['thumbnailUrl']) ? '<img src="'.esc_url($book['thumbnailUrl']).'" style="width:100%;height:100%;object-fit:cover;">' : mco_render_procedural_cover($book);
     $link = mco_get_geo_primary_link_info($book['affiliateLinks']);
-    $btn = $link ? '<a href="'.$link['url'].'" class="mco-book-btn mco-book-btn--primary" target="_blank">Buy on '.$link['domainName'].'</a>' : '';
+    $btn = $link ? '<a href="'.$link['url'].'" class="mco-book-btn mco-book-btn--primary" target="_blank">Buy on '.$link['domainName'].'</a>' : '<span class="mco-book-btn">Links Coming Soon</span>';
+
+    $description = !empty($content_override) ? $content_override : $book['description'];
 
     echo '<div id="mco-app-root"><div class="mco-wrapper"><div class="mco-single-book-card">';
     echo '<div class="mco-single-book-card__cover">'.$cover.'</div>';
     echo '<div class="mco-single-book-card__details">';
     echo '<h1>'.esc_html($book['title']).'</h1>';
-    echo '<div class="mco-single-book-card__description">'.wp_kses_post(get_post($post->ID)->post_content).'</div>';
+    echo '<div class="mco-single-book-card__description">'.wp_kses_post($description).'</div>';
     echo '<div class="mco-single-book-card__buttons">'.$btn.'</div>';
     echo '</div></div></div></div>';
     
     return ob_get_clean();
+}
+
+function mco_single_book_shortcode() {
+    global $post;
+    $config_data = mco_get_app_config_data();
+    $book_id_meta = get_post_meta($post->ID, '_mco_book_id', true);
+    
+    // Try to find in cache first
+    $book = current(array_filter($config_data['suggestedBooks'], function($b) use ($book_id_meta) { return $b['id'] === $book_id_meta; }));
+
+    // Fallback: Construct from meta if cache is stale/missing
+    if (!$book) {
+        $book = [
+            'id' => $book_id_meta,
+            'title' => get_the_title($post),
+            'description' => $post->post_content,
+            'thumbnailUrl' => get_post_meta($post->ID, '_mco_thumbnail_url', true),
+            'affiliateLinks' => [
+                'com' => get_post_meta($post->ID, '_mco_link_com', true),
+                'in' => get_post_meta($post->ID, '_mco_link_in', true),
+                'ae' => get_post_meta($post->ID, '_mco_link_ae', true),
+            ]
+        ];
+    }
+    
+    return mco_render_single_book_content($book, $post->post_content);
+}
+
+// --- AUTO INJECT TEMPLATE FOR SINGLE BOOK PAGES ---
+add_filter('the_content', 'mco_auto_inject_book_template');
+
+function mco_auto_inject_book_template($content) {
+    // Only affect the 'mco_recommended_book' post type on its own single page
+    if (is_singular('mco_recommended_book') && in_the_loop() && is_main_query()) {
+        // Use the existing shortcode logic to render the stylized card
+        return mco_single_book_shortcode();
+    }
+    return $content;
 }
 
 function mco_render_study_hall_sidebar() {
