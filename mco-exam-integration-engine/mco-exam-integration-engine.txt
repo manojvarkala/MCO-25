@@ -3,7 +3,7 @@
  * Plugin Name:       MCO Exam Integration Engine
  * Plugin URI:        https://annapoornainfo.com
  * Description:       Provides the backend API, user authentication (SSO), and content management for the React-based examination app.
- * Version:           2.8.3
+ * Version:           2.8.5
  * Author:            Annapoorna Infotech
  * Author URI:        https://annapoornainfo.com
  * License:           GPL v2 or later
@@ -20,6 +20,7 @@ $plugin_data = get_file_data(MCO_PLUGIN_FILE, array('Version' => 'Version'));
 define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 
 // --- INCLUDES ---
+// Order matters: CPTs first so they are registered before shortcodes/api might need them
 require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-data.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-api.php';
@@ -61,7 +62,7 @@ function mco_sso_login_redirect() {
             return;
         }
 
-        $app_url = mco_get_exam_app_url(); // Defined in mco-api.php
+        $app_url = mco_get_exam_app_url(); // Defined in mco-shortcodes.php compat layer or mco-api.php
         if (!$app_url) return; // Config missing
         
         $token = mco_generate_exam_jwt(get_current_user_id()); // Defined in mco-api.php
@@ -83,6 +84,7 @@ register_activation_hook(__FILE__, 'mco_plugin_activate');
 register_deactivation_hook(__FILE__, 'mco_plugin_deactivate');
 
 function mco_plugin_activate() {
+    // Explicitly call registration on activation to ensure rewrite rules can be flushed correctly immediately
     mco_register_custom_post_types();
     flush_rewrite_rules();
 }
