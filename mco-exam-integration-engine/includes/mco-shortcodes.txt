@@ -91,21 +91,44 @@ function mco_render_annapoorna_procedural_cover_php($book) {
     $styleIndex = abs($hash) % 2;
     $colorIndex = floor(abs($hash) / 2) % 5;
     
-    $colorsA = [
-        ['bg' => 'background-color: #4338ca;', 'pattern' => 'background-color: #3730a3;', 'text' => 'color: #ffffff;'],
-        ['bg' => 'background-color: #0f766e;', 'pattern' => 'background-color: #115e59;', 'text' => 'color: #ffffff;'],
-        ['bg' => 'background-color: #334155;', 'pattern' => 'background-color: #1e293b;', 'text' => 'color: #ffffff;'],
-        ['bg' => 'background-color: #1e40af;', 'pattern' => 'background-color: #1e3a8a;', 'text' => 'color: #ffffff;'],
-        ['bg' => 'background-color: #374151;', 'pattern' => 'background-color: #1f2937;', 'text' => 'color: #ffffff;'],
-    ];
-    $c = $colorsA[$colorIndex];
-    
-    return '<div class="mco-proc-cover-annapoorna-a ' . '" style="' . $c['bg'] . $c['text'] . '">' .
-            '<div class="mco-proc-cover-annapoorna-a__pattern-bg" style="' . $c['pattern'] . '"></div>' .
-            '<div class="mco-proc-cover-annapoorna-a__content">' .
-            '<span class="mco-proc-cover-annapoorna-a__super-title">Study Material</span>' .
-            '<h4 class="mco-proc-cover-annapoorna-a__title">' . esc_html($title) . '</h4>' .
-            '</div></div>';
+    // SVG Pattern for Style A (circles)
+    $svgPattern = '<svg width="100%" height="100%" style="position:absolute;inset:0;opacity:0.1;"><defs><pattern id="p-' . $hash . '" patternUnits="userSpaceOnUse" width="20" height="20"><circle cx="10" cy="10" r="1" fill="white"/></pattern></defs><rect width="100%" height="100%" fill="url(#p-' . $hash . ')"/></svg>';
+
+    if ($styleIndex === 0) {
+        // Style A: Centered with pattern
+        $colorsA = [
+            ['bg' => 'background-color: #4338ca;', 'pattern' => 'background-color: #3730a3;', 'text' => 'color: #ffffff;'],
+            ['bg' => 'background-color: #0f766e;', 'pattern' => 'background-color: #115e59;', 'text' => 'color: #ffffff;'],
+            ['bg' => 'background-color: #334155;', 'pattern' => 'background-color: #1e293b;', 'text' => 'color: #ffffff;'],
+            ['bg' => 'background-color: #1e40af;', 'pattern' => 'background-color: #1e3a8a;', 'text' => 'color: #ffffff;'],
+            ['bg' => 'background-color: #374151;', 'pattern' => 'background-color: #1f2937;', 'text' => 'color: #ffffff;'],
+        ];
+        $c = $colorsA[$colorIndex];
+        
+        return '<div class="mco-proc-cover-annapoorna-a ' . '" style="' . $c['bg'] . $c['text'] . '">' .
+                '<div class="mco-proc-cover-annapoorna-a__pattern-bg" style="' . $c['pattern'] . '">' . $svgPattern . '</div>' .
+                '<div class="mco-proc-cover-annapoorna-a__content">' .
+                '<span class="mco-proc-cover-annapoorna-a__super-title">Study Material</span>' .
+                '<h4 class="mco-proc-cover-annapoorna-a__title">' . esc_html($title) . '</h4>' .
+                '</div></div>';
+    } else {
+        // Style B: Circle shape, bottom-left
+        $colorsB = [
+            ['bg' => 'background-color: #dbeafe;', 'shape' => 'background-color: #93c5fd;', 'text' => 'color: #1e3a8a;'], // blue
+            ['bg' => 'background-color: #d1fae5;', 'shape' => 'background-color: #6ee7b7;', 'text' => 'color: #064e3b;'], // emerald
+            ['bg' => 'background-color: #ffe4e6;', 'shape' => 'background-color: #fda4af;', 'text' => 'color: #881337;'], // rose
+            ['bg' => 'background-color: #ede9fe;', 'shape' => 'background-color: #c4b5fd;', 'text' => 'color: #4c1d95;'], // violet
+            ['bg' => 'background-color: #f1f5f9;', 'shape' => 'background-color: #cbd5e1;', 'text' => 'color: #0f172a;'], // slate
+        ];
+        $c = $colorsB[$colorIndex];
+
+        return '<div class="mco-proc-cover-annapoorna-b" style="' . $c['bg'] . $c['text'] . '">' .
+                '<div class="mco-proc-cover-annapoorna-b__shape" style="' . $c['shape'] . '"></div>' .
+                '<div class="mco-proc-cover-annapoorna-b__content">' .
+                '<h4 class="mco-proc-cover-annapoorna-b__title">' . esc_html($title) . '</h4>' .
+                '<span class="mco-proc-cover-annapoorna-b__super-title">Official Guide</span>' .
+                '</div></div>';
+    }
 }
 
 function mco_render_mco_procedural_cover_php($book) {
@@ -379,24 +402,44 @@ function mco_book_showcase_shortcode() {
                 coverHtml = '<img src="' + book.thumbnailUrl + '" style="width:100%;height:100%;object-fit:cover;">';
             } else {
                  var hash = getHash(book.title);
+                 var styleIndex = Math.abs(hash) % 2;
                  var colorIndex = Math.floor(Math.abs(hash) / 2) % 5;
                  
-                 var colorsA = [
-                    {bg:'background-color: #4338ca;', pattern:'background-color: #3730a3;', text:'color: #ffffff;'},
-                    {bg:'background-color: #0f766e;', pattern:'background-color: #115e59;', text:'color: #ffffff;'},
-                    {bg:'background-color: #334155;', pattern:'background-color: #1e293b;', text:'color: #ffffff;'},
-                    {bg:'background-color: #1e40af;', pattern:'background-color: #1e3a8a;', text:'color: #ffffff;'},
-                    {bg:'background-color: #374151;', pattern:'background-color: #1f2937;', text:'color: #ffffff;'}
-                 ];
-                 
-                 var c = colorsA[colorIndex];
-                 
-                 coverHtml = '<div class="mco-proc-cover-annapoorna-a" style="' + c.bg + c.text + '">' +
-                            '<div class="mco-proc-cover-annapoorna-a__pattern-bg" style="' + c.pattern + '"></div>' +
-                            '<div class="mco-proc-cover-annapoorna-a__content">' +
-                            '<span class="mco-proc-cover-annapoorna-a__super-title">Study Material</span>' +
-                            '<h4 class="mco-proc-cover-annapoorna-a__title">' + book.title + '</h4>' +
-                            '</div></div>';
+                 if (styleIndex === 0) {
+                     var colorsA = [
+                        {bg:'background-color: #4338ca;', pattern:'background-color: #3730a3;', text:'color: #ffffff;'},
+                        {bg:'background-color: #0f766e;', pattern:'background-color: #115e59;', text:'color: #ffffff;'},
+                        {bg:'background-color: #334155;', pattern:'background-color: #1e293b;', text:'color: #ffffff;'},
+                        {bg:'background-color: #1e40af;', pattern:'background-color: #1e3a8a;', text:'color: #ffffff;'},
+                        {bg:'background-color: #374151;', pattern:'background-color: #1f2937;', text:'color: #ffffff;'}
+                     ];
+                     var c = colorsA[colorIndex];
+                     // SVG Pattern for Style A
+                     var svg = '<svg width="100%" height="100%" style="position:absolute;inset:0;opacity:0.1;"><defs><pattern id="p-' + hash + '" patternUnits="userSpaceOnUse" width="20" height="20"><circle cx="10" cy="10" r="1" fill="white"/></pattern></defs><rect width="100%" height="100%" fill="url(#p-' + hash + ')"/></svg>';
+                     
+                     coverHtml = '<div class="mco-proc-cover-annapoorna-a" style="' + c.bg + c.text + '">' +
+                                '<div class="mco-proc-cover-annapoorna-a__pattern-bg" style="' + c.pattern + '">' + svg + '</div>' +
+                                '<div class="mco-proc-cover-annapoorna-a__content">' +
+                                '<span class="mco-proc-cover-annapoorna-a__super-title">Study Material</span>' +
+                                '<h4 class="mco-proc-cover-annapoorna-a__title">' + book.title + '</h4>' +
+                                '</div></div>';
+                 } else {
+                     var colorsB = [
+                        {bg:'background-color: #dbeafe;', shape:'background-color: #93c5fd;', text:'color: #1e3a8a;'},
+                        {bg:'background-color: #d1fae5;', shape:'background-color: #6ee7b7;', text:'color: #064e3b;'},
+                        {bg:'background-color: #ffe4e6;', shape:'background-color: #fda4af;', text:'color: #881337;'},
+                        {bg:'background-color: #ede9fe;', shape:'background-color: #c4b5fd;', text:'color: #4c1d95;'},
+                        {bg:'background-color: #f1f5f9;', shape:'background-color: #cbd5e1;', text:'color: #0f172a;'}
+                     ];
+                     var c = colorsB[colorIndex];
+                     
+                     coverHtml = '<div class="mco-proc-cover-annapoorna-b" style="' + c.bg + c.text + '">' +
+                                '<div class="mco-proc-cover-annapoorna-b__shape" style="' + c.shape + '"></div>' +
+                                '<div class="mco-proc-cover-annapoorna-b__content">' +
+                                '<h4 class="mco-proc-cover-annapoorna-b__title">' + book.title + '</h4>' +
+                                '<span class="mco-proc-cover-annapoorna-b__super-title">Official Guide</span>' +
+                                '</div></div>';
+                 }
             }
 
             var titleHtml = '<h4 class="mco-book-card__title">' + book.title + '</h4>';
