@@ -75,7 +75,14 @@ const SuggestedBooksSidebar: FC = () => {
                         <div key={book.id} className="bg-white rounded-lg shadow-md overflow-hidden border border-slate-200 transform hover:-translate-y-1 transition-transform duration-200">
                             <BookCover book={book} className="w-full h-32" />
                             <div className="p-4">
-                                <h4 className="font-bold text-slate-800 text-sm mb-3 leading-tight">{book.title}</h4>
+                                {book.permalink ? (
+                                    <a href={book.permalink} target="_blank" rel="noopener noreferrer" className="group">
+                                        <h4 className="font-bold text-slate-800 text-sm mb-3 leading-tight group-hover:text-cyan-600 transition-colors">{book.title}</h4>
+                                    </a>
+                                ) : (
+                                    <h4 className="font-bold text-slate-800 text-sm mb-3 leading-tight">{book.title}</h4>
+                                )}
+                                
                                 <a 
                                     href={url} 
                                     target="_blank" 

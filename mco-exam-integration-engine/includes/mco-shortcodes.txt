@@ -310,6 +310,7 @@ function mco_book_showcase_shortcode() {
     foreach ($config_data['suggestedBooks'] as $book) {
         $cover = !empty($book['thumbnailUrl']) ? '<img src="'.esc_url($book['thumbnailUrl']).'" style="width:100%;height:100%;object-fit:cover;">' : mco_render_procedural_cover($book);
         $links = $book['affiliateLinks'];
+        $permalink = $book['permalink'] ?? '';
         $buttons_html = '';
         
         $stores = [
@@ -332,7 +333,15 @@ function mco_book_showcase_shortcode() {
 
         echo '<div class="mco-book-card">';
         echo '<div class="mco-book-cover">'.$cover.'</div>';
-        echo '<div class="mco-book-card__body"><h4 class="mco-book-card__title">'.esc_html($book['title']).'</h4><p class="mco-book-card__desc">'.wp_trim_words($book['description'], 15).'</p></div>';
+        echo '<div class="mco-book-card__body">';
+        
+        if ($permalink) {
+             echo '<a href="'.esc_url($permalink).'" style="text-decoration:none;"><h4 class="mco-book-card__title">'.esc_html($book['title']).'</h4></a>';
+        } else {
+             echo '<h4 class="mco-book-card__title">'.esc_html($book['title']).'</h4>';
+        }
+        
+        echo '<p class="mco-book-card__desc">'.wp_trim_words($book['description'], 15).'</p></div>';
         echo '<div class="mco-book-card__footer"><div class="mco-store-buttons">'.$buttons_html.'</div></div>';
         echo '</div>';
     }
@@ -395,11 +404,17 @@ function mco_render_study_hall_sidebar() {
                         ? mco_render_mco_procedural_cover_php($book) 
                         : mco_render_annapoorna_procedural_cover_php($book);
                 }
+                
+                $permalink = isset($book['permalink']) ? $book['permalink'] : '';
             ?>
             <div class="mco-book-card-sidebar">
                 <div class="mco-book-card-sidebar__cover"><?php echo $book_cover; ?></div>
                 <div class="mco-book-card-sidebar__content">
-                    <h4 class="mco-book-card-sidebar__title"><?php echo esc_html($book['title']); ?></h4>
+                    <?php if ($permalink): ?>
+                        <a href="<?php echo esc_url($permalink); ?>" style="text-decoration:none;"><h4 class="mco-book-card-sidebar__title"><?php echo esc_html($book['title']); ?></h4></a>
+                    <?php else: ?>
+                        <h4 class="mco-book-card-sidebar__title"><?php echo esc_html($book['title']); ?></h4>
+                    <?php endif; ?>
                     <a href="<?php echo esc_url($link_data['url']); ?>" target="_blank" rel="noopener noreferrer" class="mco-book-card-sidebar__button">
                         Buy on <?php echo esc_html($link_data['domainName']); ?>
                     </a>
