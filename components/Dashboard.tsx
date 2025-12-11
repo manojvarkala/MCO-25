@@ -259,6 +259,64 @@ const Dashboard: FC = () => {
                 </div>
             )}
 
+            {/* Exam Programs Grid */}
+            <div>
+                <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4 flex items-center gap-2">
+                    <FileText className="text-[rgb(var(--color-primary-rgb))]" /> Exam Programs
+                </h2>
+                {examCategories.length > 0 ? (
+                    <div className="space-y-8">
+                        {examCategories.map((category) => (
+                            <div key={category.id} className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))]">{category.name}</h3>
+                                        <p className="text-sm text-[rgb(var(--color-text-muted-rgb))] mt-1 line-clamp-2">{stripHtml(category.description)}</p>
+                                    </div>
+                                    <Link 
+                                        to={`/program/${category.id}`} 
+                                        className="text-sm font-semibold text-[rgb(var(--color-primary-rgb))] hover:underline flex-shrink-0"
+                                    >
+                                        View Program Details →
+                                    </Link>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {category.practiceExam && (
+                                        <ExamCard
+                                            exam={category.practiceExam}
+                                            programId={category.id}
+                                            isPractice={true}
+                                            isPurchased={false}
+                                            activeOrg={activeOrg}
+                                            examPrices={examPrices}
+                                            hideDetailsLink={true}
+                                        />
+                                    )}
+                                    {category.certExam && (
+                                        <ExamCard
+                                            exam={category.certExam}
+                                            programId={category.id}
+                                            isPractice={false}
+                                            isPurchased={paidExamIds.includes(category.certExam.productSku)}
+                                            activeOrg={activeOrg}
+                                            examPrices={examPrices}
+                                            hideDetailsLink={true}
+                                            attemptsMade={user ? results.filter(r => r.examId === category.certExam!.id).length : 0}
+                                            isDisabled={isBetaTester && feedbackRequiredForExam !== null && feedbackRequiredForExam.examId !== category.certExam.id}
+                                        />
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-8 bg-[rgb(var(--color-card-rgb))] rounded-xl border border-[rgb(var(--color-border-rgb))]">
+                        <p className="text-[rgb(var(--color-text-muted-rgb))]">No exam programs are currently available.</p>
+                    </div>
+                )}
+            </div>
+
             {featuredBundles.length > 0 && (
                 <div>
                     <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2">Well Curated Exam Bundles</h2>
