@@ -22,6 +22,9 @@ const ExamBundleCard: FC<ExamBundleCardProps> = ({ certExam, activeOrg, examPric
             return null;
         }
 
+        // Logic to construct SKU based on bundle type.
+        // Practice Bundle: SKU + '-1'
+        // Sub Addon Bundle: SKU + '-1mo-addon'
         const isPracticeBundle = type === 'practice';
         const specificBundleSku = isPracticeBundle
             ? `${certExam.productSku}-1`
