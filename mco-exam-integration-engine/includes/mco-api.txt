@@ -283,17 +283,22 @@ function mco_api_get_full_config(WP_REST_Request $request) {
 }
 
 function mco_api_record_hit(WP_REST_Request $request) {
+    nocache_headers(); // Critical: Ensure this endpoint is never cached by browser or server
+    
     $current_count = (int) get_option('mco_site_hits', 0);
     
     // Social Proof Inflation: 
     // If the count is brand new or low (e.g. < 2500), seed it with a higher "mature" number.
     // This gives the appearance of an established site for new tenants.
     if ($current_count < 2500) {
-        $current_count = 24350 + rand(1, 450);
+        $current_count = 14350 + rand(10, 450);
+        // Force update immediately so the jump persists
+        update_option('mco_site_hits', $current_count);
     }
 
     $new_count = $current_count + 1;
     update_option('mco_site_hits', $new_count);
+    
     return new WP_REST_Response(['count' => $new_count], 200);
 }
 

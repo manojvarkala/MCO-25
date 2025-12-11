@@ -255,12 +255,21 @@ export const googleSheetsService = {
                 // Merge local and remote results, giving precedence to remote data.
                 const mergedResultsMap = new Map<string, TestResult>();
                 
-                // Safe iteration
+                // Safe iteration using for...of loops to prevent potential "forEach" errors on non-array-like objects
                 if (Array.isArray(localResults)) {
-                    localResults.forEach(r => { if(r && r.testId) mergedResultsMap.set(r.testId, r) });
+                     for (const r of localResults) {
+                        if (r && r.testId) {
+                            mergedResultsMap.set(r.testId, r);
+                        }
+                    }
                 }
+                
                 if (Array.isArray(remoteResults)) {
-                    remoteResults.forEach(r => { if(r && r.testId) mergedResultsMap.set(r.testId, r) });
+                    for (const r of remoteResults) {
+                        if (r && r.testId) {
+                             mergedResultsMap.set(r.testId, r);
+                        }
+                    }
                 }
 
                 const mergedResults = Array.from(mergedResultsMap.values());
@@ -314,11 +323,15 @@ export const googleSheetsService = {
         }, new Map<number, number>());
 
         let correctCount = 0;
-        userAnswers.forEach(ua => {
-            if (correctAnswers.get(ua.questionId) === ua.answer) {
-                correctCount++;
-            }
-        });
+        
+        // Safer iteration
+        if(Array.isArray(userAnswers)) {
+             for(const ua of userAnswers) {
+                if (correctAnswers.get(ua.questionId) === ua.answer) {
+                    correctCount++;
+                }
+             }
+        }
 
         const score = (correctCount / questions.length) * 100;
         const testId = `test_${user.id}_${examId}_${Date.now()}`;
