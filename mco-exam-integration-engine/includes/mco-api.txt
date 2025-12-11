@@ -347,8 +347,11 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
         if (is_wp_error($response) || $response['response']['code'] !== 200) {
              return new WP_Error('sheet_error', 'Could not fetch Google Sheet. Check URL permissions.', ['status' => 500]);
         }
-
-        $csv_data = str_getcsv($response['body'], "\n");
+        
+        // Use preg_split to robustly handle different line endings (\n, \r, \r\n)
+        $lines = preg_split('/\r\n|\r|\n/', $response['body']);
+        // Filter empty lines to avoid parsing errors
+        $csv_data = array_filter($lines);
         $header = str_getcsv(array_shift($csv_data)); // Remove header row
         
         $questions = [];
@@ -356,14 +359,26 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
         
         foreach ($csv_data as $row_str) {
             $row = str_getcsv($row_str);
+            if (empty($row) || !isset($row[0])) continue;
             
-            // Support for legacy 3-column format: Question, Options (pipe separated), Correct Index
-            if (count($row) === 3) {
-                 $options = explode('|', $row[1]);
-                 if (count($options) < 2) {
-                     // Try comma separated if pipe fails (fallback for simple CSVs)
-                     $options = str_getcsv($row[1]); 
+            // Support for legacy 3-column format: Question, Options, Correct Index
+            // This format expects options to be in index 1.
+            // They might be pipe separated "Opt1|Opt2" OR comma separated within quotes.
+            if (count($row) >= 3 && count($row) < 6) {
+                 $options_raw = $row[1];
+                 $options = [];
+                 
+                 if (strpos($options_raw, '|') !== false) {
+                     // Pipe separated
+                     $options = explode('|', $options_raw);
+                 } else {
+                     // Comma separated string "Opt1, Opt2, Opt3" or just a single string if no delimiters found
+                     // Using str_getcsv on the field itself to handle quoted commas correctly
+                     $options = str_getcsv($options_raw);
                  }
+                 
+                 // If splitting resulted in less than 2 options, treat as single string or error? 
+                 // For now, array_map trim ensures clean data.
                  
                  $questions[] = [
                     'id' => $id_counter++,

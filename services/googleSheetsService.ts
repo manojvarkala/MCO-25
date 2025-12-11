@@ -235,9 +235,12 @@ export const googleSheetsService = {
             let localResults: TestResult[] = [];
             try {
                 const stored = localStorage.getItem(localResultsKey);
-                if (stored) localResults = JSON.parse(stored);
-                // Validate localResults is an array
-                if (!Array.isArray(localResults)) localResults = [];
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    if (Array.isArray(parsed)) {
+                        localResults = parsed;
+                    }
+                }
             } catch (e) {
                 console.error("Could not parse local results, starting fresh.", e);
                 localResults = [];
@@ -251,8 +254,14 @@ export const googleSheetsService = {
 
                 // Merge local and remote results, giving precedence to remote data.
                 const mergedResultsMap = new Map<string, TestResult>();
-                localResults.forEach(r => mergedResultsMap.set(r.testId, r));
-                remoteResults.forEach(r => mergedResultsMap.set(r.testId, r));
+                
+                // Safe iteration
+                if (Array.isArray(localResults)) {
+                    localResults.forEach(r => { if(r && r.testId) mergedResultsMap.set(r.testId, r) });
+                }
+                if (Array.isArray(remoteResults)) {
+                    remoteResults.forEach(r => { if(r && r.testId) mergedResultsMap.set(r.testId, r) });
+                }
 
                 const mergedResults = Array.from(mergedResultsMap.values());
                 
