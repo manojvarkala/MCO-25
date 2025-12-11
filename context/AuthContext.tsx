@@ -56,7 +56,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       try {
         const storedIds = localStorage.getItem('paidExamIds');
         const parsed = storedIds ? JSON.parse(storedIds) : [];
-        return Array.isArray(parsed) ? parsed : [];
+        return Array.isArray(parsed) ? parsed : (parsed ? Object.values(parsed) : []);
       } catch (error) {
           console.error("Failed to parse paidExamIds from localStorage", error);
           return [];
@@ -127,20 +127,19 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const storedToken = localStorage.getItem('authToken');
         if (storedToken) {
             try {
-                const payloadBase64Url = storedToken.split('.')[1];
-                if (!payloadBase64Url) {
-                    logout();
-                    return;
-                }
-                const payloadBase64 = payloadBase64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const decodedPayload = decodeURIComponent(atob(payloadBase64).split('').map(function(c) {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
-                const payload = JSON.parse(decodedPayload);
-                
-                if (payload.exp && payload.exp * 1000 < Date.now()) {
-                    toast.error("Your session has expired. Please log in again.");
-                    logout();
+                const parts = storedToken.split('.');
+                if (parts.length === 3) {
+                     const payloadBase64Url = parts[1];
+                     const payloadBase64 = payloadBase64Url.replace(/-/g, '+').replace(/_/g, '/');
+                     const decodedPayload = decodeURIComponent(atob(payloadBase64).split('').map(function(c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                     }).join(''));
+                     const payload = JSON.parse(decodedPayload);
+                     
+                     if (payload.exp && payload.exp * 1000 < Date.now()) {
+                         console.warn("Token expired via interval check.");
+                         logout();
+                     }
                 }
             } catch (e) {
                 console.error("Failed to parse token for expiration check, logging out.", e);
@@ -245,7 +244,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     } catch(e) {
         console.error("Failed to decode or parse token:", e);
-        logout();
+        // Do not force logout on sync failures, just report error.
         throw new Error("Invalid authentication token.");
     }
   }, [logout]);

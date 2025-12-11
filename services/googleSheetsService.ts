@@ -239,6 +239,9 @@ export const googleSheetsService = {
                     const parsed = JSON.parse(stored);
                     if (Array.isArray(parsed)) {
                         localResults = parsed;
+                    } else if (typeof parsed === 'object' && parsed !== null) {
+                        // Handle potential object conversion from old stored data
+                         localResults = Object.values(parsed);
                     }
                 }
             } catch (e) {
@@ -250,12 +253,17 @@ export const googleSheetsService = {
                 // Fetch remote results from the WordPress backend.
                 // REVERT: Changed method back to GET as requested by the user.
                 const remoteResultsData = await apiFetch('/user-results', 'GET', token);
-                const remoteResults: TestResult[] = Array.isArray(remoteResultsData) ? remoteResultsData : [];
+                
+                // CRITICAL FIX: Ensure remoteResults is always an array.
+                // If PHP sends an associative array (Object), convert its values to an Array.
+                const remoteResults: TestResult[] = Array.isArray(remoteResultsData) 
+                    ? remoteResultsData 
+                    : (remoteResultsData ? Object.values(remoteResultsData) : []);
 
                 // Merge local and remote results, giving precedence to remote data.
                 const mergedResultsMap = new Map<string, TestResult>();
                 
-                // Safe iteration using for...of loops to prevent potential "forEach" errors on non-array-like objects
+                // Safe iteration using for...of loops to prevent potential "forEach" errors
                 if (Array.isArray(localResults)) {
                      for (const r of localResults) {
                         if (r && r.testId) {
@@ -278,6 +286,7 @@ export const googleSheetsService = {
                 localStorage.setItem(localResultsKey, JSON.stringify(mergedResults));
 
                 // A user might take a test offline and then log in. We need to sync any unsynced local results.
+                // Re-calculate unsynced items based on the new merged map
                 const unsyncedLocalResults = localResults.filter(local => !remoteResults.some(remote => remote.testId === local.testId));
 
                 // Send any unsynced results to the backend.
@@ -301,7 +310,7 @@ export const googleSheetsService = {
         try {
             const stored = localStorage.getItem(`exam_results_${userId}`);
             const parsed = stored ? JSON.parse(stored) : [];
-            return Array.isArray(parsed) ? parsed : [];
+             return Array.isArray(parsed) ? parsed : (parsed ? Object.values(parsed) : []);
         } catch {
             return [];
         }
