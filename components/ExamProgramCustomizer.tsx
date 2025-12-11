@@ -1,5 +1,5 @@
 import React, { FC, useState, useCallback, useMemo, ReactNode, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useHistory } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -315,7 +315,7 @@ const ExamProgramCustomizer: FC = () => {
     const { activeOrg, examPrices, suggestedBooks, updateConfigData } = useAppContext();
     const { token } = useAuth();
     const location = useLocation();
-    const navigate = useNavigate();
+    const history = useHistory();
 
     const [expandedProgramId, setExpandedProgramId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -441,9 +441,9 @@ const ExamProgramCustomizer: FC = () => {
         const newId = expandedProgramId === programId ? null : programId;
         setExpandedProgramId(newId);
         if (newId) {
-            navigate(`#${newId}`);
+            history.push(`#${newId}`);
         } else {
-            navigate(location.pathname, { replace: true });
+            history.replace(location.pathname);
         }
     };
     

@@ -1,5 +1,5 @@
 import React, { FC, useRef, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useHistory, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import LogoSpinner from './LogoSpinner.tsx';
@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 
 const VolunteerOnboarding: FC = () => {
     const { token } = useParams<{ token: string }>();
-    const navigate = useNavigate();
+    const history = useHistory();
     const { loginWithToken, user } = useAuth();
     const hasProcessed = useRef(false);
 
@@ -17,7 +17,7 @@ const VolunteerOnboarding: FC = () => {
 
         if (user) {
             toast("You are already logged in.", { icon: '👋' });
-            navigate('/dashboard', { replace: true });
+            history.replace('/dashboard');
             return;
         }
 
@@ -34,18 +34,18 @@ const VolunteerOnboarding: FC = () => {
                 })
                 .then(() => {
                     toast.success('Welcome, Beta Tester! Your premium access has been activated.', { id: toastId, duration: 6000 });
-                    navigate('/dashboard', { replace: true });
+                    history.replace('/dashboard');
                 })
                 .catch((e: any) => {
                     const errorMessage = e.message || 'Invalid or expired tester token. Please check your link.';
                     toast.error(errorMessage, { id: toastId });
-                    navigate('/', { replace: true });
+                    history.replace('/');
                 });
         } else {
             toast.error("No tester token provided.");
-            navigate('/', { replace: true });
+            history.replace('/');
         }
-    }, [token, loginWithToken, navigate, user]);
+    }, [token, loginWithToken, history, user]);
 
     return (
         <div className="flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">

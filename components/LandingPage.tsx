@@ -1,31 +1,32 @@
 import React, { FC, useEffect, useRef } from 'react';
-// FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
-import { useNavigate, Link } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LogIn, UserPlus, FileText, Award, Sparkles, Beaker } from 'lucide-react';
 import LogoSpinner from './LogoSpinner.tsx';
 
 const LandingPage: FC = () => {
-    // FIX: Replaced `useHistory` with `useNavigate` for react-router-dom v6.
-    const navigate = useNavigate();
+    const history = useHistory();
     const { user } = useAuth();
     const { activeOrg, isInitializing } = useAppContext();
     const videoRef = useRef<HTMLVideoElement>(null);
     
     useEffect(() => {
         if (user) {
-            // FIX: Replaced `history.push` with `navigate`.
-            navigate('/dashboard');
+            history.push('/dashboard');
         }
-    }, [user, navigate]);
+    }, [user, history]);
 
     useEffect(() => {
         if (videoRef.current) {
             videoRef.current.muted = true;
-            videoRef.current.play().catch(error => {
-                console.warn("Video autoplay was prevented by the browser:", error);
-            });
+            // Attempt autoplay, but handle browser policies gracefully
+            const playPromise = videoRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.warn("Video autoplay was prevented by the browser:", error);
+                });
+            }
         }
     }, [activeOrg?.introVideoUrl]);
 
@@ -42,7 +43,8 @@ const LandingPage: FC = () => {
     const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
     const registerUrl = `${mainSiteBaseUrl}/wp-login.php?action=register`;
     
-    const hasIntroVideo = !!activeOrg.introVideoUrl;
+    // Explicit check for non-empty string
+    const hasIntroVideo = activeOrg.introVideoUrl && activeOrg.introVideoUrl.trim() !== '';
 
     return (
         <div className="min-h-[75vh] flex flex-col lg:flex-row items-center justify-center gap-12 p-4">
@@ -71,6 +73,7 @@ const LandingPage: FC = () => {
                             loop
                             playsInline
                         >
+                            <source src={activeOrg.introVideoUrl} type="video/mp4" />
                             Your browser does not support the video tag.
                         </video>
                     </div>

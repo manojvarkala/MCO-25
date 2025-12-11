@@ -1,5 +1,5 @@
 import React, { FC, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useHistory } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import toast from 'react-hot-toast';
 import LogoSpinner from './LogoSpinner.tsx';
@@ -8,7 +8,7 @@ import { useAppContext } from '../context/AppContext.tsx';
 const Login: FC = () => {
     const { loginWithToken, user } = useAuth();
     const { activeOrg, isInitializing } = useAppContext();
-    const navigate = useNavigate();
+    const history = useHistory();
     const location = useLocation();
     const hasProcessed = useRef(false);
 
@@ -21,7 +21,7 @@ const Login: FC = () => {
         hasProcessed.current = true;
 
         if (user) {
-            navigate('/dashboard', { replace: true });
+            history.replace('/dashboard');
             return;
         }
 
@@ -33,7 +33,7 @@ const Login: FC = () => {
             loginWithToken(token)
                 .then(() => {
                     toast.dismiss(toastId);
-                    navigate('/dashboard', { replace: true });
+                    history.replace('/dashboard');
                 })
                 .catch((e) => {
                     toast.error(e.message || 'Authentication failed. Please try again.', { id: toastId });
@@ -43,7 +43,7 @@ const Login: FC = () => {
             toast.error('No authentication token found. Redirecting to login.');
             window.location.href = loginUrl;
         }
-    }, [loginWithToken, navigate, location.search, user, activeOrg, isInitializing]);
+    }, [loginWithToken, history, location.search, user, activeOrg, isInitializing]);
 
     return (
         <div className="flex flex-col items-center justify-center py-20 px-4">

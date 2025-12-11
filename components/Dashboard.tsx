@@ -1,5 +1,5 @@
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useHistory, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -38,7 +38,7 @@ const stripHtml = (html: string): string => {
 const Dashboard: FC = () => {
     const { user, token, paidExamIds, isSubscribed, subscriptionInfo, loginWithToken, isEffectivelyAdmin, isBetaTester } = useAuth();
     const { activeOrg, isInitializing, inProgressExam, examPrices, subscriptionsEnabled, bundlesEnabled, feedbackRequiredForExam } = useAppContext();
-    const navigate = useNavigate();
+    const history = useHistory();
 
     const [results, setResults] = useState<TestResult[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -183,7 +183,7 @@ const Dashboard: FC = () => {
                         <h3 className="font-bold text-[rgb(var(--color-secondary-hover-rgb))]">You have an exam in progress!</h3>
                         <p className="text-sm text-[rgb(var(--color-secondary-hover-rgb))] opacity-80">"{inProgressExam.examName}"</p>
                     </div>
-                    <button onClick={() => navigate(`/test/${inProgressExam.examId}`)} className="bg-[rgb(var(--color-secondary-rgb))] hover:bg-[rgb(var(--color-secondary-hover-rgb))] text-white font-bold py-2 px-4 rounded-lg">
+                    <button onClick={() => history.push(`/test/${inProgressExam.examId}`)} className="bg-[rgb(var(--color-secondary-rgb))] hover:bg-[rgb(var(--color-secondary-hover-rgb))] text-white font-bold py-2 px-4 rounded-lg">
                         Resume Exam
                     </button>
                 </div>
@@ -277,85 +277,6 @@ const Dashboard: FC = () => {
 
             {user && (
                 <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
-                    <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">My Stats</h2>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <StatCard title="Total Attempts" value={stats.totalAttempts} icon={<FileText className="text-[rgb(var(--color-primary-rgb))]" />} />
-                        <StatCard title="Average Score" value={stats.averageScore} icon={<Activity className="text-[rgb(var(--color-primary-rgb))]" />} />
-                        <StatCard title="Best Score" value={stats.bestScore} icon={<BarChart2 className="text-[rgb(var(--color-primary-rgb))]" />} />
-                        <StatCard title="Exams Passed" value={stats.examsPassed} icon={<Award className="text-[rgb(var(--color-primary-rgb))]" />} />
-                    </div>
-                </div>
-            )}
-
-            <div>
-                 <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">Exam Programs</h2>
-                 <div className="space-y-6">
-                     {examCategories.map((category, index) => {
-                         const certAttempts = user && category.certExam ? results.filter(r => r.examId === category.certExam.id).length : undefined;
-                         
-                         let bundleTypeToShow: 'practice' | 'subscription' | null = null;
-                         
-                         // FIX: Added check for subscriptionsEnabled. 
-                         // Only show subscription bundles if subscriptions are enabled globally.
-                         if (bundlesEnabled && category.certExam && examPrices) {
-                             const subBundleSku = `${category.certExam.productSku}-1mo-addon`;
-                             const practiceBundleSku = `${category.certExam.productSku}-1`;
-                             
-                             if (subscriptionsEnabled && examPrices[subBundleSku]) {
-                                 bundleTypeToShow = 'subscription';
-                             } else if (examPrices[practiceBundleSku]) {
-                                 bundleTypeToShow = 'practice';
-                             }
-                         }
-                         
-                         const shareUrl = `${window.location.origin}/program/${category.id}`;
-                         const shareTitle = stripHtml(category.name);
-                         const shareText = `Check out the ${shareTitle} program on ${activeOrg.name}! Great for certification prep.`;
-                         const isDisabled = isBetaTester && !!feedbackRequiredForExam;
-
-                         return (
-                            <div key={category.id} id={category.id} className="bg-[rgb(var(--color-muted-rgb))] p-6 rounded-xl border border-[rgb(var(--color-border-rgb))]">
-                                <div className="flex flex-wrap justify-between items-start gap-2 mb-1">
-                                    <Link to={`/program/${category.id}`} className="group">
-                                        <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] group-hover:text-[rgb(var(--color-primary-rgb))] transition">{stripHtml(category.name)}</h3>
-                                    </Link>
-                                    <div className="flex items-center gap-3">
-                                        {isEffectivelyAdmin && (
-                                            <Link 
-                                                to={`/admin/programs#${category.id}`} 
-                                                className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 bg-amber-100 hover:bg-amber-200 px-2 py-1 rounded-md transition"
-                                                title="Edit Program"
-                                            >
-                                                <Edit size={12} />
-                                                Edit
-                                            </Link>
-                                        )}
-                                        <ShareButtons shareUrl={shareUrl} shareText={shareText} shareTitle={shareTitle} />
-                                    </div>
-                                </div>
-                                <div className="prose prose-sm max-w-none text-[rgb(var(--color-text-muted-rgb))] mb-4">
-                                    {stripHtml(category.description)}
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    {category.practiceExam && <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} isDisabled={isDisabled} />}
-                                    {category.certExam && <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} attemptsMade={certAttempts} isDisabled={isDisabled}/>}
-                                    {bundlesEnabled && category.certExam && bundleTypeToShow && (
-                                        <ExamBundleCard
-                                            type={bundleTypeToShow}
-                                            certExam={category.certExam}
-                                            activeOrg={activeOrg}
-                                            examPrices={examPrices}
-                                        />
-                                    )}
-                                </div>
-                            </div>
-                         );
-                     })}
-                 </div>
-            </div>
-
-             {user && (
-                <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
                     <h2 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">My Exam History</h2>
                     <div className="space-y-3">
                         {results.length > 0 ? results.slice(0, 5).map(result => {
@@ -371,7 +292,7 @@ const Dashboard: FC = () => {
                                     <div className="flex items-center gap-4">
                                         <span className={`font-bold text-lg ${isPass ? 'text-[rgb(var(--color-success-rgb))]' : 'text-[rgb(var(--color-danger-rgb))]'}`}>{result.score.toFixed(0)}%</span>
                                         {isPass ? <CheckCircle size={20} className="text-[rgb(var(--color-success-rgb))]" /> : <XCircle size={20} className="text-[rgb(var(--color-danger-rgb))]" />}
-                                        <button onClick={() => navigate(`/results/${result.testId}`)} className="text-[rgb(var(--color-primary-rgb))] hover:text-[rgb(var(--color-primary-hover-rgb))]">
+                                        <button onClick={() => history.push(`/results/${result.testId}`)} className="text-[rgb(var(--color-primary-rgb))] hover:text-[rgb(var(--color-primary-hover-rgb))]">
                                             <ChevronRight size={20} />
                                         </button>
                                     </div>

@@ -1,6 +1,6 @@
 import React, { FC, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import { Send, MessageSquare, CreditCard, Star } from 'lucide-react';
@@ -10,7 +10,7 @@ import { useAppContext } from '../context/AppContext.tsx';
 const Feedback: FC = () => {
     const { token, isBetaTester } = useAuth();
     const { activeOrg, feedbackRequiredForExam, clearFeedbackRequired } = useAppContext();
-    const navigate = useNavigate();
+    const history = useHistory();
     
     // State for general feedback
     const [category, setCategory] = useState('General Feedback');
@@ -112,7 +112,7 @@ ${detailedMessage || "No additional comments provided."}
             if (feedbackRequiredForExam) {
                 clearFeedbackRequired();
                 resetBetaForm();
-                navigate('/dashboard');
+                history.push('/dashboard');
             }
 
             setMessage('');

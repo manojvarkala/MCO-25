@@ -38,6 +38,7 @@ function mco_get_full_snapshot_data($is_blueprint = false) {
     $site_host = $site_url_parts['host'] ?? 'default-site.com';
     $custom_logo_url = get_option('mco_custom_logo_url', '');
     $logo_url = !empty($custom_logo_url) ? $custom_logo_url : (get_site_icon_url(512) ?: '');
+    $intro_video_url = get_option('mco_intro_video_url', ''); // Fetch video URL
 
     $available_themes = [
         [ 'id' => 'default', 'name' => 'Cyberpunk' ],
@@ -71,12 +72,20 @@ function mco_get_full_snapshot_data($is_blueprint = false) {
                 "name" => $site_name,
                 "website" => $site_host,
                 "logo" => $logo_url,
+                "introVideoUrl" => $intro_video_url, // Add video URL to response
                 "availableThemes" => $available_themes,
                 "activeThemeId" => "default",
                 "exams" => $dynamic_data['exams'],
                 "examProductCategories" => $dynamic_data['examProductCategories'],
                 "certificateTemplates" => array_values($configured_templates),
-                "suggestedBooks" => $dynamic_data['suggestedBooks']
+                "suggestedBooks" => $dynamic_data['suggestedBooks'],
+                "subscriptionsEnabled" => get_option('mco_subscriptions_enabled', '1') === '1',
+                "bundlesEnabled" => get_option('mco_bundles_enabled', '1') === '1',
+                "purchaseNotifierEnabled" => get_option('mco_purchase_notifier_enabled', '1') === '1',
+                "purchaseNotifierDelay" => (int)get_option('mco_purchase_notifier_delay', 7),
+                "purchaseNotifierMinGap" => (int)get_option('mco_purchase_notifier_min_gap', 8),
+                "purchaseNotifierMaxGap" => (int)get_option('mco_purchase_notifier_max_gap', 23),
+                "disclaimerText" => get_option('mco_disclaimer_text', '')
             ]
         ],
         "examPrices" => $dynamic_data['examPrices'] ?? new stdClass()

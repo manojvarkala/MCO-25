@@ -1,11 +1,11 @@
 import React, { FC, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import { ShieldCheck, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const VerifyPage: FC = () => {
     const [inputId, setInputId] = useState('');
-    const navigate = useNavigate();
+    const history = useHistory();
 
     const handleVerify = (e: React.FormEvent) => {
         e.preventDefault();
@@ -22,7 +22,7 @@ const VerifyPage: FC = () => {
             finalId = parts[parts.length - 1];
         }
         
-        navigate(`/verify/${encodeURIComponent(finalId)}`);
+        history.push(`/verify/${encodeURIComponent(finalId)}`);
     };
 
     return (

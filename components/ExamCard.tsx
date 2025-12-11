@@ -1,6 +1,5 @@
-
 import React, { FC, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useHistory, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -44,7 +43,7 @@ const stripHtml = (html: string): string => {
 };
 
 const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, activeOrg, examPrices, hideDetailsLink = false, attemptsMade, isDisabled = false }) => {
-    const navigate = useNavigate();
+    const history = useHistory();
     const { user, token, isSubscribed, isBetaTester } = useAuth();
     const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -69,7 +68,7 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
         }
         
         if (canTake) {
-            navigate(`/test/${exam.id}`);
+            history.push(`/test/${exam.id}`);
         } else if (exam.productSku) {
             if (!user || !token) {
                 toast.error("Please log in to make a purchase.");
