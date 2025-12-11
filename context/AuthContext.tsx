@@ -143,7 +143,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 }
             } catch (e) {
                 console.error("Failed to parse token for expiration check, logging out.", e);
-                logout();
+                // Do NOT logout here for minor parse errors, wait for API rejection
             }
         }
     };

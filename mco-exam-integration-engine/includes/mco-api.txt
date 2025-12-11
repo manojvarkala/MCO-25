@@ -92,6 +92,9 @@ if (!function_exists('mco_generate_exam_jwt')) {
                 }
             }
         }
+        
+        // Ensure unique and re-index to guarantee JSON array
+        $paid_exam_ids = array_values(array_unique($paid_exam_ids));
 
         $payload = [
             'iss' => get_home_url(),
@@ -103,9 +106,7 @@ if (!function_exists('mco_generate_exam_jwt')) {
                 'name' => $user->display_name,
                 'isAdmin' => user_can($user, 'manage_options'),
             ],
-            // CRITICAL FIX: array_unique preserves keys, which turns JSON into Object {"0":"a", "2":"b"}. 
-            // array_values forces re-indexing to [0,1,...] ensuring JSON Array.
-            'paidExamIds' => array_values(array_unique($paid_exam_ids)),
+            'paidExamIds' => $paid_exam_ids,
             'isSubscribed' => (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($user_id, '', 'active')),
             'subscriptionInfo' => $subscription_info,
         ];
@@ -142,7 +143,7 @@ if (!function_exists('mco_verify_exam_jwt')) {
         list($header_encoded, $payload_encoded, $signature_encoded) = $parts;
 
         $signature_to_verify = mco_base64url_decode($signature_encoded);
-        $expected_signature = hash_hmac('sha256', "$header_encoded.$payload_encoded", MCO_JWT_SECRET, true);
+        $expected_signature = hash_hmac('sha256', "$header.$payload_encoded", MCO_JWT_SECRET, true);
 
         if (!hash_equals($expected_signature, $signature_to_verify)) return false;
 

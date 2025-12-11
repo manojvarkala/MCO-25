@@ -64,6 +64,8 @@ function mco_get_full_snapshot_data($is_blueprint = false) {
         $dynamic_data = mco_get_app_config_data();
     }
 
+    // Ensure array keys are strings for JSON compatibility where needed, but lists are lists.
+    // introVideoUrl added here.
     $snapshot_object = [
         "version" => current_time('YmdHis'),
         "organizations" => [
@@ -72,7 +74,7 @@ function mco_get_full_snapshot_data($is_blueprint = false) {
                 "name" => $site_name,
                 "website" => $site_host,
                 "logo" => $logo_url,
-                "introVideoUrl" => $intro_video_url, // Ensure this property is included
+                "introVideoUrl" => $intro_video_url, 
                 "availableThemes" => $available_themes,
                 "activeThemeId" => "default",
                 "exams" => $dynamic_data['exams'],

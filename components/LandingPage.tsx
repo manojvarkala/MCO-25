@@ -43,8 +43,8 @@ const LandingPage: FC = () => {
     const loginUrl = `${mainSiteBaseUrl}/exam-login/`;
     const registerUrl = `${mainSiteBaseUrl}/wp-login.php?action=register`;
     
-    // Explicit check for non-empty string
-    const hasIntroVideo = activeOrg.introVideoUrl && activeOrg.introVideoUrl.trim() !== '';
+    // Explicit check for non-empty string and existence
+    const hasIntroVideo = activeOrg && activeOrg.introVideoUrl && typeof activeOrg.introVideoUrl === 'string' && activeOrg.introVideoUrl.trim() !== '';
 
     return (
         <div className="min-h-[75vh] flex flex-col lg:flex-row items-center justify-center gap-12 p-4">
