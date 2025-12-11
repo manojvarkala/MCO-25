@@ -236,6 +236,8 @@ export const googleSheetsService = {
             try {
                 const stored = localStorage.getItem(localResultsKey);
                 if (stored) localResults = JSON.parse(stored);
+                // Validate localResults is an array
+                if (!Array.isArray(localResults)) localResults = [];
             } catch (e) {
                 console.error("Could not parse local results, starting fresh.", e);
                 localResults = [];
@@ -244,7 +246,8 @@ export const googleSheetsService = {
             try {
                 // Fetch remote results from the WordPress backend.
                 // REVERT: Changed method back to GET as requested by the user.
-                const remoteResults: TestResult[] = await apiFetch('/user-results', 'GET', token);
+                const remoteResultsData = await apiFetch('/user-results', 'GET', token);
+                const remoteResults: TestResult[] = Array.isArray(remoteResultsData) ? remoteResultsData : [];
 
                 // Merge local and remote results, giving precedence to remote data.
                 const mergedResultsMap = new Map<string, TestResult>();
@@ -279,7 +282,8 @@ export const googleSheetsService = {
     getLocalTestResultsForUser: (userId: string): TestResult[] => {
         try {
             const stored = localStorage.getItem(`exam_results_${userId}`);
-            return stored ? JSON.parse(stored) : [];
+            const parsed = stored ? JSON.parse(stored) : [];
+            return Array.isArray(parsed) ? parsed : [];
         } catch {
             return [];
         }

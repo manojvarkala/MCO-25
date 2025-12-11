@@ -356,10 +356,27 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
         
         foreach ($csv_data as $row_str) {
             $row = str_getcsv($row_str);
-            if (count($row) < 6) continue; // Basic validation
             
-            // Assuming simplified format: Question, Opt1, Opt2, Opt3, Opt4, CorrectIndex
-            // Adjust based on your actual CSV structure logic from previous app versions if needed
+            // Support for legacy 3-column format: Question, Options (pipe separated), Correct Index
+            if (count($row) === 3) {
+                 $options = explode('|', $row[1]);
+                 if (count($options) < 2) {
+                     // Try comma separated if pipe fails (fallback for simple CSVs)
+                     $options = str_getcsv($row[1]); 
+                 }
+                 
+                 $questions[] = [
+                    'id' => $id_counter++,
+                    'question' => $row[0],
+                    'options' => array_map('trim', $options),
+                    'correctAnswer' => (int) $row[2]
+                 ];
+                 continue;
+            }
+
+            if (count($row) < 6) continue; // Skip malformed rows if not matching standard format
+            
+            // Standard 6-column format: Question, Opt1, Opt2, Opt3, Opt4, CorrectIndex
             $questions[] = [
                 'id' => $id_counter++,
                 'question' => $row[0],
