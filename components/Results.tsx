@@ -1,5 +1,5 @@
 import React, { FC, useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { useParams, useHistory } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -61,7 +61,7 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
 
 const Results: FC = () => {
     const { testId } = useParams<{ testId: string }>();
-    const history = useHistory();
+    const navigate = useNavigate();
     const { user, token, isSubscribed, paidExamIds, isEffectivelyAdmin, isBetaTester } = useAuth();
     const { activeOrg, suggestedBooks } = useAppContext();
 
@@ -90,11 +90,11 @@ const Results: FC = () => {
                 setExam(examConfig || null);
             } else {
                 toast.error("Test result not found.");
-                history.push('/dashboard');
+                navigate('/dashboard');
             }
             setIsLoading(false);
         }
-    }, [testId, user, activeOrg, history]);
+    }, [testId, user, activeOrg, navigate]);
     
     useEffect(() => {
         if (!isLoading) {
@@ -291,222 +291,4 @@ const Results: FC = () => {
     const reviewAlreadySubmitted = sessionStorage.getItem(reviewSubmittedKey) === 'true';
 
     if (isLoading || !result || !exam || !activeOrg) {
-        return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4 text-slate-600">Loading your results...</p></div>;
-    }
-    
-    if (isProcessing) {
-        return (
-            <div className="flex flex-col items-center justify-center h-64 text-center">
-                <LogoSpinner />
-                <h2 className="text-2xl font-bold text-slate-800 mt-6">Finalizing Your Results</h2>
-                <p className="text-slate-500 mt-2">{processingMessage}</p>
-            </div>
-        );
-    }
-
-    const toggleQuestion = (id: number) => {
-        setExpandedQuestion(expandedQuestion === id ? null : id);
-    };
-
-    const shareText = `I passed the ${exam.name} with a score of ${result.score.toFixed(0)}%! Thanks to ${activeOrg.name} for their great exam platform.`;
-    const shareTitle = `I passed the ${exam.name}!`;
-
-    return (
-        <>
-        <div className="max-w-4xl mx-auto space-y-8">
-            <div className={`p-8 rounded-xl text-white text-center shadow-lg ${isPassed ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-red-500 to-rose-600'}`}>
-                {isPassed ? <CheckCircle className="mx-auto h-16 w-16" /> : <XCircle className="mx-auto h-16 w-16" />}
-                <h1 className="text-4xl font-extrabold mt-4">{exam.name}</h1>
-                <p className="text-2xl mt-2">{isPassed ? 'Congratulations, You Passed!' : 'Further Study Recommended'}</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1 space-y-8">
-                    <div className="bg-white p-6 rounded-xl shadow-md">
-                        <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><BarChart2 className="mr-3 text-cyan-500" /> Your Score</h3>
-                        <div className="text-center">
-                            <p className={`text-7xl font-bold ${isPassed ? 'text-green-600' : 'text-red-600'}`}>{result.score.toFixed(0)}<span className="text-4xl">%</span></p>
-                            <p className="text-slate-500">Passing Score: {exam.passScore}%</p>
-                        </div>
-                        <div className="mt-6 space-y-3 text-sm">
-                            <div className="flex justify-between p-2 bg-slate-50 rounded-md"><span>Correct Answers:</span><span className="font-semibold">{result.correctCount} / {result.totalQuestions}</span></div>
-                            <div className="flex justify-between p-2 bg-slate-50 rounded-md"><span>Incorrect Answers:</span><span className="font-semibold">{result.totalQuestions - result.correctCount} / {result.totalQuestions}</span></div>
-                            <div className="flex justify-between p-2 bg-slate-50 rounded-md"><span>Date Completed:</span><span className="font-semibold">{new Date(result.timestamp).toLocaleDateString()}</span></div>
-                        </div>
-                    </div>
-                    
-                    {isEffectivelyAdmin && (
-                        <button 
-                            onClick={() => history.push(`/certificate/${result.testId}`)} 
-                            className="w-full text-sm flex items-center justify-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-4 rounded-lg"
-                        >
-                            <Award size={16} /> View Certificate (Admin)
-                        </button>
-                    )}
-
-                    {userCertificateVisibility === 'USER_EARNED' && (
-                        <button 
-                            onClick={() => history.push(`/certificate/${result.testId}`)} 
-                            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
-                        >
-                            <Award size={20} /> Download Your Certificate
-                        </button>
-                    )}
-
-                    {userCertificateVisibility === 'REVIEW_PENDING' && (
-                        <div className="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-500 text-center">
-                            <h4 className="font-bold text-amber-800">Provisional Pass</h4>
-                             <p className="text-sm text-amber-700 mt-2">
-                                Congratulations on passing! Your certificate will be issued following a standard integrity review within 24 hours due to proctoring flags during your session. You will be notified via email.
-                            </p>
-                        </div>
-                    )}
-                    
-                    {isPassed && (
-                        <div className="bg-white p-6 rounded-xl shadow-md">
-                            <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><Share2 className="mr-3 text-cyan-500" /> Share Your Achievement</h3>
-                            <p className="text-sm text-slate-600 mb-4">
-                                Share your success! For best results on social media, download the image below and attach it to your post.
-                            </p>
-                            <div className="space-y-3">
-                                <button
-                                    onClick={handleDownloadImage}
-                                    disabled={isGeneratingShareImage}
-                                    className="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold py-2 px-4 rounded-lg transition disabled:bg-slate-400"
-                                >
-                                    {isGeneratingShareImage ? <Spinner size="sm" /> : <Download size={16} />}
-                                    {isGeneratingShareImage ? 'Generating...' : 'Download Result Image'}
-                                </button>
-                                <div className="flex items-center justify-center gap-2 pt-2">
-                                    <span className="text-sm text-slate-600">Or share a link:</span>
-                                    <ShareButtons 
-                                        shareUrl={window.location.origin}
-                                        shareText={shareText}
-                                        shareTitle={shareTitle}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {!reviewAlreadySubmitted && (
-                         <div className="bg-white p-6 rounded-xl shadow-md">
-                            <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><Star className="mr-3 text-yellow-400" /> Rate Your Experience</h3>
-                            <form onSubmit={handleReviewSubmit}>
-                                <div className="flex justify-center mb-4">
-                                    {[1, 2, 3, 4, 5].map(star => (
-                                        <button key={star} type="button" onClick={() => setRating(star)} className="text-yellow-400 focus:outline-none">
-                                            <Star size={32} className={rating >= star ? 'fill-current' : ''} />
-                                        </button>
-                                    ))}
-                                </div>
-                                <textarea
-                                    value={reviewText}
-                                    onChange={(e) => setReviewText(e.target.value)}
-                                    placeholder="Share your thoughts... (optional)"
-                                    className="w-full p-2 border border-slate-300 rounded-md text-sm"
-                                    rows={3}
-                                />
-                                <button type="submit" disabled={isSubmittingReview || rating === 0} className="w-full mt-3 flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
-                                    {isSubmittingReview ? <Spinner/> : <Send size={16}/>} Submit Review
-                                </button>
-                            </form>
-                        </div>
-                    )}
-                </div>
-                
-                <div className="lg:col-span-2 space-y-8">
-                    {canGetAIFeedback && (
-                        <div className="bg-white p-6 rounded-xl shadow-md">
-                            <h3 className="text-xl font-bold text-slate-800 mb-2 flex items-center"><Sparkles className="mr-3 text-amber-500" /> AI-Powered Feedback</h3>
-                            <p className="text-sm text-slate-500 mb-4">Get a personalized study guide based on your incorrect answers to help you improve.</p>
-                             {!aiFeedback && (
-                                <button onClick={generateAIFeedback} disabled={isAiLoading} className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition disabled:bg-slate-400">
-                                    {isAiLoading ? <Spinner/> : <Sparkles size={16}/>} Generate Study Guide
-                                </button>
-                             )}
-                             {aiFeedback && (
-                                <div className={`mt-4 p-4 border rounded-lg max-h-96 overflow-y-auto ${aiFeedback.startsWith("We're sorry") ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
-                                    {aiFeedback.startsWith("We're sorry") ? (
-                                        <div className="flex items-start gap-3 text-amber-800">
-                                            <AlertTriangle size={24} className="flex-shrink-0 mt-1"/>
-                                            <p>{aiFeedback}</p>
-                                        </div>
-                                    ) : (
-                                        <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: aiFeedback.replace(/\n/g, '<br />') }}></div>
-                                    )}
-                                </div>
-                             )}
-                              {aiFeedback && !aiFeedback.startsWith("We're sorry") && (
-                                <button onClick={downloadAiFeedback} className="w-full mt-4 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">
-                                    <Download size={16}/> Download as PDF
-                                </button>
-                             )}
-                        </div>
-                    )}
-                    
-                    {exam.isPractice && (
-                        <div className="bg-white p-6 rounded-xl shadow-md">
-                            <h3 className="text-xl font-bold text-slate-800 mb-4">Answer Review</h3>
-                            <div className="space-y-3">
-                                {result.review.map(item => (
-                                    <div key={item.questionId} className="bg-slate-50 rounded-lg border border-slate-200">
-                                        <button onClick={() => toggleQuestion(item.questionId)} className="w-full text-left p-3 flex justify-between items-center">
-                                            <p className="font-semibold text-slate-800 flex-grow pr-4">{item.question}</p>
-                                            {item.userAnswer === item.correctAnswer ? <CheckCircle className="text-green-500 flex-shrink-0"/> : <XCircle className="text-red-500 flex-shrink-0"/>}
-                                            {expandedQuestion === item.questionId ? <ChevronUp className="ml-2"/> : <ChevronDown className="ml-2"/>}
-                                        </button>
-                                        {expandedQuestion === item.questionId && (
-                                            <div className="p-4 border-t border-slate-200 text-sm">
-                                                <p><strong>Your Answer:</strong> <span className={item.userAnswer === item.correctAnswer ? 'text-green-700' : 'text-red-700'}>{item.options[item.userAnswer] || 'Not Answered'}</span></p>
-                                                <p><strong>Correct Answer:</strong> <span className="text-green-700">{item.options[item.correctAnswer]}</span></p>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    
-                    {recommendedBooksForExam.length > 0 && (
-                        <div className="bg-white p-6 rounded-xl shadow-md">
-                            <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h3>
-                            <div className="flex flex-wrap gap-4">
-                                {recommendedBooksForExam.map(book => {
-                                    const linkData = getGeoAffiliateLink(book);
-                                    if (!linkData || !linkData.url) return null;
-                                    const { url, domainName } = linkData;
-                                    return (
-                                        <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full sm:w-56 flex-shrink-0">
-                                            <BookCover book={book} className="w-full h-32"/>
-                                            <div className="p-3">
-                                                <h4 className="font-bold text-slate-800 text-xs mb-2 leading-tight">{book.title}</h4>
-                                                <a href={url} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-center text-xs text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-2 py-1.5 transition-colors">
-                                                    Buy on {domainName}
-                                                </a>
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-        <div className="fixed -left-[9999px] top-0 pointer-events-none">
-            <div ref={shareableResultRef}>
-                <ShareableResult
-                    user={user}
-                    exam={exam}
-                    result={result}
-                    organization={activeOrg}
-                />
-            </div>
-        </div>
-        </>
-    );
-};
-
-
-export default Results;
+        return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4

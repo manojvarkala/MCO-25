@@ -50,31 +50,49 @@ const decodeHtmlEntities = (text: string | undefined): string => {
     }
 };
 
+// Helper to safely ensure we always work with arrays, even if PHP returns an object/map
+const ensureArray = <T,>(data: any): T[] => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    // If it's an object (like PHP associative array), convert values to array
+    if (typeof data === 'object') return Object.values(data);
+    return [];
+};
+
 
 // This function processes a raw config object (either static or from the API)
 // and prepares it for the application state by decoding entities and mapping data.
 const processConfigData = (configData: any) => {
     if (!configData || !configData.organizations) return null;
-    const processedOrgs: Organization[] = JSON.parse(JSON.stringify(configData.organizations));
+    
+    // Safely parse organizations, ensuring it's an array
+    let processedOrgs: Organization[] = [];
+    try {
+        const rawOrgs = JSON.parse(JSON.stringify(configData.organizations));
+        processedOrgs = ensureArray<Organization>(rawOrgs);
+    } catch (e) {
+        console.error("Error parsing config organizations", e);
+        return null;
+    }
+
     let allSuggestedBooks: RecommendedBook[] = [];
 
     processedOrgs.forEach((org: Organization) => {
         org.name = decodeHtmlEntities(org.name);
         
-        (org.examProductCategories || []).forEach((cat: ExamProductCategory) => {
+        // Safely iterate categories
+        const categories = ensureArray<ExamProductCategory>(org.examProductCategories);
+        categories.forEach((cat) => {
             cat.name = decodeHtmlEntities(cat.name);
             cat.description = decodeHtmlEntities(cat.description);
         });
+        org.examProductCategories = categories;
 
-        // FIX: Re-implemented a robust URL mapping for full backward compatibility with older plugin versions.
-        // This ensures the questionSourceUrl from the category is correctly assigned to each exam.
-        // The new logic prioritizes the exam-specific URL and uses the category URL as a fallback.
-        org.exams = (org.exams || []).map((exam: Exam): Exam | null => {
-            // Safety check for malformed exam entries
-            if (!exam || !exam.id) {
-                return null;
-            }
-            const category = (org.examProductCategories || []).find(c => c && (c.certificationExamId === exam.id || c.practiceExamId === exam.id));
+        // Safely iterate and map exams
+        const rawExams = ensureArray<Exam>(org.exams);
+        org.exams = rawExams.map((exam: Exam): Exam | null => {
+            if (!exam || !exam.id) return null;
+            const category = categories.find(c => c && (c.certificationExamId === exam.id || c.practiceExamId === exam.id));
             const categoryUrl = category ? category.questionSourceUrl : undefined;
 
             return {
@@ -83,18 +101,24 @@ const processConfigData = (configData: any) => {
                 description: decodeHtmlEntities(exam.description),
                 questionSourceUrl: exam.questionSourceUrl || categoryUrl,
             };
-        }).filter(Boolean) as Exam[]; // filter out any null entries
+        }).filter(Boolean) as Exam[];
 
-
+        // Safely iterate books
         if (org.suggestedBooks) {
-            org.suggestedBooks.forEach(book => {
+            const books = ensureArray<RecommendedBook>(org.suggestedBooks);
+            books.forEach(book => {
                 book.title = decodeHtmlEntities(book.title);
                 book.description = decodeHtmlEntities(book.description);
             });
-            allSuggestedBooks = [...allSuggestedBooks, ...org.suggestedBooks];
+            org.suggestedBooks = books;
+            allSuggestedBooks = [...allSuggestedBooks, ...books];
+        } else {
+            org.suggestedBooks = [];
         }
 
-        (org.certificateTemplates || []).forEach(template => {
+        // Safely iterate templates
+        const templates = ensureArray<any>(org.certificateTemplates);
+        templates.forEach(template => {
             template.name = decodeHtmlEntities(template.name);
             template.title = decodeHtmlEntities(template.title);
             template.body = decodeHtmlEntities(template.body);
@@ -103,6 +127,7 @@ const processConfigData = (configData: any) => {
             template.signature2Name = decodeHtmlEntities(template.signature2Name);
             template.signature2Title = decodeHtmlEntities(template.signature2Title);
         });
+        org.certificateTemplates = templates;
     });
 
     return { 
@@ -167,7 +192,8 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
       if (newActiveOrg) {
           localStorage.setItem('activeOrgId', newActiveOrg.id);
-          setAvailableThemes(newActiveOrg.availableThemes || []);
+          const themes = ensureArray<Theme>(newActiveOrg.availableThemes);
+          setAvailableThemes(themes);
           
           setSubscriptionsEnabled(newActiveOrg.subscriptionsEnabled ?? true);
           setBundlesEnabled(newActiveOrg.bundlesEnabled ?? true);
@@ -246,11 +272,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   // Effect to record a site hit once per session.
   useEffect(() => {
     const hitCountedInSession = sessionStorage.getItem('mco_hit_counted');
-
-    // The goal is to show the hit counter for everyone, but only increment it once per session.
-    // The previous logic prevented admins from seeing the count at all in a new session.
-    // This revised logic ensures the count is fetched for everyone on a new session.
-    // This will increment the counter for admins on their first hit of a session, which is an acceptable trade-off for UI consistency.
     if (!hitCountedInSession) {
         const recordHit = async () => {
             try {
@@ -258,9 +279,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 if (data && data.count) {
                     const newCount = data.count;
                     setHitCount(newCount);
-                    
-                    // Mark that a hit has been recorded for this session for EVERYONE.
-                    // This prevents admins from incrementing the counter on every page navigation within the same session.
                     sessionStorage.setItem('mco_hit_counted', 'true');
                     sessionStorage.setItem('mco_site_hit_count', newCount.toString());
                 }
@@ -268,10 +286,9 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 console.error("Could not record or fetch site hit:", error);
             }
         };
-
         recordHit();
     }
-  }, []); // Run only once on initial app mount.
+  }, []); 
 
 
   // Effect 2: Check for in-progress exams when user logs in or active org changes.
@@ -287,7 +304,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             const key = localStorage.key(i);
             if (key && key.startsWith(`exam_progress_`) && key.endsWith(`_${user.id}`)) {
                 const examId = key.split('_')[2];
-                const examDetails = activeOrg.exams.find(e => e.id === examId);
+                const examDetails = ensureArray<Exam>(activeOrg.exams).find(e => e.id === examId);
                 if (examDetails) {
                     foundExam = { examId: examDetails.id, examName: examDetails.name };
                     break; 
@@ -340,7 +357,8 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const updateExamInOrg = useCallback((examId: string, updatedExamData: Partial<Exam>) => {
     setActiveOrg(prevOrg => {
         if (!prevOrg) return null;
-        const newExams = prevOrg.exams.map(exam => 
+        const exams = ensureArray<Exam>(prevOrg.exams);
+        const newExams = exams.map(exam => 
             exam.id === examId ? { ...exam, ...updatedExamData } : exam
         );
         return { ...prevOrg, exams: newExams };

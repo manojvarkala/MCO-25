@@ -1,5 +1,5 @@
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
-import { Switch, Route, BrowserRouter, Redirect, useLocation } from "react-router-dom";
+import { Routes, Route, BrowserRouter, Navigate, useLocation } from "react-router-dom";
 import { Toaster, ToastBar, toast } from 'react-hot-toast';
 import { X, AlertTriangle } from 'lucide-react';
 
@@ -55,10 +55,10 @@ const ProtectedRoute: FC<{ children: ReactNode; adminOnly?: boolean }> = ({ chil
     const location = useLocation();
 
     if (!user) {
-        return <Redirect to={{ pathname: "/", state: { from: location } }} />;
+        return <Navigate to="/" state={{ from: location }} replace />;
     }
     if (adminOnly && !isEffectivelyAdmin) {
-        return <Redirect to={{ pathname: "/dashboard", state: { from: location } }} />;
+        return <Navigate to="/dashboard" state={{ from: location }} replace />;
     }
     return <>{children}</>;
 };
@@ -117,103 +117,103 @@ const AppContent: FC = () => {
             )}
             <div className="flex-grow w-full relative">
                 <main className={mainClasses}>
-                    <Switch>
-                        <Route path="/" exact component={LandingPage} />
-                        <Route path="/auth" component={Login} />
-                        <Route path="/checkout/:productSlug" component={Checkout} />
-                        <Route path="/verify" exact component={VerifyPage} />
-                        <Route path="/verify/:certId" component={VerifyCertificate} />
-                        <Route path="/onboard/:token" component={VolunteerOnboarding} />
-                        <Route path="/beta-signup" component={BetaRegistration} />
+                    <Routes>
+                        <Route path="/" element={<LandingPage />} />
+                        <Route path="/auth" element={<Login />} />
+                        <Route path="/checkout/:productSlug" element={<Checkout />} />
+                        <Route path="/verify" element={<VerifyPage />} />
+                        <Route path="/verify/:certId" element={<VerifyCertificate />} />
+                        <Route path="/onboard/:token" element={<VolunteerOnboarding />} />
+                        <Route path="/beta-signup" element={<BetaRegistration />} />
                         
-                        <Route path="/test/:examId">
+                        <Route path="/test/:examId" element={
                             <ProtectedRoute><Test /></ProtectedRoute>
-                        </Route>
-                        <Route path="/certificate/sample">
+                        } />
+                        <Route path="/certificate/sample" element={
                             <ProtectedRoute><Certificate /></ProtectedRoute>
-                        </Route>
-                        <Route path="/certificate/:testId">
+                        } />
+                        <Route path="/certificate/:testId" element={
                             <ProtectedRoute><Certificate /></ProtectedRoute>
-                        </Route>
+                        } />
 
                         {/* Routes with Sidebar */}
-                        <Route path="/dashboard">
+                        <Route path="/dashboard" element={
                             <SidebarLayout><Dashboard /></SidebarLayout>
-                        </Route>
-                        <Route path="/instructions">
+                        } />
+                        <Route path="/instructions" element={
                             <SidebarLayout><Instructions /></SidebarLayout>
-                        </Route>
-                        <Route path="/pricing">
+                        } />
+                        <Route path="/pricing" element={
                             <SidebarLayout><Pricing /></SidebarLayout>
-                        </Route>
-                        <Route path="/feedback">
+                        } />
+                        <Route path="/feedback" element={
                             <SidebarLayout><Feedback /></SidebarLayout>
-                        </Route>
-                        <Route path="/user-guide">
+                        } />
+                        <Route path="/user-guide" element={
                             <SidebarLayout><UserGuide /></SidebarLayout>
-                        </Route>
-                        <Route path="/about-us">
+                        } />
+                        <Route path="/about-us" element={
                             <SidebarLayout><AboutUs /></SidebarLayout>
-                        </Route>
-                        <Route path="/privacy-policy">
+                        } />
+                        <Route path="/privacy-policy" element={
                             <SidebarLayout><PrivacyPolicy /></SidebarLayout>
-                        </Route>
-                        <Route path="/refund-policy">
+                        } />
+                        <Route path="/refund-policy" element={
                             <SidebarLayout><RefundPolicy /></SidebarLayout>
-                        </Route>
-                        <Route path="/terms-of-service">
+                        } />
+                        <Route path="/terms-of-service" element={
                             <SidebarLayout><TermsOfService /></SidebarLayout>
-                        </Route>
-                        <Route path="/bookstore">
+                        } />
+                        <Route path="/bookstore" element={
                             <SidebarLayout><BookStore /></SidebarLayout>
-                        </Route>
-                        <Route path="/program/:programId">
+                        } />
+                        <Route path="/program/:programId" element={
                             <SidebarLayout><ExamProgram /></SidebarLayout>
-                        </Route>
-                        <Route path="/faq">
+                        } />
+                        <Route path="/faq" element={
                             <SidebarLayout><FAQ /></SidebarLayout>
-                        </Route>
-                        <Route path="/profile">
+                        } />
+                        <Route path="/profile" element={
                             <ProtectedRoute><SidebarLayout><Profile /></SidebarLayout></ProtectedRoute>
-                        </Route>
-                        <Route path="/results/:testId">
+                        } />
+                        <Route path="/results/:testId" element={
                             <ProtectedRoute><SidebarLayout><Results /></SidebarLayout></ProtectedRoute>
-                        </Route>
+                        } />
                         
                         {/* Admin Routes with dedicated layout */}
-                        <Route path="/admin/analytics">
+                        <Route path="/admin/analytics" element={
                             <ProtectedRoute adminOnly={true}><AdminLayout><SalesAnalytics /></AdminLayout></ProtectedRoute>
-                        </Route>
-                        <Route path="/admin/exam-analytics">
+                        } />
+                        <Route path="/admin/exam-analytics" element={
                             <ProtectedRoute adminOnly={true}><AdminLayout><ExamAnalytics /></AdminLayout></ProtectedRoute>
-                        </Route>
-                        <Route path="/admin/beta-analytics">
+                        } />
+                        <Route path="/admin/beta-analytics" element={
                             <ProtectedRoute adminOnly={true}><AdminLayout><BetaTesterAnalytics /></AdminLayout></ProtectedRoute>
-                        </Route>
-                        <Route path="/admin/products">
+                        } />
+                        <Route path="/admin/products" element={
                             <ProtectedRoute adminOnly={true}><AdminLayout><ProductCustomizer /></AdminLayout></ProtectedRoute>
-                        </Route>
-                        <Route path="/admin/programs">
+                        } />
+                        <Route path="/admin/programs" element={
                             <ProtectedRoute adminOnly={true}><AdminLayout><ExamProgramCustomizer /></AdminLayout></ProtectedRoute>
-                        </Route>
-                        <Route path="/admin/content-engine">
+                        } />
+                        <Route path="/admin/content-engine" element={
                             <ProtectedRoute adminOnly={true}><AdminLayout><ContentEngine /></AdminLayout></ProtectedRoute>
-                        </Route>
-                        <Route path="/admin/integration">
+                        } />
+                        <Route path="/admin/integration" element={
                             <ProtectedRoute adminOnly={true}><AdminLayout><Integration /></AdminLayout></ProtectedRoute>
-                        </Route>
-                        <Route path="/admin/history">
+                        } />
+                        <Route path="/admin/history" element={
                             <ProtectedRoute adminOnly={true}><AdminLayout><DevelopmentHistory /></AdminLayout></ProtectedRoute>
-                        </Route>
-                        <Route path="/admin/handbook">
+                        } />
+                        <Route path="/admin/handbook" element={
                             <ProtectedRoute adminOnly={true}><AdminLayout><Handbook /></AdminLayout></ProtectedRoute>
-                        </Route>
-                        <Route path="/admin" exact>
+                        } />
+                        <Route path="/admin" element={
                             <ProtectedRoute adminOnly={true}><AdminLayout><Admin /></AdminLayout></ProtectedRoute>
-                        </Route>
+                        } />
                     
-                        <Route path="*"><Redirect to="/" /></Route>
-                    </Switch>
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
                 </main>
             </div>
             {!isTestPage && <Footer />}
