@@ -232,10 +232,19 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 } catch (syncError: any) {
                     console.error("Background sync on login failed:", syncError.message);
                     const successPart = isSyncOnly ? 'Exams synchronized.' : 'Login successful.';
-                    toast.error(
-                        `${successPart} Could not sync your exam history. Locally saved results will be shown. Error: ${syncError.message}`,
-                        { duration: 10000 }
-                    );
+                    
+                    // Specific toast for auth failure during sync, but we don't log out here
+                    // because the initial token validation passed (JWT signature check skipped on client, but payload valid).
+                    // If apiFetch throws, it means server rejected it.
+                    
+                    if (syncError.message.includes("Authorization header")) {
+                         toast.error(`${successPart} But could not sync history due to a server configuration issue. Please check the Admin Debug sidebar if you are an admin.`, { duration: 10000 });
+                    } else {
+                         toast.error(
+                            `${successPart} Could not sync your exam history. Locally saved results will be shown. Error: ${syncError.message}`,
+                            { duration: 8000 }
+                        );
+                    }
                 }
             })();
 

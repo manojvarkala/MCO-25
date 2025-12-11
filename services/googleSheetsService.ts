@@ -42,32 +42,30 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 throw new Error(responseText || response.statusText || `Server error: ${response.status}`);
             }
 
-            const authErrorCodes = ['jwt_auth_invalid_token', 'jwt_auth_expired_token', 'rest_forbidden', 'jwt_auth_invalid_secret_key'];
-            if (errorData?.code && authErrorCodes.includes(errorData.code)) {
+            // Enhanced Error Handling:
+            // We only force-logout on explicit expiration. 
+            // For 'invalid_token' or 'forbidden', we throw an error but let the UI decide if it should logout,
+            // to prevent loops if the server is just misconfigured (stripping headers).
+            if (errorData?.code === 'jwt_auth_expired_token') {
                 localStorage.removeItem('examUser');
                 localStorage.removeItem('paidExamIds');
                 localStorage.removeItem('authToken');
                 localStorage.removeItem('isSubscribed');
                 localStorage.removeItem('activeOrg');
                 
-                Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('exam_timer_') || key.startsWith('exam_results_') || key.startsWith('exam_progress_')) {
-                        localStorage.removeItem(key);
-                    }
-                });
-                
-                toast.error("Your session has expired or is invalid. Please log in again.", { id: 'auth-error-toast' });
+                toast.error("Your session has expired. Please log in again.", { id: 'auth-expired-toast' });
                 
                 setTimeout(() => {
                     window.location.href = '/';
                 }, 1500);
-
-                throw new Error("Authentication failed. Redirecting to login.");
+                throw new Error("Session expired.");
             }
             
             if (errorData?.code === 'jwt_auth_missing_token') {
-                throw new Error("Authorization header missing. This is a server configuration issue. Please check the Admin Debug Sidebar for the solution.");
+                console.warn("API Error: Authorization header missing. Check server config.");
+                throw new Error("Server Configuration Error: Authorization header was stripped. Please check the Admin Debug Sidebar.");
             }
+            
             const errorMessage = errorData?.message || response.statusText || `Server error: ${response.status}`;
             throw new Error(errorMessage);
         }
