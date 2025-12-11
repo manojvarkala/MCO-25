@@ -456,4 +456,10 @@ export const googleSheetsService = {
     },
     adminUploadIntroVideo: async (token: string, videoBlob: Blob): Promise<{ organizations: Organization[], examPrices: any }> => {
         const formData = new FormData();
-        formData.append('video', video
+        formData.append('video', videoBlob, 'intro-video.mp4');
+        return await apiFetch('/admin/set-intro-video', 'POST', token, formData as any, true);
+    },
+    adminToggleBetaStatus: async (token: string, status: boolean): Promise<{ token: string }> => {
+        return await apiFetch('/admin/toggle-beta-status', 'POST', token, { isBetaTester: status });
+    },
+};

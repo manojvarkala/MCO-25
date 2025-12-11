@@ -1,5 +1,4 @@
 import React, { FC, useMemo, useState } from 'react';
-// FIX: Added 'ShoppingCart' to lucide-react imports to resolve missing component error.
 import { ShoppingBag, Check, ShoppingCart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
