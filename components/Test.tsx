@@ -1,5 +1,5 @@
 import React, { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useParams, useHistory } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Question, UserAnswer, Exam, ExamProgress } from '../types.ts';
@@ -21,7 +21,7 @@ const FOCUS_VIOLATION_TOAST_ID = 'focus-violation-toast';
 
 const Test: FC = () => {
   const { examId } = useParams<{ examId: string }>();
-  const history = useHistory();
+  const navigate = useNavigate();
   const { user, isSubscribed, token, isBetaTester, paidExamIds } = useAuth();
   const { activeOrg, isInitializing, setFeedbackRequiredForExam } = useAppContext();
 
@@ -64,7 +64,7 @@ const Test: FC = () => {
 
     if (!user || !examId || !token || questions.length === 0 || !examConfig) {
         toast.error("Cannot submit: user or exam context is missing.");
-        history.push('/');
+        navigate('/');
         setIsSubmitting(false);
         return;
     }
@@ -86,13 +86,13 @@ const Test: FC = () => {
         }
         
         toast.success("Test submitted successfully!");
-        history.push(`/results/${result.testId}`);
+        navigate(`/results/${result.testId}`);
     } catch (error) {
         toast.error("Failed to submit the test. Please try again.");
         setIsSubmitting(false);
         hasSubmittedRef.current = false; // Reset submit lock
     }
-  }, [examId, history, token, user, isSubmitting, questions, answers, progressKey, focusViolationCount, isBetaTester, examConfig, setFeedbackRequiredForExam]);
+  }, [examId, navigate, token, user, isSubmitting, questions, answers, progressKey, focusViolationCount, isBetaTester, examConfig, setFeedbackRequiredForExam]);
   
   // Effect 1: Load questions and saved progress.
   useEffect(() => {
@@ -101,7 +101,7 @@ const Test: FC = () => {
     const config = activeOrg.exams.find(e => e.id === examId);
     if (!config) {
         toast.error("Could not find the specified exam.");
-        history.push('/dashboard');
+        navigate('/dashboard');
         return;
     }
     setExamConfig(config);
@@ -150,7 +150,7 @@ const Test: FC = () => {
         }
     };
     loadTest();
-  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, history, progressKey, isBetaTester, paidExamIds]);
+  }, [examId, activeOrg, isInitializing, user, isSubscribed, token, navigate, progressKey, isBetaTester, paidExamIds]);
 
   // Effect 2: Manage the timer.
   useEffect(() => {
@@ -320,7 +320,7 @@ const Test: FC = () => {
                         </ol>
                     </div>
                 )}
-                <button onClick={() => history.push('/dashboard')} className="mt-6 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg">
+                <button onClick={() => navigate('/dashboard')} className="mt-6 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg">
                     Back to Dashboard
                 </button>
             </div>

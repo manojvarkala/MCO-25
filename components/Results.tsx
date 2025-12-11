@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, RecommendedBook } from '../types.ts';
-import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
 import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, Sparkles, Star, XCircle, BookOpen, AlertTriangle, Share2 } from 'lucide-react';
 import jsPDF from 'jspdf';
@@ -18,8 +17,6 @@ import ShareButtons from './ShareButtons.tsx';
 type UserCertVisibility = 'NONE' | 'USER_EARNED' | 'REVIEW_PENDING';
 
 const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } | null => {
-    // FIX: Added a bulletproof safety check. If the affiliateLinks object is missing,
-    // the function will now return null instead of crashing the application.
     if (!book.affiliateLinks) {
         return null;
     }
@@ -54,7 +51,6 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
          }
     }
     
-    // Return null if no valid URLs are found after all checks.
     return null;
 };
 
@@ -114,7 +110,7 @@ const Results: FC = () => {
 
             const timer = setTimeout(() => {
                 setIsProcessing(false);
-            }, 4500); // Total processing simulation time
+            }, 4500);
 
             return () => {
                 clearTimeout(timer);
@@ -291,4 +287,270 @@ const Results: FC = () => {
     const reviewAlreadySubmitted = sessionStorage.getItem(reviewSubmittedKey) === 'true';
 
     if (isLoading || !result || !exam || !activeOrg) {
-        return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4
+        return <div className="flex flex-col items-center justify-center h-64"><LogoSpinner /><p className="mt-4 text-slate-600">Loading Result...</p></div>;
+    }
+
+    if (isProcessing) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+                <LogoSpinner />
+                <p className="mt-4 text-lg font-semibold text-slate-700">{processingMessage}</p>
+                <div className="w-64 bg-slate-200 rounded-full h-2 mt-4">
+                    <div className="bg-cyan-500 h-2 rounded-full animate-progress"></div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="max-w-4xl mx-auto space-y-8">
+            {/* Hidden component for screenshotting */}
+            <div className="fixed -left-[9999px] top-0">
+                <div ref={shareableResultRef}>
+                    <ShareableResult user={user} exam={exam} result={result} organization={activeOrg} />
+                </div>
+            </div>
+
+            <div className="bg-white p-8 rounded-xl shadow-lg text-center border border-slate-200">
+                {isPassed ? (
+                    <div className="mb-6">
+                        <CheckCircle className="mx-auto h-20 w-20 text-green-500 mb-4" />
+                        <h1 className="text-4xl font-bold text-slate-800">Congratulations!</h1>
+                        <p className="text-xl text-slate-600 mt-2">You passed the {exam.name}.</p>
+                    </div>
+                ) : (
+                    <div className="mb-6">
+                        <XCircle className="mx-auto h-20 w-20 text-red-500 mb-4" />
+                        <h1 className="text-4xl font-bold text-slate-800">Keep Practicing!</h1>
+                        <p className="text-xl text-slate-600 mt-2">You didn't pass the {exam.name} this time.</p>
+                    </div>
+                )}
+
+                <div className="flex justify-center items-center gap-8 mt-8 mb-8">
+                    <div className="text-center">
+                        <p className="text-sm text-slate-500 uppercase tracking-wide font-semibold">Your Score</p>
+                        <p className={`text-5xl font-extrabold ${isPassed ? 'text-green-600' : 'text-red-600'}`}>
+                            {result.score.toFixed(0)}%
+                        </p>
+                    </div>
+                    <div className="h-12 w-px bg-slate-200"></div>
+                    <div className="text-center">
+                        <p className="text-sm text-slate-500 uppercase tracking-wide font-semibold">Required</p>
+                        <p className="text-5xl font-bold text-slate-700">{exam.passScore}%</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 max-w-md mx-auto mb-8">
+                    <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                        <p className="text-sm text-green-800">Correct Answers</p>
+                        <p className="text-2xl font-bold text-green-700">{result.correctCount}</p>
+                    </div>
+                    <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                        <p className="text-sm text-red-800">Incorrect Answers</p>
+                        <p className="text-2xl font-bold text-red-700">{result.totalQuestions - result.correctCount}</p>
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap justify-center gap-4">
+                    <button
+                        onClick={() => navigate('/dashboard')}
+                        className="px-6 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition"
+                    >
+                        Back to Dashboard
+                    </button>
+                    
+                    {userCertificateVisibility === 'USER_EARNED' && (
+                        <button
+                            onClick={() => navigate(`/certificate/${result.testId}`)}
+                            className="flex items-center gap-2 px-6 py-2 bg-cyan-600 text-white font-bold rounded-lg hover:bg-cyan-700 transition shadow-md"
+                        >
+                            <Award size={20} /> Download Certificate
+                        </button>
+                    )}
+                    
+                    {userCertificateVisibility === 'REVIEW_PENDING' && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg border border-yellow-200 max-w-md text-left text-sm">
+                            <AlertTriangle className="flex-shrink-0" />
+                            <div>
+                                <span className="font-bold">Provisional Pass:</span> Your exam was flagged for review. Your certificate will be released pending admin approval (usually within 24 hours).
+                            </div>
+                        </div>
+                    )}
+
+                    {isPassed && (
+                        <button
+                            onClick={handleDownloadImage}
+                            disabled={isGeneratingShareImage}
+                            className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition shadow-md disabled:bg-indigo-400"
+                        >
+                            <Share2 size={20} /> Share Achievement
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* AI Feedback Section */}
+            {!isPassed && canGetAIFeedback && (
+                <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                    <div className="flex items-start gap-4">
+                        <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-full text-white">
+                            <Sparkles size={24} />
+                        </div>
+                        <div className="flex-grow">
+                            <h2 className="text-2xl font-bold text-slate-800">AI Study Guide</h2>
+                            <p className="text-slate-600 mt-1">Get personalized feedback on your incorrect answers to help you improve.</p>
+                            
+                            {!aiFeedback ? (
+                                <button
+                                    onClick={generateAIFeedback}
+                                    disabled={isAiLoading}
+                                    className="mt-4 flex items-center gap-2 px-6 py-3 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition disabled:bg-slate-300"
+                                >
+                                    {isAiLoading ? <LogoSpinner /> : <Sparkles size={18} />}
+                                    {isAiLoading ? 'Analyzing Results...' : 'Generate My Study Guide'}
+                                </button>
+                            ) : (
+                                <div className="mt-6">
+                                    <div className="prose prose-slate max-w-none bg-slate-50 p-6 rounded-lg border border-slate-200 mb-4">
+                                        <div dangerouslySetInnerHTML={{ __html: aiFeedback.replace(/\n/g, '<br/>') }} />
+                                    </div>
+                                    <button
+                                        onClick={downloadAiFeedback}
+                                        className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white font-semibold rounded-lg hover:bg-slate-900 transition"
+                                    >
+                                        <Download size={18} /> Download as PDF
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {!isPassed && !canGetAIFeedback && (
+                <div className="bg-gradient-to-r from-slate-100 to-white p-6 rounded-xl border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-800 mb-1">Unlock AI-Powered Insights</h3>
+                        <p className="text-slate-600 text-sm">Subscribe or purchase this exam to get a personalized AI breakdown of your mistakes.</p>
+                    </div>
+                    <button onClick={() => navigate('/pricing')} className="px-4 py-2 bg-yellow-500 text-white font-bold rounded-lg hover:bg-yellow-600 transition shadow-sm whitespace-nowrap">
+                        View Plans
+                    </button>
+                </div>
+            )}
+
+            {/* Recommended Books Section */}
+            {recommendedBooksForExam.length > 0 && (
+                <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                        {recommendedBooksForExam.map(book => {
+                            const linkData = getGeoAffiliateLink(book);
+                            if (!linkData) return null;
+                            return (
+                                <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full flex-shrink-0 flex flex-col transform hover:-translate-y-1 transition-transform duration-200">
+                                    <BookCover book={book} className="w-full h-40"/>
+                                    <div className="p-4 flex flex-col flex-grow">
+                                        <h4 className="font-bold text-slate-800 text-sm mb-2 leading-tight flex-grow">{book.title}</h4>
+                                        <a href={linkData.url} target="_blank" rel="noopener noreferrer" className="mt-auto w-full flex items-center justify-center text-xs text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-2 py-1.5 transition-colors">
+                                            Buy on {linkData.domainName}
+                                        </a>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Question Review (Practice Only) */}
+            {exam.isPractice && (
+                <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                        <BarChart2 className="text-cyan-500" /> Answer Review
+                    </h2>
+                    <div className="space-y-4">
+                        {result.review.map((item, index) => {
+                            const isCorrect = item.userAnswer === item.correctAnswer;
+                            const isExpanded = expandedQuestion === index;
+                            
+                            return (
+                                <div key={index} className={`border rounded-lg overflow-hidden transition-all ${isCorrect ? 'border-slate-200' : 'border-red-200 bg-red-50/30'}`}>
+                                    <button 
+                                        onClick={() => setExpandedQuestion(isExpanded ? null : index)}
+                                        className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-50 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            {isCorrect ? <CheckCircle className="text-green-500 flex-shrink-0" size={20} /> : <XCircle className="text-red-500 flex-shrink-0" size={20} />}
+                                            <span className={`font-medium ${isCorrect ? 'text-slate-700' : 'text-red-800'}`}>Question {index + 1}</span>
+                                        </div>
+                                        {isExpanded ? <ChevronUp className="text-slate-400" /> : <ChevronDown className="text-slate-400" />}
+                                    </button>
+                                    
+                                    {isExpanded && (
+                                        <div className="p-4 border-t border-slate-200 bg-white">
+                                            <p className="font-semibold text-slate-800 mb-4">{item.question}</p>
+                                            <div className="space-y-2">
+                                                {item.options.map((opt, i) => {
+                                                    let optionClass = "p-3 rounded border border-slate-100 text-slate-600";
+                                                    if (i === item.correctAnswer) optionClass = "p-3 rounded border border-green-300 bg-green-50 text-green-800 font-semibold";
+                                                    else if (i === item.userAnswer && !isCorrect) optionClass = "p-3 rounded border border-red-300 bg-red-50 text-red-800";
+                                                    
+                                                    return (
+                                                        <div key={i} className={optionClass}>
+                                                            {String.fromCharCode(65 + i)}. {opt}
+                                                            {i === item.correctAnswer && <span className="ml-2 text-xs uppercase font-bold bg-green-200 text-green-800 px-2 py-0.5 rounded-full">Correct</span>}
+                                                            {i === item.userAnswer && !isCorrect && <span className="ml-2 text-xs uppercase font-bold bg-red-200 text-red-800 px-2 py-0.5 rounded-full">Your Answer</span>}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Review Section */}
+            {!reviewAlreadySubmitted && (
+                <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200 text-center">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-2">Rate This Exam</h2>
+                    <p className="text-slate-600 mb-4">Your feedback helps us improve.</p>
+                    <form onSubmit={handleReviewSubmit} className="max-w-md mx-auto space-y-4">
+                        <div className="flex justify-center gap-2">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                    key={star}
+                                    type="button"
+                                    onClick={() => setRating(star)}
+                                    className="focus:outline-none transition-transform hover:scale-110"
+                                >
+                                    <Star size={32} className={rating >= star ? "fill-yellow-400 text-yellow-400" : "text-slate-300"} />
+                                </button>
+                            ))}
+                        </div>
+                        <textarea
+                            value={reviewText}
+                            onChange={(e) => setReviewText(e.target.value)}
+                            placeholder="Optional: Leave a comment..."
+                            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none"
+                            rows={3}
+                        />
+                        <button
+                            type="submit"
+                            disabled={isSubmittingReview || rating === 0}
+                            className="w-full py-2 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 transition disabled:bg-slate-400"
+                        >
+                            {isSubmittingReview ? <LogoSpinner /> : 'Submit Review'}
+                        </button>
+                    </form>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default Results;

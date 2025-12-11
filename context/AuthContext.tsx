@@ -55,7 +55,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [paidExamIds, setPaidExamIds] = useState<string[]>(() => {
       try {
         const storedIds = localStorage.getItem('paidExamIds');
-        return storedIds ? JSON.parse(storedIds) : [];
+        const parsed = storedIds ? JSON.parse(storedIds) : [];
+        return Array.isArray(parsed) ? parsed : [];
       } catch (error) {
           console.error("Failed to parse paidExamIds from localStorage", error);
           return [];
@@ -171,14 +172,27 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             payload.user.name = decodeHtmlEntities(payload.user.name);
         }
 
-        if (payload.user && payload.paidExamIds) {
+        if (payload.user) {
             setUser(payload.user);
-            setPaidExamIds(payload.paidExamIds);
+            
+            // Robustly handle paidExamIds: If backend sent an object instead of array, convert it.
+            let paidIds: string[] = [];
+            if (payload.paidExamIds) {
+                if (Array.isArray(payload.paidExamIds)) {
+                    paidIds = payload.paidExamIds;
+                } else if (typeof payload.paidExamIds === 'object') {
+                    // Handle case where PHP array_unique preserved keys and json_encode made it an object
+                    paidIds = Object.values(payload.paidExamIds);
+                }
+            }
+            setPaidExamIds(paidIds);
+            
             setToken(jwtToken);
             setMasqueradeAs('none');
             setOriginalAuthState(null);
+            
             localStorage.setItem('examUser', JSON.stringify(payload.user));
-            localStorage.setItem('paidExamIds', JSON.stringify(payload.paidExamIds));
+            localStorage.setItem('paidExamIds', JSON.stringify(paidIds));
             localStorage.setItem('authToken', jwtToken);
 
             if (payload.isBetaTester) {

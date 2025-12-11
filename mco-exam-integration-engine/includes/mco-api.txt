@@ -103,7 +103,8 @@ if (!function_exists('mco_generate_exam_jwt')) {
                 'name' => $user->display_name,
                 'isAdmin' => user_can($user, 'manage_options'),
             ],
-            'paidExamIds' => array_unique($paid_exam_ids),
+            // FIX: Ensure this is a sequential array (list) for JSON, not an object/map
+            'paidExamIds' => array_values(array_unique($paid_exam_ids)),
             'isSubscribed' => (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription($user_id, '', 'active')),
             'subscriptionInfo' => $subscription_info,
         ];
@@ -140,7 +141,7 @@ if (!function_exists('mco_verify_exam_jwt')) {
         list($header_encoded, $payload_encoded, $signature_encoded) = $parts;
 
         $signature_to_verify = mco_base64url_decode($signature_encoded);
-        $expected_signature = hash_hmac('sha256', "$header_encoded.$payload_encoded", MCO_JWT_SECRET, true);
+        $expected_signature = hash_hmac('sha256', "$header.$payload_encoded", MCO_JWT_SECRET, true);
 
         if (!hash_equals($expected_signature, $signature_to_verify)) return false;
 
@@ -308,7 +309,8 @@ function mco_api_get_user_results(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
     $user_id = $payload['user']['id'];
     $results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
-    return new WP_REST_Response($results, 200);
+    // FIX: Ensure this is a sequential array (list) for JSON, not an object/map if keys were disturbed
+    return new WP_REST_Response(array_values($results), 200);
 }
 
 function mco_api_submit_result(WP_REST_Request $request) {

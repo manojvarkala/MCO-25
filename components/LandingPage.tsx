@@ -1,21 +1,21 @@
 import React, { FC, useEffect, useRef } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LogIn, UserPlus, FileText, Award, Sparkles, Beaker } from 'lucide-react';
 import LogoSpinner from './LogoSpinner.tsx';
 
 const LandingPage: FC = () => {
-    const history = useHistory();
+    const navigate = useNavigate();
     const { user } = useAuth();
     const { activeOrg, isInitializing } = useAppContext();
     const videoRef = useRef<HTMLVideoElement>(null);
     
     useEffect(() => {
         if (user) {
-            history.push('/dashboard');
+            navigate('/dashboard');
         }
-    }, [user, history]);
+    }, [user, navigate]);
 
     useEffect(() => {
         if (videoRef.current) {
