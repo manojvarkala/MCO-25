@@ -97,6 +97,7 @@ const Admin: FC = () => {
     const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
     const [examStats, setExamStats] = useState<ExamStat[] | null>(null);
     const [isLoadingData, setIsLoadingData] = useState(true);
+    const [dataLoadError, setDataLoadError] = useState<string | null>(null);
 
     const [sheetUrlToTest, setSheetUrlToTest] = useState('');
     const [isTestingUrl, setIsTestingUrl] = useState(false);
@@ -114,6 +115,7 @@ const Admin: FC = () => {
         if (!token) return;
         const fetchAdminData = async () => {
             setIsLoadingData(true);
+            setDataLoadError(null);
             try {
                 const [status, stats] = await Promise.all([
                     googleSheetsService.adminGetSystemStatus(token),
@@ -126,7 +128,15 @@ const Admin: FC = () => {
                     setExamStats(relevantStats);
                 }
             } catch (error: any) {
-                toast.error("Could not load admin data: " + error.message);
+                console.error("Admin data load error:", error);
+                const msg = error.message || 'Unknown error';
+                setDataLoadError(msg);
+                
+                if (msg.includes("Authorization header") || msg.includes("token")) {
+                     toast.error("Authentication Error. Please check the Debug Sidebar for server configuration issues.", { duration: 5000 });
+                } else {
+                     toast.error("Could not load admin data: " + msg);
+                }
             } finally {
                 setIsLoadingData(false);
             }
@@ -137,9 +147,9 @@ const Admin: FC = () => {
     const summaryStats = useMemo(() => {
         if (!examStats) return { totalSales: 0, totalRevenue: 0, totalAttempts: 0 };
         return examStats.reduce((acc, stat) => {
-            acc.totalSales += stat.totalSales;
-            acc.totalRevenue += stat.totalRevenue;
-            acc.totalAttempts += stat.attempts;
+            acc.totalSales += stat.totalSales || 0;
+            acc.totalRevenue += stat.totalRevenue || 0;
+            acc.totalAttempts += stat.attempts || 0;
             return acc;
         }, { totalSales: 0, totalRevenue: 0, totalAttempts: 0 });
     }, [examStats]);
@@ -263,6 +273,19 @@ const Admin: FC = () => {
                     <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">Admin Dashboard</h1>
                     <p className="text-lg text-[rgb(var(--color-text-muted-rgb))]">Tools and diagnostics for managing the application.</p>
                 </div>
+
+                {dataLoadError && (
+                    <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+                        <div className="flex items-start gap-3">
+                            <XCircle className="text-red-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h3 className="font-bold text-red-800">Connection Error</h3>
+                                <p className="text-sm text-red-700 mt-1">{dataLoadError}</p>
+                                <p className="text-xs text-red-600 mt-2">Please click the <strong>"Debug"</strong> button in the bottom-right corner for troubleshooting steps.</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
             
                 <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
                     <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] flex items-center mb-4">
