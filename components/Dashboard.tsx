@@ -342,4 +342,33 @@ const Dashboard: FC = () => {
                             if (!exam) return null;
                             const isPass = result.score >= exam.passScore;
                             return (
-                                <div key={result.testId
+                                <div key={result.testId} className="bg-[rgb(var(--color-muted-rgb))] p-3 rounded-lg flex justify-between items-center hover:bg-[rgb(var(--color-border-rgb))] transition">
+                                    <div>
+                                        <p className="font-semibold text-[rgb(var(--color-text-strong-rgb))]">{stripHtml(exam.name)}</p>
+                                        <p className="text-xs text-[rgb(var(--color-text-muted-rgb))]">{new Date(result.timestamp).toLocaleString()}</p>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <span className={`font-bold text-lg ${isPass ? 'text-[rgb(var(--color-success-rgb))]' : 'text-[rgb(var(--color-danger-rgb))]'}`}>{result.score.toFixed(0)}%</span>
+                                        {isPass ? <CheckCircle size={20} className="text-[rgb(var(--color-success-rgb))]" /> : <XCircle size={20} className="text-[rgb(var(--color-danger-rgb))]" />}
+                                        <button onClick={() => navigate(`/results/${result.testId}`)} className="text-[rgb(var(--color-primary-rgb))] hover:text-[rgb(var(--color-primary-hover-rgb))]">
+                                            <ChevronRight size={20} />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        }) : <p className="text-center text-[rgb(var(--color-text-muted-rgb))] py-4">You haven't completed any exams yet.</p>}
+                         {results.length > 5 && (
+                            <div className="text-center mt-4">
+                                <Link to='/profile' className="font-semibold text-[rgb(var(--color-primary-rgb))] hover:underline">
+                                    View All History
+                                </Link>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default Dashboard;
