@@ -10,6 +10,11 @@ declare const __DEV__: boolean;
 let syncPromise: Promise<TestResult[]> | null = null;
 
 const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string | null, data: Record<string, any> = {}, isFormData: boolean = false) => {
+    // Check for network connectivity first
+    if (!navigator.onLine) {
+        throw new Error("You are currently offline. Please check your internet connection.");
+    }
+
     const API_BASE_URL = getApiBaseUrl();
     const fullUrl = `${API_BASE_URL}/wp-json/mco-app/v1${endpoint}`;
 
@@ -86,7 +91,7 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         console.error(`API Fetch Error to ${endpoint}:`, error);
 
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-            throw new Error(`Could not connect to the API server at ${API_BASE_URL}. Please check your internet connection.`);
+            throw new Error(`Could not connect to the API server at ${API_BASE_URL}. Please check your internet connection or server CORS settings.`);
         }
         
         throw error;

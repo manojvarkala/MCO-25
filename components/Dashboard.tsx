@@ -36,7 +36,7 @@ const stripHtml = (html: string): string => {
 };
 
 const Dashboard: FC = () => {
-    const { user, token, paidExamIds, isSubscribed, subscriptionInfo, loginWithToken, isEffectivelyAdmin, isBetaTester } = useAuth();
+    const { user, token, paidExamIds, isSubscribed, subscriptionInfo, isEffectivelyAdmin, isBetaTester } = useAuth();
     const { activeOrg, isInitializing, inProgressExam, examPrices, subscriptionsEnabled, bundlesEnabled, feedbackRequiredForExam } = useAppContext();
     const navigate = useNavigate();
 
@@ -45,17 +45,28 @@ const Dashboard: FC = () => {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isTesterBannerVisible, setIsTesterBannerVisible] = useState(isBetaTester);
     
+    // Improved Sync Handler: Calls service directly for accurate loading/error state
     const handleSync = useCallback(async () => {
-        if (!token) return;
+        if (!user || !token) return;
         setIsSyncing(true);
+        const toastId = toast.loading("Syncing latest exams and results...");
+        
         try {
-            await loginWithToken(token, true);
+            const updatedResults = await googleSheetsService.syncResults(user, token);
+            updatedResults.sort((a, b) => b.timestamp - a.timestamp);
+            setResults(updatedResults);
+            toast.success("Exams synchronized successfully!", { id: toastId });
         } catch(e: any) {
-            toast.error(e.message || "Sync failed.");
+            console.error("Sync error:", e);
+            if (e.message?.includes("connect") || e.message?.includes("fetch")) {
+                toast.error(`Connection Error: ${e.message}`, { id: toastId });
+            } else {
+                toast.error(`Sync failed: ${e.message}`, { id: toastId });
+            }
         } finally {
             setIsSyncing(false);
         }
-    }, [token, loginWithToken]);
+    }, [user, token]);
 
     useEffect(() => {
         if (user) {
