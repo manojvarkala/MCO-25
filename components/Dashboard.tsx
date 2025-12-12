@@ -58,8 +58,11 @@ const Dashboard: FC = () => {
             toast.success("Exams synchronized successfully!", { id: toastId });
         } catch(e: any) {
             console.error("Sync error:", e);
+            // Don't show "Success" if it failed. Show detailed error.
             if (e.message?.includes("connect") || e.message?.includes("fetch")) {
                 toast.error(`Connection Error: ${e.message}`, { id: toastId });
+            } else if (e.message?.includes("Authorization")) {
+                 toast.error(`Sync Failed: Server configuration issue (Auth Header). Check Admin Debug.`, { id: toastId });
             } else {
                 toast.error(`Sync failed: ${e.message}`, { id: toastId });
             }

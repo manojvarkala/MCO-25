@@ -44,7 +44,8 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
             try {
                 errorData = JSON.parse(responseText);
             } catch (e) {
-                throw new Error(responseText || response.statusText || `Server error: ${response.status}`);
+                // If response isn't JSON, it might be a server HTML error (404, 500, etc)
+                throw new Error(responseText.substring(0, 100) || response.statusText || `Server error: ${response.status}`);
             }
 
             // CRITICAL FIX: Only auto-logout on specific expiration codes.
@@ -74,7 +75,8 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
             
             if (errorData?.code === 'jwt_auth_missing_token') {
                  // Do not logout, just throw. Admin sidebar needs to show this error.
-                throw new Error("Authorization header missing. Server config issue. Check .htaccess");
+                 // This specific error means the server stripped the Authorization header.
+                throw new Error("Server Configuration Error: Authorization header missing. Check .htaccess or Nginx config.");
             }
             
             const errorMessage = errorData?.message || response.statusText || `Server error: ${response.status}`;

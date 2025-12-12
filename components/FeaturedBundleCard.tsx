@@ -35,6 +35,7 @@ const FeaturedBundleCard: FC<FeaturedBundleCardProps> = ({ bundle, activeOrg }) 
         if (!bundle || !bundle.bundledSkus || !Array.isArray(bundle.bundledSkus) || !examPrices) return [];
         
         return bundle.bundledSkus.map(sku => {
+            // Safe access to examPrices
             const product = examPrices[sku];
             if (!product) return null;
             

@@ -218,29 +218,27 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('subscriptionInfo');
             }
 
-            // The sync operation is now non-blocking. It runs in the background
-            // without holding up the login process, allowing for immediate navigation to the dashboard.
+            // The sync operation is now non-blocking. It runs in the background.
+            // If it's just a login, we don't need to report success of sync immediately.
+            // If it fails, we show an error, but we don't show a confusing "Exams synchronized" message too early.
             (async () => {
                 try {
                     await googleSheetsService.syncResults(payload.user, jwtToken);
-                    // Provide clearer feedback: login happens instantly, sync happens in the background.
                     if (isSyncOnly) {
                         toast.success('Exams synchronized successfully!');
                     } else {
-                        toast.success('Logged in successfully! Syncing exam history in the background.');
+                        // For normal login, we just show "Logged in successfully" from the component calling this,
+                        // or we can add a small note here if needed.
+                        console.log("Background sync complete.");
                     }
                 } catch (syncError: any) {
                     console.error("Background sync on login failed:", syncError.message);
-                    
                     const errorPrefix = isSyncOnly ? 'Sync failed:' : 'Login successful, but sync failed:';
                     
                     if (syncError.message.includes("Authorization header")) {
-                         toast.error(`${errorPrefix} Server configuration issue (Authorization header missing). Check Admin Debug sidebar.`, { duration: 10000 });
+                         toast.error(`${errorPrefix} Server configuration issue (Auth Header missing). Check Admin Debug sidebar.`, { duration: 10000 });
                     } else {
-                         toast.error(
-                            `${errorPrefix} Locally saved results will be shown. Error: ${syncError.message}`,
-                            { duration: 8000 }
-                        );
+                         toast.error(`${errorPrefix} Locally saved results will be shown. Error: ${syncError.message}`, { duration: 8000 });
                     }
                 }
             })();
