@@ -42,10 +42,9 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 throw new Error(responseText || response.statusText || `Server error: ${response.status}`);
             }
 
-            // Enhanced Error Handling:
-            // We only force-logout on explicit expiration. 
-            // For 'invalid_token' or 'forbidden', we throw an error but let the UI decide if it should logout,
-            // to prevent loops if the server is just misconfigured (stripping headers).
+            // CRITICAL FIX: Only auto-logout on specific expiration codes.
+            // We REMOVE 'jwt_auth_invalid_token' from the auto-logout list because
+            // server misconfiguration (missing headers) often triggers this, causing infinite loops.
             if (errorData?.code === 'jwt_auth_expired_token') {
                 localStorage.removeItem('examUser');
                 localStorage.removeItem('paidExamIds');
@@ -53,17 +52,24 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 localStorage.removeItem('isSubscribed');
                 localStorage.removeItem('activeOrg');
                 
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('exam_timer_') || key.startsWith('exam_results_') || key.startsWith('exam_progress_')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                
                 toast.error("Your session has expired. Please log in again.", { id: 'auth-expired-toast' });
                 
                 setTimeout(() => {
                     window.location.href = '/';
                 }, 1500);
+
                 throw new Error("Session expired.");
             }
             
             if (errorData?.code === 'jwt_auth_missing_token') {
-                console.warn("API Error: Authorization header missing. Check server config.");
-                throw new Error("Server Configuration Error: Authorization header was stripped. Please check the Admin Debug Sidebar.");
+                 // Do not logout, just throw. Admin sidebar needs to show this error.
+                throw new Error("Authorization header missing. Server config issue. Check .htaccess");
             }
             
             const errorMessage = errorData?.message || response.statusText || `Server error: ${response.status}`;

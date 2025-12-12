@@ -31,7 +31,8 @@ const FeaturedBundleCard: FC<FeaturedBundleCardProps> = ({ bundle, activeOrg }) 
     const [isRedirecting, setIsRedirecting] = useState(false);
 
     const bundledItems = useMemo(() => {
-        if (!bundle.bundledSkus || !examPrices) return [];
+        // FIX: Added safe check for bundle.bundledSkus to prevent map on undefined/null
+        if (!bundle || !bundle.bundledSkus || !Array.isArray(bundle.bundledSkus) || !examPrices) return [];
         
         return bundle.bundledSkus.map(sku => {
             const product = examPrices[sku];
@@ -39,8 +40,8 @@ const FeaturedBundleCard: FC<FeaturedBundleCardProps> = ({ bundle, activeOrg }) 
             
             // Determine a friendly name
             let name = product.name;
-            if (product.name.includes('Certification Exam')) name = 'Certification Exam';
-            else if (product.name.includes('Subscription')) name = product.name; // Keep full name like "Monthly Subscription"
+            if (product.name && product.name.includes('Certification Exam')) name = 'Certification Exam';
+            else if (product.name && product.name.includes('Subscription')) name = product.name; // Keep full name like "Monthly Subscription"
             
             return {
                 sku,
@@ -48,7 +49,7 @@ const FeaturedBundleCard: FC<FeaturedBundleCardProps> = ({ bundle, activeOrg }) 
                 type: product.type
             };
         }).filter(Boolean);
-    }, [bundle.bundledSkus, examPrices]);
+    }, [bundle, examPrices]);
 
     const handlePurchase = async () => {
         if (!user || !token) {

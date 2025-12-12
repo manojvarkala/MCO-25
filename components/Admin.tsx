@@ -130,11 +130,13 @@ const Admin: FC = () => {
             } catch (error: any) {
                 console.error("Admin data load error:", error);
                 const msg = error.message || 'Unknown error';
-                setDataLoadError(msg);
                 
-                if (msg.includes("Authorization header") || msg.includes("token")) {
-                     toast.error("Authentication Error. Please check the Debug Sidebar for server configuration issues.", { duration: 5000 });
+                // Detailed error handling for the UI
+                if (msg.includes("Authorization header") || msg.includes("token") || msg.includes("403")) {
+                     setDataLoadError("Server Configuration Issue: Authorization header missing or invalid.");
+                     toast.error("Authentication Error. Please check the Debug Sidebar for the fix.", { duration: 5000 });
                 } else {
+                     setDataLoadError(msg);
                      toast.error("Could not load admin data: " + msg);
                 }
             } finally {
@@ -281,7 +283,9 @@ const Admin: FC = () => {
                             <div>
                                 <h3 className="font-bold text-red-800">Connection Error</h3>
                                 <p className="text-sm text-red-700 mt-1">{dataLoadError}</p>
-                                <p className="text-xs text-red-600 mt-2">Please click the <strong>"Debug"</strong> button in the bottom-right corner for troubleshooting steps.</p>
+                                <p className="text-xs text-red-600 mt-2 font-semibold animate-pulse">
+                                    ACTION REQUIRED: Please click the "Debug" button (bottom-right) for the server fix.
+                                </p>
                             </div>
                         </div>
                     </div>
