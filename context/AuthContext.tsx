@@ -219,17 +219,13 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             }
 
             // The sync operation is now non-blocking. It runs in the background.
-            // If it's just a login, we don't need to report success of sync immediately.
-            // If it fails, we show an error, but we don't show a confusing "Exams synchronized" message too early.
             (async () => {
                 try {
                     await googleSheetsService.syncResults(payload.user, jwtToken);
                     if (isSyncOnly) {
                         toast.success('Exams synchronized successfully!');
                     } else {
-                        // For normal login, we just show "Logged in successfully" from the component calling this,
-                        // or we can add a small note here if needed.
-                        console.log("Background sync complete.");
+                        // Silent success for login to avoid UI clutter
                     }
                 } catch (syncError: any) {
                     console.error("Background sync on login failed:", syncError.message);
