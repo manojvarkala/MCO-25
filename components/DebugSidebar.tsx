@@ -3,7 +3,7 @@ import React, { FC, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { DebugData } from '../types.ts';
-import { Bug, X, Server, User, ShoppingCart, FileText, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Bug, X, Server, User, ShoppingCart, FileText, CheckCircle, AlertTriangle, LogOut } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
 
@@ -13,7 +13,7 @@ interface DebugSidebarProps {
 }
 
 const DebugSidebar: FC<DebugSidebarProps> = ({ isOpen, onClose }) => {
-    const { token } = useAuth();
+    const { token, logout } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [debugData, setDebugData] = useState<DebugData | null>(null);
@@ -68,12 +68,21 @@ const DebugSidebar: FC<DebugSidebarProps> = ({ isOpen, onClose }) => {
     const currentAppUrl = window.location.origin;
     const apiUrl = getApiBaseUrl();
     
-    // Check for common Auth Header stripping symptoms
-    const isAuthError = error && (
+    // CASE 1: Server stripping header (401 / Missing Token)
+    const isMissingHeaderError = error && (
         error.toLowerCase().includes('jwt_auth_missing_token') || 
-        error.toLowerCase().includes('authorization header missing') ||
+        error.toLowerCase().includes('authorization header missing')
+    );
+
+    // CASE 2: Token mismatch / Secret Key issue (403 / Invalid Token)
+    const isInvalidTokenError = error && (
         error.toLowerCase().includes('invalid or expired token') ||
-        error.toLowerCase().includes('could not connect') || // CORS failures often mask auth errors
+        error.toLowerCase().includes('jwt_auth_invalid_token')
+    );
+    
+    // CASE 3: Generic connection issues
+    const isConnectionError = error && (
+        error.toLowerCase().includes('could not connect') || 
         error.toLowerCase().includes('failed to fetch')
     );
 
@@ -106,19 +115,19 @@ const DebugSidebar: FC<DebugSidebarProps> = ({ isOpen, onClose }) => {
                             <Section title="Backend API Status" icon={<AlertTriangle size={16} className="text-red-400" />}>
                                 <div className="flex items-center gap-2 mb-2">
                                     <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                                    <p className="font-bold text-red-400">Status: Connection Failed</p>
+                                    <p className="font-bold text-red-400">Status: Error</p>
                                 </div>
-                                <p className="text-xs text-slate-400 mb-2">Could not connect to the API at: <code className="bg-slate-700 p-1 rounded">{`${apiUrl}/wp-json/mco-app/v1/debug-details`}</code></p>
-                                <p className="text-sm"><strong>Error:</strong> {error}</p>
+                                <p className="text-xs text-slate-400 mb-2">Endpoint: <code className="bg-slate-700 p-1 rounded">{`${apiUrl}/wp-json/mco-app/v1/debug-details`}</code></p>
+                                <p className="text-sm break-all"><strong>Error:</strong> {error}</p>
                                 
                                 <div className="mt-4 p-3 bg-slate-700 rounded border border-amber-400/50 text-amber-200 text-xs">
-                                    {isAuthError ? (
+                                    {isMissingHeaderError && (
                                         <>
-                                            <h4 className="font-bold text-amber-300 mb-2 text-base">🔴 REQUIRED SERVER FIX</h4>
-                                            <p className="mb-2">Your server is blocking the login token. This is a common security setting on Apache/LiteSpeed servers.</p>
+                                            <h4 className="font-bold text-amber-300 mb-2 text-base">🔴 SERVER CONFIG ISSUE</h4>
+                                            <p className="mb-2">Your server is stripping the <code>Authorization</code> header. The fix is in your <code>.htaccess</code> file.</p>
                                             
-                                            <h4 className="font-bold text-white mt-4 mb-1">Step 1: Edit .htaccess</h4>
-                                            <p className="mb-2">Open the <code>.htaccess</code> file in your WordPress root folder. Add these lines to the very top:</p>
+                                            <h4 className="font-bold text-white mt-4 mb-1">Required .htaccess Rule:</h4>
+                                            <p className="mb-2">Add this to the very top of your <code>.htaccess</code> file, BEFORE any other rules:</p>
                                             <div className="bg-slate-900 p-2 rounded my-2 text-cyan-300 select-all">
                                                 <pre className="whitespace-pre-wrap"><code>
 {`<IfModule mod_rewrite.c>
@@ -128,25 +137,34 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 </IfModule>`}
                                                 </code></pre>
                                             </div>
-
-                                            <h4 className="font-bold text-white mt-4 mb-1">Step 2: Clear Caches</h4>
-                                            <p className="mb-2">If you use Cloudflare, WP Rocket, or LiteSpeed Cache, you <strong>must</strong> clear them after making this change.</p>
-                                            
-                                            <h4 className="font-bold text-white mt-4 mb-1">Step 3: Update Plugin Settings</h4>
-                                            <p className="mb-2">Go to <strong>WP Admin &rarr; Exam App Engine</strong>. Ensure "Exam Application URL(s)" includes exactly:</p>
-                                            <div className="bg-slate-900 p-2 rounded text-center my-2 text-cyan-300"><code>{currentAppUrl}</code></div>
                                         </>
-                                    ) : (
+                                    )}
+
+                                    {isInvalidTokenError && (
+                                        <>
+                                            <h4 className="font-bold text-amber-300 mb-2 text-base">🔑 TOKEN MISMATCH</h4>
+                                            <p className="mb-3">The token stored in your browser was signed with a different Secret Key than the one currently in your WordPress <code>wp-config.php</code>.</p>
+                                            
+                                            <p className="mb-3">This happens if you changed the <code>MCO_JWT_SECRET</code> after logging in, or migrated the database.</p>
+
+                                            <button 
+                                                onClick={logout}
+                                                className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded flex items-center justify-center gap-2 transition"
+                                            >
+                                                <LogOut size={16} /> Log Out & Clear Token
+                                            </button>
+                                            <p className="mt-2 text-center opacity-75">After logging out, log back in to generate a fresh, valid token.</p>
+                                        </>
+                                    )}
+
+                                    {!isMissingHeaderError && !isInvalidTokenError && (
                                         <>
                                             <h4 className="font-bold text-amber-300 mb-2">Troubleshooting Guide</h4>
-                                            <ol className="list-decimal list-inside my-2 space-y-3">
-                                                <li>
-                                                    <strong>CORS Setting:</strong> In your WordPress admin, go to <strong className="text-white">Exam App Engine &rarr; Main Settings</strong> and ensure the "Exam Application URL(s)" field contains your app's URL.
-                                                </li>
-                                                <li>
-                                                    <strong>Plugin Conflict:</strong> A security plugin (like Wordfence) might be blocking API requests. Try temporarily disabling it.
-                                                </li>
-                                            </ol>
+                                            <ul className="list-disc list-inside my-2 space-y-2">
+                                                <li>Check if your WordPress site is online.</li>
+                                                <li>Ensure the <strong>Exam App Engine</strong> plugin is active.</li>
+                                                <li>Verify CORS settings in <strong>WP Admin &rarr; Exam App Engine</strong>.</li>
+                                            </ul>
                                         </>
                                     )}
                                 </div>
@@ -190,14 +208,6 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
                                         </div>
                                     ) : <p>No results synced.</p>}
                                 </Section>
-
-                                 {debugData?.sheetTest?.data && (
-                                     <Section title="Raw Sheet Test Data" icon={<FileText size={16} />}>
-                                        <pre className="text-xs bg-slate-800 p-2 rounded mt-1 whitespace-pre-wrap break-all">
-                                            {JSON.stringify(debugData.sheetTest.data, null, 2)}
-                                        </pre>
-                                    </Section>
-                                )}
                             </div>
                         )}
                     </div>

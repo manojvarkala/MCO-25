@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, ProductVariation } from '../types.ts';
-import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit, CreditCard, Gift, X } from 'lucide-react';
+import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit, CreditCard, Gift, X, LogOut } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';
@@ -36,7 +36,7 @@ const stripHtml = (html: string): string => {
 };
 
 const Dashboard: FC = () => {
-    const { user, token, paidExamIds, isSubscribed, subscriptionInfo, isEffectivelyAdmin, isBetaTester } = useAuth();
+    const { user, token, paidExamIds, isSubscribed, subscriptionInfo, isEffectivelyAdmin, isBetaTester, logout } = useAuth();
     const { activeOrg, isInitializing, inProgressExam, examPrices, subscriptionsEnabled, bundlesEnabled, feedbackRequiredForExam } = useAppContext();
     const navigate = useNavigate();
 
@@ -61,15 +61,30 @@ const Dashboard: FC = () => {
             // Don't show "Success" if it failed. Show detailed error.
             if (e.message?.includes("connect") || e.message?.includes("fetch")) {
                 toast.error(`Connection Error: ${e.message}`, { id: toastId });
-            } else if (e.message?.includes("Authorization")) {
+            } else if (e.message?.includes("Authorization header")) {
                  toast.error(`Sync Failed: Server configuration issue (Auth Header). Check Admin Debug.`, { id: toastId });
+            } else if (e.message?.includes("Invalid or expired token") || e.message?.includes("jwt_auth_invalid_token")) {
+                 toast.error(
+                    (t) => (
+                        <div className="flex flex-col gap-2">
+                            <span>Sync Failed: Your session key is invalid.</span>
+                            <button 
+                                onClick={() => { toast.dismiss(t.id); logout(); }}
+                                className="bg-red-600 text-white px-3 py-1 rounded text-sm flex items-center justify-center gap-1 hover:bg-red-700"
+                            >
+                                <LogOut size={12} /> Log Out to Fix
+                            </button>
+                        </div>
+                    ),
+                    { id: toastId, duration: 6000 }
+                );
             } else {
                 toast.error(`Sync failed: ${e.message}`, { id: toastId });
             }
         } finally {
             setIsSyncing(false);
         }
-    }, [user, token]);
+    }, [user, token, logout]);
 
     useEffect(() => {
         if (user) {
