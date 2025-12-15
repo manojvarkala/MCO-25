@@ -1,3 +1,4 @@
+
 import React, { FC, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -66,7 +67,15 @@ const DebugSidebar: FC<DebugSidebarProps> = ({ isOpen, onClose }) => {
     
     const currentAppUrl = window.location.origin;
     const apiUrl = getApiBaseUrl();
-    const isAuthError = error && (error.toLowerCase().includes('jwt_auth_missing_token') || error.toLowerCase().includes('authorization header missing'));
+    
+    // Check for common Auth Header stripping symptoms
+    const isAuthError = error && (
+        error.toLowerCase().includes('jwt_auth_missing_token') || 
+        error.toLowerCase().includes('authorization header missing') ||
+        error.toLowerCase().includes('invalid or expired token') ||
+        error.toLowerCase().includes('could not connect') || // CORS failures often mask auth errors
+        error.toLowerCase().includes('failed to fetch')
+    );
 
     return (
         <>
@@ -105,66 +114,37 @@ const DebugSidebar: FC<DebugSidebarProps> = ({ isOpen, onClose }) => {
                                 <div className="mt-4 p-3 bg-slate-700 rounded border border-amber-400/50 text-amber-200 text-xs">
                                     {isAuthError ? (
                                         <>
-                                            <h4 className="font-bold text-amber-300 mb-2 text-base">Primary Solution (Apache Servers)</h4>
-                                            <p className="mb-2">This error almost always means your Apache server is stripping the "Authorization" header from API requests.</p>
-                                            <ol className="list-decimal list-inside my-2 space-y-3">
-                                                <li>
-                                                    <strong className="text-white">Update .htaccess file</strong><br/>
-                                                    Add the following code to the <strong>very top</strong> of your <code>.htaccess</code> file in the WordPress root directory (before the <code># BEGIN WordPress</code> block):
-                                                    <div className="bg-slate-900 p-2 rounded my-2 text-cyan-300">
-                                                        <pre className="whitespace-pre-wrap"><code>
+                                            <h4 className="font-bold text-amber-300 mb-2 text-base">🔴 REQUIRED SERVER FIX</h4>
+                                            <p className="mb-2">Your server is blocking the login token. This is a common security setting on Apache/LiteSpeed servers.</p>
+                                            
+                                            <h4 className="font-bold text-white mt-4 mb-1">Step 1: Edit .htaccess</h4>
+                                            <p className="mb-2">Open the <code>.htaccess</code> file in your WordPress root folder. Add these lines to the very top:</p>
+                                            <div className="bg-slate-900 p-2 rounded my-2 text-cyan-300 select-all">
+                                                <pre className="whitespace-pre-wrap"><code>
 {`<IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteCond %{HTTP:Authorization} .
 RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 </IfModule>`}
-                                                        </code></pre>
-                                                    </div>
-                                                    After adding this, clear any server or plugin caches.
-                                                </li>
-                                            </ol>
+                                                </code></pre>
+                                            </div>
+
+                                            <h4 className="font-bold text-white mt-4 mb-1">Step 2: Clear Caches</h4>
+                                            <p className="mb-2">If you use Cloudflare, WP Rocket, or LiteSpeed Cache, you <strong>must</strong> clear them after making this change.</p>
                                             
-                                            <h4 className="font-bold text-amber-300 mt-6 mb-2 text-base border-t border-amber-400/30 pt-4">If the Primary Solution Fails...</h4>
-                                            <p className="mb-2">If the <code>.htaccess</code> fix didn't work, one of these is likely the cause:</p>
-                                            <ol className="list-decimal list-inside my-2 space-y-4">
-                                                <li>
-                                                    <strong className="text-white">Multi-Domain Setup: Is your app on Vercel or another temporary URL?</strong><br/>
-                                                    If you access the app from multiple URLs (e.g., <code>exam.coding-online.net</code> AND <code>mco-25.vercel.app</code>), you must add <strong>ALL</strong> of them to the plugin settings. In WordPress, go to <strong className="text-white">Exam App Engine &rarr; Main Settings</strong> and add each URL to the "Exam Application URL(s)" box, each on a new line.
-                                                </li>
-                                                <li>
-                                                    <strong className="text-white">Are you using an Nginx server?</strong><br/>
-                                                    The <code>.htaccess</code> file is for Apache servers only. If your host uses Nginx, you must add the following to your site's Nginx configuration file (you may need to ask your host for help):
-                                                    <div className="bg-slate-900 p-2 rounded my-2 text-cyan-300">
-                                                        <pre className="whitespace-pre-wrap"><code>
-{`location ~ \\.php$ {
-    # ... your existing rules ...
-    fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
-    fastcgi_param HTTP_AUTHORIZATION $http_authorization; # Add this line
-    fastcgi_read_timeout 300;
-}`}
-                                                        </code></pre>
-                                                    </div>
-                                                    The key is the <code>fastcgi_param HTTP_AUTHORIZATION $http_authorization;</code> line inside your PHP location block.
-                                                </li>
-                                                <li>
-                                                    <strong className="text-white">Contact Your Hosting Provider</strong><br/>
-                                                    Some hosting environments have security rules you cannot override. Contact their support and specifically ask them to: <strong className="text-amber-200">"Please ensure that the HTTP Authorization header is being passed through to WordPress PHP scripts for the REST API."</strong>
-                                                </li>
-                                            </ol>
+                                            <h4 className="font-bold text-white mt-4 mb-1">Step 3: Update Plugin Settings</h4>
+                                            <p className="mb-2">Go to <strong>WP Admin &rarr; Exam App Engine</strong>. Ensure "Exam Application URL(s)" includes exactly:</p>
+                                            <div className="bg-slate-900 p-2 rounded text-center my-2 text-cyan-300"><code>{currentAppUrl}</code></div>
                                         </>
                                     ) : (
                                         <>
                                             <h4 className="font-bold text-amber-300 mb-2">Troubleshooting Guide</h4>
                                             <ol className="list-decimal list-inside my-2 space-y-3">
                                                 <li>
-                                                    <strong>CORS Setting:</strong> In your WordPress admin, go to <strong className="text-white">Exam App Engine &rarr; Main Settings</strong> and ensure the "Exam Application URL(s)" field contains your app's URL, exactly:
-                                                    <div className="bg-slate-900 p-2 rounded text-center my-2 text-cyan-300"><code>{currentAppUrl}</code></div>
+                                                    <strong>CORS Setting:</strong> In your WordPress admin, go to <strong className="text-white">Exam App Engine &rarr; Main Settings</strong> and ensure the "Exam Application URL(s)" field contains your app's URL.
                                                 </li>
                                                 <li>
-                                                    <strong>Plugin Conflict:</strong> A security plugin (like Wordfence) or a caching plugin might be blocking API requests. Try temporarily disabling them.
-                                                </li>
-                                                <li>
-                                                    <strong>Full Diagnosis:</strong> For more detailed diagnostics, go to the <strong className="text-white">Admin Panel</strong> and use the "System Health Check" tool.
+                                                    <strong>Plugin Conflict:</strong> A security plugin (like Wordfence) might be blocking API requests. Try temporarily disabling it.
                                                 </li>
                                             </ol>
                                         </>
