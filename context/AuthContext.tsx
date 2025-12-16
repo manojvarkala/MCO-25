@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useContext, createCon
 import toast from 'react-hot-toast';
 import type { User, TokenPayload, SubscriptionInfo } from '../types.ts';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
+import { LogOut } from 'lucide-react';
 
 type MasqueradeMode = 'none' | 'user' | 'visitor';
 
@@ -122,9 +123,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     });
   }, []);
 
-  // Removed interval token check to prevent aggressive auto-logouts during usage.
-  // We rely on API rejection to handle expired tokens naturally.
-
   const loginWithToken = useCallback(async (jwtToken: string, isSyncOnly: boolean = false) => {
     try {
         const parts = jwtToken.split('.');
@@ -184,9 +182,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('subscriptionInfo');
             }
 
-            // Sync Logic: Run in background.
-            // RESTORED BEHAVIOR: Do NOT logout if this fails. Just log the error.
-            // Also, suppress the toast unless it's a manual sync, to avoid confusing the user.
+            // Sync Logic
             (async () => {
                 try {
                     await googleSheetsService.syncResults(payload.user, jwtToken);
@@ -194,11 +190,27 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                         toast.success('Exams synchronized successfully!');
                     }
                 } catch (syncError: any) {
-                    console.error("Background sync failed (Non-fatal):", syncError.message);
+                    console.error("Background sync failed:", syncError);
                     
-                    // Only show error toast if the user explicitly clicked "Sync", otherwise fail silently
-                    // to preserve the "working fine" experience.
-                    if (isSyncOnly) {
+                    // HANDLE TOKEN MISMATCH: Show a "Fix Session" button instead of crashing
+                    if (syncError.code === 'jwt_auth_invalid_token' || (syncError.message && (syncError.message.includes('Token Mismatch') || syncError.message.includes('Invalid or expired')))) {
+                         toast(
+                            (t) => (
+                                <div className="flex flex-col gap-2 items-start">
+                                    <span className="font-semibold text-sm">Session Key Mismatch</span>
+                                    <span className="text-xs">Your login session is invalid due to a server change. Please log in again.</span>
+                                    <button 
+                                        onClick={() => { toast.dismiss(t.id); logout(); }}
+                                        className="bg-red-600 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-red-700 transition w-full justify-center"
+                                    >
+                                        <LogOut size={12} /> Log Out & Fix
+                                    </button>
+                                </div>
+                            ),
+                            { duration: 8000, icon: '⚠️' }
+                        );
+                    } else if (isSyncOnly) {
+                         // Only show generic sync error if user manually clicked Sync
                         toast.error(`Sync failed: ${syncError.message}`);
                     }
                 }
@@ -209,7 +221,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     } catch(e) {
         console.error("Login processing error:", e);
-        // Only logout if the token itself is fundamentally broken/unparseable at the start
         logout();
         throw new Error("Invalid authentication token.");
     }

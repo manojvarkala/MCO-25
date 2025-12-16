@@ -49,36 +49,14 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 throw new Error(responseText.substring(0, 100) || response.statusText || `Server error: ${response.status}`);
             }
 
-            // CRITICAL FIX: Only auto-logout on specific expiration codes.
-            // We DO NOT auto-logout for 'jwt_auth_invalid_token' here to prevent the app from
-            // effectively crashing if the server config is slightly off but local data is valid.
-            if (errorData?.code === 'jwt_auth_expired_token') {
-                localStorage.removeItem('examUser');
-                localStorage.removeItem('paidExamIds');
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('isSubscribed');
-                localStorage.removeItem('activeOrg');
-                
-                Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('exam_timer_') || key.startsWith('exam_results_') || key.startsWith('exam_progress_')) {
-                        localStorage.removeItem(key);
-                    }
-                });
-                
-                toast.error("Your session has expired. Please log in again.", { id: 'auth-expired-toast' });
-                
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 1500);
-
-                throw new Error("Session expired.");
-            }
+            // Standardize error object for the UI layer to handle
+            const customError: any = new Error(errorData?.message || response.statusText || `Server error: ${response.status}`);
+            customError.code = errorData?.code; // Attach code (e.g. 'jwt_auth_invalid_token')
             
-            // For other auth errors (missing header, invalid token), we just throw the error.
-            // This allows the UI to decide whether to show it (e.g., debug sidebar) or ignore it (silent background sync).
-            
-            const errorMessage = errorData?.message || response.statusText || `Server error: ${response.status}`;
-            throw new Error(errorMessage);
+            // Allow 'jwt_auth_expired_token' to be handled by the UI or AuthContext, 
+            // but we can still force a logout if it's critical. 
+            // For now, we THROW it so the UI knows exactly what happened.
+            throw customError;
         }
         
         try {
