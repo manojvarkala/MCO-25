@@ -49,13 +49,37 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 throw new Error(responseText.substring(0, 100) || response.statusText || `Server error: ${response.status}`);
             }
 
-            // Standardize error object for the UI layer to handle
-            const customError: any = new Error(errorData?.message || response.statusText || `Server error: ${response.status}`);
-            customError.code = errorData?.code; // Attach code (e.g. 'jwt_auth_invalid_token')
+            // CRITICAL FIX: Auto-logout on Expired OR Invalid (Mismatch) tokens.
+            // This forces the app to clear the bad localstorage and send the user back to login
+            // to get a fresh, valid token.
+            if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_auth_invalid_token') {
+                localStorage.removeItem('examUser');
+                localStorage.removeItem('paidExamIds');
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('isSubscribed');
+                localStorage.removeItem('activeOrg');
+                
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('exam_timer_') || key.startsWith('exam_results_') || key.startsWith('exam_progress_')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                
+                // Show a clear message why they are being logged out
+                toast.error("Session invalid or expired. Refreshing...", { id: 'auth-expired-toast' });
+                
+                setTimeout(() => {
+                    const mainSiteBaseUrl = getApiBaseUrl(); 
+                    // Redirect to the main site login to refresh token
+                    window.location.href = `${mainSiteBaseUrl}/exam-login/`;
+                }, 1500);
+
+                throw new Error("Session invalid. Redirecting...");
+            }
             
-            // Allow 'jwt_auth_expired_token' to be handled by the UI or AuthContext, 
-            // but we can still force a logout if it's critical. 
-            // For now, we THROW it so the UI knows exactly what happened.
+            const errorMessage = errorData?.message || response.statusText || `Server error: ${response.status}`;
+            const customError: any = new Error(errorMessage);
+            customError.code = errorData?.code;
             throw customError;
         }
         
@@ -63,13 +87,13 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
             return responseText ? JSON.parse(responseText) : {};
         } catch (error) {
             console.error(`API Call to ${endpoint} returned OK but with invalid JSON:`, responseText);
-            throw new Error('The server returned an invalid response. This is often caused by a PHP error from your theme or another plugin. Check your browser\'s developer console for the full server output.');
+            throw new Error('The server returned an invalid response. This is often caused by a PHP error from your theme or another plugin.');
         }
     } catch (error: any) {
         console.error(`API Fetch Error to ${endpoint}:`, error);
 
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-            throw new Error(`Could not connect to the API server at ${API_BASE_URL}. Please check your internet connection or server CORS settings.`);
+            throw new Error(`Could not connect to the API server. Please check your internet connection.`);
         }
         
         throw error;
