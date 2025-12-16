@@ -20,7 +20,8 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
 
     const headers: HeadersInit = {};
     if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        // Trim token to ensure no accidental whitespace breaks the header
+        headers['Authorization'] = `Bearer ${token.trim()}`;
     }
     if (!isFormData) {
         headers['Content-Type'] = 'application/json';
@@ -48,10 +49,11 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 throw new Error(responseText.substring(0, 100) || response.statusText || `Server error: ${response.status}`);
             }
 
-            // CRITICAL FIX: Only auto-logout on specific expiration codes.
-            // We REMOVE 'jwt_auth_invalid_token' from the auto-logout list because
-            // server misconfiguration (missing headers) often triggers this, causing infinite loops.
-            if (errorData?.code === 'jwt_auth_expired_token') {
+            // LOGIC UPDATE: Now that .htaccess is fixed, we can strictly enforce token validity.
+            // If the server says the token is expired OR invalid (wrong signature/secret), we must logout.
+            if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_auth_invalid_token') {
+                console.warn(`Auth Error (${errorData.code}): Logging out.`);
+                
                 localStorage.removeItem('examUser');
                 localStorage.removeItem('paidExamIds');
                 localStorage.removeItem('authToken');
@@ -64,18 +66,17 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                     }
                 });
                 
-                toast.error("Your session has expired. Please log in again.", { id: 'auth-expired-toast' });
-                
+                // Use a short timeout to allow the UI to catch the error before reloading
                 setTimeout(() => {
                     window.location.href = '/';
                 }, 1500);
 
-                throw new Error("Session expired.");
+                throw new Error("Your session is invalid or expired. Please log in again.");
             }
             
             if (errorData?.code === 'jwt_auth_missing_token') {
-                 // Do not logout, just throw. Admin sidebar needs to show this error.
-                 // This specific error means the server stripped the Authorization header.
+                 // We still alert for missing token (header stripping) but don't force logout
+                 // as it might be a temporary server glitch or config issue user is fixing.
                 throw new Error("Server Configuration Error: Authorization header missing. Check .htaccess or Nginx config.");
             }
             

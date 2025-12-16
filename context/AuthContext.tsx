@@ -174,13 +174,11 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (payload.user) {
             setUser(payload.user);
             
-            // Robustly handle paidExamIds: If backend sent an object instead of array, convert it.
             let paidIds: string[] = [];
             if (payload.paidExamIds) {
                 if (Array.isArray(payload.paidExamIds)) {
                     paidIds = payload.paidExamIds;
                 } else if (typeof payload.paidExamIds === 'object') {
-                    // Handle case where PHP array_unique preserved keys and json_encode made it an object
                     paidIds = Object.values(payload.paidExamIds);
                 }
             }
@@ -218,23 +216,32 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('subscriptionInfo');
             }
 
-            // The sync operation is now non-blocking. It runs in the background.
+            // Sync Logic:
+            // We run sync in background usually, BUT if it returns a specific AUTH error (invalid token),
+            // we must abort the login process immediately to prevent "zombie" sessions.
             (async () => {
                 try {
                     await googleSheetsService.syncResults(payload.user, jwtToken);
                     if (isSyncOnly) {
                         toast.success('Exams synchronized successfully!');
-                    } else {
-                        // Silent success for login to avoid UI clutter
                     }
                 } catch (syncError: any) {
                     console.error("Background sync on login failed:", syncError.message);
-                    const errorPrefix = isSyncOnly ? 'Sync failed:' : 'Login successful, but sync failed:';
                     
-                    if (syncError.message.includes("Authorization header")) {
+                    const errMsg = syncError.message || '';
+                    // If server explicitly rejects token, we must logout.
+                    if (errMsg.includes("session is invalid") || errMsg.includes("jwt_auth_invalid_token") || errMsg.includes("jwt_auth_expired_token")) {
+                        console.error("Critical Auth Error during sync. Aborting login.");
+                        logout(); // Clears state
+                        // The service layer likely already redirected or threw, but we ensure state is clean here.
+                        return; 
+                    }
+                    
+                    const errorPrefix = isSyncOnly ? 'Sync failed:' : 'Login successful, but sync failed:';
+                    if (errMsg.includes("Authorization header")) {
                          toast.error(`${errorPrefix} Server configuration issue (Auth Header missing). Check Admin Debug sidebar.`, { duration: 10000 });
                     } else {
-                         toast.error(`${errorPrefix} Locally saved results will be shown. Error: ${syncError.message}`, { duration: 8000 });
+                         toast.error(`${errorPrefix} Locally saved results will be shown. Error: ${errMsg}`, { duration: 8000 });
                     }
                 }
             })();
@@ -244,7 +251,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     } catch(e) {
         console.error("Failed to decode or parse token:", e);
-        // Do not force logout on sync failures, just report error.
+        // Ensure we don't leave partial state
+        logout();
         throw new Error("Invalid authentication token.");
     }
   }, [logout]);
