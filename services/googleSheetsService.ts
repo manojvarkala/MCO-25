@@ -1,7 +1,7 @@
-import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, Organization, PostCreationData, ExamStat, VerificationData, BetaTester } from '../types.ts';
+import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, Organization, PostCreationData, ExamStat, VerificationData, BetaTester } from '../types';
 import toast from 'react-hot-toast';
 import { GoogleGenAI, Type } from "@google/genai";
-import { getApiBaseUrl } from './apiConfig.ts';
+import { getApiBaseUrl } from './apiConfig';
 
 // FIX: Declare a global constant for development mode, defined in vite.config.ts.
 declare const __DEV__: boolean;
@@ -97,6 +97,7 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         throw error;
     }
 };
+
 export const googleSheetsService = {
     // --- ONBOARDING ---
     registerBetaTester: async (registrationData: any): Promise<{ success: boolean; message: string; onboarding_token?: string; user_email?: string; }> => {
@@ -170,7 +171,7 @@ export const googleSheetsService = {
                 model: 'gemini-2.5-flash',
                 contents: prompt,
             });
-            return response.text;
+            return response.text as string;
         } catch (error: any) {
             console.error("Error getting AI feedback from Gemini:", error);
 
@@ -222,7 +223,7 @@ export const googleSheetsService = {
                     systemInstruction: system_instruction,
                 },
             });
-            return response.text;
+            return response.text as string;
         } catch (error: any) {
             console.error("Error generating AI post content from Gemini:", error);
             throw new Error(error.message || 'An unknown error occurred while generating content.');
@@ -430,4 +431,45 @@ export const googleSheetsService = {
     adminResendBetaEmail: async (token: string, userId: string): Promise<{ success: boolean, message: string }> => {
         return await apiFetch('/admin/resend-beta-email', 'POST', token, { userId });
     },
-    adminGetSystemStatus: async (token: string): Promise<
+    adminGetSystemStatus: async (token: string): Promise<any> => {
+        return await apiFetch('/admin/system-status', 'GET', token);
+    },
+    adminTestSheetUrl: async (token: string, sheetUrl: string): Promise<any> => {
+        return await apiFetch('/admin/test-sheet-url', 'POST', token, { sheetUrl });
+    },
+    adminClearConfigCache: async (token: string): Promise<{ success: boolean, message: string }> => {
+        return await apiFetch('/admin/clear-config-cache', 'POST', token);
+    },
+    adminClearQuestionCaches: async (token: string): Promise<{ success: boolean, message: string }> => {
+        return await apiFetch('/admin/clear-question-caches', 'POST', token);
+    },
+    adminClearAllResults: async (token: string): Promise<{ success: boolean, message: string }> => {
+        return await apiFetch('/admin/clear-all-results', 'POST', token);
+    },
+    adminUpdateExamProgram: async (token: string, programId: string, updateData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
+        return await apiFetch('/admin/update-exam-program', 'POST', token, { programId, updateData });
+    },
+    adminCreateExamProgram: async (token: string, programName: string, productLinkData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
+        return await apiFetch('/admin/create-exam-program', 'POST', token, { programName, productLinkData });
+    },
+    adminUpsertProduct: async (token: string, productData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
+        return await apiFetch('/admin/upsert-product', 'POST', token, productData);
+    },
+    adminDeletePost: async (token: string, postId: string, postType: 'mco_exam_program' | 'product'): Promise<{ organizations: Organization[], examPrices: any }> => {
+        return await apiFetch('/admin/delete-post', 'POST', token, { postId, postType });
+    },
+    getPostCreationData: async (token: string): Promise<PostCreationData> => {
+        return await apiFetch('/admin/post-creation-data', 'GET', token);
+    },
+    createPostFromApp: async (token: string, postPayload: any): Promise<{ success: boolean, post_id: number, post_url: string }> => {
+        return await apiFetch('/admin/create-post-from-app', 'POST', token, postPayload);
+    },
+    adminUploadIntroVideo: async (token: string, videoBlob: Blob): Promise<{ organizations: Organization[], examPrices: any }> => {
+        const formData = new FormData();
+        formData.append('video', videoBlob, 'intro-video.mp4');
+        return await apiFetch('/admin/set-intro-video', 'POST', token, formData as any, true);
+    },
+    adminToggleBetaStatus: async (token: string, status: boolean): Promise<{ token: string }> => {
+        return await apiFetch('/admin/toggle-beta-status', 'POST', token, { isBetaTester: status });
+    },
+};
