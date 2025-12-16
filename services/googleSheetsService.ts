@@ -49,36 +49,10 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 throw new Error(responseText.substring(0, 100) || response.statusText || `Server error: ${response.status}`);
             }
 
-            // LOGIC UPDATE: Now that .htaccess is fixed, we can strictly enforce token validity.
-            // If the server says the token is expired OR invalid (wrong signature/secret), we must logout.
-            if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_auth_invalid_token') {
-                console.warn(`Auth Error (${errorData.code}): Logging out.`);
-                
-                localStorage.removeItem('examUser');
-                localStorage.removeItem('paidExamIds');
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('isSubscribed');
-                localStorage.removeItem('activeOrg');
-                
-                Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('exam_timer_') || key.startsWith('exam_results_') || key.startsWith('exam_progress_')) {
-                        localStorage.removeItem(key);
-                    }
-                });
-                
-                // Use a short timeout to allow the UI to catch the error before reloading
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 1500);
-
-                throw new Error("Your session is invalid or expired. Please log in again.");
-            }
-            
-            if (errorData?.code === 'jwt_auth_missing_token') {
-                 // We still alert for missing token (header stripping) but don't force logout
-                 // as it might be a temporary server glitch or config issue user is fixing.
-                throw new Error("Server Configuration Error: Authorization header missing. Check .htaccess or Nginx config.");
-            }
+            // REVERT: Removed aggressive auto-logout/redirect logic.
+            // If the token is invalid or expired, we will just throw an error.
+            // The UI components should handle this by showing an error message or
+            // disabling features, rather than forcefully refreshing the page.
             
             const errorMessage = errorData?.message || response.statusText || `Server error: ${response.status}`;
             throw new Error(errorMessage);

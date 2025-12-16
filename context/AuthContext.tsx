@@ -122,40 +122,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     });
   }, []);
 
-  useEffect(() => {
-    const checkTokenExpiration = () => {
-        const storedToken = localStorage.getItem('authToken');
-        if (storedToken) {
-            try {
-                const parts = storedToken.split('.');
-                if (parts.length === 3) {
-                     const payloadBase64Url = parts[1];
-                     const payloadBase64 = payloadBase64Url.replace(/-/g, '+').replace(/_/g, '/');
-                     const decodedPayload = decodeURIComponent(atob(payloadBase64).split('').map(function(c) {
-                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                     }).join(''));
-                     const payload = JSON.parse(decodedPayload);
-                     
-                     if (payload.exp && payload.exp * 1000 < Date.now()) {
-                         console.warn("Token expired via interval check.");
-                         logout();
-                     }
-                }
-            } catch (e) {
-                console.error("Failed to parse token for expiration check, logging out.", e);
-                // Do NOT logout here for minor parse errors, wait for API rejection
-            }
-        }
-    };
-    
-    checkTokenExpiration();
-    const intervalId = setInterval(checkTokenExpiration, 5 * 60 * 1000); // Check every 5 minutes
-
-    return () => {
-        clearInterval(intervalId);
-    };
-  }, [logout]);
-
+  // Removed interval token check to prevent aggressive auto-logouts during usage.
+  // We rely on API rejection to handle expired tokens naturally.
 
   const loginWithToken = useCallback(async (jwtToken: string, isSyncOnly: boolean = false) => {
     try {
@@ -216,9 +184,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 localStorage.removeItem('subscriptionInfo');
             }
 
-            // Sync Logic:
-            // We run sync in background usually, BUT if it returns a specific AUTH error (invalid token),
-            // we must abort the login process immediately to prevent "zombie" sessions.
+            // Sync Logic: Run in background.
+            // REVERTED: Do NOT logout if this fails. Just log the error.
             (async () => {
                 try {
                     await googleSheetsService.syncResults(payload.user, jwtToken);
@@ -226,22 +193,10 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                         toast.success('Exams synchronized successfully!');
                     }
                 } catch (syncError: any) {
-                    console.error("Background sync on login failed:", syncError.message);
-                    
-                    const errMsg = syncError.message || '';
-                    // If server explicitly rejects token, we must logout.
-                    if (errMsg.includes("session is invalid") || errMsg.includes("jwt_auth_invalid_token") || errMsg.includes("jwt_auth_expired_token")) {
-                        console.error("Critical Auth Error during sync. Aborting login.");
-                        logout(); // Clears state
-                        // The service layer likely already redirected or threw, but we ensure state is clean here.
-                        return; 
-                    }
-                    
-                    const errorPrefix = isSyncOnly ? 'Sync failed:' : 'Login successful, but sync failed:';
-                    if (errMsg.includes("Authorization header")) {
-                         toast.error(`${errorPrefix} Server configuration issue (Auth Header missing). Check Admin Debug sidebar.`, { duration: 10000 });
-                    } else {
-                         toast.error(`${errorPrefix} Locally saved results will be shown. Error: ${errMsg}`, { duration: 8000 });
+                    console.error("Background sync failed (Non-fatal):", syncError.message);
+                    // We do not logout here. If sync fails, user just sees local data.
+                    if (isSyncOnly) {
+                        toast.error(`Sync failed: ${syncError.message}`);
                     }
                 }
             })();
@@ -250,8 +205,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             throw new Error("Invalid token payload structure.");
         }
     } catch(e) {
-        console.error("Failed to decode or parse token:", e);
-        // Ensure we don't leave partial state
+        console.error("Login processing error:", e);
+        // Only logout if the token itself is fundamentally broken/unparseable at the start
         logout();
         throw new Error("Invalid authentication token.");
     }
