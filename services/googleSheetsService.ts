@@ -49,10 +49,33 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 throw new Error(responseText.substring(0, 100) || response.statusText || `Server error: ${response.status}`);
             }
 
-            // REVERT: Removed aggressive auto-logout/redirect logic.
-            // If the token is invalid or expired, we will just throw an error.
-            // The UI components should handle this by showing an error message or
-            // disabling features, rather than forcefully refreshing the page.
+            // CRITICAL FIX: Only auto-logout on specific expiration codes.
+            // We DO NOT auto-logout for 'jwt_auth_invalid_token' here to prevent the app from
+            // effectively crashing if the server config is slightly off but local data is valid.
+            if (errorData?.code === 'jwt_auth_expired_token') {
+                localStorage.removeItem('examUser');
+                localStorage.removeItem('paidExamIds');
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('isSubscribed');
+                localStorage.removeItem('activeOrg');
+                
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('exam_timer_') || key.startsWith('exam_results_') || key.startsWith('exam_progress_')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                
+                toast.error("Your session has expired. Please log in again.", { id: 'auth-expired-toast' });
+                
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1500);
+
+                throw new Error("Session expired.");
+            }
+            
+            // For other auth errors (missing header, invalid token), we just throw the error.
+            // This allows the UI to decide whether to show it (e.g., debug sidebar) or ignore it (silent background sync).
             
             const errorMessage = errorData?.message || response.statusText || `Server error: ${response.status}`;
             throw new Error(errorMessage);
@@ -407,45 +430,4 @@ export const googleSheetsService = {
     adminResendBetaEmail: async (token: string, userId: string): Promise<{ success: boolean, message: string }> => {
         return await apiFetch('/admin/resend-beta-email', 'POST', token, { userId });
     },
-    adminGetSystemStatus: async (token: string): Promise<any> => {
-        return await apiFetch('/admin/system-status', 'GET', token);
-    },
-    adminTestSheetUrl: async (token: string, sheetUrl: string): Promise<any> => {
-        return await apiFetch('/admin/test-sheet-url', 'POST', token, { sheetUrl });
-    },
-    adminClearConfigCache: async (token: string): Promise<{ success: boolean, message: string }> => {
-        return await apiFetch('/admin/clear-config-cache', 'POST', token);
-    },
-    adminClearQuestionCaches: async (token: string): Promise<{ success: boolean, message: string }> => {
-        return await apiFetch('/admin/clear-question-caches', 'POST', token);
-    },
-    adminClearAllResults: async (token: string): Promise<{ success: boolean, message: string }> => {
-        return await apiFetch('/admin/clear-all-results', 'POST', token);
-    },
-    adminUpdateExamProgram: async (token: string, programId: string, updateData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
-        return await apiFetch('/admin/update-exam-program', 'POST', token, { programId, updateData });
-    },
-    adminCreateExamProgram: async (token: string, programName: string, productLinkData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
-        return await apiFetch('/admin/create-exam-program', 'POST', token, { programName, productLinkData });
-    },
-    adminUpsertProduct: async (token: string, productData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
-        return await apiFetch('/admin/upsert-product', 'POST', token, productData);
-    },
-    adminDeletePost: async (token: string, postId: string, postType: 'mco_exam_program' | 'product'): Promise<{ organizations: Organization[], examPrices: any }> => {
-        return await apiFetch('/admin/delete-post', 'POST', token, { postId, postType });
-    },
-    getPostCreationData: async (token: string): Promise<PostCreationData> => {
-        return await apiFetch('/admin/post-creation-data', 'GET', token);
-    },
-    createPostFromApp: async (token: string, postPayload: any): Promise<{ success: boolean, post_id: number, post_url: string }> => {
-        return await apiFetch('/admin/create-post-from-app', 'POST', token, postPayload);
-    },
-    adminUploadIntroVideo: async (token: string, videoBlob: Blob): Promise<{ organizations: Organization[], examPrices: any }> => {
-        const formData = new FormData();
-        formData.append('video', videoBlob, 'intro-video.mp4');
-        return await apiFetch('/admin/set-intro-video', 'POST', token, formData as any, true);
-    },
-    adminToggleBetaStatus: async (token: string, status: boolean): Promise<{ token: string }> => {
-        return await apiFetch('/admin/toggle-beta-status', 'POST', token, { isBetaTester: status });
-    },
-};
+    adminGetSystemStatus: async (token: string): Promise<

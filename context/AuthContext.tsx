@@ -185,7 +185,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             }
 
             // Sync Logic: Run in background.
-            // REVERTED: Do NOT logout if this fails. Just log the error.
+            // RESTORED BEHAVIOR: Do NOT logout if this fails. Just log the error.
+            // Also, suppress the toast unless it's a manual sync, to avoid confusing the user.
             (async () => {
                 try {
                     await googleSheetsService.syncResults(payload.user, jwtToken);
@@ -194,7 +195,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                     }
                 } catch (syncError: any) {
                     console.error("Background sync failed (Non-fatal):", syncError.message);
-                    // We do not logout here. If sync fails, user just sees local data.
+                    
+                    // Only show error toast if the user explicitly clicked "Sync", otherwise fail silently
+                    // to preserve the "working fine" experience.
                     if (isSyncOnly) {
                         toast.error(`Sync failed: ${syncError.message}`);
                     }
