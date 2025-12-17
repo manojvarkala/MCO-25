@@ -1,3 +1,4 @@
+
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -295,49 +296,92 @@ const Dashboard: FC = () => {
                 </h2>
                 {examCategories.length > 0 ? (
                     <div className="space-y-8">
-                        {examCategories.map((category) => (
-                            <div key={category.id} className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))]">{category.name}</h3>
-                                        <p className="text-sm text-[rgb(var(--color-text-muted-rgb))] mt-1 line-clamp-2">{stripHtml(category.description)}</p>
+                        {examCategories.map((category) => {
+                            // BUNDLE DETECTION LOGIC FOR DASHBOARD
+                            let dashboardBundle = null;
+                            if (bundlesEnabled && category.certExam && category.certExam.productSku && examPrices) {
+                                const certSku = category.certExam.productSku;
+                                const subBundleSku = `${certSku}-1mo-addon`;
+                                const practiceBundleSku = `${certSku}-1`;
+
+                                if (examPrices[subBundleSku]) {
+                                     dashboardBundle = { product: examPrices[subBundleSku], type: 'subscription' as const };
+                                } else if (examPrices[practiceBundleSku]) {
+                                     dashboardBundle = { product: examPrices[practiceBundleSku], type: 'practice' as const };
+                                } else {
+                                     // Fallback: Dynamic metadata search
+                                     const eligibleBundles = Object.values(examPrices).filter((p: any) => 
+                                        p.isBundle && 
+                                        Array.isArray(p.bundledSkus) && 
+                                        p.bundledSkus.includes(certSku)
+                                     );
+                                     if (eligibleBundles.length > 0) {
+                                         const subBundle = eligibleBundles.find((p: any) => 
+                                            p.bundledSkus.some((s: string) => 
+                                                s.startsWith('sub-') || (examPrices[s] && examPrices[s].type === 'subscription')
+                                            )
+                                        );
+                                        if (subBundle) {
+                                            dashboardBundle = { product: subBundle, type: 'subscription' as const };
+                                        } else {
+                                            dashboardBundle = { product: eligibleBundles[0], type: 'practice' as const };
+                                        }
+                                     }
+                                }
+                            }
+
+                            return (
+                                <div key={category.id} className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))]">{category.name}</h3>
+                                            <p className="text-sm text-[rgb(var(--color-text-muted-rgb))] mt-1 line-clamp-2">{stripHtml(category.description)}</p>
+                                        </div>
+                                        <Link 
+                                            to={`/program/${category.id}`} 
+                                            className="text-sm font-semibold text-[rgb(var(--color-primary-rgb))] hover:underline flex-shrink-0"
+                                        >
+                                            View Program Details →
+                                        </Link>
                                     </div>
-                                    <Link 
-                                        to={`/program/${category.id}`} 
-                                        className="text-sm font-semibold text-[rgb(var(--color-primary-rgb))] hover:underline flex-shrink-0"
-                                    >
-                                        View Program Details →
-                                    </Link>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {category.practiceExam && (
+                                            <ExamCard
+                                                exam={category.practiceExam}
+                                                programId={category.id}
+                                                isPractice={true}
+                                                isPurchased={false}
+                                                activeOrg={activeOrg}
+                                                examPrices={examPrices}
+                                                hideDetailsLink={true}
+                                            />
+                                        )}
+                                        {category.certExam && (
+                                            <ExamCard
+                                                exam={category.certExam}
+                                                programId={category.id}
+                                                isPractice={false}
+                                                isPurchased={paidExamIds.includes(category.certExam.productSku)}
+                                                activeOrg={activeOrg}
+                                                examPrices={examPrices}
+                                                hideDetailsLink={true}
+                                                attemptsMade={user ? results.filter(r => r.examId === category.certExam!.id).length : 0}
+                                                isDisabled={isBetaTester && feedbackRequiredForExam !== null && feedbackRequiredForExam.examId !== category.certExam.id}
+                                            />
+                                        )}
+                                        {dashboardBundle && (
+                                            <ExamBundleCard
+                                                type={dashboardBundle.type}
+                                                bundleDataRaw={dashboardBundle.product}
+                                                activeOrg={activeOrg}
+                                                examPrices={examPrices}
+                                            />
+                                        )}
+                                    </div>
                                 </div>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {category.practiceExam && (
-                                        <ExamCard
-                                            exam={category.practiceExam}
-                                            programId={category.id}
-                                            isPractice={true}
-                                            isPurchased={false}
-                                            activeOrg={activeOrg}
-                                            examPrices={examPrices}
-                                            hideDetailsLink={true}
-                                        />
-                                    )}
-                                    {category.certExam && (
-                                        <ExamCard
-                                            exam={category.certExam}
-                                            programId={category.id}
-                                            isPractice={false}
-                                            isPurchased={paidExamIds.includes(category.certExam.productSku)}
-                                            activeOrg={activeOrg}
-                                            examPrices={examPrices}
-                                            hideDetailsLink={true}
-                                            attemptsMade={user ? results.filter(r => r.examId === category.certExam!.id).length : 0}
-                                            isDisabled={isBetaTester && feedbackRequiredForExam !== null && feedbackRequiredForExam.examId !== category.certExam.id}
-                                        />
-                                    )}
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <div className="text-center py-8 bg-[rgb(var(--color-card-rgb))] rounded-xl border border-[rgb(var(--color-border-rgb))]">
