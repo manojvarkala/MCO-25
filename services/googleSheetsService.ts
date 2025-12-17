@@ -48,12 +48,14 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         const responseText = await response.text();
 
         if (!response.ok) {
+            console.error(`API Error (${response.status}) at ${fullUrl}:`, responseText);
+            
             let errorData;
             try {
                 errorData = JSON.parse(responseText);
             } catch (e) {
                 // If response isn't JSON, it might be a server HTML error (404, 500, etc)
-                throw new Error(responseText.substring(0, 100) || response.statusText || `Server error: ${response.status}`);
+                throw new Error(`Server error (${response.status}) at ${endpoint}: ${responseText.substring(0, 100)}...`);
             }
 
             // Clean local storage on critical auth errors
@@ -73,6 +75,7 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 // Throw specific error for AuthContext to catch and handle via Toast
                 const authError: any = new Error("Session expired or invalid.");
                 authError.code = errorData?.code;
+                authError.data = errorData;
                 throw authError;
             }
             
@@ -90,14 +93,14 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         }
     } catch (error: any) {
         clearTimeout(timeoutId); // Ensure timeout cleared on error
-        console.error(`API Fetch Error to ${endpoint}:`, error);
+        console.error(`API Fetch Error to ${endpoint} (Full URL: ${fullUrl}):`, error);
 
         if (error.name === 'AbortError') {
              throw new Error("Connection Timeout: The server took too long to respond.");
         }
 
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-            throw new Error(`Could not connect to the API server. Please check your internet connection.`);
+            throw new Error(`Could not connect to the API server (${API_BASE_URL}). Check CORS or if the server is online.`);
         }
         
         throw error;
