@@ -49,9 +49,9 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 throw new Error(responseText.substring(0, 100) || response.statusText || `Server error: ${response.status}`);
             }
 
-            // CRITICAL FIX: Loop Prevention.
-            // We clear local storage on auth errors, but we DO NOT force a window.location.href redirect here.
-            // We throw the error so the UI (AuthContext) can decide to show a button or redirect gracefully.
+            // CRITICAL FIX: Event-based Logout.
+            // When we detect an invalid token, we clean up local storage and dispatch an event.
+            // The AuthContext listens for this event and performs a clean React-state logout.
             if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_auth_invalid_token') {
                 localStorage.removeItem('examUser');
                 localStorage.removeItem('paidExamIds');
@@ -65,7 +65,10 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                     }
                 });
                 
-                // Throw specific error for AuthContext to catch
+                // Dispatch global event for AuthContext to handle
+                window.dispatchEvent(new Event('auth:session-expired'));
+                
+                // Throw specific error to stop execution in caller
                 const authError: any = new Error("Session expired or invalid.");
                 authError.code = errorData?.code;
                 throw authError;

@@ -122,6 +122,20 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     });
   }, []);
+  
+  // FIX: Global Event Listener for Session Expiry
+  // This ensures that if ANY component (like Admin.tsx) hits a 403 Invalid Token error
+  // and the service layer dispatches the 'auth:session-expired' event, the app will
+  // immediately log the user out, clearing the bad state and redirecting to public routes.
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      logout();
+      toast.error("Session expired. Please log in again.");
+    };
+
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
+  }, [logout]);
 
   const loginWithToken = useCallback(async (jwtToken: string, isSyncOnly: boolean = false) => {
     try {
@@ -192,29 +206,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 } catch (syncError: any) {
                     console.error("Background sync failed:", syncError);
                     
-                    // HANDLE CRITICAL TOKEN ERRORS
-                    // If we get here, it means the API rejected the token even though we just decoded it.
-                    // We DO NOT re-throw, because re-throwing would cause the Login component to catch it
-                    // and redirect/reload, creating an infinite loop.
-                    // Instead, we show a persistent Toast so the user can manually logout.
-                    
-                    if (syncError.code === 'jwt_auth_invalid_token' || syncError.code === 'jwt_auth_expired_token' || (syncError.message && (syncError.message.includes('Token Mismatch') || syncError.message.includes('Invalid or expired')))) {
-                         toast(
-                            (t) => (
-                                <div className="flex flex-col gap-2 items-start">
-                                    <span className="font-semibold text-sm">Session Key Mismatch</span>
-                                    <span className="text-xs">Your login session is invalid. This may be due to a server change.</span>
-                                    <button 
-                                        onClick={() => { toast.dismiss(t.id); logout(); }}
-                                        className="bg-red-600 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-red-700 transition w-full justify-center"
-                                    >
-                                        <LogOut size={12} /> Log Out & Fix
-                                    </button>
-                                </div>
-                            ),
-                            { duration: Infinity, icon: '⚠️', id: 'auth-sync-error' }
-                        );
-                    } else if (isSyncOnly) {
+                    // HANDLE CRITICAL TOKEN ERRORS via event bus now, but we can still show a toast if sync fails
+                    // The event listener above will handle the actual logout if the error code matches.
+                    if (isSyncOnly) {
                         toast.error(`Sync failed: ${syncError.message}`);
                     }
                 }
