@@ -1,9 +1,8 @@
-
 import React, { FC, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { DebugData } from '../types.ts';
-import { Bug, X, Server, User, ShoppingCart, FileText, CheckCircle, AlertTriangle, LogOut } from 'lucide-react';
+import { Bug, X, Server, User, ShoppingCart, FileText, CheckCircle, AlertTriangle, LogOut, Globe } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
 
@@ -65,8 +64,8 @@ const DebugSidebar: FC<DebugSidebarProps> = ({ isOpen, onClose }) => {
         </div>
     );
     
-    const currentAppUrl = window.location.origin;
     const apiUrl = getApiBaseUrl();
+    const dynamicUrl = localStorage.getItem('mco_dynamic_api_url');
     
     // CASE 1: Server stripping header (401 / Missing Token)
     const isMissingHeaderError = error && (
@@ -85,6 +84,11 @@ const DebugSidebar: FC<DebugSidebarProps> = ({ isOpen, onClose }) => {
         error.toLowerCase().includes('could not connect') || 
         error.toLowerCase().includes('failed to fetch')
     );
+
+    const clearDynamicUrl = () => {
+        localStorage.removeItem('mco_dynamic_api_url');
+        window.location.reload();
+    };
 
     return (
         <>
@@ -106,6 +110,18 @@ const DebugSidebar: FC<DebugSidebarProps> = ({ isOpen, onClose }) => {
                     </div>
 
                     <div className="flex-grow bg-slate-900 rounded-lg p-4 overflow-auto font-mono text-sm">
+                        <Section title="Connection Details" icon={<Globe size={16} />}>
+                            <p className="mb-1"><span className="text-slate-500">API URL:</span> <span className="text-green-300 break-all">{apiUrl}</span></p>
+                            {dynamicUrl && (
+                                <div className="mt-2 p-2 bg-blue-900/30 border border-blue-700 rounded">
+                                    <p className="text-xs text-blue-300 mb-1">ℹ️ Using Dynamic URL Override</p>
+                                    <button onClick={clearDynamicUrl} className="text-xs bg-blue-700 hover:bg-blue-600 text-white px-2 py-1 rounded">
+                                        Reset to Default
+                                    </button>
+                                </div>
+                            )}
+                        </Section>
+
                         {isLoading && (
                             <div className="flex items-center justify-center h-full">
                                 <Spinner />
@@ -145,7 +161,7 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
                                             <h4 className="font-bold text-amber-300 mb-2 text-base">🔑 TOKEN MISMATCH</h4>
                                             <p className="mb-3">The token stored in your browser was signed with a different Secret Key than the one currently in your WordPress <code>wp-config.php</code>.</p>
                                             
-                                            <p className="mb-3">This happens if you changed the <code>MCO_JWT_SECRET</code> after logging in, or migrated the database.</p>
+                                            <p className="mb-3">This happens if you changed the <code>MCO_JWT_SECRET</code> after logging in, or if you are connecting to a different server environment than expected.</p>
 
                                             <button 
                                                 onClick={logout}

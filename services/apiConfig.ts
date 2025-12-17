@@ -1,5 +1,3 @@
-
-
 import type { Organization } from '../types.ts';
 
 // FIX: Declare a global constant for development mode, defined in vite.config.ts, to avoid issues with vite/client types.
@@ -35,8 +33,8 @@ const tenantMap: { [key: string]: TenantConfig } = {
 
     // Medical Coding Online Tenant (Secondary)
     'coding-online.net': medicalCodingConfig,
-    'exams.coding-online.net': medicalCodingConfig, // Corrected domain as per user's troubleshooting guide
-    'exam.coding-online.net': medicalCodingConfig, // Keep old one for compatibility
+    'exams.coding-online.net': medicalCodingConfig, 
+    'exam.coding-online.net': medicalCodingConfig,
     'mco-25.vercel.app': medicalCodingConfig,
 
     // Indian Certs Tenant
@@ -45,17 +43,31 @@ const tenantMap: { [key: string]: TenantConfig } = {
 };
 
 export const getTenantConfig = (): TenantConfig => {
+    // 1. Dynamic Override (Highest Priority)
+    // This allows the login flow to inject the correct backend URL, solving "Security Key Mismatch"
+    // when the frontend domain doesn't match the backend domain (e.g. Vercel preview vs WP).
+    try {
+        const dynamicUrl = localStorage.getItem('mco_dynamic_api_url');
+        if (dynamicUrl && dynamicUrl.startsWith('http')) {
+            return {
+                apiBaseUrl: dynamicUrl,
+                staticConfigPath: '/annapoorna-config.json' // Fallback static path
+            };
+        }
+    } catch (e) {
+        // Ignore localStorage errors
+    }
+
+    // 2. Development Mode
     if (__DEV__) {
-        // In dev, we point to the primary app's config but use the proxy for API calls.
         return {
             apiBaseUrl: '/api',
             staticConfigPath: '/annapoorna-config.json',
         };
     }
 
+    // 3. Hostname Mapping
     const hostname = window.location.hostname.replace(/^www\./, '');
-    
-    // Find the most specific match first (e.g., 'exam.annapoornainfo.com' before 'annapoornainfo.com')
     const sortedKeys = Object.keys(tenantMap).sort((a, b) => b.length - a.length);
 
     for (const key of sortedKeys) {
@@ -64,7 +76,7 @@ export const getTenantConfig = (): TenantConfig => {
         }
     }
     
-    // Fallback to the primary app config if no match is found
+    // 4. Default Fallback
     return annapoornaConfig;
 }
 

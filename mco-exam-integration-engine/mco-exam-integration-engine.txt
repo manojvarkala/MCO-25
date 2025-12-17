@@ -70,7 +70,9 @@ function mco_sso_login_redirect() {
             wp_die('Could not generate authentication token. Ensure MCO_JWT_SECRET is defined in wp-config.php.');
         }
         
-        $redirect_url = add_query_arg('token', $token, rtrim($app_url, '/') . '/auth');
+        // FIX: Include api_url here too
+        $site_url = get_site_url();
+        $redirect_url = add_query_arg(['token' => $token, 'api_url' => $site_url], rtrim($app_url, '/') . '/auth');
         
         nocache_headers();
         wp_redirect($redirect_url);

@@ -19,7 +19,7 @@ const Login: FC = () => {
     // Hard reset function: Clears EVERYTHING and redirects
     const handleHardReset = () => {
         localStorage.clear(); 
-        sessionStorage.clear(); // Clear loop trackers
+        sessionStorage.clear(); 
         logout(); 
         
         const cacheBuster = new Date().getTime();
@@ -35,19 +35,27 @@ const Login: FC = () => {
         }
     }, [user, isInitializing, navigate]);
 
-    // Effect 2: Handle token processing
+    // Effect 2: Handle token and API URL binding
     useEffect(() => {
-        // Wait for config init
         if (isInitializing) return;
-        
-        // If we already have a user, do nothing (Effect 1 handles redirect)
         if (user) return;
-
-        // Prevent double-firing in StrictMode
         if (hasProcessed.current) return;
 
         const params = new URLSearchParams(location.search);
         const token = params.get('token');
+        const apiUrlOverride = params.get('api_url');
+        
+        // DYNAMIC BINDING: If the backend sent its URL, force the app to use it.
+        // This fixes "Security Key Mismatch" errors when domains don't match.
+        if (apiUrlOverride) {
+            const currentStoredUrl = localStorage.getItem('mco_dynamic_api_url');
+            if (currentStoredUrl !== apiUrlOverride) {
+                console.log(`Binding app to new backend: ${apiUrlOverride}`);
+                localStorage.setItem('mco_dynamic_api_url', apiUrlOverride);
+                // We don't need to reload, the next service call will pick it up via getApiBaseUrl()
+            }
+        }
+
         const loginUrl = mainSiteBaseUrl ? `${mainSiteBaseUrl}/exam-login/` : '/';
 
         if (token) {
@@ -57,39 +65,32 @@ const Login: FC = () => {
             loginWithToken(token)
                 .then(() => {
                     toast.dismiss(toastId);
-                    sessionStorage.removeItem('auth_retry_count'); // Success, clear retry count
+                    sessionStorage.removeItem('auth_retry_count');
                     // Navigation handled by Effect 1
                 })
                 .catch((e) => {
                     console.error("Login failed:", e);
                     toast.dismiss(toastId);
                     
-                    // Cleanup URL to prevent refresh loops
+                    // Cleanup URL
                     window.history.replaceState({}, document.title, window.location.pathname);
 
                     if (e.message === "Session Expired") {
-                        // Check for infinite loop of expired tokens
                         const retryCount = parseInt(sessionStorage.getItem('auth_retry_count') || '0', 10);
-                        
                         if (retryCount < 3) {
-                            // Increment and retry
                             sessionStorage.setItem('auth_retry_count', (retryCount + 1).toString());
                             const cacheBuster = new Date().getTime();
                             console.log(`Token expired. Retrying (Attempt ${retryCount + 1}/3)...`);
                             window.location.href = `${loginUrl}?v=${cacheBuster}`;
                         } else {
-                            // Too many retries, stop and show error
                             sessionStorage.removeItem('auth_retry_count');
                             setError("Login Loop Detected: Your browser is caching an old, expired login token. Please click 'Hard Reset' below.");
                         }
                     } else {
-                        // Configuration error
                         setError(e.message || 'Authentication failed. Session invalid.');
                     }
                 });
         } else {
-            // No token present. If we are just landing here, redirect to main login.
-            // But if we just errored out (error state set), don't redirect.
             if (!error) {
                  window.location.href = loginUrl;
             }
@@ -160,7 +161,6 @@ const Login: FC = () => {
                 <p className="text-slate-500">
                     Please wait while we securely log you in to the examination portal.
                 </p>
-                {/* Fallback link if stuck */}
                 <button 
                     onClick={handleHardReset}
                     className="text-xs text-slate-400 underline hover:text-slate-600 mt-8"

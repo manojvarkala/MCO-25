@@ -860,7 +860,9 @@ function mco_redirect_to_app_with_token() {
     $app_url = mco_get_exam_app_url();
     if (!$app_url) return '<p>Error: App URL not configured.</p>';
     
-    $redirect_url = add_query_arg('token', $token, rtrim($app_url, '/') . '/auth');
+    // FIX: Include the dynamic API URL in the redirect so the React app knows where to connect back to.
+    $site_url = get_site_url();
+    $redirect_url = add_query_arg(['token' => $token, 'api_url' => $site_url], rtrim($app_url, '/') . '/auth');
     
     // JS redirect is safer if headers are sent, but meta refresh is a good fallback
     return '<meta http-equiv="refresh" content="0;url=' . esc_url($redirect_url) . '">' .
