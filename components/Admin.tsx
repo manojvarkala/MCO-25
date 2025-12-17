@@ -132,9 +132,10 @@ const Admin: FC = () => {
                 const msg = error.message || 'Unknown error';
                 
                 // Detailed error handling for the UI
-                if (msg.includes("Authorization header") || msg.includes("token") || msg.includes("403")) {
-                     setDataLoadError("Authentication Error. Check Debug Sidebar.");
-                     toast.error("Authentication failed. Please check debug sidebar.", { duration: 5000 });
+                if (msg.includes("Authorization header") || msg.includes("token") || msg.includes("403") || msg.includes("Session expired")) {
+                     setDataLoadError("Authentication Error: Session Expired or Invalid Token.");
+                     // Don't auto-logout here, let the user see the error and decide
+                     toast.error("Session invalid. Please check Debug sidebar or re-login.", { duration: 5000 });
                 } else {
                      setDataLoadError(msg);
                      toast.error("Could not load admin data: " + msg);
@@ -284,7 +285,7 @@ const Admin: FC = () => {
                                 <h3 className="font-bold text-red-800">Connection Error</h3>
                                 <p className="text-sm text-red-700 mt-1">{dataLoadError}</p>
                                 <p className="text-xs text-red-600 mt-2 font-semibold animate-pulse">
-                                    ACTION REQUIRED: Please click the "Debug" button (bottom-right) for the fix.
+                                    ACTION REQUIRED: Check the Debug Sidebar (bottom-right) for specific fix instructions.
                                 </p>
                             </div>
                         </div>
