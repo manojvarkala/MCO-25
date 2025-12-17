@@ -297,7 +297,12 @@ const Dashboard: FC = () => {
                 {examCategories.length > 0 ? (
                     <div className="space-y-8">
                         {examCategories.map((category) => {
+                            
                             // BUNDLE DETECTION LOGIC FOR DASHBOARD
+                            // We use the exact same logic as the WordPress plugin to find the bundle:
+                            // 1. Look for [sku]-1mo-addon
+                            // 2. Look for [sku]-1
+                            // 3. Fallback to metadata search
                             let dashboardBundle = null;
                             if (bundlesEnabled && category.certExam && category.certExam.productSku && examPrices) {
                                 const certSku = category.certExam.productSku;
@@ -370,6 +375,7 @@ const Dashboard: FC = () => {
                                                 isDisabled={isBetaTester && feedbackRequiredForExam !== null && feedbackRequiredForExam.examId !== category.certExam.id}
                                             />
                                         )}
+                                        {/* BUNDLE CARD RENDERING */}
                                         {dashboardBundle && (
                                             <ExamBundleCard
                                                 type={dashboardBundle.type}
