@@ -27,9 +27,14 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         headers['Content-Type'] = 'application/json';
     }
 
+    // Create an AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
     const config: RequestInit = {
         method,
         headers,
+        signal: controller.signal
     };
     
     if (method === 'POST') {
@@ -38,6 +43,8 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
 
     try {
         const response = await fetch(fullUrl, config);
+        clearTimeout(timeoutId); // Clear timeout on response
+
         const responseText = await response.text();
 
         if (!response.ok) {
@@ -82,7 +89,12 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
             throw new Error('The server returned an invalid response. This is often caused by a PHP error from your theme or another plugin.');
         }
     } catch (error: any) {
+        clearTimeout(timeoutId); // Ensure timeout cleared on error
         console.error(`API Fetch Error to ${endpoint}:`, error);
+
+        if (error.name === 'AbortError') {
+             throw new Error("Connection Timeout: The server took too long to respond.");
+        }
 
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
             throw new Error(`Could not connect to the API server. Please check your internet connection.`);

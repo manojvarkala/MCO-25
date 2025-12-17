@@ -14,66 +14,92 @@ const Login: FC = () => {
     const hasProcessed = useRef(false);
     const [error, setError] = useState<string | null>(null);
 
+    const mainSiteBaseUrl = activeOrg ? `https://${activeOrg.website}` : '';
+
     // Hard reset function: Clears EVERYTHING and redirects
     const handleHardReset = () => {
-        localStorage.clear(); // Wipe all app data
-        logout(); // Reset context state
+        localStorage.clear(); 
+        sessionStorage.clear(); // Clear loop trackers
+        logout(); 
         
-        const mainSiteBaseUrl = activeOrg ? `https://${activeOrg.website}` : '';
         const cacheBuster = new Date().getTime();
         const loginUrl = mainSiteBaseUrl ? `${mainSiteBaseUrl}/exam-login/?v=${cacheBuster}` : '/';
         
         window.location.href = loginUrl;
     };
 
+    // Effect 1: Immediate redirection if user is already authenticated
     useEffect(() => {
-        if (isInitializing || hasProcessed.current) return;
-        
-        const mainSiteBaseUrl = activeOrg ? `https://${activeOrg.website}` : '';
-        const loginUrl = mainSiteBaseUrl ? `${mainSiteBaseUrl}/exam-login/` : '/';
-
-        hasProcessed.current = true;
-
-        if (user) {
+        if (user && !isInitializing) {
             navigate('/dashboard', { replace: true });
-            return;
         }
+    }, [user, isInitializing, navigate]);
+
+    // Effect 2: Handle token processing
+    useEffect(() => {
+        // Wait for config init
+        if (isInitializing) return;
+        
+        // If we already have a user, do nothing (Effect 1 handles redirect)
+        if (user) return;
+
+        // Prevent double-firing in StrictMode
+        if (hasProcessed.current) return;
 
         const params = new URLSearchParams(location.search);
         const token = params.get('token');
+        const loginUrl = mainSiteBaseUrl ? `${mainSiteBaseUrl}/exam-login/` : '/';
 
         if (token) {
+            hasProcessed.current = true;
             const toastId = toast.loading('Authenticating your session...');
+            
             loginWithToken(token)
                 .then(() => {
                     toast.dismiss(toastId);
-                    navigate('/dashboard', { replace: true });
+                    sessionStorage.removeItem('auth_retry_count'); // Success, clear retry count
+                    // Navigation handled by Effect 1
                 })
                 .catch((e) => {
                     console.error("Login failed:", e);
                     toast.dismiss(toastId);
                     
-                    // Cleanup URL
+                    // Cleanup URL to prevent refresh loops
                     window.history.replaceState({}, document.title, window.location.pathname);
 
                     if (e.message === "Session Expired") {
-                        // If just expired, auto-redirect to refresh it (seamless)
-                        const cacheBuster = new Date().getTime();
-                        window.location.href = `${mainSiteBaseUrl}/exam-login/?v=${cacheBuster}`;
+                        // Check for infinite loop of expired tokens
+                        const retryCount = parseInt(sessionStorage.getItem('auth_retry_count') || '0', 10);
+                        
+                        if (retryCount < 3) {
+                            // Increment and retry
+                            sessionStorage.setItem('auth_retry_count', (retryCount + 1).toString());
+                            const cacheBuster = new Date().getTime();
+                            console.log(`Token expired. Retrying (Attempt ${retryCount + 1}/3)...`);
+                            window.location.href = `${loginUrl}?v=${cacheBuster}`;
+                        } else {
+                            // Too many retries, stop and show error
+                            sessionStorage.removeItem('auth_retry_count');
+                            setError("Login Loop Detected: Your browser is caching an old, expired login token. Please click 'Hard Reset' below.");
+                        }
                     } else {
-                        // Real configuration error: show UI
+                        // Configuration error
                         setError(e.message || 'Authentication failed. Session invalid.');
                     }
                 });
         } else {
-            // No token, redirect to main login
-            window.location.href = loginUrl;
+            // No token present. If we are just landing here, redirect to main login.
+            // But if we just errored out (error state set), don't redirect.
+            if (!error) {
+                 window.location.href = loginUrl;
+            }
         }
-    }, [loginWithToken, navigate, location.search, user, activeOrg, isInitializing, logout]);
+    }, [loginWithToken, location.search, user, isInitializing, mainSiteBaseUrl, error]);
 
     if (error) {
         const isHeaderError = error.includes('Authorization');
         const isKeyError = error.includes('Security Key');
+        const isLoopError = error.includes('Loop');
 
         return (
              <div className="flex flex-col items-center justify-center py-20 px-4">
@@ -90,6 +116,10 @@ const Login: FC = () => {
 
                     <div className="text-slate-600 text-sm space-y-3 text-left">
                         <p>We encountered an issue verifying your session with the server.</p>
+                        
+                        {isLoopError && (
+                             <p><strong>Diagnosis:</strong> Your WordPress site is serving a cached page with an old security token. The "Hard Reset" below forces a fresh request.</p>
+                        )}
                         
                         {isHeaderError && (
                             <div className="bg-slate-100 p-3 rounded text-xs font-mono">
@@ -111,11 +141,11 @@ const Login: FC = () => {
                             onClick={handleHardReset}
                             className="flex items-center justify-center gap-2 w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition"
                         >
-                            <Trash2 size={18} /> Clear Data & Retry Login
+                            <Trash2 size={18} /> Hard Reset & Retry Login
                         </button>
                     </div>
                     <p className="text-xs text-slate-400 mt-2">
-                        This button clears your local cache and forces a completely fresh login attempt.
+                        This button clears local storage, session cache, and forces a completely fresh login attempt.
                     </p>
                 </div>
             </div>
@@ -130,6 +160,13 @@ const Login: FC = () => {
                 <p className="text-slate-500">
                     Please wait while we securely log you in to the examination portal.
                 </p>
+                {/* Fallback link if stuck */}
+                <button 
+                    onClick={handleHardReset}
+                    className="text-xs text-slate-400 underline hover:text-slate-600 mt-8"
+                >
+                    Stuck? Click here to reset.
+                </button>
             </div>
         </div>
     );
