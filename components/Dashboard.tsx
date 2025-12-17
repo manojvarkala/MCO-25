@@ -146,7 +146,9 @@ const Dashboard: FC = () => {
 
     const featuredBundles = useMemo(() => {
         if (!bundlesEnabled || !examPrices) return [];
-        return Object.values(examPrices)
+        // Map object to array, injecting the SKU from the key
+        return Object.entries(examPrices)
+            .map(([sku, p]: [string, any]) => ({ ...p, sku }))
             .filter((p: any) => p.isBundle && p.bundledSkus && p.bundledSkus.length > 1)
             .map((p: any): ProductVariation => ({
                 id: p.productId?.toString() || p.sku,
@@ -307,23 +309,34 @@ const Dashboard: FC = () => {
 
                                 // 1. Strict SKU match for -1mo-addon (Subscription Bundle)
                                 if (examPrices[subBundleSku]) {
-                                     dashboardBundle = { product: examPrices[subBundleSku], type: 'subscription' as const };
+                                     // IMPORTANT: Inject SKU, as backend object may not have it
+                                     dashboardBundle = { 
+                                         product: { ...examPrices[subBundleSku], sku: subBundleSku }, 
+                                         type: 'subscription' as const 
+                                     };
                                 } 
                                 // 2. Strict SKU match for -1 (Practice Bundle)
                                 else if (examPrices[practiceBundleSku]) {
-                                     dashboardBundle = { product: examPrices[practiceBundleSku], type: 'practice' as const };
+                                     dashboardBundle = { 
+                                         product: { ...examPrices[practiceBundleSku], sku: practiceBundleSku }, 
+                                         type: 'practice' as const 
+                                     };
                                 } 
-                                // 3. Fallback: Dynamic metadata search if strict SKUs not found
+                                // 3. Fallback: Dynamic metadata search
                                 else {
-                                     const eligibleBundles = Object.values(examPrices).filter((p: any) => 
+                                     // Convert map to array with SKU injected for searching
+                                     const allPricesWithSku = Object.entries(examPrices).map(([sku, data]) => ({ ...data, sku }));
+                                     
+                                     const eligibleBundles = allPricesWithSku.filter((p: any) => 
                                         p.isBundle && 
                                         Array.isArray(p.bundledSkus) && 
                                         p.bundledSkus.includes(certSku)
                                      );
+
                                      if (eligibleBundles.length > 0) {
                                          const subBundle = eligibleBundles.find((p: any) => 
                                             p.bundledSkus.some((s: string) => 
-                                                s.startsWith('sub-') || (examPrices[s] && examPrices[s].type === 'subscription')
+                                                s.startsWith('sub-') || (examPrices[s] && examPrices[s].type?.includes('subscription'))
                                             )
                                         );
                                         if (subBundle) {

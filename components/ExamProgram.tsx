@@ -145,16 +145,25 @@ const ExamProgram: FC = () => {
 
         // Check subscription bundle first (higher priority)
         if (examPrices[subBundleSku]) {
-             return { product: examPrices[subBundleSku], type: 'subscription' as const };
+             // IMPORTANT: Inject SKU so ExamBundleCard works
+             return { 
+                 product: { ...examPrices[subBundleSku], sku: subBundleSku }, 
+                 type: 'subscription' as const 
+             };
         }
         // Check practice bundle
         if (examPrices[practiceBundleSku]) {
-             return { product: examPrices[practiceBundleSku], type: 'practice' as const };
+             return { 
+                 product: { ...examPrices[practiceBundleSku], sku: practiceBundleSku }, 
+                 type: 'practice' as const 
+             };
         }
 
         // 2. Fallback: Metadata Search (For custom bundles that have the _mco_is_bundle meta set)
-        // This is useful if the user creates a bundle with a different SKU but sets it up correctly in the customizer.
-        const eligibleBundles = Object.values(examPrices).filter((p: any) => 
+        // Must transform to array with SKU to search properly
+        const allPricesWithSku = Object.entries(examPrices).map(([sku, data]) => ({ ...data, sku }));
+
+        const eligibleBundles = allPricesWithSku.filter((p: any) => 
             p.isBundle && 
             Array.isArray(p.bundledSkus) && 
             p.bundledSkus.includes(certSku)
@@ -163,7 +172,7 @@ const ExamProgram: FC = () => {
         if (eligibleBundles.length > 0) {
              const subBundle = eligibleBundles.find((p: any) => 
                 p.bundledSkus.some((s: string) => 
-                    s.startsWith('sub-') || (examPrices[s] && examPrices[s].type === 'subscription')
+                    s.startsWith('sub-') || (examPrices[s] && examPrices[s].type?.includes('subscription'))
                 )
             );
             if (subBundle) {
