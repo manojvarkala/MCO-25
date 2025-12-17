@@ -49,8 +49,10 @@ export const getTenantConfig = (): TenantConfig => {
     try {
         const dynamicUrl = localStorage.getItem('mco_dynamic_api_url');
         if (dynamicUrl && dynamicUrl.startsWith('http')) {
+            // Trim trailing slash just in case
+            const cleanUrl = dynamicUrl.replace(/\/$/, "");
             return {
-                apiBaseUrl: dynamicUrl,
+                apiBaseUrl: cleanUrl,
                 staticConfigPath: '/annapoorna-config.json' // Fallback static path
             };
         }
@@ -82,5 +84,10 @@ export const getTenantConfig = (): TenantConfig => {
 
 // Returns the base URL for the WordPress backend (for user-specific API calls)
 export const getApiBaseUrl = (): string => {
-    return getTenantConfig().apiBaseUrl;
+    const config = getTenantConfig();
+    // Debug log to trace connection issues
+    if (__DEV__) {
+        console.log("API Target:", config.apiBaseUrl);
+    }
+    return config.apiBaseUrl;
 };

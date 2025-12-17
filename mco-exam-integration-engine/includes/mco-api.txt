@@ -99,7 +99,7 @@ if (!function_exists('mco_generate_exam_jwt')) {
         $payload = [
             'iss' => get_home_url(),
             'iat' => time(),
-            'exp' => time() + (24 * 60 * 60),
+            'exp' => time() + (24 * 60 * 60), // 24 hours expiry
             'user' => [
                 'id' => strval($user->ID),
                 'email' => $user->user_email,
@@ -135,20 +135,29 @@ if (!function_exists('mco_generate_exam_jwt')) {
 
 if (!function_exists('mco_verify_exam_jwt')) {
     function mco_verify_exam_jwt($token) {
-        if (!defined('MCO_JWT_SECRET')) return false;
+        if (!defined('MCO_JWT_SECRET')) return new WP_Error('config_error', 'MCO_JWT_SECRET not defined in wp-config.php');
         
         $parts = explode('.', $token);
-        if (count($parts) !== 3) return false;
+        if (count($parts) !== 3) return new WP_Error('jwt_auth_invalid_token', 'Invalid token structure');
 
         list($header_encoded, $payload_encoded, $signature_encoded) = $parts;
 
+        // Verify Signature
         $signature_to_verify = mco_base64url_decode($signature_encoded);
         $expected_signature = hash_hmac('sha256', "$header.$payload_encoded", MCO_JWT_SECRET, true);
 
-        if (!hash_equals($expected_signature, $signature_to_verify)) return false;
+        if (!hash_equals($expected_signature, $signature_to_verify)) {
+             return new WP_Error('jwt_auth_bad_signature', 'Token signature mismatch. Check MCO_JWT_SECRET.');
+        }
 
         $payload = json_decode(mco_base64url_decode($payload_encoded), true);
-        if (!$payload || (isset($payload['exp']) && $payload['exp'] < time())) return false;
+        if (!$payload) return new WP_Error('jwt_auth_invalid_token', 'Could not decode payload');
+
+        // Verify Expiry with 60s Leeway for clock skew
+        $leeway = 60; 
+        if (isset($payload['exp']) && ($payload['exp'] + $leeway) < time()) {
+             return new WP_Error('jwt_auth_expired_token', 'Token has expired');
+        }
         
         return $payload;
     }
@@ -250,13 +259,22 @@ function mco_api_permission_check(WP_REST_Request $request) {
         }
     }
 
-    if (empty($auth_header) || !preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
-        return new WP_Error('jwt_auth_missing_token', 'Authorization header missing. Server configuration likely stripping header.', ['status' => 401]);
+    // Flexible regex for Bearer token
+    if (empty($auth_header) || !preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+        return new WP_Error('jwt_auth_missing_token', 'Authorization header missing or invalid format.', ['status' => 401]);
     }
     
-    $payload = mco_verify_exam_jwt($matches[1]);
-    if (!$payload || !isset($payload['user']['id'])) {
-        return new WP_Error('jwt_auth_invalid_token', 'Invalid or expired token.', ['status' => 403]);
+    $token = $matches[1];
+    $payload_or_error = mco_verify_exam_jwt($token);
+    
+    if (is_wp_error($payload_or_error)) {
+        // Return specific error code from verification (bad signature vs expired)
+        return new WP_Error($payload_or_error->get_error_code(), $payload_or_error->get_error_message(), ['status' => 403]);
+    }
+    
+    $payload = $payload_or_error;
+    if (!isset($payload['user']['id'])) {
+        return new WP_Error('jwt_auth_invalid_payload', 'Token payload invalid.', ['status' => 403]);
     }
     
     $request->set_param('jwt_payload', $payload);

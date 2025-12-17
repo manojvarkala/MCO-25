@@ -45,14 +45,16 @@ const Login: FC = () => {
         const token = params.get('token');
         const apiUrlOverride = params.get('api_url');
         
-        // DYNAMIC BINDING: If the backend sent its URL, force the app to use it.
-        // This fixes "Security Key Mismatch" errors when domains don't match.
+        // DYNAMIC BINDING (CRITICAL FIX): 
+        // Always enforce the API URL from the redirect if present.
+        // This ensures subsequent calls go to the correct backend before the token is used.
         if (apiUrlOverride) {
             const currentStoredUrl = localStorage.getItem('mco_dynamic_api_url');
             if (currentStoredUrl !== apiUrlOverride) {
                 console.log(`Binding app to new backend: ${apiUrlOverride}`);
                 localStorage.setItem('mco_dynamic_api_url', apiUrlOverride);
-                // We don't need to reload, the next service call will pick it up via getApiBaseUrl()
+                // We don't reload here because getApiBaseUrl() reads from localStorage directly.
+                // The subsequent loginWithToken -> syncResults flow will use the new URL.
             }
         }
 
@@ -92,10 +94,14 @@ const Login: FC = () => {
                 });
         } else {
             if (!error) {
-                 window.location.href = loginUrl;
+                 // If no token and no error, redirect to login.
+                 // Ideally we should wait for activeOrg to be loaded to know where to redirect.
+                 if (activeOrg) {
+                    window.location.href = loginUrl;
+                 }
             }
         }
-    }, [loginWithToken, location.search, user, isInitializing, mainSiteBaseUrl, error]);
+    }, [loginWithToken, location.search, user, isInitializing, mainSiteBaseUrl, error, activeOrg]);
 
     if (error) {
         const isHeaderError = error.includes('Authorization');
