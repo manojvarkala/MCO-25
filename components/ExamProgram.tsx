@@ -133,36 +133,46 @@ const ExamProgram: FC = () => {
     }, [programId, activeOrg]);
 
     // DYNAMIC BUNDLE FINDER
-    // Instead of guessing the SKU string, we look for any bundle product that contains this exam.
     const foundBundle = useMemo(() => {
         if (!bundlesEnabled || !programData?.certExam?.productSku || !examPrices) return null;
 
         const certSku = programData.certExam.productSku;
-        
-        // 1. Find all bundles that include this certification exam
+
+        // 1. Strict Match (Matches PHP/Shortcode Logic)
+        // This relies on the convention [sku]-1mo-addon or [sku]-1
+        const subBundleSku = `${certSku}-1mo-addon`;
+        const practiceBundleSku = `${certSku}-1`;
+
+        // Check subscription bundle first (higher priority)
+        if (examPrices[subBundleSku]) {
+             return { product: examPrices[subBundleSku], type: 'subscription' as const };
+        }
+        // Check practice bundle
+        if (examPrices[practiceBundleSku]) {
+             return { product: examPrices[practiceBundleSku], type: 'practice' as const };
+        }
+
+        // 2. Fallback: Metadata Search (For custom bundles that have the _mco_is_bundle meta set)
+        // This is useful if the user creates a bundle with a different SKU but sets it up correctly in the customizer.
         const eligibleBundles = Object.values(examPrices).filter((p: any) => 
             p.isBundle && 
             Array.isArray(p.bundledSkus) && 
             p.bundledSkus.includes(certSku)
         );
 
-        if (eligibleBundles.length === 0) return null;
-
-        // 2. Prioritize a "Subscription Bundle" (Exam + Subscription)
-        // Check if any bundled SKU is a subscription (starts with 'sub-' or has type 'subscription')
-        const subBundle = eligibleBundles.find((p: any) => 
-            p.bundledSkus.some((s: string) => 
-                s.startsWith('sub-') || (examPrices[s] && examPrices[s].type === 'subscription')
-            )
-        );
-        
-        if (subBundle) {
-            return { product: subBundle, type: 'subscription' as const };
+        if (eligibleBundles.length > 0) {
+             const subBundle = eligibleBundles.find((p: any) => 
+                p.bundledSkus.some((s: string) => 
+                    s.startsWith('sub-') || (examPrices[s] && examPrices[s].type === 'subscription')
+                )
+            );
+            if (subBundle) {
+                return { product: subBundle, type: 'subscription' as const };
+            }
+            return { product: eligibleBundles[0], type: 'practice' as const };
         }
 
-        // 3. Fallback to any other bundle (likely a Practice Bundle)
-        return { product: eligibleBundles[0], type: 'practice' as const };
-
+        return null;
     }, [programData, examPrices, bundlesEnabled]);
 
     if (isInitializing || !activeOrg || !activeOrg.exams) {
