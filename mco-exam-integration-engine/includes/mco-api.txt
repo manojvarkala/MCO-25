@@ -144,14 +144,15 @@ if (!function_exists('mco_verify_exam_jwt')) {
 
         // Verify Signature
         $signature_to_verify = mco_base64url_decode($signature_encoded);
-        $expected_signature = hash_hmac('sha256', "$header.$payload_encoded", MCO_JWT_SECRET, true);
+        // FIX: Variable name correction $header -> $header_encoded
+        $expected_signature = hash_hmac('sha256', "$header_encoded.$payload_encoded", MCO_JWT_SECRET, true);
 
         if (!hash_equals($expected_signature, $signature_to_verify)) {
              return new WP_Error('jwt_auth_bad_signature', 'Token signature mismatch. Check MCO_JWT_SECRET.');
         }
 
         $payload = json_decode(mco_base64url_decode($payload_encoded), true);
-        if (!$payload) return new WP_Error('jwt_auth_invalid_token', 'Could not decode payload');
+        if (!$payload) return new WP_Error('jwt_auth_invalid_payload', 'Could not decode payload');
 
         // Verify Expiry with 60s Leeway for clock skew
         $leeway = 60; 
