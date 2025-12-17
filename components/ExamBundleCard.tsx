@@ -1,41 +1,30 @@
+
 import React, { FC, useMemo, useState } from 'react';
 import { ShoppingBag, Check, ShoppingCart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { Exam, Organization } from '../types.ts';
+import type { Organization } from '../types.ts';
 import Spinner from './Spinner.tsx';
 
 interface ExamBundleCardProps {
-    certExam: Exam;
+    type: 'practice' | 'subscription';
+    bundleDataRaw: any; // The raw product object from examPrices
     activeOrg: Organization;
     examPrices: { [key: string]: any } | null;
-    type: 'practice' | 'subscription';
 }
 
-const ExamBundleCard: FC<ExamBundleCardProps> = ({ certExam, activeOrg, examPrices, type }) => {
+const ExamBundleCard: FC<ExamBundleCardProps> = ({ type, bundleDataRaw, activeOrg }) => {
     const { user, token } = useAuth();
     const [isRedirecting, setIsRedirecting] = useState(false);
 
-    const bundleData = useMemo(() => {
-        if (!activeOrg || !examPrices || !certExam?.productSku) {
+    const bundleInfo = useMemo(() => {
+        if (!bundleDataRaw || !bundleDataRaw.sku) {
             return null;
         }
 
-        // Logic to construct SKU based on bundle type.
-        // Practice Bundle: SKU + '-1'
-        // Sub Addon Bundle: SKU + '-1mo-addon'
         const isPracticeBundle = type === 'practice';
-        const specificBundleSku = isPracticeBundle
-            ? `${certExam.productSku}-1`
-            : `${certExam.productSku}-1mo-addon`;
-            
-        const priceData = examPrices[specificBundleSku];
-
-        if (!priceData) {
-            return null;
-        }
-
+        
         const title = isPracticeBundle ? 'Exam Bundle' : 'Exam + Subscription';
         const description = isPracticeBundle
             ? 'The complete package for your certification.'
@@ -53,18 +42,18 @@ const ExamBundleCard: FC<ExamBundleCardProps> = ({ certExam, activeOrg, examPric
 
         return {
             title,
-            sku: specificBundleSku,
-            price: priceData.price,
-            regularPrice: priceData.regularPrice,
+            sku: bundleDataRaw.sku, // Use actual SKU from object
+            price: bundleDataRaw.price,
+            regularPrice: bundleDataRaw.regularPrice,
             description,
             gradientClass,
             buttonClass,
             features,
         };
-    }, [certExam, examPrices, activeOrg, type]);
+    }, [type, bundleDataRaw]);
 
     const handlePurchase = async () => {
-        if (!bundleData?.sku) return;
+        if (!bundleInfo?.sku) return;
         if (!user || !token) {
             toast.error("Please log in to make a purchase.");
             const loginUrl = `https://www.${activeOrg.website}/exam-login/`;
@@ -73,7 +62,7 @@ const ExamBundleCard: FC<ExamBundleCardProps> = ({ certExam, activeOrg, examPric
         }
         setIsRedirecting(true);
         try {
-            const { checkoutUrl } = await googleSheetsService.createCheckoutSession(token, bundleData.sku);
+            const { checkoutUrl } = await googleSheetsService.createCheckoutSession(token, bundleInfo.sku);
             window.location.href = checkoutUrl;
         } catch (error: any) {
             toast.error(`Could not prepare checkout: ${error.message}`);
@@ -81,32 +70,32 @@ const ExamBundleCard: FC<ExamBundleCardProps> = ({ certExam, activeOrg, examPric
         }
     };
 
-    if (!bundleData) {
+    if (!bundleInfo) {
         return null;
     }
 
     const buttonText = isRedirecting ? 'Preparing...' : 'Purchase Bundle';
 
     return (
-        <div className={`${bundleData.gradientClass} text-white rounded-xl shadow-lg p-6 flex flex-col`}>
-            <h3 className="text-xl font-bold flex items-center gap-2"><ShoppingBag size={20} /> {bundleData.title}</h3>
+        <div className={`${bundleInfo.gradientClass} text-white rounded-xl shadow-lg p-6 flex flex-col`}>
+            <h3 className="text-xl font-bold flex items-center gap-2"><ShoppingBag size={20} /> {bundleInfo.title}</h3>
             <p className="text-sm text-white/80 mt-2 mb-4 flex-grow">
-                {bundleData.description}
+                {bundleInfo.description}
             </p>
 
             <div className="my-4 text-center">
-                {bundleData.regularPrice && bundleData.regularPrice > bundleData.price ? (
+                {bundleInfo.regularPrice && bundleInfo.regularPrice > bundleInfo.price ? (
                     <div className="flex items-baseline justify-center gap-2">
-                        <span className="text-2xl line-through text-white/70">${bundleData.regularPrice.toFixed(2)}</span>
-                        <span className="text-4xl font-extrabold text-white">${bundleData.price.toFixed(2)}</span>
+                        <span className="text-2xl line-through text-white/70">${bundleInfo.regularPrice.toFixed(2)}</span>
+                        <span className="text-4xl font-extrabold text-white">${bundleInfo.price.toFixed(2)}</span>
                     </div>
                 ) : (
-                    <span className="text-4xl font-extrabold text-white">${bundleData.price.toFixed(2)}</span>
+                    <span className="text-4xl font-extrabold text-white">${bundleInfo.price.toFixed(2)}</span>
                 )}
             </div>
 
             <ul className="space-y-2 text-sm text-white/90 mb-6 text-left">
-                {bundleData.features.map((feature, index) => (
+                {bundleInfo.features.map((feature, index) => (
                     <li key={index} className={`flex items-start gap-2 ${feature.startsWith('Incl.') ? 'pl-6 text-xs text-white/80' : ''}`}>
                        {!feature.startsWith('Incl.') && <Check size={16} className="text-green-300 flex-shrink-0 mt-0.5" />}
                        <span>{feature}</span>
@@ -117,7 +106,7 @@ const ExamBundleCard: FC<ExamBundleCardProps> = ({ certExam, activeOrg, examPric
             <button
                 onClick={handlePurchase}
                 disabled={isRedirecting}
-                className={`mt-auto w-full flex items-center justify-center gap-2 bg-white font-bold py-3 text-center rounded-lg transition disabled:opacity-75 ${bundleData.buttonClass}`}
+                className={`mt-auto w-full flex items-center justify-center gap-2 bg-white font-bold py-3 text-center rounded-lg transition disabled:opacity-75 ${bundleInfo.buttonClass}`}
             >
                 {isRedirecting ? <Spinner /> : <ShoppingCart size={18} />} {buttonText}
             </button>
