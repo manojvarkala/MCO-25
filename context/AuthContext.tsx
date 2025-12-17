@@ -191,9 +191,30 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                     }
                 } catch (syncError: any) {
                     console.error("Background sync failed:", syncError);
-                    // Only show generic sync error if user manually clicked Sync.
-                    // Critical errors (expired/invalid token) are handled by the service layer itself.
-                    if (isSyncOnly) {
+                    
+                    // HANDLE CRITICAL TOKEN ERRORS
+                    // If we get here, it means the API rejected the token even though we just decoded it.
+                    // We DO NOT re-throw, because re-throwing would cause the Login component to catch it
+                    // and redirect/reload, creating an infinite loop.
+                    // Instead, we show a persistent Toast so the user can manually logout.
+                    
+                    if (syncError.code === 'jwt_auth_invalid_token' || syncError.code === 'jwt_auth_expired_token' || (syncError.message && (syncError.message.includes('Token Mismatch') || syncError.message.includes('Invalid or expired')))) {
+                         toast(
+                            (t) => (
+                                <div className="flex flex-col gap-2 items-start">
+                                    <span className="font-semibold text-sm">Session Key Mismatch</span>
+                                    <span className="text-xs">Your login session is invalid. This may be due to a server change.</span>
+                                    <button 
+                                        onClick={() => { toast.dismiss(t.id); logout(); }}
+                                        className="bg-red-600 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-red-700 transition w-full justify-center"
+                                    >
+                                        <LogOut size={12} /> Log Out & Fix
+                                    </button>
+                                </div>
+                            ),
+                            { duration: Infinity, icon: '⚠️', id: 'auth-sync-error' }
+                        );
+                    } else if (isSyncOnly) {
                         toast.error(`Sync failed: ${syncError.message}`);
                     }
                 }

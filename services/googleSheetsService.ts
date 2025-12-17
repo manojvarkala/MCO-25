@@ -49,9 +49,9 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 throw new Error(responseText.substring(0, 100) || response.statusText || `Server error: ${response.status}`);
             }
 
-            // CRITICAL FIX: Auto-logout on Expired OR Invalid (Mismatch) tokens.
-            // This forces the app to clear the bad localstorage and send the user back to login
-            // to get a fresh, valid token.
+            // CRITICAL FIX: Loop Prevention.
+            // We clear local storage on auth errors, but we DO NOT force a window.location.href redirect here.
+            // We throw the error so the UI (AuthContext) can decide to show a button or redirect gracefully.
             if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_auth_invalid_token') {
                 localStorage.removeItem('examUser');
                 localStorage.removeItem('paidExamIds');
@@ -65,16 +65,10 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                     }
                 });
                 
-                // Show a clear message why they are being logged out
-                toast.error("Session invalid or expired. Refreshing...", { id: 'auth-expired-toast' });
-                
-                setTimeout(() => {
-                    const mainSiteBaseUrl = getApiBaseUrl(); 
-                    // Redirect to the main site login to refresh token
-                    window.location.href = `${mainSiteBaseUrl}/exam-login/`;
-                }, 1500);
-
-                throw new Error("Session invalid. Redirecting...");
+                // Throw specific error for AuthContext to catch
+                const authError: any = new Error("Session expired or invalid.");
+                authError.code = errorData?.code;
+                throw authError;
             }
             
             const errorMessage = errorData?.message || response.statusText || `Server error: ${response.status}`;
