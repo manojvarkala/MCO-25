@@ -138,6 +138,30 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
 
         if (payload.user) {
+            
+            // SERVER VALIDATION CHECK:
+            // Before we officially "log in" the user in the React state, we try to sync.
+            // If the server rejects this sync with an Auth error, we abort the login.
+            if (!isSyncOnly) {
+                try {
+                    await googleSheetsService.syncResults(payload.user, jwtToken);
+                } catch (serverError: any) {
+                    // Check for critical auth failures
+                    if (serverError.code === 'jwt_auth_invalid_token' || 
+                        serverError.code === 'jwt_auth_expired_token' || 
+                        serverError.message?.includes('Session expired') ||
+                        serverError.message?.includes('Invalid token')) {
+                        
+                        console.error("Login Aborted: Token rejected by server.", serverError);
+                        // Re-throw so Login.tsx catches it and shows the error UI instead of redirecting
+                        throw new Error("Server Configuration Mismatch: The security key on your WordPress site does not match this token. Please check MCO_JWT_SECRET in wp-config.php.");
+                    }
+                    // Non-critical errors (like network offline) are ignored during login to allow offline access if needed
+                    console.warn("Non-critical sync error during login:", serverError);
+                }
+            }
+
+            // If we get here, either sync worked OR it was a non-critical error.
             setUser(payload.user);
             
             let paidIds: string[] = [];
@@ -181,46 +205,21 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 setSubscriptionInfo(null);
                 localStorage.removeItem('subscriptionInfo');
             }
-
-            // Sync Logic - Swallowed error to prevent login loop
-            (async () => {
-                try {
-                    await googleSheetsService.syncResults(payload.user, jwtToken);
-                    if (isSyncOnly) {
-                        toast.success('Exams synchronized successfully!');
-                    }
-                } catch (syncError: any) {
-                    console.error("Background sync failed:", syncError);
-                    
-                    if (syncError.code === 'jwt_auth_invalid_token' || syncError.code === 'jwt_auth_expired_token' || (syncError.message && (syncError.message.includes('Token Mismatch') || syncError.message.includes('Invalid or expired')))) {
-                         toast(
-                            (t) => (
-                                <div className="flex flex-col gap-2 items-start">
-                                    <span className="font-semibold text-sm">Session Key Mismatch</span>
-                                    <span className="text-xs">Your login session is invalid. This may be due to a server configuration change.</span>
-                                    <button 
-                                        onClick={() => { toast.dismiss(t.id); logout(); }}
-                                        className="bg-red-600 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-red-700 transition w-full justify-center"
-                                    >
-                                        <LogOut size={12} /> Log Out & Fix
-                                    </button>
-                                </div>
-                            ),
-                            { duration: Infinity, icon: '⚠️', id: 'auth-sync-error' }
-                        );
-                    } else if (isSyncOnly) {
-                        toast.error(`Sync failed: ${syncError.message}`);
-                    }
-                }
-            })();
+            
+            if (isSyncOnly) {
+                 toast.success('Exams synchronized successfully!');
+            }
 
         } else {
             throw new Error("Invalid token payload structure.");
         }
     } catch(e) {
         console.error("Login processing error:", e);
-        logout();
-        throw new Error("Invalid authentication token.");
+        // Ensure state is clear if login fails
+        if (!isSyncOnly) {
+            logout();
+        }
+        throw e;
     }
   }, [logout]);
   
