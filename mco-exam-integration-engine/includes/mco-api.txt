@@ -144,7 +144,6 @@ if (!function_exists('mco_verify_exam_jwt')) {
 
         // Verify Signature
         $signature_to_verify = mco_base64url_decode($signature_encoded);
-        // FIX: Variable name correction $header -> $header_encoded
         $expected_signature = hash_hmac('sha256', "$header_encoded.$payload_encoded", MCO_JWT_SECRET, true);
 
         if (!hash_equals($expected_signature, $signature_to_verify)) {
