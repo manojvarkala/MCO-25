@@ -299,22 +299,22 @@ const Dashboard: FC = () => {
                         {examCategories.map((category) => {
                             
                             // BUNDLE DETECTION LOGIC FOR DASHBOARD
-                            // We use the exact same logic as the WordPress plugin to find the bundle:
-                            // 1. Look for [sku]-1mo-addon
-                            // 2. Look for [sku]-1
-                            // 3. Fallback to metadata search
                             let dashboardBundle = null;
                             if (bundlesEnabled && category.certExam && category.certExam.productSku && examPrices) {
                                 const certSku = category.certExam.productSku;
                                 const subBundleSku = `${certSku}-1mo-addon`;
                                 const practiceBundleSku = `${certSku}-1`;
 
+                                // 1. Strict SKU match for -1mo-addon (Subscription Bundle)
                                 if (examPrices[subBundleSku]) {
                                      dashboardBundle = { product: examPrices[subBundleSku], type: 'subscription' as const };
-                                } else if (examPrices[practiceBundleSku]) {
+                                } 
+                                // 2. Strict SKU match for -1 (Practice Bundle)
+                                else if (examPrices[practiceBundleSku]) {
                                      dashboardBundle = { product: examPrices[practiceBundleSku], type: 'practice' as const };
-                                } else {
-                                     // Fallback: Dynamic metadata search
+                                } 
+                                // 3. Fallback: Dynamic metadata search if strict SKUs not found
+                                else {
                                      const eligibleBundles = Object.values(examPrices).filter((p: any) => 
                                         p.isBundle && 
                                         Array.isArray(p.bundledSkus) && 
