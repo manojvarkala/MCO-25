@@ -51,7 +51,7 @@ const Dashboard: FC = () => {
         const toastId = toast.loading("Syncing latest exams and results...");
         
         try {
-            // 1. Refresh Global App Config (detect new products/bundles)
+            // 1. Refresh Global App Config (detect new products/bundles/updates)
             await refreshConfig();
             
             // 2. Sync User Results

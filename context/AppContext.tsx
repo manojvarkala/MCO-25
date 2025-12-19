@@ -58,9 +58,6 @@ const ensureArray = <T,>(data: any): T[] => {
     return [];
 };
 
-/**
- * Robust utility to find values across multiple possible WP database keys
- */
 const getField = (obj: any, keys: string[], defaultValue: any = '') => {
     if (!obj) return defaultValue;
     for (const key of keys) {
@@ -81,7 +78,6 @@ const processConfigData = (configData: any) => {
     rawOrgs.forEach((rawOrg: any) => {
         if (!rawOrg) return;
 
-        // 1. Normalize Categories
         const categories = ensureArray<any>(rawOrg.examProductCategories).map(cat => ({
             ...cat,
             id: getField(cat, ['id', 'ID', 'term_id']).toString(),
@@ -91,7 +87,6 @@ const processConfigData = (configData: any) => {
             certificationExamId: getField(cat, ['certificationExamId', 'certification_exam_id'], '').toString()
         }));
 
-        // 2. Normalize Exams
         const exams = ensureArray<any>(rawOrg.exams).map((exam: any) => {
             const rawId = getField(exam, ['id', 'ID', 'post_id']);
             if (!rawId) return null;
@@ -105,18 +100,17 @@ const processConfigData = (configData: any) => {
                 id,
                 name: decodeHtmlEntities(getField(exam, ['name', 'post_title', 'title'])),
                 description: decodeHtmlEntities(getField(exam, ['description', 'post_content', 'content'])),
-                // Ensure no numeric fields are 0 unless explicitly set as such
                 numberOfQuestions: parseInt(getField(exam, ['numberOfQuestions', 'number_of_questions', 'questions_count']), 10) || 0,
                 durationMinutes: parseInt(getField(exam, ['durationMinutes', 'duration_minutes', 'duration']), 10) || 0,
                 passScore: parseInt(getField(exam, ['passScore', 'pass_score']), 10) || 70,
                 price: parseFloat(getField(exam, ['price'])) || 0,
                 regularPrice: parseFloat(getField(exam, ['regularPrice', 'regular_price'])) || 0,
                 isPractice: exam.isPractice ?? (category ? category.practiceExamId === id : false),
+                productSku: getField(exam, ['productSku', 'product_sku', 'sku']),
                 questionSourceUrl: getField(exam, ['questionSourceUrl', 'question_source_url'], categoryUrl)
             };
         }).filter(Boolean) as Exam[];
 
-        // 3. Normalize Books
         const books = ensureArray<any>(rawOrg.suggestedBooks || []).map(book => ({
             ...book,
             id: getField(book, ['id', 'book_id']).toString(),
@@ -183,7 +177,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setExamPrices(config.examPrices || null);
       setSuggestedBooks(processedData.allSuggestedBooks);
       
-      const newActiveOrg = processedData.processedOrgs[0];
+      const newActiveOrg = processedData.processedOrgs.find(o => o.id === localStorage.getItem('activeOrgId')) || processedData.processedOrgs[0];
       setActiveOrg(newActiveOrg);
 
       if (newActiveOrg) {
@@ -233,8 +227,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             }
         }
     } catch (apiError) {
-        console.warn("API load failed:", apiError);
-        // If we have no data yet, try static fallback
         if (organizations.length === 0) {
             try {
                 const response = await fetch(tenantConfig.staticConfigPath);
@@ -251,7 +243,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     loadAppConfig();
-    // Record hit count separately
     googleSheetsService.recordSiteHit().then(data => {
         if (data && data.count) setHitCount(data.count);
     }).catch(() => {});

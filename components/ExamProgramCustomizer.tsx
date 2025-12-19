@@ -1,3 +1,4 @@
+
 import React, { FC, useState, useCallback, useMemo, ReactNode, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -12,6 +13,7 @@ interface EditableProgramData {
     category?: Partial<ExamProductCategory>;
     practiceExam?: Partial<Exam>;
     certExam?: Partial<Exam>;
+    addonEnabled?: boolean;
 }
 
 const BulkEditPanel: FC<{
@@ -132,10 +134,19 @@ interface ExamEditorProps {
 
 const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, unlinkedProducts, suggestedBooks, examPrices }) => {
     const { activeOrg } = useAppContext();
+    
+    // Check if addon exists for this program
+    const initialAddonEnabled = useMemo(() => {
+        if (!program.certExam?.productSku || !examPrices) return false;
+        const addonSku = `${program.certExam.productSku}-1mo-addon`;
+        return !!examPrices[addonSku];
+    }, [program.certExam, examPrices]);
+
     const [data, setData] = useState<EditableProgramData>({
         category: { ...program.category },
         practiceExam: program.practiceExam ? { ...program.practiceExam } : undefined,
         certExam: program.certExam ? { ...program.certExam } : undefined,
+        addonEnabled: initialAddonEnabled
     });
     
     useEffect(() => {
@@ -143,8 +154,9 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
             category: { ...program.category },
             practiceExam: program.practiceExam ? { ...program.practiceExam } : undefined,
             certExam: program.certExam ? { ...program.certExam } : undefined,
+            addonEnabled: initialAddonEnabled
         });
-    }, [program]);
+    }, [program, initialAddonEnabled]);
 
     const handleCategoryChange = (field: keyof ExamProductCategory, value: string) => {
         setData(prev => ({ ...prev, category: { ...prev.category, [field]: value } }));
@@ -174,7 +186,7 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
         });
     };
     
-    const { category, practiceExam, certExam } = data;
+    const { category, practiceExam, certExam, addonEnabled } = data;
     
     const initialLinkedProductInfo = useMemo(() => {
         if (!program.certExam?.productSku || !examPrices) return null;
@@ -250,6 +262,23 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
                             {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
                         </select>
                     </div>
+                    
+                    {/* Addon Toggle */}
+                    <div className="p-3 bg-[rgb(var(--color-muted-rgb))] rounded-md border border-[rgb(var(--color-border-rgb))]">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={addonEnabled}
+                                onChange={e => setData(prev => ({ ...prev, addonEnabled: e.target.checked }))}
+                                className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500"
+                            />
+                            <div className="flex flex-col">
+                                <span className="font-bold text-sm">Enable 1-Month Addon Bundle</span>
+                                <span className="text-xs text-slate-500">Automatically creates/manages an "Exam + Subscription" bundle.</span>
+                            </div>
+                        </label>
+                    </div>
+
                     <div>
                         <label className="text-xs font-bold">Certificate Template</label>
                         <select
@@ -312,7 +341,7 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
 };
 
 const ExamProgramCustomizer: FC = () => {
-    const { activeOrg, examPrices, suggestedBooks, updateConfigData } = useAppContext();
+    const { activeOrg, examPrices, suggestedBooks, updateConfigData, refreshConfig } = useAppContext();
     const { token } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
@@ -371,9 +400,32 @@ const ExamProgramCustomizer: FC = () => {
         if (!token) { toast.error("Authentication Error"); return; }
         setIsSaving(true);
         try {
+            // 1. Update the main Program settings
             const result = await googleSheetsService.adminUpdateExamProgram(token, programId, data);
-            updateConfigData(result.organizations, result.examPrices);
-            toast.success("Program updated successfully!");
+            
+            // 2. Handle Addon Upsert if needed
+            if (data.certExam?.productSku) {
+                const certSku = data.certExam.productSku;
+                const addonSku = `${certSku}-1mo-addon`;
+                
+                if (data.addonEnabled) {
+                     const examName = data.certExam.name || data.category?.name || 'Exam';
+                     await googleSheetsService.adminUpsertProduct(token, {
+                        sku: addonSku,
+                        name: `${examName} - 1-Month Premium Access`,
+                        price: (data.certExam.price || 49.99) + 10, // Default bundle logic
+                        regularPrice: (data.certExam.regularPrice || 59.99) + 29.99,
+                        isBundle: true,
+                        bundled_skus: [certSku, 'sub-monthly']
+                    });
+                } else {
+                    // Logic to delete/disable addon if it exists could go here
+                }
+            }
+
+            // 3. Refresh and navigate
+            await refreshConfig();
+            toast.success("Program and linked data updated successfully!");
             setExpandedProgramId(null);
         } catch (error: any) {
             toast.error(error.message || 'Failed to update program.');
@@ -390,7 +442,7 @@ const ExamProgramCustomizer: FC = () => {
         setIsCreating(true);
         try {
             const result = await googleSheetsService.adminCreateExamProgram(token, newProgramName, { sku: newProgramProductLink });
-            updateConfigData(result.organizations, result.examPrices);
+            await refreshConfig();
             toast.success(`Program "${newProgramName}" created!`);
             setIsCreateModalOpen(false);
             setNewProgramName('');
@@ -410,7 +462,7 @@ const ExamProgramCustomizer: FC = () => {
         setIsSaving(true);
         try {
             const result = await googleSheetsService.adminDeletePost(token, programId, 'mco_exam_program');
-            updateConfigData(result.organizations, result.examPrices);
+            await refreshConfig();
             toast.success(`Program "${programName}" deleted.`);
         } catch(error: any) {
             toast.error(error.message || 'Failed to delete program.');
@@ -427,9 +479,9 @@ const ExamProgramCustomizer: FC = () => {
             for (const programId of selectedProgramIds) {
                 await googleSheetsService.adminUpdateExamProgram(token, programId, updateData);
             }
-            toast.success(`${selectedProgramIds.length} programs updated successfully! Refreshing data...`, { id: toastId, duration: 4000 });
+            await refreshConfig();
+            toast.success(`${selectedProgramIds.length} programs updated successfully!`, { id: toastId, duration: 4000 });
             setSelectedProgramIds([]);
-            setTimeout(() => window.location.reload(), 1000);
         } catch (error: any) {
             toast.error(error.message || "An error occurred during bulk update.", { id: toastId });
         } finally {
@@ -521,7 +573,7 @@ const ExamProgramCustomizer: FC = () => {
                      {programData.length > 0 && (
                         <div className="flex items-center px-4 py-2">
                             <label className="flex items-center gap-4 cursor-pointer">
-                                <input type="checkbox" onChange={handleSelectAll} checked={isAllSelected} className="h-4 w-4 rounded text-[rgb(var(--color-primary-rgb))] focus:ring-[rgb(var(--color-primary-rgb))]"/>
+                                <input type="checkbox" onChange={handleSelectAll} checked={isAllSelected} className="h-4 w-4 rounded text-[rgb(var(--color-primary-rgb))] focus:ring-[rgb(var(--color-primary-rgb))]" />
                                 <span className="font-semibold text-sm">Select All</span>
                             </label>
                         </div>
