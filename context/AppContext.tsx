@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
 import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook, Theme, FeedbackContext } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -50,26 +51,19 @@ const decodeHtmlEntities = (text: string | undefined): string => {
     }
 };
 
-// Helper to safely ensure we always work with arrays, even if PHP returns an object/map
 const ensureArray = <T,>(data: any): T[] => {
     if (!data) return [];
     if (Array.isArray(data)) return data;
-    // If it's an object (like PHP associative array), convert values to array
     if (typeof data === 'object') return Object.values(data);
     return [];
 };
 
-
-// This function processes a raw config object (either static or from the API)
-// and prepares it for the application state by decoding entities and mapping data.
 const processConfigData = (configData: any) => {
-    if (!configData || !configData.organizations) return null;
+    if (!configData || !configData.organizations || !Array.isArray(configData.organizations) || configData.organizations.length === 0) return null;
     
-    // Safely parse organizations, ensuring it's an array
     let processedOrgs: Organization[] = [];
     try {
-        const rawOrgs = JSON.parse(JSON.stringify(configData.organizations));
-        processedOrgs = ensureArray<Organization>(rawOrgs);
+        processedOrgs = JSON.parse(JSON.stringify(configData.organizations));
     } catch (e) {
         console.error("Error parsing config organizations", e);
         return null;
@@ -78,17 +72,17 @@ const processConfigData = (configData: any) => {
     let allSuggestedBooks: RecommendedBook[] = [];
 
     processedOrgs.forEach((org: Organization) => {
+        if (!org) return;
         org.name = decodeHtmlEntities(org.name);
         
-        // Safely iterate categories
         const categories = ensureArray<ExamProductCategory>(org.examProductCategories);
         categories.forEach((cat) => {
+            if (!cat) return;
             cat.name = decodeHtmlEntities(cat.name);
             cat.description = decodeHtmlEntities(cat.description);
         });
         org.examProductCategories = categories;
 
-        // Safely iterate and map exams
         const rawExams = ensureArray<Exam>(org.exams);
         org.exams = rawExams.map((exam: Exam): Exam | null => {
             if (!exam || !exam.id) return null;
@@ -103,10 +97,10 @@ const processConfigData = (configData: any) => {
             };
         }).filter(Boolean) as Exam[];
 
-        // Safely iterate books
         if (org.suggestedBooks) {
             const books = ensureArray<RecommendedBook>(org.suggestedBooks);
             books.forEach(book => {
+                if (!book) return;
                 book.title = decodeHtmlEntities(book.title);
                 book.description = decodeHtmlEntities(book.description);
             });
@@ -116,9 +110,9 @@ const processConfigData = (configData: any) => {
             org.suggestedBooks = [];
         }
 
-        // Safely iterate templates
         const templates = ensureArray<any>(org.certificateTemplates);
         templates.forEach(template => {
+            if (!template) return;
             template.name = decodeHtmlEntities(template.name);
             template.title = decodeHtmlEntities(template.title);
             template.body = decodeHtmlEntities(template.body);
@@ -160,7 +154,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setActiveThemeState(themeId);
       try {
           localStorage.setItem('mco_active_theme', themeId);
-      } catch(e) { console.error("Could not save theme to local storage", e); }
+      } catch(e) {}
   };
 
   const setFeedbackRequiredForExam = (context: FeedbackContext) => {
@@ -172,22 +166,15 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     localStorage.removeItem('feedbackRequiredForExam');
   };
   
-  const [hitCount, setHitCount] = useState<number | null>(() => {
-    try {
-        const storedCount = sessionStorage.getItem('mco_site_hit_count');
-        return storedCount ? parseInt(storedCount, 10) : null;
-    } catch {
-        return null;
-    }
-  });
+  const [hitCount, setHitCount] = useState<number | null>(null);
 
   const setProcessedConfig = (config: any, processedData: any) => {
-    if (processedData) {
+    if (processedData && processedData.processedOrgs && processedData.processedOrgs.length > 0) {
       setOrganizations(processedData.processedOrgs);
       setExamPrices(config.examPrices || null);
       setSuggestedBooks(processedData.allSuggestedBooks);
       
-      const newActiveOrg = processedData.processedOrgs[0] || null;
+      const newActiveOrg = processedData.processedOrgs[0];
       setActiveOrg(newActiveOrg);
 
       if (newActiveOrg) {
@@ -202,6 +189,8 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
           const defaultTheme = newActiveOrg.activeThemeId || 'default';
           setActiveThemeState(savedTheme || defaultTheme);
       }
+    } else {
+        console.error("setProcessedConfig called with invalid or empty data");
     }
   };
 
@@ -213,63 +202,60 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         let activeConfig = null;
         let loadedFromCache = false;
 
-        // Stage 1: Attempt to load from tenant-specific cache for an instant UI update.
         try {
             const cachedConfigJSON = localStorage.getItem(cacheKey);
             if (cachedConfigJSON) {
                 const cachedConfig = JSON.parse(cachedConfigJSON);
-                activeConfig = cachedConfig;
                 const processedData = processConfigData(cachedConfig);
-                setProcessedConfig(cachedConfig, processedData);
-                loadedFromCache = true;
+                if (processedData) {
+                    activeConfig = cachedConfig;
+                    setProcessedConfig(cachedConfig, processedData);
+                    loadedFromCache = true;
+                }
             }
         } catch (e) {
-            console.warn("Could not load cached config:", e);
             localStorage.removeItem(cacheKey);
         }
 
-        // Stage 2: Always try fetching the latest config from the API.
         try {
             const response = await fetch(`${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config`);
             if (!response.ok) throw new Error(`Server returned status ${response.status}`);
             
             const liveConfig = await response.json();
+            const processedData = processConfigData(liveConfig);
             
-            if (!activeConfig || activeConfig.version !== liveConfig.version) {
-                localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
-                const processedData = processConfigData(liveConfig);
-                setProcessedConfig(liveConfig, processedData);
-                if (activeConfig) toast.success('Content and features have been updated!', { duration: 3000 });
+            if (processedData) {
+                if (!activeConfig || activeConfig.version !== liveConfig.version) {
+                    localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
+                    setProcessedConfig(liveConfig, processedData);
+                    if (activeConfig) toast.success('Content updated!');
+                }
+                setIsInitializing(false);
+                return;
             }
-            setIsInitializing(false); // Success, we're done.
-            return;
         } catch (apiError) {
-            console.error("Failed to fetch live config:", apiError);
             if (loadedFromCache) {
-                setIsInitializing(false); // We have cached data, so we can stop initializing.
+                setIsInitializing(false); 
                 return;
             }
         }
 
-        // Stage 3: API failed and no cache. Try loading static fallback file.
         try {
-            toast.error("Could not connect to the server. Displaying default content which may be outdated.", { duration: 6000 });
             const response = await fetch(tenantConfig.staticConfigPath);
-            if (!response.ok) throw new Error(`Static config file not found: ${response.status}`);
-            const staticConfig = await response.json();
-            const processedData = processConfigData(staticConfig);
-            setProcessedConfig(staticConfig, processedData);
-        } catch (staticError) {
-            console.error("Failed to fetch static config:", staticError);
-            toast.error("Could not load application configuration. Please check your connection and try again.", { duration: 10000 });
-        } finally {
+            if (response.ok) {
+                const staticConfig = await response.json();
+                const processedData = processConfigData(staticConfig);
+                if (processedData) {
+                    setProcessedConfig(staticConfig, processedData);
+                }
+            }
+        } catch (staticError) {} finally {
             setIsInitializing(false);
         }
     };
     loadAppConfig();
   }, []);
 
-  // Effect to record a site hit once per session.
   useEffect(() => {
     const hitCountedInSession = sessionStorage.getItem('mco_hit_counted');
     if (!hitCountedInSession) {
@@ -277,21 +263,15 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             try {
                 const data = await googleSheetsService.recordSiteHit();
                 if (data && data.count) {
-                    const newCount = data.count;
-                    setHitCount(newCount);
+                    setHitCount(data.count);
                     sessionStorage.setItem('mco_hit_counted', 'true');
-                    sessionStorage.setItem('mco_site_hit_count', newCount.toString());
                 }
-            } catch (error) {
-                console.error("Could not record or fetch site hit:", error);
-            }
+            } catch (error) {}
         };
         recordHit();
     }
   }, []); 
 
-
-  // Effect 2: Check for in-progress exams when user logs in or active org changes.
   useEffect(() => {
     if (!user || !activeOrg) {
         setInProgressExam(null);
@@ -311,14 +291,10 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 }
             }
         }
-    } catch (error) {
-        console.error("Failed to check for in-progress exams:", error);
-    }
+    } catch (error) {}
     setInProgressExam(foundExam);
-
   }, [user, activeOrg]);
 
-  // Effect to load persisted feedback requirement
   useEffect(() => {
     const storedFeedback = localStorage.getItem('feedbackRequiredForExam');
     if (storedFeedback) {
