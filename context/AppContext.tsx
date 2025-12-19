@@ -84,6 +84,7 @@ const processConfigData = (configData: any) => {
 
         const rawExams = ensureArray<any>(org.exams);
         org.exams = rawExams.map((exam: any): Exam | null => {
+            // NORMALIZATION LAYER: Handle id/ID casing and field mapping
             const id = exam.id || exam.ID;
             if (!id) return null;
             
@@ -93,14 +94,15 @@ const processConfigData = (configData: any) => {
             return {
                 ...exam,
                 id: id.toString(),
-                name: decodeHtmlEntities(exam.name),
-                description: decodeHtmlEntities(exam.description),
-                numberOfQuestions: parseInt(exam.numberOfQuestions || 0, 10),
-                durationMinutes: parseInt(exam.durationMinutes || 0, 10),
-                passScore: parseInt(exam.passScore || 70, 10),
+                name: decodeHtmlEntities(exam.name || exam.post_title),
+                description: decodeHtmlEntities(exam.description || exam.post_content),
+                // Handle various WP field naming conventions and cast strings to numbers
+                numberOfQuestions: parseInt(exam.numberOfQuestions || exam.number_of_questions || 0, 10),
+                durationMinutes: parseInt(exam.durationMinutes || exam.duration_minutes || 0, 10),
+                passScore: parseInt(exam.passScore || exam.pass_score || 70, 10),
                 price: parseFloat(exam.price || 0),
-                regularPrice: parseFloat(exam.regularPrice || 0),
-                questionSourceUrl: exam.questionSourceUrl || categoryUrl,
+                regularPrice: parseFloat(exam.regularPrice || exam.regular_price || 0),
+                questionSourceUrl: exam.questionSourceUrl || exam.question_source_url || categoryUrl,
             };
         }).filter(Boolean) as Exam[];
 
@@ -256,6 +258,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         } catch (staticError) {
             console.error("Critical: All config sources failed.");
         } finally {
+            // CRITICAL: Always ensure initializing is set to false
             setIsInitializing(false);
         }
     };

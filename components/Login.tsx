@@ -54,10 +54,13 @@ const Login: FC = () => {
             if (currentStoredUrl !== apiUrlOverride) {
                 console.log(`Binding app to new backend: ${apiUrlOverride}`);
                 localStorage.setItem('mco_dynamic_api_url', apiUrlOverride);
-                // Force a reload of the configuration to match the new API target
-                const cacheKeyPrefix = 'appConfigCache_';
+                
+                // CRITICAL: Force clear of all config caches when the API URL changes
+                // This prevents the "blank screen" caused by stale data from another tenant
                 Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith(cacheKeyPrefix)) localStorage.removeItem(key);
+                    if (key.startsWith('appConfigCache_')) {
+                        localStorage.removeItem(key);
+                    }
                 });
             }
         }
@@ -106,8 +109,6 @@ const Login: FC = () => {
     }, [loginWithToken, location.search, user, isInitializing, mainSiteBaseUrl, error, activeOrg]);
 
     if (error) {
-        const isHeaderError = error.includes('Authorization');
-        const isKeyError = error.includes('Security Key');
         const isLoopError = error.includes('Loop');
 
         return (

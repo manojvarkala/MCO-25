@@ -26,13 +26,8 @@ const indianCertsConfig: TenantConfig = {
 
 const tenantMap: { [key: string]: TenantConfig } = {
     'annapoornainfo.com': annapoornaConfig,
-    'exams.annapoornainfo.com': annapoornaConfig,
-    'exam.annapoornainfo.com': annapoornaConfig,
     'coding-online.net': medicalCodingConfig,
-    'exams.coding-online.net': medicalCodingConfig, 
-    'exam.coding-online.net': medicalCodingConfig,
     'bharatcerts.in': indianCertsConfig,
-    'exams.bharatcerts.in': indianCertsConfig,
 };
 
 export const getTenantConfig = (): TenantConfig => {
@@ -53,11 +48,18 @@ export const getTenantConfig = (): TenantConfig => {
         };
     }
 
-    const hostname = window.location.hostname.toLowerCase().replace(/^www\./, '');
+    const hostname = window.location.hostname.toLowerCase();
+    
+    // Explicit subdomain handling for Annapoorna
+    if (hostname.includes('annapoornainfo.com')) {
+        return annapoornaConfig;
+    }
+
+    const cleanHostname = hostname.replace(/^www\./, '');
     const sortedKeys = Object.keys(tenantMap).sort((a, b) => b.length - a.length);
 
     for (const key of sortedKeys) {
-        if (hostname === key || hostname.endsWith('.' + key)) {
+        if (cleanHostname === key || cleanHostname.endsWith('.' + key)) {
             return tenantMap[key];
         }
     }
