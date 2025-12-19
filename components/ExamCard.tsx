@@ -1,3 +1,4 @@
+
 import React, { FC, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -91,7 +92,6 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
 
     const Icon = isPractice ? BookOpen : Award;
     const headerText = isPractice ? "Practice Exam" : (exam.certificateEnabled ? "Certification Exam" : "Proficiency Exam");
-    const themeGradientClass = isPractice ? 'exam-card--practice' : 'exam-card--cert';
     
     const buttonTitle = isDisabled 
         ? "Please submit feedback for your last exam before starting a new one."
@@ -99,7 +99,7 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
 
 
     return (
-        <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col text-white relative ${themeGradientClass} ${isDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
+        <div className={`rounded-xl shadow-lg overflow-hidden flex flex-col text-white relative ${isPractice ? 'bg-blue-600' : 'bg-emerald-600'} ${isDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
             <div className="p-6 flex flex-col flex-grow">
                 <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">
@@ -117,18 +117,14 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                 
                 <h3 className="text-lg font-bold mb-2 leading-tight">{decodeHtml(exam.name)}</h3>
                 
-                {/* Description added with HTML stripping */}
                 <p className="text-sm text-white/90 mb-4 line-clamp-3 flex-grow">
                     {stripHtml(exam.description)}
                 </p>
 
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-white/80 mb-4 p-3 bg-black/10 rounded-md">
-                    <span><HelpCircle size={14} className="inline mr-1" />{exam.numberOfQuestions} Qs</span>
-                    <span><Clock size={14} className="inline mr-1" />{exam.durationMinutes} Mins</span>
-                    <span><CheckCircle size={14} className="inline mr-1" />{exam.passScore}% Pass</span>
-                    {typeof attemptsMade === 'number' && !isPractice && (
-                         <span><History size={14} className="inline mr-1" />{attemptsMade}/3 Attempts</span>
-                    )}
+                    <span><HelpCircle size={14} className="inline mr-1" />{exam.numberOfQuestions || 0} Qs</span>
+                    <span><Clock size={14} className="inline mr-1" />{exam.durationMinutes || 0} Mins</span>
+                    <span><CheckCircle size={14} className="inline mr-1" />{exam.passScore || 70}% Pass</span>
                 </div>
                 
                 {!canTake && price > 0 && (
