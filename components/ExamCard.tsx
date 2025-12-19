@@ -1,3 +1,4 @@
+
 import React, { FC, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -115,17 +116,16 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                     )}
                 </div>
                 
-                <h3 className="text-lg font-bold mb-2 leading-tight">{decodeHtml(exam.name)}</h3>
+                <h3 className="text-lg font-bold mb-2 leading-tight">{decodeHtml(exam.name || 'Untitled Exam')}</h3>
                 
-                {/* Description added with HTML stripping */}
                 <p className="text-sm text-white/90 mb-4 line-clamp-3 flex-grow">
                     {stripHtml(exam.description)}
                 </p>
 
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-white/80 mb-4 p-3 bg-black/10 rounded-md">
-                    <span><HelpCircle size={14} className="inline mr-1" />{exam.numberOfQuestions} Qs</span>
-                    <span><Clock size={14} className="inline mr-1" />{exam.durationMinutes} Mins</span>
-                    <span><CheckCircle size={14} className="inline mr-1" />{exam.passScore}% Pass</span>
+                    <span><HelpCircle size={14} className="inline mr-1" />{exam.numberOfQuestions || '--'} Qs</span>
+                    <span><Clock size={14} className="inline mr-1" />{exam.durationMinutes || '--'} Mins</span>
+                    <span><CheckCircle size={14} className="inline mr-1" />{exam.passScore || '--'}% Pass</span>
                     {typeof attemptsMade === 'number' && !isPractice && (
                          <span><History size={14} className="inline mr-1" />{attemptsMade}/3 Attempts</span>
                     )}

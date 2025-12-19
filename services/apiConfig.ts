@@ -31,16 +31,18 @@ const tenantMap: { [key: string]: TenantConfig } = {
 };
 
 export const getTenantConfig = (): TenantConfig => {
+    // 1. Check for manual override from Login redirect
     try {
         const dynamicUrl = localStorage.getItem('mco_dynamic_api_url');
         if (dynamicUrl && dynamicUrl.startsWith('http')) {
             return {
                 apiBaseUrl: dynamicUrl.replace(/\/$/, ""),
-                staticConfigPath: '/annapoorna-config.json' 
+                staticConfigPath: dynamicUrl.includes('annapoorna') ? '/annapoorna-config.json' : '/medical-coding-config.json' 
             };
         }
     } catch (e) {}
 
+    // 2. Development mode
     if (isDev) {
         return {
             apiBaseUrl: '/api',
@@ -48,9 +50,9 @@ export const getTenantConfig = (): TenantConfig => {
         };
     }
 
+    // 3. Resilient brand-based hostname detection
     const hostname = window.location.hostname.toLowerCase();
     
-    // Aggressive catch for specific brands
     if (hostname.includes('annapoornainfo')) {
         return annapoornaConfig;
     }
@@ -61,6 +63,7 @@ export const getTenantConfig = (): TenantConfig => {
         return indianCertsConfig;
     }
 
+    // 4. Fallback to default hostname map
     const cleanHostname = hostname.replace(/^www\./, '');
     const sortedKeys = Object.keys(tenantMap).sort((a, b) => b.length - a.length);
 
@@ -70,6 +73,7 @@ export const getTenantConfig = (): TenantConfig => {
         }
     }
     
+    // Final fallback
     return annapoornaConfig;
 }
 
