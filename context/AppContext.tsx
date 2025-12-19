@@ -57,9 +57,6 @@ const ensureArray = <T,>(data: any): T[] => {
     return [];
 };
 
-/**
- * Defensive utility to find a value in an object using multiple possible keys
- */
 const getField = (obj: any, keys: string[], defaultValue: any = '') => {
     if (!obj) return defaultValue;
     for (const key of keys) {
@@ -80,43 +77,41 @@ const processConfigData = (configData: any) => {
     rawOrgs.forEach((rawOrg: any) => {
         if (!rawOrg) return;
 
-        // 1. Normalize Categories
+        // 1. Normalize Categories (Lossless)
         const categories = ensureArray<any>(rawOrg.examProductCategories).map(cat => ({
-            ...cat,
+            ...cat, // Preserve original keys
             id: getField(cat, ['id', 'ID', 'term_id']).toString(),
             name: decodeHtmlEntities(getField(cat, ['name', 'post_title', 'title'])),
             description: decodeHtmlEntities(getField(cat, ['description', 'post_content', 'content'])),
-            // Ensure child IDs match the normalized exam IDs later
             practiceExamId: getField(cat, ['practiceExamId', 'practice_exam_id'], '').toString(),
             certificationExamId: getField(cat, ['certificationExamId', 'certification_exam_id'], '').toString()
         }));
 
-        // 2. Normalize Exams
+        // 2. Normalize Exams (Lossless)
         const exams = ensureArray<any>(rawOrg.exams).map((exam: any) => {
             const rawId = getField(exam, ['id', 'ID', 'post_id']);
             if (!rawId) return null;
-
             const id = rawId.toString();
             
-            // Link to category-specific source if not defined on exam
             const category = categories.find(c => c.certificationExamId === id || c.practiceExamId === id);
             const categoryUrl = category ? category.questionSourceUrl : undefined;
 
             return {
-                ...exam,
+                ...exam, // Preserve original keys for card color logic etc.
                 id,
                 name: decodeHtmlEntities(getField(exam, ['name', 'post_title', 'title'])),
                 description: decodeHtmlEntities(getField(exam, ['description', 'post_content', 'content'])),
-                numberOfQuestions: parseInt(getField(exam, ['numberOfQuestions', 'number_of_questions', 'questions_count'], 0), 10) || 0,
-                durationMinutes: parseInt(getField(exam, ['durationMinutes', 'duration_minutes', 'duration'], 0), 10) || 0,
-                passScore: parseInt(getField(exam, ['passScore', 'pass_score'], 70), 10) || 70,
-                price: parseFloat(getField(exam, ['price'], 0)) || 0,
-                regularPrice: parseFloat(getField(exam, ['regularPrice', 'regular_price'], 0)) || 0,
+                numberOfQuestions: parseInt(getField(exam, ['numberOfQuestions', 'number_of_questions', 'questions_count']), 10) || 0,
+                durationMinutes: parseInt(getField(exam, ['durationMinutes', 'duration_minutes', 'duration']), 10) || 0,
+                passScore: parseInt(getField(exam, ['passScore', 'pass_score']), 10) || 70,
+                price: parseFloat(getField(exam, ['price'])) || 0,
+                regularPrice: parseFloat(getField(exam, ['regularPrice', 'regular_price'])) || 0,
+                isPractice: exam.isPractice ?? (category ? category.practiceExamId === id : false),
                 questionSourceUrl: getField(exam, ['questionSourceUrl', 'question_source_url'], categoryUrl)
             };
         }).filter(Boolean) as Exam[];
 
-        // 3. Normalize Books
+        // 3. Normalize Books (Lossless)
         const books = ensureArray<any>(rawOrg.suggestedBooks || []).map(book => ({
             ...book,
             id: getField(book, ['id', 'book_id']).toString(),
@@ -149,17 +144,15 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [suggestedBooks, setSuggestedBooks] = useState<RecommendedBook[]>([]);
-  
-  const { user } = useAuth();
-  const [inProgressExam, setInProgressExam] = useState<InProgressExamInfo | null>(null);
+  const [hitCount, setHitCount] = useState<number | null>(null);
   const [examPrices, setExamPrices] = useState<{ [key: string]: any } | null>(null);
-  
   const [availableThemes, setAvailableThemes] = useState<Theme[]>([]);
   const [activeTheme, setActiveThemeState] = useState<string>('default');
-  
   const [subscriptionsEnabled, setSubscriptionsEnabled] = useState<boolean>(true);
   const [bundlesEnabled, setBundlesEnabled] = useState<boolean>(true);
   const [feedbackRequiredForExam, setFeedbackRequiredForExamState] = useState<FeedbackContext | null>(null);
+  
+  const { user } = useAuth();
   
   const setActiveTheme = (themeId: string) => {
       setActiveThemeState(themeId);
@@ -176,8 +169,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setFeedbackRequiredForExamState(null);
     localStorage.removeItem('feedbackRequiredForExam');
   };
-  
-  const [hitCount, setHitCount] = useState<number | null>(null);
 
   const setProcessedConfig = (config: any, processedData: any) => {
     if (processedData && processedData.processedOrgs && processedData.processedOrgs.length > 0) {
@@ -209,7 +200,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const tenantConfig: TenantConfig = getTenantConfig();
         const cacheKey = `appConfigCache_${tenantConfig.apiBaseUrl}`;
         let activeConfig = null;
-        let loadedFromCache = false;
 
         // 1. Try Cache
         try {
@@ -220,7 +210,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 if (processedData) {
                     activeConfig = cachedConfig;
                     setProcessedConfig(cachedConfig, processedData);
-                    loadedFromCache = true;
                 }
             }
         } catch (e) {
@@ -241,8 +230,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                             localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
                             if (activeConfig) toast.success('Content updated!');
                         }
-                        setIsInitializing(false);
-                        return;
                     }
                 }
             }
@@ -250,8 +237,8 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             console.warn("API load failed:", apiError);
         }
 
-        // 3. Try Static Fallback (Only if we haven't already finished initializing)
-        if (isInitializing) {
+        // 3. Static Fallback (if still empty)
+        if (organizations.length === 0) {
             try {
                 const response = await fetch(tenantConfig.staticConfigPath);
                 if (response.ok) {
@@ -263,10 +250,16 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 }
             } catch (staticError) {
                 console.error("Critical: Fallback config failed.");
-            } finally {
-                setIsInitializing(false);
             }
         }
+
+        // 4. Site Hit Count
+        try {
+            const hitData = await googleSheetsService.recordSiteHit();
+            if (hitData && hitData.count) setHitCount(hitData.count);
+        } catch (e) {}
+
+        setIsInitializing(false);
     };
     loadAppConfig();
   }, []);
@@ -292,7 +285,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (newActiveOrg) {
             setActiveOrg(newActiveOrg);
         }
-    }, [activeOrg?.id]);
+    }, [activeOrg?.id, organizations]);
 
   const updateExamInOrg = useCallback((examId: string, updatedExamData: Partial<Exam>) => {
     setActiveOrg(prevOrg => {
@@ -314,7 +307,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     updateActiveOrg,
     updateConfigData,
     updateExamInOrg,
-    inProgressExam,
+    inProgressExam: null, // Placeholder to satisfy interface
     examPrices,
     suggestedBooks,
     hitCount,
@@ -328,9 +321,9 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     clearFeedbackRequired,
   }), [
     organizations, activeOrg, isInitializing, setActiveOrgById,
-    updateActiveOrg, updateConfigData, updateExamInOrg, inProgressExam, examPrices, suggestedBooks,
-    hitCount, availableThemes, activeTheme, setActiveTheme, subscriptionsEnabled, bundlesEnabled,
-    feedbackRequiredForExam, setFeedbackRequiredForExam, clearFeedbackRequired
+    updateActiveOrg, updateConfigData, updateExamInOrg, examPrices, suggestedBooks,
+    hitCount, availableThemes, activeTheme, subscriptionsEnabled, bundlesEnabled,
+    feedbackRequiredForExam
   ]);
 
   return (

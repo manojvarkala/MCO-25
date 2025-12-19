@@ -31,6 +31,14 @@ body {
     padding: 0;
 }
 
+/* Exam Card Colors */
+.exam-card--practice {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+.exam-card--cert {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
 /* ================= THEME DEFINITIONS ================= */
 
 /* --- 1. Default (Cyberpunk) Theme --- */
@@ -51,4 +59,22 @@ body {
   --color-danger-rgb: 248, 113, 113;
 }
 
-/* ... existing themes ... */
+/* --- 2. Professional Theme --- */
+[data-theme="professional"] {
+  --color-primary-rgb: 4, 120, 87; /* emerald-700 */
+  --color-primary-hover-rgb: 6, 95, 70;
+  --color-secondary-rgb: 59, 130, 246; /* blue-500 */
+  --color-secondary-hover-rgb: 37, 99, 235;
+  --color-accent-rgb: 234, 179, 8; /* yellow-600 */
+  --color-background-rgb: 241, 245, 249; /* slate-100 */
+  --color-card-rgb: 255, 255, 255;
+  --color-muted-rgb: 226, 232, 240;
+  --color-border-rgb: 203, 213, 225;
+  --color-text-strong-rgb: 15, 23, 42;
+  --color-text-default-rgb: 51, 65, 85;
+  --color-text-muted-rgb: 100, 116, 139;
+  --color-success-rgb: 22, 163, 74;
+  --color-danger-rgb: 220, 38, 38;
+}
+
+/* ...rest of themes remain same... */

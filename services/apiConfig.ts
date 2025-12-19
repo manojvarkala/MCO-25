@@ -50,9 +50,15 @@ export const getTenantConfig = (): TenantConfig => {
 
     const hostname = window.location.hostname.toLowerCase();
     
-    // Catch any annapoornainfo.com variation
-    if (hostname.includes('annapoornainfo.com')) {
+    // Aggressive catch for specific brands
+    if (hostname.includes('annapoornainfo')) {
         return annapoornaConfig;
+    }
+    if (hostname.includes('coding-online')) {
+        return medicalCodingConfig;
+    }
+    if (hostname.includes('bharatcerts')) {
+        return indianCertsConfig;
     }
 
     const cleanHostname = hostname.replace(/^www\./, '');
