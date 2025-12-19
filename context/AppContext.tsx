@@ -46,7 +46,6 @@ const decodeHtmlEntities = (text: string | undefined): string => {
         textarea.innerHTML = text;
         return textarea.value;
     } catch (e) {
-        console.error("Could not decode HTML entities", e);
         return text;
     }
 };
@@ -131,7 +130,6 @@ const processConfigData = (configData: any) => {
     };
 };
 
-
 export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
@@ -147,7 +145,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   
   const [subscriptionsEnabled, setSubscriptionsEnabled] = useState<boolean>(true);
   const [bundlesEnabled, setBundlesEnabled] = useState<boolean>(true);
-
   const [feedbackRequiredForExam, setFeedbackRequiredForExamState] = useState<FeedbackContext | null>(null);
   
   const setActiveTheme = (themeId: string) => {
@@ -189,8 +186,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
           const defaultTheme = newActiveOrg.activeThemeId || 'default';
           setActiveThemeState(savedTheme || defaultTheme);
       }
-    } else {
-        console.error("setProcessedConfig called with invalid or empty data");
     }
   };
 
@@ -219,21 +214,22 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         try {
             const response = await fetch(`${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config`);
-            if (!response.ok) throw new Error(`Server returned status ${response.status}`);
+            if (!response.ok) throw new Error(`API failed: ${response.status}`);
             
             const liveConfig = await response.json();
             const processedData = processConfigData(liveConfig);
             
             if (processedData) {
+                setProcessedConfig(liveConfig, processedData);
                 if (!activeConfig || activeConfig.version !== liveConfig.version) {
                     localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
-                    setProcessedConfig(liveConfig, processedData);
                     if (activeConfig) toast.success('Content updated!');
                 }
                 setIsInitializing(false);
                 return;
             }
         } catch (apiError) {
+            console.warn("API load failed, falling back...", apiError);
             if (loadedFromCache) {
                 setIsInitializing(false); 
                 return;
@@ -249,63 +245,14 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                     setProcessedConfig(staticConfig, processedData);
                 }
             }
-        } catch (staticError) {} finally {
+        } catch (staticError) {
+            console.error("Critical: All config sources failed.");
+        } finally {
             setIsInitializing(false);
         }
     };
     loadAppConfig();
   }, []);
-
-  useEffect(() => {
-    const hitCountedInSession = sessionStorage.getItem('mco_hit_counted');
-    if (!hitCountedInSession) {
-        const recordHit = async () => {
-            try {
-                const data = await googleSheetsService.recordSiteHit();
-                if (data && data.count) {
-                    setHitCount(data.count);
-                    sessionStorage.setItem('mco_hit_counted', 'true');
-                }
-            } catch (error) {}
-        };
-        recordHit();
-    }
-  }, []); 
-
-  useEffect(() => {
-    if (!user || !activeOrg) {
-        setInProgressExam(null);
-        return;
-    }
-    
-    let foundExam: InProgressExamInfo | null = null;
-    try {
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith(`exam_progress_`) && key.endsWith(`_${user.id}`)) {
-                const examId = key.split('_')[2];
-                const examDetails = ensureArray<Exam>(activeOrg.exams).find(e => e.id === examId);
-                if (examDetails) {
-                    foundExam = { examId: examDetails.id, examName: examDetails.name };
-                    break; 
-                }
-            }
-        }
-    } catch (error) {}
-    setInProgressExam(foundExam);
-  }, [user, activeOrg]);
-
-  useEffect(() => {
-    const storedFeedback = localStorage.getItem('feedbackRequiredForExam');
-    if (storedFeedback) {
-        try {
-            setFeedbackRequiredForExamState(JSON.parse(storedFeedback));
-        } catch (e) {
-            localStorage.removeItem('feedbackRequiredForExam');
-        }
-    }
-  }, []);
-
 
   const setActiveOrgById = useCallback((orgId: string) => {
     const org = organizations.find(o => o.id === orgId);
@@ -341,7 +288,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     });
   }, []);
   
-
   const value = useMemo(() => ({
     organizations,
     activeOrg,
