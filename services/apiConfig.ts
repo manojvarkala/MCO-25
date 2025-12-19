@@ -26,23 +26,26 @@ const indianCertsConfig: TenantConfig = {
 
 const tenantMap: { [key: string]: TenantConfig } = {
     'annapoornainfo.com': annapoornaConfig,
+    'exams.annapoornainfo.com': annapoornaConfig,
+    'exam.annapoornainfo.com': annapoornaConfig,
     'coding-online.net': medicalCodingConfig,
+    'exams.coding-online.net': medicalCodingConfig, 
+    'exam.coding-online.net': medicalCodingConfig,
     'bharatcerts.in': indianCertsConfig,
+    'exams.bharatcerts.in': indianCertsConfig,
 };
 
 export const getTenantConfig = (): TenantConfig => {
-    // 1. Check for manual override from Login redirect
     try {
         const dynamicUrl = localStorage.getItem('mco_dynamic_api_url');
         if (dynamicUrl && dynamicUrl.startsWith('http')) {
             return {
                 apiBaseUrl: dynamicUrl.replace(/\/$/, ""),
-                staticConfigPath: dynamicUrl.includes('annapoorna') ? '/annapoorna-config.json' : '/medical-coding-config.json' 
+                staticConfigPath: '/annapoorna-config.json' 
             };
         }
     } catch (e) {}
 
-    // 2. Development mode
     if (isDev) {
         return {
             apiBaseUrl: '/api',
@@ -50,30 +53,15 @@ export const getTenantConfig = (): TenantConfig => {
         };
     }
 
-    // 3. Resilient brand-based hostname detection
-    const hostname = window.location.hostname.toLowerCase();
-    
-    if (hostname.includes('annapoornainfo')) {
-        return annapoornaConfig;
-    }
-    if (hostname.includes('coding-online')) {
-        return medicalCodingConfig;
-    }
-    if (hostname.includes('bharatcerts')) {
-        return indianCertsConfig;
-    }
-
-    // 4. Fallback to default hostname map
-    const cleanHostname = hostname.replace(/^www\./, '');
+    const hostname = window.location.hostname.toLowerCase().replace(/^www\./, '');
     const sortedKeys = Object.keys(tenantMap).sort((a, b) => b.length - a.length);
 
     for (const key of sortedKeys) {
-        if (cleanHostname === key || cleanHostname.endsWith('.' + key)) {
+        if (hostname === key || hostname.endsWith('.' + key)) {
             return tenantMap[key];
         }
     }
     
-    // Final fallback
     return annapoornaConfig;
 }
 
