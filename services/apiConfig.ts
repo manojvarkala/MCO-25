@@ -24,24 +24,13 @@ const indianCertsConfig: TenantConfig = {
     staticConfigPath: '/indian-certs-config.json'
 };
 
-const tenantMap: { [key: string]: TenantConfig } = {
-    'annapoornainfo.com': annapoornaConfig,
-    'exams.annapoornainfo.com': annapoornaConfig,
-    'exam.annapoornainfo.com': annapoornaConfig,
-    'coding-online.net': medicalCodingConfig,
-    'exams.coding-online.net': medicalCodingConfig, 
-    'exam.coding-online.net': medicalCodingConfig,
-    'bharatcerts.in': indianCertsConfig,
-    'exams.bharatcerts.in': indianCertsConfig,
-};
-
 export const getTenantConfig = (): TenantConfig => {
     try {
         const dynamicUrl = localStorage.getItem('mco_dynamic_api_url');
         if (dynamicUrl && dynamicUrl.startsWith('http')) {
             return {
                 apiBaseUrl: dynamicUrl.replace(/\/$/, ""),
-                staticConfigPath: '/annapoorna-config.json' 
+                staticConfigPath: dynamicUrl.includes('annapoorna') ? '/annapoorna-config.json' : '/medical-coding-config.json' 
             };
         }
     } catch (e) {}
@@ -53,13 +42,17 @@ export const getTenantConfig = (): TenantConfig => {
         };
     }
 
-    const hostname = window.location.hostname.toLowerCase().replace(/^www\./, '');
-    const sortedKeys = Object.keys(tenantMap).sort((a, b) => b.length - a.length);
-
-    for (const key of sortedKeys) {
-        if (hostname === key || hostname.endsWith('.' + key)) {
-            return tenantMap[key];
-        }
+    const hostname = window.location.hostname.toLowerCase();
+    
+    // Defensive Brand Matching - ignores subdomains like 'exam.' or 'exams.'
+    if (hostname.includes('annapoornainfo')) {
+        return annapoornaConfig;
+    }
+    if (hostname.includes('coding-online')) {
+        return medicalCodingConfig;
+    }
+    if (hostname.includes('bharatcerts')) {
+        return indianCertsConfig;
     }
     
     return annapoornaConfig;

@@ -31,14 +31,13 @@ const stripHtml = (html: string): string => {
         tempDiv.innerHTML = html;
         return tempDiv.textContent || tempDiv.innerText || '';
     } catch (e) {
-        console.error("Could not parse HTML string for stripping", e);
         return html;
     }
 };
 
 const Dashboard: FC = () => {
-    const { user, token, paidExamIds, isSubscribed, subscriptionInfo, isEffectivelyAdmin, isBetaTester, logout } = useAuth();
-    const { activeOrg, isInitializing, inProgressExam, examPrices, subscriptionsEnabled, bundlesEnabled, feedbackRequiredForExam } = useAppContext();
+    const { user, token, paidExamIds, isSubscribed, subscriptionInfo, logout, isBetaTester } = useAuth();
+    const { activeOrg, isInitializing, refreshConfig, examPrices, subscriptionsEnabled, bundlesEnabled, feedbackRequiredForExam } = useAppContext();
     const navigate = useNavigate();
 
     const [results, setResults] = useState<TestResult[]>([]);
@@ -46,46 +45,28 @@ const Dashboard: FC = () => {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isTesterBannerVisible, setIsTesterBannerVisible] = useState(isBetaTester);
     
-    // Improved Sync Handler: Calls service directly for accurate loading/error state
     const handleSync = useCallback(async () => {
         if (!user || !token) return;
         setIsSyncing(true);
         const toastId = toast.loading("Syncing latest exams and results...");
         
         try {
+            // 1. Refresh Global App Config (detect new products/bundles)
+            await refreshConfig();
+            
+            // 2. Sync User Results
             const updatedResults = await googleSheetsService.syncResults(user, token);
             updatedResults.sort((a, b) => b.timestamp - a.timestamp);
             setResults(updatedResults);
-            toast.success("Exams synchronized successfully!", { id: toastId });
+            
+            toast.success("Synchronized successfully!", { id: toastId });
         } catch(e: any) {
             console.error("Sync error:", e);
-            // Don't show "Success" if it failed. Show detailed error.
-            if (e.message?.includes("connect") || e.message?.includes("fetch")) {
-                toast.error(`Connection Error: ${e.message}`, { id: toastId });
-            } else if (e.message?.includes("Authorization header")) {
-                 toast.error(`Sync Failed: Server configuration issue (Auth Header). Check Admin Debug.`, { id: toastId });
-            } else if (e.message?.includes("Invalid or expired token") || e.message?.includes("jwt_auth_invalid_token")) {
-                 toast.error(
-                    (t) => (
-                        <div className="flex flex-col gap-2">
-                            <span>Sync Failed: Your session key is invalid.</span>
-                            <button 
-                                onClick={() => { toast.dismiss(t.id); logout(); }}
-                                className="bg-red-600 text-white px-3 py-1 rounded text-sm flex items-center justify-center gap-1 hover:bg-red-700"
-                            >
-                                <LogOut size={12} /> Log Out to Fix
-                            </button>
-                        </div>
-                    ),
-                    { id: toastId, duration: 6000 }
-                );
-            } else {
-                toast.error(`Sync failed: ${e.message}`, { id: toastId });
-            }
+            toast.error(`Sync failed: ${e.message}`, { id: toastId });
         } finally {
             setIsSyncing(false);
         }
-    }, [user, token, logout]);
+    }, [user, token, refreshConfig]);
 
     useEffect(() => {
         if (user) {
@@ -97,7 +78,7 @@ const Dashboard: FC = () => {
         } else {
             setIsLoading(false);
         }
-    }, [user, token]);
+    }, [user]);
 
     const stats = useMemo(() => {
         if (!user || results.length === 0) {
@@ -115,21 +96,17 @@ const Dashboard: FC = () => {
     }, [results, activeOrg, user]);
 
     const examCategories = useMemo(() => {
-        if (!activeOrg || !activeOrg.examProductCategories || !Array.isArray(activeOrg.examProductCategories) || !activeOrg.exams || !Array.isArray(activeOrg.exams)) {
-            return [];
-        }
+        if (!activeOrg || !activeOrg.examProductCategories || !activeOrg.exams) return [];
         return activeOrg.examProductCategories
             .filter(Boolean)
             .map(category => {
                 const practiceExam = activeOrg.exams.find(e => e && e.id === category.practiceExamId);
                 const certExam = activeOrg.exams.find(e => e && e.id === category.certificationExamId);
-                    
                 return { ...category, practiceExam, certExam };
             });
     }, [activeOrg]);
     
     const { monthlyPrice, monthlyRegularPrice, yearlyPrice, yearlyRegularPrice, monthlySubUrl, yearlySubUrl } = useMemo(() => {
-        // With new flat structure, look for SKU keys directly
         const monthlyData = examPrices?.['sub-monthly'];
         const yearlyData = examPrices?.['sub-yearly'];
         const website = activeOrg ? `https://${activeOrg.website}` : '';
@@ -146,10 +123,9 @@ const Dashboard: FC = () => {
 
     const featuredBundles = useMemo(() => {
         if (!bundlesEnabled || !examPrices) return [];
-        // Map object to array, injecting the SKU from the key
         return Object.entries(examPrices)
             .map(([sku, p]: [string, any]) => ({ ...p, sku }))
-            .filter((p: any) => p.isBundle && p.bundledSkus && p.bundledSkus.length > 1)
+            .filter((p: any) => p.isBundle && Array.isArray(p.bundledSkus) && p.bundledSkus.length > 1)
             .map((p: any): ProductVariation => ({
                 id: p.productId?.toString() || p.sku,
                 sku: p.sku,
@@ -163,11 +139,11 @@ const Dashboard: FC = () => {
             .sort((a,b) => (a.name || '').localeCompare(b.name || ''));
     }, [examPrices, bundlesEnabled]);
 
-    if (isInitializing || isLoading || !activeOrg || !Array.isArray(activeOrg.examProductCategories) || !Array.isArray(activeOrg.exams)) {
-        return <div className="text-center py-10"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading dashboard data...</p></div>;
+    if (isInitializing || isLoading || !activeOrg) {
+        return <div className="text-center py-10"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading dashboard...</p></div>;
     }
 
-    const myAccountUrl = activeOrg ? `https://www.${activeOrg.website}/my-account/` : '#';
+    const myAccountUrl = activeOrg ? `https://${activeOrg.website}/my-account/` : '#';
 
     return (
         <div className="space-y-8">
@@ -177,7 +153,7 @@ const Dashboard: FC = () => {
                         <h3 className="font-bold flex items-center gap-2"><Gift size={16} /> Welcome to the Beta Program!</h3>
                         <p className="text-sm opacity-90 mt-1">Thank you for your help. You have 1-month of premium access. Please <Link to="/feedback" className="font-bold underline hover:text-yellow-200">submit your feedback</Link> to help us improve!</p>
                     </div>
-                    <button onClick={() => setIsTesterBannerVisible(false)} className="p-1 rounded-full hover:bg-white/20 transition-colors" aria-label="Dismiss">
+                    <button onClick={() => setIsTesterBannerVisible(false)} className="p-1 rounded-full hover:bg-white/20 transition-colors">
                         <X size={20} />
                     </button>
                 </div>
@@ -209,19 +185,6 @@ const Dashboard: FC = () => {
                 )}
             </div>
 
-            {user && inProgressExam && (
-                <div className="bg-[rgba(var(--color-secondary-rgb),0.1)] p-4 rounded-lg border-l-4 border-[rgb(var(--color-secondary-rgb))] flex justify-between items-center">
-                    <div>
-                        <h3 className="font-bold text-[rgb(var(--color-secondary-hover-rgb))]">You have an exam in progress!</h3>
-                        <p className="text-sm text-[rgb(var(--color-secondary-hover-rgb))] opacity-80">"{inProgressExam.examName}"</p>
-                    </div>
-                    <button onClick={() => navigate(`/test/${inProgressExam.examId}`)} className="bg-[rgb(var(--color-secondary-rgb))] hover:bg-[rgb(var(--color-secondary-hover-rgb))] text-white font-bold py-2 px-4 rounded-lg">
-                        Resume Exam
-                    </button>
-                </div>
-            )}
-            
-            {/* Show Subscription Status if User HAS a subscription OR if subscriptions are ENABLED */}
             {user && subscriptionInfo && (
                  <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
                      <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4 flex items-center gap-2"><CreditCard className="text-[rgb(var(--color-primary-rgb))]" /> Subscription Status</h2>
@@ -231,7 +194,7 @@ const Dashboard: FC = () => {
                                 <p className="text-sm text-green-400 font-semibold">STATUS: ACTIVE</p>
                                 <p className="text-lg font-bold">You have full access to all practice exams.</p>
                                 {subscriptionInfo.nextPaymentDate && (
-                                    <p className="text-sm text-[rgb(var(--color-text-muted-rgb))]">Your subscription will renew on {subscriptionInfo.nextPaymentDate}.</p>
+                                    <p className="text-sm text-[rgb(var(--color-text-muted-rgb))]">Renewal: {subscriptionInfo.nextPaymentDate}.</p>
                                 )}
                             </div>
                             <a href={myAccountUrl} target="_blank" rel="noopener noreferrer" className="bg-slate-200 text-slate-800 font-semibold py-2 px-4 rounded-lg text-sm hover:bg-slate-300 transition">
@@ -243,7 +206,6 @@ const Dashboard: FC = () => {
                             <div>
                                 <p className="text-sm text-yellow-400 font-semibold">STATUS: INACTIVE</p>
                                 <p className="text-lg font-bold">Your subscription has expired or is on hold.</p>
-                                <p className="text-sm text-[rgb(var(--color-text-muted-rgb))]">Renew now to regain access to all premium features.</p>
                             </div>
                             <Link to="/pricing" className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition">
                                 Renew Now
@@ -253,24 +215,17 @@ const Dashboard: FC = () => {
                  </div>
             )}
 
-
-            {/* CONDITIONAL RENDERING: Only show subscription offers if enabled in backend */}
             {subscriptionsEnabled && !isSubscribed && !subscriptionInfo && (
                 <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))]">
                     <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2 flex items-center gap-2"><Star className="text-yellow-400" /> Unlock Your Full Potential</h2>
-                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-6">Get unlimited access to all practice exams and AI study guides with a subscription.</p>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch mt-6">
                         <SubscriptionOfferCard
                             planName="Monthly Subscription"
                             price={monthlyPrice}
                             regularPrice={monthlyRegularPrice}
                             priceUnit="month"
                             url={monthlySubUrl}
-                            features={[
-                                'Unlimited Practice Exams',
-                                'Unlimited AI Feedback',
-                                'Cancel Anytime',
-                            ]}
+                            features={['Unlimited Practice Exams', 'Unlimited AI Feedback', 'Cancel Anytime']}
                             gradientClass="bg-gradient-to-br from-cyan-500 to-sky-600"
                         />
                         <SubscriptionOfferCard
@@ -279,11 +234,7 @@ const Dashboard: FC = () => {
                             regularPrice={yearlyRegularPrice}
                             priceUnit="year"
                             url={yearlySubUrl}
-                            features={[
-                                'All Monthly features',
-                                'Access All Exam Programs',
-                                'Saves over 35%!',
-                            ]}
+                            features={['All Monthly features', 'Access All Exam Programs', 'Saves over 35%!']}
                             isBestValue={true}
                             gradientClass="bg-gradient-to-br from-purple-600 to-indigo-700"
                         />
@@ -291,7 +242,6 @@ const Dashboard: FC = () => {
                 </div>
             )}
 
-            {/* Exam Programs Grid */}
             <div>
                 <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4 flex items-center gap-2">
                     <FileText className="text-[rgb(var(--color-primary-rgb))]" /> Exam Programs
@@ -299,52 +249,16 @@ const Dashboard: FC = () => {
                 {examCategories.length > 0 ? (
                     <div className="space-y-8">
                         {examCategories.map((category) => {
-                            
-                            // BUNDLE DETECTION LOGIC FOR DASHBOARD
                             let dashboardBundle = null;
-                            if (bundlesEnabled && category.certExam && category.certExam.productSku && examPrices) {
+                            if (bundlesEnabled && category.certExam?.productSku && examPrices) {
                                 const certSku = category.certExam.productSku;
                                 const subBundleSku = `${certSku}-1mo-addon`;
                                 const practiceBundleSku = `${certSku}-1`;
 
-                                // 1. Strict SKU match for -1mo-addon (Subscription Bundle)
                                 if (examPrices[subBundleSku]) {
-                                     // IMPORTANT: Inject SKU, as backend object may not have it
-                                     dashboardBundle = { 
-                                         product: { ...examPrices[subBundleSku], sku: subBundleSku }, 
-                                         type: 'subscription' as const 
-                                     };
-                                } 
-                                // 2. Strict SKU match for -1 (Practice Bundle)
-                                else if (examPrices[practiceBundleSku]) {
-                                     dashboardBundle = { 
-                                         product: { ...examPrices[practiceBundleSku], sku: practiceBundleSku }, 
-                                         type: 'practice' as const 
-                                     };
-                                } 
-                                // 3. Fallback: Dynamic metadata search
-                                else {
-                                     // Convert map to array with SKU injected for searching
-                                     const allPricesWithSku = Object.entries(examPrices).map(([sku, data]) => ({ ...data, sku }));
-                                     
-                                     const eligibleBundles = allPricesWithSku.filter((p: any) => 
-                                        p.isBundle && 
-                                        Array.isArray(p.bundledSkus) && 
-                                        p.bundledSkus.includes(certSku)
-                                     );
-
-                                     if (eligibleBundles.length > 0) {
-                                         const subBundle = eligibleBundles.find((p: any) => 
-                                            p.bundledSkus.some((s: string) => 
-                                                s.startsWith('sub-') || (examPrices[s] && examPrices[s].type?.includes('subscription'))
-                                            )
-                                        );
-                                        if (subBundle) {
-                                            dashboardBundle = { product: subBundle, type: 'subscription' as const };
-                                        } else {
-                                            dashboardBundle = { product: eligibleBundles[0], type: 'practice' as const };
-                                        }
-                                     }
+                                     dashboardBundle = { product: { ...examPrices[subBundleSku], sku: subBundleSku }, type: 'subscription' as const };
+                                } else if (examPrices[practiceBundleSku]) {
+                                     dashboardBundle = { product: { ...examPrices[practiceBundleSku], sku: practiceBundleSku }, type: 'practice' as const };
                                 }
                             }
 
@@ -355,47 +269,19 @@ const Dashboard: FC = () => {
                                             <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))]">{category.name}</h3>
                                             <p className="text-sm text-[rgb(var(--color-text-muted-rgb))] mt-1 line-clamp-2">{stripHtml(category.description)}</p>
                                         </div>
-                                        <Link 
-                                            to={`/program/${category.id}`} 
-                                            className="text-sm font-semibold text-[rgb(var(--color-primary-rgb))] hover:underline flex-shrink-0"
-                                        >
-                                            View Program Details →
+                                        <Link to={`/program/${category.id}`} className="text-sm font-semibold text-[rgb(var(--color-primary-rgb))] hover:underline flex-shrink-0">
+                                            View Details →
                                         </Link>
                                     </div>
-                                    
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {category.practiceExam && (
-                                            <ExamCard
-                                                exam={category.practiceExam}
-                                                programId={category.id}
-                                                isPractice={true}
-                                                isPurchased={false}
-                                                activeOrg={activeOrg}
-                                                examPrices={examPrices}
-                                                hideDetailsLink={true}
-                                            />
+                                            <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} hideDetailsLink={true} />
                                         )}
                                         {category.certExam && (
-                                            <ExamCard
-                                                exam={category.certExam}
-                                                programId={category.id}
-                                                isPractice={false}
-                                                isPurchased={paidExamIds.includes(category.certExam.productSku)}
-                                                activeOrg={activeOrg}
-                                                examPrices={examPrices}
-                                                hideDetailsLink={true}
-                                                attemptsMade={user ? results.filter(r => r.examId === category.certExam!.id).length : 0}
-                                                isDisabled={isBetaTester && feedbackRequiredForExam !== null && feedbackRequiredForExam.examId !== category.certExam.id}
-                                            />
+                                            <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} hideDetailsLink={true} attemptsMade={user ? results.filter(r => r.examId === category.certExam!.id).length : 0} isDisabled={isBetaTester && feedbackRequiredForExam !== null && feedbackRequiredForExam.examId !== category.certExam.id} />
                                         )}
-                                        {/* BUNDLE CARD RENDERING */}
                                         {dashboardBundle && (
-                                            <ExamBundleCard
-                                                type={dashboardBundle.type}
-                                                bundleDataRaw={dashboardBundle.product}
-                                                activeOrg={activeOrg}
-                                                examPrices={examPrices}
-                                            />
+                                            <ExamBundleCard type={dashboardBundle.type} bundleDataRaw={dashboardBundle.product} activeOrg={activeOrg} examPrices={examPrices} />
                                         )}
                                     </div>
                                 </div>
@@ -404,7 +290,7 @@ const Dashboard: FC = () => {
                     </div>
                 ) : (
                     <div className="text-center py-8 bg-[rgb(var(--color-card-rgb))] rounded-xl border border-[rgb(var(--color-border-rgb))]">
-                        <p className="text-[rgb(var(--color-text-muted-rgb))]">No exam programs are currently available.</p>
+                        <p className="text-[rgb(var(--color-text-muted-rgb))]">No exam programs found.</p>
                     </div>
                 )}
             </div>
@@ -412,14 +298,9 @@ const Dashboard: FC = () => {
             {featuredBundles.length > 0 && (
                 <div>
                     <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2">Well Curated Exam Bundles</h2>
-                    <p className="text-[rgb(var(--color-text-muted-rgb))] mb-4">Get the best value with our comprehensive study packages.</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {featuredBundles.map(bundle => (
-                            <FeaturedBundleCard
-                                key={bundle.sku}
-                                bundle={bundle}
-                                activeOrg={activeOrg}
-                            />
+                            <FeaturedBundleCard key={bundle.sku} bundle={bundle} activeOrg={activeOrg} />
                         ))}
                     </div>
                 </div>
@@ -436,26 +317,18 @@ const Dashboard: FC = () => {
                             return (
                                 <div key={result.testId} className="bg-[rgb(var(--color-muted-rgb))] p-3 rounded-lg flex justify-between items-center hover:bg-[rgb(var(--color-border-rgb))] transition">
                                     <div>
-                                        <p className="font-semibold text-[rgb(var(--color-text-strong-rgb))]">{stripHtml(exam.name)}</p>
+                                        <p className="font-semibold">{stripHtml(exam.name)}</p>
                                         <p className="text-xs text-[rgb(var(--color-text-muted-rgb))]">{new Date(result.timestamp).toLocaleString()}</p>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <span className={`font-bold text-lg ${isPass ? 'text-[rgb(var(--color-success-rgb))]' : 'text-[rgb(var(--color-danger-rgb))]'}`}>{result.score.toFixed(0)}%</span>
-                                        {isPass ? <CheckCircle size={20} className="text-[rgb(var(--color-success-rgb))]" /> : <XCircle size={20} className="text-[rgb(var(--color-danger-rgb))]" />}
-                                        <button onClick={() => navigate(`/results/${result.testId}`)} className="text-[rgb(var(--color-primary-rgb))] hover:text-[rgb(var(--color-primary-hover-rgb))]">
+                                        <span className={`font-bold ${isPass ? 'text-green-500' : 'text-red-500'}`}>{result.score.toFixed(0)}%</span>
+                                        <button onClick={() => navigate(`/results/${result.testId}`)} className="text-[rgb(var(--color-primary-rgb))]">
                                             <ChevronRight size={20} />
                                         </button>
                                     </div>
                                 </div>
                             );
-                        }) : <p className="text-center text-[rgb(var(--color-text-muted-rgb))] py-4">You haven't completed any exams yet.</p>}
-                         {results.length > 5 && (
-                            <div className="text-center mt-4">
-                                <Link to='/profile' className="font-semibold text-[rgb(var(--color-primary-rgb))] hover:underline">
-                                    View All History
-                                </Link>
-                            </div>
-                        )}
+                        }) : <p className="text-center py-4">No exam history yet.</p>}
                     </div>
                 </div>
             )}
