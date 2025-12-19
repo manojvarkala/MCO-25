@@ -1,7 +1,8 @@
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 import { Routes, Route, BrowserRouter, Navigate, useLocation } from "react-router-dom";
 import { Toaster, ToastBar, toast } from 'react-hot-toast';
-import { X, AlertTriangle } from 'lucide-react';
+import { X, AlertTriangle, WifiOff, RefreshCw } from 'lucide-react';
 
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
 import { AppProvider, useAppContext } from './context/AppContext.tsx';
@@ -65,8 +66,8 @@ const ProtectedRoute: FC<{ children: ReactNode; adminOnly?: boolean }> = ({ chil
 
 
 const AppContent: FC = () => {
-    const { user, isMasquerading, isEffectivelyAdmin } = useAuth();
-    const { activeOrg, activeTheme } = useAppContext();
+    const { user, isMasquerading, isEffectivelyAdmin, logout } = useAuth();
+    const { activeOrg, activeTheme, isInitializing } = useAppContext();
     const location = useLocation();
     const [isDebugSidebarOpen, setIsDebugSidebarOpen] = useState(false);
 
@@ -102,6 +103,35 @@ const AppContent: FC = () => {
     const mainClasses = isTestPage 
         ? "py-8" 
         : "container mx-auto px-4 py-8";
+
+    // CRITICAL FIX: Rescue from the 'Black Screen' of initialization failure
+    if (!isInitializing && !activeOrg) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white p-6 text-center">
+                <div className="max-w-md w-full bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700">
+                    <WifiOff size={48} className="mx-auto text-red-400 mb-4" />
+                    <h2 className="text-2xl font-bold mb-2">Connection Issue</h2>
+                    <p className="text-slate-400 mb-6">
+                        We're having trouble connecting to the examination server. This might be due to a temporary network issue or server maintenance.
+                    </p>
+                    <div className="space-y-3">
+                        <button 
+                            onClick={() => window.location.reload()} 
+                            className="w-full flex items-center justify-center gap-2 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg transition"
+                        >
+                            <RefreshCw size={18} /> Retry Connection
+                        </button>
+                        <button 
+                            onClick={() => { localStorage.clear(); window.location.reload(); }} 
+                            className="w-full py-2 text-slate-500 hover:text-slate-300 text-sm underline transition"
+                        >
+                            Clear Cache & Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div data-theme={activeTheme} className={`flex flex-col min-h-screen bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-default-rgb))] font-main ${isMasquerading ? 'pt-10' : ''}`}>

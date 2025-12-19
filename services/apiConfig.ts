@@ -1,8 +1,11 @@
 
 import type { Organization } from '../types.ts';
 
-// FIX: Declare a global constant for development mode, defined in vite.config.ts, to avoid issues with vite/client types.
+// FIX: Declare a global constant for development mode, defined in vite.config.ts.
 declare const __DEV__: boolean;
+
+// Safety wrapper for the global __DEV__ constant
+const isDev = typeof __DEV__ !== 'undefined' && __DEV__;
 
 export interface TenantConfig {
     apiBaseUrl: string;
@@ -24,7 +27,6 @@ const indianCertsConfig: TenantConfig = {
     apiBaseUrl: 'https://www.bharatcerts.in',
     staticConfigPath: '/indian-certs-config.json'
 };
-
 
 const tenantMap: { [key: string]: TenantConfig } = {
     // Annapoorna Infotech Tenant (Primary)
@@ -58,7 +60,7 @@ export const getTenantConfig = (): TenantConfig => {
     } catch (e) {}
 
     // 2. Development Mode
-    if (__DEV__) {
+    if (isDev) {
         return {
             apiBaseUrl: '/api',
             staticConfigPath: '/annapoorna-config.json',
@@ -81,7 +83,7 @@ export const getTenantConfig = (): TenantConfig => {
 
 export const getApiBaseUrl = (): string => {
     const config = getTenantConfig();
-    if (__DEV__) {
+    if (isDev) {
         console.log("API Target:", config.apiBaseUrl);
     }
     return config.apiBaseUrl;
