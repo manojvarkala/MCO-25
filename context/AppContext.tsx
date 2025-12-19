@@ -82,16 +82,24 @@ const processConfigData = (configData: any) => {
         });
         org.examProductCategories = categories;
 
-        const rawExams = ensureArray<Exam>(org.exams);
-        org.exams = rawExams.map((exam: Exam): Exam | null => {
-            if (!exam || !exam.id) return null;
-            const category = categories.find(c => c && (c.certificationExamId === exam.id || c.practiceExamId === exam.id));
+        const rawExams = ensureArray<any>(org.exams);
+        org.exams = rawExams.map((exam: any): Exam | null => {
+            const id = exam.id || exam.ID;
+            if (!id) return null;
+            
+            const category = categories.find(c => c && (c.certificationExamId === id || c.practiceExamId === id));
             const categoryUrl = category ? category.questionSourceUrl : undefined;
 
             return {
                 ...exam,
+                id: id.toString(),
                 name: decodeHtmlEntities(exam.name),
                 description: decodeHtmlEntities(exam.description),
+                numberOfQuestions: parseInt(exam.numberOfQuestions || 0, 10),
+                durationMinutes: parseInt(exam.durationMinutes || 0, 10),
+                passScore: parseInt(exam.passScore || 70, 10),
+                price: parseFloat(exam.price || 0),
+                regularPrice: parseFloat(exam.regularPrice || 0),
                 questionSourceUrl: exam.questionSourceUrl || categoryUrl,
             };
         }).filter(Boolean) as Exam[];

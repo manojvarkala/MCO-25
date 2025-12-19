@@ -1,3 +1,4 @@
+
 import React, { FC, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -53,8 +54,11 @@ const Login: FC = () => {
             if (currentStoredUrl !== apiUrlOverride) {
                 console.log(`Binding app to new backend: ${apiUrlOverride}`);
                 localStorage.setItem('mco_dynamic_api_url', apiUrlOverride);
-                // We don't reload here because getApiBaseUrl() reads from localStorage directly.
-                // The subsequent loginWithToken -> syncResults flow will use the new URL.
+                // Force a reload of the configuration to match the new API target
+                const cacheKeyPrefix = 'appConfigCache_';
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith(cacheKeyPrefix)) localStorage.removeItem(key);
+                });
             }
         }
 
@@ -94,8 +98,6 @@ const Login: FC = () => {
                 });
         } else {
             if (!error) {
-                 // If no token and no error, redirect to login.
-                 // Ideally we should wait for activeOrg to be loaded to know where to redirect.
                  if (activeOrg) {
                     window.location.href = loginUrl;
                  }
@@ -123,23 +125,8 @@ const Login: FC = () => {
 
                     <div className="text-slate-600 text-sm space-y-3 text-left">
                         <p>We encountered an issue verifying your session with the server.</p>
-                        
                         {isLoopError && (
                              <p><strong>Diagnosis:</strong> Your WordPress site is serving a cached page with an old security token. The "Hard Reset" below forces a fresh request.</p>
-                        )}
-                        
-                        {isHeaderError && (
-                            <div className="bg-slate-100 p-3 rounded text-xs font-mono">
-                                <strong>Admin Fix:</strong> Your server is stripping the <code>Authorization</code> header. Add the following to the top of your <code>.htaccess</code> file:
-                                <br/><br/>
-                                <code>RewriteRule .* - [E=HTTP_AUTHORIZATION:%&#123;HTTP:Authorization&#125;]</code>
-                            </div>
-                        )}
-                        
-                        {isKeyError && (
-                            <div className="bg-slate-100 p-3 rounded text-xs font-mono">
-                                <strong>Admin Fix:</strong> Ensure <code>MCO_JWT_SECRET</code> in <code>wp-config.php</code> is defined and matches the key used to generate this token.
-                            </div>
                         )}
                     </div>
 
@@ -151,9 +138,6 @@ const Login: FC = () => {
                             <Trash2 size={18} /> Hard Reset & Retry Login
                         </button>
                     </div>
-                    <p className="text-xs text-slate-400 mt-2">
-                        This button clears local storage, session cache, and forces a completely fresh login attempt.
-                    </p>
                 </div>
             </div>
         );
