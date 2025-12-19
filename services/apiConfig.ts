@@ -50,7 +50,7 @@ export const getTenantConfig = (): TenantConfig => {
 
     const hostname = window.location.hostname.toLowerCase();
     
-    // Explicit subdomain handling for Annapoorna
+    // Catch any annapoornainfo.com variation
     if (hostname.includes('annapoornainfo.com')) {
         return annapoornaConfig;
     }
