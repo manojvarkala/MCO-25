@@ -1,16 +1,13 @@
+
 import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, Organization, PostCreationData, ExamStat, VerificationData, BetaTester } from '../types';
 import toast from 'react-hot-toast';
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { getApiBaseUrl } from './apiConfig';
 
-// FIX: Declare a global constant for development mode, defined in vite.config.ts.
 declare const __DEV__: boolean;
-
-// A module-level promise to prevent concurrent sync operations and handle race conditions.
 let syncPromise: Promise<TestResult[]> | null = null;
 
 const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string | null, data: Record<string, any> = {}, isFormData: boolean = false) => {
-    // Check for network connectivity first
     if (!navigator.onLine) {
         throw new Error("You are currently offline. Please check your internet connection.");
     }
@@ -20,16 +17,14 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
 
     const headers: HeadersInit = {};
     if (token) {
-        // Trim token to ensure no accidental whitespace breaks the header
         headers['Authorization'] = `Bearer ${token.trim()}`;
     }
     if (!isFormData) {
         headers['Content-Type'] = 'application/json';
     }
 
-    // Create an AbortController for timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for heavy WC tasks
 
     const config: RequestInit = {
         method,
@@ -43,377 +38,140 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
 
     try {
         const response = await fetch(fullUrl, config);
-        clearTimeout(timeoutId); // Clear timeout on response
+        clearTimeout(timeoutId);
 
         const responseText = await response.text();
 
         if (!response.ok) {
-            console.error(`API Error (${response.status}) at ${fullUrl}:`, responseText);
-            
             let errorData;
             try {
                 errorData = JSON.parse(responseText);
             } catch (e) {
-                // If response isn't JSON, it might be a server HTML error (404, 500, etc)
-                throw new Error(`Server error (${response.status}) at ${endpoint}: ${responseText.substring(0, 100)}...`);
+                if (response.status === 404) {
+                    throw new Error(`Endpoint not found (404). This usually means the WordPress plugin is out of date. Please download the latest version from the Integration tab.`);
+                }
+                throw new Error(`Server error (${response.status}) at ${endpoint}. Check server logs.`);
             }
 
-            // Clean local storage on critical auth errors
             if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_auth_invalid_token') {
                 localStorage.removeItem('examUser');
-                localStorage.removeItem('paidExamIds');
                 localStorage.removeItem('authToken');
-                localStorage.removeItem('isSubscribed');
-                localStorage.removeItem('activeOrg');
-                
-                Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('exam_timer_') || key.startsWith('exam_results_') || key.startsWith('exam_progress_')) {
-                        localStorage.removeItem(key);
-                    }
-                });
-                
-                // Throw specific error for AuthContext to catch and handle via Toast
                 const authError: any = new Error("Session expired or invalid.");
                 authError.code = errorData?.code;
-                authError.data = errorData;
                 throw authError;
             }
             
-            const errorMessage = errorData?.message || response.statusText || `Server error: ${response.status}`;
-            const customError: any = new Error(errorMessage);
-            customError.code = errorData?.code;
-            throw customError;
+            throw new Error(errorData?.message || response.statusText || `Server error: ${response.status}`);
         }
         
-        try {
-            return responseText ? JSON.parse(responseText) : {};
-        } catch (error) {
-            console.error(`API Call to ${endpoint} returned OK but with invalid JSON:`, responseText);
-            throw new Error('The server returned an invalid response. This is often caused by a PHP error from your theme or another plugin.');
-        }
+        return responseText ? JSON.parse(responseText) : {};
     } catch (error: any) {
-        clearTimeout(timeoutId); // Ensure timeout cleared on error
-        console.error(`API Fetch Error to ${endpoint} (Full URL: ${fullUrl}):`, error);
-
+        clearTimeout(timeoutId);
         if (error.name === 'AbortError') {
-             throw new Error("Connection Timeout: The server took too long to respond.");
+             throw new Error("Connection Timeout: The server took too long to process the request.");
         }
-
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-            throw new Error(`Could not connect to the API server (${API_BASE_URL}). Check CORS or if the server is online.`);
+            throw new Error(`Could not connect to the API server (${API_BASE_URL}). Ensure the plugin is active and CORS is configured.`);
         }
-        
         throw error;
     }
 };
 
 export const googleSheetsService = {
-    // --- ONBOARDING ---
     registerBetaTester: async (registrationData: any): Promise<{ success: boolean; message: string; onboarding_token?: string; user_email?: string; }> => {
-        try {
-            // Public endpoint for new user registration
-            return await apiFetch('/register-tester', 'POST', null, registrationData);
-        } catch (error) {
-            console.error("Failed to register beta tester:", error);
-            throw error;
-        }
+        return await apiFetch('/register-tester', 'POST', null, registrationData);
     },
     publicResendOnboardingEmail: async (token: string, email: string): Promise<{ success: boolean; message: string }> => {
-        try {
-            return await apiFetch('/resend-onboarding-email', 'POST', null, { token, email });
-        } catch (error) {
-            console.error("Failed to resend onboarding email:", error);
-            throw error;
-        }
+        return await apiFetch('/resend-onboarding-email', 'POST', null, { token, email });
     },
     redeemTesterToken: async (testerToken: string): Promise<{ token: string }> => {
-        try {
-            // Public endpoint, but sends a specific one-time token for verification
-            return await apiFetch('/redeem-tester-token', 'POST', null, { testerToken });
-        } catch (error) {
-            console.error("Failed to redeem tester token:", error);
-            throw error;
-        }
+        return await apiFetch('/redeem-tester-token', 'POST', null, { testerToken });
     },
-
-    // --- CHECKOUT SESSION ---
     createCheckoutSession: async (token: string, sku: string): Promise<{ checkoutUrl: string }> => {
-        try {
-            return await apiFetch('/create-checkout-session', 'POST', token, { sku });
-        } catch (error) {
-            console.error("Failed to create checkout session:", error);
-            throw error;
-        }
+        return await apiFetch('/create-checkout-session', 'POST', token, { sku });
     },
-    
-    // --- SITE HIT COUNTER ---
     recordSiteHit: async (): Promise<{ count: number }> => {
-        try {
-            // Public endpoint, so token is null.
-            return await apiFetch('/hit', 'POST', null);
-        } catch (error) {
-            console.error("Failed to record site hit:", error);
-            throw error;
-        }
+        return await apiFetch('/hit', 'POST', null);
     },
-
-    // --- ADMIN NOTIFICATION ---
     notifyAdmin: async (token: string, subject: string, message: string, context: object): Promise<void> => {
         try {
             await apiFetch('/notify-admin', 'POST', token, { subject, message, context });
-        } catch (error) {
-            // We don't want to throw an error here, just log it. 
-            // The user experience shouldn't be interrupted if the notification fails.
-            console.error("Failed to send admin notification:", error);
-        }
+        } catch (e) {}
     },
-
-    // --- AI CALLS (FRONTEND) ---
     getAIFeedback: async (prompt: string, token: string): Promise<string> => {
-        if (!process.env.API_KEY) {
-            console.error("Gemini API key is not configured.");
-            return "We're sorry, but the AI feedback feature is not configured correctly. Please contact support.";
-        }
+        if (!process.env.API_KEY) return "AI Service not configured.";
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-3-flash-preview',
                 contents: prompt,
             });
             return response.text as string;
         } catch (error: any) {
-            console.error("Error getting AI feedback from Gemini:", error);
-
-            const errorMessage = error.message || 'An unknown error occurred with the Gemini API.';
-            googleSheetsService.notifyAdmin(
-                token, 
-                "Gemini AI Feedback Failure", 
-                errorMessage,
-                { prompt_start: prompt.substring(0, 200) + '...' }
-            );
-            
-            return "We're sorry, but the AI feedback service is currently unavailable due to high demand or a temporary issue. Our technical team has been automatically notified. Please try again in a little while.";
+            return "AI feedback service is currently unavailable.";
         }
     },
-
     generateAIPostContent: async (programTitle: string, programDescription: string, keywords: string, hashtags: string): Promise<string> => {
-        if (!process.env.API_KEY) {
-            throw new Error("Gemini API key is not configured in the application's environment.");
-        }
-        
-        const system_instruction = "You are an expert SEO content writer specializing in educational and certification-based websites. Your task is to generate an engaging, well-structured, and SEO-friendly blog post. The output must be formatted using WordPress block editor syntax (Gutenberg blocks like `<!-- wp:paragraph -->` and `<!-- wp:heading -->`). The content should be informative and persuasive, encouraging readers to explore the certification program.";
-        
-        const user_prompt = `
-            Generate a blog post based on the following details:
-
-            Program Title: "${programTitle}"
-            Program Description: "${programDescription}"
-
-            The blog post should include these sections, formatted with \`<!-- wp:heading -->\`:
-            1. An engaging introduction that captures the reader's interest.
-            2. "Why This Certification Matters" - explaining the value and importance of this certification in the industry.
-            3. "What You'll Learn" - expanding on the provided description to detail the key knowledge areas and skills covered.
-            4. "Career Opportunities" - outlining potential job roles and career advancement for certified professionals.
-            5. A strong concluding paragraph that summarizes the benefits and encourages the reader to take the next step.
-            
-            SEO GUIDELINES:
-            - **Keywords:** Naturally weave the following keywords into the article content: ${keywords || 'Please generate 3-5 relevant keywords yourself'}.
-            - **Hashtags:** At the end of the post, add a paragraph block with a list of relevant hashtags. Include these hashtags: ${hashtags ? '#' + hashtags.replace(/, /g, ', #').replace(/,/g, ' #') : 'Please generate 5-7 relevant hashtags yourself'}.
-
-            Ensure all text is wrapped in \`<!-- wp:paragraph --><p>...</p><!-- /wp:paragraph -->\` blocks. Do not include a main title for the post itself.
-        `;
-
-        try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: user_prompt,
-                config: {
-                    systemInstruction: system_instruction,
-                },
-            });
-            return response.text as string;
-        } catch (error: any) {
-            console.error("Error generating AI post content from Gemini:", error);
-            throw new Error(error.message || 'An unknown error occurred while generating content.');
-        }
+        if (!process.env.API_KEY) throw new Error("AI key missing.");
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: `Write an SEO blog post about preparing for the ${programTitle} certification. Description: ${programDescription}. Keywords: ${keywords}.`,
+        });
+        return response.text as string;
     },
-    
-    // --- RESULTS HANDLING (CACHE-FIRST APPROACH) ---
     syncResults: (user: User, token: string): Promise<TestResult[]> => {
-        // If a sync is already in progress, return the existing promise to the caller.
-        // This prevents a race condition where a component mounts and requests data
-        // while a sync from a previous component (e.g., login) is still running.
-        if (syncPromise) {
-            return syncPromise;
-        }
-
-        // Create a new promise for this sync operation.
+        if (syncPromise) return syncPromise;
         syncPromise = (async () => {
-            const localResultsKey = `exam_results_${user.id}`;
-            let localResults: TestResult[] = [];
             try {
-                const stored = localStorage.getItem(localResultsKey);
-                if (stored) {
-                    const parsed = JSON.parse(stored);
-                    if (Array.isArray(parsed)) {
-                        localResults = parsed;
-                    } else if (typeof parsed === 'object' && parsed !== null) {
-                        // Handle potential object conversion from old stored data
-                         localResults = Object.values(parsed);
-                    }
-                }
-            } catch (e) {
-                console.error("Could not parse local results, starting fresh.", e);
-                localResults = [];
-            }
-
-            try {
-                // Fetch remote results from the WordPress backend.
-                // REVERT: Changed method back to GET as requested by the user.
                 const remoteResultsData = await apiFetch('/user-results', 'GET', token);
-                
-                // CRITICAL FIX: Ensure remoteResults is always an array.
-                // If PHP sends an associative array (Object), convert its values to an Array.
-                const remoteResults: TestResult[] = Array.isArray(remoteResultsData) 
-                    ? remoteResultsData 
-                    : (remoteResultsData ? Object.values(remoteResultsData) : []);
-
-                // Merge local and remote results, giving precedence to remote data.
-                const mergedResultsMap = new Map<string, TestResult>();
-                
-                // Safe iteration using for...of loops to prevent potential "forEach" errors
-                if (Array.isArray(localResults)) {
-                     for (const r of localResults) {
-                        if (r && r.testId) {
-                            mergedResultsMap.set(r.testId, r);
-                        }
-                    }
-                }
-                
-                if (Array.isArray(remoteResults)) {
-                    for (const r of remoteResults) {
-                        if (r && r.testId) {
-                             mergedResultsMap.set(r.testId, r);
-                        }
-                    }
-                }
-
-                const mergedResults = Array.from(mergedResultsMap.values());
-                
-                // Save the merged results back to local storage.
-                localStorage.setItem(localResultsKey, JSON.stringify(mergedResults));
-
-                // A user might take a test offline and then log in. We need to sync any unsynced local results.
-                // Re-calculate unsynced items based on the new merged map
-                const unsyncedLocalResults = localResults.filter(local => !remoteResults.some(remote => remote.testId === local.testId));
-
-                // Send any unsynced results to the backend.
-                for (const result of unsyncedLocalResults) {
-                    await apiFetch('/submit-result', 'POST', token, result);
-                }
-
-                return mergedResults;
-            } catch (error) {
-                console.error("Could not sync with server, using local results only.", error);
-                throw error; // Re-throw to be caught in the UI
-            } finally {
-                // Clear the promise so the next sync operation can start fresh.
-                syncPromise = null;
-            }
+                const remoteResults: TestResult[] = Array.isArray(remoteResultsData) ? remoteResultsData : Object.values(remoteResultsData || {});
+                localStorage.setItem(`exam_results_${user.id}`, JSON.stringify(remoteResults));
+                return remoteResults;
+            } finally { syncPromise = null; }
         })();
-
         return syncPromise;
     },
     getLocalTestResultsForUser: (userId: string): TestResult[] => {
-        try {
-            const stored = localStorage.getItem(`exam_results_${userId}`);
-            const parsed = stored ? JSON.parse(stored) : [];
-             return Array.isArray(parsed) ? parsed : (parsed ? Object.values(parsed) : []);
-        } catch {
-            return [];
-        }
+        try { return JSON.parse(localStorage.getItem(`exam_results_${userId}`) || '[]'); } catch { return []; }
     },
     getTestResult: (user: User, testId: string): TestResult | undefined => {
-        const results = googleSheetsService.getLocalTestResultsForUser(user.id);
-        return results.find(r => r.testId === testId);
+        return googleSheetsService.getLocalTestResultsForUser(user.id).find(r => r.testId === testId);
     },
     getQuestions: async (exam: Exam, token: string): Promise<Question[]> => {
-        return await apiFetch('/questions-from-sheet', 'POST', token, {
-            sheetUrl: exam.questionSourceUrl,
-            count: exam.numberOfQuestions
-        });
+        return await apiFetch('/questions-from-sheet', 'POST', token, { sheetUrl: exam.questionSourceUrl, count: exam.numberOfQuestions });
     },
     submitTest: async (user: User, examId: string, userAnswers: UserAnswer[], questions: Question[], token: string, proctoringViolations: number): Promise<TestResult> => {
-        const correctAnswers = questions.reduce((acc, q) => {
-            acc.set(q.id, q.correctAnswer - 1); // Convert to 0-based
-            return acc;
-        }, new Map<number, number>());
-
-        let correctCount = 0;
-        
-        // Safer iteration
-        if(Array.isArray(userAnswers)) {
-             for(const ua of userAnswers) {
-                if (correctAnswers.get(ua.questionId) === ua.answer) {
-                    correctCount++;
-                }
-             }
-        }
-
-        const score = (correctCount / questions.length) * 100;
-        const testId = `test_${user.id}_${examId}_${Date.now()}`;
-
-        const reviewData = questions.map(q => {
-            const userAnswer = userAnswers.find(ua => ua.questionId === q.id);
-            return {
-                questionId: q.id,
-                question: q.question,
-                options: q.options,
-                userAnswer: userAnswer ? userAnswer.answer : -1, // -1 for unanswered
-                correctAnswer: q.correctAnswer - 1,
-            };
-        });
-
+        const correctCount = userAnswers.filter(ua => questions.find(q => q.id === ua.questionId)?.correctAnswer === ua.answer + 1).length;
         const result: TestResult = {
-            testId,
+            testId: `test_${user.id}_${examId}_${Date.now()}`,
             userId: user.id,
             examId,
             answers: userAnswers,
-            score,
+            score: (correctCount / questions.length) * 100,
             correctCount,
             totalQuestions: questions.length,
             timestamp: Date.now(),
-            review: reviewData,
-            proctoringViolations: proctoringViolations
+            review: questions.map(q => ({
+                questionId: q.id,
+                question: q.question,
+                options: q.options,
+                userAnswer: userAnswers.find(ua => ua.questionId === q.id)?.answer ?? -1,
+                correctAnswer: q.correctAnswer - 1,
+            })),
+            proctoringViolations
         };
-        
-        // Save to local storage first for immediate UI update.
-        const localResultsKey = `exam_results_${user.id}`;
-        const localResults = googleSheetsService.getLocalTestResultsForUser(user.id);
-        localResults.push(result);
-        localStorage.setItem(localResultsKey, JSON.stringify(localResults));
-        
-        // Then, sync to backend. Errors are caught by the caller.
         await apiFetch('/submit-result', 'POST', token, result);
-
         return result;
     },
     getCertificateData: async (token: string, testId: string, isAdminView: boolean = false): Promise<ApiCertificateData> => {
-        const endpoint = `/certificate-data/${testId}${isAdminView ? '?admin_view=true' : ''}`;
-        return await apiFetch(endpoint, 'GET', token);
+        return await apiFetch(`/certificate-data/${testId}${isAdminView ? '?admin_view=true' : ''}`, 'GET', token);
     },
     updateUserName: async (token: string, fullName: string): Promise<{ message: string }> => {
         return await apiFetch('/update-name', 'POST', token, { fullName });
     },
     submitFeedback: async (token: string, category: string, message: string, examId?: string, examName?: string): Promise<{ success: boolean }> => {
-        const payload: { category: string; message: string; examId?: string; examName?: string } = {
-            category,
-            message,
-        };
-        if (examId) payload.examId = examId;
-        if (examName) payload.examName = examName;
-        return await apiFetch('/submit-feedback', 'POST', token, payload);
+        return await apiFetch('/submit-feedback', 'POST', token, { category, message, examId, examName });
     },
     submitReview: async (token: string, examId: string, rating: number, reviewText: string): Promise<{ success: boolean }> => {
         return await apiFetch('/submit-review', 'POST', token, { examId, rating, reviewText });
@@ -422,12 +180,8 @@ export const googleSheetsService = {
         return await apiFetch(`/verify-certificate/${certId}`, 'GET', null);
     },
     logEngagement: async (token: string, examId: string): Promise<void> => {
-        apiFetch('/log-engagement', 'POST', token, { examId }).catch(error => {
-            console.warn(`Failed to log engagement for exam ${examId}:`, error);
-        });
+        apiFetch('/log-engagement', 'POST', token, { examId }).catch(() => {});
     },
-    
-    // --- ADMIN ENDPOINTS ---
     getDebugDetails: async (token: string): Promise<DebugData> => {
         return await apiFetch('/debug-details', 'GET', token);
     },
@@ -455,16 +209,16 @@ export const googleSheetsService = {
     adminClearAllResults: async (token: string): Promise<{ success: boolean, message: string }> => {
         return await apiFetch('/admin/clear-all-results', 'POST', token);
     },
-    adminUpdateExamProgram: async (token: string, programId: string, updateData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
+    adminUpdateExamProgram: async (token: string, programId: string, updateData: any): Promise<any> => {
         return await apiFetch('/admin/update-exam-program', 'POST', token, { programId, updateData });
     },
-    adminCreateExamProgram: async (token: string, programName: string, productLinkData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
+    adminCreateExamProgram: async (token: string, programName: string, productLinkData: any): Promise<any> => {
         return await apiFetch('/admin/create-exam-program', 'POST', token, { programName, productLinkData });
     },
-    adminUpsertProduct: async (token: string, productData: any): Promise<{ organizations: Organization[], examPrices: any }> => {
+    adminUpsertProduct: async (token: string, productData: any): Promise<any> => {
         return await apiFetch('/admin/upsert-product', 'POST', token, productData);
     },
-    adminDeletePost: async (token: string, postId: string, postType: 'mco_exam_program' | 'product'): Promise<{ organizations: Organization[], examPrices: any }> => {
+    adminDeletePost: async (token: string, postId: string, postType: string): Promise<any> => {
         return await apiFetch('/admin/delete-post', 'POST', token, { postId, postType });
     },
     getPostCreationData: async (token: string): Promise<PostCreationData> => {
@@ -472,11 +226,6 @@ export const googleSheetsService = {
     },
     createPostFromApp: async (token: string, postPayload: any): Promise<{ success: boolean, post_id: number, post_url: string }> => {
         return await apiFetch('/admin/create-post-from-app', 'POST', token, postPayload);
-    },
-    adminUploadIntroVideo: async (token: string, videoBlob: Blob): Promise<{ organizations: Organization[], examPrices: any }> => {
-        const formData = new FormData();
-        formData.append('video', videoBlob, 'intro-video.mp4');
-        return await apiFetch('/admin/set-intro-video', 'POST', token, formData as any, true);
     },
     adminToggleBetaStatus: async (token: string, status: boolean): Promise<{ token: string }> => {
         return await apiFetch('/admin/toggle-beta-status', 'POST', token, { isBetaTester: status });
