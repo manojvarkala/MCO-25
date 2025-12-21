@@ -1,0 +1,44 @@
+
+/**
+ * 15. ADMIN: Intelligence
+ */
+function mco_api_get_exam_stats(WP_REST_Request $request) {
+    global $wpdb;
+    $meta = $wpdb->get_results("SELECT meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'");
+    $stats = [];
+    foreach ($meta as $m) {
+        $arr = maybe_unserialize($m->meta_value);
+        if (is_array($arr)) {
+            foreach ($arr as $r) {
+                $eid = $r['examId'];
+                if (!isset($stats[$eid])) $stats[$eid] = ['attempts' => 0, 'passes' => 0, 'sum' => 0];
+                $stats[$eid]['attempts']++;
+                $stats[$eid]['sum'] += (float)$r['score'];
+                if ((float)$r['score'] >= 70) $stats[$eid]['passes']++;
+            }
+        }
+    }
+    $out = [];
+    foreach ($stats as $id => $s) {
+        $pid = wc_get_product_id_by_sku($id);
+        $out[] = [
+            'id' => $id, 'name' => $id, 'attempts' => $s['attempts'],
+            'averageScore' => $s['sum'] / $s['attempts'],
+            'passRate' => ($s['passes'] / $s['attempts']) * 100,
+            'totalSales' => $pid ? get_post_meta($pid, 'total_sales', true) : 0
+        ];
+    }
+    return new WP_REST_Response($out, 200);
+}
+
+function mco_api_get_debug_details(WP_REST_Request $request) {
+    return new WP_REST_Response($request->get_param('jwt_payload'), 200);
+}
+
+function mco_api_get_system_status(WP_REST_Request $request) {
+    return new WP_REST_Response([
+        'api_connection' => ['success' => true, 'message' => 'Active'],
+        'woocommerce' => ['success' => class_exists('WooCommerce'), 'message' => 'Detected'],
+        'jwt_secret' => ['success' => defined('MCO_JWT_SECRET'), 'message' => 'Configured']
+    ], 200);
+}

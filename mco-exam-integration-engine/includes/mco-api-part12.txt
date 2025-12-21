@@ -1,0 +1,37 @@
+
+/**
+ * 13. USER: Business Logic
+ */
+function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
+    $p = $request->get_json_params();
+    $url = $p['sheetUrl'];
+    $fetch = mco_fetch_remote_csv_content($url);
+    if (is_wp_error($fetch)) return $fetch;
+
+    $lines = explode("\n", $fetch['body']);
+    array_shift($lines);
+    $q = []; $id = 1;
+    foreach ($lines as $line) {
+        $row = str_getcsv($line);
+        if (count($row) >= 6) {
+            $q[] = [
+                'id' => $id++, 
+                'question' => $row[0], 
+                'options' => array_map('trim', [$row[1], $row[2], $row[3], $row[4]]), 
+                'correctAnswer' => (int)$row[5]
+            ];
+        }
+    }
+    if ((int)$p['count'] > 0) {
+        shuffle($q); $q = array_slice($q, 0, (int)$p['count']);
+    }
+    return new WP_REST_Response($q, 200);
+}
+
+function mco_api_create_checkout_session(WP_REST_Request $request) {
+    if (!class_exists('WooCommerce')) return new WP_Error('mco_err', 'WC required.');
+    $p = $request->get_json_params();
+    $pid = wc_get_product_id_by_sku($p['sku']);
+    if (!$pid) return new WP_Error('404', 'SKU not found.', ['status' => 404]);
+    return new WP_REST_Response(['checkoutUrl' => add_query_arg('add-to-cart', $pid, wc_get_checkout_url())], 200);
+}

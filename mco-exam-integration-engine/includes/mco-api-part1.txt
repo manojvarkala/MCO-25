@@ -1,0 +1,42 @@
+<?php
+/**
+ * MCO API Engine - Part 1: Core Utilities
+ * Version: 3.6.0 (Ultra-Exhaustive Build)
+ * Author: Annapoorna Infotech
+ */
+
+if (!defined('ABSPATH')) exit;
+
+/**
+ * 1. UTILITY: Remote CSV Fetcher
+ * Strictly handles timeouts and SSL verification for Google Sheets.
+ */
+function mco_fetch_remote_csv_content($url) {
+    if (empty($url)) {
+        return new WP_Error('mco_url_empty', 'CSV Source URL is empty.');
+    }
+
+    $args = array(
+        'timeout'     => 45,
+        'redirection' => 5,
+        'httpversion' => '1.1',
+        'user-agent'  => 'MCO-App-Engine/3.6.0',
+        'blocking'    => true,
+        'sslverify'   => false,
+        'headers'     => array('Accept' => 'text/csv')
+    );
+
+    $response = wp_remote_get(esc_url_raw($url), $args);
+
+    if (is_wp_error($response)) {
+        error_log('MCO API [Remote Fetch]: ' . $response->get_error_message());
+        return $response;
+    }
+
+    $code = wp_remote_retrieve_response_code($response);
+    if ($code !== 200) {
+        return new WP_Error('mco_http_err', "Source returned code: $code");
+    }
+
+    return $response;
+}

@@ -1,0 +1,33 @@
+
+/**
+ * 4. SECURITY: JWT Validator
+ */
+function mco_verify_exam_jwt($token) {
+    if (!defined('MCO_JWT_SECRET')) {
+        return new WP_Error('mco_err', 'JWT Secret missing on server.', ['status' => 500]);
+    }
+
+    $parts = explode('.', $token);
+    if (count($parts) !== 3) {
+        return new WP_Error('mco_invalid', 'Invalid token format.', ['status' => 401]);
+    }
+
+    $header = $parts[0];
+    $payload = $parts[1];
+    $signature = $parts[2];
+
+    $check_sig = mco_base64url_encode(hash_hmac('sha256', $header . "." . $payload, MCO_JWT_SECRET, true));
+    
+    if (!hash_equals($signature, $check_sig)) {
+        return new WP_Error('jwt_auth_invalid_token', 'JWT Signature mismatch.', ['status' => 403]);
+    }
+
+    $decoded = json_decode(mco_base64url_decode($payload), true);
+    if (!$decoded) return new WP_Error('mco_corrupt', 'Token data corrupt.', ['status' => 403]);
+
+    if (isset($decoded['exp']) && $decoded['exp'] < time()) {
+        return new WP_Error('jwt_auth_expired_token', 'Session expired.', ['status' => 403]);
+    }
+
+    return $decoded;
+}

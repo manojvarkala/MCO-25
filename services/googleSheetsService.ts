@@ -24,7 +24,7 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 45000); 
 
     const config: RequestInit = {
         method,
@@ -48,9 +48,9 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 errorData = JSON.parse(responseText);
             } catch (e) {
                 if (response.status === 404) {
-                    throw new Error(`Endpoint not found (404). This usually means the WordPress plugin is out of date. Please download the latest version from the Integration tab.`);
+                    throw new Error(`Route Not Found (404) at ${endpoint}. Please ensure the WordPress plugin is updated to the latest version.`);
                 }
-                throw new Error(`Server error (${response.status}) at ${endpoint}. Check your server logs.`);
+                throw new Error(`Server Response Error (${response.status}): ${responseText.substring(0, 150)}`);
             }
 
             if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_auth_invalid_token') {
@@ -68,10 +68,16 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     } catch (error: any) {
         clearTimeout(timeoutId);
         if (error.name === 'AbortError') {
-             throw new Error("Connection Timeout: The server took too long to process this request.");
+             throw new Error("API Timeout: The server took too long to process this request. Check server load or timeout settings.");
         }
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-            throw new Error(`Could not connect to the API server (${API_BASE_URL}). Check plugin status, server firewall, and CORS settings.`);
+            console.error("Fetch API Failure Diagnostics:", {
+                url: fullUrl,
+                method: method,
+                hasToken: !!token,
+                error: error.message
+            });
+            throw new Error(`Could not connect to the API server (${API_BASE_URL}). Check plugin status, server firewall, and CORS settings in your WordPress Admin.`);
         }
         throw error;
     }

@@ -1,0 +1,22 @@
+
+/**
+ * 11. USER: Synchronization
+ */
+function mco_api_get_user_results(WP_REST_Request $request) {
+    $payload = $request->get_param('jwt_payload');
+    $results = get_user_meta($payload['user']['id'], 'mco_exam_results', true) ?: [];
+    return new WP_REST_Response(array_values($results), 200);
+}
+
+function mco_api_submit_result(WP_REST_Request $request) {
+    $payload = $request->get_param('jwt_payload');
+    $uid = $payload['user']['id'];
+    $data = $request->get_json_params();
+
+    $results = get_user_meta($uid, 'mco_exam_results', true) ?: [];
+    $results[] = $data;
+    update_user_meta($uid, 'mco_exam_results', $results);
+    delete_transient('mco_app_config_data');
+
+    return new WP_REST_Response(['success' => true], 200);
+}

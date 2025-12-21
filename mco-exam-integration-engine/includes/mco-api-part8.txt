@@ -1,0 +1,27 @@
+
+/**
+ * 9. PUBLIC: Certificate Validator
+ */
+function mco_api_verify_certificate(WP_REST_Request $request) {
+    $certId = strtoupper(sanitize_text_field($request->get_param('certId')));
+    global $wpdb;
+    
+    $rows = $wpdb->get_results("SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'");
+    foreach ($rows as $row) {
+        $results = maybe_unserialize($row->meta_value);
+        if (is_array($results)) {
+            foreach ($results as $res) {
+                if (strtoupper(substr(md5($res['testId']), 0, 12)) === $certId) {
+                    $u = get_userdata($row->user_id);
+                    return new WP_REST_Response([
+                        'candidateName' => $u->display_name,
+                        'examName'      => $res['examId'],
+                        'finalScore'    => $res['score'],
+                        'date'          => date('F j, Y', $res['timestamp'] / 1000)
+                    ], 200);
+                }
+            }
+        }
+    }
+    return new WP_Error('not_found', 'Invalid Certificate ID.', ['status' => 404]);
+}

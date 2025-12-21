@@ -1,0 +1,29 @@
+
+/**
+ * 12. USER: Asset Data
+ */
+function mco_api_get_certificate_data(WP_REST_Request $request) {
+    $payload = $request->get_param('jwt_payload');
+    $testId = $request->get_param('testId');
+    $results = get_user_meta($payload['user']['id'], 'mco_exam_results', true) ?: [];
+    
+    foreach ($results as $res) {
+        if ($res['testId'] === $testId) {
+            return new WP_REST_Response([
+                'certificateNumber' => strtoupper(substr(md5($testId), 0, 12)),
+                'candidateName'     => $payload['user']['name'],
+                'finalScore'        => $res['score'],
+                'date'              => date('F j, Y', $res['timestamp'] / 1000),
+                'examId'            => $res['examId']
+            ], 200);
+        }
+    }
+    return new WP_Error('404', 'Result not found.', ['status' => 404]);
+}
+
+function mco_api_update_name(WP_REST_Request $request) {
+    $payload = $request->get_param('jwt_payload');
+    $p = $request->get_json_params();
+    wp_update_user(['ID' => $payload['user']['id'], 'display_name' => sanitize_text_field($p['fullName'])]);
+    return new WP_REST_Response(['message' => 'Profile Updated'], 200);
+}

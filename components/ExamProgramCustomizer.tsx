@@ -110,19 +110,10 @@ interface ExamEditorProps {
 const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, unlinkedProducts, suggestedBooks, examPrices }) => {
     const { activeOrg } = useAppContext();
     
-    // Ensure we have a local cert exam object for editing even if one wasn't in the initial data
+    // Safety: ensure certExam exists for state management even if one wasn't in the initial data
     const initialCertExam = useMemo(() => {
         if (program.certExam) return { ...program.certExam };
-        return { 
-            id: program.category.certificationExamId, 
-            productSku: '', 
-            name: program.category.name,
-            passScore: 70,
-            numberOfQuestions: 50,
-            durationMinutes: 90,
-            isProctored: false,
-            certificateEnabled: true
-        } as Partial<Exam>;
+        return { id: program.category.certificationExamId, productSku: '', name: program.category.name, passScore: 70, numberOfQuestions: 50, durationMinutes: 90, isProctored: false, certificateEnabled: true } as Partial<Exam>;
     }, [program]);
 
     const addonData = useMemo(() => {
@@ -181,7 +172,6 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
     };
 
     const { category, practiceExam, certExam, addonEnabled, addonPrice, addonRegularPrice } = data;
-    
     const initialLinkedProductInfo = useMemo(() => {
         const sku = program.certExam?.productSku || '';
         if (!sku || !examPrices) return null;
@@ -233,7 +223,7 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
                             <label className="text-xs font-bold text-slate-500">Mins</label>
                             <input type="number" value={certExam?.durationMinutes || ''} onChange={e => handleExamChange('certExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-slate-50" />
                         </div>
-                        <div>
+                         <div>
                             <label className="text-xs font-bold text-slate-500">Pass %</label>
                             <input type="number" value={certExam?.passScore || ''} onChange={e => handleExamChange('certExam', 'passScore', e.target.value)} className="w-full p-2 border rounded bg-slate-50" />
                         </div>
@@ -345,12 +335,11 @@ const ExamProgramCustomizer: FC = () => {
     const unlinkedProducts = useMemo(() => {
         if (!examPrices || !activeOrg) return [];
         
-        // We look for all products that are NOT subscriptions and NOT bundles
-        // (Unless they are already explicitly linked to this current program)
+        // Return ALL products that aren't recurring subscriptions or already used bundles
         return Object.entries(examPrices)
             .filter(([sku, data]: [string, any]) => {
                 if (sku.startsWith('sub-')) return false;
-                if (data.isBundle) return false;
+                if (data.isBundle && !sku.endsWith('-addon')) return false;
                 return true;
             })
             .map(([sku, data]: [string, any]) => ({ sku, name: data.name }));
@@ -363,7 +352,6 @@ const ExamProgramCustomizer: FC = () => {
         try {
             await googleSheetsService.adminUpdateExamProgram(token, programId, data);
             
-            // Handle addon bundle logic if enabled
             if (data.certExam?.productSku && data.addonEnabled) {
                 const certSku = data.certExam.productSku;
                 const addonSku = `${certSku}-1mo-addon`;
@@ -484,7 +472,8 @@ const ExamProgramCustomizer: FC = () => {
                                     <p className="font-bold text-[rgb(var(--color-text-strong-rgb))]">{p.category.name}</p>
                                     <div className="flex gap-4 mt-1">
                                         {p.certExam?.productSku ? <span className="text-xs text-slate-500 font-mono">SKU: {p.certExam.productSku}</span> : <span className="text-xs text-red-400 italic">No Product Linked</span>}
-                                        {p.stat && <span className="text-xs text-slate-500 font-mono">Sales: {p.stat.totalSales}</span>}
+                                        {/* FIX: Use p.stat instead of stat which is not defined in this scope */}
+                                        {p.stat && <span className="text-xs text-slate-500 font-mono">Sales: {p.stat?.totalSales || 0}</span>}
                                     </div>
                                 </div>
                                 <button onClick={() => setExpandedProgramId(expandedProgramId === p.category.id ? null : p.category.id)} className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg text-sm font-bold shadow-sm hover:bg-slate-50 border border-slate-200">
