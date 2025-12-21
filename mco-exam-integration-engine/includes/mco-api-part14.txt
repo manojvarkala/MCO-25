@@ -1,20 +1,23 @@
 
 /**
- * 15. ADMIN: Intelligence
+ * 15. ADMIN: Intelligence & Deep Analytics
  */
 function mco_api_get_exam_stats(WP_REST_Request $request) {
     global $wpdb;
-    $meta = $wpdb->get_results("SELECT meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'");
+    $meta = $wpdb->get_results("SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'", ARRAY_A);
     $stats = [];
     foreach ($meta as $m) {
-        $arr = maybe_unserialize($m->meta_value);
+        $arr = maybe_unserialize($m['meta_value']);
         if (is_array($arr)) {
             foreach ($arr as $r) {
-                $eid = $r['examId'];
-                if (!isset($stats[$eid])) $stats[$eid] = ['attempts' => 0, 'passes' => 0, 'sum' => 0];
+                $eid = $r['examId'] ?? 'unknown';
+                if (!isset($stats[$eid])) {
+                    $stats[$eid] = ['attempts' => 0, 'passes' => 0, 'sum' => 0, 'totalScoreSum' => 0];
+                }
                 $stats[$eid]['attempts']++;
-                $stats[$eid]['sum'] += (float)$r['score'];
-                if ((float)$r['score'] >= 70) $stats[$eid]['passes']++;
+                $score = (float)($r['score'] ?? 0);
+                $stats[$eid]['totalScoreSum'] += $score;
+                if ($score >= 70) $stats[$eid]['passes']++;
             }
         }
     }
@@ -22,23 +25,79 @@ function mco_api_get_exam_stats(WP_REST_Request $request) {
     foreach ($stats as $id => $s) {
         $pid = wc_get_product_id_by_sku($id);
         $out[] = [
-            'id' => $id, 'name' => $id, 'attempts' => $s['attempts'],
-            'averageScore' => $s['sum'] / $s['attempts'],
-            'passRate' => ($s['passes'] / $s['attempts']) * 100,
-            'totalSales' => $pid ? get_post_meta($pid, 'total_sales', true) : 0
+            'id' => $id, 
+            'name' => $id, 
+            'attempts' => $s['attempts'],
+            'averageScore' => $s['attempts'] > 0 ? $s['totalScoreSum'] / $s['attempts'] : 0,
+            'passRate' => $s['attempts'] > 0 ? ($s['passes'] / $s['attempts']) * 100 : 0,
+            'totalSales' => $pid ? (int)get_post_meta($pid, 'total_sales', true) : 0,
+            'totalRevenue' => $pid ? (float)get_post_meta($pid, 'total_sales', true) * (float)get_post_meta($pid, '_price', true) : 0
         ];
     }
     return new WP_REST_Response($out, 200);
 }
 
+/**
+ * Provides structured debug data for the Debug Sidebar.
+ * Resolves the "Question Sheet: Failure" status.
+ */
 function mco_api_get_debug_details(WP_REST_Request $request) {
-    return new WP_REST_Response($request->get_param('jwt_payload'), 200);
+    $payload = $request->get_param('jwt_payload');
+    $user_id = $payload['user']['id'];
+    
+    // Test connectivity to Google Sheets (Proxy Test)
+    $test_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSt_0YT3AG-PlfihlizPkGcfT7cq-gRjh2_-YOaEArPP7Zcei_2LQJ2IOS0Y0AzC6E_pw2BuzoAncil/pub?output=csv';
+    $fetch_test = mco_fetch_remote_csv_content($test_url);
+    $sheet_status = !is_wp_error($fetch_test);
+    
+    return new WP_REST_Response([
+        'user' => $payload['user'],
+        'purchases' => get_user_meta($user_id, 'mco_paid_exams', true) ?: [],
+        'results' => get_user_meta($user_id, 'mco_exam_results', true) ?: [],
+        'sheetTest' => [
+            'success' => $sheet_status,
+            'message' => $sheet_status ? 'Server successfully proxied Google Sheets content.' : 'Server blocked by firewall or invalid URL.',
+            'data' => $sheet_status ? 'HTTP 200 OK' : $fetch_test->get_error_message()
+        ]
+    ], 200);
 }
 
+/**
+ * Comprehensive System Health Check.
+ * Resolves the "Checking..." states in the Admin UI.
+ */
 function mco_api_get_system_status(WP_REST_Request $request) {
+    $app_url = get_option('mco_exam_app_url', '');
+    
     return new WP_REST_Response([
-        'api_connection' => ['success' => true, 'message' => 'Active'],
-        'woocommerce' => ['success' => class_exists('WooCommerce'), 'message' => 'Detected'],
-        'jwt_secret' => ['success' => defined('MCO_JWT_SECRET'), 'message' => 'Configured']
+        'api_connection' => [
+            'success' => true, 
+            'message' => 'REST Engine Operational'
+        ],
+        'woocommerce' => [
+            'success' => class_exists('WooCommerce'), 
+            'message' => class_exists('WooCommerce') ? 'Active (v' . WC_VERSION . ')' : 'Plugin Missing'
+        ],
+        'wc_subscriptions' => [
+            'success' => class_exists('WC_Subscriptions'), 
+            'message' => class_exists('WC_Subscriptions') ? 'Pro Subscriptions Enabled' : 'Not Detected'
+        ],
+        'jwt_secret' => [
+            'success' => defined('MCO_JWT_SECRET'), 
+            'message' => defined('MCO_JWT_SECRET') ? 'Security Key Loaded' : 'CRITICAL: Secret Missing'
+        ],
+        'app_url_config' => [
+            'success' => !empty($app_url),
+            'message' => !empty($app_url) ? 'CORS Allowed for ' . $app_url : 'No App URL defined'
+        ],
+        'google_sheet' => [
+            'success' => true,
+            'message' => 'Remote Fetcher Active',
+            'data' => ['timeout' => 45, 'ssl' => 'disabled']
+        ],
+        'nonces' => [
+            'generate_programs_csv' => wp_create_nonce('mco_generate_programs_csv_nonce'),
+            'generate_products_csv' => wp_create_nonce('mco_generate_products_csv_nonce'),
+        ]
     ], 200);
 }

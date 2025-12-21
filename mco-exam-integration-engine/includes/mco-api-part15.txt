@@ -4,29 +4,41 @@
  */
 function mco_api_admin_upsert_product(WP_REST_Request $request) {
     if (!class_exists('WooCommerce')) return new WP_Error('mco_err', 'WC missing.');
-    $p = $request->get_json_params(); $sku = $p['sku'];
+    $p = $request->get_json_params(); 
+    $sku = sanitize_text_field($p['sku'] ?? '');
+    if (empty($sku)) return new WP_Error('mco_err', 'SKU required.');
+    
     $id = wc_get_product_id_by_sku($sku);
     $prod = $id ? wc_get_product($id) : new WC_Product_Simple();
     $prod->set_sku($sku);
-    $prod->set_name(sanitize_text_field($p['name']));
-    $prod->set_regular_price($p['regularPrice']);
-    if (isset($p['price']) && $p['price'] < $p['regularPrice']) $prod->set_sale_price($p['price']);
+    $prod->set_name(sanitize_text_field($p['name'] ?? 'New Exam'));
+    $prod->set_regular_price(sanitize_text_field($p['regularPrice'] ?? '0'));
+    if (isset($p['price']) && (float)$p['price'] < (float)$p['regularPrice']) {
+        $prod->set_sale_price($p['price']);
+    }
     $prod->save();
     delete_transient('mco_app_config_data');
-    return new WP_REST_Response(['success' => true], 200);
+    return new WP_REST_Response(['success' => true, 'id' => $prod->get_id()], 200);
 }
 
 function mco_api_create_post_from_app(WP_REST_Request $request) {
     $p = $request->get_json_params();
-    $id = wp_insert_post(['post_title' => $p['post_title'], 'post_content' => $p['post_content'], 'post_status' => 'publish']);
-    return new WP_REST_Response(['success' => true, 'post_id' => $id], 200);
+    $post_id = wp_insert_post([
+        'post_title' => sanitize_text_field($p['post_title']), 
+        'post_content' => wp_kses_post($p['post_content']), 
+        'post_status' => 'publish',
+        'post_type' => 'post'
+    ]);
+    return new WP_REST_Response(['success' => !is_wp_error($post_id), 'post_id' => $post_id], 200);
 }
 
 /**
  * 17. FINAL REGISTRY
  */
 function mco_register_rest_routes() {
-    $ns = 'mco-app/v1'; $auth = ['permission_callback' => 'mco_api_permission_check']; $adm = ['permission_callback' => 'mco_api_jwt_admin_permission_check'];
+    $ns = 'mco-app/v1'; 
+    $auth = ['permission_callback' => 'mco_api_permission_check']; 
+    $adm = ['permission_callback' => 'mco_api_jwt_admin_permission_check'];
 
     register_rest_route($ns, '/config', ['methods' => 'GET', 'callback' => 'mco_api_get_full_config', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/hit', ['methods' => 'POST', 'callback' => 'mco_api_record_hit', 'permission_callback' => '__return_true']);
