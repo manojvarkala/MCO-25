@@ -2,18 +2,10 @@
 import React, { FC, useState } from 'react';
 import toast from 'react-hot-toast';
 import JSZip from 'jszip';
-import { DownloadCloud, Code } from 'lucide-react';
+import { DownloadCloud, Code, Share2 } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
-// Core Imports
-import mainPluginFile from '../mco-exam-integration-engine/mco-exam-integration-engine.txt?raw';
-import stylesFile from '../mco-exam-integration-engine/assets/mco-styles.txt?raw';
-import cptsFile from '../mco-exam-integration-engine/includes/mco-cpts.txt?raw';
-import adminFile from '../mco-exam-integration-engine/includes/mco-admin.txt?raw';
-import dataFile from '../mco-exam-integration-engine/includes/mco-data.txt?raw';
-import shortcodesFile from '../mco-exam-integration-engine/includes/mco-shortcodes.txt?raw';
-
-// The 15-Part API Engine
+// API Octopus Imports (15 Parts)
 import apiP1 from '../mco-exam-integration-engine/includes/mco-api-part1.txt?raw';
 import apiP2 from '../mco-exam-integration-engine/includes/mco-api-part2.txt?raw';
 import apiP3 from '../mco-exam-integration-engine/includes/mco-api-part3.txt?raw';
@@ -30,57 +22,63 @@ import apiP13 from '../mco-exam-integration-engine/includes/mco-api-part13.txt?r
 import apiP14 from '../mco-exam-integration-engine/includes/mco-api-part14.txt?raw';
 import apiP15 from '../mco-exam-integration-engine/includes/mco-api-part15.txt?raw';
 
-import templateExamPrograms from '../public/template-exam-programs.csv?raw';
-import templateRecommendedBooks from '../public/template-recommended-books.csv?raw';
-import templateQuestions from '../public/template-questions.csv?raw';
+// Core Engine Files
+import mainPluginFile from '../mco-exam-integration-engine/mco-exam-integration-engine.txt?raw';
+import stylesFile from '../mco-exam-integration-engine/assets/mco-styles.txt?raw';
+import cptsFile from '../mco-exam-integration-engine/includes/mco-cpts.txt?raw';
+import adminFile from '../mco-exam-integration-engine/includes/mco-admin.txt?raw';
+import dataFile from '../mco-exam-integration-engine/includes/mco-data.txt?raw';
+import shortcodesFile from '../mco-exam-integration-engine/includes/mco-shortcodes.txt?raw';
+
+// Social Poster Files
+import socialMainFile from '../mco-social-poster/mco-social-poster.txt?raw';
+import socialAdminFile from '../mco-social-poster/includes/admin-page.txt?raw';
+import socialHandlerFile from '../mco-social-poster/includes/post-handler.txt?raw';
 
 const Integration: FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     
     const generateEngineZip = async () => {
         setIsGenerating(true);
-        const toastId = toast.loading('Assembling 15-part production engine...');
+        const toastId = toast.loading('Bundling Multi-Plugin Master Suite...');
         try {
             const zip = new JSZip();
-            const root = zip.folder('mco-exam-integration-engine');
-            if (!root) throw new Error("FS Error");
-
-            root.folder('assets');
-            root.folder('includes');
-            root.folder('public');
             
-            // Seamless concatenation of all 15 modules
+            // --- 1. CORE API ENGINE ---
+            const engineRoot = zip.folder('mco-exam-integration-engine');
+            if (!engineRoot) throw new Error("FS Failure");
+
+            engineRoot.folder('assets').file('mco-styles.css', stylesFile);
+            const engineIncludes = engineRoot.folder('includes');
+            
             const fullApi = [
                 apiP1, apiP2, apiP3, apiP4, apiP5, apiP6, apiP7, apiP8,
                 apiP9, apiP10, apiP11, apiP12, apiP13, apiP14, apiP15
             ].join("\n\n");
 
-            const files = {
-                'mco-exam-integration-engine.php': mainPluginFile,
-                'assets/mco-styles.css': stylesFile,
-                'includes/mco-cpts.php': cptsFile,
-                'includes/mco-admin.php': adminFile,
-                'includes/mco-api.php': fullApi,
-                'includes/mco-data.php': dataFile,
-                'includes/mco-shortcodes.php': shortcodesFile,
-                'public/template-exam-programs.csv': templateExamPrograms,
-                'public/template-recommended-books.csv': templateRecommendedBooks,
-                'public/template-questions.csv': templateQuestions,
-            };
+            engineRoot.file('mco-exam-integration-engine.php', mainPluginFile);
+            engineIncludes.file('mco-cpts.php', cptsFile);
+            engineIncludes.file('mco-admin.php', adminFile);
+            engineIncludes.file('mco-api.php', fullApi);
+            engineIncludes.file('mco-data.php', dataFile);
+            engineIncludes.file('mco-shortcodes.php', shortcodesFile);
 
-            for (const [path, content] of Object.entries(files)) {
-                root.file(path, content);
-            }
+            // --- 2. SOCIAL POSTER PLUGIN ---
+            const socialRoot = zip.folder('mco-social-poster');
+            socialRoot.file('mco-social-poster.php', socialMainFile);
+            const socialIncludes = socialRoot.folder('includes');
+            socialIncludes.file('admin-page.php', socialAdminFile);
+            socialIncludes.file('post-handler.php', socialHandlerFile);
             
             const blob = await zip.generateAsync({ type: 'blob' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `mco-production-engine.zip`;
+            link.download = `mco-full-suite-v3.6.0.zip`;
             link.click();
 
-            toast.success('Production Engine Synchronized!', { id: toastId });
+            toast.success('Full Suite Synchronized Successfully!', { id: toastId });
         } catch (error: any) {
-            toast.error(`Assembly Error: ${error.message}`, { id: toastId });
+            toast.error(`Bundle Error: ${error.message}`, { id: toastId });
         } finally {
             setIsGenerating(false);
         }
@@ -93,12 +91,24 @@ const Integration: FC = () => {
                 <div className="flex items-center gap-4 mb-6">
                     <div className="p-3 bg-green-100 text-green-600 rounded-xl"><Code size={32} /></div>
                     <div>
-                        <h2 className="text-2xl font-bold">MCO Master API Engine</h2>
-                        <p className="text-sm text-[rgb(var(--color-text-muted-rgb))]">15-Module Synchronized Build • Covers all 44 Endpoints</p>
+                        <h2 className="text-2xl font-bold">MCO Master Suite</h2>
+                        <p className="text-sm text-[rgb(var(--color-text-muted-rgb))]">Complete Bundle: Core API + Social Poster Companion</p>
                     </div>
                 </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                        <h3 className="font-bold flex items-center gap-2 mb-2 text-blue-600"><Code size={18}/> Core Engine</h3>
+                        <p className="text-xs text-slate-500">1300+ lines of robust API logic, JWT security, and WooCommerce deep-sync.</p>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                        <h3 className="font-bold flex items-center gap-2 mb-2 text-purple-600"><Share2 size={18}/> Social Poster</h3>
+                        <p className="text-xs text-slate-500">Auto-shares AI generated posts to FB/LinkedIn via mco_ai_post_created hook.</p>
+                    </div>
+                </div>
+
                 <button onClick={generateEngineZip} disabled={isGenerating} className="flex items-center gap-2 bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 disabled:opacity-50">
-                    {isGenerating ? <Spinner size="sm" /> : <DownloadCloud />} Assemble & Download Production ZIP
+                    {isGenerating ? <Spinner size="sm" /> : <DownloadCloud />} Assemble & Download Plugin Bundle
                 </button>
             </div>
         </div>
