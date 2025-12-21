@@ -48,9 +48,9 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 errorData = JSON.parse(responseText);
             } catch (e) {
                 if (response.status === 404) {
-                    throw new Error(`Endpoint not found (404). This usually means the WordPress plugin is out of date. Please download and install the latest version from the Integration tab.`);
+                    throw new Error(`Endpoint not found (404). This usually means the WordPress plugin is out of date. Please download the latest version from the Integration tab.`);
                 }
-                throw new Error(`Server error (${response.status}) at ${endpoint}.`);
+                throw new Error(`Server error (${response.status}) at ${endpoint}. Check your server logs.`);
             }
 
             if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_auth_invalid_token') {
@@ -68,10 +68,10 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     } catch (error: any) {
         clearTimeout(timeoutId);
         if (error.name === 'AbortError') {
-             throw new Error("Connection Timeout: The server took too long to process the request.");
+             throw new Error("Connection Timeout: The server took too long to process this request.");
         }
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-            throw new Error(`Could not connect to the API server (${API_BASE_URL}). Check plugin status.`);
+            throw new Error(`Could not connect to the API server (${API_BASE_URL}). Check plugin status, server firewall, and CORS settings.`);
         }
         throw error;
     }

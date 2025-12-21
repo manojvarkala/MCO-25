@@ -110,10 +110,19 @@ interface ExamEditorProps {
 const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, unlinkedProducts, suggestedBooks, examPrices }) => {
     const { activeOrg } = useAppContext();
     
-    // Safety: ensure certExam exists for state management even if not in the linked list
+    // Ensure we have a local cert exam object for editing even if one wasn't in the initial data
     const initialCertExam = useMemo(() => {
         if (program.certExam) return { ...program.certExam };
-        return { id: program.category.certificationExamId, productSku: '', name: program.category.name } as Partial<Exam>;
+        return { 
+            id: program.category.certificationExamId, 
+            productSku: '', 
+            name: program.category.name,
+            passScore: 70,
+            numberOfQuestions: 50,
+            durationMinutes: 90,
+            isProctored: false,
+            certificateEnabled: true
+        } as Partial<Exam>;
     }, [program]);
 
     const addonData = useMemo(() => {
@@ -129,7 +138,7 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
 
     const [data, setData] = useState<EditableProgramData>({
         category: { ...program.category },
-        practiceExam: program.practiceExam ? { ...program.practiceExam } : { id: program.category.practiceExamId } as any,
+        practiceExam: program.practiceExam ? { ...program.practiceExam } : { id: program.category.practiceExamId, isPractice: true } as any,
         certExam: initialCertExam,
         addonEnabled: addonData.enabled,
         addonPrice: addonData.price,
@@ -139,7 +148,7 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
     useEffect(() => {
         setData({
             category: { ...program.category },
-            practiceExam: program.practiceExam ? { ...program.practiceExam } : { id: program.category.practiceExamId } as any,
+            practiceExam: program.practiceExam ? { ...program.practiceExam } : { id: program.category.practiceExamId, isPractice: true } as any,
             certExam: initialCertExam,
             addonEnabled: addonData.enabled,
             addonPrice: addonData.price,
@@ -172,6 +181,7 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
     };
 
     const { category, practiceExam, certExam, addonEnabled, addonPrice, addonRegularPrice } = data;
+    
     const initialLinkedProductInfo = useMemo(() => {
         const sku = program.certExam?.productSku || '';
         if (!sku || !examPrices) return null;
@@ -202,15 +212,19 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
                 <div className="p-4 border rounded-xl bg-white space-y-4 shadow-sm">
                     <h4 className="font-bold flex items-center gap-2 border-b pb-2"><Award size={18} className="text-blue-500" /> Certification Exam</h4>
                     <div>
-                        <label className="text-xs font-bold text-slate-500">Linked Product</label>
-                        <select value={certExam?.productSku || ''} onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} className="w-full p-2 border rounded bg-slate-50 mt-1">
+                        <label className="text-xs font-bold text-slate-500">Linked WooCommerce Product</label>
+                        <select 
+                            value={certExam?.productSku || ''} 
+                            onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} 
+                            className="w-full p-2 border rounded bg-slate-50 mt-1 text-sm"
+                        >
                             <option value="">-- No Product Linked --</option>
                             {initialLinkedProductInfo && <option value={initialLinkedProductInfo.sku}>{initialLinkedProductInfo.name} ({initialLinkedProductInfo.sku})</option>}
                             {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
                         </select>
-                        <p className="text-[10px] text-slate-400 mt-1 italic">Selecting a product links this program to your WooCommerce store.</p>
+                        <p className="text-[10px] text-slate-400 mt-1 italic">Links the program to a specific WooCommerce product for purchase tracking.</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-2">
                         <div>
                             <label className="text-xs font-bold text-slate-500">Questions</label>
                             <input type="number" value={certExam?.numberOfQuestions || ''} onChange={e => handleExamChange('certExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-slate-50" />
@@ -219,6 +233,21 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
                             <label className="text-xs font-bold text-slate-500">Mins</label>
                             <input type="number" value={certExam?.durationMinutes || ''} onChange={e => handleExamChange('certExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-slate-50" />
                         </div>
+                        <div>
+                            <label className="text-xs font-bold text-slate-500">Pass %</label>
+                            <input type="number" value={certExam?.passScore || ''} onChange={e => handleExamChange('certExam', 'passScore', e.target.value)} className="w-full p-2 border rounded bg-slate-50" />
+                        </div>
+                    </div>
+                    
+                    <div className="flex gap-4">
+                        <label className="flex items-center gap-2 text-xs cursor-pointer">
+                            <input type="checkbox" checked={certExam?.isProctored || false} onChange={e => handleExamChange('certExam', 'isProctored', e.target.checked)} />
+                            Enable Proctoring
+                        </label>
+                        <label className="flex items-center gap-2 text-xs cursor-pointer">
+                            <input type="checkbox" checked={certExam?.certificateEnabled || false} onChange={e => handleExamChange('certExam', 'certificateEnabled', e.target.checked)} />
+                            Enable Certificate
+                        </label>
                     </div>
 
                     {/* ADDON SECTION */}
@@ -315,12 +344,13 @@ const ExamProgramCustomizer: FC = () => {
     
     const unlinkedProducts = useMemo(() => {
         if (!examPrices || !activeOrg) return [];
-        const usedSkus = new Set(activeOrg.exams.map(e => e.productSku).filter(Boolean));
+        
+        // We look for all products that are NOT subscriptions and NOT bundles
+        // (Unless they are already explicitly linked to this current program)
         return Object.entries(examPrices)
             .filter(([sku, data]: [string, any]) => {
                 if (sku.startsWith('sub-')) return false;
-                if (data.isBundle && !sku.endsWith('-addon')) return false; // Hide non-addon bundles to keep simple
-                if (usedSkus.has(sku)) return false;
+                if (data.isBundle) return false;
                 return true;
             })
             .map(([sku, data]: [string, any]) => ({ sku, name: data.name }));
@@ -333,21 +363,20 @@ const ExamProgramCustomizer: FC = () => {
         try {
             await googleSheetsService.adminUpdateExamProgram(token, programId, data);
             
-            if (data.certExam?.productSku) {
+            // Handle addon bundle logic if enabled
+            if (data.certExam?.productSku && data.addonEnabled) {
                 const certSku = data.certExam.productSku;
                 const addonSku = `${certSku}-1mo-addon`;
+                const examName = data.certExam.name || data.category?.name || 'Exam';
                 
-                if (data.addonEnabled) {
-                     const examName = data.certExam.name || data.category?.name || 'Exam';
-                     await googleSheetsService.adminUpsertProduct(token, {
-                        sku: addonSku,
-                        name: `${examName} - 1-Month Premium Access`,
-                        price: parseFloat(data.addonPrice || '0'),
-                        regularPrice: parseFloat(data.addonRegularPrice || '0'),
-                        isBundle: true,
-                        bundled_skus: [certSku, 'sub-monthly']
-                    });
-                }
+                await googleSheetsService.adminUpsertProduct(token, {
+                    sku: addonSku,
+                    name: `${examName} - 1-Month Premium Access`,
+                    price: parseFloat(data.addonPrice || '0'),
+                    regularPrice: parseFloat(data.addonRegularPrice || '0'),
+                    isBundle: true,
+                    bundled_skus: [certSku, 'sub-monthly']
+                });
             }
 
             await refreshConfig();
