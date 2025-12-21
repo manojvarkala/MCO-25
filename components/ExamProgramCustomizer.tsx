@@ -110,21 +110,27 @@ interface ExamEditorProps {
 const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, unlinkedProducts, suggestedBooks, examPrices }) => {
     const { activeOrg } = useAppContext();
     
+    // Safety: ensure certExam exists for state management even if not in the linked list
+    const initialCertExam = useMemo(() => {
+        if (program.certExam) return { ...program.certExam };
+        return { id: program.category.certificationExamId, productSku: '', name: program.category.name } as Partial<Exam>;
+    }, [program]);
+
     const addonData = useMemo(() => {
-        if (!program.certExam?.productSku || !examPrices) return { enabled: false, price: '', regPrice: '' };
-        const addonSku = `${program.certExam.productSku}-1mo-addon`;
+        if (!initialCertExam?.productSku || !examPrices) return { enabled: false, price: '', regPrice: '' };
+        const addonSku = `${initialCertExam.productSku}-1mo-addon`;
         const data = examPrices[addonSku];
         return {
             enabled: !!data,
             price: data?.price?.toString() || '',
             regPrice: data?.regularPrice?.toString() || ''
         };
-    }, [program.certExam, examPrices]);
+    }, [initialCertExam, examPrices]);
 
     const [data, setData] = useState<EditableProgramData>({
         category: { ...program.category },
-        practiceExam: program.practiceExam ? { ...program.practiceExam } : undefined,
-        certExam: program.certExam ? { ...program.certExam } : undefined,
+        practiceExam: program.practiceExam ? { ...program.practiceExam } : { id: program.category.practiceExamId } as any,
+        certExam: initialCertExam,
         addonEnabled: addonData.enabled,
         addonPrice: addonData.price,
         addonRegularPrice: addonData.regPrice
@@ -133,13 +139,13 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
     useEffect(() => {
         setData({
             category: { ...program.category },
-            practiceExam: program.practiceExam ? { ...program.practiceExam } : undefined,
-            certExam: program.certExam ? { ...program.certExam } : undefined,
+            practiceExam: program.practiceExam ? { ...program.practiceExam } : { id: program.category.practiceExamId } as any,
+            certExam: initialCertExam,
             addonEnabled: addonData.enabled,
             addonPrice: addonData.price,
             addonRegularPrice: addonData.regPrice
         });
-    }, [program, addonData]);
+    }, [program, initialCertExam, addonData]);
 
     const handleCategoryChange = (field: keyof ExamProductCategory, value: string) => {
         setData(prev => ({ ...prev, category: { ...prev.category, [field]: value } }));
@@ -148,7 +154,7 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
     const handleExamChange = (examType: 'practiceExam' | 'certExam', field: keyof Exam, value: any) => {
         setData(prev => ({
             ...prev,
-            [examType]: prev[examType] ? { ...prev[examType], [field]: value } : undefined
+            [examType]: { ...prev[examType], [field]: value }
         }));
     };
 
@@ -156,27 +162,21 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
         setData(prev => {
             let nextPrice = prev.addonPrice;
             let nextReg = prev.addonRegularPrice;
-            
-            // Set defaults if enabling for the first time and prices are empty
-            if (enabled && !nextPrice && prev.certExam?.price) {
-                nextPrice = (prev.certExam.price + 10).toString();
-                nextReg = (prev.certExam.regularPrice ? prev.certExam.regularPrice + 20 : prev.certExam.price + 30).toString();
+            if (enabled && !nextPrice && prev.certExam?.productSku && examPrices) {
+                const basePrice = examPrices[prev.certExam.productSku]?.price || 0;
+                nextPrice = (basePrice + 10).toString();
+                nextReg = (basePrice + 30).toString();
             }
-
-            return {
-                ...prev,
-                addonEnabled: enabled,
-                addonPrice: nextPrice,
-                addonRegularPrice: nextReg
-            };
+            return { ...prev, addonEnabled: enabled, addonPrice: nextPrice, addonRegularPrice: nextReg };
         });
     };
 
     const { category, practiceExam, certExam, addonEnabled, addonPrice, addonRegularPrice } = data;
     const initialLinkedProductInfo = useMemo(() => {
-        if (!program.certExam?.productSku || !examPrices) return null;
-        const info = examPrices[program.certExam.productSku];
-        return info ? { sku: program.certExam.productSku, name: info.name } : null;
+        const sku = program.certExam?.productSku || '';
+        if (!sku || !examPrices) return null;
+        const info = examPrices[sku];
+        return info ? { sku, name: info.name } : null;
     }, [program.certExam, examPrices]);
 
     return (
@@ -198,77 +198,74 @@ const ExamEditor: FC<ExamEditorProps> = ({ program, onSave, onCancel, isSaving, 
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                {/* Certification Exam Box */}
-                {certExam && (
-                    <div className="p-4 border rounded-xl bg-white space-y-4 shadow-sm">
-                        <h4 className="font-bold flex items-center gap-2 border-b pb-2"><Award size={18} className="text-blue-500" /> Certification Exam</h4>
+                {/* Certification Exam Box - ALWAYS VISIBLE */}
+                <div className="p-4 border rounded-xl bg-white space-y-4 shadow-sm">
+                    <h4 className="font-bold flex items-center gap-2 border-b pb-2"><Award size={18} className="text-blue-500" /> Certification Exam</h4>
+                    <div>
+                        <label className="text-xs font-bold text-slate-500">Linked Product</label>
+                        <select value={certExam?.productSku || ''} onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} className="w-full p-2 border rounded bg-slate-50 mt-1">
+                            <option value="">-- No Product Linked --</option>
+                            {initialLinkedProductInfo && <option value={initialLinkedProductInfo.sku}>{initialLinkedProductInfo.name} ({initialLinkedProductInfo.sku})</option>}
+                            {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
+                        </select>
+                        <p className="text-[10px] text-slate-400 mt-1 italic">Selecting a product links this program to your WooCommerce store.</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="text-xs font-bold text-slate-500">Linked Product</label>
-                            <select value={certExam.productSku || ''} onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} className="w-full p-2 border rounded bg-slate-50 mt-1">
-                                <option value="">-- No Product Linked --</option>
-                                {initialLinkedProductInfo && <option value={initialLinkedProductInfo.sku}>{initialLinkedProductInfo.name} ({initialLinkedProductInfo.sku})</option>}
-                                {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
-                            </select>
+                            <label className="text-xs font-bold text-slate-500">Questions</label>
+                            <input type="number" value={certExam?.numberOfQuestions || ''} onChange={e => handleExamChange('certExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-slate-50" />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-xs font-bold text-slate-500">Questions</label>
-                                <input type="number" value={certExam.numberOfQuestions || ''} onChange={e => handleExamChange('certExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-slate-50" />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-500">Mins</label>
-                                <input type="number" value={certExam.durationMinutes || ''} onChange={e => handleExamChange('certExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-slate-50" />
-                            </div>
+                        <div>
+                            <label className="text-xs font-bold text-slate-500">Mins</label>
+                            <input type="number" value={certExam?.durationMinutes || ''} onChange={e => handleExamChange('certExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-slate-50" />
                         </div>
+                    </div>
 
-                        {/* ADDON SECTION */}
-                        <div className={`p-3 rounded-lg border-2 transition ${addonEnabled ? 'border-blue-200 bg-blue-50' : 'border-slate-100 bg-slate-50 opacity-70'}`}>
-                            <label className="flex items-center gap-2 cursor-pointer mb-2">
-                                <input type="checkbox" checked={addonEnabled} onChange={e => toggleAddon(e.target.checked)} className="h-4 w-4 rounded text-blue-600" />
-                                <span className="font-bold text-sm">Enable 1-Month Addon Bundle</span>
-                            </label>
-                            {addonEnabled && (
-                                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-blue-100">
-                                    <div>
-                                        <label className="text-[10px] font-bold uppercase text-slate-500">Addon Sale Price</label>
-                                        <div className="relative mt-1">
-                                            <span className="absolute left-2 top-2 text-slate-400">$</span>
-                                            <input type="number" value={addonPrice} onChange={e => setData(prev => ({...prev, addonPrice: e.target.value}))} className="w-full p-1.5 pl-5 border rounded bg-white text-sm" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold uppercase text-slate-500">Addon Regular Price</label>
-                                        <div className="relative mt-1">
-                                            <span className="absolute left-2 top-2 text-slate-400">$</span>
-                                            <input type="number" value={addonRegularPrice} onChange={e => setData(prev => ({...prev, addonRegularPrice: e.target.value}))} className="w-full p-1.5 pl-5 border rounded bg-white text-sm" />
-                                        </div>
+                    {/* ADDON SECTION */}
+                    <div className={`p-3 rounded-lg border-2 transition ${addonEnabled ? 'border-blue-200 bg-blue-50' : 'border-slate-100 bg-slate-50 opacity-70'}`}>
+                        <label className="flex items-center gap-2 cursor-pointer mb-2">
+                            <input type="checkbox" checked={addonEnabled} onChange={e => toggleAddon(e.target.checked)} className="h-4 w-4 rounded text-blue-600" />
+                            <span className="font-bold text-sm">Enable 1-Month Addon Bundle</span>
+                        </label>
+                        {addonEnabled && (
+                            <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-blue-100">
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-slate-500">Addon Sale Price</label>
+                                    <div className="relative mt-1">
+                                        <span className="absolute left-2 top-2 text-slate-400">$</span>
+                                        <input type="number" value={addonPrice} onChange={e => setData(prev => ({...prev, addonPrice: e.target.value}))} className="w-full p-1.5 pl-5 border rounded bg-white text-sm" />
                                     </div>
                                 </div>
-                            )}
-                        </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-slate-500">Addon Regular Price</label>
+                                    <div className="relative mt-1">
+                                        <span className="absolute left-2 top-2 text-slate-400">$</span>
+                                        <input type="number" value={addonRegularPrice} onChange={e => setData(prev => ({...prev, addonRegularPrice: e.target.value}))} className="w-full p-1.5 pl-5 border rounded bg-white text-sm" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                )}
+                </div>
 
                 {/* Practice Exam Box */}
-                {practiceExam && (
-                    <div className="p-4 border rounded-xl bg-white space-y-4 shadow-sm">
-                        <h4 className="font-bold flex items-center gap-2 border-b pb-2"><FileText size={18} className="text-emerald-500" /> Practice Exam</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-xs font-bold text-slate-500">Questions</label>
-                                <input type="number" value={practiceExam.numberOfQuestions || ''} onChange={e => handleExamChange('practiceExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-slate-50" />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-500">Duration (Mins)</label>
-                                <input type="number" value={practiceExam.durationMinutes || ''} onChange={e => handleExamChange('practiceExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-slate-50" />
-                            </div>
+                <div className="p-4 border rounded-xl bg-white space-y-4 shadow-sm">
+                    <h4 className="font-bold flex items-center gap-2 border-b pb-2"><FileText size={18} className="text-emerald-500" /> Practice Exam</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-xs font-bold text-slate-500">Questions</label>
+                            <input type="number" value={practiceExam?.numberOfQuestions || ''} onChange={e => handleExamChange('practiceExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-slate-50" />
                         </div>
-                        <label className="flex items-center gap-2 text-sm cursor-pointer pt-2">
-                            <input type="checkbox" checked={practiceExam.certificateEnabled || false} onChange={e => handleExamChange('practiceExam', 'certificateEnabled', e.target.checked)} />
-                            Enable Practice Certificate
-                        </label>
+                        <div>
+                            <label className="text-xs font-bold text-slate-500">Duration (Mins)</label>
+                            <input type="number" value={practiceExam?.durationMinutes || ''} onChange={e => handleExamChange('practiceExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-slate-50" />
+                        </div>
                     </div>
-                )}
+                    <label className="flex items-center gap-2 text-sm cursor-pointer pt-2">
+                        <input type="checkbox" checked={practiceExam?.certificateEnabled || false} onChange={e => handleExamChange('practiceExam', 'certificateEnabled', e.target.checked)} />
+                        Enable Practice Certificate
+                    </label>
+                </div>
             </div>
             
             <div className="flex justify-end gap-3 pt-4">
@@ -318,9 +315,14 @@ const ExamProgramCustomizer: FC = () => {
     
     const unlinkedProducts = useMemo(() => {
         if (!examPrices || !activeOrg) return [];
-        const linkedSkus = new Set(activeOrg.exams.map(e => e.productSku).filter(Boolean));
+        const usedSkus = new Set(activeOrg.exams.map(e => e.productSku).filter(Boolean));
         return Object.entries(examPrices)
-            .filter(([sku, data]: [string, any]) => !sku.startsWith('sub-') && !data.isBundle && !linkedSkus.has(sku))
+            .filter(([sku, data]: [string, any]) => {
+                if (sku.startsWith('sub-')) return false;
+                if (data.isBundle && !sku.endsWith('-addon')) return false; // Hide non-addon bundles to keep simple
+                if (usedSkus.has(sku)) return false;
+                return true;
+            })
             .map(([sku, data]: [string, any]) => ({ sku, name: data.name }));
     }, [examPrices, activeOrg]);
 
@@ -452,7 +454,7 @@ const ExamProgramCustomizer: FC = () => {
                                 <div className="flex-grow">
                                     <p className="font-bold text-[rgb(var(--color-text-strong-rgb))]">{p.category.name}</p>
                                     <div className="flex gap-4 mt-1">
-                                        {p.certExam?.productSku && <span className="text-xs text-slate-500 font-mono">SKU: {p.certExam.productSku}</span>}
+                                        {p.certExam?.productSku ? <span className="text-xs text-slate-500 font-mono">SKU: {p.certExam.productSku}</span> : <span className="text-xs text-red-400 italic">No Product Linked</span>}
                                         {p.stat && <span className="text-xs text-slate-500 font-mono">Sales: {p.stat.totalSales}</span>}
                                     </div>
                                 </div>

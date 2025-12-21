@@ -24,7 +24,7 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for heavy WC tasks
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
     const config: RequestInit = {
         method,
@@ -48,9 +48,9 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 errorData = JSON.parse(responseText);
             } catch (e) {
                 if (response.status === 404) {
-                    throw new Error(`Endpoint not found (404). This usually means the WordPress plugin is out of date. Please download the latest version from the Integration tab.`);
+                    throw new Error(`Endpoint not found (404). This usually means the WordPress plugin is out of date. Please download and install the latest version from the Integration tab.`);
                 }
-                throw new Error(`Server error (${response.status}) at ${endpoint}. Check server logs.`);
+                throw new Error(`Server error (${response.status}) at ${endpoint}.`);
             }
 
             if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_auth_invalid_token') {
@@ -71,7 +71,7 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
              throw new Error("Connection Timeout: The server took too long to process the request.");
         }
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-            throw new Error(`Could not connect to the API server (${API_BASE_URL}). Ensure the plugin is active and CORS is configured.`);
+            throw new Error(`Could not connect to the API server (${API_BASE_URL}). Check plugin status.`);
         }
         throw error;
     }
