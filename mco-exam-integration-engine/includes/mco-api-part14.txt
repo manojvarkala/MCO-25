@@ -5,6 +5,7 @@
 function mco_api_get_exam_stats(WP_REST_Request $request) {
     global $wpdb;
     
+    // Bulk fetch all user results
     $query = "SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'";
     $meta_rows = $wpdb->get_results($query);
     
@@ -15,10 +16,16 @@ function mco_api_get_exam_stats(WP_REST_Request $request) {
             foreach ($res_array as $r) {
                 $eid = $r['examId'] ?? 'unknown';
                 if (!isset($stats[$eid])) {
-                    $stats[$eid] = ['attempts' => 0, 'passes' => 0, 'scoreSum' => 0];
+                    $stats[$eid] = [
+                        'attempts' => 0, 
+                        'passes' => 0, 
+                        'scoreSum' => 0,
+                        'users' => []
+                    ];
                 }
                 $stats[$eid]['attempts']++;
                 $stats[$eid]['scoreSum'] += (float)($r['score'] ?? 0);
+                $stats[$eid]['users'][] = $m->user_id;
                 if ((float)($r['score'] ?? 0) >= 70) $stats[$eid]['passes']++;
             }
         }
@@ -34,13 +41,15 @@ function mco_api_get_exam_stats(WP_REST_Request $request) {
             'id'           => $eid,
             'name'         => $eid,
             'attempts'     => $s['attempts'],
+            'uniqueUsers'  => count(array_unique($s['users'])),
             'averageScore' => $s['attempts'] > 0 ? $s['scoreSum'] / $s['attempts'] : 0,
             'passRate'     => $s['attempts'] > 0 ? ($s['passes'] / $s['attempts']) * 100 : 0,
             'totalSales'   => $sales,
             'totalRevenue' => $sales * $price,
-            'engagements'  => $sales * 7
+            'engagements'  => $sales * 7 // Multiplier for estimated reach
         ];
     }
+    
     return new WP_REST_Response($final, 200);
 }
 
@@ -51,8 +60,10 @@ function mco_api_get_debug_details(WP_REST_Request $request) {
     return new WP_REST_Response([
         'user'          => $payload['user'],
         'server_time'   => current_time('mysql'),
+        'php_version'   => PHP_VERSION,
+        'wp_version'    => get_bloginfo('version'),
         'purchases'     => get_user_meta($uid, 'mco_paid_exams', true) ?: [],
-        'results'       => (array)maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true)),
-        'sheetTest'     => ['success' => true, 'message' => 'System Online']
+        'results_count' => count((array)maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true))),
+        'jwt_status'    => 'Validated'
     ], 200);
 }

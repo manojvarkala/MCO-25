@@ -9,7 +9,9 @@ function mco_api_get_user_results(WP_REST_Request $request) {
     $results = get_user_meta($user_id, 'mco_exam_results', true);
     if (empty($results)) return new WP_REST_Response([], 200);
     
+    // Ensure data is unserialized for the JSON response
     $results = is_array($results) ? $results : maybe_unserialize($results);
+    
     return new WP_REST_Response(array_values((array)$results), 200);
 }
 
@@ -25,16 +27,28 @@ function mco_api_submit_result(WP_REST_Request $request) {
     $existing = get_user_meta($user_id, 'mco_exam_results', true);
     $existing = is_array($existing) ? $existing : (empty($existing) ? [] : maybe_unserialize($existing));
     
+    // Prevent duplicate submissions of the same Test ID
     foreach ((array)$existing as $r) {
         if (isset($r['testId']) && $r['testId'] === $new_result['testId']) {
             return new WP_REST_Response(['success' => true, 'note' => 'Duplicate ignored'], 200);
         }
     }
 
+    // Add server metadata
     $new_result['server_timestamp'] = current_time('timestamp');
+    $new_result['ip_address'] = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    
     $existing[] = $new_result;
+    
+    // Save as serialized data
     update_user_meta($user_id, 'mco_exam_results', $existing);
+    
+    // Clear relevant caches
     delete_transient('mco_app_config_data');
     
-    return new WP_REST_Response(['success' => true, 'count' => count($existing)], 200);
+    return new WP_REST_Response([
+        'success' => true, 
+        'count' => count($existing),
+        'testId' => $new_result['testId']
+    ], 200);
 }

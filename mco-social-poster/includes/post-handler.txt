@@ -2,23 +2,48 @@
 if (!defined('ABSPATH')) exit;
 
 /**
- * Listens for AI Post creation and triggers social dispatch
+ * Listens for AI Post creation and triggers social dispatch based on enabled status.
  */
 function mco_social_dispatch_post($post_id) {
     $options = get_option('mco_social_settings');
     $post = get_post($post_id);
     
-    if (!$post || empty($options['fb_token'])) return;
+    if (!$post) return;
 
     $message = "New Certification Update: " . get_the_title($post_id) . " - Read more at " . get_permalink($post_id);
 
-    // Facebook Dispatch
-    wp_remote_post('https://graph.facebook.com/v19.0/me/feed', [
-        'body' => [
-            'message' => $message,
-            'access_token' => $options['fb_token']
-        ]
-    ]);
+    // 1. Facebook Dispatch
+    if (!empty($options['facebook_enabled']) && !empty($options['facebook_access_token']) && !empty($options['facebook_page_id'])) {
+        $fb_url = "https://graph.facebook.com/v19.0/" . $options['facebook_page_id'] . "/feed";
+        wp_remote_post($fb_url, [
+            'body' => [
+                'message' => $message,
+                'access_token' => $options['facebook_access_token']
+            ]
+        ]);
+    }
+
+    // 2. LinkedIn Dispatch
+    if (!empty($options['linkedin_enabled']) && !empty($options['linkedin_access_token']) && !empty($options['linkedin_page_id'])) {
+        $li_url = "https://api.linkedin.com/v2/ugcPosts";
+        wp_remote_post($li_url, [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $options['linkedin_access_token'],
+                'Content-Type' => 'application/json',
+                'X-Restli-Protocol-Version' => '2.0.0'
+            ],
+            'body' => json_encode([
+                'author' => 'urn:li:organization:' . $options['linkedin_page_id'],
+                'lifecycleState' => 'PUBLISHED',
+                'specificContent' => [
+                    'com.linkedin.ugc.ShareContent' => [
+                        'shareCommentary' => ['text' => $message],
+                        'shareMediaCategory' => 'NONE'
+                    ]
+                ],
+                'visibility' => ['com.linkedin.ugc.MemberNetworkVisibility' => 'PUBLIC']
+            ])
+        ]);
+    }
 }
 add_action('mco_ai_post_created', 'mco_social_dispatch_post');
-?>

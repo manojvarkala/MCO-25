@@ -2,17 +2,15 @@
 if (!defined('ABSPATH')) exit;
 
 function mco_social_render_admin_page() {
-    if (isset($_GET['settings-updated'])) {
-        add_settings_error('mco_social_messages', 'mco_social_message', __('Settings Saved', 'mco-social'), 'updated');
-    }
-    settings_errors('mco_social_messages');
     ?>
     <div class="wrap">
-        <h1>MCO Social Poster Settings</h1>
-        <form action="options.php" method="post">
+        <h1>MCO-Social Poster Settings</h1>
+        <p>Connect your social media accounts to automatically share new AI-generated blog posts.</p>
+        
+        <form method="post" action="options.php">
             <?php
-            settings_fields('mco_social_options');
-            do_settings_sections('mco-social-settings');
+            settings_fields('mco_social_options_group');
+            do_settings_sections('mco-social-poster');
             submit_button('Save Social Credentials');
             ?>
         </form>
@@ -20,23 +18,55 @@ function mco_social_render_admin_page() {
     <?php
 }
 
-function mco_social_init_settings() {
-    register_setting('mco_social_options', 'mco_social_settings');
+function mco_social_register_settings() {
+    register_setting('mco_social_options_group', 'mco_social_settings', 'mco_social_sanitize_settings');
 
-    add_settings_section('mco_social_main', 'API Configuration', null, 'mco-social-settings');
+    // --- Facebook Section ---
+    add_settings_section('mco_social_facebook_section', 'Facebook Settings', null, 'mco-social-poster');
+    add_settings_field('facebook_enabled', 'Enable Facebook Posting', 'mco_social_facebook_enabled_callback', 'mco-social-poster', 'mco_social_facebook_section');
+    add_settings_field('facebook_page_id', 'Facebook Page ID', 'mco_social_facebook_page_id_callback', 'mco-social-poster', 'mco_social_facebook_section');
+    add_settings_field('facebook_access_token', 'Access Token', 'mco_social_facebook_access_token_callback', 'mco-social-poster', 'mco_social_facebook_section');
 
-    add_settings_field('fb_token', 'Facebook Page Token', 'mco_social_fb_token_cb', 'mco-social-settings', 'mco_social_main');
-    add_settings_field('li_token', 'LinkedIn Access Token', 'mco_social_li_token_cb', 'mco-social-settings', 'mco_social_main');
+    // --- LinkedIn Section ---
+    add_settings_section('mco_social_linkedin_section', 'LinkedIn Settings', null, 'mco-social-poster');
+    add_settings_field('linkedin_enabled', 'Enable LinkedIn Posting', 'mco_social_linkedin_enabled_callback', 'mco-social-poster', 'mco_social_linkedin_section');
+    add_settings_field('linkedin_page_id', 'LinkedIn Page ID', 'mco_social_linkedin_page_id_callback', 'mco-social-poster', 'mco_social_linkedin_section');
+    add_settings_field('linkedin_access_token', 'Access Token', 'mco_social_linkedin_access_token_callback', 'mco-social-poster', 'mco_social_linkedin_section');
 }
-add_action('admin_init', 'mco_social_init_settings');
+add_action('admin_init', 'mco_social_register_settings');
 
-function mco_social_fb_token_cb() {
-    $options = get_option('mco_social_settings');
-    echo "<input type='text' name='mco_social_settings[fb_token]' value='" . esc_attr($options['fb_token'] ?? '') . "' class='regular-text'>";
+function mco_social_sanitize_settings($input) {
+    $new = [];
+    $new['facebook_enabled'] = isset($input['facebook_enabled']) ? 1 : 0;
+    $new['facebook_page_id'] = sanitize_text_field($input['facebook_page_id'] ?? '');
+    $new['facebook_access_token'] = sanitize_text_field($input['facebook_access_token'] ?? '');
+    $new['linkedin_enabled'] = isset($input['linkedin_enabled']) ? 1 : 0;
+    $new['linkedin_page_id'] = sanitize_text_field($input['linkedin_page_id'] ?? '');
+    $new['linkedin_access_token'] = sanitize_text_field($input['linkedin_access_token'] ?? '');
+    return $new;
 }
 
-function mco_social_li_token_cb() {
-    $options = get_option('mco_social_settings');
-    echo "<input type='text' name='mco_social_settings[li_token]' value='" . esc_attr($options['li_token'] ?? '') . "' class='regular-text'>";
+function mco_social_facebook_enabled_callback() {
+    $o = get_option('mco_social_settings');
+    echo '<input type="checkbox" name="mco_social_settings[facebook_enabled]" value="1"' . checked(1, $o['facebook_enabled'] ?? 0, false) . '/>';
 }
-?>
+function mco_social_facebook_page_id_callback() {
+    $o = get_option('mco_social_settings');
+    echo '<input type="text" name="mco_social_settings[facebook_page_id]" value="' . esc_attr($o['facebook_page_id'] ?? '') . '" class="regular-text" />';
+}
+function mco_social_facebook_access_token_callback() {
+    $o = get_option('mco_social_settings');
+    echo '<textarea name="mco_social_settings[facebook_access_token]" class="large-text" rows="3">' . esc_attr($o['facebook_access_token'] ?? '') . '</textarea>';
+}
+function mco_social_linkedin_enabled_callback() {
+    $o = get_option('mco_social_settings');
+    echo '<input type="checkbox" name="mco_social_settings[linkedin_enabled]" value="1"' . checked(1, $o['linkedin_enabled'] ?? 0, false) . '/>';
+}
+function mco_social_linkedin_page_id_callback() {
+    $o = get_option('mco_social_settings');
+    echo '<input type="text" name="mco_social_settings[linkedin_page_id]" value="' . esc_attr($o['linkedin_page_id'] ?? '') . '" class="regular-text" />';
+}
+function mco_social_linkedin_access_token_callback() {
+    $o = get_option('mco_social_settings');
+    echo '<textarea name="mco_social_settings[linkedin_access_token]" class="large-text" rows="3">' . esc_attr($o['linkedin_access_token'] ?? '') . '</textarea>';
+}

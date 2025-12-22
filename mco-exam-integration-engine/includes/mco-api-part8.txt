@@ -28,6 +28,7 @@ function mco_api_verify_certificate(WP_REST_Request $request) {
                     $u = get_userdata($row->user_id);
                     $timestamp = $res['timestamp'] ?? time();
                     
+                    // Return full verification payload
                     return new WP_REST_Response([
                         'success'       => true,
                         'candidateName' => $u ? $u->display_name : 'Anonymous User',
