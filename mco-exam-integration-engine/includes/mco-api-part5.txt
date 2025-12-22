@@ -1,22 +1,12 @@
 
 /**
- * 5. HEADLESS: Secure CORS Handler
- * Replaces wildcard origins with the specific configured App URL.
+ * 5. HEADLESS: Simple CORS & Preflight Handler
+ * Reflects the incoming origin to ensure compatibility with Credentials and Auth headers.
  */
 function mco_handle_cors_preflight() {
-    $raw_urls = get_option('mco_exam_app_url', '');
-    $url_list = preg_split('/\r\n|\r|\n/', $raw_urls);
-    $allowed_origin = trim($url_list[0]);
+    $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '*';
     
-    $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-    
-    // Check if the current origin is in our allowed list (simplified for the first entry)
-    if (!empty($allowed_origin)) {
-        header("Access-Control-Allow-Origin: $allowed_origin");
-    } else {
-        header("Access-Control-Allow-Origin: $origin");
-    }
-
+    header("Access-Control-Allow-Origin: $origin");
     header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
     header("Access-Control-Allow-Credentials: true");
     header("Access-Control-Allow-Headers: Origin, Content-Type, Accept, Authorization, X-Requested-With");
@@ -31,13 +21,8 @@ add_action('init', 'mco_handle_cors_preflight', 1);
 add_action('rest_api_init', 'mco_handle_cors_preflight', 1);
 
 function mco_add_cors_headers_to_response($response) {
-    $raw_urls = get_option('mco_exam_app_url', '');
-    $url_list = preg_split('/\r\n|\r|\n/', $raw_urls);
-    $allowed_origin = trim($url_list[0]);
-
-    if (!empty($allowed_origin)) {
-        header("Access-Control-Allow-Origin: $allowed_origin");
-        header("Access-Control-Allow-Credentials: true");
-    }
+    $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '*';
+    header("Access-Control-Allow-Origin: $origin");
+    header("Access-Control-Allow-Credentials: true");
     return $response;
 }
