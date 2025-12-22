@@ -1,26 +1,54 @@
 /**
  * 14. USER: Sheet Proxy & Question Intelligence
+ * Enhanced with auto-detection for 3-column and 6-column CSV formats.
  */
 function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
     $p = $request->get_json_params();
-    $url = $p['sheetUrl'];
+    $url = $p['sheetUrl'] ?? '';
     $count = (int)($p['count'] ?? 0);
     
+    if (empty($url)) return new WP_Error('400', 'Sheet URL is missing.', ['status' => 400]);
+
     $fetch = mco_fetch_remote_csv_content($url);
     if (is_wp_error($fetch)) return $fetch;
 
     $lines = preg_split('/\r\n|\r|\n/', $fetch['body']);
-    array_shift($lines);
+    array_shift($lines); // Remove header
     
-    $q = []; $id = 1;
+    $questions = []; 
+    $id_counter = 1;
+    
     foreach ($lines as $line) {
         $row = str_getcsv($line);
+        if (count($row) < 3) continue;
+
+        // Handle Standard 6-Column Format
         if (count($row) >= 6) {
-            $q[] = ['id' => $id++, 'question' => $row[0], 'options' => array_slice($row, 1, 4), 'correctAnswer' => (int)$row[5]];
+            $questions[] = [
+                'id' => $id_counter++,
+                'question' => $row[0],
+                'options' => array_map('trim', array_slice($row, 1, 4)),
+                'correctAnswer' => (int)filter_var($row[5], FILTER_SANITIZE_NUMBER_INT)
+            ];
+        } 
+        // Handle Legacy/Compact 3-Column Format (Question, OptionsPipe, CorrectIndex)
+        else if (count($row) >= 3) {
+            $options = explode('|', $row[1]);
+            $questions[] = [
+                'id' => $id_counter++,
+                'question' => $row[0],
+                'options' => array_map('trim', $options),
+                'correctAnswer' => (int)filter_var($row[2], FILTER_SANITIZE_NUMBER_INT)
+            ];
         }
     }
-    if ($count > 0) { shuffle($q); $q = array_slice($q, 0, $count); }
-    return new WP_REST_Response($q, 200);
+
+    if ($count > 0 && count($questions) > $count) {
+        shuffle($questions);
+        $questions = array_slice($questions, 0, $count);
+    }
+    
+    return new WP_REST_Response($questions, 200);
 }
 
 /**
@@ -28,7 +56,10 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
  */
 function mco_api_create_checkout_session(WP_REST_Request $request) {
     $p = $request->get_json_params();
-    $pid = wc_get_product_id_by_sku($p['sku']);
-    if (!$pid) return new WP_Error('404', 'Product not found.', ['status' => 404]);
-    return new WP_REST_Response(['checkoutUrl' => add_query_arg('add-to-cart', $pid, wc_get_checkout_url())], 200);
+    $sku = sanitize_text_field($p['sku'] ?? '');
+    $pid = wc_get_product_id_by_sku($sku);
+    if (!$pid) return new WP_Error('404', 'Product SKU not found in WooCommerce.', ['status' => 404]);
+    
+    $checkout_url = add_query_arg('add-to-cart', $pid, wc_get_checkout_url());
+    return new WP_REST_Response(['checkoutUrl' => $checkout_url], 200);
 }
