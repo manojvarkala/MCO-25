@@ -1,6 +1,6 @@
 /**
  * 9. PUBLIC: Industrial Certificate Authenticator
- * This function performs a deep-scan of the database to verify certificate 
+ * Performs a deep-scan of the database to verify certificate 
  * authenticity based on a truncated MD5 hash of the unique Test ID.
  */
 function mco_api_verify_certificate(WP_REST_Request $request) {
@@ -28,7 +28,6 @@ function mco_api_verify_certificate(WP_REST_Request $request) {
                     $u = get_userdata($row->user_id);
                     $timestamp = $res['timestamp'] ?? time();
                     
-                    // Return full verification payload
                     return new WP_REST_Response([
                         'success'       => true,
                         'candidateName' => $u ? $u->display_name : 'Anonymous User',

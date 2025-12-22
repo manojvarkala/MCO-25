@@ -1,20 +1,28 @@
 /**
  * 14. USER: Sheet Proxy & Question Intelligence
- * Enhanced with auto-detection for 3-column and 6-column CSV formats.
+ * Parses CSV with industrial-grade error recovery.
  */
 function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
     $p = $request->get_json_params();
     $url = $p['sheetUrl'] ?? '';
     $count = (int)($p['count'] ?? 0);
     
-    if (empty($url)) return new WP_Error('400', 'Sheet URL is missing.', ['status' => 400]);
+    if (empty($url)) {
+        error_log('MCO SHEET ERR: Empty URL requested by user.');
+        return new WP_Error('400', 'URL missing.');
+    }
 
     $fetch = mco_fetch_remote_csv_content($url);
-    if (is_wp_error($fetch)) return $fetch;
+    if (is_wp_error($fetch)) {
+        error_log('MCO SHEET ERR: Fetch failed for ' . $url);
+        return $fetch;
+    }
 
     $lines = preg_split('/\r\n|\r|\n/', $fetch['body']);
-    array_shift($lines); // Remove header
+    $header = str_getcsv(array_shift($lines));
     
+    error_log('MCO SHEET: Parsing ' . count($lines) . ' rows from ' . $url);
+
     $questions = []; 
     $id_counter = 1;
     
@@ -22,7 +30,7 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
         $row = str_getcsv($line);
         if (count($row) < 3) continue;
 
-        // Handle Standard 6-Column Format
+        // Industrial Format Handling
         if (count($row) >= 6) {
             $questions[] = [
                 'id' => $id_counter++,
@@ -30,9 +38,8 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
                 'options' => array_map('trim', array_slice($row, 1, 4)),
                 'correctAnswer' => (int)filter_var($row[5], FILTER_SANITIZE_NUMBER_INT)
             ];
-        } 
-        // Handle Legacy/Compact 3-Column Format (Question, OptionsPipe, CorrectIndex)
-        else if (count($row) >= 3) {
+        } else {
+            // Legacy Pipe Handling
             $options = explode('|', $row[1]);
             $questions[] = [
                 'id' => $id_counter++,
@@ -57,9 +64,14 @@ function mco_api_get_questions_from_sheet(WP_REST_Request $request) {
 function mco_api_create_checkout_session(WP_REST_Request $request) {
     $p = $request->get_json_params();
     $sku = sanitize_text_field($p['sku'] ?? '');
-    $pid = wc_get_product_id_by_sku($sku);
-    if (!$pid) return new WP_Error('404', 'Product SKU not found in WooCommerce.', ['status' => 404]);
     
-    $checkout_url = add_query_arg('add-to-cart', $pid, wc_get_checkout_url());
-    return new WP_REST_Response(['checkoutUrl' => $checkout_url], 200);
+    error_log('MCO COMMERCE: Creating checkout for SKU: ' . $sku);
+    
+    $pid = wc_get_product_id_by_sku($sku);
+    if (!$pid) {
+        error_log('MCO COMMERCE ERR: SKU ' . $sku . ' not found in WooCommerce.');
+        return new WP_Error('404', 'Product not found.');
+    }
+    
+    return new WP_REST_Response(['checkoutUrl' => add_query_arg('add-to-cart', $pid, wc_get_checkout_url())], 200);
 }
