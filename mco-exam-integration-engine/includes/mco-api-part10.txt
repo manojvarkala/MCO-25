@@ -1,53 +1,25 @@
 /**
- * 11. USER: Result Submission & Data Integrity
- * Ensures that large result arrays are saved without data loss or duplication.
+ * 11. USER: Result Submission & Synchronization
  */
+function mco_api_get_user_results(WP_REST_Request $request) {
+    $payload = $request->get_param('jwt_payload');
+    $user_id = $payload['user']['id'];
+    $results = get_user_meta($user_id, 'mco_exam_results', true);
+    if (empty($results)) return new WP_REST_Response([], 200);
+    return new WP_REST_Response(array_values((array)maybe_unserialize($results)), 200);
+}
+
 function mco_api_submit_result(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
-    $user_id = (int)$payload['user']['id'];
-    $new_result = $request->get_json_params();
-
-    if (empty($new_result) || !isset($new_result['testId'])) {
-        return new WP_Error('mco_invalid_data', 'Submission data is malformed.', ['status' => 400]);
-    }
-
-    // High-Integrity Fetch: Prevent Race Conditions
-    $existing = get_user_meta($user_id, 'mco_exam_results', true);
-    if (!is_array($existing)) {
-        $existing = !empty($existing) ? maybe_unserialize($existing) : [];
-    }
-    if (!is_array($existing)) $existing = [];
-
-    // Duplicate Prevention: Check if this specific attempt was already recorded
-    foreach ($existing as $recorded) {
-        if (isset($recorded['testId']) && $recorded['testId'] === $new_result['testId']) {
-            return new WP_REST_Response(['success' => true, 'note' => 'duplicate_entry_ignored'], 200);
-        }
-    }
-
-    // Augment result with server-side metadata for auditing
-    $new_result['server_timestamp'] = current_time('timestamp');
-    $new_result['user_ip'] = $_SERVER['REMOTE_ADDR'];
-    $new_result['user_agent'] = $_SERVER['HTTP_USER_AGENT'];
-
-    // Append and Persist
-    $existing[] = $new_result;
-    $updated = update_user_meta($user_id, 'mco_exam_results', $existing);
-
-    if (!$updated) {
-        // Fallback for cases where meta update returns false but data is same
-        $verify = get_user_meta($user_id, 'mco_exam_results', true);
-        if (count($verify) !== count($existing)) {
-            return new WP_Error('mco_db_fail', 'Database write failed.', ['status' => 500]);
-        }
-    }
-
-    // Force clear of global config cache to reflect new attempt counts in stats
-    delete_transient('mco_app_config_data');
+    $user_id = $payload['user']['id'];
+    $new_res = $request->get_json_params();
     
-    return new WP_REST_Response([
-        'success' => true,
-        'testId'  => $new_result['testId'],
-        'count'   => count($existing)
-    ], 200);
+    $existing = maybe_unserialize(get_user_meta($user_id, 'mco_exam_results', true)) ?: [];
+    foreach ($existing as $r) {
+        if ($r['testId'] === $new_res['testId']) return new WP_REST_Response(['success' => true], 200);
+    }
+
+    $existing[] = $new_res;
+    update_user_meta($user_id, 'mco_exam_results', $existing);
+    return new WP_REST_Response(['success' => true], 200);
 }

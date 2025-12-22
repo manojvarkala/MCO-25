@@ -1,3 +1,15 @@
+    if (empty($paid_exam_skus) && class_exists('WooCommerce')) {
+        $orders = wc_get_orders(['customer_id' => $user_id, 'status' => ['wc-completed', 'wc-processing']]);
+        $paid_exam_skus = [];
+        foreach ($orders as $order) {
+            foreach ($order->get_items() as $item) {
+                $product = $item->get_product();
+                if ($product && $product->get_sku()) $paid_exam_skus[] = $product->get_sku();
+            }
+        }
+        $paid_exam_skus = array_unique($paid_exam_skus);
+        update_user_meta($user_id, 'mco_paid_exams', $paid_exam_skus);
+    }
 
     $payload = json_encode([
         'iss' => get_bloginfo('url'),

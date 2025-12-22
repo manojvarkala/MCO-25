@@ -1,4 +1,3 @@
-
 /**
  * 4. SECURITY: JWT Validator
  */
@@ -9,7 +8,7 @@ function mco_verify_exam_jwt($token) {
 
     $parts = explode('.', $token);
     if (count($parts) !== 3) {
-        return new WP_Error('mco_invalid', 'Invalid token format.', ['status' => 401]);
+        return new WP_Error('jwt_auth_invalid_token', 'Invalid token format.', ['status' => 401]);
     }
 
     $header = $parts[0];
@@ -19,11 +18,11 @@ function mco_verify_exam_jwt($token) {
     $check_sig = mco_base64url_encode(hash_hmac('sha256', $header . "." . $payload, MCO_JWT_SECRET, true));
     
     if (!hash_equals($signature, $check_sig)) {
-        return new WP_Error('jwt_auth_invalid_token', 'JWT Signature mismatch.', ['status' => 403]);
+        return new WP_Error('jwt_auth_bad_signature', 'JWT Signature mismatch.', ['status' => 403]);
     }
 
     $decoded = json_decode(mco_base64url_decode($payload), true);
-    if (!$decoded) return new WP_Error('mco_corrupt', 'Token data corrupt.', ['status' => 403]);
+    if (!$decoded) return new WP_Error('jwt_auth_invalid_payload', 'Token data corrupt.', ['status' => 403]);
 
     if (isset($decoded['exp']) && $decoded['exp'] < time()) {
         return new WP_Error('jwt_auth_expired_token', 'Session expired.', ['status' => 403]);

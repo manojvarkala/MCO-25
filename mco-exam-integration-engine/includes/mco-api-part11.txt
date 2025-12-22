@@ -1,26 +1,30 @@
-
 /**
- * 12. USER: Asset Data
+ * 12. USER: Certificate Asset Generation
  */
 function mco_api_get_certificate_data(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
     $testId = $request->get_param('testId');
-    $results = get_user_meta($payload['user']['id'], 'mco_exam_results', true) ?: [];
+    $user_id = $payload['user']['id'];
     
+    $results = maybe_unserialize(get_user_meta($user_id, 'mco_exam_results', true)) ?: [];
     foreach ($results as $res) {
         if ($res['testId'] === $testId) {
             return new WP_REST_Response([
                 'certificateNumber' => strtoupper(substr(md5($testId), 0, 12)),
                 'candidateName'     => $payload['user']['name'],
-                'finalScore'        => $res['score'],
+                'finalScore'        => (float)$res['score'],
                 'date'              => date('F j, Y', $res['timestamp'] / 1000),
-                'examId'            => $res['examId']
+                'examId'            => $res['examId'],
+                'examName'          => $res['examId']
             ], 200);
         }
     }
     return new WP_Error('404', 'Result not found.', ['status' => 404]);
 }
 
+/**
+ * 13. USER: Identity Synchronization
+ */
 function mco_api_update_name(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
     $p = $request->get_json_params();

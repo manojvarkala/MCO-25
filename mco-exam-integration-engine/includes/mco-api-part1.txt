@@ -1,87 +1,54 @@
 <?php
 /**
- * MCO API Engine - Part 1: Heavy-Duty Multi-Tier Fetcher
- * Version: 3.8.5 (Enterprise Grade)
- * This logic ensures Google Sheets are reachable even behind strict firewalls.
+ * MCO API Engine - Part 1: Industrial Multi-Tier Fetcher
+ * Version: 3.9.0 (Production Standard)
+ * Description: High-performance network layer with 3-tier fallback.
  */
-
 if (!defined('ABSPATH')) exit;
 
 if (!function_exists('mco_fetch_remote_csv_content')) {
+    /**
+     * Attempts to fetch remote CSV content using three different PHP/WP methods.
+     * Essential for handling varied server environments and strict firewalls.
+     */
     function mco_fetch_remote_csv_content($url) {
-        if (empty($url)) {
-            return new WP_Error('mco_url_empty', 'CSV Source URL is empty.');
-        }
-
-        $args = array(
+        if (empty($url)) return new WP_Error('empty', 'URL Empty');
+        $args = [
             'timeout'     => 60,
             'redirection' => 10,
-            'httpversion' => '1.1',
-            'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'blocking'    => true,
-            'headers'     => array('Accept' => 'text/csv'),
-            'sslverify'   => false
-        );
-
-        // --- TIER 1: WordPress HTTP API ---
-        $response = wp_remote_get(esc_url_raw($url), $args);
-
-        if (is_wp_error($response)) {
-            // --- TIER 2: cURL Fallback (Required for LiteSpeed/Nginx) ---
-            if (function_exists('curl_init')) {
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, $url);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                if (defined('CURLOPT_FOLLOWLOCATION')) curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 60);
-                $body = curl_exec($ch);
-                $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                curl_close($ch);
-
-                if ($code === 200 && !empty($body)) {
-                    return array('body' => $body, 'response' => array('code' => 200));
-                }
-            }
-
-            // --- TIER 3: file_get_contents Stream ---
-            if (ini_get('allow_url_fopen')) {
-                $ctx = stream_context_create(array('http' => array('timeout' => 60)));
-                $body = @file_get_contents($url, false, $ctx);
-                if ($body !== false) {
-                    return array('body' => $body, 'response' => array('code' => 200));
-                }
-            }
-
-            // --- TIER 4: fsockopen (The Last Resort) ---
-            $url_parts = parse_url($url);
-            $host = $url_parts['host'];
-            $path = $url_parts['path'] . (isset($url_parts['query']) ? '?' . $url_parts['query'] : '');
-            $fp = @fsockopen($host, 80, $errno, $errstr, 30);
-            if ($fp) {
-                $out = "GET $path HTTP/1.1\r\nHost: $host\r\nConnection: Close\r\n\r\n";
-                fwrite($fp, $out);
-                $body = '';
-                while (!feof($fp)) { $body .= fgets($fp, 128); }
-                fclose($fp);
-                if (!empty($body)) {
-                    $body_parts = explode("\r\n\r\n", $body, 2);
-                    return array('body' => $body_parts[1], 'response' => array('code' => 200));
-                }
-            }
-
-            return $response; // Return original WP_Error if all fail
-        }
-
-        $code = wp_remote_retrieve_response_code($response);
-        if ($code !== 200) {
-            return new WP_Error('mco_http_err', "HTTP $code: Ensure Google Sheet is 'Published to the Web' as CSV.");
-        }
-
-        return [
-            'response' => ['code' => $code],
-            'body' => wp_remote_retrieve_body($response)
+            'user-agent'  => 'MCO-Industrial-Engine/3.9.0',
+            'sslverify'   => false,
+            'headers'     => ['Cache-Control' => 'no-cache']
         ];
+
+        // Tier 1: WordPress Native HTTP API (Preferred)
+        $res = wp_remote_get(esc_url_raw($url), $args);
+        if (!is_wp_error($res) && wp_remote_retrieve_response_code($res) === 200) {
+            return ['body' => wp_remote_retrieve_body($res), 'code' => 200];
+        }
+
+        // Tier 2: PHP cURL Extension (Industrial Fallback)
+        if (function_exists('curl_init')) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'MCO-Industrial-Engine/3.9.0');
+            $body = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($code === 200 && !empty($body)) return ['body' => $body, 'code' => 200];
+        }
+
+        // Tier 3: Native file_get_contents (Last Resort)
+        if (ini_get('allow_url_fopen')) {
+            $context = stream_context_create(['http' => ['timeout' => 60]]);
+            $body = @file_get_contents($url, false, $context);
+            if ($body !== false) return ['body' => $body, 'code' => 200];
+        }
+
+        return is_wp_error($res) ? $res : new WP_Error('fail', 'All network tiers failed to reach source.');
     }
 }

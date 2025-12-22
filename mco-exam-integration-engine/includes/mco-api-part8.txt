@@ -1,6 +1,5 @@
-
 /**
- * 9. PUBLIC: Certificate Validator
+ * 9. PUBLIC: Certificate Authenticator
  */
 function mco_api_verify_certificate(WP_REST_Request $request) {
     $certId = strtoupper(sanitize_text_field($request->get_param('certId')));
@@ -16,12 +15,12 @@ function mco_api_verify_certificate(WP_REST_Request $request) {
                     return new WP_REST_Response([
                         'candidateName' => $u->display_name,
                         'examName'      => $res['examId'],
-                        'finalScore'    => $res['score'],
+                        'finalScore'    => (float)$res['score'],
                         'date'          => date('F j, Y', $res['timestamp'] / 1000)
                     ], 200);
                 }
             }
         }
     }
-    return new WP_Error('not_found', 'Invalid Certificate ID.', ['status' => 404]);
+    return new WP_Error('not_found', 'Invalid or expired Certificate ID.', ['status' => 404]);
 }

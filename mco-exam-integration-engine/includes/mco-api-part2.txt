@@ -1,4 +1,3 @@
-
 /**
  * 2. SECURITY: Base64URL Formatting
  */
@@ -35,17 +34,16 @@ function mco_generate_exam_jwt($user_id) {
     $sub_info = null;
 
     if (class_exists('WC_Subscriptions')) {
-        if (wcs_user_has_subscription($user_id, '', 'active')) {
-            $is_subscribed = true;
-            $subs = wcs_get_users_subscriptions($user_id);
-            foreach ($subs as $sub) {
-                if ($sub->has_status('active')) {
-                    $sub_info = [
-                        'status' => 'active',
-                        'nextPaymentDate' => date_i18n(get_option('date_format'), $sub->get_time('next_payment'))
-                    ];
-                    break;
-                }
+        $subs = wcs_get_users_subscriptions($user_id);
+        foreach ($subs as $sub) {
+            if ($sub->has_status('active')) {
+                $is_subscribed = true;
+                $next_payment_timestamp = $sub->get_time('next_payment');
+                $sub_info = [
+                    'status' => 'active',
+                    'nextPaymentDate' => $next_payment_timestamp ? date_i18n(get_option('date_format'), $next_payment_timestamp) : null,
+                ];
+                break;
             }
         }
     }

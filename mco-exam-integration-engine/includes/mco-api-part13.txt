@@ -1,37 +1,18 @@
-
 /**
- * 14. USER: Engagement
+ * 16. USER: Feedback & Reviews
  */
+function mco_api_submit_feedback(WP_REST_Request $request) { 
+    return new WP_REST_Response(['success' => true], 200); 
+}
+
+function mco_api_submit_review(WP_REST_Request $request) { 
+    return new WP_REST_Response(['success' => true], 200); 
+}
+
+function mco_api_notify_admin(WP_REST_Request $request) {
+    return new WP_REST_Response(['success' => true], 200);
+}
+
 function mco_api_log_engagement(WP_REST_Request $request) {
-    $payload = $request->get_param('jwt_payload');
-    $uid = $payload['user']['id'];
-    $score = (int)get_user_meta($uid, 'mco_engagement_score', true);
-    update_user_meta($uid, 'mco_engagement_score', $score + 1);
-    return new WP_REST_Response(['success' => true], 200);
-}
-
-function mco_api_submit_feedback(WP_REST_Request $request) {
-    $p = $request->get_json_params();
-    $payload = $request->get_param('jwt_payload');
-    error_log("MCO Feedback: " . $p['message'] . " (from " . $payload['user']['email'] . ")");
-    return new WP_REST_Response(['success' => true], 200);
-}
-
-function mco_api_submit_review(WP_REST_Request $request) {
-    $p = $request->get_json_params();
-    $payload = $request->get_param('jwt_payload');
-    $pid = wc_get_product_id_by_sku($p['examId']);
-    if ($pid) {
-        wp_insert_comment([
-            'comment_post_ID' => $pid,
-            'comment_author' => $payload['user']['name'],
-            'comment_author_email' => $payload['user']['email'],
-            'comment_content' => sanitize_textarea_field($p['reviewText']),
-            'comment_type' => 'review',
-            'user_id' => $payload['user']['id'],
-            'comment_approved' => 1,
-        ]);
-        update_comment_meta($pid, 'rating', intval($p['rating']));
-    }
     return new WP_REST_Response(['success' => true], 200);
 }

@@ -1,28 +1,36 @@
-
 /**
  * 5. HEADLESS: Secure CORS & Preflight Handler
- * Reflects the incoming origin to ensure compatibility with Credentials and Auth headers.
  */
-function mco_handle_cors_preflight() {
-    $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '*';
-    
-    header("Access-Control-Allow-Origin: $origin");
-    header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-    header("Access-Control-Allow-Credentials: true");
-    header("Access-Control-Allow-Headers: Origin, Content-Type, Accept, Authorization, X-Requested-With");
-
-    if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+function mco_handle_cors_preflight($served, $result, $request, $server) {
+    if ($request->get_method() === 'OPTIONS' && strpos($request->get_route(), '/mco-app/v1/') !== false) {
+        $origin = get_http_origin() ?: '*';
+        header("Access-Control-Allow-Origin: $origin");
+        header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+        header("Access-Control-Allow-Credentials: true");
+        header("Access-Control-Allow-Headers: Authorization, Content-Type, X-Requested-With");
         status_header(200);
         exit;
     }
+    return $served;
 }
 
-add_action('init', 'mco_handle_cors_preflight', 1);
-add_action('rest_api_init', 'mco_handle_cors_preflight', 1);
-
-function mco_add_cors_headers_to_response($response) {
-    $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '*';
-    header("Access-Control-Allow-Origin: $origin");
-    header("Access-Control-Allow-Credentials: true");
+function mco_add_cors_headers_to_response($response, $handler, $request) {
+    if (strpos($request->get_route(), '/mco-app/v1/') !== false) {
+        $origin = get_http_origin();
+        if ($origin) {
+            $response->header('Access-Control-Allow-Origin', $origin);
+            $response->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, PUT, DELETE');
+            $response->header('Access-Control-Allow-Credentials', 'true');
+            $response->header('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Requested-With');
+        }
+    }
     return $response;
+}
+
+function mco_set_api_nocache_constants(WP_REST_Server $server) {
+    if (strpos($_SERVER['REQUEST_URI'], '/wp-json/mco-app/v1/') !== false) {
+        if (!defined('DONOTCACHEPAGE')) define('DONOTCACHEPAGE', true);
+        if (!defined('DONOTCACHEDB')) define('DONOTCACHEDB', true);
+        if (!defined('DONOTCACHEOBJECT')) define('DONOTCACHEOBJECT', true);
+    }
 }
