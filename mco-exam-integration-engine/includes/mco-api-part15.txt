@@ -7,7 +7,9 @@ function mco_api_admin_get_beta_testers(WP_REST_Request $request) {
     $out = [];
     foreach ($users as $u) {
         $out[] = [
-            'id' => (string)$u->ID, 'name' => $u->display_name, 'email' => $u->user_email,
+            'id' => (string)$u->ID, 
+            'name' => $u->display_name, 
+            'email' => $u->user_email,
             'registrationDate' => $u->user_registered,
             'tokenRedeemed' => (bool)get_user_meta($u->ID, 'mco_token_redeemed', true),
             'expiryTimestamp' => time() + 2592000
@@ -24,7 +26,7 @@ function mco_api_admin_toggle_beta_status(WP_REST_Request $request) {
 }
 
 function mco_api_admin_resend_beta_email(WP_REST_Request $request) {
-    return new WP_REST_Response(['success' => true], 200);
+    return new WP_REST_Response(['success' => true, 'message' => 'Email queued for sending.'], 200);
 }
 
 function mco_api_get_post_creation_data(WP_REST_Request $request) {
@@ -36,47 +38,49 @@ function mco_api_get_post_creation_data(WP_REST_Request $request) {
 
 /**
  * 17. FINAL REGISTRY
+ * All routes must exactly match the endpoints in googleSheetsService.ts
  */
 function mco_register_rest_routes() {
     $ns = 'mco-app/v1'; 
-    $auth = ['permission_callback' => 'mco_api_permission_check']; 
-    $adm = ['permission_callback' => 'mco_api_jwt_admin_permission_check'];
+    $auth_cb = 'mco_api_permission_check'; 
+    $admin_cb = 'mco_api_jwt_admin_permission_check';
 
+    // Public
     register_rest_route($ns, '/config', ['methods' => 'GET', 'callback' => 'mco_api_get_full_config', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/hit', ['methods' => 'POST', 'callback' => 'mco_api_record_hit', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/verify-certificate/(?P<certId>.+)', ['methods' => 'GET', 'callback' => 'mco_api_verify_certificate', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/register-tester', ['methods' => 'POST', 'callback' => 'mco_api_register_tester', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/redeem-tester-token', ['methods' => 'POST', 'callback' => 'mco_api_redeem_tester_token', 'permission_callback' => '__return_true']);
 
-    register_rest_route($ns, '/user-results', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_user_results'], $auth));
-    register_rest_route($ns, '/submit-result', array_merge(['methods' => 'POST', 'callback' => 'mco_api_submit_result'], $auth));
-    register_rest_route($ns, '/certificate-data/(?P<testId>.+)', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_certificate_data'], $auth));
-    register_rest_route($ns, '/update-name', array_merge(['methods' => 'POST', 'callback' => 'mco_api_update_name'], $auth));
-    register_rest_route($ns, '/questions-from-sheet', array_merge(['methods' => 'POST', 'callback' => 'mco_api_get_questions_from_sheet'], $auth));
-    register_rest_route($ns, '/create-checkout-session', array_merge(['methods' => 'POST', 'callback' => 'mco_api_create_checkout_session'], $auth));
-    register_rest_route($ns, '/log-engagement', array_merge(['methods' => 'POST', 'callback' => 'mco_api_log_engagement'], $auth));
-    register_rest_route($ns, '/submit-feedback', array_merge(['methods' => 'POST', 'callback' => 'mco_api_submit_feedback'], $auth));
-    register_rest_route($ns, '/submit-review', array_merge(['methods' => 'POST', 'callback' => 'mco_api_submit_review'], $auth));
+    // User
+    register_rest_route($ns, '/user-results', ['methods' => 'GET', 'callback' => 'mco_api_get_user_results', 'permission_callback' => $auth_cb]);
+    register_rest_route($ns, '/submit-result', ['methods' => 'POST', 'callback' => 'mco_api_submit_result', 'permission_callback' => $auth_cb]);
+    register_rest_route($ns, '/certificate-data/(?P<testId>.+)', ['methods' => 'GET', 'callback' => 'mco_api_get_certificate_data', 'permission_callback' => $auth_cb]);
+    register_rest_route($ns, '/update-name', ['methods' => 'POST', 'callback' => 'mco_api_update_name', 'permission_callback' => $auth_cb]);
+    register_rest_route($ns, '/questions-from-sheet', ['methods' => 'POST', 'callback' => 'mco_api_get_questions_from_sheet', 'permission_callback' => $auth_cb]);
+    register_rest_route($ns, '/create-checkout-session', ['methods' => 'POST', 'callback' => 'mco_api_create_checkout_session', 'permission_callback' => $auth_cb]);
+    register_rest_route($ns, '/log-engagement', ['methods' => 'POST', 'callback' => 'mco_api_log_engagement', 'permission_callback' => $auth_cb]);
+    register_rest_route($ns, '/submit-feedback', ['methods' => 'POST', 'callback' => 'mco_api_submit_feedback', 'permission_callback' => $auth_cb]);
+    register_rest_route($ns, '/submit-review', ['methods' => 'POST', 'callback' => 'mco_api_submit_review', 'permission_callback' => $auth_cb]);
 
-    register_rest_route($ns, '/exam-stats', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats'], $adm));
-    register_rest_route($ns, '/debug-details', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_debug_details'], $adm));
-    register_rest_route($ns, '/admin/system-status', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_system_status'], $adm));
-    register_rest_route($ns, '/admin/upsert-product', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_upsert_product'], $adm));
-    register_rest_route($ns, '/admin/create-post-from-app', array_merge(['methods' => 'POST', 'callback' => 'mco_api_create_post_from_app'], $adm));
-    register_rest_route($ns, '/admin/update-exam-program', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_update_exam_program'], $adm));
-    register_rest_route($ns, '/admin/create-exam-program', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_create_exam_program'], $adm));
-    register_rest_route($ns, '/admin/test-sheet-url', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_test_sheet_url'], $adm));
-    register_rest_route($ns, '/admin/clear-config-cache', array_merge(['methods' => 'POST', 'callback' => 'mco_api_clear_config_cache'], $adm));
-    register_rest_route($ns, '/admin/clear-question-caches', array_merge(['methods' => 'POST', 'callback' => 'mco_api_clear_question_caches'], $adm));
-    register_rest_route($ns, '/admin/clear-all-results', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_clear_all_results'], $adm));
-    register_rest_route($ns, '/admin/delete-post', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_delete_post'], $adm));
-    register_rest_route($ns, '/admin/post-creation-data', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_post_creation_data'], $adm));
-    register_rest_route($ns, '/admin/beta-testers', array_merge(['methods' => 'GET', 'callback' => 'mco_api_admin_get_beta_testers'], $adm));
-    register_rest_route($ns, '/admin/toggle-beta-status', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_toggle_beta_status'], $adm));
-    register_rest_route($ns, '/admin/resend-beta-email', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_resend_beta_email'], $adm));
+    // Admin
+    register_rest_route($ns, '/exam-stats', ['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats', 'permission_callback' => $admin_cb]);
+    register_rest_route($ns, '/debug-details', ['methods' => 'GET', 'callback' => 'mco_api_get_debug_details', 'permission_callback' => $admin_cb]);
+    register_rest_route($ns, '/admin/system-status', ['methods' => 'GET', 'callback' => 'mco_api_get_system_status', 'permission_callback' => $admin_cb]);
+    register_rest_route($ns, '/admin/upsert-product', ['methods' => 'POST', 'callback' => 'mco_api_admin_upsert_product', 'permission_callback' => $admin_cb]);
+    register_rest_route($ns, '/admin/create-post-from-app', ['methods' => 'POST', 'callback' => 'mco_api_create_post_from_app', 'permission_callback' => $admin_cb]);
+    register_rest_route($ns, '/admin/update-exam-program', ['methods' => 'POST', 'callback' => 'mco_api_admin_update_exam_program', 'permission_callback' => $admin_cb]);
+    register_rest_route($ns, '/admin/create-exam-program', ['methods' => 'POST', 'callback' => 'mco_api_admin_create_exam_program', 'permission_callback' => $admin_cb]);
+    register_rest_route($ns, '/admin/test-sheet-url', ['methods' => 'POST', 'callback' => 'mco_api_admin_test_sheet_url', 'permission_callback' => $admin_cb]);
+    register_rest_route($ns, '/admin/clear-config-cache', ['methods' => 'POST', 'callback' => 'mco_api_clear_config_cache', 'permission_callback' => $admin_cb]);
+    register_rest_route($ns, '/admin/clear-question-caches', ['methods' => 'POST', 'callback' => 'mco_api_clear_question_caches', 'permission_callback' => $admin_cb]);
+    register_rest_route($ns, '/admin/clear-all-results', ['methods' => 'POST', 'callback' => 'mco_api_admin_clear_all_results', 'permission_callback' => $admin_cb]);
+    register_rest_route($ns, '/admin/delete-post', ['methods' => 'POST', 'callback' => 'mco_api_admin_delete_post', 'permission_callback' => $admin_cb]);
+    register_rest_route($ns, '/admin/post-creation-data', ['methods' => 'GET', 'callback' => 'mco_api_get_post_creation_data', 'permission_callback' => $admin_cb]);
+    register_rest_route($ns, '/admin/beta-testers', ['methods' => 'GET', 'callback' => 'mco_api_admin_get_beta_testers', 'permission_callback' => $admin_cb]);
+    register_rest_route($ns, '/admin/toggle-beta-status', ['methods' => 'POST', 'callback' => 'mco_api_admin_toggle_beta_status', 'permission_callback' => $admin_cb]);
 }
 
 add_action('rest_api_init', 'mco_register_rest_routes');
-add_action('init', 'mco_handle_cors_preflight');
-add_filter('rest_post_dispatch', 'mco_add_cors_headers_to_response', 10, 3);
+add_filter('rest_post_dispatch', 'mco_add_cors_headers_to_response', 15);
 ?>

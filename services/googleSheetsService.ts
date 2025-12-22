@@ -12,8 +12,9 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         throw new Error("You are currently offline. Please check your internet connection.");
     }
 
-    const API_BASE_URL = getApiBaseUrl();
-    const fullUrl = `${API_BASE_URL}/wp-json/mco-app/v1${endpoint}`;
+    const API_BASE_URL = getApiBaseUrl().replace(/\/$/, "");
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const fullUrl = `${API_BASE_URL}/wp-json/mco-app/v1${cleanEndpoint}`;
 
     const headers: HeadersInit = {};
     if (token) {
@@ -29,7 +30,9 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     const config: RequestInit = {
         method,
         headers,
-        signal: controller.signal
+        signal: controller.signal,
+        mode: 'cors',
+        credentials: 'include'
     };
     
     if (method === 'POST') {
@@ -48,15 +51,15 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 errorData = JSON.parse(responseText);
             } catch (e) {
                 if (response.status === 404) {
-                    throw new Error(`Route Not Found (404) at ${endpoint}. Please ensure the WordPress plugin is updated to the latest version.`);
+                    throw new Error(`Endpoint Not Found (404) at ${endpoint}. This usually means the WordPress plugin is inactive or outdated.`);
                 }
-                throw new Error(`Server Response Error (${response.status}): ${responseText.substring(0, 150)}`);
+                throw new Error(`Server Error (${response.status}) at ${endpoint}: ${responseText.substring(0, 100)}`);
             }
 
             if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_auth_invalid_token') {
                 localStorage.removeItem('examUser');
                 localStorage.removeItem('authToken');
-                const authError: any = new Error("Session expired or invalid.");
+                const authError: any = new Error("Session expired or security token mismatch.");
                 authError.code = errorData?.code;
                 throw authError;
             }
@@ -68,16 +71,15 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     } catch (error: any) {
         clearTimeout(timeoutId);
         if (error.name === 'AbortError') {
-             throw new Error("API Timeout: The server took too long to process this request. Check server load or timeout settings.");
+             throw new Error(`API Timeout at ${endpoint}: The server took too long. Check server load or timeout settings.`);
         }
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-            console.error("Fetch API Failure Diagnostics:", {
-                url: fullUrl,
+            console.error("Critical Connection Error:", {
+                target: fullUrl,
                 method: method,
-                hasToken: !!token,
-                error: error.message
+                browserMessage: error.message
             });
-            throw new Error(`Could not connect to the API server (${API_BASE_URL}). Check plugin status, server firewall, and CORS settings in your WordPress Admin.`);
+            throw new Error(`Connection Failed: Could not reach ${API_BASE_URL}. Ensure the MCO Integration Plugin is active and CORS is correctly configured in WordPress Admin.`);
         }
         throw error;
     }

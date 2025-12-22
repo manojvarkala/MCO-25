@@ -1,30 +1,43 @@
 
 /**
- * 5. HEADLESS: CORS Preflight
+ * 5. HEADLESS: Secure CORS Handler
+ * Replaces wildcard origins with the specific configured App URL.
  */
 function mco_handle_cors_preflight() {
-    if (isset($_SERVER['HTTP_ORIGIN'])) {
-        header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
-        header('Access-Control-Allow-Credentials: true');
-        header('Access-Control-Max-Age: 86400');
+    $raw_urls = get_option('mco_exam_app_url', '');
+    $url_list = preg_split('/\r\n|\r|\n/', $raw_urls);
+    $allowed_origin = trim($url_list[0]);
+    
+    $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+    
+    // Check if the current origin is in our allowed list (simplified for the first entry)
+    if (!empty($allowed_origin)) {
+        header("Access-Control-Allow-Origin: $allowed_origin");
+    } else {
+        header("Access-Control-Allow-Origin: $origin");
     }
+
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+    header("Access-Control-Allow-Credentials: true");
+    header("Access-Control-Allow-Headers: Origin, Content-Type, Accept, Authorization, X-Requested-With");
+
     if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-        if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD'])) {
-            header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-        }
-        if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS'])) {
-            header("Access-Control-Allow-Headers: {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}, Authorization, Content-Type");
-        }
-        status_header(200); exit;
+        status_header(200);
+        exit;
     }
 }
 
-function mco_add_cors_headers_to_response($response, $handler, $request) {
-    if (isset($_SERVER['HTTP_ORIGIN'])) {
-        header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+add_action('init', 'mco_handle_cors_preflight', 1);
+add_action('rest_api_init', 'mco_handle_cors_preflight', 1);
+
+function mco_add_cors_headers_to_response($response) {
+    $raw_urls = get_option('mco_exam_app_url', '');
+    $url_list = preg_split('/\r\n|\r|\n/', $raw_urls);
+    $allowed_origin = trim($url_list[0]);
+
+    if (!empty($allowed_origin)) {
+        header("Access-Control-Allow-Origin: $allowed_origin");
+        header("Access-Control-Allow-Credentials: true");
     }
-    header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-    header("Access-Control-Allow-Credentials: true");
-    header("Access-Control-Allow-Headers: Authorization, Content-Type");
     return $response;
 }

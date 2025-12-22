@@ -96,13 +96,6 @@ function mco_api_admin_clear_all_results(WP_REST_Request $request) {
     return new WP_REST_Response(['success' => true, 'message' => 'All user results deleted.'], 200);
 }
 
-function mco_api_admin_delete_post(WP_REST_Request $request) {
-    $p = $request->get_json_params();
-    wp_trash_post($p['postId']);
-    delete_transient('mco_app_config_data');
-    return new WP_REST_Response(['success' => true], 200);
-}
-
 function mco_api_get_debug_details(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
     $user_id = $payload['user']['id'];
