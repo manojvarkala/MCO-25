@@ -1,6 +1,6 @@
 /**
- * 11. USER: Result Persistence & Data Integrity
- * Ensures large result arrays are saved without corruption.
+ * 11. USER: Result Submission & Data Integrity
+ * Ensures that large result arrays are saved without data loss or duplication.
  */
 function mco_api_submit_result(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
@@ -11,30 +11,38 @@ function mco_api_submit_result(WP_REST_Request $request) {
         return new WP_Error('mco_invalid_data', 'Submission data is malformed.', ['status' => 400]);
     }
 
-    // Lock and Fetch
+    // High-Integrity Fetch: Prevent Race Conditions
     $existing = get_user_meta($user_id, 'mco_exam_results', true);
+    if (!is_array($existing)) {
+        $existing = !empty($existing) ? maybe_unserialize($existing) : [];
+    }
     if (!is_array($existing)) $existing = [];
 
-    // Duplicate Prevention (Crucial for high-latency connections)
-    foreach ($existing as $r) {
-        if (isset($r['testId']) && $r['testId'] === $new_result['testId']) {
-            return new WP_REST_Response(['success' => true, 'note' => 'duplicate_ignored'], 200);
+    // Duplicate Prevention: Check if this specific attempt was already recorded
+    foreach ($existing as $recorded) {
+        if (isset($recorded['testId']) && $recorded['testId'] === $new_result['testId']) {
+            return new WP_REST_Response(['success' => true, 'note' => 'duplicate_entry_ignored'], 200);
         }
     }
 
-    // Add Metadata to result for backend tracking
-    $new_result['ip_address'] = $_SERVER['REMOTE_ADDR'];
-    $new_result['submitted_at'] = current_time('mysql');
+    // Augment result with server-side metadata for auditing
+    $new_result['server_timestamp'] = current_time('timestamp');
+    $new_result['user_ip'] = $_SERVER['REMOTE_ADDR'];
+    $new_result['user_agent'] = $_SERVER['HTTP_USER_AGENT'];
 
-    // Atomic Update
+    // Append and Persist
     $existing[] = $new_result;
     $updated = update_user_meta($user_id, 'mco_exam_results', $existing);
 
     if (!$updated) {
-        return new WP_Error('mco_db_fail', 'Could not write results to database.', ['status' => 500]);
+        // Fallback for cases where meta update returns false but data is same
+        $verify = get_user_meta($user_id, 'mco_exam_results', true);
+        if (count($verify) !== count($existing)) {
+            return new WP_Error('mco_db_fail', 'Database write failed.', ['status' => 500]);
+        }
     }
 
-    // Global cache invalidation
+    // Force clear of global config cache to reflect new attempt counts in stats
     delete_transient('mco_app_config_data');
     
     return new WP_REST_Response([

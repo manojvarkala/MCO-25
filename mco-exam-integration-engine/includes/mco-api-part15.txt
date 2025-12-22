@@ -1,32 +1,41 @@
 /**
- * 16. ADMIN: Content Operations
+ * 16. ADMIN: Content Operations & Cache Management
  */
-function mco_api_admin_upsert_product(WP_REST_Request $request) {
-    if (!class_exists('WooCommerce')) return new WP_Error('no_wc', 'WC required.');
+function mco_api_admin_update_exam_program(WP_REST_Request $request) {
     $p = $request->get_json_params();
-    $sku = sanitize_text_field($p['sku'] ?? '');
-    if (empty($sku)) return new WP_Error('no_sku', 'SKU required.');
+    $programId = $p['programId'] ?? '';
+    $updateData = $p['updateData'] ?? [];
+    
+    $post_id = (int) str_replace('prod-', '', $programId);
+    if (!$post_id) return new WP_Error('invalid_id', 'Could not parse Program ID');
 
-    $pid = wc_get_product_id_by_sku($sku);
-    $product = $pid ? wc_get_product($pid) : new WC_Product_Simple();
-    
-    $product->set_sku($sku);
-    $product->set_name(sanitize_text_field($p['name']));
-    $product->set_regular_price($p['regularPrice']);
-    if (isset($p['price'])) $product->set_sale_price($p['price']);
-    
-    if (!empty($p['isBundle'])) {
-        $product->update_meta_data('_mco_is_bundle', 'yes');
-        $product->update_meta_data('_mco_bundled_skus', $p['bundled_skus']);
+    // Perform atomic updates to core post data
+    if (isset($updateData['category']['name'])) {
+        wp_update_post(['ID' => $post_id, 'post_title' => sanitize_text_field($updateData['category']['name'])]);
     }
-    
-    $product->save();
+    if (isset($updateData['category']['description'])) {
+        wp_update_post(['ID' => $post_id, 'post_content' => wp_kses_post($updateData['category']['description'])]);
+    }
+
+    // Sync Meta Fields (This fixes the "Edits not saving" issue)
+    if (isset($updateData['category']['questionSourceUrl'])) {
+        update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($updateData['category']['questionSourceUrl']));
+    }
+    if (isset($updateData['certExam']['productSku'])) {
+        update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($updateData['certExam']['productSku']));
+    }
+
+    // CRITICAL: Force clear all caches so the app sees the changes immediately
     delete_transient('mco_app_config_data');
-    return new WP_REST_Response(['success' => true, 'id' => $product->get_id()], 200);
+    global $wpdb;
+    $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_mco_sheet_%'");
+    $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_mco_sheet_%'");
+
+    return new WP_REST_Response(['success' => true, 'message' => 'Program updated and caches cleared'], 200);
 }
 
 /**
- * 17. FINAL REGISTRY: The Master Mapping
+ * 17. FINAL REGISTRY: The Master Route Mapping
  * Maps every single call from the React frontend to its backend logic.
  */
 function mco_register_rest_routes() {
@@ -34,7 +43,7 @@ function mco_register_rest_routes() {
     $auth = ['permission_callback' => 'mco_api_permission_check'];
     $adm = ['permission_callback' => 'mco_api_jwt_admin_permission_check'];
 
-    // --- PUBLIC GROUP ---
+    // Registry: PUBLIC Endpoints
     register_rest_route($ns, '/config', ['methods' => 'GET', 'callback' => 'mco_api_get_full_config', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/hit', ['methods' => 'POST', 'callback' => 'mco_api_record_hit', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/verify-certificate/(?P<certId>[a-zA-Z0-9-]+)', ['methods' => 'GET', 'callback' => 'mco_api_verify_certificate', 'permission_callback' => '__return_true']);
@@ -42,19 +51,19 @@ function mco_register_rest_routes() {
     register_rest_route($ns, '/redeem-tester-token', ['methods' => 'POST', 'callback' => 'mco_api_redeem_tester_token', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/resend-onboarding-email', ['methods' => 'POST', 'callback' => 'mco_api_public_resend_onboarding_email', 'permission_callback' => '__return_true']);
 
-    // --- USER GROUP ---
+    // Registry: PROTECTED USER Endpoints
     register_rest_route($ns, '/user-results', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_user_results'], $auth));
     register_rest_route($ns, '/submit-result', array_merge(['methods' => 'POST', 'callback' => 'mco_api_submit_result'], $auth));
     register_rest_route($ns, '/certificate-data/(?P<testId>[a-zA-Z0-9_-]+)', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_certificate_data'], $auth));
+    register_rest_route($ns, '/update-name', array_merge(['methods' => 'POST', 'callback' => 'mco_api_update_name'], $auth));
     register_rest_route($ns, '/questions-from-sheet', array_merge(['methods' => 'POST', 'callback' => 'mco_api_get_questions_from_sheet'], $auth));
     register_rest_route($ns, '/create-checkout-session', array_merge(['methods' => 'POST', 'callback' => 'mco_api_create_checkout_session'], $auth));
-    register_rest_route($ns, '/update-name', array_merge(['methods' => 'POST', 'callback' => 'mco_api_update_name'], $auth));
     register_rest_route($ns, '/submit-feedback', array_merge(['methods' => 'POST', 'callback' => 'mco_api_submit_feedback'], $auth));
     register_rest_route($ns, '/submit-review', array_merge(['methods' => 'POST', 'callback' => 'mco_api_submit_review'], $auth));
     register_rest_route($ns, '/notify-admin', array_merge(['methods' => 'POST', 'callback' => 'mco_api_notify_admin'], $auth));
     register_rest_route($ns, '/log-engagement', array_merge(['methods' => 'POST', 'callback' => 'mco_api_log_engagement'], $auth));
 
-    // --- ADMIN GROUP ---
+    // Registry: PROTECTED ADMIN Endpoints
     register_rest_route($ns, '/exam-stats', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats'], $adm));
     register_rest_route($ns, '/debug-details', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_debug_details'], $adm));
     register_rest_route($ns, '/admin/system-status', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_system_status'], $adm));

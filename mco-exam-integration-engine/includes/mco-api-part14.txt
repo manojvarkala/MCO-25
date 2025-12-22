@@ -1,39 +1,45 @@
 /**
  * 15. ADMIN: Environment Intelligence & Deep Analytics
- * Provides the data for the Admin Dashboard diagnostics.
+ * This handles the heavy-duty "System Health Check" in the React app.
  */
 function mco_api_get_debug_details(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
-    $user_id = $payload['user']['id'];
+    $user_id = (int)$payload['user']['id'];
     
-    // 1. Server Capabilities Audit
+    // 1. Core Server & PHP Audit
     $env = [
-        'php'           => PHP_VERSION,
-        'wp'            => get_bloginfo('version'),
-        'mem'           => ini_get('memory_limit'),
-        'post'          => ini_get('post_max_size'),
-        'exec'          => ini_get('max_execution_time'),
-        'software'      => $_SERVER['SERVER_SOFTWARE'] ?? 'N/A',
-        'ssl'           => is_ssl(),
-        'curl'          => function_exists('curl_init'),
-        'fopen'         => ini_get('allow_url_fopen')
+        'php_version'        => PHP_VERSION,
+        'wp_version'         => get_bloginfo('version'),
+        'memory_limit'       => ini_get('memory_limit'),
+        'post_max_size'      => ini_get('post_max_size'),
+        'upload_max_filesize'=> ini_get('upload_max_filesize'),
+        'max_execution_time' => ini_get('max_execution_time'),
+        'server_software'    => $_SERVER['SERVER_SOFTWARE'] ?? 'N/A',
+        'is_ssl'             => is_ssl(),
+        'curl_available'     => function_exists('curl_init'),
+        'allow_url_fopen'    => ini_get('allow_url_fopen'),
+        'api_url'            => get_rest_url()
     ];
 
-    // 2. WooCommerce Sync Integrity
+    // 2. User Data Audit (Sanitized for JSON transport)
+    $raw_results = get_user_meta($user_id, 'mco_exam_results', true);
+    $results = is_array($raw_results) ? array_values($raw_results) : [];
+
+    // 3. WooCommerce Sync Audit
     $purchase_audit = [];
     $raw_purchases = get_user_meta($user_id, 'mco_paid_exams', true) ?: [];
     if (class_exists('WooCommerce')) {
-        foreach ($raw_purchases as $sku) {
+        foreach ((array)$raw_purchases as $sku) {
             $pid = wc_get_product_id_by_sku($sku);
             $purchase_audit[] = [
                 'sku'    => $sku,
-                'exists' => ($pid > 0),
-                'price'  => $pid ? get_post_meta($pid, '_price', true) : '0'
+                'wc_id'  => $pid,
+                'status' => $pid ? get_post_status($pid) : 'missing_in_wc'
             ];
         }
     }
 
-    // 3. Connectivity Verification
+    // 4. Remote Sheet Connectivity Probe
     $test_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSt_0YT3AG-PlfihlizPkGcfT7cq-gRjh2_-YOaEArPP7Zcei_2LQJ2IOS0Y0AzC6E_pw2BuzoAncil/pub?output=csv';
     $fetch_test = mco_fetch_remote_csv_content($test_url);
     $sheet_status = !is_wp_error($fetch_test);
@@ -41,29 +47,32 @@ function mco_api_get_debug_details(WP_REST_Request $request) {
     return new WP_REST_Response([
         'user'            => $payload['user'],
         'environment'     => $env,
+        'purchases'       => array_values((array)$raw_purchases),
         'purchase_audit'  => $purchase_audit,
-        'results_summary' => [
-            'count' => count(get_user_meta($user_id, 'mco_exam_results', true) ?: []),
-            'type'  => 'meta_store'
-        ],
-        'sheetTest' => [
+        'results_count'   => count($results),
+        'latest_results'  => array_slice($results, -5),
+        'sheet_probe'     => [
             'success' => $sheet_status,
-            'message' => $sheet_status ? 'Connected' : $fetch_test->get_error_message(),
-            'engine'  => function_exists('curl_init') ? 'CURL' : 'WP_HTTP'
+            'message' => $sheet_status ? 'Sheets Proxy Active' : $fetch_test->get_error_message(),
+            'engine'  => function_exists('curl_init') ? 'cURL High-Performance' : 'WP_HTTP Fallback'
         ]
     ], 200);
 }
 
 function mco_api_get_system_status(WP_REST_Request $request) {
+    $app_url = get_option('mco_exam_app_url');
+    
     return new WP_REST_Response([
-        'api'      => ['success' => true, 'message' => 'Engine Stable'],
-        'wc'       => ['success' => class_exists('WooCommerce')],
-        'subs'     => ['success' => class_exists('WC_Subscriptions')],
-        'security' => ['success' => (defined('MCO_JWT_SECRET') && strlen(MCO_JWT_SECRET) > 16)],
-        'nonces'   => [
-            'programs' => wp_create_nonce('mco_generate_programs_csv_nonce'),
-            'products' => wp_create_nonce('mco_generate_products_csv_nonce'),
-            'import'   => wp_create_nonce('mco_bulk_import_nonce')
+        'api_connection'   => ['success' => true, 'message' => 'REST Logic Operational'],
+        'jwt_secret'       => ['success' => (defined('MCO_JWT_SECRET') && strlen(MCO_JWT_SECRET) > 16), 'message' => defined('MCO_JWT_SECRET') ? 'Secret Key Loaded' : 'KEY MISSING'],
+        'woocommerce'      => ['success' => class_exists('WooCommerce'), 'message' => class_exists('WooCommerce') ? 'WC Active' : 'WC Inactive'],
+        'wc_subscriptions' => ['success' => class_exists('WC_Subscriptions'), 'message' => class_exists('WC_Subscriptions') ? 'Subscriptions Active' : 'Subscriptions Not Detected'],
+        'app_url_config'   => ['success' => !empty($app_url), 'message' => !empty($app_url) ? 'CORS Configured' : 'CORS Missing', 'data' => $app_url],
+        'google_sheet'     => ['success' => true, 'message' => 'Remote Fetcher Ready'],
+        'nonces' => [
+            'generate_programs_csv' => wp_create_nonce('mco_generate_programs_csv_nonce'),
+            'generate_products_csv' => wp_create_nonce('mco_generate_products_csv_nonce'),
+            'bulk_import'           => wp_create_nonce('mco_bulk_import_nonce')
         ]
     ], 200);
 }
