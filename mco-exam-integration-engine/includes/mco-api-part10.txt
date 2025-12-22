@@ -1,25 +1,40 @@
 /**
  * 11. USER: Result Submission & Synchronization
+ * Handles complex serialization of exam data to prevent database bloat.
  */
 function mco_api_get_user_results(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
-    $user_id = $payload['user']['id'];
+    $user_id = (int)$payload['user']['id'];
+    
     $results = get_user_meta($user_id, 'mco_exam_results', true);
     if (empty($results)) return new WP_REST_Response([], 200);
-    return new WP_REST_Response(array_values((array)maybe_unserialize($results)), 200);
+    
+    $results = is_array($results) ? $results : maybe_unserialize($results);
+    return new WP_REST_Response(array_values((array)$results), 200);
 }
 
 function mco_api_submit_result(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
-    $user_id = $payload['user']['id'];
-    $new_res = $request->get_json_params();
+    $user_id = (int)$payload['user']['id'];
+    $new_result = $request->get_json_params();
     
-    $existing = maybe_unserialize(get_user_meta($user_id, 'mco_exam_results', true)) ?: [];
-    foreach ($existing as $r) {
-        if ($r['testId'] === $new_res['testId']) return new WP_REST_Response(['success' => true], 200);
+    if (empty($new_result) || !isset($new_result['testId'])) {
+        return new WP_Error('mco_err', 'Malformed result payload.', ['status' => 400]);
     }
 
-    $existing[] = $new_res;
+    $existing = get_user_meta($user_id, 'mco_exam_results', true);
+    $existing = is_array($existing) ? $existing : (empty($existing) ? [] : maybe_unserialize($existing));
+    
+    foreach ((array)$existing as $r) {
+        if (isset($r['testId']) && $r['testId'] === $new_result['testId']) {
+            return new WP_REST_Response(['success' => true, 'note' => 'Duplicate ignored'], 200);
+        }
+    }
+
+    $new_result['server_timestamp'] = current_time('timestamp');
+    $existing[] = $new_result;
     update_user_meta($user_id, 'mco_exam_results', $existing);
-    return new WP_REST_Response(['success' => true], 200);
+    delete_transient('mco_app_config_data');
+    
+    return new WP_REST_Response(['success' => true, 'count' => count($existing)], 200);
 }

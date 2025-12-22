@@ -1,29 +1,24 @@
 /**
- * 18. ADMIN: Master Registry & Tools
+ * 16. ADMIN: System Diagnostics & Route Registry
  */
 function mco_api_get_system_status(WP_REST_Request $request) {
-    return new WP_REST_Response(['api_connection' => ['success' => true, 'message' => 'Online'], 'woocommerce' => ['success' => true]], 200);
+    return new WP_REST_Response([
+        'api_connection' => ['success' => true, 'message' => 'MCO Engine Online'],
+        'woocommerce'    => ['success' => class_exists('WooCommerce'), 'message' => 'Active'],
+        'jwt_secret'     => ['success' => defined('MCO_JWT_SECRET'), 'message' => 'Secure'],
+        'nonces' => [
+            'generate_programs_csv' => wp_create_nonce('mco_generate_programs_csv_nonce'),
+            'generate_products_csv' => wp_create_nonce('mco_generate_products_csv_nonce'),
+        ]
+    ], 200);
 }
-function mco_api_admin_test_sheet_url(WP_REST_Request $request) { return new WP_REST_Response(['success' => true], 200); }
-function mco_api_clear_config_cache(WP_REST_Request $request) { delete_transient('mco_app_config_data'); return new WP_REST_Response(['success' => true], 200); }
-function mco_api_clear_question_caches(WP_REST_Request $request) { return new WP_REST_Response(['success' => true], 200); }
-function mco_api_admin_clear_all_results(WP_REST_Request $request) { return new WP_REST_Response(['success' => true], 200); }
-function mco_api_admin_update_exam_program(WP_REST_Request $request) { return new WP_REST_Response(['success' => true], 200); }
-function mco_api_admin_upsert_product(WP_REST_Request $request) { return new WP_REST_Response(['success' => true], 200); }
-function mco_api_admin_create_exam_program(WP_REST_Request $request) { return new WP_REST_Response(['success' => true], 200); }
-function mco_api_admin_delete_post(WP_REST_Request $request) { return new WP_REST_Response(['success' => true], 200); }
-function mco_api_get_post_creation_data(WP_REST_Request $request) { return new WP_REST_Response(['authors' => [], 'categories' => []], 200); }
-function mco_api_create_post_from_app(WP_REST_Request $request) { return new WP_REST_Response(['success' => true], 200); }
-function mco_api_admin_set_intro_video(WP_REST_Request $request) { return new WP_REST_Response(['success' => true], 200); }
-function mco_api_admin_get_beta_testers(WP_REST_Request $request) { return new WP_REST_Response([], 200); }
-function mco_api_admin_toggle_beta_status(WP_REST_Request $request) { return new WP_REST_Response(['token' => ''], 200); }
-function mco_api_resend_beta_email(WP_REST_Request $request) { return new WP_REST_Response(['success' => true], 200); }
 
 function mco_register_rest_routes() {
     $ns = 'mco-app/v1';
     $auth = ['permission_callback' => 'mco_api_permission_check'];
     $adm = ['permission_callback' => 'mco_api_jwt_admin_permission_check'];
 
+    // Public
     register_rest_route($ns, '/config', ['methods' => 'GET', 'callback' => 'mco_api_get_full_config', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/hit', ['methods' => 'POST', 'callback' => 'mco_api_record_hit', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/verify-certificate/(?P<certId>.+)', ['methods' => 'GET', 'callback' => 'mco_api_verify_certificate', 'permission_callback' => '__return_true']);
@@ -31,6 +26,7 @@ function mco_register_rest_routes() {
     register_rest_route($ns, '/redeem-tester-token', ['methods' => 'POST', 'callback' => 'mco_api_redeem_tester_token', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/resend-onboarding-email', ['methods' => 'POST', 'callback' => 'mco_api_public_resend_onboarding_email', 'permission_callback' => '__return_true']);
 
+    // User
     register_rest_route($ns, '/user-results', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_user_results'], $auth));
     register_rest_route($ns, '/submit-result', array_merge(['methods' => 'POST', 'callback' => 'mco_api_submit_result'], $auth));
     register_rest_route($ns, '/certificate-data/(?P<testId>[a-zA-Z0-9_-]+)', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_certificate_data'], $auth));
@@ -42,6 +38,7 @@ function mco_register_rest_routes() {
     register_rest_route($ns, '/notify-admin', array_merge(['methods' => 'POST', 'callback' => 'mco_api_notify_admin'], $auth));
     register_rest_route($ns, '/log-engagement', array_merge(['methods' => 'POST', 'callback' => 'mco_api_log_engagement'], $auth));
 
+    // Admin
     register_rest_route($ns, '/exam-stats', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats'], $adm));
     register_rest_route($ns, '/debug-details', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_debug_details'], $adm));
     register_rest_route($ns, '/admin/system-status', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_system_status'], $adm));

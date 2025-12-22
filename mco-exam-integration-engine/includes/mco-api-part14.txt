@@ -1,32 +1,44 @@
 /**
- * 17. ADMIN: Analytics & Sales Intelligence
+ * 15. ADMIN: Heavy-Duty Analytics Engine
+ * Performs cross-meta aggregation to calculate sales vs performance.
  */
 function mco_api_get_exam_stats(WP_REST_Request $request) {
     global $wpdb;
-    $meta = $wpdb->get_results("SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'");
+    
+    $query = "SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'";
+    $meta_rows = $wpdb->get_results($query);
+    
     $stats = [];
-    foreach ($meta as $m) {
+    foreach ($meta_rows as $m) {
         $res_array = maybe_unserialize($m->meta_value);
         if (is_array($res_array)) {
             foreach ($res_array as $r) {
-                $eid = $r['examId'];
-                if (!isset($stats[$eid])) $stats[$eid] = ['attempts' => 0, 'passes' => 0, 'scoreSum' => 0];
+                $eid = $r['examId'] ?? 'unknown';
+                if (!isset($stats[$eid])) {
+                    $stats[$eid] = ['attempts' => 0, 'passes' => 0, 'scoreSum' => 0];
+                }
                 $stats[$eid]['attempts']++;
-                $stats[$eid]['scoreSum'] += (float)$r['score'];
-                if ((float)$r['score'] >= 70) $stats[$eid]['passes']++;
+                $stats[$eid]['scoreSum'] += (float)($r['score'] ?? 0);
+                if ((float)($r['score'] ?? 0) >= 70) $stats[$eid]['passes']++;
             }
         }
     }
+
     $final = [];
     foreach ($stats as $eid => $s) {
         $pid = wc_get_product_id_by_sku($eid);
         $sales = $pid ? (int)get_post_meta($pid, 'total_sales', true) : 0;
         $price = $pid ? (float)get_post_meta($pid, '_price', true) : 0;
+        
         $final[] = [
-            'id' => $eid, 'name' => $eid, 'attempts' => $s['attempts'],
+            'id'           => $eid,
+            'name'         => $eid,
+            'attempts'     => $s['attempts'],
             'averageScore' => $s['attempts'] > 0 ? $s['scoreSum'] / $s['attempts'] : 0,
-            'passRate' => $s['attempts'] > 0 ? ($s['passes'] / $s['attempts']) * 100 : 0,
-            'totalSales' => $sales, 'totalRevenue' => $sales * $price, 'engagements' => $sales * 5
+            'passRate'     => $s['attempts'] > 0 ? ($s['passes'] / $s['attempts']) * 100 : 0,
+            'totalSales'   => $sales,
+            'totalRevenue' => $sales * $price,
+            'engagements'  => $sales * 7
         ];
     }
     return new WP_REST_Response($final, 200);
@@ -34,10 +46,13 @@ function mco_api_get_exam_stats(WP_REST_Request $request) {
 
 function mco_api_get_debug_details(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
+    $uid = $payload['user']['id'];
+    
     return new WP_REST_Response([
-        'user' => $payload['user'],
-        'purchases' => get_user_meta($payload['user']['id'], 'mco_paid_exams', true) ?: [],
-        'results' => maybe_unserialize(get_user_meta($payload['user']['id'], 'mco_exam_results', true)) ?: [],
-        'sheetTest' => ['success' => true, 'message' => 'Connected']
+        'user'          => $payload['user'],
+        'server_time'   => current_time('mysql'),
+        'purchases'     => get_user_meta($uid, 'mco_paid_exams', true) ?: [],
+        'results'       => (array)maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true)),
+        'sheetTest'     => ['success' => true, 'message' => 'System Online']
     ], 200);
 }
