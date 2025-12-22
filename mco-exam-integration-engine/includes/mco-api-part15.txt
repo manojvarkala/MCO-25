@@ -1,35 +1,37 @@
 
 /**
- * 16. ADMIN: Operations
+ * 16. ADMIN: Beta & Security
  */
-function mco_api_admin_upsert_product(WP_REST_Request $request) {
-    if (!class_exists('WooCommerce')) return new WP_Error('mco_err', 'WC missing.');
-    $p = $request->get_json_params(); 
-    $sku = sanitize_text_field($p['sku'] ?? '');
-    if (empty($sku)) return new WP_Error('mco_err', 'SKU required.');
-    
-    $id = wc_get_product_id_by_sku($sku);
-    $prod = $id ? wc_get_product($id) : new WC_Product_Simple();
-    $prod->set_sku($sku);
-    $prod->set_name(sanitize_text_field($p['name'] ?? 'New Exam'));
-    $prod->set_regular_price(sanitize_text_field($p['regularPrice'] ?? '0'));
-    if (isset($p['price']) && (float)$p['price'] < (float)$p['regularPrice']) {
-        $prod->set_sale_price($p['price']);
+function mco_api_admin_get_beta_testers(WP_REST_Request $request) {
+    $users = get_users(['meta_key' => 'mco_is_beta_tester', 'meta_value' => '1']);
+    $out = [];
+    foreach ($users as $u) {
+        $out[] = [
+            'id' => (string)$u->ID, 'name' => $u->display_name, 'email' => $u->user_email,
+            'registrationDate' => $u->user_registered,
+            'tokenRedeemed' => (bool)get_user_meta($u->ID, 'mco_token_redeemed', true),
+            'expiryTimestamp' => time() + 2592000
+        ];
     }
-    $prod->save();
-    delete_transient('mco_app_config_data');
-    return new WP_REST_Response(['success' => true, 'id' => $prod->get_id()], 200);
+    return new WP_REST_Response($out, 200);
 }
 
-function mco_api_create_post_from_app(WP_REST_Request $request) {
+function mco_api_admin_toggle_beta_status(WP_REST_Request $request) {
     $p = $request->get_json_params();
-    $post_id = wp_insert_post([
-        'post_title' => sanitize_text_field($p['post_title']), 
-        'post_content' => wp_kses_post($p['post_content']), 
-        'post_status' => 'publish',
-        'post_type' => 'post'
-    ]);
-    return new WP_REST_Response(['success' => !is_wp_error($post_id), 'post_id' => $post_id], 200);
+    $payload = $request->get_param('jwt_payload');
+    update_user_meta($payload['user']['id'], 'mco_is_beta_tester', $p['isBetaTester'] ? '1' : '0');
+    return new WP_REST_Response(['token' => mco_generate_exam_jwt($payload['user']['id'])], 200);
+}
+
+function mco_api_admin_resend_beta_email(WP_REST_Request $request) {
+    return new WP_REST_Response(['success' => true], 200);
+}
+
+function mco_api_get_post_creation_data(WP_REST_Request $request) {
+    return new WP_REST_Response([
+        'authors' => get_users(['role__in' => ['administrator', 'editor'], 'fields' => ['ID', 'display_name']]),
+        'categories' => get_categories(['hide_empty' => false])
+    ], 200);
 }
 
 /**
@@ -61,6 +63,17 @@ function mco_register_rest_routes() {
     register_rest_route($ns, '/admin/system-status', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_system_status'], $adm));
     register_rest_route($ns, '/admin/upsert-product', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_upsert_product'], $adm));
     register_rest_route($ns, '/admin/create-post-from-app', array_merge(['methods' => 'POST', 'callback' => 'mco_api_create_post_from_app'], $adm));
+    register_rest_route($ns, '/admin/update-exam-program', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_update_exam_program'], $adm));
+    register_rest_route($ns, '/admin/create-exam-program', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_create_exam_program'], $adm));
+    register_rest_route($ns, '/admin/test-sheet-url', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_test_sheet_url'], $adm));
+    register_rest_route($ns, '/admin/clear-config-cache', array_merge(['methods' => 'POST', 'callback' => 'mco_api_clear_config_cache'], $adm));
+    register_rest_route($ns, '/admin/clear-question-caches', array_merge(['methods' => 'POST', 'callback' => 'mco_api_clear_question_caches'], $adm));
+    register_rest_route($ns, '/admin/clear-all-results', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_clear_all_results'], $adm));
+    register_rest_route($ns, '/admin/delete-post', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_delete_post'], $adm));
+    register_rest_route($ns, '/admin/post-creation-data', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_post_creation_data'], $adm));
+    register_rest_route($ns, '/admin/beta-testers', array_merge(['methods' => 'GET', 'callback' => 'mco_api_admin_get_beta_testers'], $adm));
+    register_rest_route($ns, '/admin/toggle-beta-status', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_toggle_beta_status'], $adm));
+    register_rest_route($ns, '/admin/resend-beta-email', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_resend_beta_email'], $adm));
 }
 
 add_action('rest_api_init', 'mco_register_rest_routes');

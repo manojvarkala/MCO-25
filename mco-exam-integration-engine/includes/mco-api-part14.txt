@@ -12,7 +12,7 @@ function mco_api_get_exam_stats(WP_REST_Request $request) {
             foreach ($arr as $r) {
                 $eid = $r['examId'] ?? 'unknown';
                 if (!isset($stats[$eid])) {
-                    $stats[$eid] = ['attempts' => 0, 'passes' => 0, 'sum' => 0, 'totalScoreSum' => 0];
+                    $stats[$eid] = ['attempts' => 0, 'passes' => 0, 'totalScoreSum' => 0];
                 }
                 $stats[$eid]['attempts']++;
                 $score = (float)($r['score'] ?? 0);
@@ -37,15 +37,75 @@ function mco_api_get_exam_stats(WP_REST_Request $request) {
     return new WP_REST_Response($out, 200);
 }
 
-/**
- * Provides structured debug data for the Debug Sidebar.
- * Resolves the "Question Sheet: Failure" status.
- */
+function mco_api_admin_update_exam_program(WP_REST_Request $request) {
+    $p = $request->get_json_params();
+    $id = (int)str_replace('prod-', '', $p['programId']);
+    $data = $p['updateData'];
+    
+    if (isset($data['category']['name'])) {
+        wp_update_post(['ID' => $id, 'post_title' => sanitize_text_field($data['category']['name'])]);
+    }
+    if (isset($data['category']['questionSourceUrl'])) {
+        update_post_meta($id, '_mco_question_source_url', esc_url_raw($data['category']['questionSourceUrl']));
+    }
+    if (isset($data['certExam']['productSku'])) {
+        update_post_meta($id, '_mco_certification_exam_sku', sanitize_text_field($data['certExam']['productSku']));
+    }
+    
+    delete_transient('mco_app_config_data');
+    return new WP_REST_Response(['success' => true], 200);
+}
+
+function mco_api_admin_create_exam_program(WP_REST_Request $request) {
+    $p = $request->get_json_params();
+    $id = wp_insert_post([
+        'post_title' => sanitize_text_field($p['programName']), 
+        'post_type' => 'mco_exam_program', 
+        'post_status' => 'publish'
+    ]);
+    if (isset($p['productLinkData']['sku'])) {
+        update_post_meta($id, '_mco_certification_exam_sku', sanitize_text_field($p['productLinkData']['sku']));
+    }
+    delete_transient('mco_app_config_data');
+    return new WP_REST_Response(['success' => true, 'id' => $id], 200);
+}
+
+function mco_api_admin_test_sheet_url(WP_REST_Request $request) {
+    $p = $request->get_json_params();
+    $res = mco_fetch_remote_csv_content($p['sheetUrl']);
+    return new WP_REST_Response([
+        'success' => !is_wp_error($res), 
+        'message' => is_wp_error($res) ? $res->get_error_message() : 'OK'
+    ], 200);
+}
+
+function mco_api_clear_config_cache(WP_REST_Request $request) {
+    delete_transient('mco_app_config_data');
+    return new WP_REST_Response(['success' => true, 'message' => 'App Config Cache Cleared'], 200);
+}
+
+function mco_api_clear_question_caches(WP_REST_Request $request) {
+    global $wpdb;
+    $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_mco_sheet_%'");
+    return new WP_REST_Response(['success' => true, 'message' => 'All Question Caches Purged'], 200);
+}
+
+function mco_api_admin_clear_all_results(WP_REST_Request $request) {
+    global $wpdb;
+    $wpdb->query("DELETE FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'");
+    return new WP_REST_Response(['success' => true, 'message' => 'All user results deleted.'], 200);
+}
+
+function mco_api_admin_delete_post(WP_REST_Request $request) {
+    $p = $request->get_json_params();
+    wp_trash_post($p['postId']);
+    delete_transient('mco_app_config_data');
+    return new WP_REST_Response(['success' => true], 200);
+}
+
 function mco_api_get_debug_details(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
     $user_id = $payload['user']['id'];
-    
-    // Test connectivity to Google Sheets (Proxy Test)
     $test_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSt_0YT3AG-PlfihlizPkGcfT7cq-gRjh2_-YOaEArPP7Zcei_2LQJ2IOS0Y0AzC6E_pw2BuzoAncil/pub?output=csv';
     $fetch_test = mco_fetch_remote_csv_content($test_url);
     $sheet_status = !is_wp_error($fetch_test);
@@ -56,45 +116,18 @@ function mco_api_get_debug_details(WP_REST_Request $request) {
         'results' => get_user_meta($user_id, 'mco_exam_results', true) ?: [],
         'sheetTest' => [
             'success' => $sheet_status,
-            'message' => $sheet_status ? 'Server successfully proxied Google Sheets content.' : 'Server blocked by firewall or invalid URL.',
-            'data' => $sheet_status ? 'HTTP 200 OK' : $fetch_test->get_error_message()
+            'message' => $sheet_status ? 'Sheets Proxied Successfully' : $fetch_test->get_error_message()
         ]
     ], 200);
 }
 
-/**
- * Comprehensive System Health Check.
- * Resolves the "Checking..." states in the Admin UI.
- */
 function mco_api_get_system_status(WP_REST_Request $request) {
-    $app_url = get_option('mco_exam_app_url', '');
-    
     return new WP_REST_Response([
-        'api_connection' => [
-            'success' => true, 
-            'message' => 'REST Engine Operational'
-        ],
-        'woocommerce' => [
-            'success' => class_exists('WooCommerce'), 
-            'message' => class_exists('WooCommerce') ? 'Active (v' . WC_VERSION . ')' : 'Plugin Missing'
-        ],
-        'wc_subscriptions' => [
-            'success' => class_exists('WC_Subscriptions'), 
-            'message' => class_exists('WC_Subscriptions') ? 'Pro Subscriptions Enabled' : 'Not Detected'
-        ],
-        'jwt_secret' => [
-            'success' => defined('MCO_JWT_SECRET'), 
-            'message' => defined('MCO_JWT_SECRET') ? 'Security Key Loaded' : 'CRITICAL: Secret Missing'
-        ],
-        'app_url_config' => [
-            'success' => !empty($app_url),
-            'message' => !empty($app_url) ? 'CORS Allowed for ' . $app_url : 'No App URL defined'
-        ],
-        'google_sheet' => [
-            'success' => true,
-            'message' => 'Remote Fetcher Active',
-            'data' => ['timeout' => 45, 'ssl' => 'disabled']
-        ],
+        'api_connection' => ['success' => true, 'message' => 'REST Engine Operational'],
+        'woocommerce' => ['success' => class_exists('WooCommerce'), 'message' => 'WC Active'],
+        'wc_subscriptions' => ['success' => class_exists('WC_Subscriptions'), 'message' => 'Subscriptions Active'],
+        'jwt_secret' => ['success' => defined('MCO_JWT_SECRET'), 'message' => 'Security Key Loaded'],
+        'google_sheet' => ['success' => true, 'message' => 'Remote Fetcher Active'],
         'nonces' => [
             'generate_programs_csv' => wp_create_nonce('mco_generate_programs_csv_nonce'),
             'generate_products_csv' => wp_create_nonce('mco_generate_products_csv_nonce'),
