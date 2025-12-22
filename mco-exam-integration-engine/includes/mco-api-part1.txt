@@ -1,41 +1,61 @@
-
 <?php
 /**
- * MCO API Engine - Part 1: Core Utilities
- * Version: 3.6.1 (Stable Fetch Build)
- * Author: Annapoorna Infotech
+ * MCO API Engine - Part 1: Heavy-Duty Fetcher
+ * Version: 3.6.5 (Production Stable)
  */
 
 if (!defined('ABSPATH')) exit;
 
 /**
- * 1. UTILITY: Remote CSV Fetcher
- * Optimized for Google Sheets accessibility across all hosting environments.
+ * 1. UTILITY: Robust Remote CSV Fetcher
+ * This function is the "Excellent Logic" from the stable branch.
+ * It uses a 3-tier fallback system to bypass server firewalls.
  */
 function mco_fetch_remote_csv_content($url) {
     if (empty($url)) {
         return new WP_Error('mco_url_empty', 'CSV Source URL is empty.');
     }
 
-    // This configuration matches the stable v2.6.0 logic
     $args = array(
-        'timeout'     => 45, // High timeout for slow Google redirects
-        'redirection' => 5,
+        'timeout'     => 45,
+        'redirection' => 10,
         'httpversion' => '1.0',
-        'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
+        'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         'blocking'    => true,
-        'sslverify'   => false // Essential for compatibility with varied server SSL configs
+        'sslverify'   => false // Disabled for maximum sheet compatibility
     );
 
+    // Tier 1: Standard WordPress Remote Get
     $response = wp_remote_get(esc_url_raw($url), $args);
 
-    if (is_wp_error($response)) {
-        return $response;
+    // Tier 2: Manual cURL Fallback (Required if allow_url_fopen is OFF)
+    if (is_wp_error($response) && function_exists('curl_init')) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 45);
+        curl_setopt($ch, CURLOPT_USERAGENT, $args['user-agent']);
+        
+        $body = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($code === 200 && !empty($body)) {
+            return array(
+                'body' => $body,
+                'response' => array('code' => 200)
+            );
+        }
     }
 
-    $code = wp_remote_retrieve_response_code($response);
-    if ($code !== 200) {
-        return new WP_Error('mco_http_err', "Source returned code: $code");
+    // Tier 3: Return error if code is not 200
+    if (!is_wp_error($response)) {
+        $code = wp_remote_retrieve_response_code($response);
+        if ($code !== 200) {
+            return new WP_Error('mco_http_err', "Source returned code: $code. Please ensure the Google Sheet is 'Published to the Web' as a CSV.");
+        }
     }
 
     return $response;

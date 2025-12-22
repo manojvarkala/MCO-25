@@ -1,62 +1,60 @@
-
 /**
- * 16. ADMIN: Additional Management Logic
+ * 16. ADMIN: Product & Content Management
  */
 function mco_api_admin_upsert_product(WP_REST_Request $request) {
-    if (!class_exists('WooCommerce')) return new WP_Error('no_wc', 'WooCommerce is not active.');
+    if (!class_exists('WooCommerce')) return new WP_Error('no_wc', 'WooCommerce is required.');
     $p = $request->get_json_params();
-    $sku = sanitize_text_field($p['sku']);
+    $sku = sanitize_text_field($p['sku'] ?? '');
+    if (empty($sku)) return new WP_Error('no_sku', 'SKU is required.');
+
     $id = wc_get_product_id_by_sku($sku);
     $product = $id ? wc_get_product($id) : new WC_Product_Simple();
+    
     $product->set_sku($sku);
     $product->set_name(sanitize_text_field($p['name']));
     $product->set_regular_price($p['regularPrice']);
-    if (isset($p['price']) && $p['price'] < $p['regularPrice']) $product->set_sale_price($p['price']);
+    if (isset($p['price'])) $product->set_sale_price($p['price']);
+    
     if (!empty($p['isBundle'])) {
         $product->update_meta_data('_mco_is_bundle', 'yes');
         $product->update_meta_data('_mco_bundled_skus', $p['bundled_skus']);
     }
+    
     $product->save();
     delete_transient('mco_app_config_data');
-    return new WP_REST_Response(['success' => true], 200);
-}
-
-function mco_api_admin_set_intro_video(WP_REST_Request $request) {
-    $p = $request->get_json_params();
-    update_option('mco_intro_video_url', esc_url_raw($p['url']));
-    return new WP_REST_Response(['success' => true], 200);
+    return new WP_REST_Response(['success' => true, 'id' => $product->get_id()], 200);
 }
 
 /**
- * 17. FINAL REGISTRY
- * Maps every frontend call to a backend function defined in parts 1-15.
+ * 17. FINAL REGISTRY: The Master Mapping
+ * This ensures all 44 calls from the React frontend are answered.
  */
 function mco_register_rest_routes() {
     $ns = 'mco-app/v1';
     $auth = ['permission_callback' => 'mco_api_permission_check'];
     $adm = ['permission_callback' => 'mco_api_jwt_admin_permission_check'];
 
-    // Public Routes
+    // --- PUBLIC GROUP ---
     register_rest_route($ns, '/config', ['methods' => 'GET', 'callback' => 'mco_api_get_full_config', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/hit', ['methods' => 'POST', 'callback' => 'mco_api_record_hit', 'permission_callback' => '__return_true']);
-    register_rest_route($ns, '/verify-certificate/(?P<certId>.+)', ['methods' => 'GET', 'callback' => 'mco_api_verify_certificate', 'permission_callback' => '__return_true']);
+    register_rest_route($ns, '/verify-certificate/(?P<certId>[a-zA-Z0-9-]+)', ['methods' => 'GET', 'callback' => 'mco_api_verify_certificate', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/register-tester', ['methods' => 'POST', 'callback' => 'mco_api_register_tester', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/redeem-tester-token', ['methods' => 'POST', 'callback' => 'mco_api_redeem_tester_token', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/resend-onboarding-email', ['methods' => 'POST', 'callback' => 'mco_api_public_resend_onboarding_email', 'permission_callback' => '__return_true']);
 
-    // User Routes
-    register_rest_route($ns, '/create-checkout-session', array_merge(['methods' => 'POST', 'callback' => 'mco_api_create_checkout_session'], $auth));
+    // --- PROTECTED USER GROUP ---
     register_rest_route($ns, '/user-results', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_user_results'], $auth));
-    register_rest_route($ns, '/certificate-data/(?P<testId>.+)', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_certificate_data'], $auth));
-    register_rest_route($ns, '/update-name', array_merge(['methods' => 'POST', 'callback' => 'mco_api_update_name'], $auth));
-    register_rest_route($ns, '/questions-from-sheet', array_merge(['methods' => 'POST', 'callback' => 'mco_api_get_questions_from_sheet'], $auth));
     register_rest_route($ns, '/submit-result', array_merge(['methods' => 'POST', 'callback' => 'mco_api_submit_result'], $auth));
+    register_rest_route($ns, '/certificate-data/(?P<testId>[a-zA-Z0-9_-]+)', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_certificate_data'], $auth));
+    register_rest_route($ns, '/questions-from-sheet', array_merge(['methods' => 'POST', 'callback' => 'mco_api_get_questions_from_sheet'], $auth));
+    register_rest_route($ns, '/create-checkout-session', array_merge(['methods' => 'POST', 'callback' => 'mco_api_create_checkout_session'], $auth));
+    register_rest_route($ns, '/update-name', array_merge(['methods' => 'POST', 'callback' => 'mco_api_update_name'], $auth));
     register_rest_route($ns, '/submit-feedback', array_merge(['methods' => 'POST', 'callback' => 'mco_api_submit_feedback'], $auth));
     register_rest_route($ns, '/submit-review', array_merge(['methods' => 'POST', 'callback' => 'mco_api_submit_review'], $auth));
     register_rest_route($ns, '/notify-admin', array_merge(['methods' => 'POST', 'callback' => 'mco_api_notify_admin'], $auth));
     register_rest_route($ns, '/log-engagement', array_merge(['methods' => 'POST', 'callback' => 'mco_api_log_engagement'], $auth));
 
-    // Admin Routes
+    // --- PROTECTED ADMIN GROUP ---
     register_rest_route($ns, '/exam-stats', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats'], $adm));
     register_rest_route($ns, '/debug-details', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_debug_details'], $adm));
     register_rest_route($ns, '/admin/system-status', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_system_status'], $adm));
@@ -73,7 +71,7 @@ function mco_register_rest_routes() {
     register_rest_route($ns, '/admin/set-intro-video', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_set_intro_video'], $adm));
     register_rest_route($ns, '/admin/beta-testers', array_merge(['methods' => 'GET', 'callback' => 'mco_api_admin_get_beta_testers'], $adm));
     register_rest_route($ns, '/admin/toggle-beta-status', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_toggle_beta_status'], $adm));
-    register_rest_route($ns, '/admin/resend-beta-email', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_resend_beta_email'], $adm));
+    register_rest_route($ns, '/admin/resend-beta-email', array_merge(['methods' => 'POST', 'callback' => 'mco_api_resend_beta_email'], $adm));
 }
 
 add_action('rest_api_init', 'mco_register_rest_routes');
