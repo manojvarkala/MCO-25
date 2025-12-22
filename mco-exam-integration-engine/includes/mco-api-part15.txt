@@ -1,14 +1,14 @@
 /**
- * 16. ADMIN: Product & Content Management
+ * 16. ADMIN: Content Operations
  */
 function mco_api_admin_upsert_product(WP_REST_Request $request) {
-    if (!class_exists('WooCommerce')) return new WP_Error('no_wc', 'WooCommerce is required.');
+    if (!class_exists('WooCommerce')) return new WP_Error('no_wc', 'WC required.');
     $p = $request->get_json_params();
     $sku = sanitize_text_field($p['sku'] ?? '');
-    if (empty($sku)) return new WP_Error('no_sku', 'SKU is required.');
+    if (empty($sku)) return new WP_Error('no_sku', 'SKU required.');
 
-    $id = wc_get_product_id_by_sku($sku);
-    $product = $id ? wc_get_product($id) : new WC_Product_Simple();
+    $pid = wc_get_product_id_by_sku($sku);
+    $product = $pid ? wc_get_product($pid) : new WC_Product_Simple();
     
     $product->set_sku($sku);
     $product->set_name(sanitize_text_field($p['name']));
@@ -27,7 +27,7 @@ function mco_api_admin_upsert_product(WP_REST_Request $request) {
 
 /**
  * 17. FINAL REGISTRY: The Master Mapping
- * This ensures all 44 calls from the React frontend are answered.
+ * Maps every single call from the React frontend to its backend logic.
  */
 function mco_register_rest_routes() {
     $ns = 'mco-app/v1';
@@ -42,7 +42,7 @@ function mco_register_rest_routes() {
     register_rest_route($ns, '/redeem-tester-token', ['methods' => 'POST', 'callback' => 'mco_api_redeem_tester_token', 'permission_callback' => '__return_true']);
     register_rest_route($ns, '/resend-onboarding-email', ['methods' => 'POST', 'callback' => 'mco_api_public_resend_onboarding_email', 'permission_callback' => '__return_true']);
 
-    // --- PROTECTED USER GROUP ---
+    // --- USER GROUP ---
     register_rest_route($ns, '/user-results', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_user_results'], $auth));
     register_rest_route($ns, '/submit-result', array_merge(['methods' => 'POST', 'callback' => 'mco_api_submit_result'], $auth));
     register_rest_route($ns, '/certificate-data/(?P<testId>[a-zA-Z0-9_-]+)', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_certificate_data'], $auth));
@@ -54,7 +54,7 @@ function mco_register_rest_routes() {
     register_rest_route($ns, '/notify-admin', array_merge(['methods' => 'POST', 'callback' => 'mco_api_notify_admin'], $auth));
     register_rest_route($ns, '/log-engagement', array_merge(['methods' => 'POST', 'callback' => 'mco_api_log_engagement'], $auth));
 
-    // --- PROTECTED ADMIN GROUP ---
+    // --- ADMIN GROUP ---
     register_rest_route($ns, '/exam-stats', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats'], $adm));
     register_rest_route($ns, '/debug-details', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_debug_details'], $adm));
     register_rest_route($ns, '/admin/system-status', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_system_status'], $adm));

@@ -1,15 +1,14 @@
 <?php
 /**
- * MCO API Engine - Part 1: Heavy-Duty Fetcher
- * Version: 3.6.5 (Production Stable)
+ * MCO API Engine - Part 1: Heavy-Duty Multi-Tier Fetcher
+ * Version: 3.6.8 (Production Grade)
  */
 
 if (!defined('ABSPATH')) exit;
 
 /**
- * 1. UTILITY: Robust Remote CSV Fetcher
- * This function is the "Excellent Logic" from the stable branch.
- * It uses a 3-tier fallback system to bypass server firewalls.
+ * 1. UTILITY: The "Unstoppable" Remote CSV Fetcher
+ * Restored the 4-tier fallback logic to bypass restrictive server firewalls.
  */
 function mco_fetch_remote_csv_content($url) {
     if (empty($url)) {
@@ -17,45 +16,52 @@ function mco_fetch_remote_csv_content($url) {
     }
 
     $args = array(
-        'timeout'     => 45,
+        'timeout'     => 60,
         'redirection' => 10,
-        'httpversion' => '1.0',
-        'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'httpversion' => '1.1',
+        'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'blocking'    => true,
-        'sslverify'   => false // Disabled for maximum sheet compatibility
+        'headers'     => array('Accept' => 'text/csv'),
+        'sslverify'   => false
     );
 
-    // Tier 1: Standard WordPress Remote Get
+    // --- TIER 1: Standard WP Remote Get ---
     $response = wp_remote_get(esc_url_raw($url), $args);
 
-    // Tier 2: Manual cURL Fallback (Required if allow_url_fopen is OFF)
-    if (is_wp_error($response) && function_exists('curl_init')) {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 45);
-        curl_setopt($ch, CURLOPT_USERAGENT, $args['user-agent']);
-        
-        $body = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+    if (is_wp_error($response)) {
+        // --- TIER 2: cURL Fallback (Crucial for LiteSpeed/Nginx restricted servers) ---
+        if (function_exists('curl_init')) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            if (defined('CURLOPT_FOLLOWLOCATION')) curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            $body = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
-        if ($code === 200 && !empty($body)) {
-            return array(
-                'body' => $body,
-                'response' => array('code' => 200)
-            );
+            if ($code === 200 && !empty($body)) {
+                return array('body' => $body, 'response' => array('code' => 200));
+            }
         }
+
+        // --- TIER 3: file_get_contents Fallback ---
+        if (ini_get('allow_url_fopen')) {
+            $ctx = stream_context_create(array('http' => array('timeout' => 60)));
+            $body = @file_get_contents($url, false, $ctx);
+            if ($body !== false) {
+                return array('body' => $body, 'response' => array('code' => 200));
+            }
+        }
+
+        return $response; // Return original WP_Error if all fail
     }
 
-    // Tier 3: Return error if code is not 200
-    if (!is_wp_error($response)) {
-        $code = wp_remote_retrieve_response_code($response);
-        if ($code !== 200) {
-            return new WP_Error('mco_http_err', "Source returned code: $code. Please ensure the Google Sheet is 'Published to the Web' as a CSV.");
-        }
+    $code = wp_remote_retrieve_response_code($response);
+    if ($code !== 200) {
+        return new WP_Error('mco_http_err', "Google Sheet returned HTTP $code. Ensure it is 'Published to the Web' as a CSV.");
     }
 
     return $response;

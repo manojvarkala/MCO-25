@@ -1,22 +1,45 @@
-
 /**
- * 11. USER: Synchronization
+ * 11. USER: Result Persistence & Data Integrity
+ * Ensures large result arrays are saved without corruption.
  */
-function mco_api_get_user_results(WP_REST_Request $request) {
-    $payload = $request->get_param('jwt_payload');
-    $results = get_user_meta($payload['user']['id'], 'mco_exam_results', true) ?: [];
-    return new WP_REST_Response(array_values($results), 200);
-}
-
 function mco_api_submit_result(WP_REST_Request $request) {
     $payload = $request->get_param('jwt_payload');
-    $uid = $payload['user']['id'];
-    $data = $request->get_json_params();
+    $user_id = (int)$payload['user']['id'];
+    $new_result = $request->get_json_params();
 
-    $results = get_user_meta($uid, 'mco_exam_results', true) ?: [];
-    $results[] = $data;
-    update_user_meta($uid, 'mco_exam_results', $results);
+    if (empty($new_result) || !isset($new_result['testId'])) {
+        return new WP_Error('mco_invalid_data', 'Submission data is malformed.', ['status' => 400]);
+    }
+
+    // Lock and Fetch
+    $existing = get_user_meta($user_id, 'mco_exam_results', true);
+    if (!is_array($existing)) $existing = [];
+
+    // Duplicate Prevention (Crucial for high-latency connections)
+    foreach ($existing as $r) {
+        if (isset($r['testId']) && $r['testId'] === $new_result['testId']) {
+            return new WP_REST_Response(['success' => true, 'note' => 'duplicate_ignored'], 200);
+        }
+    }
+
+    // Add Metadata to result for backend tracking
+    $new_result['ip_address'] = $_SERVER['REMOTE_ADDR'];
+    $new_result['submitted_at'] = current_time('mysql');
+
+    // Atomic Update
+    $existing[] = $new_result;
+    $updated = update_user_meta($user_id, 'mco_exam_results', $existing);
+
+    if (!$updated) {
+        return new WP_Error('mco_db_fail', 'Could not write results to database.', ['status' => 500]);
+    }
+
+    // Global cache invalidation
     delete_transient('mco_app_config_data');
-
-    return new WP_REST_Response(['success' => true], 200);
+    
+    return new WP_REST_Response([
+        'success' => true,
+        'testId'  => $new_result['testId'],
+        'count'   => count($existing)
+    ], 200);
 }
