@@ -29,6 +29,7 @@ function mco_api_admin_set_intro_video(WP_REST_Request $request) {
 
 /**
  * 17. FINAL REGISTRY
+ * Maps every frontend call to a backend function defined in parts 1-15.
  */
 function mco_register_rest_routes() {
     $ns = 'mco-app/v1';

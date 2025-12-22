@@ -1,6 +1,6 @@
 
 /**
- * 5. HEADLESS: Simple CORS & Preflight Handler
+ * 5. HEADLESS: Secure CORS & Preflight Handler
  * Reflects the incoming origin to ensure compatibility with Credentials and Auth headers.
  */
 function mco_handle_cors_preflight() {

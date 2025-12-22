@@ -1,7 +1,8 @@
+
 <?php
 /**
  * MCO API Engine - Part 1: Core Utilities
- * Version: 3.6.0 (Ultra-Exhaustive Build)
+ * Version: 3.6.1 (Stable Fetch Build)
  * Author: Annapoorna Infotech
  */
 
@@ -9,27 +10,26 @@ if (!defined('ABSPATH')) exit;
 
 /**
  * 1. UTILITY: Remote CSV Fetcher
- * Strictly handles timeouts and SSL verification for Google Sheets.
+ * Optimized for Google Sheets accessibility across all hosting environments.
  */
 function mco_fetch_remote_csv_content($url) {
     if (empty($url)) {
         return new WP_Error('mco_url_empty', 'CSV Source URL is empty.');
     }
 
+    // This configuration matches the stable v2.6.0 logic
     $args = array(
-        'timeout'     => 45,
+        'timeout'     => 45, // High timeout for slow Google redirects
         'redirection' => 5,
-        'httpversion' => '1.1',
-        'user-agent'  => 'MCO-App-Engine/3.6.0',
+        'httpversion' => '1.0',
+        'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
         'blocking'    => true,
-        'sslverify'   => false,
-        'headers'     => array('Accept' => 'text/csv')
+        'sslverify'   => false // Essential for compatibility with varied server SSL configs
     );
 
     $response = wp_remote_get(esc_url_raw($url), $args);
 
     if (is_wp_error($response)) {
-        error_log('MCO API [Remote Fetch]: ' . $response->get_error_message());
         return $response;
     }
 

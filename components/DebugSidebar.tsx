@@ -1,3 +1,4 @@
+
 import React, { FC, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -67,22 +68,14 @@ const DebugSidebar: FC<DebugSidebarProps> = ({ isOpen, onClose }) => {
     const apiUrl = getApiBaseUrl();
     const dynamicUrl = localStorage.getItem('mco_dynamic_api_url');
     
-    // CASE 1: Server stripping header (401 / Missing Token)
     const isMissingHeaderError = error && (
         error.toLowerCase().includes('jwt_auth_missing_token') || 
         error.toLowerCase().includes('authorization header missing')
     );
 
-    // CASE 2: Token mismatch / Secret Key issue (403 / Invalid Token)
     const isInvalidTokenError = error && (
         error.toLowerCase().includes('invalid or expired token') ||
         error.toLowerCase().includes('jwt_auth_invalid_token')
-    );
-    
-    // CASE 3: Generic connection issues
-    const isConnectionError = error && (
-        error.toLowerCase().includes('could not connect') || 
-        error.toLowerCase().includes('failed to fetch')
     );
 
     const clearDynamicUrl = () => {
@@ -159,28 +152,13 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
                                     {isInvalidTokenError && (
                                         <>
                                             <h4 className="font-bold text-amber-300 mb-2 text-base">🔑 TOKEN MISMATCH</h4>
-                                            <p className="mb-3">The token stored in your browser was signed with a different Secret Key than the one currently in your WordPress <code>wp-config.php</code>.</p>
-                                            
-                                            <p className="mb-3">This happens if you changed the <code>MCO_JWT_SECRET</code> after logging in, or if you are connecting to a different server environment than expected.</p>
-
+                                            <p className="mb-3">The token stored in your browser was signed with a different Secret Key than the one in your WordPress <code>wp-config.php</code>.</p>
                                             <button 
                                                 onClick={logout}
                                                 className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded flex items-center justify-center gap-2 transition"
                                             >
                                                 <LogOut size={16} /> Log Out & Clear Token
                                             </button>
-                                            <p className="mt-2 text-center opacity-75">After logging out, log back in to generate a fresh, valid token.</p>
-                                        </>
-                                    )}
-
-                                    {!isMissingHeaderError && !isInvalidTokenError && (
-                                        <>
-                                            <h4 className="font-bold text-amber-300 mb-2">Troubleshooting Guide</h4>
-                                            <ul className="list-disc list-inside my-2 space-y-2">
-                                                <li>Check if your WordPress site is online.</li>
-                                                <li>Ensure the <strong>Exam App Engine</strong> plugin is active.</li>
-                                                <li>Verify CORS settings in <strong>WP Admin &rarr; Exam App Engine</strong>.</li>
-                                            </ul>
                                         </>
                                     )}
                                 </div>
@@ -218,7 +196,6 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
                                                     <p><strong>Test ID:</strong> {result.testId}</p>
                                                     <p><strong>Exam ID:</strong> {result.examId}</p>
                                                     <p><strong>Score:</strong> {result.score}%</p>
-                                                    <p><strong>Date:</strong> {new Date(result.timestamp).toLocaleString()}</p>
                                                 </div>
                                             ))}
                                         </div>
