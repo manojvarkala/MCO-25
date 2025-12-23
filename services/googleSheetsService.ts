@@ -30,32 +30,35 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     }
 
     try {
+        console.log(`MCO API: Requesting ${method} ${fullUrl}`);
         const response = await fetch(fullUrl, config);
         const responseText = await response.text();
 
         if (!response.ok) {
+            console.error(`MCO API: Server returned ${response.status}`, responseText);
             let errorData;
             try {
                 errorData = JSON.parse(responseText);
             } catch (e) {
-                throw new Error(`Server Error: ${response.status}`);
+                throw new Error(`Server Error: ${response.status}. The backend might be experiencing issues.`);
             }
 
             if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_auth_invalid_token') {
                 localStorage.removeItem('examUser');
                 localStorage.removeItem('authToken');
-                const authError: any = new Error("Session expired.");
+                const authError: any = new Error("Session expired. Please log in again.");
                 authError.code = errorData?.code;
                 throw authError;
             }
             
-            throw new Error(errorData?.message || `Error ${response.status}`);
+            throw new Error(errorData?.message || `Error ${response.status}: ${response.statusText}`);
         }
         
         return responseText ? JSON.parse(responseText) : {};
     } catch (error: any) {
-        if (error.message.includes('Failed to fetch')) {
-             throw new Error("Could not connect to the API server. Please check your connection.");
+        console.error("MCO API Connection Error:", error);
+        if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+             throw new Error("Connection Blocked: The browser could not reach the API. This is usually caused by: 1. Permalinks not set to 'Post Name' in WP. 2. Missing .htaccess rules. 3. CORS blocking the request.");
         }
         throw error;
     }
