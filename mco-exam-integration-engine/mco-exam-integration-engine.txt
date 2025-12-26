@@ -3,7 +3,7 @@
  * Plugin Name:       MCO Exam Integration Engine
  * Plugin URI:        https://annapoornainfo.com
  * Description:       Provides the backend API, user authentication (SSO), and content management for the React-based examination app.
- * Version:           2.9.0
+ * Version:           2.9.1
  * Author:            Annapoorna Infotech
  * Author URI:        https://annapoornainfo.com
  * License:           GPL v2 or later
@@ -22,10 +22,10 @@ define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 // --- INCLUDES ---
 // Order matters: CPTs first so they are registered before shortcodes/api might need them
 require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-data.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-api.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php';
-require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-data.php'; // Contains core data functions, used by API and shortcodes
+require_once MCO_PLUGIN_PATH . 'includes/mco-api.php'; // Main API routes and JWT logic
+require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; // WordPress Admin pages
+require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php'; // WordPress Shortcodes
 
 // --- FORCE REGISTRATION OPTION ---
 if (!function_exists('mco_force_registration_option')) {
@@ -61,7 +61,7 @@ if (!function_exists('mco_sso_login_redirect')) {
             $user = wp_get_current_user();
             
             // If user hasn't set a full name yet, stop here. The shortcode will render the form.
-            if (strpos($user->display_name, ' ') === false && !isset($_POST['mco_update_name_action'])) {
+            if (strpos(trim($user->display_name), ' ') === false && !isset($_POST['mco_update_name_action'])) {
                 return;
             }
 
@@ -98,13 +98,19 @@ add_action('template_redirect', 'mco_sso_login_redirect');
 register_activation_hook(__FILE__, 'mco_plugin_activate');
 register_deactivation_hook(__FILE__, 'mco_plugin_deactivate');
 
-function mco_plugin_activate() {
-    // Explicitly call registration on activation to ensure rewrite rules can be flushed correctly immediately
-    mco_register_custom_post_types();
-    flush_rewrite_rules();
+if (!function_exists('mco_plugin_activate')) {
+    function mco_plugin_activate() {
+        // Explicitly call registration on activation to ensure rewrite rules can be flushed correctly immediately
+        if (function_exists('mco_register_custom_post_types')) {
+            mco_register_custom_post_types();
+        }
+        flush_rewrite_rules();
+    }
 }
 
-function mco_plugin_deactivate() {
-    flush_rewrite_rules();
+if (!function_exists('mco_plugin_deactivate')) {
+    function mco_plugin_deactivate() {
+        flush_rewrite_rules();
+    }
 }
 ?>

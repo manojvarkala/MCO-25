@@ -1,3 +1,5 @@
+
+
 import React, { FC, useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -240,11 +242,12 @@ const ExamAnalytics: FC = () => {
                         </table>
                     </div>
                 ) : (
-                    <p className="text-center p-8 text-[rgb(var(--color-text-muted-rgb))]">No analytics data available yet.</p>
+                    <p className="text-center p-8 text-[rgb(var(--color-text-muted-rgb))]">No analytics data available yet. Data will appear after users complete certification exams.</p>
                 )}
             </div>
         </div>
     );
 };
+
 
 export default ExamAnalytics;

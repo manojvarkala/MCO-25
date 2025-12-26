@@ -127,7 +127,7 @@ if (!function_exists('mco_base64url_decode')) {
             $padlen = 4 - $remainder;
             $data .= str_repeat('=', $padlen);
         }
-        return base66_decode(str_replace(['-', '_'], ['+', '/'], $data));
+        return base64_decode(str_replace(['-', '_'], ['+', '/'], $data));
     }
 }
 
@@ -192,7 +192,7 @@ if (!function_exists('mco_generate_exam_jwt')) {
             'paidExamIds' => array_values((array)$paid_exam_skus),
             'isSubscribed' => $is_subscribed,
             'subscriptionInfo' => $sub_info,
-            'isBetaTester' => get_user_meta($user_id, 'mco_is_beta_tester', true) === '1'
+            'isBetaTester' => get_user_meta($user_id, '_mco_is_beta_tester', true) === '1'
         ]);
 
         $b64Header = mco_base64url_encode($header);
@@ -293,9 +293,21 @@ if (!function_exists('mco_verify_exam_jwt')) {
  */
 if (!function_exists('mco_handle_cors_preflight')) {
     function mco_handle_cors_preflight($served, $result, $request, $server) {
+        // Ensure mco_get_exam_app_url is available from mco-shortcodes.php (or its fallback in this file)
+        if (!function_exists('mco_get_exam_app_url')) {
+            // Fallback: Use get_option directly if mco_get_exam_app_url is missing
+            $allowed_origins = array_filter(array_map('trim', explode("\n", get_option('mco_exam_app_url', ''))));
+        } else {
+            $allowed_origins = array_filter(array_map('trim', explode("\n", mco_get_exam_app_url(true)))); // true to get all URLs
+        }
+
+        $origin = get_http_origin();
         if ($request->get_method() === 'OPTIONS' && strpos($request->get_route(), '/mco-app/v1/') !== false) {
-            $origin = get_http_origin() ?: '*';
-            header("Access-Control-Allow-Origin: $origin");
+            if (in_array($origin, $allowed_origins) || empty($allowed_origins)) { // Allow all if none configured
+                header("Access-Control-Allow-Origin: $origin");
+            } else {
+                header("Access-Control-Allow-Origin: " . $allowed_origins[0]); // Default to first if multiple
+            }
             header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
             header("Access-Control-Allow-Credentials: true");
             header("Access-Control-Allow-Headers: Authorization, Content-Type, X-Requested-With");
@@ -309,13 +321,22 @@ if (!function_exists('mco_handle_cors_preflight')) {
 if (!function_exists('mco_add_cors_headers_to_response')) {
     function mco_add_cors_headers_to_response($response, $handler, $request) {
         if (strpos($request->get_route(), '/mco-app/v1/') !== false) {
-            $origin = get_http_origin();
-            if ($origin) {
-                $response->header('Access-Control-Allow-Origin', $origin);
-                $response->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, PUT, DELETE');
-                $response->header('Access-Control-Allow-Credentials', 'true');
-                $response->header('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Requested-With');
+            // Ensure mco_get_exam_app_url is available from mco-shortcodes.php (or its fallback in this file)
+            if (!function_exists('mco_get_exam_app_url')) {
+                 $allowed_origins = array_filter(array_map('trim', explode("\n", get_option('mco_exam_app_url', ''))));
+            } else {
+                 $allowed_origins = array_filter(array_map('trim', explode("\n", mco_get_exam_app_url(true))));
             }
+            
+            $origin = get_http_origin();
+            if (in_array($origin, $allowed_origins) || empty($allowed_origins)) {
+                $response->header('Access-Control-Allow-Origin', $origin);
+            } else {
+                $response->header('Access-Control-Allow-Origin', $allowed_origins[0]);
+            }
+            $response->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, PUT, DELETE');
+            $response->header('Access-Control-Allow-Credentials', 'true');
+            $response->header('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Requested-With');
         }
         return $response;
     }
@@ -370,10 +391,12 @@ if (!function_exists('mco_api_jwt_admin_permission_check')) {
  */
 if (!function_exists('mco_api_get_full_config')) {
     function mco_api_get_full_config(WP_REST_Request $request) {
-        if (function_exists('mco_get_full_snapshot_data')) {
-            return new WP_REST_Response(mco_get_full_snapshot_data(false), 200);
+        // Ensure mco_get_full_snapshot_data is available from mco-data.php
+        if (!function_exists('mco_get_full_snapshot_data')) {
+            error_log('Error: mco_get_full_snapshot_data function not found in mco-api.php. Ensure mco-data.php is loaded.');
+            return new WP_Error('mco_provider_missing', 'Data provider not found. Check plugin includes.', ['status' => 500]);
         }
-        return new WP_Error('mco_provider_missing', 'Data provider not found.', ['status' => 500]);
+        return new WP_REST_Response(mco_get_full_snapshot_data(false), 200);
     }
 }
 
@@ -593,8 +616,8 @@ if (!function_exists('mco_api_get_certificate_data')) {
                 return new WP_REST_Response([
                     'certificateNumber' => strtoupper(substr(md5($testId), 0, 12)),
                     'candidateName'     => $payload['user']['name'],
-                    'finalScore'        => (float)$res['score'],
-                    'date'              => date('F j, Y', (int)($timestamp / 1000)),
+                    'finalScore'        => (float)($res['score'] ?? 0),
+                    'date'              => date('F j, Y', (int)(($res['timestamp'] ?? time()) / 1000)),
                     'examId'            => $res['examId'],
                     'examName'          => $res['examId']
                 ], 200);
@@ -724,7 +747,7 @@ if (!function_exists('mco_api_submit_feedback')) {
             return new WP_REST_Response(['success' => true, 'message' => 'Feedback sent!'], 200);
         } else {
             error_log("MCO FEEDBACK ERR: Failed to send email from {$user_email}.");
-            return new WP_Error('mail_fail', 'Failed to send feedback email. Check SMTP settings.', ['status' => 500]);
+            return new WP_Error('mail_fail', 'Failed to send email. Check SMTP settings.', ['status' => 500]);
         }
     }
 }
@@ -837,6 +860,166 @@ if (!function_exists('mco_api_log_engagement')) {
     }
 }
 
+if (!function_exists('mco_api_get_exam_stats')) {
+    function mco_api_get_exam_stats(WP_REST_Request $request) {
+        $payload = $request->get_param('jwt_payload');
+        if (empty($payload['user']['isAdmin'])) {
+            return new WP_Error('rest_forbidden', 'Administrative access required.', ['status' => 403]);
+        }
+
+        global $wpdb;
+        
+        $stats = [];
+        $programs = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish']);
+        $all_users = get_users(['fields' => ['ID']]);
+
+        // Fetch sales data from WooCommerce (global per product)
+        $product_sales_data = [];
+        if (class_exists('WooCommerce')) {
+            $wc_products = wc_get_products(['limit' => -1, 'status' => 'publish']);
+            foreach ($wc_products as $wc_product) {
+                $product_sales_data[$wc_product->get_sku()] = [
+                    'total_sales' => (int)$wc_product->get_total_sales(),
+                    'current_price' => (float)$wc_product->get_price(),
+                    'product_id' => $wc_product->get_id(),
+                ];
+            }
+        }
+
+        foreach ($programs as $program_post) {
+            $program_title = $program_post->post_title;
+            $practice_exam_id = 'prac-' . $program_post->ID;
+            $cert_exam_sku = get_post_meta($program_post->ID, '_mco_certification_exam_sku', true);
+            $question_source_url = get_post_meta($program_post->ID, '_mco_question_source_url', true);
+            $cert_pass_score = (int)get_post_meta($program_post->ID, '_mco_pass_score', true) ?: 70;
+            
+            // --- Engagements (Clicks to program page) ---
+            $engagements = (int)get_post_meta($program_post->ID, '_mco_engagement_count', true);
+
+            // --- Aggregate User Exam Results ---
+            $exam_results_for_program = [];
+            foreach ($all_users as $user) {
+                $user_results = maybe_unserialize(get_user_meta($user->ID, 'mco_exam_results', true)) ?: [];
+                foreach ($user_results as $result) {
+                    if ($result['examId'] === $practice_exam_id || $result['examId'] === $cert_exam_sku) {
+                        $exam_results_for_program[] = $result;
+                    }
+                }
+            }
+
+            // --- Practice Exam Stats ---
+            $practice_attempts = 0;
+            $practice_total_score = 0;
+            $practice_pass_count = 0;
+
+            foreach ($exam_results_for_program as $result) {
+                if ($result['examId'] === $practice_exam_id) {
+                    $practice_attempts++;
+                    $practice_total_score += $result['score'];
+                    if ($result['score'] >= 70) $practice_pass_count++; // Default 70% for practice
+                }
+            }
+            $practice_avg_score = $practice_attempts > 0 ? $practice_total_score / $practice_attempts : 0;
+            $practice_pass_rate = $practice_attempts > 0 ? ($practice_pass_count / $practice_attempts) * 100 : 0;
+
+            $stats[] = [
+                'id' => $practice_exam_id,
+                'name' => get_post_meta($program_post->ID, '_mco_practice_exam_title_override', true) ?: $program_title . ' Practice',
+                'programId' => 'prod-'.$program_post->ID,
+                'programName' => $program_title,
+                'isPractice' => true,
+                'attempts' => $practice_attempts,
+                'averageScore' => $practice_avg_score,
+                'passRate' => $practice_pass_rate,
+                'engagements' => $engagements,
+                'totalSales' => 0, // Practice exams are not sold
+                'totalRevenue' => 0,
+                'passCount' => $practice_pass_count,
+                'totalScoreSum' => $practice_total_score,
+                'country' => 'Global' // Assuming global for now
+            ];
+
+            // --- Certification Exam Stats ---
+            if ($cert_exam_sku) {
+                $cert_attempts = 0;
+                $cert_total_score = 0;
+                $cert_pass_count = 0;
+
+                foreach ($exam_results_for_program as $result) {
+                    if ($result['examId'] === $cert_exam_sku) {
+                        $cert_attempts++;
+                        $cert_total_score += $result['score'];
+                        if ($result['score'] >= $cert_pass_score) $cert_pass_count++;
+                    }
+                }
+                $cert_avg_score = $cert_attempts > 0 ? $cert_total_score / $cert_attempts : 0;
+                $cert_pass_rate = $cert_attempts > 0 ? ($cert_pass_count / $cert_attempts) * 100 : 0;
+
+                $sales_data = $product_sales_data[$cert_exam_sku] ?? ['total_sales' => 0, 'current_price' => 0, 'product_id' => 0];
+                $total_sales = $sales_data['total_sales'];
+                $total_revenue = $total_sales * $sales_data['current_price'];
+
+                $stats[] = [
+                    'id' => $cert_exam_sku,
+                    'name' => get_post_meta($program_post->ID, '_mco_cert_exam_title_override', true) ?: $program_title . ' Certification',
+                    'programId' => 'prod-'.$program_post->ID,
+                    'programName' => $program_title,
+                    'isPractice' => false,
+                    'attempts' => $cert_attempts,
+                    'averageScore' => $cert_avg_score,
+                    'passRate' => $cert_pass_rate,
+                    'engagements' => $engagements, // Engagements are for the program, not specific exam type
+                    'totalSales' => $total_sales,
+                    'totalRevenue' => $total_revenue,
+                    'passCount' => $cert_pass_count,
+                    'totalScoreSum' => $cert_total_score,
+                    'country' => 'Global'
+                ];
+            }
+        }
+
+        return new WP_REST_Response($stats, 200);
+    }
+}
+
+if (!function_exists('mco_api_get_debug_details')) {
+    function mco_api_get_debug_details(WP_REST_Request $request) {
+        $payload = $request->get_param('jwt_payload');
+        $user_id = (int)$payload['user']['id'];
+        
+        $user_purchased_skus = get_user_meta($user_id, 'mco_paid_exams', true) ?: [];
+        $user_results = maybe_unserialize(get_user_meta($user_id, 'mco_exam_results', true)) ?: [];
+
+        // Test Google Sheet accessibility for a sample program
+        $sheet_test_status = ['success' => false, 'message' => 'No exam programs found to test.'];
+        $programs = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => 1, 'fields' => 'ids']);
+        if (!empty($programs)) {
+            $program_id = $programs[0];
+            $sheet_url = get_post_meta($program_id, '_mco_question_source_url', true);
+            if (!empty($sheet_url)) {
+                $test_fetch = mco_fetch_remote_csv_content($sheet_url);
+                if (is_wp_error($test_fetch)) {
+                    $sheet_test_status = ['success' => false, 'message' => 'ERROR: ' . $test_fetch->get_error_message(), 'data' => 'Verify sheet is "Published to web" and URL is correct.'];
+                } elseif (!isset($test_fetch['code']) || $test_fetch['code'] !== 200) {
+                     $sheet_test_status = ['success' => false, 'message' => 'HTTP Error ' . ($test_fetch['code'] ?? 'Unknown'), 'data' => 'Sheet fetch failed. Check URL permissions and availability.'];
+                } else {
+                    $sheet_test_status = ['success' => true, 'message' => 'Successfully accessed a sample sheet.', 'data' => 'Fetched content from first Exam Program: ' . get_the_title($program_id)];
+                }
+            } else {
+                $sheet_test_status = ['success' => false, 'message' => 'No sheet URL found for a sample test. Add a URL to an Exam Program.', 'data' => null];
+            }
+        }
+
+
+        return new WP_REST_Response([
+            'user' => $payload['user'],
+            'purchases' => $user_purchased_skus,
+            'results' => $user_results,
+            'sheetTest' => $sheet_test_status,
+        ], 200);
+    }
+}
+
 if (!function_exists('mco_api_admin_get_system_status')) {
     function mco_api_admin_get_system_status(WP_REST_Request $request) {
         $status = [
@@ -848,9 +1031,17 @@ if (!function_exists('mco_api_admin_get_system_status')) {
             'google_sheet' => ['success' => false, 'message' => 'Not tested yet. Add an Exam Program with a Google Sheet URL to test.'] // Default for lazy load
         ];
 
-        $app_urls = get_option('mco_exam_app_url', '');
-        if (empty($app_urls)) {
+        // Ensure mco_get_exam_app_url is available
+        if (!function_exists('mco_get_exam_app_url')) {
+            $app_urls_option = get_option('mco_exam_app_url', '');
+        } else {
+            $app_urls_option = mco_get_exam_app_url(true); // Get all URLs
+        }
+        
+        if (empty($app_urls_option)) {
             $status['app_url_config'] = ['success' => false, 'message' => 'CRITICAL: Exam Application URL(s) are not configured. Go to Exam App Engine -> Main Settings to fix.', 'data' => null];
+        } else {
+            $status['app_url_config']['data'] = $app_urls_option;
         }
         
         // Test Google Sheet accessibility
@@ -1055,10 +1246,8 @@ if (!function_exists('mco_api_admin_upsert_product_internal')) {
             error_log('MCO COMMERCE ERR: WooCommerce not active during product upsert.');
             return new WP_Error('woocommerce_inactive', 'WooCommerce is not active.', ['status' => 500]);
         }
-        if (!class_exists('WC_Product_Subscription')) {
-            // Log, but don't error out if trying to create subscription and plugin is missing,
-            // as some installs might not use subscriptions.
-            error_log('MCO COMMERCE WARN: WooCommerce Subscriptions not active during product upsert. Subscription features will not work.');
+        if (!class_exists('WC_Subscriptions')) { // Changed from WC_Product_Subscription to WC_Subscriptions
+            error_log('MCO COMMERCE WARN: WooCommerce Subscriptions plugin not active during product upsert. Subscription features will not work.');
         }
 
         $sku = sanitize_text_field($params['sku'] ?? '');
@@ -1069,12 +1258,14 @@ if (!function_exists('mco_api_admin_upsert_product_internal')) {
 
         $is_subscription_request = isset($params['subscription_period']) || (isset($params['type']) && $params['type'] === 'subscription');
 
-        if ($is_subscription_request && class_exists('WC_Product_Subscription')) {
+        if ($is_subscription_request && class_exists('WC_Subscriptions')) { // Use WC_Subscriptions for class_exists check
             if ($product_id) {
                 $product = wc_get_product($product_id);
                 if (!($product instanceof WC_Product_Subscription)) {
-                    // Convert existing simple product to subscription or create new subscription
-                    $product = new WC_Product_Subscription($product_id);
+                    // If it exists but is not a subscription, delete it and create a new one
+                    $product->delete(true);
+                    $product = new WC_Product_Subscription();
+                    $product->set_sku($sku); // Need to re-set SKU for new object
                 }
             } else {
                 $product = new WC_Product_Subscription();
@@ -1083,9 +1274,11 @@ if (!function_exists('mco_api_admin_upsert_product_internal')) {
             // Default to simple product
             if ($product_id) {
                 $product = wc_get_product($product_id);
-                // If it was a subscription but now it's not requested as such, convert to simple
+                // If it was a subscription but now it's not requested as such, delete and create simple
                 if ($product instanceof WC_Product_Subscription && !$is_subscription_request) {
-                    $product = new WC_Product_Simple($product_id);
+                    $product->delete(true);
+                    $product = new WC_Product_Simple();
+                    $product->set_sku($sku); // Need to re-set SKU for new object
                 }
             } else {
                 $product = new WC_Product_Simple();
@@ -1097,11 +1290,11 @@ if (!function_exists('mco_api_admin_upsert_product_internal')) {
             return new WP_Error('product_create_fail', 'Failed to create/get product object.', ['status' => 500]);
         }
 
-        if (!$product_id) {
+        if (!$product_id && empty($product->get_sku())) { // Only set SKU for new products or if it was just converted
             $product->set_sku($sku);
-            $product->set_status('publish'); // Publish new products by default
-            $product->set_virtual(true); // All our products are virtual
         }
+        $product->set_status('publish'); // Publish new products by default
+        $product->set_virtual(true); // All our products are virtual
         
         if (isset($params['name'])) $product->set_name(sanitize_text_field($params['name']));
         if (isset($params['regularPrice'])) $product->set_regular_price((float)$params['regularPrice']);

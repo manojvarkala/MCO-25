@@ -24,16 +24,12 @@ if (!function_exists('mco_register_custom_post_types')) {
         ));
     }
 }
-// FIX: Hook this function to init so CPTs are registered on every page load
 add_action('init', 'mco_register_custom_post_types');
 
 
 // --- META BOXES ---
-
-add_action('add_meta_boxes', 'mco_add_custom_meta_boxes');
-add_action('save_post', 'mco_save_custom_meta_data');
-
 if (!function_exists('mco_add_custom_meta_boxes')) {
+    add_action('add_meta_boxes', 'mco_add_custom_meta_boxes');
     function mco_add_custom_meta_boxes($post_type) {
         if ($post_type === 'mco_exam_program') {
             add_meta_box(
@@ -54,6 +50,89 @@ if (!function_exists('mco_add_custom_meta_boxes')) {
                 'normal',
                 'high'
             );
+        }
+    }
+}
+
+if (!function_exists('mco_save_custom_meta_data')) {
+    add_action('save_post', 'mco_save_custom_meta_data');
+    function mco_save_custom_meta_data($post_id) {
+        // Exam Programs
+        if (isset($_POST['mco_exam_meta_box_nonce']) && wp_verify_nonce($_POST['mco_exam_meta_box_nonce'], 'mco_save_exam_meta_box_data')) {
+            if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+            if (!current_user_can('edit_post', $post_id)) return;
+            
+            $fields = [
+                '_mco_practice_exam_title_override' => 'sanitize_text_field',
+                '_mco_cert_exam_title_override' => 'sanitize_text_field',
+                '_mco_question_source_url' => 'esc_url_raw',
+                '_mco_certification_exam_sku' => 'sanitize_text_field',
+                '_mco_certificate_template_id' => 'sanitize_text_field',
+                '_mco_is_proctored' => 'sanitize_text_field',
+                '_mco_certificate_enabled' => 'sanitize_text_field',
+                '_mco_practice_certificate_enabled' => 'sanitize_text_field',
+                '_mco_practice_questions' => 'sanitize_text_field',
+                '_mco_practice_duration' => 'sanitize_text_field',
+                '_mco_cert_questions' => 'sanitize_text_field',
+                '_mco_cert_duration' => 'sanitize_text_field',
+                '_mco_pass_score' => 'sanitize_text_field',
+            ];
+            
+            foreach ($fields as $key => $sanitize_func) {
+                $post_key = str_replace('_mco_', 'mco_', $key);
+                if (isset($_POST[$post_key])) {
+                    update_post_meta($post_id, $key, call_user_func($sanitize_func, $_POST[$post_key]));
+                } else {
+                    if (in_array($key, ['_mco_is_proctored', '_mco_certificate_enabled', '_mco_practice_certificate_enabled'])) {
+                        update_post_meta($post_id, $key, '0');
+                    }
+                }
+            }
+            
+            if (isset($_POST['mco_recommended_book_ids']) && is_array($_POST['mco_recommended_book_ids'])) {
+                $sanitized_ids = array_map('intval', $_POST['mco_recommended_book_ids']);
+                update_post_meta($post_id, '_mco_recommended_book_ids', $sanitized_ids);
+            } else {
+                delete_post_meta($post_id, '_mco_recommended_book_ids');
+            }
+
+            if (isset($_POST['mco_sections']) && is_array($_POST['mco_sections'])) {
+                $sanitized_sections = [];
+                foreach ($_POST['mco_sections'] as $section) {
+                    if (!empty($section['name']) && !empty($section['start']) && !empty($section['end'])) {
+                        $sanitized_sections[] = [
+                            'id' => sanitize_title($section['name']),
+                            'name' => sanitize_text_field($section['name']),
+                            'startQuestion' => intval($section['start']),
+                            'endQuestion' => intval($section['end'])
+                        ];
+                    }
+                }
+                update_post_meta($post_id, '_mco_exam_sections', $sanitized_sections);
+            } else {
+                delete_post_meta($post_id, '_mco_exam_sections');
+            }
+        }
+        
+        // Recommended Books
+        if (isset($_POST['mco_book_nonce']) && wp_verify_nonce($_POST['mco_book_nonce'], 'mco_save_book_meta_data')) {
+            if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+            if (!current_user_can('edit_post', $post_id)) return;
+
+            $book_fields = [
+                '_mco_book_id' => 'sanitize_text_field',
+                '_mco_thumbnail_url' => 'esc_url_raw',
+                '_mco_link_com' => 'esc_url_raw',
+                '_mco_link_in' => 'esc_url_raw',
+                '_mco_link_ae' => 'esc_url_raw',
+            ];
+
+            foreach ($book_fields as $key => $sanitize_func) {
+                $post_key = str_replace('_mco_', 'mco_', $key);
+                if (isset($_POST[$post_key])) {
+                    update_post_meta($post_id, $key, call_user_func($sanitize_func, $_POST[$post_key]));
+                }
+            }
         }
     }
 }
@@ -80,8 +159,14 @@ if (!function_exists('mco_exam_program_meta_box_callback')) {
         $cert_duration = get_post_meta($post->ID, '_mco_cert_duration', true);
         $pass_score = get_post_meta($post->ID, '_mco_pass_score', true);
 
+        // Ensure mco_get_default_certificate_templates is available from mco-data.php
+        if (!function_exists('mco_get_default_certificate_templates')) {
+            error_log('mco_get_default_certificate_templates function not found. Ensure mco-data.php is loaded correctly.');
+            $all_templates = []; // Fallback to empty if function is missing
+        } else {
+            $all_templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
+        }
         $all_books = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
-        $all_templates = get_option('mco_certificate_templates', []);
 
         ?>
         <table class="form-table">
@@ -237,86 +322,3 @@ if (!function_exists('mco_book_meta_box_callback')) {
         <?php
     }
 }
-
-if (!function_exists('mco_save_custom_meta_data')) {
-    function mco_save_custom_meta_data($post_id) {
-        // Exam Programs
-        if (isset($_POST['mco_exam_meta_box_nonce']) && wp_verify_nonce($_POST['mco_exam_meta_box_nonce'], 'mco_save_exam_meta_box_data')) {
-            if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
-            if (!current_user_can('edit_post', $post_id)) return;
-            
-            $fields = [
-                '_mco_practice_exam_title_override' => 'sanitize_text_field',
-                '_mco_cert_exam_title_override' => 'sanitize_text_field',
-                '_mco_question_source_url' => 'esc_url_raw',
-                '_mco_certification_exam_sku' => 'sanitize_text_field',
-                '_mco_certificate_template_id' => 'sanitize_text_field',
-                '_mco_is_proctored' => 'sanitize_text_field',
-                '_mco_certificate_enabled' => 'sanitize_text_field',
-                '_mco_practice_certificate_enabled' => 'sanitize_text_field',
-                '_mco_practice_questions' => 'sanitize_text_field',
-                '_mco_practice_duration' => 'sanitize_text_field',
-                '_mco_cert_questions' => 'sanitize_text_field',
-                '_mco_cert_duration' => 'sanitize_text_field',
-                '_mco_pass_score' => 'sanitize_text_field',
-            ];
-            
-            foreach ($fields as $key => $sanitize_func) {
-                $post_key = str_replace('_mco_', 'mco_', $key);
-                if (isset($_POST[$post_key])) {
-                    update_post_meta($post_id, $key, call_user_func($sanitize_func, $_POST[$post_key]));
-                } else {
-                    if (in_array($key, ['_mco_is_proctored', '_mco_certificate_enabled', '_mco_practice_certificate_enabled'])) {
-                        update_post_meta($post_id, $key, '0');
-                    }
-                }
-            }
-            
-            if (isset($_POST['mco_recommended_book_ids']) && is_array($_POST['mco_recommended_book_ids'])) {
-                $sanitized_ids = array_map('intval', $_POST['mco_recommended_book_ids']);
-                update_post_meta($post_id, '_mco_recommended_book_ids', $sanitized_ids);
-            } else {
-                delete_post_meta($post_id, '_mco_recommended_book_ids');
-            }
-
-            if (isset($_POST['mco_sections']) && is_array($_POST['mco_sections'])) {
-                $sanitized_sections = [];
-                foreach ($_POST['mco_sections'] as $section) {
-                    if (!empty($section['name']) && !empty($section['start']) && !empty($section['end'])) {
-                        $sanitized_sections[] = [
-                            'id' => sanitize_title($section['name']),
-                            'name' => sanitize_text_field($section['name']),
-                            'startQuestion' => intval($section['start']),
-                            'endQuestion' => intval($section['end'])
-                        ];
-                    }
-                }
-                update_post_meta($post_id, '_mco_exam_sections', $sanitized_sections);
-            } else {
-                delete_post_meta($post_id, '_mco_exam_sections');
-            }
-        }
-        
-        // Recommended Books
-        if (isset($_POST['mco_book_nonce']) && wp_verify_nonce($_POST['mco_book_nonce'], 'mco_save_book_meta_data')) {
-            if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
-            if (!current_user_can('edit_post', $post_id)) return;
-
-            $book_fields = [
-                '_mco_book_id' => 'sanitize_text_field',
-                '_mco_thumbnail_url' => 'esc_url_raw',
-                '_mco_link_com' => 'esc_url_raw',
-                '_mco_link_in' => 'esc_url_raw',
-                '_mco_link_ae' => 'esc_url_raw',
-            ];
-
-            foreach ($book_fields as $key => $sanitize_func) {
-                $post_key = str_replace('_mco_', 'mco_', $key);
-                if (isset($_POST[$post_key])) {
-                    update_post_meta($post_id, $key, call_user_func($sanitize_func, $_POST[$post_key]));
-                }
-            }
-        }
-    }
-}
-?>

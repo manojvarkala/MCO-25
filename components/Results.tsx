@@ -1,3 +1,4 @@
+
 import React, { FC, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -278,7 +279,6 @@ const Results: FC = () => {
         link.href = URL.createObjectURL(blob);
         link.download = 'exam-result.png';
         document.body.appendChild(link);
-        link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(link.href);
         toast.success("Image downloaded! You can now attach it to your post.");
