@@ -28,55 +28,68 @@ require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php';
 
 // --- FORCE REGISTRATION OPTION ---
-add_filter('option_users_can_register', 'mco_force_registration_option');
-function mco_force_registration_option($value) {
-    if (get_option('mco_force_enable_registration')) {
-        return 1;
+if (!function_exists('mco_force_registration_option')) {
+    add_filter('option_users_can_register', 'mco_force_registration_option');
+    function mco_force_registration_option($value) {
+        if (get_option('mco_force_enable_registration')) {
+            return 1;
+        }
+        return $value;
     }
-    return $value;
 }
 
 // --- SINGLE SIGN-ON & LOGIN REDIRECTS ---
 // This must run on template_redirect to happen before headers are sent.
-function mco_sso_login_redirect() {
-    global $post;
-    
-    // Detect if we are on the exam login page (via shortcode presence)
-    $is_login_page = is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_login');
-    
-    // 1. HANDLE LOGGED OUT USERS (Force Redirect to WP Login)
-    if ($is_login_page && !is_user_logged_in()) {
-        nocache_headers();
-        $current_url = get_permalink();
-        $login_url = wp_login_url($current_url);
-        wp_redirect($login_url);
-        exit;
-    }
-
-    // 2. HANDLE LOGGED IN USERS (SSO Redirect to App)
-    if (is_user_logged_in() && (isset($_GET['mco_sso_trigger']) || $is_login_page)) {
-        $user = wp_get_current_user();
+if (!function_exists('mco_sso_login_redirect')) {
+    function mco_sso_login_redirect() {
+        global $post;
         
-        // If user hasn't set a full name yet, stop here. The shortcode will render the form.
-        if (strpos($user->display_name, ' ') === false && !isset($_POST['mco_update_name_action'])) {
-            return;
+        // Detect if we are on the exam login page (via shortcode presence)
+        $is_login_page = is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'mco_exam_login');
+        
+        // 1. HANDLE LOGGED OUT USERS (Force Redirect to WP Login)
+        if ($is_login_page && !is_user_logged_in()) {
+            nocache_headers();
+            $current_url = get_permalink();
+            $login_url = wp_login_url($current_url);
+            wp_redirect($login_url);
+            exit;
         }
 
-        $app_url = mco_get_exam_app_url(); // Defined in mco-shortcodes.php compat layer or mco-api.php
-        if (!$app_url) return; // Config missing
-        
-        $token = mco_generate_exam_jwt(get_current_user_id()); // Defined in mco-api.php
-        if (!$token) {
-            wp_die('Could not generate authentication token. Ensure MCO_JWT_SECRET is defined in wp-config.php.');
+        // 2. HANDLE LOGGED IN USERS (SSO Redirect to App)
+        if (is_user_logged_in() && (isset($_GET['mco_sso_trigger']) || $is_login_page)) {
+            $user = wp_get_current_user();
+            
+            // If user hasn't set a full name yet, stop here. The shortcode will render the form.
+            if (strpos($user->display_name, ' ') === false && !isset($_POST['mco_update_name_action'])) {
+                return;
+            }
+
+            // Ensure mco_get_exam_app_url and mco_generate_exam_jwt are defined (from mco-api.php)
+            if (!function_exists('mco_get_exam_app_url') || !function_exists('mco_generate_exam_jwt')) {
+                error_log('MCO SSO ERR: Critical API functions not defined. Check mco-api.php.');
+                return; // Let the shortcode handle the error message if it renders.
+            }
+
+            $app_url = mco_get_exam_app_url(); // Defined in mco-api.php
+            if (!$app_url) {
+                error_log('MCO SSO ERR: App URL configuration missing.');
+                return; // Config missing
+            }
+            
+            $token = mco_generate_exam_jwt(get_current_user_id()); // Defined in mco-api.php
+            if (!$token) {
+                wp_die('Could not generate authentication token. Ensure MCO_JWT_SECRET is defined in wp-config.php.');
+            }
+            
+            // FIX: Include api_url here too
+            $site_url = get_site_url();
+            $redirect_url = add_query_arg(['token' => $token, 'api_url' => $site_url], rtrim($app_url, '/') . '/auth');
+            
+            nocache_headers();
+            wp_redirect($redirect_url);
+            exit;
         }
-        
-        // FIX: Include api_url here too
-        $site_url = get_site_url();
-        $redirect_url = add_query_arg(['token' => $token, 'api_url' => $site_url], rtrim($app_url, '/') . '/auth');
-        
-        nocache_headers();
-        wp_redirect($redirect_url);
-        exit;
     }
 }
 add_action('template_redirect', 'mco_sso_login_redirect');

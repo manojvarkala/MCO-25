@@ -1,4 +1,5 @@
 
+
 import JSZip from 'jszip';
 
 interface CorePluginSources {
@@ -8,7 +9,7 @@ interface CorePluginSources {
     admin: string;
     data: string;
     shortcodes: string;
-    apiParts: string[];
+    api: string; // Consolidated API content
     templates: { [key: string]: string };
 }
 
@@ -30,13 +31,10 @@ export const downloadCorePluginZip = async (sources: CorePluginSources) => {
     const includes = root.folder('includes');
     const publicDir = root.folder('public');
 
-    // Reassemble the 15-part API file
-    const fullApi = sources.apiParts.join("\n\n");
-
     root.file('mco-exam-integration-engine.php', sources.main);
     includes?.file('mco-cpts.php', sources.cpts);
     includes?.file('mco-admin.php', sources.admin);
-    includes?.file('mco-api.php', fullApi);
+    includes?.file('mco-api.php', sources.api); // Use the consolidated API content
     includes?.file('mco-data.php', sources.data);
     includes?.file('mco-shortcodes.php', sources.shortcodes);
 

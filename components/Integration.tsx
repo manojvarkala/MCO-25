@@ -12,22 +12,8 @@ import cptsFile from '../mco-exam-integration-engine/includes/mco-cpts.txt?raw';
 import adminFile from '../mco-exam-integration-engine/includes/mco-admin.txt?raw';
 import dataFile from '../mco-exam-integration-engine/includes/mco-data.txt?raw';
 import shortcodesFile from '../mco-exam-integration-engine/includes/mco-shortcodes.txt?raw';
+import apiFile from '../mco-exam-integration-engine/includes/mco-api.txt?raw';
 
-import apiP1 from '../mco-exam-integration-engine/includes/mco-api-part1.txt?raw';
-import apiP2 from '../mco-exam-integration-engine/includes/mco-api-part2.txt?raw';
-import apiP3 from '../mco-exam-integration-engine/includes/mco-api-part3.txt?raw';
-import apiP4 from '../mco-exam-integration-engine/includes/mco-api-part4.txt?raw';
-import apiP5 from '../mco-exam-integration-engine/includes/mco-api-part5.txt?raw';
-import apiP6 from '../mco-exam-integration-engine/includes/mco-api-part6.txt?raw';
-import apiP7 from '../mco-exam-integration-engine/includes/mco-api-part7.txt?raw';
-import apiP8 from '../mco-exam-integration-engine/includes/mco-api-part8.txt?raw';
-import apiP9 from '../mco-exam-integration-engine/includes/mco-api-part9.txt?raw';
-import apiP10 from '../mco-exam-integration-engine/includes/mco-api-part10.txt?raw';
-import apiP11 from '../mco-exam-integration-engine/includes/mco-api-part11.txt?raw';
-import apiP12 from '../mco-exam-integration-engine/includes/mco-api-part12.txt?raw';
-import apiP13 from '../mco-exam-integration-engine/includes/mco-api-part13.txt?raw';
-import apiP14 from '../mco-exam-integration-engine/includes/mco-api-part14.txt?raw';
-import apiP15 from '../mco-exam-integration-engine/includes/mco-api-part15.txt?raw';
 
 import socialMain from '../mco-social-poster/mco-social-poster.txt?raw';
 import socialAdmin from '../mco-social-poster/includes/admin-page.txt?raw';
@@ -52,7 +38,7 @@ const Integration: FC = () => {
                 admin: adminFile,
                 data: dataFile,
                 shortcodes: shortcodesFile,
-                apiParts: [apiP1, apiP2, apiP3, apiP4, apiP5, apiP6, apiP7, apiP8, apiP9, apiP10, apiP11, apiP12, apiP13, apiP14, apiP15],
+                api: apiFile,
                 templates: {
                     'template-exam-programs.csv': templateExams,
                     'template-recommended-books.csv': templateBooks,
