@@ -201,9 +201,16 @@ if (!function_exists('mco_render_mco_procedural_cover_php')) {
         if ($styleIndex === 0) {
             $c = $colorsA[$colorIndex];
             $titleWords = explode(' ', $title);
-            // Fix: Explicitly parenthesize the nested ternary to resolve PHP syntax error
-            $bgWord = (count($titleWords) > 1 ? end($titleWords) : ($titleWords[0] ?? '')) ?: 'MCO';
-            $bgWord = strtoupper(substr($bgWord, 0, min(strlen($bgWord), 4))); // Take up to 4 chars
+            // Fix: Re-structured for robustness, avoiding ?? with end() for older PHP compatibility
+            $bgWord = '';
+            if (!empty($titleWords)) {
+                if (count($titleWords) > 1) {
+                    $bgWord = end($titleWords);
+                } else {
+                    $bgWord = $titleWords[0];
+                }
+            }
+            $bgWord = empty($bgWord) ? 'MCO' : strtoupper(substr($bgWord, 0, min(strlen($bgWord), 4))); // Take up to 4 chars
             
             return '<div style="position: relative; z-index: 1; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; padding: 1.5rem; box-sizing: border-box; background-color: ' . esc_attr($c['bg']) . '; color: ' . esc_attr($c['text']) . '; overflow: hidden;">' .
                     '<div style="position: absolute; bottom: -0.5rem; right: -0.5rem; font-size: 5rem; font-weight: 900; line-height: 1; z-index: 0; opacity: 0.15; user-select: none; color: ' . esc_attr($c['bgWord']) . ';">' . esc_html($bgWord) . '</div>' .
@@ -701,8 +708,8 @@ if (!function_exists('mco_book_showcase_shortcode')) {
                                 '</div></div>';
                     } else { // Annapoorna Style B
                         var c = annapoornaColorsB[colorIndex];
-                        return '<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; text-align: left; padding: 1.5rem; box-sizing: border-box; background-color: ' + c.bg + '; color: ' + c.text + '; overflow: hidden;">' + // FIX: Changed background-color from c.text to c.bg
-                                '<div style="position: absolute; right: -20%; top: -20%; width: 70%; height: 70%; border-radius: 50%; opacity: 0.5; mix-blend-mode: multiply; background-color: ' + c.shape + ';"></div>' + // ADDED: Shape div
+                        return '<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; text-align: left; padding: 1.5rem; box-sizing: border-box; background-color: ' . esc_attr($c['bg']) . '; color: ' . esc_attr($c['text']) . '; overflow: hidden;">' + // FIX: Changed background-color from c.text to c.bg
+                                '<div style="position: absolute; right: -20%; top: -20%; width: 70%; height: 70%; border-radius: 50%; opacity: 0.5; mix-blend-mode: multiply; background-color: ' . esc_attr($c['shape']) . ';"></div>' + // ADDED: Shape div
                                 '<div style="position: relative; z-index: 10;">' +
                                 '<h4 style="font-weight: 800; font-size: 1.5rem; line-height: 1.1; margin: 0 0 0.5rem 0; color: inherit;">' + bookTitle + '</h4>' +
                                 '<span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: inherit;">Official Guide</span>' +
@@ -1308,15 +1315,6 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
                 { bg: '#065f46', text: '#ffffff', accent: '#a3e635' }, // Emerald with Lime accent
             ];
 
-            function getHash(str) {
-                var hash = 0;
-                if (!str || str.length === 0) return hash;
-                for (var i = 0; i < str.length; i++) {
-                    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-                }
-                return hash;
-            }
-
             function renderProceduralCoverSidebar(bookTitle, isMco) {
                 var hash = getHash(bookTitle);
                 var styleIndex = Math.abs(hash) % 2;
@@ -1348,8 +1346,8 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
                                 '</div>';
                     } else { // Annapoorna Style B
                         var c = annapoornaColorsB[colorIndex];
-                        return '<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; text-align: left; padding: 8px; box-sizing: border-box; background-color: ' + c.bg + '; color: ' + c.text + '; overflow: hidden;">' + // FIX: Changed background-color to c.bg
-                                '<div style="position: absolute; right: -20%; top: -20%; width: 70%; height: 70%; border-radius: 50%; opacity: 0.5; mix-blend-mode: multiply; background-color: ' + c.shape + ';"></div>' + // ADDED: Shape div
+                        return '<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; text-align: left; padding: 8px; box-sizing: border-box; background-color: ' . esc_attr($c['bg']) . '; color: ' . esc_attr($c['text']) . '; overflow: hidden;">' + // FIX: Changed background-color to c.bg
+                                '<div style="position: absolute; right: -20%; top: -20%; width: 70%; height: 70%; border-radius: 50%; opacity: 0.5; mix-blend-mode: multiply; background-color: ' . esc_attr($c['shape']) . ';"></div>' + // ADDED: Shape div
                                 '<div>' +
                                 '<h4 style="font-weight: 800; font-size: 10px; line-height: 1.2; margin: 0; color: inherit;">' + bookTitle + '</h4>' +
                                 '</div></div>';
