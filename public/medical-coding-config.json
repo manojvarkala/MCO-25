@@ -1,4 +1,3 @@
-
 {
     "version": "20251030131255",
     "organizations": [
@@ -25,11 +24,28 @@
                 { "id": "exam-coc-cert", "name": "COC Certification Exam", "description": "The official certification exam to become a Certified Outpatient Coder (COC).", "price": 49.99, "regularPrice": 79.99, "productSku": "exam-coc-cert", "productSlug": "coc-certification-exam", "numberOfQuestions": 150, "passScore": 70, "certificateTemplateId": "cert-coc", "isPractice": false, "isProctored": true, "durationMinutes": 240, "recommendedBookIds": ["book-coc-guide"]}
             ],
             "examProductCategories": [
-                { "id": "prod-cpc", "name": "Certified Professional Coder (CPC)", "description": "Prepare for the industry-standard CPC certification with our comprehensive practice and full-length exams.", "practiceExamId": "exam-cpc-practice", "certificationExamId": "exam-cpc-cert", "questionSourceUrl": "https://docs.google.com/spreadsheets/d/1vQjL2G2X5S4S7J1gJ7Q0X0X0X0X0X0X0X0X0X0/edit?usp=sharing"},
+                { "id": "prod-cpc", "name": "Certified Professional Coder (CPC)", "description": "Prepare for the industry-standard CPC certification with our comprehensive practice and full-length exams.", "practiceExamId": "exam-cpc-practice", "certificationExamId": "exam-cpc-cert", "questionSourceUrl": "https://docs.google.com/spreadsheets/d/1vQjL2G2X5S4S7J1gJ7Q0X0X0X0X0X0X0X0X0X0X0/edit?usp=sharing"},
                 { "id": "prod-cic", "name": "Certified Inpatient Coder (CIC)", "description": "Master inpatient coding skills required for the CIC certification.", "practiceExamId": "exam-cic-practice", "certificationExamId": "exam-cic-cert", "questionSourceUrl": "https://docs.google.com/spreadsheets/d/1vQjL2G2X5S4S7J1gJ7Q0X0X0X0X0X0X0X0X0X0X0/edit?usp=sharing"},
                 { "id": "prod-coc", "name": "Certified Outpatient Coder (COC)", "description": "Sharpen your outpatient coding expertise for the COC certification.", "practiceExamId": "exam-coc-practice", "certificationExamId": "exam-coc-cert", "questionSourceUrl": "https://docs.google.com/spreadsheets/d/1vQjL2G2X5S4S7J1gJ7Q0X0X0X0X0X0X0X0X0X0X0/edit?usp=sharing"}
             ],
             "certificateTemplates": [
                 { "id": "cert-practice", "title": "Certificate of Proficiency", "body": "This certifies that <strong>{candidateName}</strong> has successfully demonstrated proficiency in the <strong>{examName}</strong> practice exam, achieving a score of <strong>{finalScore}%</strong>.", "signature1Name": "Jane Doe", "signature1Title": "Program Director", "signature1ImageUrl": "" },
                 { "id": "cert-cpc", "title": "Certified Professional Coder", "body": "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", "signature1Name": "Jane Doe", "signature1Title": "Program Director", "signature1ImageUrl": "", "signature2Name": "John Smith", "signature2Title": "Lead Instructor", "signature2ImageUrl": "" },
-                { "
+                { "id": "cert-cic", "title": "Certified Inpatient Coder", "body": "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", "signature1Name": "Jane Doe", "signature1Title": "Program Director", "signature1ImageUrl": "", "signature2Name": "John Smith", "signature2Title": "Lead Instructor", "signature2ImageUrl": "" },
+                { "id": "cert-coc", "title": "Certified Outpatient Coder", "body": "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", "signature1Name": "Jane Doe", "signature1Title": "Program Director", "signature1ImageUrl": "", "signature2Name": "John Smith", "signature2Title": "Lead Instructor", "signature2ImageUrl": "" }
+            ],
+            "suggestedBooks": [
+                { "id": "book-cpc-guide", "title": "CPC® Study Guide 2024 - Official AAPC Certification", "description": "The official study guide from AAPC for the Certified Professional Coder (CPC) exam. Essential for preparation.", "thumbnailUrl": "", "affiliateLinks": { "com": "https://www.amazon.com/dp/1640161421?tag=mykada-20", "in": "https://www.amazon.in/dp/1640161421?tag=httpcodingonl-21", "ae": "https://www.amazon.ae/dp/1640161421?tag=medical0f1-21"}},
+                { "id": "book-cic-guide", "title": "CIC® Study Guide 2024 - Official AAPC Certification", "description": "The official study guide from AAPC for the Certified Inpatient Coder (CIC) exam. Essential for preparation.", "thumbnailUrl": "", "affiliateLinks": { "com": "https://www.amazon.com/dp/1640161421?tag=mykada-20", "in": "https://www.amazon.in/dp/1640161421?tag=httpcodingonl-21", "ae": "https://www.amazon.ae/dp/1640161421?tag=medical0f1-21"}},
+                { "id": "book-coc-guide", "title": "COC® Study Guide 2024 - Official AAPC Certification", "description": "The official study guide from AAPC for the Certified Outpatient Coder (COC) exam. Essential for preparation.", "thumbnailUrl": "", "affiliateLinks": { "com": "https://www.amazon.com/dp/1640161421?tag=mykada-20", "in": "https://www.amazon.in/dp/1640161421?tag=httpcodingonl-21", "ae": "https://www.amazon.ae/dp/1640161421?tag=medical0f1-21"}}
+            ]
+        }
+    ],
+    "examPrices": {
+        "exam-cpc-cert": { "price": 49.99, "regularPrice": 79.99, "productSlug": "cpc-certification-exam" },
+        "exam-cic-cert": { "price": 49.99, "regularPrice": 79.99, "productSlug": "cic-certification-exam" },
+        "exam-coc-cert": { "price": 49.99, "regularPrice": 79.99, "productSlug": "coc-certification-exam" },
+        "sub-monthly": { "price": 19.99, "regularPrice": 29.99, "productId": 1234, "name": "Monthly Subscription", "type": "subscription" },
+        "sub-yearly": { "price": 149.99, "regularPrice": 249.99, "productId": 5678, "name": "Yearly Subscription", "type": "subscription" }
+    }
+}
