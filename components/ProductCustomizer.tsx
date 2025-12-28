@@ -352,6 +352,7 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                     <div className="grid grid-cols-3 gap-4">
                         <div>
                             <label className="text-sm font-medium">Billing Period</label>
+                            {/* FIX: Cast e.target.value to BillingPeriod to resolve type error */}
                             <select value={period} onChange={e => setPeriod(e.target.value as BillingPeriod)} className="w-full p-2 mt-1 border rounded bg-white">
                                 <option value="day">Day</option>
                                 <option value="week">Week</option>
@@ -713,7 +714,7 @@ const ProductCustomizer: FC = () => {
                  {products.length > 0 && (
                      <div className="flex items-center p-2 mb-4 border-b border-[rgb(var(--color-border-rgb))]">
                         <label className="flex items-center gap-4 cursor-pointer">
-                            <input type="checkbox" onChange={(e) => handleSelectAll(e, products)} checked={isAllSelected} className="h-4 w-4 rounded text-[rgb(var(--color-primary-rgb))] focus:ring-[rgb(var(--color-primary-rgb))]"/>
+                            <input type="checkbox" onChange={(e) => handleSelectAll(e, products)} checked={isAllSelected} className="h-4 w-4 rounded text-[rgb(var(--color-primary-rgb))] focus:ring-[rgb(var(--color-primary-rgb))]" />
                             <span className="font-semibold text-sm">Select All ({selectedSkus.length} / {products.length})</span>
                         </label>
                     </div>

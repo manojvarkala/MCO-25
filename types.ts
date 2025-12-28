@@ -1,4 +1,4 @@
-// FIX: This file contained incorrect code. It has been replaced with the application's type definitions.
+
 export interface User {
   id: string;
   name: string;
@@ -222,8 +222,7 @@ export interface ProductVariation {
     type: ProductVariationType;
     regularPrice: string;
     salePrice: string;
-    subscriptionPrice?: string;
-    subscriptionPeriod?: BillingPeriod;
+    subscriptionPeriod?: string;
     subscriptionPeriodInterval?: string;
     subscriptionLength?: string;
     isBundle?: boolean;
