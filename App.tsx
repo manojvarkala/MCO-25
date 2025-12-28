@@ -113,13 +113,25 @@ const AppContent: FC = () => {
                     <WifiOff size={48} className="mx-auto text-red-400 mb-4" />
                     <h2 className="text-2xl font-bold mb-2">Connection Issue</h2>
                     <p className="text-slate-400 mb-4">
-                        We're having trouble connecting to the examination server. 
+                        We're having trouble connecting to the examination server. This often indicates a misconfiguration with your WordPress backend API.
                     </p>
                     <div className="bg-slate-900/50 p-3 rounded-lg mb-6 text-left border border-slate-700">
                         <p className="text-[10px] uppercase font-bold text-slate-500 mb-1 flex items-center gap-1">
-                            <Server size={10} /> Target Backend:
+                            <Server size={10} /> Attempting to connect to:
                         </p>
                         <code className="text-xs text-cyan-400 break-all">{targetUrl}</code>
+                    </div>
+                    <div className="text-left text-sm text-slate-300 space-y-3 mb-6">
+                        <h3 className="font-bold text-base text-red-300 flex items-center gap-2 mb-2">
+                             <AlertTriangle size={18} /> Common Troubleshooting Steps:
+                        </h3>
+                        <ul className="list-disc list-inside space-y-1">
+                            <li><strong>.htaccess Fix:</strong> Ensure the <code>.htaccess</code> file in your WordPress root has the correct <code>Authorization</code> header rewrite rules at the very top. <a href="https://developers.google.com/workspace/marketplace/security-checklist#http-headers" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline hover:text-cyan-300">More info here</a>.</li>
+                            <li><strong>WordPress Permalinks:</strong> Confirm WordPress permalinks are set to "Post Name" (Settings > Permalinks).</li>
+                            <li><strong>API URL Config:</strong> Verify the "App URL(s)" in your WordPress Admin (Exam App Engine > Main Settings) matches this site's URL.</li>
+                            <li><strong>Clear Caches:</strong> Clear all caches on your WordPress site (plugin cache, server cache).</li>
+                            <li><strong>Browser Cache:</strong> Perform a hard refresh (Ctrl+Shift+R or Cmd+Shift+R) or clear your browser's cache for this site.</li>
+                        </ul>
                     </div>
                     <div className="space-y-3">
                         <button 

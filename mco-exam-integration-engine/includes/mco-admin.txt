@@ -43,9 +43,39 @@ if (!function_exists('mco_handle_generate_programs_csv')) { add_action('admin_po
 if (!function_exists('mco_handle_generate_books_csv')) { add_action('admin_post_mco_generate_books_csv', 'mco_handle_generate_books_csv'); }
 if (!function_exists('mco_handle_generate_products_csv')) { add_action('admin_post_mco_generate_products_csv', 'mco_handle_generate_products_csv'); }
 
+// --- ADMIN NOTICES FOR BULK UPLOAD RESULTS ---
+if (!function_exists('mco_admin_upload_notices')) {
+    add_action('admin_notices', 'mco_admin_upload_notices');
+    function mco_admin_upload_notices() {
+        // Only show on our admin page
+        if (!isset($_GET['page']) || $_GET['page'] !== 'mco-exam-engine') {
+            return;
+        }
+
+        if (isset($_GET['message'])) {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(urldecode($_GET['message'])) . '</p></div>';
+        }
+        if (isset($_GET['errors'])) {
+            $errors = json_decode(urldecode($_GET['errors']), true);
+            if (is_array($errors) && !empty($errors)) {
+                echo '<div class="notice notice-error is-dismissible"><p><strong>Errors during import:</strong></p><ul>';
+                foreach ($errors as $error) {
+                    // Ensure row_data is handled safely, especially if it's an array
+                    $rowData = isset($error['row_data']) ? (is_array($error['row_data']) ? implode(', ', $error['row_data']) : $error['row_data']) : 'N/A';
+                    echo '<li>Row ' . esc_html($error['row_num'] ?? 'N/A') . ': ' . esc_html($error['reason'] ?? 'Unknown reason') . ' (Data: ' . esc_html($rowData) . ')</li>';
+                }
+                echo '</ul></div>';
+            }
+        }
+    }
+}
+
 
 if (!function_exists('mco_exam_engine_admin_page')) {
     function mco_exam_engine_admin_page() {
+        // Moved admin notices to a separate function `mco_admin_upload_notices` hooked to `admin_notices`.
+        // This ensures they render correctly at the top of the admin page.
+
         if (isset($_POST['mco_save_settings_nonce']) && wp_verify_nonce($_POST['mco_save_settings_nonce'], 'mco_save_settings')) {
             $form_action = isset($_POST['mco_form_action']) ? sanitize_text_field($_POST['mco_form_action']) : '';
 
@@ -103,7 +133,7 @@ if (!function_exists('mco_exam_engine_admin_page')) {
                 delete_transient('mco_app_config_data');
                 update_option('mco_config_version', current_time('YmdHis'));
                 echo '<div class="notice notice-success is-dismissible"><p>Certificate templates saved and cache cleared.</p></div>';
-            
+
             } elseif ($form_action === 'clear_caches') {
                 if (isset($_POST['clear_config_cache'])) {
                     delete_transient('mco_app_config_data');
@@ -159,7 +189,7 @@ if (!function_exists('mco_render_main_settings_tab')) {
                 <tr><th>Enable Registration</th><td><input type="checkbox" name="mco_users_can_register" value="1" <?php checked(get_option('mco_force_enable_registration'), 1); ?>></td></tr>
                 <tr><th>Enable Subscriptions</th><td><input type="checkbox" name="mco_subscriptions_enabled" value="1" <?php checked(get_option('mco_subscriptions_enabled', '1'), '1'); ?>></td></tr>
                 <tr><th>Enable Bundles</th><td><input type="checkbox" name="mco_bundles_enabled" value="1" <?php checked(get_option('mco_bundles_enabled', '1'), '1'); ?>></td></tr>
-                <tr><th>Enable Notifier</th><td><input type="checkbox" name="mco_purchase_notifier_enabled" value="1" <?php checked(get_option('mco_purchase_notifier_enabled', '1'), '1'); ?>></td></tr>
+                <tr><th>Notifier Enable</th><td><input type="checkbox" name="mco_purchase_notifier_enabled" value="1" <?php checked(get_option('mco_purchase_notifier_enabled', '1'), '1'); ?>></td></tr>
                 <tr><th>Notifier Initial Delay (Seconds)</th><td><input type="number" name="mco_purchase_notifier_delay" value="<?php echo esc_attr(get_option('mco_purchase_notifier_delay', '7')); ?>" class="small-text"></td></tr>
                 <tr><th>Notifier Min Gap (Seconds)</th><td><input type="number" name="mco_purchase_notifier_min_gap" value="<?php echo esc_attr(get_option('mco_purchase_notifier_min_gap', '8')); ?>" class="small-text"></td></tr>
                 <tr><th>Notifier Max Gap (Seconds)</th><td><input type="number" name="mco_purchase_notifier_max_gap" value="<?php echo esc_attr(get_option('mco_purchase_notifier_max_gap', '23')); ?>" class="small-text"></td></tr>
@@ -384,8 +414,8 @@ if (!function_exists('mco_handle_generate_books_csv')) {
             $thumbnail_url = esc_url_raw($thumbnail_url);
 
             // Safely get permalink
-            $permalink = '';
-            if (function_exists('get_permalink')) {
+            $permalink = get_post_meta($p->ID, '_mco_permalink', true); // Prefer custom meta
+            if (empty($permalink) && function_exists('get_permalink')) {
                 $permalink = get_permalink($p->ID);
             }
             $permalink = esc_url($permalink);
