@@ -1,7 +1,10 @@
+
+
 import React, { FC } from 'react';
 import { LayoutDashboard, FileText, CheckCircle, Sparkles, Award, Star, MessageSquare, BookOpen, ShoppingBag, LogIn } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
-import { Link } from 'react-router-dom';
+// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
+import { Link } from "react-router-dom";
 
 const UserGuide: FC = () => {
     const { activeOrg } = useAppContext();

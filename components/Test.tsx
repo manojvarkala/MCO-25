@@ -1,5 +1,8 @@
+
+
 import React, { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
+import { useParams, useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Question, UserAnswer, Exam, ExamProgress } from '../types.ts';

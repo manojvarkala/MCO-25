@@ -594,7 +594,8 @@ if (!function_exists('mco_handle_csv_upload')) {
                 }
             } elseif ($type === 'books') {
                 try {
-                    $expected_cols_books = 8; // FIX: Changed from 9 to 8 to match actual CSV header
+                    // FIX: Changed from 8 to 9 to match actual CSV export header.
+                    $expected_cols_books = 9;
                     // --- NEW DEBUG LOGGING START (Books) ---
                     error_log('MCO CSV IMPORT DEBUG (Book): RAW fgetcsv output for row ' . $row_num . ': ' . var_export($row, true) . '; Column count: ' . (is_array($row) ? count($row) : 'N/A'));
                     // --- END NEW DEBUG LOGGING ---
@@ -664,10 +665,12 @@ if (!function_exists('mco_handle_csv_upload')) {
                     if($pid) {
                         update_post_meta($pid, '_mco_book_id', $book_id);
                         update_post_meta($pid, '_mco_thumbnail_url', esc_url_raw(trim($row[4] ?? '')));
-                        // FIX: Adjusted index from 5 to 8 for correct column mapping
-                        update_post_meta($pid, '_mco_link_com', esc_url_raw(trim($row[5] ?? '')));
-                        update_post_meta($pid, '_mco_link_in', esc_url_raw(trim($row[6] ?? '')));
-                        update_post_meta($pid, '_mco_link_ae', esc_url_raw(trim($row[7] ?? '')));
+                        // FIX: Added permalink field
+                        update_post_meta($pid, '_mco_permalink', esc_url_raw(trim($row[5] ?? '')));
+                        // FIX: Adjusted index for correct column mapping for affiliate links
+                        update_post_meta($pid, '_mco_link_com', esc_url_raw(trim($row[6] ?? '')));
+                        update_post_meta($pid, '_mco_link_in', esc_url_raw(trim($row[7] ?? '')));
+                        update_post_meta($pid, '_mco_link_ae', esc_url_raw(trim($row[8] ?? '')));
                         $processed_count++;
                         error_log('MCO CSV IMPORT: Successfully processed book row ' . $row_num . ' (ID: ' . $pid . ')');
                     }

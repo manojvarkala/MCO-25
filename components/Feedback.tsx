@@ -1,6 +1,9 @@
+
+
 import React, { FC, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Link, useNavigate } from 'react-router-dom';
+// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import { Send, MessageSquare, CreditCard, Star } from 'lucide-react';
@@ -108,7 +111,7 @@ ${detailedMessage || "No additional comments provided."}
                 feedbackRequiredForExam?.examName
             );
 
-            toast.success("Thank you! Your feedback has been sent.", { id: toastId });
+            toast.success("Thank You! Your feedback has been sent.", { id: toastId });
             if (feedbackRequiredForExam) {
                 clearFeedbackRequired();
                 resetBetaForm();

@@ -4,8 +4,11 @@
 
 
 
+
+
 import React, { FC, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
+import { useParams } from "react-router-dom";
 import Spinner from './Spinner.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 

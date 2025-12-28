@@ -1,5 +1,7 @@
+
 import React, { FC, useState, useCallback, ReactNode, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
+import { Link } from "react-router-dom";
 import { Settings, Paintbrush, DatabaseZap, DownloadCloud, FileSpreadsheet, Cpu, Loader, CheckCircle, XCircle, RefreshCw, Trash2, Bug, ShoppingCart, BarChart3, FileText, DollarSign } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { ExamStat } from '../types.ts';

@@ -1,7 +1,9 @@
 
 
+
 import React, { FC, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from '../context/AuthContext.tsx';
 import toast from 'react-hot-toast';
 import LogoSpinner from './LogoSpinner.tsx';
@@ -134,7 +136,7 @@ const Login: FC = () => {
                     <div className="grid grid-cols-1 gap-3">
                         <button 
                             onClick={handleHardReset}
-                            className="flex items-center justify-center gap-2 w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition"
+                            className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition"
                         >
                             <Trash2 size={18} /> Hard Reset & Retry Login
                         </button>

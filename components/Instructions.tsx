@@ -1,5 +1,8 @@
+
+
 import React, { FC } from 'react';
-import { Link } from 'react-router-dom';
+// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
+import { Link } from "react-router-dom";
 import { useAppContext } from '../context/AppContext.tsx';
 import { LogIn, FileText, MonitorPlay, CheckCircle, Award, Sparkles } from 'lucide-react';
 
