@@ -101,8 +101,8 @@ if (!function_exists('mco_get_app_config_data')) {
             // Practice Exam Details
             $exams[] = [
                 'id' => $practice_exam_id, 
-                'name' => get_post_meta($p->ID, '_mco_practice_exam_title_override', true) ?: $p->post_title . ' Practice',
-                'description' => wp_kses_post($p->post_content),
+                'name' => html_entity_decode(get_post_meta($p->ID, '_mco_practice_exam_title_override', true) ?: $p->post_title . ' Practice', ENT_QUOTES, 'UTF-8'),
+                'description' => html_entity_decode(wp_kses_post($p->post_content), ENT_QUOTES, 'UTF-8'),
                 'numberOfQuestions' => (int)get_post_meta($p->ID, '_mco_practice_questions', true) ?: 20,
                 'durationMinutes' => (int)get_post_meta($p->ID, '_mco_practice_duration', true) ?: 30,
                 'passScore' => 70, 
@@ -114,7 +114,7 @@ if (!function_exists('mco_get_app_config_data')) {
             ];
 
             // Certification Exam Details
-            $cert_exam_name = get_post_meta($p->ID, '_mco_cert_exam_title_override', true) ?: $p->post_title;
+            $cert_exam_name = html_entity_decode(get_post_meta($p->ID, '_mco_cert_exam_title_override', true) ?: $p->post_title, ENT_QUOTES, 'UTF-8');
             $cert_pass_score = (int)get_post_meta($p->ID, '_mco_pass_score', true) ?: 70;
             $cert_questions = (int)get_post_meta($p->ID, '_mco_cert_questions', true) ?: 50;
             $cert_duration = (int)get_post_meta($p->ID, '_mco_cert_duration', true) ?: 90;
@@ -137,7 +137,7 @@ if (!function_exists('mco_get_app_config_data')) {
                     $exams[] = [
                         'id' => $sku, 
                         'name' => $cert_exam_name, 
-                        'description' => wp_kses_post($p->post_content),
+                        'description' => html_entity_decode(wp_kses_post($p->post_content), ENT_QUOTES, 'UTF-8'),
                         'numberOfQuestions' => $cert_questions,
                         'durationMinutes' => $cert_duration,
                         'passScore' => $cert_pass_score, 
@@ -156,10 +156,10 @@ if (!function_exists('mco_get_app_config_data')) {
                         'productId' => $product->get_id(),
                         'price' => (float)$product->get_price(), 
                         'regularPrice' => (float)$product->get_regular_price(), 
-                        'name' => $product->get_name(),
+                        'name' => html_entity_decode($product->get_name(), ENT_QUOTES, 'UTF-8'),
                         'type' => $product->get_type(),
-                        'isBundle' => $product->get_meta('_mco_is_bundle') === 'yes',
-                        'bundledSkus' => $product->get_meta('_mco_bundled_skus') ?: [],
+                        'isBundle' => get_post_meta($product->get_id(), '_mco_is_bundle', true) === 'yes',
+                        'bundledSkus' => get_post_meta($product->get_id(), '_mco_bundled_skus', true) ?: [],
                         'subscription_period' => $product->get_meta('_subscription_period'),
                         'subscription_period_interval' => $product->get_meta('_subscription_period_interval'),
                         'subscription_length' => $product->get_meta('_subscription_length'),
@@ -169,34 +169,14 @@ if (!function_exists('mco_get_app_config_data')) {
 
             $cats[] = [
                 'id' => $program_id_app_format, 
-                'name' => wp_kses_post($p->post_title), 
-                'description' => wp_kses_post($p->post_content), 
+                'name' => html_entity_decode(wp_kses_post($p->post_title), ENT_QUOTES, 'UTF-8'), 
+                'description' => html_entity_decode(wp_kses_post($p->post_content), ENT_QUOTES, 'UTF-8'), 
                 'practiceExamId' => $practice_exam_id, 
                 'certificationExamId' => $sku,
                 'questionSourceUrl' => esc_url_raw($question_source_url)
             ];
         }
 
-        // --- Fetch Recommended Books ---
-        $book_posts = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
-        foreach ($book_posts as $bp) {
-            $book_sku = get_post_meta($bp->ID, '_mco_book_id', true);
-            if ($book_sku) {
-                $books[] = [
-                    'id' => $book_sku,
-                    'title' => html_entity_decode($bp->post_title, ENT_QUOTES, 'UTF-8'), // Decode HTML entities
-                    'description' => html_entity_decode(wp_kses_post($bp->post_content), ENT_QUOTES, 'UTF-8'), // Decode HTML entities
-                    'thumbnailUrl' => get_post_meta($bp->ID, '_mco_thumbnail_url', true),
-                    'permalink' => get_permalink($bp->ID),
-                    'affiliateLinks' => [
-                        'com' => get_post_meta($bp->ID, '_mco_link_com', true),
-                        'in' => get_post_meta($bp->ID, '_mco_link_in', true),
-                        'ae' => get_post_meta($bp->ID, '_mco_link_ae', true),
-                    ]
-                ];
-            }
-        }
-        
         // --- Fetch Subscription Products directly ---
         if (class_exists('WC_Subscriptions') && class_exists('WooCommerce')) {
             $subscription_products = wc_get_products([
@@ -211,15 +191,35 @@ if (!function_exists('mco_get_app_config_data')) {
                         'productId' => $product->get_id(),
                         'price' => (float)$product->get_price(), 
                         'regularPrice' => (float)$product->get_regular_price(), 
-                        'name' => $product->get_name(),
+                        'name' => html_entity_decode($product->get_name(), ENT_QUOTES, 'UTF-8'),
                         'type' => $product->get_type(),
-                        'isBundle' => $product->get_meta('_mco_is_bundle') === 'yes',
-                        'bundledSkus' => $product->get_meta('_mco_bundled_skus') ?: [],
+                        'isBundle' => get_post_meta($product->get_id(), '_mco_is_bundle', true) === 'yes',
+                        'bundledSkus' => get_post_meta($product->get_id(), '_mco_bundled_skus', true) ?: [],
                         'subscription_period' => $product->get_meta('_subscription_period'),
                         'subscription_period_interval' => $product->get_meta('_subscription_period_interval'),
                         'subscription_length' => $product->get_meta('_subscription_length'),
                     ];
                 }
+            }
+        }
+
+        // --- Fetch Recommended Books ---
+        $book_posts = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
+        foreach ($book_posts as $bp) {
+            $book_id = get_post_meta($bp->ID, '_mco_book_id', true);
+            if ($book_id) {
+                $books[] = [
+                    'id' => $book_id,
+                    'title' => html_entity_decode(get_the_title($bp->ID), ENT_QUOTES, 'UTF-8'),
+                    'description' => html_entity_decode(wp_kses_post($bp->post_content), ENT_QUOTES, 'UTF-8'),
+                    'thumbnailUrl' => get_post_meta($bp->ID, '_mco_thumbnail_url', true),
+                    'permalink' => get_permalink($bp->ID),
+                    'affiliateLinks' => [
+                        'com' => get_post_meta($bp->ID, '_mco_link_com', true),
+                        'in' => get_post_meta($bp->ID, '_mco_link_in', true),
+                        'ae' => get_post_meta($bp->ID, '_mco_link_ae', true),
+                    ]
+                ];
             }
         }
         
