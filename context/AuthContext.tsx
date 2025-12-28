@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useContext, createContext, FC, ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import type { User, TokenPayload, SubscriptionInfo } from '../types.ts';
@@ -115,7 +116,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     localStorage.removeItem('isSubscribed');
     localStorage.removeItem('subscriptionInfo');
     localStorage.removeItem('isBetaTester');
-    localStorage.removeItem('activeOrg');
+    // FIX: Do NOT remove 'activeOrg' or 'activeOrgId'. The tenant binding should persist.
+    // localStorage.removeItem('activeOrg'); 
     
     // Note: We deliberately do NOT clear 'mco_dynamic_api_url' here. 
     // This allows the user to re-login to the same tenant backend without issues.

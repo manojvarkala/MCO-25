@@ -23,6 +23,8 @@ const Login: FC = () => {
         localStorage.clear(); 
         sessionStorage.clear(); 
         logout(); 
+        localStorage.removeItem('mco_dynamic_api_url'); // Explicitly clear dynamic API URL on hard reset
+        localStorage.removeItem('activeOrgId'); // Also clear active org ID for a full reset
         
         const cacheBuster = new Date().getTime();
         const loginUrl = mainSiteBaseUrl ? `${mainSiteBaseUrl}/exam-login/?v=${cacheBuster}` : '/';
