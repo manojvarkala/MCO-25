@@ -5,9 +5,8 @@ import type { RecommendedBook } from '../types.ts';
 import { BookUp, BookOpen } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 
-const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } | null => {
-    // FIX: Added a bulletproof safety check. If the affiliateLinks object is missing,
-    // the function will now return null instead of crashing the application.
+// Unified geo-affiliate link logic
+const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
     if (!book.affiliateLinks) {
         return null;
     }
@@ -15,35 +14,47 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     
     let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
+    let preferredDomainName = 'Amazon.com';
+    
     const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
     if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
         preferredKey = 'in';
+        preferredDomainName = 'Amazon.in';
     } else if (gccTimezones.some(tz => timeZone === tz)) {
         preferredKey = 'ae';
+        preferredDomainName = 'Amazon.ae';
     }
 
-    const preferredUrl = links[preferredKey];
-    if (preferredUrl && preferredUrl.trim() !== '') {
-        let domainName = 'Amazon.com';
-        if (preferredKey === 'in') domainName = 'Amazon.in';
-        if (preferredKey === 'ae') domainName = 'Amazon.ae';
-        return { url: preferredUrl, domainName };
+    // Try preferred geo link first
+    if (links[preferredKey] && links[preferredKey].trim() !== '') {
+        return { url: links[preferredKey], domainName: preferredDomainName, key: preferredKey };
     }
 
+    // Fallback in a defined priority order
     const fallbackPriority: (keyof RecommendedBook['affiliateLinks'])[] = ['com', 'in', 'ae'];
     for (const key of fallbackPriority) {
-        if (key === preferredKey) continue;
-        const url = links[key];
-        if (url && url.trim() !== '') {
+        if (key === preferredKey) continue; // Already tried
+        if (links[key] && links[key].trim() !== '') {
             let domainName = 'Amazon.com';
             if (key === 'in') domainName = 'Amazon.in';
             if (key === 'ae') domainName = 'Amazon.ae';
-            return { url, domainName };
+            return { url: links[key], domainName, key };
         }
     }
     return null;
 };
 
+const decodeHtmlEntities = (html: string): string => {
+    if (!html || typeof html !== 'string') return html || '';
+    try {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = html;
+        return textarea.value;
+    } catch (e) {
+        console.error("Could not decode HTML entities", e);
+        return html;
+    }
+};
 
 const SuggestedBooksSidebar: FC = () => {
     const { suggestedBooks } = useAppContext();
@@ -78,10 +89,10 @@ const SuggestedBooksSidebar: FC = () => {
                             <div className="p-4">
                                 {book.permalink ? (
                                     <a href={book.permalink} target="_blank" rel="noopener noreferrer" className="group">
-                                        <h4 className="font-bold text-slate-800 text-sm mb-3 leading-tight group-hover:text-cyan-600 transition-colors">{book.title}</h4>
+                                        <h4 className="font-bold text-slate-800 text-sm mb-3 leading-tight group-hover:text-cyan-600 transition-colors">{decodeHtmlEntities(book.title)}</h4>
                                     </a>
                                 ) : (
-                                    <h4 className="font-bold text-slate-800 text-sm mb-3 leading-tight">{book.title}</h4>
+                                    <h4 className="font-bold text-slate-800 text-sm mb-3 leading-tight">{decodeHtmlEntities(book.title)}</h4>
                                 )}
                                 
                                 <a 

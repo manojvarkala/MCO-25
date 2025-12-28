@@ -1,2 +1,4 @@
 book_id,title,description,status,thumbnail_url,link_com,link_in,link_ae
-sample-book-1,"Sample Book Title","A great book for studying.","publish","","https://amazon.com/your-link","https://amazon.in/your-link","https://amazon.ae/your-link"
+sample-book-1,"Sample Book Title","A great book for studying.","publish","","https://www.amazon.com/your-link-com","https://www.amazon.in/your-link-in","https://www.amazon.ae/your-link-ae"
+sample-book-2,"Another Study Guide","This is another excellent resource for exam preparation.","publish","","","https://www.amazon.in/another-link-in",""
+sample-book-3,"Advanced Coding Strategies","For experienced coders. No image specified, will use procedural cover.","publish","","https://www.amazon.com/advanced-coding","","https://www.amazon.ae/advanced-coding-ae"

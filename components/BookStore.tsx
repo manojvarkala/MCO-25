@@ -6,46 +6,58 @@ import type { RecommendedBook } from '../types.ts';
 import { ShoppingCart, BookOpenCheck } from 'lucide-react';
 import BookCover from '../assets/BookCover.tsx';
 
-const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
-    const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
-        // FIX: Added a bulletproof safety check. If the affiliateLinks object is missing,
-        // the function will now return null instead of crashing the application.
-        if (!book.affiliateLinks) {
-            return null;
-        }
-        const links = book.affiliateLinks;
-        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        
-        let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
-        const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
-        if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
-            preferredKey = 'in';
-        } else if (gccTimezones.some(tz => timeZone === tz)) {
-            preferredKey = 'ae';
-        }
-
-        const preferredUrl = links[preferredKey];
-        if (preferredUrl && preferredUrl.trim() !== '') {
-            let domainName = 'Amazon.com';
-            if (preferredKey === 'in') domainName = 'Amazon.in';
-            if (preferredKey === 'ae') domainName = 'Amazon.ae';
-            return { url: preferredUrl, domainName, key: preferredKey };
-        }
-
-        const fallbackPriority: (keyof RecommendedBook['affiliateLinks'])[] = ['com', 'in', 'ae'];
-        for (const key of fallbackPriority) {
-            if (key === preferredKey) continue;
-            const url = links[key];
-            if (url && url.trim() !== '') {
-                let domainName = 'Amazon.com';
-                if (key === 'in') domainName = 'Amazon.in';
-                if (key === 'ae') domainName = 'Amazon.ae';
-                return { url, domainName, key };
-            }
-        }
+// Unified geo-affiliate link logic
+const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
+    if (!book.affiliateLinks) {
         return null;
-    };
+    }
+    const links = book.affiliateLinks;
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
+    let preferredDomainName = 'Amazon.com';
 
+    const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
+    if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
+        preferredKey = 'in';
+        preferredDomainName = 'Amazon.in';
+    } else if (gccTimezones.some(tz => timeZone === tz)) {
+        preferredKey = 'ae';
+        preferredDomainName = 'Amazon.ae';
+    }
+
+    // Try preferred geo link first
+    if (links[preferredKey] && links[preferredKey].trim() !== '') {
+        return { url: links[preferredKey], domainName: preferredDomainName, key: preferredKey };
+    }
+
+    // Fallback in a defined priority order
+    const fallbackPriority: (keyof RecommendedBook['affiliateLinks'])[] = ['com', 'in', 'ae'];
+    for (const key of fallbackPriority) {
+        if (key === preferredKey) continue; // Already tried
+        if (links[key] && links[key].trim() !== '') {
+            let domainName = 'Amazon.com';
+            if (key === 'in') domainName = 'Amazon.in';
+            if (key === 'ae') domainName = 'Amazon.ae';
+            return { url: links[key], domainName, key };
+        }
+    }
+    return null;
+};
+
+const decodeHtmlEntities = (html: string): string => {
+    if (!html || typeof html !== 'string') return html || '';
+    try {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = html;
+        return textarea.value;
+    } catch (e) {
+        console.error("Could not decode HTML entities", e);
+        return html;
+    }
+};
+
+const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
     const primaryLinkInfo = getGeoAffiliateLink(book);
     const allStores = [
         { key: 'com' as const, name: 'Amazon.com', url: book.affiliateLinks?.com },
@@ -59,15 +71,15 @@ const BookCard: FC<{ book: RecommendedBook }> = ({ book }) => {
             <div className="p-6 flex flex-col flex-grow">
                 {book.permalink ? (
                     <a href={book.permalink} target="_blank" rel="noopener noreferrer" className="group">
-                        <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2 leading-tight group-hover:text-[rgb(var(--color-primary-rgb))] transition-colors">{book.title}</h3>
+                        <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2 leading-tight group-hover:text-[rgb(var(--color-primary-rgb))] transition-colors">{decodeHtmlEntities(book.title)}</h3>
                     </a>
                 ) : (
-                    <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2 leading-tight">{book.title}</h3>
+                    <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-2 leading-tight">{decodeHtmlEntities(book.title)}</h3>
                 )}
                 
                 <div className="flex-grow">
                     <p className="text-[rgb(var(--color-text-default-rgb))] text-base mb-4">
-                        {book.description}
+                        {decodeHtmlEntities(book.description)}
                     </p>
                 </div>
 
@@ -125,7 +137,7 @@ const BookStore: FC = () => {
                         Enhance your learning with our curated list of essential books for medical coding professionals. Each book has been selected to help you succeed in your exams and career.
                     </p>
                     <p className="text-xs text-[rgb(var(--color-text-muted-rgb))] mt-4">
-                        As an Amazon Associate, we earn from qualifying purchases. Using our links doesn't cost you anything extra and helps support our platform to keep creating great content for you. Please note that book availability may vary by region.
+                        As an Amazon Associate, we earn from qualifying purchases. Using our links doesn't cost you extra and helps support our platform to keep creating great content for you. Please note that book availability may vary by region.
                     </p>
                 </div>
 

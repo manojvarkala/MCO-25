@@ -17,44 +17,56 @@ import ShareButtons from './ShareButtons.tsx';
 
 type UserCertVisibility = 'NONE' | 'USER_EARNED' | 'REVIEW_PENDING';
 
-const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } | null => {
+// Unified geo-affiliate link logic
+const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
     if (!book.affiliateLinks) {
         return null;
     }
-
+    const links = book.affiliateLinks;
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
     let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
-    let preferredDomain = 'Amazon.com';
+    let preferredDomainName = 'Amazon.com';
 
     const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
     if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
         preferredKey = 'in';
-        preferredDomain = 'Amazon.in';
+        preferredDomainName = 'Amazon.in';
     } else if (gccTimezones.some(tz => timeZone === tz)) {
         preferredKey = 'ae';
-        preferredDomain = 'Amazon.ae';
-    }
-    
-    const preferredUrl = book.affiliateLinks[preferredKey];
-    if (preferredUrl && preferredUrl.trim() !== '') {
-        return { url: preferredUrl, domainName: preferredDomain };
-    }
-    
-    if (book.affiliateLinks.com && book.affiliateLinks.com.trim() !== '') {
-        return { url: book.affiliateLinks.com, domainName: 'Amazon.com' };
+        preferredDomainName = 'Amazon.ae';
     }
 
-    const fallbackOrder: (keyof RecommendedBook['affiliateLinks'])[] = ['in', 'ae'];
-    for (const key of fallbackOrder) {
-         if (book.affiliateLinks[key] && book.affiliateLinks[key].trim() !== '') {
-            const domain = key === 'in' ? 'Amazon.in' : 'Amazon.ae';
-            return { url: book.affiliateLinks[key], domainName: domain };
-         }
+    // Try preferred geo link first
+    if (links[preferredKey] && links[preferredKey].trim() !== '') {
+        return { url: links[preferredKey], domainName: preferredDomainName, key: preferredKey };
     }
-    
+
+    // Fallback in a defined priority order
+    const fallbackPriority: (keyof RecommendedBook['affiliateLinks'])[] = ['com', 'in', 'ae'];
+    for (const key of fallbackPriority) {
+        if (key === preferredKey) continue; // Already tried
+        if (links[key] && links[key].trim() !== '') {
+            let domainName = 'Amazon.com';
+            if (key === 'in') domainName = 'Amazon.in';
+            if (key === 'ae') domainName = 'Amazon.ae';
+            return { url: links[key], domainName, key };
+        }
+    }
     return null;
 };
 
+const decodeHtmlEntities = (html: string): string => {
+    if (!html || typeof html !== 'string') return html || '';
+    try {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = html;
+        return textarea.value;
+    } catch (e) {
+        console.error("Could not decode HTML entities", e);
+        return html;
+    }
+};
 
 const Results: FC = () => {
     const { testId } = useParams<{ testId: string }>();
@@ -201,7 +213,7 @@ const Results: FC = () => {
         try {
             const doc = new jsPDF();
             doc.setFontSize(18);
-            doc.text(`AI Study Guide for ${exam.name}`, 14, 22);
+            doc.text(`AI Study Guide for ${decodeHtmlEntities(exam.name)}`, 14, 22);
             doc.setFontSize(11);
             doc.text(`Generated for: ${user.name}`, 14, 30);
             doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 36);
@@ -215,7 +227,7 @@ const Results: FC = () => {
                 headStyles: { fillColor: [8, 145, 178] },
                 styles: { cellPadding: 3, fontSize: 10 },
             });
-            doc.save(`AI-Study-Guide-${exam.name.replace(/\s+/g, '_')}.pdf`);
+            doc.save(`AI-Study-Guide-${decodeHtmlEntities(exam.name).replace(/\s+/g, '_')}.pdf`);
             toast.success("Feedback downloaded!");
         } catch (error) {
             console.error("PDF generation failed:", error);
@@ -316,13 +328,13 @@ const Results: FC = () => {
                     <div className="mb-6">
                         <CheckCircle className="mx-auto h-20 w-20 text-green-500 mb-4" />
                         <h1 className="text-4xl font-bold text-slate-800">Congratulations!</h1>
-                        <p className="text-xl text-slate-600 mt-2">You passed the {exam.name}.</p>
+                        <p className="text-xl text-slate-600 mt-2">You passed the {decodeHtmlEntities(exam.name)}.</p>
                     </div>
                 ) : (
                     <div className="mb-6">
                         <XCircle className="mx-auto h-20 w-20 text-red-500 mb-4" />
                         <h1 className="text-4xl font-bold text-slate-800">Keep Practicing!</h1>
-                        <p className="text-xl text-slate-600 mt-2">You didn't pass the {exam.name} this time.</p>
+                        <p className="text-xl text-slate-600 mt-2">You didn't pass the {decodeHtmlEntities(exam.name)} this time.</p>
                     </div>
                 )}
 
@@ -451,7 +463,7 @@ const Results: FC = () => {
                                 <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full flex-shrink-0 flex flex-col transform hover:-translate-y-1 transition-transform duration-200">
                                     <BookCover book={book} className="w-full h-40"/>
                                     <div className="p-4 flex flex-col flex-grow">
-                                        <h4 className="font-bold text-slate-800 text-sm mb-2 leading-tight flex-grow">{book.title}</h4>
+                                        <h4 className="font-bold text-slate-800 text-sm mb-2 leading-tight flex-grow">{decodeHtmlEntities(book.title)}</h4>
                                         <a href={linkData.url} target="_blank" rel="noopener noreferrer" className="mt-auto w-full flex items-center justify-center text-xs text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-2 py-1.5 transition-colors">
                                             Buy on {linkData.domainName}
                                         </a>

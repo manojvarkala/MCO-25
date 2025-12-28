@@ -14,7 +14,8 @@ import ExamBundleCard from './ExamBundleCard.tsx';
 import SubscriptionOfferCard from './SubscriptionOfferCard.tsx';
 import ShareButtons from './ShareButtons.tsx';
 
-const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string } | null => {
+// Unified geo-affiliate link logic
+const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
     if (!book.affiliateLinks) {
         return null;
     }
@@ -22,30 +23,31 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     
     let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
+    let preferredDomainName = 'Amazon.com';
+
     const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
     if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
         preferredKey = 'in';
+        preferredDomainName = 'Amazon.in';
     } else if (gccTimezones.some(tz => timeZone === tz)) {
         preferredKey = 'ae';
+        preferredDomainName = 'Amazon.ae';
     }
 
-    const preferredUrl = links[preferredKey];
-    if (preferredUrl && preferredUrl.trim() !== '') {
-        let domainName = 'Amazon.com';
-        if (preferredKey === 'in') domainName = 'Amazon.in';
-        if (preferredKey === 'ae') domainName = 'Amazon.ae';
-        return { url: preferredUrl, domainName };
+    // Try preferred geo link first
+    if (links[preferredKey] && links[preferredKey].trim() !== '') {
+        return { url: links[preferredKey], domainName: preferredDomainName, key: preferredKey };
     }
 
+    // Fallback in a defined priority order
     const fallbackPriority: (keyof RecommendedBook['affiliateLinks'])[] = ['com', 'in', 'ae'];
     for (const key of fallbackPriority) {
-        if (key === preferredKey) continue;
-        const url = links[key];
-        if (url && url.trim() !== '') {
+        if (key === preferredKey) continue; // Already tried
+        if (links[key] && links[key].trim() !== '') {
             let domainName = 'Amazon.com';
             if (key === 'in') domainName = 'Amazon.in';
             if (key === 'ae') domainName = 'Amazon.ae';
-            return { url, domainName };
+            return { url: links[key], domainName, key };
         }
     }
     return null;
@@ -59,6 +61,18 @@ const stripHtml = (html: string): string => {
         return tempDiv.textContent || tempDiv.innerText || '';
     } catch (e) {
         console.error("Could not parse HTML string for stripping", e);
+        return html;
+    }
+};
+
+const decodeHtmlEntities = (html: string): string => {
+    if (!html || typeof html !== 'string') return html || '';
+    try {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = html;
+        return textarea.value;
+    } catch (e) {
+        console.error("Could not decode HTML entities", e);
         return html;
     }
 };
@@ -214,7 +228,7 @@ const ExamProgram: FC = () => {
         <div className="space-y-8">
             <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
                 <div className="flex flex-wrap justify-between items-start gap-2">
-                    <h1 className="text-3xl font-extrabold text-slate-900">{stripHtml(category.name)}</h1>
+                    <h1 className="text-3xl font-extrabold text-slate-900">{decodeHtmlEntities(category.name)}</h1>
                     <div className="flex items-center gap-3">
                         {isEffectivelyAdmin && (
                             <Link 
@@ -236,7 +250,7 @@ const ExamProgram: FC = () => {
                             <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform"/>
                             <div>
                                 <span className="text-xs text-slate-500">Previous</span>
-                                <span className="block font-semibold text-sm line-clamp-1">{stripHtml(navigationLinks.prev.name)}</span>
+                                <span className="block font-semibold text-sm line-clamp-1">{decodeHtmlEntities(navigationLinks.prev.name)}</span>
                             </div>
                         </Link>
                     ) : (
@@ -246,7 +260,7 @@ const ExamProgram: FC = () => {
                         <Link to={`/program/${navigationLinks.next.id}`} className="flex items-center gap-2 text-cyan-600 hover:text-cyan-800 transition-colors text-right group">
                             <div className="text-right">
                                 <span className="text-xs text-slate-500">Next</span>
-                                <span className="block font-semibold text-sm line-clamp-1">{stripHtml(navigationLinks.next.name)}</span>
+                                <span className="block font-semibold text-sm line-clamp-1">{decodeHtmlEntities(navigationLinks.next.name)}</span>
                             </div>
                             <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform"/>
                         </Link>
@@ -337,7 +351,7 @@ const ExamProgram: FC = () => {
                                 <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full flex-shrink-0 flex flex-col transform hover:-translate-y-1 transition-transform duration-200">
                                     <BookCover book={book} className="w-full h-40"/>
                                     <div className="p-4 flex flex-col flex-grow">
-                                        <h4 className="font-bold text-slate-800 text-sm mb-2 leading-tight flex-grow">{book.title}</h4>
+                                        <h4 className="font-bold text-slate-800 text-sm mb-2 leading-tight flex-grow">{decodeHtmlEntities(book.title)}</h4>
                                         <a href={linkData.url} target="_blank" rel="noopener noreferrer" className="mt-auto w-full flex items-center justify-center text-xs text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-2 py-1.5 transition-colors">
                                             Buy on {linkData.domainName}
                                         </a>
