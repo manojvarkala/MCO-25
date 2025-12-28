@@ -175,6 +175,7 @@ const MCOStyleB: FC<{ book: RecommendedBook; color: { bg: string; text: string; 
             flexDirection: 'column',
             justifyContent: 'space-between',
             padding: '1.5rem',
+            // FIX: The value 'border-sizing' is incorrect for the CSS property 'boxSizing'. It should be 'border-box'.
             boxSizing: 'border-box',
             backgroundColor: color.bg,
             color: color.text,
