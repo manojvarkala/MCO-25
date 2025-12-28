@@ -1,4 +1,5 @@
 
+
 import React, { FC, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -48,17 +49,15 @@ const Login: FC = () => {
         
         // DYNAMIC BINDING (CRITICAL FIX): 
         // Always enforce the API URL from the redirect if present.
-        // This ensures subsequent calls go to the correct backend before the token is used.
+        // If the URL changes, force a full page reload to ensure apiConfig.ts re-evaluates.
         if (apiUrlOverride) {
             const currentStoredUrl = localStorage.getItem('mco_dynamic_api_url');
             if (currentStoredUrl !== apiUrlOverride) {
                 console.log(`Binding app to new backend: ${apiUrlOverride}`);
                 localStorage.setItem('mco_dynamic_api_url', apiUrlOverride);
-                // Force a reload of the configuration to match the new API target
-                const cacheKeyPrefix = 'appConfigCache_';
-                Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith(cacheKeyPrefix)) localStorage.removeItem(key);
-                });
+                // Force a full reload to ensure apiConfig.ts is re-evaluated and the base URL is picked up.
+                window.location.reload(); 
+                return; // Stop further execution in this effect
             }
         }
 
@@ -103,7 +102,7 @@ const Login: FC = () => {
                  }
             }
         }
-    }, [loginWithToken, location.search, user, isInitializing, mainSiteBaseUrl, error, activeOrg]);
+    }, [loginWithToken, location.search, user, isInitializing, mainSiteBaseUrl, activeOrg]); // Removed 'error' from dependencies
 
     if (error) {
         const isHeaderError = error.includes('Authorization');
