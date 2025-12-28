@@ -1,4 +1,5 @@
 
+
 import type { Organization } from '../types.ts';
 
 declare const __DEV__: boolean;
@@ -35,6 +36,7 @@ export const getTenantConfig = (): TenantConfig => {
                 return KNOWN_TENANT_CONFIGS[key].staticConfigPath;
             }
         }
+        console.warn(`apiConfig: Could not infer static config path for hostname "${apiHostname}". Using default.`);
         return DEFAULT_TENANT_CONFIG.staticConfigPath; // Fallback to default static path
     };
 
@@ -44,6 +46,7 @@ export const getTenantConfig = (): TenantConfig => {
         const sanitizedUrl = apiUrlParam.replace(/\/$/, "");
         localStorage.setItem('mco_dynamic_api_url', sanitizedUrl);
         const inferredStaticPath = inferStaticConfigPath(new URL(sanitizedUrl).hostname.toLowerCase());
+        console.log(`apiConfig: Using API URL from URL parameter: ${sanitizedUrl}. Static config: ${inferredStaticPath}`);
         return {
             apiBaseUrl: sanitizedUrl,
             staticConfigPath: inferredStaticPath
@@ -63,23 +66,25 @@ export const getTenantConfig = (): TenantConfig => {
             
             if (isRelatedToCurrentHost || isKnownTenant) {
                  const inferredStaticPath = inferStaticConfigPath(dynamicHostname);
+                 console.log(`apiConfig: Using dynamic API URL from localStorage: ${dynamicUrl}. Static config: ${inferredStaticPath}`);
                 return {
                     apiBaseUrl: dynamicUrl.replace(/\/$/, ""),
                     staticConfigPath: inferredStaticPath
                 };
             } else {
                 // If the stored dynamic URL is suspicious or unrelated, clear it for security.
-                console.warn("MCO_API_CONFIG: Clearing potentially invalid dynamic API URL from localStorage.");
+                console.warn("apiConfig: Clearing potentially invalid dynamic API URL from localStorage.");
                 localStorage.removeItem('mco_dynamic_api_url');
             }
         }
     } catch (e) {
-        console.error("Error accessing localStorage for mco_dynamic_api_url:", e);
+        console.error("apiConfig: Error accessing localStorage for mco_dynamic_api_url:", e);
         localStorage.removeItem('mco_dynamic_api_url'); // Clear potentially corrupted entry
     }
 
     // 3. Third Priority: Development Proxy
     if (isDev) {
+        console.log(`apiConfig: Running in development mode, using Vite proxy "/api". Static config: ${DEFAULT_TENANT_CONFIG.staticConfigPath}`);
         // In development, always use the Vite proxy for API calls.
         // The staticConfigPath can default to one of the known tenants.
         return {
@@ -91,16 +96,16 @@ export const getTenantConfig = (): TenantConfig => {
     // 4. Fourth Priority: Hostname Matching (for direct production deployments without prior dynamic URL)
     for (const key in KNOWN_TENANT_CONFIGS) {
         if (hostname.includes(key)) {
+            console.log(`apiConfig: Matched hostname "${hostname}" to known tenant "${key}". Using: ${KNOWN_TENANT_CONFIGS[key].apiBaseUrl}. Static config: ${KNOWN_TENANT_CONFIGS[key].staticConfigPath}`);
             return KNOWN_TENANT_CONFIGS[key];
         }
     }
     
     // 5. Fallback: If no match is found anywhere, use a predefined default.
-    console.warn(`MCO_API_CONFIG: No specific tenant configuration found for hostname "${hostname}". Falling back to default: ${DEFAULT_TENANT_CONFIG.apiBaseUrl}`);
+    console.warn(`apiConfig: No specific tenant configuration found for hostname "${hostname}". Falling back to default: ${DEFAULT_TENANT_CONFIG.apiBaseUrl}. Static config: ${DEFAULT_TENANT_CONFIG.staticConfigPath}`);
     return DEFAULT_TENANT_CONFIG;
 };
 
 export const getApiBaseUrl = (): string => {
     return getTenantConfig().apiBaseUrl;
 };
-    

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
 import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook, Theme, FeedbackContext } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -198,6 +199,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const loadAppConfig = async (bypassCache: boolean = false) => {
     const tenantConfig: TenantConfig = getTenantConfig();
     const cacheKey = `appConfigCache_${tenantConfig.apiBaseUrl}`;
+    let configLoaded = false;
     
     if (!bypassCache) {
         try {
@@ -206,15 +208,18 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 const cachedConfig = JSON.parse(cachedConfigJSON);
                 const processedData = processConfigData(cachedConfig);
                 if (processedData) {
-                    setProcessedConfig(cachedConfig, processedData);
+                    configLoaded = setProcessedConfig(cachedConfig, processedData);
+                    console.log("AppContext: Loaded config from localStorage.");
                 }
             }
         } catch (e) {
+            console.error("AppContext: Error loading config from localStorage, clearing cache.", e);
             localStorage.removeItem(cacheKey);
         }
     }
 
     try {
+        console.log(`AppContext: Attempting to fetch live config from ${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config`);
         const response = await fetch(`${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config`);
         if (response.ok) {
             const liveConfig = await response.json();
@@ -223,22 +228,50 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 const changed = setProcessedConfig(liveConfig, processedData);
                 if (changed) {
                     localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
+                    console.log("AppContext: Fetched and updated live config.");
+                } else {
+                    console.log("AppContext: Live config is same as cached, no update needed.");
                 }
+                configLoaded = true;
+            } else {
+                console.error("AppContext: Failed to process live config data structure.");
             }
+        } else {
+            console.error(`AppContext: Failed to fetch live config. HTTP Status: ${response.status} - ${response.statusText}`);
+            throw new Error(`Failed to fetch live config: ${response.statusText}`);
         }
-    } catch (apiError) {
-        if (organizations.length === 0) {
+    } catch (apiError: any) {
+        console.error("AppContext: Error fetching live config, attempting static fallback:", apiError);
+        // Only attempt static fallback if live API failed AND no config has been loaded yet
+        if (!configLoaded) {
             try {
+                console.log(`AppContext: Attempting to load static config from ${tenantConfig.staticConfigPath}`);
                 const response = await fetch(tenantConfig.staticConfigPath);
                 if (response.ok) {
                     const staticConfig = await response.json();
                     const processedData = processConfigData(staticConfig);
-                    if (processedData) setProcessedConfig(staticConfig, processedData);
+                    if (processedData) {
+                        setProcessedConfig(staticConfig, processedData);
+                        console.log("AppContext: Loaded static config as fallback.");
+                        configLoaded = true;
+                    } else {
+                        console.error("AppContext: Failed to process static config data structure.");
+                    }
+                } else {
+                    console.error(`AppContext: Failed to fetch static config. HTTP Status: ${response.status} - ${response.statusText}`);
                 }
-            } catch (staticError) {}
+            } catch (staticError: any) {
+                console.error("AppContext: Error fetching static config fallback.", staticError);
+            }
         }
+    } finally {
+        if (!configLoaded) {
+            // If after all attempts, no config is loaded, ensure activeOrg is null and set error state
+            setActiveOrg(null);
+            console.error("AppContext: No configuration loaded after all attempts. activeOrg remains null.");
+        }
+        setIsInitializing(false);
     }
-    setIsInitializing(false);
   };
 
   useEffect(() => {

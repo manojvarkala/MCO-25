@@ -372,12 +372,31 @@ if (!function_exists('mco_handle_generate_books_csv')) {
         check_admin_referer('mco_generate_books_csv_nonce');
         header('Content-Type: text/csv'); header('Content-Disposition: attachment; filename="books.csv"');
         $output = fopen('php://output', 'w');
-        fputcsv($output, ['book_id','title','description','status','thumbnail_url','link_com','link_in','link_ae']);
+        // FIX: Ensure all expected fields are in the header.
+        fputcsv($output, ['book_id','title','description','status','thumbnail_url','permalink','link_com','link_in','link_ae']);
         $posts = get_posts(['post_type'=>'mco_recommended_book','posts_per_page'=>-1]);
         foreach ($posts as $p) {
+            // Safely get thumbnail URL
+            $thumbnail_url = get_post_meta($p->ID, '_mco_thumbnail_url', true);
+            if (empty($thumbnail_url) && function_exists('get_post_thumbnail_url')) {
+                $thumbnail_url = get_post_thumbnail_url($p->ID, 'large');
+            }
+            $thumbnail_url = esc_url_raw($thumbnail_url);
+
+            // Safely get permalink
+            $permalink = '';
+            if (function_exists('get_permalink')) {
+                $permalink = get_permalink($p->ID);
+            }
+            $permalink = esc_url($permalink);
+
             fputcsv($output, [
-                get_post_meta($p->ID,'_mco_book_id',true), $p->post_title, $p->post_content, $p->post_status,
-                get_post_meta($p->ID,'_mco_thumbnail_url',true),
+                get_post_meta($p->ID,'_mco_book_id',true),
+                $p->post_title,
+                $p->post_content,
+                $p->post_status,
+                $thumbnail_url, // Use the safely retrieved URL
+                $permalink,     // Use the safely retrieved permalink
                 get_post_meta($p->ID,'_mco_link_com',true),
                 get_post_meta($p->ID,'_mco_link_in',true),
                 get_post_meta($p->ID,'_mco_link_ae',true)
@@ -411,30 +430,58 @@ if (!function_exists('mco_handle_csv_upload')) {
         
         $type = $_POST['import_type'];
         $handle = fopen($_FILES['csv_file']['tmp_name'], 'r');
+        if (!$handle) wp_die('Could not open uploaded file.');
+
+        $row_num = 1; // Start at 1 for header
         $header = fgetcsv($handle); // Skip header
         
+        $processed_count = 0;
+        $skipped_count = 0;
+        $error_rows = [];
+
         while (($row = fgetcsv($handle)) !== FALSE) {
+            $row_num++; // Increment for each data row
             if ($type === 'programs') {
-                $post_data = ['post_title'=>$row[0], 'post_content'=>$row[1], 'post_status'=>$row[14]??'publish', 'post_type'=>'mco_exam_program'];
-                // Check if exists by title to update instead of duplicate
-                $existing = get_page_by_title($row[0], OBJECT, 'mco_exam_program');
+                if (count($row) < 15) { // Assuming 15 columns for programs based on template
+                    error_log('MCO CSV IMPORT: Skipping program row ' . $row_num . ' due to insufficient columns: ' . implode(',', $row));
+                    $skipped_count++;
+                    $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => 'Insufficient columns for program.'];
+                    continue;
+                }
+
+                $post_title = sanitize_text_field($row[0]);
+                $post_content = wp_kses_post($row[1]);
+                $post_status = sanitize_text_field($row[14]??'publish');
+
+                $post_data = [
+                    'post_title'    => $post_title,
+                    'post_content'  => $post_content,
+                    'post_status'   => $post_status,
+                    'post_type'     => 'mco_exam_program'
+                ];
+                
+                $existing = get_page_by_title($post_title, OBJECT, 'mco_exam_program');
                 if ($existing) $post_data['ID'] = $existing->ID;
 
-                $pid = wp_insert_post($post_data);
+                $pid = wp_insert_post($post_data, true); // true to return WP_Error on failure
                 
-                if($pid && !is_wp_error($pid)) {
-                    update_post_meta($pid, '_mco_practice_exam_title_override', $row[2]);
-                    update_post_meta($pid, '_mco_cert_exam_title_override', $row[3]);
-                    update_post_meta($pid, '_mco_question_source_url', $row[4]);
-                    update_post_meta($pid, '_mco_certification_exam_sku', $row[5]);
-                    update_post_meta($pid, '_mco_is_proctored', $row[6]);
-                    update_post_meta($pid, '_mco_certificate_enabled', $row[7]);
+                if(is_wp_error($pid)) {
+                    error_log('MCO CSV IMPORT: Error inserting/updating program at row ' . $row_num . ': ' . $pid->get_error_message() . ' for row: ' . implode(',', $row));
+                    $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => $pid->get_error_message()];
+                    continue;
+                }
+                
+                if($pid) {
+                    update_post_meta($pid, '_mco_practice_exam_title_override', sanitize_text_field($row[2]));
+                    update_post_meta($pid, '_mco_cert_exam_title_override', sanitize_text_field($row[3]));
+                    update_post_meta($pid, '_mco_question_source_url', esc_url_raw($row[4]));
+                    update_post_meta($pid, '_mco_certification_exam_sku', sanitize_text_field($row[5]));
+                    update_post_meta($pid, '_mco_is_proctored', sanitize_text_field($row[6]));
+                    update_post_meta($pid, '_mco_certificate_enabled', sanitize_text_field($row[7]));
 
-                    // Handle Book ID lookup
-                    $book_str_ids = explode(',', $row[8]);
+                    $book_str_ids = array_map('trim', explode(',', $row[8]));
                     $book_post_ids = [];
                     foreach($book_str_ids as $bsid) {
-                        $bsid = trim($bsid);
                         if(empty($bsid)) continue;
                         $args = [
                             'post_type' => 'mco_recommended_book',
@@ -448,32 +495,71 @@ if (!function_exists('mco_handle_csv_upload')) {
                     }
                     update_post_meta($pid, '_mco_recommended_book_ids', $book_post_ids);
                     
-                    update_post_meta($pid, '_mco_practice_questions', $row[9]);
-                    update_post_meta($pid, '_mco_practice_duration', $row[10]);
-                    update_post_meta($pid, '_mco_cert_questions', $row[11]);
-                    update_post_meta($pid, '_mco_cert_duration', $row[12]);
-                    update_post_meta($pid, '_mco_pass_score', $row[13]);
+                    update_post_meta($pid, '_mco_practice_questions', sanitize_text_field($row[9]));
+                    update_post_meta($pid, '_mco_practice_duration', sanitize_text_field($row[10]));
+                    update_post_meta($pid, '_mco_cert_questions', sanitize_text_field($row[11]));
+                    update_post_meta($pid, '_mco_cert_duration', sanitize_text_field($row[12]));
+                    update_post_meta($pid, '_mco_pass_score', sanitize_text_field($row[13]));
+                    $processed_count++;
                 }
             } elseif ($type === 'books') {
-                $post_data = ['post_title'=>$row[1], 'post_content'=>$row[2], 'post_status'=>$row[3]??'publish', 'post_type'=>'mco_recommended_book'];
+                if (count($row) < 9) { // Assuming 9 columns for books based on template
+                    error_log('MCO CSV IMPORT: Skipping book row ' . $row_num . ' due to insufficient columns: ' . implode(',', $row));
+                    $skipped_count++;
+                    $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => 'Insufficient columns for book.'];
+                    continue;
+                }
+
+                $book_id = sanitize_text_field($row[0]);
+                $post_title = sanitize_text_field($row[1]);
+                $post_content = wp_kses_post($row[2]);
+                $post_status = sanitize_text_field($row[3]??'publish');
+
+                $post_data = [
+                    'post_title'    => $post_title,
+                    'post_content'  => $post_content,
+                    'post_status'   => $post_status,
+                    'post_type'     => 'mco_recommended_book'
+                ];
+                
                 // Check existing by Book ID meta
-                $args = ['post_type'=>'mco_recommended_book', 'meta_key'=>'_mco_book_id', 'meta_value'=>$row[0], 'posts_per_page'=>1, 'fields'=>'ids'];
+                $args = ['post_type'=>'mco_recommended_book', 'meta_key'=>'_mco_book_id', 'meta_value'=>$book_id, 'posts_per_page'=>1, 'fields'=>'ids'];
                 $existing = get_posts($args);
                 if (!empty($existing)) $post_data['ID'] = $existing[0];
 
-                $pid = wp_insert_post($post_data);
-                if($pid && !is_wp_error($pid)) {
-                    update_post_meta($pid, '_mco_book_id', $row[0]);
-                    update_post_meta($pid, '_mco_thumbnail_url', $row[4]);
-                    update_post_meta($pid, '_mco_link_com', $row[5]);
-                    update_post_meta($pid, '_mco_link_in', $row[6]);
-                    update_post_meta($pid, '_mco_link_ae', $row[7]);
+                $pid = wp_insert_post($post_data, true); // true to return WP_Error on failure
+                
+                if(is_wp_error($pid)) {
+                    error_log('MCO CSV IMPORT: Error inserting/updating book at row ' . $row_num . ': ' . $pid->get_error_message() . ' for row: ' . implode(',', $row));
+                    $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => $pid->get_error_message()];
+                    continue;
+                }
+
+                if($pid) {
+                    update_post_meta($pid, '_mco_book_id', $book_id);
+                    update_post_meta($pid, '_mco_thumbnail_url', esc_url_raw($row[4]));
+                    update_post_meta($pid, '_mco_link_com', esc_url_raw($row[6]));
+                    update_post_meta($pid, '_mco_link_in', esc_url_raw($row[7]));
+                    update_post_meta($pid, '_mco_link_ae', esc_url_raw($row[8]));
+                    $processed_count++;
                 }
             }
         }
         fclose($handle);
         delete_transient('mco_app_config_data');
-        wp_redirect(admin_url('admin.php?page=mco-exam-engine&import=success')); exit;
+
+        $redirect_url = admin_url('admin.php?page=mco-exam-engine&tab=bulk_data');
+        if ($processed_count > 0) {
+            $redirect_url = add_query_arg('message', urlencode("Import complete. Processed {$processed_count} {$type}. Skipped {$skipped_count} rows."), $redirect_url);
+        } else {
+            $redirect_url = add_query_arg('message', urlencode("Import completed, but no {$type} were processed. Skipped {$skipped_count} rows."), $redirect_url);
+        }
+        if (!empty($error_rows)) {
+            $redirect_url = add_query_arg('errors', urlencode(json_encode($error_rows)), $redirect_url);
+        }
+
+        wp_redirect($redirect_url);
+        exit;
     }
 }
 
