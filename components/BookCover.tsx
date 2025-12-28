@@ -1,4 +1,5 @@
 
+
 import React, { FC } from 'react';
 import type { RecommendedBook } from '../types.ts';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -219,7 +220,7 @@ const McoProceduralCover: FC<Omit<BookCoverProps, 'className'>> = ({ book }) => 
     ];
     const colorsB = [
         { bg: '#1e293b', text: '#ffffff', accent: '#38bdf8' }, // Slate with Sky accent
-        { bg: '#44403c', text: '#ffffff', accent: '#facc15' }, // Stone with Yellow accent
+        { bg: '#44403c', text: '#ffffff', accent: 'rgb(250, 204, 21)' }, // Stone with Yellow accent (rgb(250, 204, 21)
         { bg: '#0c4a6e', text: '#ffffff', accent: '#fb7185' }, // Blue with Rose accent
         { bg: '#065f46', text: '#ffffff', accent: '#a3e635' }, // Emerald with Lime accent
     ];

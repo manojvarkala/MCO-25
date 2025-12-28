@@ -52,21 +52,11 @@ if (!function_exists('mco_admin_upload_notices')) {
             return;
         }
 
+        // Display general success messages if present
         if (isset($_GET['message'])) {
             echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(urldecode($_GET['message'])) . '</p></div>';
         }
-        if (isset($_GET['errors'])) {
-            $errors = json_decode(urldecode($_GET['errors']), true);
-            if (is_array($errors) && !empty($errors)) {
-                echo '<div class="notice notice-error is-dismissible"><p><strong>Errors during import:</strong></p><ul>';
-                foreach ($errors as $error) {
-                    // Ensure row_data is handled safely, especially if it's an array
-                    $rowData = isset($error['row_data']) ? (is_array($error['row_data']) ? implode(', ', $error['row_data']) : $error['row_data']) : 'N/A';
-                    echo '<li>Row ' . esc_html($error['row_num'] ?? 'N/A') . ': ' . esc_html($error['reason'] ?? 'Unknown reason') . ' (Data: ' . esc_html($rowData) . ')</li>';
-                }
-                echo '</ul></div>';
-            }
-        }
+        // The $_GET['errors'] handling is now removed as CSV errors are handled by transient
     }
 }
 
@@ -340,6 +330,23 @@ if (!function_exists('mco_render_bulk_data_tab')) {
             </tr>
         </table>
         <?php
+        // Display errors from the last CSV upload using a transient
+        $errors_from_upload = get_transient('mco_csv_upload_errors_' . get_current_user_id());
+        if ($errors_from_upload !== false && !empty($errors_from_upload)) {
+            echo '<div class="notice notice-error is-dismissible" style="margin-top: 20px;">';
+            echo '<h3><strong>Errors from Last Import:</strong></h3><ul>';
+            foreach ($errors_from_upload as $error) {
+                $rowData = isset($error['row_data']) ? $error['row_data'] : 'N/A';
+                // Directly display var_export output or fallback to simple esc_html
+                $displayData = '<pre style="background-color: #f0f0f0; padding: 5px; border-radius: 3px; font-size: 0.8em; margin-top: 5px; overflow-x: auto;">' . esc_html($rowData) . '</pre>';
+
+                echo '<li>Row ' . esc_html($error['row_num'] ?? 'N/A') . ': ' . esc_html($error['reason'] ?? 'Unknown reason') . ' (Data: ' . $displayData . ')</li>';
+            }
+            echo '</ul></div>';
+            delete_transient('mco_csv_upload_errors_' . get_current_user_id()); // Clear after display
+        }
+        ?>
+        <?php
     }
 }
 
@@ -463,31 +470,65 @@ if (!function_exists('mco_handle_csv_upload')) {
         if (!$handle) wp_die('Could not open uploaded file.');
 
         $row_num = 1; // Start at 1 for header
-        $header = fgetcsv($handle); // Skip header
+        $header = fgetcsv($handle, 0, ','); // Use comma delimiter for header
         
         $processed_count = 0;
         $skipped_count = 0;
         $error_rows = [];
 
-        while (($row = fgetcsv($handle)) !== FALSE) {
+        while (($row = fgetcsv($handle, 0, ',')) !== FALSE) { // Use comma delimiter for data rows
             $row_num++; // Increment for each data row
+            
+            // Explicitly handle different fgetcsv return values
+            if ($row === null) { // Typically an empty line in the file
+                error_log('MCO CSV IMPORT: Skipping row ' . $row_num . ' due to fgetcsv returning NULL (empty line).');
+                $skipped_count++;
+                $error_rows[] = ['row_num' => $row_num, 'row_data' => 'fgetcsv returned NULL (empty line).', 'reason' => 'Empty line in CSV.'];
+                continue;
+            }
+            if ($row === false) { // Typically an error or unexpected EOF if inside loop
+                 error_log('MCO CSV IMPORT: Skipping row ' . $row_num . ' due to fgetcsv returning FALSE (malformed line or error).');
+                 $skipped_count++;
+                 $error_rows[] = ['row_num' => $row_num, 'row_data' => 'fgetcsv returned FALSE (malformed line or error).', 'reason' => 'Malformed line in CSV.'];
+                 continue;
+            }
+            
+            // Filter out rows that are arrays but contain only empty strings or nulls (effectively empty)
+            if (!is_array($row) || empty(array_filter($row, fn($v) => $v !== null && $v !== ''))) {
+                error_log('MCO CSV IMPORT: Skipping row ' . $row_num . ' due to effectively empty content: ' . var_export($row, true));
+                $skipped_count++;
+                $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Effectively empty row (contains only empty/null values).'];
+                continue;
+            }
+
+
             if ($type === 'programs') {
                 try {
-                    if (count($row) < 15) { // Assuming 15 columns for programs based on template
-                        error_log('MCO CSV IMPORT: Skipping program row ' . $row_num . ' due to insufficient columns: ' . esc_html(implode(', ', $row)));
+                    $expected_cols_programs = 15;
+                    // --- NEW DEBUG LOGGING START (Programs) ---
+                    error_log('MCO CSV IMPORT DEBUG (Program): Processing row ' . $row_num);
+                    error_log('MCO CSV IMPORT DEBUG (Program): Raw fgetcsv output: ' . var_export($row, true) . '; Column count: ' . (is_array($row) ? count($row) : 'N/A'));
+                    // --- NEW DEBUG LOGGING END (Programs) ---
+
+                    if (count($row) < $expected_cols_programs) { 
+                        error_log('MCO CSV IMPORT: Skipping program row ' . $row_num . ' due to insufficient columns: ' . count($row) . ' found, ' . $expected_cols_programs . ' expected. Data: ' . esc_html(implode(', ', $row)));
                         $skipped_count++;
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => 'Insufficient columns for program (expected 15).'];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Insufficient columns for program (' . count($row) . ' found, ' . $expected_cols_programs . ' expected).'];
                         continue;
                     }
 
                     $post_title = sanitize_text_field(trim($row[0] ?? ''));
                     $post_content = wp_kses_post(trim($row[1] ?? ''));
                     $post_status = sanitize_text_field(trim($row[14]??'publish'));
+                    
+                    // --- NEW DEBUG LOGGING START (Programs) ---
+                    error_log('MCO CSV IMPORT DEBUG (Program): Post Title after trim for row ' . $row_num . ': "' . $post_title . '"');
+                    // --- NEW DEBUG LOGGING END (Programs) ---
 
                     if (empty($post_title)) {
                         error_log('MCO CSV IMPORT: Skipping program row ' . $row_num . ' due to empty program title: ' . esc_html(implode(', ', $row)));
                         $skipped_count++;
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => 'Program title (column 1) is empty.'];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Program title (column 1) is empty.'];
                         continue;
                     }
 
@@ -505,12 +546,12 @@ if (!function_exists('mco_handle_csv_upload')) {
                     
                     if(is_wp_error($pid)) {
                         error_log('MCO CSV IMPORT: Error inserting/updating program at row ' . $row_num . ': ' . $pid->get_error_message() . ' for row: ' . esc_html(implode(', ', $row)));
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => 'Post insertion/update failed: ' . $pid->get_error_message()];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Post insertion/update failed: ' . $pid->get_error_message()];
                         continue;
                     } elseif (empty($pid)) { // Check for silent failure (pid = 0)
                         error_log('MCO CSV IMPORT: Silent failure inserting/updating program at row ' . $row_num . ': wp_insert_post returned 0. Data: ' . esc_html(implode(', ', $row)));
                         $skipped_count++;
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => 'Post insertion/update failed silently (e.g. invalid title).'];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Post insertion/update failed silently (e.g. invalid title).'];
                         continue;
                     }
                     
@@ -549,36 +590,49 @@ if (!function_exists('mco_handle_csv_upload')) {
                 } catch (Exception $e) {
                     error_log('MCO CSV IMPORT FATAL: Exception during program row ' . $row_num . ': ' . $e->getMessage() . ' for row: ' . esc_html(implode(', ', $row)));
                     $skipped_count++;
-                    $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => 'Unhandled exception: ' . $e->getMessage()];
+                    $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Unhandled exception: ' . $e->getMessage()];
                 }
             } elseif ($type === 'books') {
                 try {
-                    // The books template now has 9 columns: book_id, title, description, status, thumbnail_url, permalink, link_com, link_in, link_ae
-                    if (count($row) < 9) { 
-                        error_log('MCO CSV IMPORT: Skipping book row ' . $row_num . ' due to insufficient columns: ' . esc_html(implode(', ', $row)));
+                    $expected_cols_books = 8; // FIX: Changed from 9 to 8 to match actual CSV header
+                    // --- NEW DEBUG LOGGING START (Books) ---
+                    error_log('MCO CSV IMPORT DEBUG (Book): RAW fgetcsv output for row ' . $row_num . ': ' . var_export($row, true) . '; Column count: ' . (is_array($row) ? count($row) : 'N/A'));
+                    // --- END NEW DEBUG LOGGING ---
+
+                    // This check is now less critical as empty/null rows are handled above, but useful for short/malformed
+                    if (count($row) < $expected_cols_books) { 
+                        error_log('MCO CSV IMPORT: Skipping book row ' . $row_num . ' due to insufficient columns: ' . count($row) . ' found, ' . $expected_cols_books . ' expected. Data: ' . esc_html(implode(', ', $row)));
                         $skipped_count++;
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => 'Insufficient columns for book (expected 9).'];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Insufficient columns for book (' . count($row) . ' found, ' . $expected_cols_books . ' expected).'];
                         continue;
                     }
 
                     $book_id = sanitize_text_field(trim($row[0] ?? ''));
                     
+                    // --- NEW DEBUG LOGGING START (Books) ---
+                    error_log('MCO CSV IMPORT DEBUG (Book): Book ID after trim for row ' . $row_num . ': "' . $book_id . '"');
+                    // --- NEW DEBUG LOGGING END (Books) ---
+
                     // IMPORTANT: Ensure book_id is not empty or it can lead to creating many posts with empty book_id
                     if (empty($book_id)) {
                         error_log('MCO CSV IMPORT: Skipping book row ' . $row_num . ' due to empty book_id: ' . esc_html(implode(', ', $row)));
                         $skipped_count++;
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => 'Book ID (column 1) is empty.'];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Book ID (column 1) is empty.'];
                         continue;
                     }
 
                     $post_title = sanitize_text_field(trim($row[1] ?? ''));
+                    // --- NEW DEBUG LOGGING START (Books) ---
+                    error_log('MCO CSV IMPORT DEBUG (Book): Post Title after trim for row ' . $row_num . ': "' . $post_title . '"');
+                    // --- NEW DEBUG LOGGING END (Books) ---
+
                     $post_content = wp_kses_post(trim($row[2] ?? ''));
                     $post_status = sanitize_text_field(trim($row[3]??'publish'));
 
                     if (empty($post_title)) {
                         error_log('MCO CSV IMPORT: Skipping book row ' . $row_num . ' due to empty book title: ' . esc_html(implode(', ', $row)));
                         $skipped_count++;
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => 'Book title (column 2) is empty.'];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Book title (column 2) is empty.'];
                         continue;
                     }
 
@@ -598,29 +652,29 @@ if (!function_exists('mco_handle_csv_upload')) {
                     
                     if(is_wp_error($pid)) {
                         error_log('MCO CSV IMPORT: Error inserting/updating book at row ' . $row_num . ': ' . $pid->get_error_message() . ' for row: ' . esc_html(implode(', ', $row)));
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => 'Post insertion/update failed: ' . $pid->get_error_message()];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Post insertion/update failed: ' . $pid->get_error_message()];
                         continue;
                     } elseif (empty($pid)) { // Check for silent failure (pid = 0)
                         error_log('MCO CSV IMPORT: Silent failure inserting/updating book at row ' . $row_num . ': wp_insert_post returned 0. Data: ' . esc_html(implode(', ', $row)));
                         $skipped_count++;
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => 'Post insertion/update failed silently (e.g. invalid title).'];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Post insertion/update failed silently (e.g. invalid title).'];
                         continue;
                     }
 
                     if($pid) {
                         update_post_meta($pid, '_mco_book_id', $book_id);
                         update_post_meta($pid, '_mco_thumbnail_url', esc_url_raw(trim($row[4] ?? '')));
-                        update_post_meta($pid, '_mco_permalink', esc_url_raw(trim($row[5] ?? ''))); 
-                        update_post_meta($pid, '_mco_link_com', esc_url_raw(trim($row[6] ?? '')));
-                        update_post_meta($pid, '_mco_link_in', esc_url_raw(trim($row[7] ?? '')));
-                        update_post_meta($pid, '_mco_link_ae', esc_url_raw(trim($row[8] ?? '')));
+                        // FIX: Adjusted index from 5 to 8 for correct column mapping
+                        update_post_meta($pid, '_mco_link_com', esc_url_raw(trim($row[5] ?? '')));
+                        update_post_meta($pid, '_mco_link_in', esc_url_raw(trim($row[6] ?? '')));
+                        update_post_meta($pid, '_mco_link_ae', esc_url_raw(trim($row[7] ?? '')));
                         $processed_count++;
                         error_log('MCO CSV IMPORT: Successfully processed book row ' . $row_num . ' (ID: ' . $pid . ')');
                     }
                 } catch (Exception $e) {
                     error_log('MCO CSV IMPORT FATAL: Exception during book row ' . $row_num . ': ' . $e->getMessage() . ' for row: ' . esc_html(implode(', ', $row)));
                     $skipped_count++;
-                    $error_rows[] = ['row_num' => $row_num, 'row_data' => $row, 'reason' => 'Unhandled exception: ' . $e->getMessage()];
+                    $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Unhandled exception: ' . $e->getMessage()];
                 }
             }
         }
@@ -633,8 +687,9 @@ if (!function_exists('mco_handle_csv_upload')) {
         } else {
             $redirect_url = add_query_arg('message', urlencode("Import completed, but no {$type} were processed. Skipped {$skipped_count} rows."), $redirect_url);
         }
+        // Store errors in a transient instead of passing via URL
         if (!empty($error_rows)) {
-            $redirect_url = add_query_arg('errors', urlencode(json_encode($error_rows)), $redirect_url);
+            set_transient('mco_csv_upload_errors_' . get_current_user_id(), $error_rows, 5 * MINUTE_IN_SECONDS);
         }
 
         wp_redirect($redirect_url);

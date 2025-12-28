@@ -906,3 +906,18 @@
 #mco-app-root button.mco-button:hover {
     background: #0e7490;
 }
+
+/* FIX: Hide the "Mark New Posts" plugin elements within or near MCO app shortcode output */
+.mco-single-book-card .mnp-unread,
+.mco-book-card .mnp-unread,
+.mnp-image-before {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important; /* Move off screen */
+    left: -9999px !important;
+    top: -9999px !important;
+    z-index: -1 !important; /* Ensure it's behind everything if it somehow still renders */
+}
