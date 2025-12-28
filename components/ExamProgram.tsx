@@ -159,7 +159,7 @@ const ExamProgram: FC = () => {
         const practiceBundleSku = `${certSku}-1`;
 
         // Check subscription bundle first (higher priority)
-        if (examPrices[subBundleSku]) {
+        if (examPrices[subBundleSku] && examPrices[subBundleSku].isBundle) {
              // IMPORTANT: Inject SKU so ExamBundleCard works
              return { 
                  product: { ...examPrices[subBundleSku], sku: subBundleSku }, 
@@ -167,7 +167,7 @@ const ExamProgram: FC = () => {
              };
         }
         // Check practice bundle
-        if (examPrices[practiceBundleSku]) {
+        if (examPrices[practiceBundleSku] && examPrices[practiceBundleSku].isBundle) {
              return { 
                  product: { ...examPrices[practiceBundleSku], sku: practiceBundleSku }, 
                  type: 'practice' as const 

@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -255,9 +256,10 @@ const Dashboard: FC = () => {
                                 const subBundleSku = `${certSku}-1mo-addon`;
                                 const practiceBundleSku = `${certSku}-1`;
 
-                                if (examPrices[subBundleSku]) {
+                                // Check subscription bundle first (higher priority) and ensure it's marked as a bundle
+                                if (examPrices[subBundleSku] && examPrices[subBundleSku].isBundle) {
                                      dashboardBundle = { product: { ...examPrices[subBundleSku], sku: subBundleSku }, type: 'subscription' as const };
-                                } else if (examPrices[practiceBundleSku]) {
+                                } else if (examPrices[practiceBundleSku] && examPrices[practiceBundleSku].isBundle) {
                                      dashboardBundle = { product: { ...examPrices[practiceBundleSku], sku: practiceBundleSku }, type: 'practice' as const };
                                 }
                             }

@@ -412,10 +412,10 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
                     $bundle_type = null;
 
                     // Check subscription bundle first (higher priority)
-                    if (isset($config_data['examPrices'][$subscription_bundle_sku]) && $config_data['examPrices'][$subscription_bundle_sku]['isBundle']) {
+                    if (isset($config_data['examPrices'][$subscription_bundle_sku]) && ($config_data['examPrices'][$subscription_bundle_sku]['isBundle'] ?? false)) {
                         $bundle_data = $config_data['examPrices'][$subscription_bundle_sku];
                         $bundle_type = 'subscription';
-                    } elseif (isset($config_data['examPrices'][$practice_bundle_sku]) && $config_data['examPrices'][$practice_bundle_sku]['isBundle']) {
+                    } elseif (isset($config_data['examPrices'][$practice_bundle_sku]) && ($config_data['examPrices'][$practice_bundle_sku]['isBundle'] ?? false)) {
                         $bundle_data = $config_data['examPrices'][$practice_bundle_sku];
                         $bundle_type = 'practice';
                     }
@@ -972,17 +972,53 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
         ?>
         <style>
         /* Specific Sidebar Styles to Fix Overflow */
-        .mco-book-card-sidebar {
-            display: flex;
+        .mco-study-hall-sidebar {
             background: #fff;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
+            border-radius: 12px; /* Increased border-radius for more rounded look */
+            padding: 24px; /* Increased padding */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* More pronounced shadow */
+            box-sizing: border-box; /* Ensure proper box model */
+        }
+        .mco-study-hall-sidebar__title {
+            font-size: 1.5rem; /* Larger title */
+            font-weight: 700;
+            margin: 0 0 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px; /* Increased gap */
+            color: #1e293b;
+            border-bottom: 2px solid #e2e8f0; /* Thicker border */
+            padding-bottom: 12px; /* More padding */
+        }
+        .mco-study-hall-sidebar__title svg {
+            color: #0891b2; /* Cyan color for icon */
+            width: 28px; /* Larger icon */
+            height: 28px;
+        }
+        .mco-study-hall-sidebar__grid {
+            display: flex;
+            flex-direction: column;
+            gap: 20px; /* Increased gap between cards */
+        }
+        .mco-book-card-sidebar {
+            border: 1px solid #cbd5e1; /* Slightly darker border for contrast */
+            border-radius: 10px; /* More rounded cards */
             overflow: hidden;
-            margin-bottom: 12px;
-            min-height: 80px; 
+            display: flex;
+            min-height: 120px; /* Slightly taller cards */
+            background: #fff;
+            transition: all 0.2s ease-in-out; /* Smooth transition for hover effects */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Subtle shadow for individual cards */
+            box-sizing: border-box;
+        }
+        .mco-book-card-sidebar:hover {
+            border-color: #0ea5e9; /* Blue border on hover */
+            transform: translateY(-3px); /* Lift effect on hover */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         .mco-book-card-sidebar__cover {
-            width: 70px;
+            width: 90px; /* Wider cover */
             flex-shrink: 0;
             position: relative;
             overflow: hidden;
@@ -996,14 +1032,14 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
         }
         /* Procedural Cover Tweaks for Sidebar Small Size */
         .mco-book-card-sidebar__cover [class*="mco-proc-cover-"] {
-            padding: 5px !important;
+            padding: 8px !important; /* Adjusted padding */
             justify-content: center;
             width: 100% !important;
             height: 100% !important;
         }
         .mco-book-card-sidebar__cover [class*="mco-proc-cover-"] h4 {
-            font-size: 9px !important;
-            line-height: 1.1 !important;
+            font-size: 10px !important; /* Slightly larger text for readability */
+            line-height: 1.2 !important;
             margin: 0 !important;
             display: block !important;
         }
@@ -1011,39 +1047,52 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
             display: none !important; /* Hide supertitles to save space */
         }
         .mco-book-card-sidebar__content {
-            padding: 10px;
+            padding: 15px; /* Increased padding */
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: space-between; /* Space out title and button */
             flex-grow: 1;
             min-width: 0;
         }
         .mco-book-card-sidebar__title {
-            font-size: 14px;
+            font-size: 15px; /* Larger title font size */
             font-weight: 600;
-            line-height: 1.2;
-            margin: 0 0 5px 0;
+            line-height: 1.3;
+            margin: 0 0 8px 0; /* Adjusted margin */
             color: #1e293b;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            text-decoration: none; /* Remove underline from default */
+        }
+        .mco-book-card-sidebar__title:hover {
+            color: #0891b2; /* Primary color on hover */
         }
         .mco-book-card-sidebar__button {
-            font-size: 11px;
-            padding: 4px 8px;
-            background: #f1f5f9;
-            color: #334155;
-            border-radius: 4px;
+            display: inline-flex; /* Use inline-flex for button content alignment */
+            align-items: center;
+            justify-content: center;
+            background: #f59e0b; /* Amber 500 */
+            color: #fff;
+            font-size: 12px; /* Smaller font size for button */
+            font-weight: 700;
+            padding: 8px 12px; /* Adjusted padding */
+            border-radius: 6px; /* More rounded button */
             text-decoration: none;
             align-self: flex-start;
-            display: inline-block;
-            margin-top: auto;
-            border: 1px solid #e2e8f0;
+            transition: background-color 0.2s ease-in-out;
+            gap: 6px; /* Gap for icon + text */
         }
         .mco-book-card-sidebar__button:hover {
-            background: #e2e8f0;
-            color: #0f172a;
+            background: #d97706; /* Amber 700 on hover */
+        }
+        .mco-study-hall-sidebar__disclaimer {
+            font-size: 0.8rem; /* Slightly larger disclaimer */
+            color: #64748b; /* Slate 500 */
+            margin-top: 24px; /* More margin */
+            text-align: center;
+            line-height: 1.5;
         }
         </style>
         
