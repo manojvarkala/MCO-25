@@ -255,7 +255,7 @@ if (!function_exists('mco_render_mco_procedural_cover_php_full')) {
             <div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 1.5rem; box-sizing: border-box; background-color: ' . esc_attr($color['bg']) . '; color: ' . esc_attr($color['text']) . '; overflow: hidden;">
                 <div style="position: absolute; top: 1rem; left: 0; width: 0.25rem; height: 25%; background-color: ' . esc_attr($color['accent']) . ';"></div>
                 <div>
-                     <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; display: block; margin-bottom: 0.5rem; color: inherit;">Reference Material</span>
+                     <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: ' . esc_attr('0.1em') . '; opacity: 0.8; display: block; margin-bottom: 0.5rem; color: inherit;">Reference Material</span>
                     <h4 style="font-weight: 800; font-size: 1.25rem; line-height: 1.2; margin: 0; color: inherit;">' . esc_html($title) . '</h4>
                 </div>
                 <div style="align-self: flex-end; font-size: 3rem; font-weight: 900; opacity: 0.1; user-select: none; font-family: var(--font-display, sans-serif); color: inherit;">
@@ -281,49 +281,49 @@ if (!function_exists('mco_render_procedural_cover_full')) {
 
 // --- GEO-CODING HELPER (PHP Native) ---
 if (!function_exists('mco_get_geo_primary_link_info')) {
-    function mco_get_geo_primary_link_info($links) {
+    function mco_get_geo_primary_link_info($links, $override_geo_key = null) {
         if (empty($links) || !is_array($links)) return null;
         
-        $links = array_filter(array_map('trim', $links)); // Filter out empty or whitespace-only links
+        // Filter out empty or whitespace-only links
+        $links = array_filter(array_map('trim', $links)); 
         if (empty($links)) return null;
 
-        $preferredKey = 'com';
-        $preferredDomainName = 'Amazon.com';
+        $domainMap = [
+            'com' => 'Amazon.com', 
+            'in' => 'Amazon.in', 
+            'ae' => 'Amazon.ae'
+        ];
         
-        // This relies on the server's timezone, which may not match the client's.
-        // For precise client-side geo-targeting, JavaScript is required.
-        $timeZone = date_default_timezone_get(); 
-
-        $gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
-        if (strpos($timeZone, 'Asia/Kolkata') !== false || strpos($timeZone, 'Asia/Calcutta') !== false) {
-            $preferredKey = 'in';
-            $preferredDomainName = 'Amazon.in';
-        } else if (in_array($timeZone, $gccTimezones)) {
-            $preferredKey = 'ae';
-            $preferredDomainName = 'Amazon.ae';
+        // 1. Prioritize override geo key if provided and valid
+        if (!empty($override_geo_key) && isset($links[$override_geo_key]) && !empty($links[$override_geo_key])) {
+            return [ 
+                'key' => $override_geo_key, 
+                'url' => $links[$override_geo_key], 
+                'domainName' => $domainMap[$override_geo_key] ?? 'Amazon.com' 
+            ];
         }
 
-        // Try preferred geo link first
-        if (isset($links[$preferredKey]) && !empty($links[$preferredKey])) {
-            return [ 'key' => $preferredKey, 'url' => $links[$preferredKey], 'domainName' => $preferredDomainName ];
-        }
-
-        // Fallback in a defined priority order
-        $fallbackPriority = ['com', 'in', 'ae'];
-        foreach ($fallbackPriority as $key) {
-            if ($key === $preferredKey) continue; // Already tried
+        // 2. Fallback to fixed priority (in, ae, com)
+        $priority = ['in', 'ae', 'com'];
+        foreach ($priority as $key) {
             if (isset($links[$key]) && !empty($links[$key])) {
-                $domainMap = ['com' => 'Amazon.com', 'in' => 'Amazon.in', 'ae' => 'Amazon.ae'];
-                return [ 'key' => $key, 'url' => $links[$key], 'domainName' => $domainMap[$key] ];
+                return [ 
+                    'key' => $key, 
+                    'url' => $links[$key], 
+                    'domainName' => $domainMap[$key] 
+                ];
             }
         }
+        
         return null; // No valid links found
     }
 }
 
 if (!function_exists('mco_render_book_card_php')) {
     function mco_render_book_card_php($book, $type = 'showcase') {
-        $primary_link_info = mco_get_geo_primary_link_info($book['affiliateLinks'] ?? []);
+        // Get geo override from URL parameter
+        $geo_override_from_url = isset($_GET['geo']) ? sanitize_text_field($_GET['geo']) : null;
+        $primary_link_info = mco_get_geo_primary_link_info($book['affiliateLinks'] ?? [], $geo_override_from_url);
         $all_stores = [];
         if (!empty($book['affiliateLinks'])) {
             $stores = [
@@ -533,13 +533,13 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
                     $monthly_url = get_site_url() . '/cart/?add-to-cart=' . $monthly_sub['productId'];
                     echo '<div class="mco-card mco-gradient--sub-monthly"><h3 class="mco-sub-card__title">Monthly Subscription</h3><p class="mco-sub-card__description">Perfect for focused, short-term preparation.</p><div class="mco-sub-card__price">';
                     if (isset($monthly_sub['regularPrice']) && $monthly_sub['regularPrice'] > $monthly_sub['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($monthly_sub['regularPrice'], 2) . '</span> ';
-                    echo '<span class="mco-sub-card__price-value">$' . number_format_i18n($monthly_sub['price'], 2) . '</span><span class="mco-sub-card__price-unit">/month</span></div><ul class="mco-sub-card__features"><li>' . mco_get_svg_icon('check') . '<span>Unlimited Access to ALL Practice Exams</span></li><li>' . mco_get_svg_icon('check') . '<span>Unlimited AI-Powered Feedback & Study Guides</span></li><li>' . mco_get_svg_icon('check') . '<span>Cancel Anytime</span></li></ul><div class="mco-card__footer"><a href="' . esc_url($monthly_url) . '" class="mco-card__button mco-card__button--primary">Subscribe Now</a></div></div>';
+                    echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($monthly_sub['price'], 2) . '</span><span class="mco-sub-card__price-unit">/month</span></div><ul class="mco-sub-card__features"><li>' . mco_get_svg_icon('check') . '<span>Unlimited Access to ALL Practice Exams</span></li><li>' . mco_get_svg_icon('check') . '<span>Unlimited AI-Powered Feedback & Study Guides</span></li><li>' . mco_get_svg_icon('check') . '<span>Cancel Anytime</span></li></ul><div class="mco-card__footer"><a href="' . esc_url($monthly_url) . '" class="mco-card__button mco-card__button--primary">Subscribe Now</a></div></div>';
                 }
                 if ($yearly_sub && isset($yearly_sub['productId'])) {
                     $yearly_url = get_site_url() . '/cart/?add-to-cart=' . $yearly_sub['productId'];
                     echo '<div class="mco-card mco-gradient--sub-yearly mco-card--best-value"><div class="mco-best-value-tag">' . mco_get_svg_icon('star') . ' Best Value</div><h3 class="mco-sub-card__title">Yearly Subscription</h3><p class="mco-sub-card__description">For continuous learning and preparing for multiple certifications.</p><div class="mco-sub-card__price">';
                     if (isset($yearly_sub['regularPrice']) && $yearly_sub['regularPrice'] > $yearly_sub['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($yearly_sub['regularPrice'], 2) . '</span> ';
-                    echo '<span class="mco-sub-card__price-value">$' . number_format_i18n($yearly_sub['price'], 2) . '</span><span class="mco-sub-card__price-unit">/year</span></div><p style="text-align:center; font-size: 0.875rem; color: #fcd34d; font-weight: 600;">Saves over 35%!</p><ul class="mco-sub-card__features"><li>' . mco_get_svg_icon('check') . '<span>All Monthly features</span></li><li>' . mco_get_svg_icon('check') . '<span>Access All Exam Programs</span></li><li>' . mco_get_svg_icon('check') . '<span>Billed Annually</span></li></ul><div class="mco-card__footer"><a href="' . esc_url($yearly_url) . '" class="mco-card__button mco-card__button--primary">Subscribe & Save</a></div></div>';
+                    echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($yearly_sub['price'], 2) . '</span><span class="mco-sub-card__price-unit">/year</span></div><p style="text-align:center; font-size: 0.875rem; color: #fcd34d; font-weight: 600;">Saves over 35%!</p><ul class="mco-sub-card__features"><li>' . mco_get_svg_icon('check') . '<span>All Monthly features</span></li><li>' . mco_get_svg_icon('check') . '<span>Access All Exam Programs</span></li><li>' . mco_get_svg_icon('check') . '<span>Billed Annually</span></li></ul><div class="mco-card__footer"><a href="' . esc_url($yearly_url) . '" class="mco-card__button mco-card__button--primary">Subscribe & Save</a></div></div>';
                 }
                 echo '</div>';
             }
@@ -908,10 +908,6 @@ if (!function_exists('mco_auto_inject_template')) {
             return mco_single_book_shortcode();
         }
         if (is_singular('mco_exam_program') && in_the_loop() && is_main_query()) {
-            return mco_single_program_shortcode();
-        }
-        // Handle Archive Pages: Inject card view for items in the loop
-        if (is_post_type_archive('mco_exam_program') && in_the_loop() && is_main_query()) {
             global $post;
             // Ensure mco_get_app_config_data is defined
             if (!function_exists('mco_get_app_config_data')) {
@@ -990,7 +986,7 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
                 <?php echo $books_html; ?>
             </div>
             <p class="mco-study-hall-sidebar__disclaimer">
-                Using our affiliate links doesn't cost you extra and helps support our platform. Note: Book availability may vary by region. Thank out for you!
+                Using our affiliate links doesn't cost you extra and helps support our platform. Note: Book availability may vary by region. Thank you!
             </p>
         </div>
         <?php
@@ -1044,10 +1040,9 @@ if (!function_exists('mco_redirect_to_app_with_token')) {
         $site_url = get_site_url();
         $redirect_url = add_query_arg(['token' => $token, 'api_url' => $site_url], rtrim($app_url, '/') . '/auth');
         
-        // JS redirect is safer if headers are sent, but meta refresh is a good fallback
-        return '<meta http-equiv="refresh" content="0;url=' . esc_url($redirect_url) . '">' .
-            '<script>window.location.href="' . esc_url($redirect_url) . '";</script>' .
-            '<div id="mco-app-root"><div class="mco-form-container" style="text-align:center;"><p>Redirecting to exam portal...</p><a href="' . esc_url($redirect_url) . '" class="mco-button">Click here if not redirected</a></div></div>';
+        nocache_headers();
+        wp_redirect($redirect_url);
+        exit;
     }
 }
 

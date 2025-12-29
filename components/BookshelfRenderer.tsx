@@ -1,5 +1,5 @@
 
-import React, { FC } from 'react';
+import React, { FC, useMemo } from 'react';
 // FIX: Changed import of BookCover from default to named import to align with the module's export type.
 import { BookCover } from './BookCover.tsx';
 import type { RecommendedBook } from '../types.ts';
@@ -76,6 +76,17 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
             { key: 'ae' as const, name: 'Amazon.ae', url: book.affiliateLinks?.ae }
         ].filter(store => store.url && store.url.trim() !== '');
 
+        const permalinkWithGeo = useMemo(() => {
+            if (!book.permalink) return '#';
+            const linkData = getGeoAffiliateLink(book);
+            if (linkData) {
+                const url = new URL(book.permalink);
+                url.searchParams.set('geo', linkData.key);
+                return url.toString();
+            }
+            return book.permalink;
+        }, [book.permalink, book.affiliateLinks]);
+
         return (
             <div className="mco-single-book-card">
                 <div className="mco-single-book-card__cover">
@@ -120,6 +131,17 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
             { key: 'ae' as const, name: 'Amazon.ae', url: book.affiliateLinks?.ae }
         ].filter(store => store.url && store.url.trim() !== '');
 
+        const permalinkWithGeo = useMemo(() => {
+            if (!book.permalink) return '#';
+            const linkData = getGeoAffiliateLink(book);
+            if (linkData) {
+                const url = new URL(book.permalink);
+                url.searchParams.set('geo', linkData.key);
+                return url.toString();
+            }
+            return book.permalink;
+        }, [book.permalink, book.affiliateLinks]);
+
         const desc = (book.description || '').split(' ').slice(0, 20).join(' ') + '...';
         
         if (type === 'sidebar') {
@@ -130,7 +152,7 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                     </div>
                     <div className="mco-book-card-sidebar__content">
                         {book.permalink ? (
-                            <a href={book.permalink} target="_blank" rel="noopener noreferrer" className="group">
+                            <a href={permalinkWithGeo} target="_blank" rel="noopener noreferrer" className="group">
                                 <h4 className="mco-book-card-sidebar__title group-hover:text-cyan-600 transition-colors">{decodeHtmlEntities(book.title)}</h4>
                             </a>
                         ) : (
@@ -169,7 +191,7 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                     </div>
                     <div className="mco-book-card__body">
                         {book.permalink ? (
-                            <a href={book.permalink} style={{ textDecoration: 'none' }}>
+                            <a href={permalinkWithGeo} style={{ textDecoration: 'none' }}>
                                 <h4 className="mco-book-card__title">{decodeHtmlEntities(book.title)}</h4>
                             </a>
                         ) : (
