@@ -50,3 +50,201 @@ body {
   --color-success-rgb: 74, 222, 128;
   --color-danger-rgb: 248, 113, 113;
 }
+
+/* --- Book Card & Button Styles (For React App) --- */
+
+.mco-book-card-sidebar {
+    border: 1px solid rgb(var(--color-border-rgb));
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    height: 110px;
+    background: rgb(var(--color-card-rgb));
+    transition: border-color 0.2s;
+}
+
+.mco-book-card-sidebar:hover {
+    border-color: rgb(var(--color-text-muted-rgb));
+}
+
+.mco-book-card-sidebar__cover {
+    width: 80px;
+    flex-shrink: 0;
+    border-right: 1px solid rgb(var(--color-muted-rgb));
+}
+
+.mco-book-card-sidebar__cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mco-book-card-sidebar__content {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex-grow: 1;
+    min-width: 0; /* Important for text-overflow to work in flex children */
+}
+
+.mco-book-card-sidebar__title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+    color: rgb(var(--color-text-strong-rgb));
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.mco-book-card-sidebar__title:hover {
+    color: rgb(var(--color-primary-rgb));
+}
+
+.mco-store-buttons-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: auto;
+}
+
+.mco-book-card-sidebar__button {
+    display: inline-flex; /* Changed from block for icon alignment */
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgb(var(--color-accent-rgb));
+    color: rgb(var(--color-text-strong-rgb));
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    align-self: flex-start;
+    transition: background-color 0.2s;
+    border: 1px solid rgb(var(--color-accent-rgb)); /* Added border for consistency */
+    min-width: 100px; /* Ensure minimum width */
+}
+
+.mco-book-card-sidebar__button:hover {
+    background: rgba(var(--color-accent-rgb), 0.8);
+}
+
+.mco-book-card-sidebar__button--secondary {
+    background: rgb(var(--color-muted-rgb));
+    color: rgb(var(--color-text-default-rgb));
+    border: 1px solid rgb(var(--color-border-rgb));
+}
+
+.mco-book-card-sidebar__button--secondary:hover {
+    background: rgb(var(--color-border-rgb));
+    color: rgb(var(--color-text-strong-rgb));
+}
+
+/* Common button styles */
+.mco-book-btn {
+    display: inline-flex; /* Use flex for icon alignment */
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+    transition: all 0.2s;
+    min-width: 150px; /* Ensure minimum width */
+}
+
+.mco-book-btn--primary {
+    background: rgb(var(--color-accent-rgb));
+    color: rgb(var(--color-text-strong-rgb));
+    border: 1px solid rgb(var(--color-accent-rgb));
+}
+
+.mco-book-btn--primary:hover {
+    background: rgba(var(--color-accent-rgb), 0.8);
+}
+
+.mco-book-btn--secondary {
+    background: rgb(var(--color-muted-rgb));
+    color: rgb(var(--color-text-default-rgb));
+    border: 1px solid rgb(var(--color-border-rgb));
+}
+
+.mco-book-btn--secondary:hover {
+    background: rgb(var(--color-border-rgb));
+    color: rgb(var(--color-text-strong-rgb));
+}
+
+/* Showcase Grid */
+.mco-book-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 30px;
+}
+
+.mco-book-card {
+    background: rgb(var(--color-card-rgb));
+    border: 1px solid rgb(var(--color-border-rgb));
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+    height: 100%;
+}
+
+.mco-book-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 20px -5px rgba(0,0,0,0.1);
+}
+
+.mco-book-card .mco-book-cover {
+    height: 300px;
+    border-bottom: 1px solid rgb(var(--color-muted-rgb));
+}
+
+.mco-book-card__body {
+    padding: 20px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.mco-book-card__title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: rgb(var(--color-text-strong-rgb));
+    margin: 0 0 10px 0;
+    line-height: 1.3;
+}
+
+.mco-book-card__desc {
+    font-size: 0.9rem;
+    color: rgb(var(--color-text-muted-rgb));
+    line-height: 1.6;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.mco-book-card__footer {
+    padding: 16px 20px;
+    border-top: 1px solid rgb(var(--color-muted-rgb));
+    background: rgba(var(--color-muted-rgb), 0.5);
+}
+
+.mco-store-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
