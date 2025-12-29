@@ -1,5 +1,6 @@
 
 
+
 import React, { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useParams, useNavigate } from "react-router-dom";
@@ -29,7 +30,7 @@ const Test: FC = () => {
   const { activeOrg, isInitializing, setFeedbackRequiredForExam } = useAppContext();
 
   const [examConfig, setExamConfig] = useState<Exam | null>(null);
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Map<number, number>>(new Map());
   const [isLoading, setIsLoading] = useState(true);

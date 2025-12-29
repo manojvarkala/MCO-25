@@ -295,7 +295,8 @@ const UpsertSubscriptionModal: FC<UpsertSubscriptionModalProps> = ({ isOpen, onC
                 setSku(productToEdit.sku || '');
                 setPrice(productToEdit.salePrice?.toString() || '');
                 setRegularPrice(productToEdit.regularPrice?.toString() || '');
-                setPeriod(productToEdit.subscriptionPeriod || 'month');
+                // FIX: Cast productToEdit.subscriptionPeriod to BillingPeriod to resolve type error.
+                setPeriod(productToEdit.subscriptionPeriod as BillingPeriod || 'month');
                 setInterval(productToEdit.subscriptionPeriodInterval || '1');
                 setLength(productToEdit.subscriptionLength || '0');
             } else {

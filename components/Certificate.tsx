@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useEffect, useRef } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -18,9 +19,9 @@ import { localLogosMap } from '../assets/localLogos.ts'; // FIX: Import local lo
 const decodeHtmlEntities = (text: string | undefined): string => {
     if (!text || typeof text !== 'string') return text || '';
     try {
-        const textarea = document.createElement('textarea');
+        const textarea = document.createElement('div');
         textarea.innerHTML = text;
-        return textarea.value;
+        return textarea.textContent || textarea.innerText || '';
     } catch (e) {
         console.error("Could not decode HTML entities", e);
         return text;

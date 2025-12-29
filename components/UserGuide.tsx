@@ -1,5 +1,6 @@
 
 
+
 import React, { FC } from 'react';
 import { LayoutDashboard, FileText, CheckCircle, Sparkles, Award, Star, MessageSquare, BookOpen, ShoppingBag, LogIn } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -32,13 +33,13 @@ const UserGuide: FC = () => {
                 <p>Your dashboard is your central hub for all activities:</p>
                 <ul>
                     <li><strong>Subscription & Bundle Offers:</strong> At the top, you'll see options to subscribe or purchase bundles for the best value.</li>
+                    <li><strong>My Stats:</strong> Get a quick overview of your performance, including your average and best scores.</li>
                     <li><strong>My Exam Programs:</strong> This is where you'll find your exams. Each program has two parts:
                         <ul>
                             <li><strong>Free Practice:</strong> A shorter test to warm you up. You can take this multiple times (subscribers get unlimited attempts).</li>
                             <li><strong>Certification Exam:</strong> The full exam. This is unlocked after purchase and is limited to 3 attempts.</li>
                         </ul>
                     </li>
-                    <li><strong>My Stats:</strong> Get a quick overview of your performance, including your average and best scores.</li>
                     <li><strong>My Exam History:</strong> A list of all your completed exams. You can revisit the results page from here by clicking the arrow icon.</li>
                 </ul>
 

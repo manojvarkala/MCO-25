@@ -1,5 +1,6 @@
 
 
+
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useNavigate, Link } from "react-router-dom";
@@ -90,7 +91,7 @@ const Dashboard: FC = () => {
         const averageScore = (totalScore / results.length).toFixed(1) + '%';
         const bestScore = Math.max(...results.map(r => r.score)).toFixed(1) + '%';
         const examsPassed = results.filter(r => {
-            const exam = activeOrg?.exams.find(e => e.id === r.examId);
+            const exam = activeOrg?.exams.find(e => e && e.id === r.examId);
             return exam && r.score >= exam.passScore;
         }).length;
 

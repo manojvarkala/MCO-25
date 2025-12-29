@@ -1,5 +1,6 @@
 
 
+
 import React, { FC, useMemo, useState, useEffect } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useParams, useNavigate, Link } from "react-router-dom";
@@ -69,9 +70,9 @@ const stripHtml = (html: string): string => {
 const decodeHtmlEntities = (html: string): string => {
     if (!html || typeof html !== 'string') return html || '';
     try {
-        const textarea = document.createElement('textarea');
+        const textarea = document.createElement('div');
         textarea.innerHTML = html;
-        return textarea.value;
+        return textarea.textContent || textarea.innerText || '';
     } catch (e) {
         console.error("Could not decode HTML entities", e);
         return html;

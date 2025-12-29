@@ -62,9 +62,9 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
 const decodeHtmlEntities = (html: string): string => {
     if (!html || typeof html !== 'string') return html || '';
     try {
-        const textarea = document.createElement('textarea');
+        const textarea = document.createElement('div');
         textarea.innerHTML = html;
-        return textarea.value;
+        return textarea.textContent || textarea.innerText || '';
     } catch (e) {
         console.error("Could not decode HTML entities", e);
         return html;

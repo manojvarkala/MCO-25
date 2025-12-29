@@ -1,3 +1,5 @@
+
+
 import React, { FC } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
@@ -25,7 +27,7 @@ const AboutUs: FC = () => {
             
             <div className="prose max-w-none text-slate-700 space-y-6">
                 <p className="text-lg">
-                    Welcome to the <strong>{activeOrg.name}</strong> examination portal, a state-of-the-art platform designed to empower professionals and students on their path to certification and mastery. Our mission is to provide a comprehensive, intuitive, and reliable testing environment that supports your learning and career goals.
+                    Welcome to the <strong>{activeOrg.name}</strong> examination portal, a state-of-art platform designed to empower professionals and students on their path to certification and mastery. Our mission is to provide a comprehensive, intuitive, and reliable testing environment that supports your learning and career goals.
                 </p>
 
                 <div>
