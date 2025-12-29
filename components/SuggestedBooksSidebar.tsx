@@ -1,11 +1,12 @@
 
+
 import React, { FC, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { RecommendedBook } from '../types.ts';
 import { BookUp, BookOpen } from 'lucide-react';
-import BookCover from '../assets/BookCover.tsx';
+import BookshelfRenderer from './BookshelfRenderer.tsx'; // Import the new renderer
 
-// Unified geo-affiliate link logic
+// Unified geo-affiliate link logic (kept for other components if needed, but BookshelfRenderer uses its own)
 const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
     if (!book.affiliateLinks) {
         return null;
@@ -79,35 +80,7 @@ const SuggestedBooksSidebar: FC = () => {
                 <BookOpen className="mr-3 text-cyan-500" /> Study Hall
             </h3>
             <div className="space-y-6">
-                {randomBooks.map(book => {
-                    const linkData = getGeoAffiliateLink(book);
-                    if (!linkData) return null; // Don't render if no valid URL
-                    const { url, domainName } = linkData;
-                    return (
-                        <div key={book.id} className="bg-white rounded-lg shadow-md overflow-hidden border border-slate-200 transform hover:-translate-y-1 transition-transform duration-200">
-                            <BookCover book={book} className="w-full h-32" />
-                            <div className="p-4">
-                                {book.permalink ? (
-                                    <a href={book.permalink} target="_blank" rel="noopener noreferrer" className="group">
-                                        <h4 className="font-bold text-slate-800 text-sm mb-3 leading-tight group-hover:text-cyan-600 transition-colors">{decodeHtmlEntities(book.title)}</h4>
-                                    </a>
-                                ) : (
-                                    <h4 className="font-bold text-slate-800 text-sm mb-3 leading-tight">{decodeHtmlEntities(book.title)}</h4>
-                                )}
-                                
-                                <a 
-                                    href={url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="w-full flex items-center justify-center gap-2 text-sm text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-3 py-2 transition-colors"
-                                >
-                                    <BookUp size={16} />
-                                    <span>Buy on {domainName}</span>
-                                </a>
-                            </div>
-                        </div>
-                    );
-                })}
+                <BookshelfRenderer books={randomBooks} type="sidebar" />
             </div>
              <p className="text-xs text-slate-400 mt-6 text-center">
                 Using our affiliate links doesn't cost you extra and helps support our platform. Note: Book availability may vary by region. Thank you!

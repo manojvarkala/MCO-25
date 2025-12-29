@@ -125,124 +125,37 @@ if (!function_exists('mco_get_hash_of_string')) {
     }
 }
 
+/**
+ * Simplified PHP procedural cover for shortcodes.
+ * It only outputs data attributes for React to render the full cover.
+ */
 if (!function_exists('mco_render_annapoorna_procedural_cover_php')) {
-    function mco_render_annapoorna_procedural_cover_php($item_data, $type = 'book') {
-        $title = strip_tags(html_entity_decode($item_data['title'] ?? '', ENT_QUOTES, 'UTF-8'), '<strong><em>'); // FIX: Strip HTML
-        $hash = mco_get_hash_of_string($title);
-        $styleIndex = abs($hash) % 2;
-        $colorIndex = floor(abs($hash) / 2) % 5;
-        
-        $superTitle = ($type === 'program') ? 'Certification Program' : 'Study Material';
-        $subTitle = ($type === 'program') ? 'Exam Prep' : 'Official Guide';
-
-        // SVG Pattern for Style A (circles)
-        $svgPattern = '<svg width="100%" height="100%" style="position:absolute;inset:0;opacity:0.1;"><defs><pattern id="p-' . $hash . '" patternUnits="userSpaceOnUse" width="20" height="20"><circle cx="10" cy="10" r="1" fill="white"/></pattern></defs><rect width="100%" height="100%" fill="url(#p-' . $hash . ')"/></svg>';
-
-        $colorsA = [
-            ['bg' => '#4338ca', 'pattern' => '#3730a3', 'text' => '#ffffff'], // Indigo
-            ['bg' => '#0f766e', 'pattern' => '#115e59', 'text' => '#ffffff'], // Teal
-            ['bg' => '#334155', 'pattern' => '#1e293b', 'text' => '#ffffff'], // Slate
-            ['bg' => '#1e40af', 'pattern' => '#1e3a8a', 'text' => '#ffffff'], // Blue
-            ['bg' => '#374151', 'pattern' => '#1f2937', 'text' => '#ffffff'], // Gray
-        ];
-        
-        $colorsB = [
-            ['bg' => '#dbeafe', 'shape' => '#93c5fd', 'text' => '#1e3a8a'], // Blue
-            ['bg' => '#d1fae5', 'shape' => '#6ee7b7', 'text' => '#064e3b'], // Emerald
-            ['bg' => '#ffe4e6', 'shape' => '#fda4af', 'text' => '#881337'], // Rose
-            ['bg' => '#ede9fe', 'shape' => '#c4b5fd', 'text' => '#4c1d95'], // Violet
-            ['bg' => '#f1f5f9', 'shape' => '#cbd5e1', 'text' => '#0f172a'], // Slate
-        ];
-
-        if ($styleIndex === 0) {
-            $c = $colorsA[$colorIndex];
-            return '<div style="position: relative; z-index: 1; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 1.5rem; box-sizing: border-box; background-color: ' . esc_attr($c['bg']) . '; color: ' . esc_attr($c['text']) . '; overflow: hidden;">' .
-                    '<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; clip-path: polygon(0 0, 100% 0, 0 100%); opacity: 0.2; background-color: ' . esc_attr($c['pattern']) . ';">' . $svgPattern . '</div>' .
-                    '<div style="position: relative; z-index: 10;">' .
-                    '<span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; display: block; margin-bottom: 0.5rem; color: inherit;">' . esc_html($superTitle) . '</span>' .
-                    '<h4 style="font-weight: 800; font-size: 1.25rem; line-height: 1.2; margin: 0; color: inherit;">' . esc_html($title) . '</h4>' .
-                    '</div></div>';
-        } else {
-            $c = $colorsB[$colorIndex];
-            // FIX: Corrected background-color from $c['text'] to $c['bg']
-            return '<div style="position: relative; z-index: 1; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; text-align: left; padding: 1.5rem; box-sizing: border-box; background-color: ' . esc_attr($c['bg']) . '; color: ' . esc_attr($c['text']) . '; overflow: hidden;">' .
-                    '<div style="position: absolute; right: -20%; top: -20%; width: 70%; height: 70%; border-radius: 50%; opacity: 0.5; mix-blend-mode: multiply; background-color: ' . esc_attr($c['shape']) . ';"></div>' .
-                    '<div style="position: relative; z-index: 10;">' .
-                    '<h4 style="font-weight: 800; font-size: 1.5rem; line-height: 1.1; margin: 0 0 0.5rem 0; color: inherit;">' . esc_html($title) . '</h4>' .
-                    '<span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: inherit;">' . esc_html($subTitle) . '</span>' .
-                    '</div></div>';
-        }
+    function mco_render_annapoorna_procedural_cover_php($item_data) {
+        $title = strip_tags(html_entity_decode($item_data['title'] ?? '', ENT_QUOTES, 'UTF-8'), '<strong><em>');
+        return '<div data-procedural-cover="annapoorna" data-book-title="' . esc_attr($title) . '"></div>';
     }
 }
 
+/**
+ * Simplified MCO procedural cover for shortcodes.
+ * It only outputs data attributes for React to render the full cover.
+ */
 if (!function_exists('mco_render_mco_procedural_cover_php')) {
-   function mco_render_mco_procedural_cover_php($item_data, $type = 'book') {
-        $title = strip_tags(html_entity_decode($item_data['title'] ?? '', ENT_QUOTES, 'UTF-8'), '<strong><em>'); // FIX: Strip HTML
-        $hash = mco_get_hash_of_string($title);
-        $styleIndex = abs($hash) % 2;
-        $colorIndex = floor(abs($hash) / 2) % 4;
-
-        $superTitle = ($type === 'program') ? 'Certification Program' : 'Reference Material';
-        $subTitle = ($type === 'program') ? 'Exam Prep' : 'Official Guide'; // Used only in style B
-
-        $colorsA = [
-            ['bg' => '#334155', 'text' => '#f1f5f9', 'bgWord' => '#475569'], // Gray
-            ['bg' => '#0891b2', 'text' => '#cffafe', 'bgWord' => '#0e7490'], // Cyan
-            ['bg' => '#115e59', 'text' => '#ccfbf1', 'bgWord' => '#065f46'], // Emerald
-            ['bg' => '#0369a1', 'text' => '#e0f2fe', 'bgWord' => '#075985'], // Sky
-        ];
-        $colorsB = [
-            ['bg' => '#1e293b', 'text' => '#ffffff', 'accent' => '#38bdf8'], // Slate with Sky accent
-            ['bg' => '#44403c', 'text' => '#ffffff', 'accent' => '#facc15'], // Stone with Yellow accent
-            ['bg' => '#0c4a6e', 'text' => '#ffffff', 'accent' => '#fb7185'], // Blue with Rose accent
-            ['bg' => '#065f46', 'text' => '#ffffff', 'accent' => '#a3e635'], // Emerald with Lime accent
-        ];
-
-        if ($styleIndex === 0) {
-            $c = $colorsA[$colorIndex];
-            $titleWords = explode(' ', $title);
-            // Fix: Re-structured for robustness, avoiding ?? with end() for older PHP compatibility
-            $bgWord = '';
-            if (!empty($titleWords)) {
-                if (count($titleWords) > 1) {
-                    $bgWord = end($titleWords);
-                } else {
-                    $bgWord = $titleWords[0];
-                }
-            }
-            $bgWord = empty($bgWord) ? 'MCO' : strtoupper(substr($bgWord, 0, min(strlen($bgWord), 4))); // Take up to 4 chars
-            
-            return '<div style="position: relative; z-index: 1; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; padding: 1.5rem; box-sizing: border-box; background-color: ' . esc_attr($c['bg']) . '; color: ' . esc_attr($c['text']) . '; overflow: hidden;">' .
-                    '<div style="position: absolute; bottom: -0.5rem; right: -0.5rem; font-size: 5rem; font-weight: 900; line-height: 1; z-index: 0; opacity: 0.15; user-select: none; color: ' . esc_attr($c['bgWord']) . ';">' . esc_html($bgWord) . '</div>' .
-                    '<div style="position: relative; z-index: 10;">' .
-                    '<span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; display: block; margin-bottom: 0.5rem; color: inherit;">' . esc_html($superTitle) . '</span>' .
-                    '<h4 style="font-weight: 800; font-size: 1.5rem; line-height: 1.2; margin: 0; color: inherit; text-shadow: 0 1px 3px rgba(0,0,0,0.1);">' . esc_html($title) . '</h4>' .
-                    '</div></div>';
-        } else {
-            $c = $colorsB[$colorIndex];
-            return '<div style="position: relative; z-index: 1; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 1.5rem; box-sizing: border-box; background-color: ' . esc_attr($c['bg']) . '; color: ' . esc_attr($c['text']) . '; overflow: hidden;">' .
-                    '<div style="position: absolute; top: 1.5rem; left: 0; width: 6px; height: 25%; background-color: ' . esc_attr($c['accent']) . ';"></div>' .
-                    '<div style="position: relative; z-index: 10;">' .
-                    '<span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; display: block; color: inherit;">' . esc_html($superTitle) . '</span>' .
-                    '<h4 style="font-weight: 800; font-size: 1.4rem; line-height: 1.2; margin: 0.5rem 0 0 0; color: inherit;">' . esc_html($title) . '</h4>' .
-                    '</div>' .
-                    '<div style="align-self: flex-end; font-size: 2.5rem; font-weight: 900; opacity: 0.1; user-select: none; color: inherit;">MCO</div>' .
-                    '</div>';
-        }
+   function mco_render_mco_procedural_cover_php($item_data) {
+        $title = strip_tags(html_entity_decode($item_data['title'] ?? '', ENT_QUOTES, 'UTF-8'), '<strong><em>');
+        return '<div data-procedural-cover="mco" data-book-title="' . esc_attr($title) . '"></div>';
    }
 }
 
 if (!function_exists('mco_render_procedural_cover')) {
-    function mco_render_procedural_cover($item_data, $type = 'book') {
-        // Use the activeOrg to determine which style to render.
-        // If mco_get_app_config_data is not available (e.g. plugin not fully loaded), default to Annapoorna.
+    function mco_render_procedural_cover($item_data) {
         $config_data = function_exists('mco_get_app_config_data') ? mco_get_app_config_data() : [];
-        $active_org_id = $config_data['id'] ?? 'org-annapoorna'; // Default to Annapoorna if not set
+        $active_org_id = $config_data['id'] ?? 'org-annapoorna';
 
         if ($active_org_id === 'org-medical-coding-online') {
-            return mco_render_mco_procedural_cover_php($item_data, $type);
+            return mco_render_mco_procedural_cover_php($item_data);
         }
-        return mco_render_annapoorna_procedural_cover_php($item_data, $type);
+        return mco_render_annapoorna_procedural_cover_php($item_data);
     }
 }
 
@@ -497,12 +410,11 @@ if (!function_exists('mco_program_grid_shortcode')) {
                         }
 
                         $item_data = [
-                            'ID' => $program_post->ID, // Pass WP Post ID for thumbnail fallback (though now mostly pre-fetched)
+                            'id' => $app_program_id, // Use app-specific ID for React
                             'title' => $program_post->post_title,
                             'description' => $program_post->post_content,
                             'thumbnailUrl' => $program_category['thumbnailUrl'] ?? '', // Use pre-fetched thumbnail from app_config_data
                             'permalink' => rtrim($app_url, '/') . '/program/' . $app_program_id,
-                            'app_program_id' => $app_program_id
                         ];
                         echo mco_render_program_card($item_data, $app_url);
                     }
@@ -523,24 +435,14 @@ if (!function_exists('mco_render_program_card')) {
             return '<p>Application is not configured correctly. Missing core functions.</p>';
         }
 
-        $app_program_id = $program_data['app_program_id'] ?? ('prod-' . ($program_data['ID'] ?? ''));
+        $app_program_id = $program_data['id'] ?? ('prod-' . ($program_data['ID'] ?? ''));
         $program_url = rtrim($app_url, '/') . '/program/' . $app_program_id;
         
-        // Use the thumbnailUrl passed in program_data, which is pre-fetched safely
         $thumbnail_url = $program_data['thumbnailUrl'] ?? '';
         
-        if (!empty($thumbnail_url)) {
-            $coverHtml = '<img src="' . esc_url($thumbnail_url) . '" style="width:100%;height:100%;object-fit:cover;" crossorigin="' . (str_starts_with($thumbnail_url, 'data:image') ? '' : 'anonymous') . '">';
-        } else {
-            // Use activeOrg ID to determine procedural cover style
-            $config_data = function_exists('mco_get_app_config_data') ? mco_get_app_config_data() : [];
-            $active_org_id = $config_data['id'] ?? 'org-annapoorna';
-            
-            $item_data = ['title' => $program_data['title']];
-            $coverHtml = ($active_org_id === 'org-medical-coding-online') 
-                ? mco_render_mco_procedural_cover_php($item_data, 'program') 
-                : mco_render_annapoorna_procedural_cover_php($item_data, 'program');
-        }
+        $coverHtml = !empty($thumbnail_url) 
+            ? '<img src="' . esc_url($thumbnail_url) . '" style="width:100%;height:100%;object-fit:cover;" crossorigin="' . (str_starts_with($thumbnail_url, 'data:image') ? '' : 'anonymous') . '">'
+            : mco_render_procedural_cover(['title' => $program_data['title']], 'program'); // Simplified to let React handle procedural covers
         
         $desc = wp_trim_words(html_entity_decode($program_data['description'] ?? '', ENT_QUOTES, 'UTF-8'), 20, '...');
         
@@ -576,23 +478,17 @@ if (!function_exists('mco_book_showcase_shortcode')) {
         ob_start();
         mco_load_shortcode_css();
         
-        // Inject JS array of books for geo-coding
-        // Ensure book titles are HTML entity decoded and stripped before passing to JS
         $decoded_books = array_map(function($book) {
-            $book['title'] = strip_tags(html_entity_decode($book['title'] ?? '', ENT_QUOTES, 'UTF-8'), '<strong><em>'); // FIX: Strip HTML
+            $book['title'] = strip_tags(html_entity_decode($book['title'] ?? '', ENT_QUOTES, 'UTF-8'), '<strong><em>');
             $book['description'] = html_entity_decode($book['description'] ?? '', ENT_QUOTES, 'UTF-8');
-            $book['thumbnailUrl'] = $book['thumbnailUrl'] ?? ''; // Ensure it exists
-            $book['permalink'] = $book['permalink'] ?? ''; // Ensure it exists
+            $book['thumbnailUrl'] = $book['thumbnailUrl'] ?? '';
+            $book['permalink'] = $book['permalink'] ?? '';
             $book['affiliateLinks'] = $book['affiliateLinks'] ?? ['com' => '', 'in' => '', 'ae' => ''];
             return $book;
         }, $raw_books);
         $books_json = json_encode($decoded_books);
-        $unique_id = 'mco-books-grid-' . uniqid();
+        $unique_id = 'mco-bookshelf-root-' . uniqid();
         
-        // Get activeOrg ID for procedural cover logic
-        $active_org_id = $config_data['id'] ?? 'org-annapoorna';
-        $is_mco_tenant_js = ($active_org_id === 'org-medical-coding-online') ? 'true' : 'false';
-
         ?>
         <div id="mco-app-root">
             <div class="mco-wrapper">
@@ -602,208 +498,19 @@ if (!function_exists('mco_book_showcase_shortcode')) {
             </div>
         </div>
         
-        <script>
-        (function() {
-            var books = <?php echo $books_json; ?>;
-            var container = document.getElementById('<?php echo $unique_id; ?>');
-            var isMcoTenant = <?php echo $is_mco_tenant_js; ?>;
+        <script type="module">
+            import React from 'react';
+            import ReactDOM from 'react-dom/client';
+            import BookshelfRenderer from '/components/BookshelfRenderer.tsx'; // Adjust path if necessary
 
-            // Debugging: Log the books array to see what's being passed
-            console.log('MCO Book Showcase Books Data:', books);
-
-            function getGeoStore() {
-                try {
-                    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                    var gcc = ['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat'];
-                    if (tz.includes('Asia/Kolkata') || tz.includes('Asia/Calcutta')) return 'in';
-                    if (gcc.some(t => tz === t)) return 'ae';
-                } catch(e) { console.error("Error determining timezone for geo-affiliate links", e); }
-                return 'com'; // Default fallback
+            const container = document.getElementById('<?php echo $unique_id; ?>');
+            if (container) {
+                const props = JSON.parse(container.dataset.props || '{}');
+                const root = ReactDOM.createRoot(container);
+                root.render(React.createElement(BookshelfRenderer, { ...props, type: 'showcase' }));
             }
-            
-            function getHash(str) {
-                var hash = 0;
-                if (!str || str.length === 0) return hash;
-                for (var i = 0; i < str.length; i++) {
-                    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-                }
-                return hash;
-            }
-
-            var stores = {
-                'com': 'Amazon.com',
-                'in': 'Amazon.in',
-                'ae': 'Amazon.ae'
-            };
-            
-            // Annapoorna Procedural Cover Styles (mirrors React component)
-            const annapoornaColorsA = [
-                { bg: '#4338ca', pattern: '#3730a3', text: '#ffffff' }, // Indigo
-                { bg: '#0f766e', pattern: '#115e59', text: '#ffffff' }, // Teal
-                { bg: '#334155', pattern: '#1e293b', text: '#ffffff' }, // Slate
-                { bg: '#1e40af', pattern: '#1e3a8a', text: '#ffffff' }, // Blue
-                { bg: '#374151', pattern: '#1f2937', text: '#ffffff' }, // Gray
-            ];
-            const annapoornaColorsB = [
-                { bg: '#dbeafe', shape: '#93c5fd', text: '#1e3a8a' }, // Blue
-                { bg: '#d1fae5', shape: '#6ee7b7', text: '#064e3b' }, // Emerald
-                { bg: '#ffe4e6', shape: '#fda4af', text: '#881337' }, // Rose
-                { bg: '#ede9fe', shape: '#c4b5fd', text: '#4c1d95' }, // Violet
-                { bg: '#f1f5f9', shape: '#cbd5e1', text: '#0f172a' }, // Slate
-            ];
-
-            // MCO Procedural Cover Styles (mirrors React component)
-            const mcoColorsA = [
-                { bg: '#334155', text: '#f1f5f9', bgWord: '#475569' }, // Gray
-                { bg: '#0891b2', text: '#cffafe', bgWord: '#0e7490' }, // Cyan
-                { bg: '#115e59', text: '#ccfbf1', bgWord: '#065f46' }, // Emerald
-                { bg: '#0369a1', text: '#e0f2fe', bgWord: '#075985' }, // Sky
-            ];
-            const mcoColorsB = [
-                { bg: '#1e293b', text: '#ffffff', accent: '#38bdf8' }, // Slate with Sky accent
-                { bg: '#44403c', text: '#ffffff', accent: '#facc15' }, // Stone with Yellow accent
-                { bg: '#0c4a6e', text: '#ffffff', accent: '#fb7185' }, // Blue with Rose accent
-                { bg: '#065f46', text: '#ffffff', accent: '#a3e635' }, // Emerald with Lime accent
-            ];
-
-            function renderProceduralCover(bookTitle, isMco) {
-                var hash = getHash(bookTitle);
-                var styleIndex = Math.abs(hash) % 2;
-                var colorIndex;
-                var svgPattern = '<svg width="100%" height="100%" style="position:absolute;inset:0;opacity:0.1;"><defs><pattern id="p-' + hash + '" patternUnits="userSpaceOnUse" width="20" height="20"><circle cx="10" cy="10" r="1" fill="white"/></pattern></defs><rect width="100%" height="100%" fill="url(#p-' + hash + ')"/></svg>';
-                
-                if (isMco) {
-                    colorIndex = Math.floor(Math.abs(hash) / 2) % mcoColorsA.length; // Use MCO specific color count
-                    if (styleIndex === 0) { // MCO Style A
-                        var c = mcoColorsA[colorIndex];
-                        var titleWords = bookTitle.split(' ');
-                        var bgWord = (titleWords.length > 1 ? titleWords[titleWords.length - 1] : (titleWords[0] || '')).toUpperCase();
-                        bgWord = bgWord.substring(0, Math.min(bgWord.length, 4));
-                        return '<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; padding: 1.5rem; box-sizing: border-box; background-color: ' + c.bg + '; color: ' + c.text + '; overflow: hidden;">' +
-                                '<div style="position: absolute; bottom: -0.5rem; right: -0.5rem; font-size: 5rem; font-weight: 900; line-height: 1; z-index: 0; opacity: 0.15; user-select: none; color: ' + c.bgWord + ';">' + bgWord + '</div>' +
-                                '<div style="position: relative; z-index: 10;">' +
-                                '<span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; display: block; margin-bottom: 0.5rem; color: inherit;">Reference Material</span>' +
-                                '<h4 style="font-weight: 800; font-size: 1.5rem; line-height: 1.2; margin: 0; color: inherit; text-shadow: 0 1px 3px rgba(0,0,0,0.1);">' + bookTitle + '</h4>' +
-                                '</div></div>';
-                    } else { // MCO Style B
-                        var c = mcoColorsB[colorIndex];
-                        return '<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 1.5rem; box-sizing: border-box; background-color: ' + c.bg + '; color: ' + c.text + '; overflow: hidden;">' +
-                                '<div style="position: absolute; top: 1.5rem; left: 0; width: 6px; height: 25%; background-color: ' + c.accent + ';"></div>' +
-                                '<div>' +
-                                '<span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; display: block; color: inherit;">Reference Material</span>' +
-                                '<h4 style="font-weight: 800; font-size: 1.4rem; line-height: 1.2; margin: 0.5rem 0 0 0; color: inherit;">' + bookTitle + '</h4>' +
-                                '</div>' +
-                                '<div style="align-self: flex-end; font-size: 2.5rem; font-weight: 900; opacity: 0.1; user-select: none; color: inherit;">MCO</div>' +
-                                '</div>';
-                    }
-                } else { // Annapoorna (Default) Style
-                    colorIndex = Math.floor(Math.abs(hash) / 2) % annapoornaColorsA.length;
-                    if (styleIndex === 0) { // Annapoorna Style A
-                        var c = annapoornaColorsA[colorIndex];
-                        return '<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 1.5rem; box-sizing: border-box; background-color: ' + c.bg + '; color: ' + c.text + '; overflow: hidden;">' +
-                                '<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; clip-path: polygon(0 0, 100% 0, 0 100%); opacity: 0.2; background-color: ' + c.pattern + ';">' + svgPattern + '</div>' +
-                                '<div style="position: relative; z-index: 10;">' +
-                                '<span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; display: block; margin-bottom: 0.5rem; color: inherit;">Study Material</span>' +
-                                '<h4 style="font-weight: 800; font-size: 1.25rem; line-height: 1.2; margin: 0; color: inherit;">' + bookTitle + '</h4>' +
-                                '</div></div>';
-                    } else { // Annapoorna Style B
-                        var c = annapoornaColorsB[colorIndex];
-                        return '<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; text-align: left; padding: 1.5rem; box-sizing: border-box; background-color: ' . esc_attr($c['bg']) . '; color: ' . esc_attr($c['text']) . '; overflow: hidden;">' + // FIX: Changed background-color from c.text to c.bg
-                                '<div style="position: absolute; right: -20%; top: -20%; width: 70%; height: 70%; border-radius: 50%; opacity: 0.5; mix-blend-mode: multiply; background-color: ' . esc_attr($c['shape']) . ';"></div>' + // ADDED: Shape div
-                                '<div style="position: relative; z-index: 10;">' +
-                                '<h4 style="font-weight: 800; font-size: 1.5rem; line-height: 1.1; margin: 0 0 0.5rem 0; color: inherit;">' + bookTitle + '</h4>' +
-                                '<span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: inherit;">Official Guide</span>' +
-                                '</div></div>';
-                    }
-                }
-            }
-
-
-            function renderBook(book) {
-                var geoStore = getGeoStore();
-                var links = book.affiliateLinks;
-                var buttonsHtml = '';
-                var hasLinks = false;
-
-                // Define all potential stores and their order
-                var allStoreKeys = ['com', 'in', 'ae'];
-                var sortedLinks = [];
-
-                // Prioritize geoStore, then fallback order
-                if (links[geoStore] && links[geoStore].trim() !== '') {
-                    sortedLinks.push({ key: geoStore, url: links[geoStore], domainName: stores[geoStore] });
-                }
-                for (var i = 0; i < allStoreKeys.length; i++) {
-                    var key = allStoreKeys[i];
-                    if (key === geoStore) continue; // Already added if it existed
-                    if (links[key] && links[key].trim() !== '') {
-                        sortedLinks.push({ key: key, url: links[key], domainName: stores[key] });
-                    }
-                }
-                
-                if (sortedLinks.length > 0) {
-                    hasLinks = true;
-                    // Mimic React's "Available on:"
-                    buttonsHtml += '<p style="font-size: 0.75rem; font-weight: 600; color: #64748b; margin-bottom: 0.5rem; text-align: center;">Available on:</p>'; 
-                    buttonsHtml += '<div class="mco-store-buttons">';
-                    sortedLinks.forEach(function(linkInfo) {
-                        var isPrimary = linkInfo.key === geoStore;
-                        var buttonClass = isPrimary ? 'mco-book-btn mco-book-btn--primary' : 'mco-book-btn mco-book-btn--secondary';
-                        buttonsHtml += '<a href="' + linkInfo.url + '" class="' + buttonClass + '" target="_blank">' +
-                                        '<?php echo mco_get_svg_icon('book-up'); ?>' +
-                                        'Buy on ' + linkInfo.domainName + '</a>';
-                    });
-                    buttonsHtml += '</div>';
-                }
-                
-                if (!hasLinks) buttonsHtml = '<span class="mco-book-btn" style="cursor:default; background:#f1f5f9; color:#94a3b8; border:1px solid #cbd5e1;">Links Coming Soon</span>';
-                
-                var coverHtml = '';
-                if (book.thumbnailUrl) {
-                    coverHtml = '<img src="' + book.thumbnailUrl + '" style="width:100%;height:100%;object-fit:cover;" crossorigin="' + (book.thumbnailUrl.startsWith('data:image') ? '' : 'anonymous') + '">';
-                } else {
-                    coverHtml = renderProceduralCover(book.title, isMcoTenant);
-                }
-
-                var titleHtml = '<h4 class="mco-book-card__title">' + book.title + '</h4>';
-                if (book.permalink) {
-                    titleHtml = '<a href="' + book.permalink + '" style="text-decoration:none;">' + titleHtml + '</a>';
-                }
-                var desc = (book.description || '').split(' ').slice(0, 20).join(' ') + '...';
-
-                return `
-                <div class="mco-book-card">
-                    <div class="mco-book-cover">${coverHtml}</div>
-                    <div class="mco-book-card__body">
-                        ${titleHtml}
-                        <p class="mco-book-card__desc">${desc}</p>
-                    </div>
-                    <div class="mco-book-card__footer">
-                        ${buttonsHtml}
-                    </div>
-                </div>
-                `;
-            }
-            
-            // Clear loading text, then render
-            var loadingTextElement = container.querySelector('.mco-loading-text');
-            if (loadingTextElement) {
-                loadingTextElement.remove();
-            }
-
-            if (books && books.length > 0) {
-                container.innerHTML = books.map(renderBook).join('');
-            } else {
-                container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #94a3b8; font-size: 0.9rem; font-style: italic;">No books found.</p>';
-            }
-
-        })();
         </script>
-        <style>
-            .mco-book-btn--secondary { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
-            .mco-book-btn--secondary:hover { background: #e2e8f0; color: #1e293b; }
-            .mco-loading-text { color: #94a3b8; font-size: 0.9rem; font-style: italic; }
-        </style>
+        <div data-props='<?php echo esc_attr($books_json); ?>' id="<?php echo $unique_id; ?>" class="mco-book-grid"></div>
         <?php
         
         return ob_get_clean();
@@ -812,86 +519,42 @@ if (!function_exists('mco_book_showcase_shortcode')) {
 
 // --- SINGLE BOOK RENDERER ---
 if (!function_exists('mco_render_single_book_content')) {
-    function mco_render_single_book_content($book, $content_override = '') {
-        if (!$book) return '';
+    function mco_render_single_book_content($book_data_arr, $content_override = '') {
+        if (!$book_data_arr) return '';
         ob_start();
         mco_load_shortcode_css();
         
-        // Ensure mco_render_procedural_cover and mco_get_svg_icon are defined
-        if (!function_exists('mco_render_procedural_cover') || !function_exists('mco_get_svg_icon')) {
-            return '<p>Application is not configured correctly. Missing core functions.</p>';
-        }
-
-        $cover = !empty($book['thumbnailUrl']) ? '<img src="'.esc_url($book['thumbnailUrl']).'" style="width:100%;height:100%;object-fit:cover;" crossorigin="' . (str_starts_with($book['thumbnailUrl'], 'data:image') ? '' : 'anonymous') + ';">' : mco_render_procedural_cover($book, 'book');
+        $book_data_arr['title'] = strip_tags(html_entity_decode($book_data_arr['title'] ?? '', ENT_QUOTES, 'UTF-8'), '<strong><em>');
+        $book_data_arr['description'] = !empty($content_override) ? $content_override : (html_entity_decode($book_data_arr['description'] ?? '', ENT_QUOTES, 'UTF-8'));
+        $book_data_arr['thumbnailUrl'] = $book_data_arr['thumbnailUrl'] ?? '';
+        $book_data_arr['permalink'] = $book_data_arr['permalink'] ?? '';
+        $book_data_arr['affiliateLinks'] = $book_data_arr['affiliateLinks'] ?? ['com' => '', 'in' => '', 'ae' => ''];
         
-        $links_json = json_encode($book['affiliateLinks']);
-        $book_title = strip_tags(html_entity_decode($book['title'], ENT_QUOTES, 'UTF-8'), '<strong><em>'); // FIX: Strip HTML
-        $unique_id = 'mco-book-' . uniqid();
-        $description = !empty($content_override) ? $content_override : (html_entity_decode($book['description'] ?? '', ENT_QUOTES, 'UTF-8'));
-
-        echo '<div id="mco-app-root"><div class="mco-wrapper"><div class="mco-single-book-card">';
-        echo '<div class="mco-single-book-card__cover" style="overflow: hidden;">'.$cover.'</div>'; // FIX: Add overflow hidden
-        echo '<div class="mco-single-book-card__details">';
-        echo '<h1 style="position: relative; z-index: 2;">'.$book_title.'</h1>'; // FIX: Add z-index to title
-        echo '<div class="mco-single-book-card__description">'.wp_kses_post($description).'</div>';
-        echo '<div id="'.$unique_id.'" class="mco-single-book-card__buttons"><span class="mco-loading-text">Loading purchasing options...</span></div>';
-        echo '</div></div></div></div>';
+        $book_json = json_encode($book_data_arr);
+        $unique_id = 'mco-single-book-root-' . uniqid();
 
         ?>
-        <script>
-        (function() {
-            var links = <?php echo $links_json; ?>;
-            var container = document.getElementById('<?php echo $unique_id; ?>');
-            
-            function getGeoStore() {
-                try {
-                    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                    var gcc = ['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat'];
-                    if (tz.includes('Asia/Kolkata') || tz.includes('Asia/Calcutta')) return 'in';
-                    if (gcc.some(t => tz === t)) return 'ae';
-                } catch(e) { console.error("Error determining timezone for geo-affiliate links", e); }
-                return 'com'; // Default fallback
-            }
+        <div id="mco-app-root">
+            <div class="mco-wrapper">
+                <div id="<?php echo $unique_id; ?>">
+                    <p class="mco-loading-text">Loading book details...</p>
+                </div>
+            </div>
+        </div>
 
-            var stores = {'com': 'Amazon.com', 'in': 'Amazon.in', 'ae': 'Amazon.ae'};
-            var preferred = getGeoStore();
-            var html = '';
+        <script type="module">
+            import React from 'react';
+            import ReactDOM from 'react-dom/client';
+            import BookshelfRenderer from '/components/BookshelfRenderer.tsx'; // Adjust path if necessary
 
-            var allStoreKeys = ['com', 'in', 'ae'];
-            var sortedLinks = [];
-
-            if (links[preferred] && links[preferred].trim() !== '') {
-                sortedLinks.push({ key: preferred, url: links[preferred], domainName: stores[preferred] });
+            const container = document.getElementById('<?php echo $unique_id; ?>');
+            if (container) {
+                const props = JSON.parse(container.dataset.props || '{}');
+                const root = ReactDOM.createRoot(container);
+                root.render(React.createElement(BookshelfRenderer, { books: [props], type: 'single' }));
             }
-            for (var i = 0; i < allStoreKeys.length; i++) {
-                var key = allStoreKeys[i];
-                if (key === preferred) continue;
-                if (links[key] && links[key].trim() !== '') {
-                    sortedLinks.push({ key: key, url: links[key], domainName: stores[key] });
-                }
-            }
-
-            if (sortedLinks.length > 0) {
-                sortedLinks.forEach(function(linkInfo) {
-                    var isPrimary = linkInfo.key === preferred;
-                    var buttonClass = isPrimary ? 'mco-book-btn mco-book-btn--primary' : 'mco-book-btn mco-book-btn--secondary';
-                    html += '<a href="' + linkInfo.url + '" class="' + buttonClass + '" target="_blank">' +
-                            '<?php echo mco_get_svg_icon('book-up'); ?>' +
-                            'Buy on ' + linkInfo.domainName + '</a>';
-                });
-            }
-            
-            // Clear loading text, then render
-            var loadingTextElement = container.querySelector('.mco-loading-text');
-            if (loadingTextElement) {
-                loadingTextElement.remove();
-            }
-
-            if (!html) html = '<span class="mco-book-btn" style="cursor:default; background:#f1f5f9; color:#94a3b8; border:1px solid #cbd5e1;">Links Coming Soon</span>';
-            container.innerHTML = html;
-        })();
         </script>
-        <style>.mco-book-btn--secondary { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; } .mco-book-btn--secondary:hover { background: #e2e8f0; color: #1e293b; } .mco-loading-text { color: #94a3b8; font-size: 0.9rem; font-style: italic; }</style>
+        <div data-props='<?php echo esc_attr($book_json); ?>' id="<?php echo $unique_id; ?>"></div>
         <?php
         return ob_get_clean();
     }
@@ -915,6 +578,7 @@ if (!function_exists('mco_single_book_shortcode')) {
                 'title' => get_the_title($post),
                 'description' => $post->post_content,
                 'thumbnailUrl' => get_post_meta($post->ID, '_mco_thumbnail_url', true),
+                'permalink' => get_permalink($post->ID),
                 'affiliateLinks' => [
                     'com' => get_post_meta($post->ID, '_mco_link_com', true),
                     'in' => get_post_meta($post->ID, '_mco_link_in', true),
@@ -928,49 +592,42 @@ if (!function_exists('mco_single_book_shortcode')) {
 
 // --- SINGLE PROGRAM RENDERER (PHP) ---
 if (!function_exists('mco_render_single_program_content')) {
-    function mco_render_single_program_content($program) {
-        if (!$program) return '';
+    function mco_render_single_program_content($program_data_arr) {
+        if (!$program_data_arr) return '';
         ob_start();
         mco_load_shortcode_css();
         
-        // Ensure mco_render_procedural_cover and mco_get_svg_icon are defined
-        if (!function_exists('mco_render_procedural_cover') || !function_exists('mco_get_svg_icon')) {
-            return '<p>Application is not configured correctly. Missing core functions.</p>';
-        }
+        $program_data_arr['title'] = html_entity_decode($program_data_arr['title'] ?? '', ENT_QUOTES, 'UTF-8');
+        $program_data_arr['description'] = html_entity_decode($program_data_arr['description'] ?? '', ENT_QUOTES, 'UTF-8');
+        $program_data_arr['thumbnailUrl'] = $program_data_arr['thumbnailUrl'] ?? '';
+        $program_data_arr['id'] = $program_data_arr['id'] ?? ('prod-' . ($program_data_arr['ID'] ?? ''));
 
-        // Use the thumbnailUrl passed in program_data, which is pre-fetched safely
-        $thumbnail_url = $program['thumbnailUrl'] ?? '';
+        $program_json = json_encode($program_data_arr);
+        $unique_id = 'mco-single-program-root-' . uniqid();
 
-        if (!empty($thumbnail_url)) {
-            $cover = '<img src="'.esc_url($thumbnail_url).'" style="width:100%;height:100%;object-fit:cover;" crossorigin="' . (str_starts_with($thumbnail_url, 'data:image') ? '' : 'anonymous') . '">';
-        } else {
-            // Use activeOrg ID to determine procedural cover style
-            $config_data = function_exists('mco_get_app_config_data') ? mco_get_app_config_data() : [];
-            $active_org_id = $config_data['id'] ?? 'org-annapoorna';
+        ?>
+        <div id="mco-app-root">
+            <div class="mco-wrapper">
+                <div id="<?php echo $unique_id; ?>">
+                    <p class="mco-loading-text">Loading program details...</p>
+                </div>
+            </div>
+        </div>
 
-            $item_data = ['title' => $program['title']];
-            $cover = ($active_org_id === 'org-medical-coding-online') 
-                ? mco_render_mco_procedural_cover_php($item_data, 'program') 
-                : mco_render_annapoorna_procedural_cover_php($item_data, 'program');
-        }
-        
-        $title = esc_html(html_entity_decode($program['title'], ENT_QUOTES, 'UTF-8'));
-        $desc = html_entity_decode($program['description'] ?? '', ENT_QUOTES, 'UTF-8');
-        $app_link = rtrim(mco_get_exam_app_url(), '/') . '/program/' . ($program['id'] ?? '');
+        <script type="module">
+            import React from 'react';
+            import ReactDOM from 'react-dom/client';
+            import ProgramRenderer from '/components/ProgramRenderer.tsx'; // New component to create
 
-        echo '<div id="mco-app-root"><div class="mco-wrapper"><div class="mco-single-book-card">';
-        echo '<div class="mco-single-book-card__cover">'.$cover.'</div>';
-        echo '<div class="mco-single-book-card__details">';
-        echo '<h1>'.$title.'</h1>';
-        echo '<div class="mco-single-book-card__description">'.wp_kses_post($desc).'</div>';
-        
-        echo '<div class="mco-single-book-card__buttons">
-                <a href="' . esc_url($app_link) . '" style="display:inline-flex;align-items:center;justify-content:center;width:auto;padding:12px 30px;font-size:1.1rem;" class="mco-book-btn mco-book-btn--primary">
-                    View Program Details ' . mco_get_svg_icon('external-link') . '
-                </a>
-            </div>';
-        
-        echo '</div></div></div></div>';
+            const container = document.getElementById('<?php echo $unique_id; ?>');
+            if (container) {
+                const props = JSON.parse(container.dataset.props || '{}');
+                const root = ReactDOM.createRoot(container);
+                root.render(React.createElement(ProgramRenderer, { program: props }));
+            }
+        </script>
+        <div data-props='<?php echo esc_attr($program_json); ?>' id="<?php echo $unique_id; ?>"></div>
+        <?php
         return ob_get_clean();
     }
 }
@@ -1025,12 +682,11 @@ if (!function_exists('mco_auto_inject_template')) {
             }
 
             $item_data = [
-                'ID' => $post->ID, // Pass WP Post ID for thumbnail fallback
+                'id' => $app_program_id, // Pass WP Post ID for thumbnail fallback
                 'title' => $post->post_title,
                 'description' => $post->post_content,
                 'thumbnailUrl' => $program_category['thumbnailUrl'] ?? '', // Use pre-fetched thumbnail from app_config_data
                 'permalink' => rtrim($app_url, '/') . '/program/' . $app_program_id,
-                'app_program_id' => $app_program_id
             ];
 
             $card_html = mco_render_program_card($item_data, $app_url);
@@ -1072,7 +728,7 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
         ob_start();
         // Inject JS array of books for client-side geo-coding
         $sidebar_books_json = json_encode(array_map(function($book) {
-            $book['title'] = strip_tags(html_entity_decode($book['title'] ?? '', ENT_QUOTES, 'UTF-8'), '<strong><em>'); // FIX: Strip HTML
+            $book['title'] = strip_tags(html_entity_decode($book['title'] ?? '', ENT_QUOTES, 'UTF-8'), '<strong><em>');
             $book['description'] = html_entity_decode($book['description'] ?? '', ENT_QUOTES, 'UTF-8');
             $book['thumbnailUrl'] = $book['thumbnailUrl'] ?? '';
             $book['permalink'] = $book['permalink'] ?? '';
@@ -1080,178 +736,11 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
             return $book;
         }, $random_books));
         
-        $active_org_id = $config_data['id'] ?? 'org-annapoorna';
-        $is_mco_tenant_js = ($active_org_id === 'org-medical-coding-online') ? 'true' : 'false';
-        $unique_sidebar_id = 'mco-sidebar-books-' . uniqid();
+        $unique_sidebar_id = 'mco-sidebar-books-root-' . uniqid();
         ?>
-        <style>
-        /* Specific Sidebar Styles to Fix Overflow */
-        .mco-study-hall-sidebar {
-            background: #fff !important;
-            border: 1px solid #e2e8f0 !important;
-            border-radius: 12px !important;
-            padding: 24px !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
-            box-sizing: border-box !important;
-            margin-bottom: 24px !important; /* Ensure spacing if not in flex container */
-            font-family: system-ui, -apple-system, sans-serif !important;
-        }
-        .mco-study-hall-sidebar__title {
-            font-size: 1.5rem !important;
-            font-weight: 700 !important;
-            margin: 0 0 20px 0 !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 12px !important;
-            color: #1e293b !important;
-            border-bottom: 2px solid #e2e8f0 !important;
-            padding-bottom: 12px !important;
-            line-height: 1.2 !important;
-        }
-        .mco-study-hall-sidebar__title svg {
-            color: #0891b2 !important;
-            width: 28px !important;
-            height: 28px !important;
-            flex-shrink: 0 !important;
-        }
-        .mco-study-hall-sidebar__grid {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 20px !important;
-        }
-        .mco-book-card-sidebar {
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 10px !important;
-            overflow: hidden !important;
-            display: flex !important;
-            min-height: auto !important; /* Changed to auto to allow content to dictate height */
-            background: #fff !important;
-            transition: all 0.2s ease-in-out !important;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
-            box-sizing: border-box !important;
-        }
-        .mco-book-card-sidebar:hover {
-            border-color: #0ea5e9 !important;
-            transform: translateY(-3px) !important;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
-        }
-        .mco-book-card-sidebar__cover {
-            width: 90px !important;
-            flex-shrink: 0 !important;
-            position: relative !important;
-            overflow: hidden !important;
-            border-right: 1px solid #f1f5f9 !important;
-            height: auto !important; /* Allow content to dictate height */
-        }
-        .mco-book-card-sidebar__cover img {
-            width: 100% !important;
-            height: 100% !important;
-            object-fit: cover !important;
-            display: block !important;
-        }
-        /* Procedural Cover Tweaks for Sidebar Small Size */
-        .mco-book-card-sidebar__cover [class*="mco-proc-cover-"] {
-            padding: 8px !important;
-            justify-content: center !important;
-            align-items: center !important;
-            text-align: center !important;
-            width: 100% !important;
-            height: 100% !important;
-            box-sizing: border-box !important;
-        }
-        .mco-book-card-sidebar__cover [class*="mco-proc-cover-"] h4 {
-            font-size: 10px !important;
-            line-height: 1.2 !important;
-            margin: 0 !important;
-            display: block !important;
-            font-weight: 800 !important;
-        }
-        .mco-book-card-sidebar__cover [class*="mco-proc-cover-"] span {
-            display: none !important; /* Hide supertitles to save space */
-        }
-        .mco-book-card-sidebar__content {
-            padding: 15px !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: space-between !important;
-            flex-grow: 1 !important;
-            min-width: 0 !important;
-        }
-        .mco-book-card-sidebar__title {
-            font-size: 15px !important;
-            font-weight: 600 !important;
-            line-height: 1.3 !important;
-            margin: 0 0 8px 0 !important;
-            color: #1e293b !important;
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
-            text-decoration: none !important;
-        }
-        .mco-book-card-sidebar__title:hover {
-            color: #0891b2 !important;
-        }
-        /* New for sidebar multiple buttons */
-        .mco-store-buttons-sidebar {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 5px !important; /* Smaller gap for sidebar buttons */
-            margin-top: auto !important; /* Push to bottom */
-            flex-shrink: 0 !important;
-            width: 100% !important; /* Ensure buttons take full width */
-        }
-        .mco-book-card-sidebar__button {
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            font-size: 12px !important;
-            font-weight: 700 !important;
-            padding: 8px 12px !important;
-            border-radius: 6px !important;
-            text-decoration: none !important;
-            /* Remove align-self here, let parent .mco-store-buttons-sidebar handle it */
-            transition: background-color 0.2s ease-in-out !important;
-            gap: 6px !important;
-            box-sizing: border-box !important;
-            white-space: nowrap !important;
-            width: 100% !important; /* Ensure full width */
-        }
-        .mco-book-card-sidebar__button svg { /* Style for icon inside button */
-            width: 14px !important; /* Smaller icon size for sidebar buttons */
-            height: 14px !important;
-            flex-shrink: 0 !important;
-        }
-        .mco-book-card-sidebar__button--primary {
-            background: #f59e0b !important;
-            color: #fff !important;
-            border: none !important;
-        }
-        .mco-book-card-sidebar__button--primary:hover {
-            background: #d97706 !important;
-        }
-        .mco-book-card-sidebar__button--secondary {
-            background: #f1f5f9 !important;
-            color: #475569 !important;
-            border: 1px solid #cbd5e1 !important;
-            box-shadow: none !important;
-        }
-        .mco-book-card-sidebar__button--secondary:hover {
-            background: #e2e8f0 !important;
-            color: #1e293b !important;
-        }
-        .mco-study-hall-sidebar__disclaimer {
-            font-size: 0.8rem !important;
-            color: #64748b !important;
-            margin-top: 24px !important;
-            text-align: center !important;
-            line-height: 1.5 !important;
-        }
-        </style>
-        
         <div class="mco-study-hall-sidebar">
             <h3 class="mco-study-hall-sidebar__title">
-                <?php echo mco_get_svg_icon('book-open'); // Use the correct icon name ?>
+                <?php echo mco_get_svg_icon('book-open'); ?>
                 <span>Study Hall</span>
             </h3>
             <div id="<?php echo $unique_sidebar_id; ?>" class="mco-study-hall-sidebar__grid">
@@ -1262,167 +751,19 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
             </p>
         </div>
 
-        <script>
-        (function() {
-            var books = <?php echo $sidebar_books_json; ?>;
-            var container = document.getElementById('<?php echo $unique_sidebar_id; ?>');
-            var isMcoTenant = <?php echo $is_mco_tenant_js; ?>; // Use this for procedural cover logic
+        <script type="module">
+            import React from 'react';
+            import ReactDOM from 'react-dom/client';
+            import BookshelfRenderer from '/components/BookshelfRenderer.tsx'; // Adjust path if necessary
 
-            // Debugging: Log the books array to see what's being passed
-            console.log('MCO Sidebar Books Data:', books);
-
-            function getGeoStore() {
-                try {
-                    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                    var gcc = ['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat'];
-                    if (tz.includes('Asia/Kolkata') || tz.includes('Asia/Calcutta')) return 'in';
-                    if (gcc.some(t => tz === t)) return 'ae';
-                } catch(e) { console.error("Error determining timezone for geo-affiliate links", e); }
-                return 'com'; // Default fallback
+            const container = document.getElementById('<?php echo $unique_sidebar_id; ?>');
+            if (container) {
+                const props = JSON.parse(container.dataset.props || '{}');
+                const root = ReactDOM.createRoot(container);
+                root.render(React.createElement(BookshelfRenderer, { ...props, type: 'sidebar' }));
             }
-
-            var stores = {
-                'com': 'Amazon.com',
-                'in': 'Amazon.in',
-                'ae': 'Amazon.ae'
-            };
-            
-            // Procedural cover colors (mirroring React's BookCover.tsx)
-            const annapoornaColorsA = [
-                { bg: '#4338ca', pattern: '#3730a3', text: '#ffffff' }, // Indigo
-                { bg: '#0f766e', pattern: '#115e59', text: '#ffffff' }, // Teal
-                { bg: '#334155', pattern: '#1e293b', text: '#ffffff' }, // Slate
-                { bg: '#1e40af', pattern: '#1e3a8a', text: '#ffffff' }, // Blue
-                { bg: '#374151', pattern: '#1f2937', text: '#ffffff' }, // Gray
-            ];
-            const annapoornaColorsB = [
-                { bg: '#dbeafe', shape: '#93c5fd', text: '#1e3a8a' }, // Blue
-                { bg: '#d1fae5', shape: '#6ee7b7', text: '#064e3b' }, // Emerald
-                { bg: '#ffe4e6', shape: '#fda4af', text: '#881337' }, // Rose
-                { bg: '#ede9fe', shape: '#c4b5fd', text: '#4c1d95' }, // Violet
-                { bg: '#f1f5f9', shape: '#cbd5e1', text: '#0f172a' }, // Slate
-            ];
-            const mcoColorsA = [
-                { bg: '#334155', text: '#f1f5f9', bgWord: '#475569' }, // Gray
-                { bg: '#0891b2', text: '#cffafe', bgWord: '#0e7490' }, // Cyan
-                { bg: '#115e59', text: '#ccfbf1', bgWord: '#065f46' }, // Emerald
-                { bg: '#0369a1', text: '#e0f2fe', bgWord: '#075985' }, // Sky
-            ];
-            const mcoColorsB = [
-                { bg: '#1e293b', text: '#ffffff', accent: '#38bdf8' }, // Slate with Sky accent
-                { bg: '#44403c', text: '#ffffff', accent: '#facc15' }, // Stone with Yellow accent
-                { bg: '#0c4a6e', text: '#ffffff', accent: '#fb7185' }, // Blue with Rose accent
-                { bg: '#065f46', text: '#ffffff', accent: '#a3e635' }, // Emerald with Lime accent
-            ];
-
-            function renderProceduralCoverSidebar(bookTitle, isMco) {
-                var hash = getHash(bookTitle);
-                var styleIndex = Math.abs(hash) % 2;
-                var colorIndex;
-                var svgPattern = '<svg width="100%" height="100%" style="position:absolute;inset:0;opacity:0.1;"><defs><pattern id="p-s-' + hash + '" patternUnits="userSpaceOnUse" width="20" height="20"><circle cx="10" cy="10" r="1" fill="white"/></pattern></defs><rect width="100%" height="100%" fill="url(#p-s-' + hash + ')"/></svg>';
-                
-                if (isMco) {
-                    colorIndex = Math.floor(Math.abs(hash) / 2) % mcoColorsA.length;
-                    if (styleIndex === 0) { // MCO Style A
-                        var c = mcoColorsA[colorIndex];
-                        return '<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: center; padding: 8px; box-sizing: border-box; background-color: ' + c.bg + '; color: ' + c.text + '; overflow: hidden;">' +
-                                '<h4 style="font-weight: 800; font-size: 10px; line-height: 1.2; margin: 0; color: inherit;">' + bookTitle + '</h4>' +
-                                '</div>';
-                    } else { // MCO Style B
-                        var c = mcoColorsB[colorIndex];
-                        return '<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 8px; box-sizing: border-box; background-color: ' + c.bg + '; color: ' + c.text + '; overflow: hidden;">' +
-                                '<div style="position: absolute; top: 8px; left: 0; width: 6px; height: 25%; background-color: ' + c.accent + ';"></div>' +
-                                '<div>' +
-                                '<h4 style="font-weight: 800; font-size: 10px; line-height: 1.2; margin: 0; color: inherit;">' + bookTitle + '</h4>' +
-                                '</div>' +
-                                '</div>';
-                    }
-                } else { // Annapoorna (Default) Style
-                    colorIndex = Math.floor(Math.abs(hash) / 2) % annapoornaColorsA.length;
-                    if (styleIndex === 0) { // Annapoorna Style A
-                        var c = annapoornaColorsA[colorIndex];
-                        return '<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8px; box-sizing: border-box; background-color: ' + c.bg + '; color: ' + c.text + '; overflow: hidden;">' +
-                                '<h4 style="font-weight: 800; font-size: 10px; line-height: 1.2; margin: 0; color: inherit;">' + bookTitle + '</h4>' +
-                                '</div>';
-                    } else { // Annapoorna Style B
-                        var c = annapoornaColorsB[colorIndex];
-                        return '<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; text-align: left; padding: 8px; box-sizing: border-box; background-color: ' . esc_attr($c['bg']) . '; color: ' . esc_attr($c['text']) . '; overflow: hidden;">' + // FIX: Changed background-color to c.bg
-                                '<div style="position: absolute; right: -20%; top: -20%; width: 70%; height: 70%; border-radius: 50%; opacity: 0.5; mix-blend-mode: multiply; background-color: ' . esc_attr($c['shape']) . ';"></div>' + // ADDED: Shape div
-                                '<div>' +
-                                '<h4 style="font-weight: 800; font-size: 10px; line-height: 1.2; margin: 0; color: inherit;">' + bookTitle + '</h4>' +
-                                '</div></div>';
-                    }
-                }
-            }
-
-            function renderSidebarBook(book) {
-                var geoStore = getGeoStore();
-                var links = book.affiliateLinks;
-                var buttonsHtml = '';
-                var hasLinks = false;
-                var allStoreKeys = ['com', 'in', 'ae'];
-                var sortedLinks = [];
-
-                if (links[geoStore] && links[geoStore].trim() !== '') {
-                    sortedLinks.push({ key: geoStore, url: links[geoStore], domainName: stores[geoStore] });
-                }
-                for (var i = 0; i < allStoreKeys.length; i++) {
-                    var key = allStoreKeys[i];
-                    if (key === geoStore) continue;
-                    if (links[key] && links[key].trim() !== '') {
-                        sortedLinks.push({ key: key, url: links[key], domainName: stores[key] });
-                    }
-                }
-
-                if (sortedLinks.length > 0) {
-                    hasLinks = true;
-                    sortedLinks.forEach(function(linkInfo) {
-                        var isPrimary = linkInfo.key === geoStore;
-                        var buttonClass = isPrimary ? 'mco-book-card-sidebar__button mco-book-card-sidebar__button--primary' : 'mco-book-card-sidebar__button mco-book-card-sidebar__button--secondary';
-                        buttonsHtml += '<a href="' + linkInfo.url + '" target="_blank" rel="noopener noreferrer" class="' + buttonClass + '">' +
-                                        '<?php echo mco_get_svg_icon('book-up'); ?>' + // Use the new icon
-                                        'Buy on ' + linkInfo.domainName + '</a>';
-                    });
-                }
-                
-                if (!hasLinks) buttonsHtml = '<span class="mco-book-card-sidebar__button" style="cursor:default; background:#e2e8f0; color:#64748b; border:1px solid #cbd5e1;">Coming Soon</span>';
-
-                var bookCoverHtml = '';
-                if (book.thumbnailUrl) {
-                    bookCoverHtml = '<img src="' + book.thumbnailUrl + '" alt="' + book.title + '" style="width: 100%; height: 100%; object-fit: cover;" crossorigin="' + (book.thumbnailUrl.startsWith('data:image') ? '' : 'anonymous') + '">';
-                } else {
-                    bookCoverHtml = renderProceduralCoverSidebar(book.title, isMcoTenant);
-                }
-
-                var titleElement = book.permalink ?
-                    '<a href="' + book.permalink + '" style="text-decoration:none;"><h4 class="mco-book-card-sidebar__title">' + book.title + '</h4></a>' :
-                    '<h4 class="mco-book-card-sidebar__title">' + book.title + '</h4>';
-
-                return `
-                <div class="mco-book-card-sidebar">
-                    <div class="mco-book-card-sidebar__cover">${bookCoverHtml}</div>
-                    <div class="mco-book-card-sidebar__content">
-                        ${titleElement}
-                        <div class="mco-store-buttons-sidebar">${buttonsHtml}</div>
-                    </div>
-                </div>
-                `;
-            }
-            
-            // Clear loading text, then render
-            var loadingTextElement = container.querySelector('.mco-loading-text');
-            if (loadingTextElement) {
-                loadingTextElement.remove();
-            }
-
-            if (books && books.length > 0) {
-                container.innerHTML = books.map(renderSidebarBook).join('');
-            } else {
-                container.innerHTML = '<p style="text-align: center; color: #94a3b8; font-size: 0.9rem; font-style: italic;">No books found.</p>';
-            }
-
-        })();
         </script>
+        <div data-props='<?php echo esc_attr($sidebar_books_json); ?>' id="<?php echo $unique_sidebar_id; ?>" class="mco-study-hall-sidebar__grid"></div>
         <?php
         return ob_get_clean();
     }

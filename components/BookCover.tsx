@@ -1,10 +1,12 @@
 
+
+
 import React, { FC } from 'react';
 import type { RecommendedBook } from '../types.ts';
 import { useAppContext } from '../context/AppContext.tsx';
 
 interface BookCoverProps {
-  book: RecommendedBook;
+  book: RecommendedBook | { title: string; thumbnailUrl?: string; }; // Allow minimal book data for procedural covers
   className?: string;
 }
 
@@ -20,7 +22,7 @@ const getHashOfString = (str: string) => {
 
 // --- Annapoorna (Default) Tenant Procedural Covers ---
 
-const AnnapoornaStyleA: FC<{ book: RecommendedBook; color: { bg: string; pattern: string; text: string; } }> = ({ book, color }) => (
+const AnnapoornaStyleA: FC<{ book: BookCoverProps['book']; color: { bg: string; pattern: string; text: string; } }> = ({ book, color }) => (
     <div style={{
         position: 'relative',
         width: '100%',
@@ -62,7 +64,7 @@ const AnnapoornaStyleA: FC<{ book: RecommendedBook; color: { bg: string; pattern
     </div>
 );
 
-const AnnapoornaStyleB: FC<{ book: RecommendedBook; color: { bg: string; shape: string; text: string; } }> = ({ book, color }) => (
+const AnnapoornaStyleB: FC<{ book: BookCoverProps['book']; color: { bg: string; shape: string; text: string; } }> = ({ book, color }) => (
     <div style={{
         position: 'relative',
         width: '100%',
@@ -72,7 +74,7 @@ const AnnapoornaStyleB: FC<{ book: RecommendedBook; color: { bg: string; shape: 
         justifyContent: 'flex-end',
         textAlign: 'left',
         padding: '1.5rem',
-        // FIX: Correct CSS property value from 'border-sizing' to 'border-box'.
+        // FIX: Correct CSS property value from 'border-sizing' to 'box-sizing'.
         boxSizing: 'border-box',
         backgroundColor: color.bg,
         color: color.text,
@@ -96,7 +98,7 @@ const AnnapoornaStyleB: FC<{ book: RecommendedBook; color: { bg: string; shape: 
     </div>
 );
 
-const AnnapoornaProceduralCover: FC<Omit<BookCoverProps, 'className'>> = ({ book }) => {
+const AnnapoornaProceduralCover: FC<{ book: BookCoverProps['book'] }> = ({ book }) => {
     const hash = getHashOfString(book.title);
     const styleIndex = Math.abs(hash) % 2;
     const colorIndex = Math.floor(Math.abs(hash) / 2) % 5;
@@ -126,7 +128,7 @@ const AnnapoornaProceduralCover: FC<Omit<BookCoverProps, 'className'>> = ({ book
 
 // --- MCO Tenant Procedural Covers ---
 
-const MCOStyleA: FC<{ book: RecommendedBook; color: { bg: string; text: string; bgWord: string; } }> = ({ book, color }) => {
+const MCOStyleA: FC<{ book: BookCoverProps['book']; color: { bg: string; text: string; bgWord: string; } }> = ({ book, color }) => {
     const titleWords = book.title.split(' ');
     const bgWord = (titleWords.find(w => w.length > 4) || titleWords[0] || '').toUpperCase();
     return (
@@ -149,24 +151,25 @@ const MCOStyleA: FC<{ book: RecommendedBook; color: { bg: string; text: string; 
                 position: 'absolute',
                 bottom: '-0.5rem',
                 right: '-0.5rem',
-                fontSize: '5rem',
+                fontSize: '9rem',
                 fontWeight: 900,
+                // Using a fallback for `font-family` if 'sans-serif' is not available
+                fontFamily: 'var(--font-display, sans-serif)',
                 lineHeight: 1,
-                zIndex: 0,
-                opacity: 0.15,
                 userSelect: 'none',
+                zIndex: 0,
                 color: color.bgWord
             }}>
                 {bgWord}
             </div>
             <div style={{ position: 'relative', zIndex: 10 }}>
-                <h4 style={{ fontWeight: 800, fontSize: '1.5rem', lineHeight: 1.2, margin: 0, color: 'inherit', textShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>{book.title}</h4>
+                <h4 style={{ fontWeight: 800, fontSize: '1.5rem', lineHeight: 1.2, margin: 0, color: 'inherit' }}>{book.title}</h4>
             </div>
         </div>
     );
 };
 
-const MCOStyleB: FC<{ book: RecommendedBook; color: { bg: string; text: string; accent: string; } }> = ({ book, color }) => {
+const MCOStyleB: FC<{ book: BookCoverProps['book']; color: { bg: string; text: string; accent: string; } }> = ({ book, color }) => {
     return (
         <div style={{
             position: 'relative',
@@ -183,22 +186,24 @@ const MCOStyleB: FC<{ book: RecommendedBook; color: { bg: string; text: string; 
         }}>
             <div style={{
                 position: 'absolute',
-                top: '1.5rem',
+                top: '1rem',
                 left: 0,
-                width: '6px',
+                width: '0.25rem',
                 height: '25%',
                 backgroundColor: color.accent
             }}></div>
             <div>
-                 <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.7, display: 'block', color: 'inherit' }}>Reference Material</span>
-                <h4 style={{ fontWeight: 800, fontSize: '1.4rem', lineHeight: 1.2, margin: '0.5rem 0 0 0', color: 'inherit' }}>{book.title}</h4>
+                 <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.8, display: 'block', marginBottom: '0.5rem', color: 'inherit' }}>Reference Material</span>
+                <h4 style={{ fontWeight: 800, fontSize: '1.25rem', lineHeight: 1.2, margin: 0, color: 'inherit' }}>{book.title}</h4>
             </div>
             <div style={{
                 alignSelf: 'flex-end',
-                fontSize: '2.5rem',
+                fontSize: '3rem',
                 fontWeight: 900,
                 opacity: 0.1,
                 userSelect: 'none',
+                // Using a fallback for `font-family` if 'sans-serif' is not available
+                fontFamily: 'var(--font-display, sans-serif)',
                 color: 'inherit'
             }}>
                 MCO
@@ -207,22 +212,22 @@ const MCOStyleB: FC<{ book: RecommendedBook; color: { bg: string; text: string; 
     );
 };
 
-const McoProceduralCover: FC<Omit<BookCoverProps, 'className'>> = ({ book }) => {
+const McoProceduralCover: FC<{ book: BookCoverProps['book'] }> = ({ book }) => {
     const hash = getHashOfString(book.title);
     const styleIndex = Math.abs(hash) % 2;
     const colorIndex = Math.floor(Math.abs(hash) / 2) % 4;
     
     const colorsA = [
-        { bg: '#334155', text: '#f1f5f9', bgWord: '#475569' }, // Gray
-        { bg: '#0891b2', text: '#cffafe', bgWord: '#0e7490' }, // Cyan
-        { bg: '#115e59', text: '#ccfbf1', bgWord: '#065f46' }, // Emerald
-        { bg: '#0369a1', text: '#e0f2fe', bgWord: '#075985' }, // Sky
+        { bg: '#1f2937', text: '#f9fafb', bgWord: '#374151' }, // Gray
+        { bg: '#1e3a8a', text: '#eff6ff', bgWord: '#3b82f6' }, // Blue
+        { bg: '#064e3b', text: '#ecfdf5', bgWord: '#34d399' }, // Green
+        { bg: '#3730a3', text: '#e0e7ff', bgWord: '#6366f1' }, // Indigo
     ];
     const colorsB = [
-        { bg: '#1e293b', text: '#ffffff', accent: '#38bdf8' }, // Slate with Sky accent
-        { bg: '#44403c', text: '#ffffff', accent: 'rgb(250, 204, 21)' }, // Stone with Yellow accent (rgb(250, 204, 21)
-        { bg: '#0c4a6e', text: '#ffffff', accent: '#fb7185' }, // Blue with Rose accent
-        { bg: '#065f46', text: '#ffffff', accent: '#a3e635' }, // Emerald with Lime accent
+        { bg: '#111827', text: '#ffffff', accent: '#f59e0b' }, // Gray-Amber
+        { bg: '#1e293b', text: '#ffffff', accent: '#0ea5e9' }, // Slate-Sky
+        { bg: '#262626', text: '#ffffff', accent: '#84cc16' }, // Zinc-Lime
+        { bg: '#292524', text: '#ffffff', accent: '#f43f5e' }, // Stone-Rose
     ];
 
     if (styleIndex === 0) {
@@ -233,24 +238,18 @@ const McoProceduralCover: FC<Omit<BookCoverProps, 'className'>> = ({ book }) => 
 
 
 // --- Main BookCover Component ---
-const BookCover: FC<BookCoverProps> = ({ book, className }) => {
+// FIX: Changed to a named export to resolve "Module has no default export" error.
+export const BookCover: FC<BookCoverProps> = ({ book, className }) => {
   const { activeOrg } = useAppContext();
 
-  // If thumbnailUrl is provided, render it.
   if (typeof book.thumbnailUrl === 'string' && book.thumbnailUrl) {
     return (
-      <div className={`relative ${className}`} style={{ backgroundColor: '#f1f5f9' }}>
-        <img 
-          src={book.thumbnailUrl} 
-          alt={book.title} 
-          className="w-full h-full object-cover" 
-          crossOrigin={book.thumbnailUrl.startsWith('data:image') ? undefined : "anonymous"} // Only add crossOrigin for external URLs
-        />
+      <div className={`relative ${className} bg-slate-100`}>
+        <img src={book.thumbnailUrl} alt={book.title} className="w-full h-full object-cover" />
       </div>
     );
   }
   
-  // Otherwise, render a procedural cover based on the tenant.
   const ProceduralCover = (activeOrg && activeOrg.id === 'org-medical-coding-online') 
     ? <McoProceduralCover book={book} />
     : <AnnapoornaProceduralCover book={book} />;
@@ -262,4 +261,4 @@ const BookCover: FC<BookCoverProps> = ({ book, className }) => {
   );
 };
 
-export default BookCover;
+// No default export as it is now a named export.

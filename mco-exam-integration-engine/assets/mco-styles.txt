@@ -159,13 +159,13 @@
     box-sizing: border-box;
 }
 
-/* Procedural Book Covers */
+/* Procedural Book Covers (minimal CSS, actual rendering by React) */
 .mco-book-cover {
     position: relative;
     overflow: hidden;
     width: 100%;
     height: 100%;
-    background: #f0f0f1;
+    background: #f0f0f1; /* Placeholder background */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -177,204 +177,10 @@
     object-fit: cover;
 }
 
-/* Annapoorna Style A */
-.mco-proc-cover-annapoorna-a {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 1.5rem;
+.mco-book-cover > div[data-procedural-cover] {
     width: 100%;
     height: 100%;
-    box-sizing: border-box;
-    position: relative;
 }
-
-.mco-proc-cover-annapoorna-a__pattern-bg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    clip-path: polygon(0 0, 100% 0, 0 100%);
-    opacity: 0.2;
-    background: rgba(255,255,255,0.2);
-}
-
-.mco-proc-cover-annapoorna-a__content {
-    position: relative;
-    z-index: 10;
-}
-
-.mco-proc-cover-annapoorna-a__super-title {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    opacity: 0.8;
-    display: block;
-    margin-bottom: 0.5rem;
-    color: inherit;
-}
-
-.mco-proc-cover-annapoorna-a__title {
-    font-weight: 800;
-    font-size: 1.25rem;
-    line-height: 1.2;
-    margin: 0;
-    color: inherit;
-}
-
-/* Annapoorna Style B */
-.mco-proc-cover-annapoorna-b {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    text-align: left;
-    padding: 1.5rem;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-    position: relative;
-}
-
-.mco-proc-cover-annapoorna-b__shape {
-    position: absolute;
-    right: -20%;
-    top: -20%;
-    width: 70%;
-    height: 70%;
-    border-radius: 50%;
-    opacity: 0.5;
-    mix-blend-mode: multiply;
-}
-
-.mco-proc-cover-annapoorna-b__content {
-    position: relative;
-    z-index: 10;
-}
-
-.mco-proc-cover-annapoorna-b__title {
-    font-weight: 800;
-    font-size: 1.5rem;
-    line-height: 1.1;
-    margin: 0 0 0.5rem 0;
-    color: inherit;
-}
-
-.mco-proc-cover-annapoorna-b__super-title {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    opacity: 0.8;
-    color: inherit;
-}
-
-/* MCO Style A */
-.mco-proc-cover-mco-a {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
-    text-align: left;
-    padding: 1.5rem;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-    position: relative;
-    overflow: hidden;
-}
-
-.mco-proc-cover-mco-a__bg-word {
-    position: absolute;
-    bottom: -0.5rem;
-    right: -0.5rem;
-    font-size: 5rem;
-    font-weight: 900;
-    line-height: 1;
-    z-index: 0;
-    opacity: 0.15;
-    user-select: none;
-    color: inherit;
-}
-
-.mco-proc-cover-mco-a__content {
-    position: relative;
-    z-index: 10;
-}
-
-.mco-proc-cover-mco-a__title {
-    font-weight: 800;
-    font-size: 1.5rem;
-    line-height: 1.2;
-    margin: 0;
-    color: inherit;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-/* MCO Style B */
-.mco-proc-cover-mco-b {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 1.5rem;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-    position: relative;
-}
-
-.mco-proc-cover-mco-b__accent {
-    position: absolute;
-    top: 1.5rem;
-    left: 0;
-    width: 6px;
-    height: 25%;
-}
-
-.mco-proc-cover-mco-b__super-title {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    opacity: 0.7;
-    display: block;
-    color: inherit;
-}
-
-.mco-proc-cover-mco-b__title {
-    font-weight: 800;
-    font-size: 1.4rem;
-    line-height: 1.2;
-    margin: 0.5rem 0 0 0;
-    color: inherit;
-}
-
-.mco-proc-cover-mco-b__logo-mark {
-    align-self: flex-end;
-    font-size: 2.5rem;
-    font-weight: 900;
-    opacity: 0.1;
-    user-select: none;
-    color: inherit;
-}
-
-/* Color Classes for PHP injection */
-.mco-proc-cover-mco-a--color-0 { background-color: #334155; color: #f1f5f9; }
-.mco-proc-cover-mco-a--color-1 { background-color: #0891b2; color: #cffafe; }
-.mco-proc-cover-mco-a--color-2 { background-color: #115e59; color: #ccfbf1; }
-.mco-proc-cover-mco-a--color-3 { background-color: #0369a1; color: #e0f2fe; }
-
-.mco-proc-cover-mco-b--color-0 { background-color: #1e293b; color: #ffffff; }
-.mco-proc-cover-mco-b--color-0 .mco-proc-cover-mco-b__accent { background-color: #38bdf8; }
-
-.mco-proc-cover-mco-b--color-1 { background-color: #44403c; color: #ffffff; }
-.mco-proc-cover-mco-b--color-1 .mco-proc-cover-mco-b__accent { background-color: #facc15; }
-
-.mco-proc-cover-mco-b--color-2 { background-color: #0c4a6e; color: #ffffff; }
-.mco-proc-cover-mco-b--color-2 .mco-proc-cover-mco-b__accent { background-color: #fb7185; }
-
-.mco-proc-cover-mco-b--color-3 { background-color: #065f46; color: #ffffff; }
-.mco-proc-cover-mco-b--color-3 .mco-proc-cover-mco-b__accent { background-color: #a3e635; }
 
 
 /* Exam Showcase Layout */
@@ -544,18 +350,6 @@
 .mco-gradient--sub-monthly { background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%); }
 .mco-gradient--sub-yearly { background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); }
 
-/* Subscription Card Specifics */
-.mco-sub-card__title { font-size: 1.5rem; font-weight: 800; margin: 0 0 5px 0; color: white; }
-.mco-sub-card__description { margin: 0 0 20px 0; font-size: 1rem; opacity: 0.9; }
-.mco-sub-card__price { margin-bottom: 20px; display: flex; align-items: baseline; gap: 4px; }
-.mco-sub-card__price-value { font-size: 2.5rem; font-weight: 800; line-height: 1; }
-.mco-sub-card__price-unit { opacity: 0.8; font-size: 1rem; }
-.mco-sub-card__features { list-style: none; padding: 0; margin: 0 0 24px 0; }
-.mco-sub-card__features li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.95rem; margin-bottom: 8px; line-height: 1.4; }
-.mco-sub-card__features li svg { flex-shrink: 0; margin-top: 3px; }
-.mco-card--best-value { transform: scale(1.02); border: 2px solid #facc15; }
-.mco-best-value-tag { background: #facc15; color: #1e293b; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 12px; }
-
 /* Sidebar */
 .mco-study-hall-sidebar {
     background: #fff;
@@ -577,6 +371,7 @@
     padding-bottom: 10px;
 }
 
+/* FIX: Added display flex to grid for consistent layout before JS loads */
 .mco-study-hall-sidebar__grid {
     display: flex;
     flex-direction: column;
@@ -630,6 +425,10 @@
     overflow: hidden;
 }
 
+.mco-book-card-sidebar__title:hover {
+    color: #0891b2;
+}
+
 .mco-book-card-sidebar__button {
     display: inline-block;
     background: #f59e0b;
@@ -662,11 +461,28 @@
     margin: 0 auto;
 }
 
+/* FIX: Added display flex to grid for consistent layout before JS loads */
 .mco-book-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    display: flex; 
+    flex-wrap: wrap; /* Allow items to wrap */
     gap: 30px;
 }
+.mco-book-grid .mco-book-card {
+    flex: 1 1 calc(33.333% - 20px); /* Adjust for 3 columns on larger screens */
+    min-width: 260px; /* Ensure minimum width */
+    max-width: 100%;
+}
+@media (max-width: 768px) {
+    .mco-book-grid .mco-book-card {
+        flex: 1 1 calc(50% - 15px); /* Adjust for 2 columns on medium screens */
+    }
+}
+@media (max-width: 500px) {
+    .mco-book-grid .mco-book-card {
+        flex: 1 1 100%; /* Single column on small screens */
+    }
+}
+
 
 .mco-book-card {
     background: #fff;
