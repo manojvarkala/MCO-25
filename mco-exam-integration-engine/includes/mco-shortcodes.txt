@@ -126,10 +126,23 @@ if (!function_exists('mco_get_hash_of_string_php')) {
         $hash = 0;
         if (empty($str)) return $hash;
         $len = strlen($str);
+        // Using a prime multiplier (31 is common) to distribute hash values.
+        // This avoids bitwise left shifts (<<) which can cause implicit float conversion
+        // for numbers exceeding PHP_INT_MAX on 64-bit systems.
+        // The modulo operation keeps the hash within a positive 32-bit integer range.
+        // 2147483647 is 2^31 - 1, the maximum positive value for a 32-bit signed integer.
+        // This helps mimic JavaScript's hash behavior and ensures consistent modulo results.
+        $bound = 2147483647; 
         for ($i = 0; $i < $len; $i++) {
-            $hash = ord($str[$i]) + (($hash << 5) - $hash);
+            $char_code = ord($str[$i]);
+            $hash = ($hash * 31 + $char_code);
+            // Keep the hash within the positive 32-bit signed integer range
+            $hash = $hash % $bound;
+            if ($hash < 0) {
+                $hash += $bound; 
+            }
         }
-        return $hash;
+        return $hash; // This will always be a positive integer
     }
 }
 
@@ -379,16 +392,16 @@ if (!function_exists('mco_render_book_card_php')) {
                     <div class="mco-single-book-card__buttons">
                         ' . (count($all_stores) > 0 ? (
                             implode('', array_map(function($store) use ($primary_link_info) {
-                                $is_primary = $store['key'] === ($primary_link_info['key'] ?? '');
-                                $button_class = $is_primary ? 'mco-book-btn mco-book-btn--primary' : 'mco-book-btn mco-book-btn--secondary';
-                                return '
-                                    <a href="' . esc_url($store['url']) . '" target="_blank" rel="noopener noreferrer" class="' . $button_class . '">
-                                        ' . mco_get_svg_icon('book-up') . ' Buy on ' . esc_html($store['name']) . '
-                                    </a>';
-                            }, $all_stores))
-                        ) : (
-                            '<span class="mco-book-btn" style="cursor: default; background: #f1f5f9; color: #94a3b8; border: 1px solid #cbd5e1;">Links Coming Soon</span>'
-                        )) . '
+                                    $is_primary = $store['key'] === ($primary_link_info['key'] ?? '');
+                                    $button_class = $is_primary ? 'mco-book-btn mco-book-btn--primary' : 'mco-book-btn mco-book-btn--secondary';
+                                    return '
+                                        <a href="' . esc_url($store['url']) . '" target="_blank" rel="noopener noreferrer" class="' . $button_class . '">
+                                            ' . mco_get_svg_icon('book-up') . ' Buy on ' . esc_html($store['name']) . '
+                                        </a>';
+                                }, $all_stores))
+                            ) : (
+                                '<span class="mco-book-btn" style="cursor: default; background: #f1f5f9; color: #94a3b8; border: 1px solid #cbd5e1;">Links Coming Soon</span>'
+                            )) . '
                     </div>
                 </div>
             </div>';
@@ -883,168 +896,4 @@ if (!function_exists('mco_auto_inject_template')) {
         }
         // Handle Archive Pages: Inject card view for items in the loop
         if (is_post_type_archive('mco_exam_program') && in_the_loop() && is_main_query()) {
-            global $post;
-            // Ensure mco_get_app_config_data is defined
-            if (!function_exists('mco_get_app_config_data')) {
-                return '<p>Application is not configured correctly. Missing core functions.</p>';
-            }
-
-            $config_data = mco_get_app_config_data();
-            $app_url = mco_get_exam_app_url();
-
-            $app_program_id = 'prod-' . $post->ID;
-            $program_category = current(array_filter($config_data['examProductCategories'], function($c) use ($app_program_id) { return $c['id'] === $app_program_id; }));
-            
-            // If category is not found, skip rendering to prevent errors
-            if (!$program_category) {
-                error_log("MCO SHORTCODE: Program category not found for post ID: {$post->ID}. Skipping rendering.");
-                return ''; 
-            }
-
-            $item_data = [
-                'id' => $app_program_id, // Pass WP Post ID for thumbnail fallback
-                'title' => $post->post_title,
-                'description' => $post->post_content,
-                'thumbnailUrl' => $program_category['thumbnailUrl'] ?? '', // Use pre-fetched thumbnail from app_config_data
-                'permalink' => rtrim($app_url, '/') . '/program/' . $app_program_id,
-            ];
-
-            $card_html = mco_render_program_card($item_data, $app_url);
-            
-            // Ensure CSS is loaded, but only once per page load to avoid bloat
-            // We capture it into a variable to prepend to the first card
-            $styles = '';
-            if (!$css_loaded) {
-                ob_start();
-                mco_load_shortcode_css();
-                $styles = ob_get_clean();
-                $css_loaded = true;
-            }
-            
-            return $styles . $card_html;
-        }
-        return $content;
-    }
-}
-
-if (!function_exists('mco_render_study_hall_sidebar')) {
-    function mco_render_study_hall_sidebar() {
-        if (!function_exists('mco_get_app_config_data')) {
-            return '<p style="color:#dc2626;font-size:0.9rem;">Application is not configured correctly. Missing core functions for sidebar.</p>';
-        }
-
-        $config_data = mco_get_app_config_data();
-        $raw_books = $config_data['suggestedBooks'] ?? []; 
-        
-        // Shuffle and slice books if there are any
-        if (!empty($raw_books)) {
-            shuffle($raw_books);
-            $random_books = array_slice($raw_books, 0, 5);
-        } else {
-            $random_books = [];
-        }
-
-        ob_start();
-        
-        $books_html = '';
-        foreach ((array)$random_books as $book) {
-            $books_html .= mco_render_book_card_php($book, 'sidebar');
-        }
-
-        ?>
-        <div class="mco-study-hall-sidebar">
-            <h3 class="mco-study-hall-sidebar__title">
-                <?php echo mco_get_svg_icon('book-open'); ?>
-                <span>Study Hall</span>
-            </h3>
-            <div class="mco-study-hall-sidebar__grid">
-                <?php echo $books_html; ?>
-            </div>
-            <p class="mco-study-hall-sidebar__disclaimer">
-                Using our affiliate links doesn't cost you extra and helps support our platform. Note: Book availability may vary by region. Thank out for you!
-            </p>
-        </div>
-        <?php
-        return ob_get_clean();
-    }
-}
-
-if (!function_exists('mco_render_name_update_form')) {
-    function mco_render_name_update_form($error_msg = '') {
-        $redirect_to = isset($_GET['redirect_to']) ? $_GET['redirect_to'] : '';
-        ob_start();
-        mco_load_shortcode_css();
-        ?>
-        <div id="mco-app-root">
-            <div class="mco-form-container">
-                <h2>Complete Your Profile</h2>
-                <p>Please enter your full First and Last Name. This will be used for your certificates.</p>
-                <?php if ($error_msg): ?>
-                    <div class="mco-error"><?php echo esc_html($error_msg); ?></div>
-                <?php endif; ?>
-                <form method="post" action="">
-                    <?php wp_nonce_field('mco_update_name_action', 'mco_update_name_nonce'); ?>
-                    <input type="hidden" name="redirect_to" value="<?php echo esc_attr($redirect_to); ?>">
-                    <label for="full_name">Full Name</label>
-                    <input type="text" name="full_name" id="full_name" required placeholder="e.g. John Doe">
-                    <button type="submit" class="mco-button">Save & Continue</button>
-                </form>
-            </div>
-        </div>
-        <?php
-        return ob_get_clean();
-    }
-}
-
-if (!function_exists('mco_redirect_to_app_with_token')) {
-    function mco_redirect_to_app_with_token() {
-        // Ensure mco_generate_exam_jwt and mco_get_exam_app_url are defined (from mco-api.php)
-        if (!function_exists('mco_generate_exam_jwt') || !function_exists('mco_get_exam_app_url')) {
-            error_log('MCO SHORTCODE REDIRECT ERR: Critical API functions not defined. Check mco-api.php.');
-            return '<p>Error: Application is not configured correctly. Missing core functions.</p>';
-        }
-
-        $token = mco_generate_exam_jwt(get_current_user_id());
-        if (!$token) {
-            return '<p>Error: Could not generate authentication token.</p>';
-        }
-        $app_url = mco_get_exam_app_url();
-        if (!$app_url) return '<p>Error: App URL not configured.</p>';
-        
-        // FIX: Include the dynamic API URL in the redirect so the React app knows where to connect back to.
-        $site_url = get_site_url();
-        $redirect_url = add_query_arg(['token' => $token, 'api_url' => $site_url], rtrim($app_url, '/') . '/auth');
-        
-        // JS redirect is safer if headers are sent, but meta refresh is a good fallback
-        return '<meta http-equiv="refresh" content="0;url=' . esc_url($redirect_url) . '">' .
-            '<script>window.location.href="' . esc_url($redirect_url) . '";</script>' .
-            '<div id="mco-app-root"><div class="mco-form-container" style="text-align:center;"><p>Redirecting to exam portal...</p><a href="' . esc_url($redirect_url) . '" class="mco-button">Click here if not redirected</a></div></div>';
-    }
-}
-
-/**
- * --- GLOBAL JS VARIABLE INJECTION ---
- * Injects the React App's base URL into the global JavaScript scope.
- * This is crucial for dynamically loading React components within shortcodes,
- * allowing them to locate their built assets relative to the app's root.
- */
-if (!function_exists('mco_set_react_app_base_url_for_js')) {
-    function mco_set_react_app_base_url_for_js() {
-        $app_url = mco_get_exam_app_url();
-        if (!empty($app_url)) {
-            // Ensure the URL does not end with a slash for consistent path construction
-            echo '<script>window.mcoReactAppBaseUrl = "' . rtrim(esc_url($app_url), '/') . '";</script>' . "\n";
-        }
-    }
-    // Use wp_footer to ensure mco_get_exam_app_url() has been evaluated in the request.
-    add_action('wp_footer', 'mco_set_react_app_base_url_for_js');
-}
-
-
-// --- SHORTCODE REGISTRATION ---
-add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
-add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
-add_shortcode('mco_program_grid', 'mco_program_grid_shortcode'); // New grid shortcode for category pages
-add_shortcode('mco_single_program', 'mco_single_program_shortcode'); // New single item shortcode
-add_shortcode('mco_book_showcase', 'mco_book_showcase_shortcode');
-add_shortcode('mco_single_book', 'mco_single_book_shortcode');
+            global<ctrl63>
