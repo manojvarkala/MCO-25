@@ -1,5 +1,4 @@
 
-
 import React, { FC, useState } from 'react';
 import toast from 'react-hot-toast';
 import { DownloadCloud, Code, Share2, ShieldCheck, Zap } from 'lucide-react';
@@ -8,18 +7,18 @@ import { downloadCorePluginZip, downloadSocialPluginZip } from '../services/zipS
 
 // --- RAW IMPORTS ---
 // FIX: Corrected relative import paths
-import mainPluginFile from '../../mco-exam-integration-engine/mco-exam-integration-engine.txt?raw';
-import stylesFile from '../../mco-exam-integration-engine/assets/mco-styles.txt?raw';
-import cptsFile from '../../mco-exam-integration-engine/includes/mco-cpts.txt?raw';
-import adminFile from '../../mco-exam-integration-engine/includes/mco-admin.txt?raw';
-import dataFile from '../../mco-exam-integration-engine/includes/mco-data.txt?raw';
-import shortcodesFile from '../../mco-exam-integration-engine/includes/mco-shortcodes.txt?raw';
-import apiFile from '../../mco-exam-integration-engine/includes/mco-api.txt?raw';
+import mainPluginFile from '../mco-exam-integration-engine/mco-exam-integration-engine.txt?raw';
+import stylesFile from '../mco-exam-integration-engine/assets/mco-styles.txt?raw';
+import cptsFile from '../mco-exam-integration-engine/includes/mco-cpts.txt?raw';
+import adminFile from '../mco-exam-integration-engine/includes/mco-admin.txt?raw';
+import dataFile from '../mco-exam-integration-engine/includes/mco-data.txt?raw';
+import shortcodesFile from '../mco-exam-integration-engine/includes/mco-shortcodes.txt?raw';
+import apiFile from '../mco-exam-integration-engine/includes/mco-api.txt?raw';
 
 
-import socialMain from '../../mco-social-poster/mco-social-poster.txt?raw';
-import socialAdmin from '../../mco-social-poster/includes/admin-page.txt?raw';
-import socialHandler from '../../mco-social-poster/includes/post-handler.txt?raw';
+import socialMain from '../mco-social-poster/mco-social-poster.txt?raw';
+import socialAdmin from '../mco-social-poster/includes/admin-page.txt?raw';
+import socialHandler from '../mco-social-poster/includes/post-handler.txt?raw';
 
 import templateExams from '../public/template-exam-programs.csv?raw';
 import templateBooks from '../public/template-recommended-books.csv?raw';
