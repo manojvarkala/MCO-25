@@ -58,7 +58,7 @@ body {
     border-radius: 6px;
     overflow: hidden;
     display: flex;
-    height: 110px;
+    height: 130px; /* Increased height */
     background: rgb(var(--color-card-rgb));
     transition: border-color 0.2s;
 }
@@ -118,9 +118,9 @@ body {
     gap: 6px;
     background: rgb(var(--color-accent-rgb));
     color: rgb(var(--color-text-strong-rgb));
-    font-size: 0.75rem;
+    font-size: 0.8rem; /* Increased font size */
     font-weight: 700;
-    padding: 6px 12px;
+    padding: 7px 14px; /* Increased padding */
     border-radius: 4px;
     text-decoration: none;
     align-self: flex-start;

@@ -72,7 +72,6 @@ const AnnapoornaStyleB: FC<{ book: BookCoverProps['book']; color: { bg: string; 
         justifyContent: 'flex-end',
         textAlign: 'left',
         padding: '1.5rem',
-        // FIX: Correct CSS property value from 'border-sizing' to 'box-sizing'.
         boxSizing: 'border-box',
         backgroundColor: color.bg,
         color: color.text,

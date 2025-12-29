@@ -1,4 +1,5 @@
 
+
 import React, { FC } from 'react';
 // FIX: Changed import of BookCover from default to named import to align with the module's export type.
 import { BookCover } from './BookCover.tsx';

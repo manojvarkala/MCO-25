@@ -1,3 +1,4 @@
+
 /* 
    MCO PLUGIN STYLES 
    Strictly scoped to prevent conflicts with WordPress Admin or Themes.
@@ -383,7 +384,7 @@
     border-radius: 6px;
     overflow: hidden;
     display: flex;
-    height: 110px;
+    height: 130px; /* Increased height */
     background: #fff;
     transition: border-color 0.2s;
 }
@@ -430,20 +431,36 @@
 }
 
 .mco-book-card-sidebar__button {
-    display: inline-block;
+    display: inline-flex; /* Changed from block for icon alignment */
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     background: #f59e0b;
     color: #fff;
-    font-size: 0.75rem;
+    font-size: 0.8rem; /* Increased font size */
     font-weight: 700;
-    padding: 6px 12px;
+    padding: 7px 14px; /* Increased padding */
     border-radius: 4px;
     text-decoration: none;
     align-self: flex-start;
     transition: background-color 0.2s;
+    border: 1px solid #f59e0b; /* Added border for consistency */
+    min-width: 100px; /* Ensure minimum width */
 }
 
 .mco-book-card-sidebar__button:hover {
     background: #d97706;
+}
+
+.mco-book-card-sidebar__button--secondary {
+    background: #e2e8f0;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+}
+
+.mco-book-card-sidebar__button--secondary:hover {
+    background: #cbd5e1;
+    color: #1e293b;
 }
 
 .mco-study-hall-sidebar__disclaimer {
