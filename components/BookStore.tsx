@@ -1,5 +1,4 @@
 
-
 import React, { FC } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
@@ -85,7 +84,7 @@ const BookStore: FC = () => {
                 </div>
 
                 {suggestedBooks.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="mco-book-grid">
                         <BookshelfRenderer books={suggestedBooks} type="showcase" />
                     </div>
                 ) : (
