@@ -366,7 +366,8 @@ if (!function_exists('mco_render_book_card_php')) {
                             ' . (count($all_stores) > 0 ? (
                                 implode('', array_map(function($store) use ($primary_link_info) {
                                     $is_primary = $store['key'] === ($primary_link_info['key'] ?? '');
-                                    $button_style = 'display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.75rem; font-weight: 700; padding: 6px 12px; border-radius: 4px; text-decoration: none; align-self: flex-start; transition: background-color 0.2s; min-width: 100px; box-sizing: border-box;';
+                                    // Consolidated and explicit inline styles
+                                    $button_style = 'display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.75rem; font-weight: 700; padding: 6px 12px; border-radius: 4px; text-decoration: none; align-self: flex-start; transition: background-color 0.2s; min-width: 100px; box-sizing: border-box; white-space: nowrap; text-align: center;';
                                     if ($is_primary) {
                                         $button_style .= ' background-color: #f59e0b; color: #fff; border: 1px solid #f59e0b;';
                                     } else {
@@ -378,7 +379,7 @@ if (!function_exists('mco_render_book_card_php')) {
                                         </a>';
                                 }, $all_stores))
                             ) : (
-                                '<span class="mco-book-card-sidebar__button" style="cursor: default; background: #e2e8f0; color: #64748b; border: 1px solid #cbd5e1; min-width: 100px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.75rem; font-weight: 700; padding: 6px 12px; border-radius: 4px; text-decoration: none; align-self: flex-start;">Links Coming Soon</span>'
+                                '<span class="mco-book-card-sidebar__button" style="cursor: default; background: #e2e8f0; color: #64748b; border: 1px solid #cbd5e1; min-width: 100px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.75rem; font-weight: 700; padding: 6px 12px; border-radius: 4px; text-decoration: none; align-self: flex-start; white-space: nowrap;">Links Coming Soon</span>'
                             )) . '
                         </div>
                     </div>
@@ -396,7 +397,8 @@ if (!function_exists('mco_render_book_card_php')) {
                         ' . (count($all_stores) > 0 ? (
                             implode('', array_map(function($store) use ($primary_link_info) {
                                     $is_primary = $store['key'] === ($primary_link_info['key'] ?? '');
-                                    $button_style = 'display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: auto; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 1.1rem; box-sizing: border-box; transition: all 0.2s; min-width: 150px; text-align: center;';
+                                    // Consolidated and explicit inline styles
+                                    $button_style = 'display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: auto; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 1.1rem; box-sizing: border-box; transition: all 0.2s; min-width: 150px; text-align: center; white-space: nowrap;';
                                     if ($is_primary) {
                                         $button_style .= ' background-color: #facc15; color: #1e293b; border: 1px solid #eab308;';
                                     } else {
@@ -408,7 +410,7 @@ if (!function_exists('mco_render_book_card_php')) {
                                         </a>';
                                 }, $all_stores))
                             ) : (
-                                '<span class="mco-book-btn" style="cursor: default; background: #f1f5f9; color: #94a3b8; border: 1px solid #cbd5e1; min-width: 150px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: auto; padding: 12px 30px; font-size: 1.1rem; text-align: center;">Links Coming Soon</span>'
+                                '<span class="mco-book-btn" style="cursor: default; background: #f1f5f9; color: #94a3b8; border: 1px solid #cbd5e1; min-width: 150px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: auto; padding: 12px 30px; font-size: 1.1rem; text-align: center; white-space: nowrap;">Links Coming Soon</span>'
                             )) . '
                     </div>
                 </div>
@@ -430,7 +432,8 @@ if (!function_exists('mco_render_book_card_php')) {
                             ' . (count($all_stores) > 0 ? (
                                 implode('', array_map(function($store) use ($primary_link_info) {
                                     $is_primary = $store['key'] === ($primary_link_info['key'] ?? '');
-                                    $button_style = 'display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9rem; box-sizing: border-box; transition: all 0.2s; min-width: 150px; text-align: center;';
+                                    // Consolidated and explicit inline styles
+                                    $button_style = 'display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9rem; box-sizing: border-box; transition: all 0.2s; min-width: 150px; text-align: center; white-space: nowrap;';
                                     if ($is_primary) {
                                         $button_style .= ' background-color: #facc15; color: #1e293b; border: 1px solid #eab308;';
                                     } else {
@@ -442,7 +445,7 @@ if (!function_exists('mco_render_book_card_php')) {
                                         </a>';
                                 }, $all_stores))
                             ) : (
-                                '<span class="mco-book-btn" style="cursor: default; background: #f1f5f9; color: #94a3b8; border: 1px solid #cbd5e1; min-width: 150px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9rem;">Links Coming Soon</span>'
+                                '<span class="mco-book-btn" style="cursor: default; background: #f1f5f9; color: #94a3b8; border: 1px solid #cbd5e1; min-width: 150px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9rem; white-space: nowrap;">Links Coming Soon</span>'
                             )) . '
                         </div>
                     </div>
