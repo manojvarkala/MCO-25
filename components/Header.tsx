@@ -1,5 +1,4 @@
 
-
 import React, { FC, useState, useMemo, useEffect } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { Link } from "react-router-dom";
@@ -17,7 +16,7 @@ const Header: FC = () => {
   // Reset error state if the logo URL changes
   useEffect(() => {
       setLogoError(false);
-  }, [activeOrg?.logo]);
+  }, [activeOrg?.logoUrl]); // Changed to activeOrg.logoUrl
 
   // Updated URL generation with fallback
   const mainSiteBaseUrl = useMemo(() => {
@@ -52,12 +51,14 @@ const Header: FC = () => {
     <header className={headerClasses}>
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link to={headerLink} className="flex items-center space-x-3">
-             {activeOrg && (activeOrg.logo && !logoError) ? (
+             {activeOrg && (activeOrg.logoUrl && !logoError) ? (
                 <img
-                    src={activeOrg.logo}
+                    src={activeOrg.logoUrl}
                     alt={`${activeOrg.name} Logo`}
                     className="h-14 w-14 object-contain"
                     onError={() => setLogoError(true)}
+                    // FIX: Add crossOrigin attribute for better compatibility with html2canvas and CORS.
+                    crossOrigin="anonymous" 
                 />
              ) : activeOrg ? (
                 <div className="h-14 w-14 bg-slate-200 rounded-full flex items-center justify-center">

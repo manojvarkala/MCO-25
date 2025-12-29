@@ -1,3 +1,5 @@
+
+
 {
     "version": "20251030131255",
     "organizations": [
@@ -5,7 +7,7 @@
             "id": "org-medical-coding-online",
             "name": "Medical Coding Online",
             "website": "www.coding-online.net",
-            "logo": "https://via.placeholder.com/150/0000FF/FFFFFF?text=MCO",
+            "logoUrl": "/assets/logos/mco-logo.png",
             "availableThemes": [
                 { "id": "default", "name": "Cyberpunk" },
                 { "id": "professional", "name": "Professional" },
@@ -29,10 +31,10 @@
                 { "id": "prod-coc", "name": "Certified Outpatient Coder (COC)", "description": "Sharpen your outpatient coding expertise for the COC certification.", "practiceExamId": "exam-coc-practice", "certificationExamId": "exam-coc-cert", "questionSourceUrl": "https://docs.google.com/spreadsheets/d/1vQjL2G2X5S4S7J1gJ7Q0X0X0X0X0X0X0X0X0X0X0/edit?usp=sharing"}
             ],
             "certificateTemplates": [
-                { "id": "cert-practice", "title": "Certificate of Proficiency", "body": "This certifies that <strong>{candidateName}</strong> has successfully demonstrated proficiency in the <strong>{examName}</strong> practice exam, achieving a score of <strong>{finalScore}%</strong>.", "signature1Name": "Jane Doe", "signature1Title": "Program Director", "signature1ImageUrl": "" },
-                { "id": "cert-cpc", "title": "Certified Professional Coder", "body": "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", "signature1Name": "Jane Doe", "signature1Title": "Program Director", "signature1ImageUrl": "", "signature2Name": "John Smith", "signature2Title": "Lead Instructor", "signature2ImageUrl": "" },
-                { "id": "cert-cic", "title": "Certified Inpatient Coder", "body": "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", "signature1Name": "Jane Doe", "signature1Title": "Program Director", "signature1ImageUrl": "", "signature2Name": "John Smith", "signature2Title": "Lead Instructor", "signature2ImageUrl": "" },
-                { "id": "cert-coc", "title": "Certified Outpatient Coder", "body": "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", "signature1Name": "Jane Doe", "signature1Title": "Program Director", "signature1ImageUrl": "", "signature2Name": "John Smith", "signature2Title": "Lead Instructor", "signature2ImageUrl": "" }
+                { "id": "cert-practice", "title": "Certificate of Proficiency", "body": "This certifies that <strong>{candidateName}</strong> has successfully demonstrated proficiency in the {examName} practice exam, achieving a score of <strong>{finalScore}%</strong>.", "signature1Name": "Jane Doe", "signature1Title": "Program Director", "signature1ImageUrl": "" },
+                { "id": "cert-cpc", "title": "Certified Professional Coder", "body": "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the {examName} and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", "signature1Name": "Jane Doe", "signature1Title": "Program Director", "signature1ImageUrl": "", "signature2Name": "John Smith", "signature2Title": "Lead Instructor", "signature2ImageUrl": "" },
+                { "id": "cert-cic", "title": "Certified Inpatient Coder", "body": "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the {examName} and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", "signature1Name": "Jane Doe", "signature1Title": "Program Director", "signature1ImageUrl": "", "signature2Name": "John Smith", "signature2Title": "Lead Instructor", "signature2ImageUrl": "" },
+                { "id": "cert-coc", "title": "Certified Outpatient Coder", "body": "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the {examName} and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", "signature1Name": "Jane Doe", "signature1Title": "Program Director", "signature1ImageUrl": "", "signature2Name": "John Smith", "signature2Title": "Lead Instructor", "signature2ImageUrl": "" }
             ],
             "suggestedBooks": [
                 { "id": "book-cpc-guide", "title": "CPC® Study Guide 2024 - Official AAPC Certification", "description": "The official study guide from AAPC for the Certified Professional Coder (CPC) exam. Essential for preparation.", "thumbnailUrl": "", "affiliateLinks": { "com": "https://www.amazon.com/dp/1640161421?tag=mykada-20", "in": "https://www.amazon.in/dp/1640161421?tag=httpcodingonl-21", "ae": "https://www.amazon.ae/dp/1640161421?tag=medical0f1-21"}},

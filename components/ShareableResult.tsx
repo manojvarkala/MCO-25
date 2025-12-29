@@ -1,3 +1,4 @@
+
 import React, { FC } from 'react';
 import type { User, Exam, TestResult, Organization } from '../types.ts';
 import Seal from '../assets/Seal.tsx';
@@ -33,7 +34,8 @@ const ShareableResult: FC<ShareableResultProps> = ({ user, exam, result, organiz
             {/* Header */}
             <header className="flex justify-between items-start">
                 <div className="flex items-center gap-4">
-                    {organization.logo && <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="h-20 w-20 object-contain" />}
+                    {/* FIX: Add crossOrigin="anonymous" for external images to prevent CORS issues with html2canvas */}
+                    {organization.logoUrl && <img src={organization.logoUrl} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="h-20 w-20 object-contain" />}
                     <div>
                         <h1 className="text-3xl font-bold font-display">{organization.name}</h1>
                         <p className="text-lg text-white/80">www.{organization.website}</p>

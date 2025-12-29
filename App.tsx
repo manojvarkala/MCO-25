@@ -128,8 +128,8 @@ const AppContent: FC = () => {
                         </h3>
                         <ul className="list-disc list-inside space-y-1">
                             <li><strong>.htaccess Fix:</strong> Ensure the <code>.htaccess</code> file in your WordPress root has the correct <code>Authorization</code> header rewrite rules at the very top. <a href="https://developers.google.com/workspace/marketplace/security-checklist#http-headers" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline hover:text-cyan-300">More info here</a>.</li>
-                            <li><strong>WordPress Permalinks:</strong> Confirm WordPress permalinks are set to "Post Name" (Settings > Permalinks).</li>
-                            <li><strong>API URL Config:</strong> Verify the "App URL(s)" in your WordPress Admin (Exam App Engine > Main Settings) matches this site's URL.</li>
+                            <li><strong>WordPress Permalinks:</strong> Confirm WordPress permalinks are set to "Post Name" (Settings &gt; Permalinks).</li>
+                            <li><strong>API URL Config:</strong> Verify the "App URL(s)" in your WordPress Admin (Exam App Engine &gt; Main Settings) matches this site's URL.</li>
                             <li><strong>Clear Caches:</strong> Clear all caches on your WordPress site (plugin cache, server cache).</li>
                             <li><strong>Browser Cache:</strong> Perform a hard refresh (Ctrl+Shift+R or Cmd+Shift+R) or clear your browser's cache for this site.</li>
                         </ul>

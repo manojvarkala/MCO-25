@@ -50,7 +50,7 @@ const RefundPolicy: FC = () => {
                     We may consider refunds on a case-by-case basis for exceptional circumstances, such as a duplicate purchase or a demonstrable technical issue that prevented you from accessing the product.
                 </p>
 
-                <h2 class="text-2xl font-semibold text-slate-700 mt-6 mb-2">How to Contact Us</h2>
+                <h2 className="text-2xl font-semibold text-slate-700 mt-6 mb-2">How to Contact Us</h2>
                 <p>
                     If you believe you are eligible for a refund under exceptional circumstances, please contact our support team via the <Link to="/feedback" className="text-cyan-600">Feedback form</Link> within 7 days of your purchase. Please include your order number and a detailed explanation of the issue.
                 </p>

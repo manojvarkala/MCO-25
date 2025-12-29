@@ -13,6 +13,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppContext } from '../context/AppContext.tsx';
 import Seal from '../assets/Seal.tsx';
+import { localLogosMap } from '../assets/localLogos.ts'; // FIX: Import local logos map
 
 const decodeHtmlEntities = (text: string | undefined): string => {
     if (!text || typeof text !== 'string') return text || '';
@@ -172,8 +173,15 @@ const Certificate: FC = () => {
     }
 
     const { organization, template, examName } = certData;
+
+    // FIX: Prioritize local base64 logo for PDF rendering, fall back to external URL
+    const orgLogoSrc = localLogosMap[organization.id] || organization.logoUrl;
+    // Determine if crossOrigin is needed (only for external URLs, not base64)
+    const orgLogoCrossOrigin = orgLogoSrc && !orgLogoSrc.startsWith('data:image') ? "anonymous" : undefined;
+
     const isSig1Base64 = template.signature1ImageUrl && template.signature1ImageUrl.startsWith('data:image');
     const isSig2Base64 = template.signature2ImageUrl && template.signature2ImageUrl.startsWith('data:image');
+    
     const verificationUrl = `${window.location.origin}/verify/${certData.certificateNumber}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(verificationUrl)}`;
 
@@ -202,8 +210,8 @@ const Certificate: FC = () => {
                          <div className="cert-content-inner">
                             {/* Header */}
                             <header className="cert-header">
-                                {organization.logo && (
-                                    <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="cert-logo" />
+                                {orgLogoSrc && ( // FIX: Use orgLogoSrc for dynamic source
+                                    <img src={orgLogoSrc} crossOrigin={orgLogoCrossOrigin} alt={`${organization.name} Logo`} className="cert-logo" />
                                 )}
                                 <div className="cert-brain-icon">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-slate-200">
@@ -283,7 +291,7 @@ const Certificate: FC = () => {
         <div className="cert-container-modern">
             <div className="cert-modern-sidebar">
                 <div className="cert-modern-sidebar__header">
-                    {organization.logo && <img src={organization.logo} crossOrigin="anonymous" alt={`${organization.name} Logo`} className="cert-logo-modern" />}
+                    {orgLogoSrc && <img src={orgLogoSrc} crossOrigin={orgLogoCrossOrigin} alt={`${organization.name} Logo`} className="cert-logo-modern" />}
                     <h3 className="cert-org-name-modern mt-4">{organization.name}</h3>
                     <p className="cert-org-website-modern">{organization.website}</p>
                 </div>

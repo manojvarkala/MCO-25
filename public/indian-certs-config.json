@@ -1,4 +1,5 @@
 
+
 {
     "version": "20240725000000",
     "organizations": [
@@ -6,7 +7,7 @@
             "id": "org-indian-certs",
             "name": "Bharat Certifications",
             "website": "bharatcerts.in",
-            "logo": "/logo.png",
+            "logoUrl": "/assets/logos/bharatcerts-logo.png",
             "availableThemes": [
                 { "id": "default", "name": "Cyberpunk" },
                 { "id": "professional", "name": "Professional" },
@@ -30,8 +31,8 @@
                 { "id": "prod-cma", "name": "Cost & Management Accountancy (CMA)", "description": "Excel in cost and management accounting principles for the CMA examinations by the ICMAI (Intermediate Course).", "practiceExamId": "exam-cma-practice", "certificationExamId": "exam-cma-cert", "questionSourceUrl": "https://docs.google.com/spreadsheets/d/10QGeiupsw6KtW9613v1yj03SYtzf3rDCEu-hbgQUwgs/edit?usp=sharing"}
             ],
             "certificateTemplates": [
-                { "id": "cert-practice", "title": "Certificate of Proficiency", "body": "This certifies that <strong>{candidateName}</strong> has successfully demonstrated proficiency in the <strong>{examName}</strong> practice exam, achieving a score of <strong>{finalScore}%</strong>.", "signature1Name": "Priya Sharma", "signature1Title": "Director of Examinations", "signature1ImageUrl": "", "signature2Name": "", "signature2Title": ""},
-                { "id": "cert-completion", "title": "Certificate of Achievement", "body": "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", "signature1Name": "Priya Sharma", "signature1Title": "Director of Examinations", "signature1ImageUrl": "", "signature2Name": "Arjun Mehta", "signature2Title": "Chairman, Accreditation Board", "signature2ImageUrl": ""}
+                { "id": "cert-practice", "title": "Certificate of Proficiency", "body": "This certifies that <strong>{candidateName}</strong> has successfully demonstrated proficiency in the {examName} practice exam, achieving a score of <strong>{finalScore}%</strong>.", "signature1Name": "Priya Sharma", "signature1Title": "Director of Examinations", "signature1ImageUrl": "", "signature2Name": "", "signature2Title": ""},
+                { "id": "cert-completion", "title": "Certificate of Achievement", "body": "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the {examName} and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.", "signature1Name": "Priya Sharma", "signature1Title": "Director of Examinations", "signature1ImageUrl": "", "signature2Name": "Arjun Mehta", "signature2Title": "Chairman, Accreditation Board", "signature2ImageUrl": ""}
             ],
             "suggestedBooks": [
                 { "id": "book-ca-foundation", "title": "Taxmann's CRACKER for Principles and Practice of Accounting (CA-Foundation)", "description": "A comprehensive book with past exam questions and detailed answers for the CA-Foundation exam.", "thumbnailUrl": "", "affiliateLinks": { "com": "", "in": "https://www.amazon.in/dp/935778216X?tag=httpcodingonl-21", "ae": ""}},

@@ -29,7 +29,9 @@ if (!function_exists('mco_get_full_snapshot_data')) {
     function mco_get_full_snapshot_data($is_blueprint = false) {
         $dynamic_data = mco_get_app_config_data();
         
+        // Prioritize custom logo URL from plugin settings
         $logo_url = (string)get_option('mco_custom_logo_url', '');
+        // Fallback to site icon if custom logo is not set
         if (empty($logo_url)) {
             $custom_logo_id = get_theme_mod('custom_logo');
             $image = wp_get_attachment_image_src($custom_logo_id, 'full');
@@ -43,7 +45,7 @@ if (!function_exists('mco_get_full_snapshot_data')) {
                 "name" => get_bloginfo('name'),
                 "website" => parse_url(get_bloginfo('url'), PHP_URL_HOST),
                 "address" => (string)get_option('mco_organization_address', ''),
-                "logo" => $logo_url,
+                "logoUrl" => $logo_url, // Changed from "logo" to "logoUrl"
                 "introVideoUrl" => (string)get_option('mco_intro_video_url', ''),
                 "availableThemes" => mco_get_available_themes(),
                 "activeThemeId" => (string)get_option('mco_active_theme_id', 'default'),

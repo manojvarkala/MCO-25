@@ -1,5 +1,4 @@
 
-
 import React, { FC } from 'react';
 import type { RecommendedBook } from '../types.ts';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -73,6 +72,7 @@ const AnnapoornaStyleB: FC<{ book: RecommendedBook; color: { bg: string; shape: 
         justifyContent: 'flex-end',
         textAlign: 'left',
         padding: '1.5rem',
+        // FIX: Correct CSS property value from 'border-sizing' to 'border-box'.
         boxSizing: 'border-box',
         backgroundColor: color.bg,
         color: color.text,

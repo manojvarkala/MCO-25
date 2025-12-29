@@ -121,7 +121,7 @@ export interface Theme {
 export interface Organization {
   id: string;
   name: string;
-  logo: string;
+  logoUrl: string;
   website: string;
   address?: string;
   introVideoUrl?: string;

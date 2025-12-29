@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
 import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook, Theme, FeedbackContext } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -26,6 +25,10 @@ interface AppContextType {
   setActiveTheme: (themeId: string) => void;
   subscriptionsEnabled: boolean;
   bundlesEnabled: boolean;
+  purchaseNotifierEnabled: boolean;
+  purchaseNotifierDelay: number;
+  purchaseNotifierMinGap: number;
+  purchaseNotifierMaxGap: number;
   feedbackRequiredForExam: FeedbackContext | null;
   setFeedbackRequiredForExam: (context: FeedbackContext) => void;
   clearFeedbackRequired: () => void;
@@ -126,7 +129,8 @@ const processConfigData = (configData: any) => {
             id: getField(rawOrg, ['id', 'ID']).toString(),
             name: decodeHtmlEntities(getField(rawOrg, ['name', 'post_title'])),
             website: getField(rawOrg, ['website', 'url']),
-            logo: getField(rawOrg, ['logo', 'logo_url', 'custom_logo_url']),
+            // FIX: Map logoUrl correctly, providing fallbacks for older configurations
+            logoUrl: getField(rawOrg, ['logoUrl', 'logo', 'logo_url', 'custom_logo_url']), 
             exams,
             examProductCategories: categories,
             suggestedBooks: books,
@@ -152,6 +156,10 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [activeTheme, setActiveThemeState] = useState<string>('default');
   const [subscriptionsEnabled, setSubscriptionsEnabled] = useState<boolean>(true);
   const [bundlesEnabled, setBundlesEnabled] = useState<boolean>(true);
+  const [purchaseNotifierEnabled, setPurchaseNotifierEnabled] = useState<boolean>(true);
+  const [purchaseNotifierDelay, setPurchaseNotifierDelay] = useState<number>(7);
+  const [purchaseNotifierMinGap, setPurchaseNotifierMinGap] = useState<number>(8);
+  const [purchaseNotifierMaxGap, setPurchaseNotifierMaxGap] = useState<number>(23);
   const [feedbackRequiredForExam, setFeedbackRequiredForExamState] = useState<FeedbackContext | null>(null);
   
   const { user } = useAuth();
@@ -186,6 +194,10 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
           setAvailableThemes(newActiveOrg.availableThemes || []);
           setSubscriptionsEnabled(newActiveOrg.subscriptionsEnabled ?? true);
           setBundlesEnabled(newActiveOrg.bundlesEnabled ?? true);
+          setPurchaseNotifierEnabled(newActiveOrg.purchaseNotifierEnabled ?? true);
+          setPurchaseNotifierDelay(newActiveOrg.purchaseNotifierDelay ?? 7);
+          setPurchaseNotifierMinGap(newActiveOrg.purchaseNotifierMinGap ?? 8);
+          setPurchaseNotifierMaxGap(newActiveOrg.purchaseNotifierMaxGap ?? 23);
 
           const savedTheme = localStorage.getItem('mco_active_theme');
           const defaultTheme = newActiveOrg.activeThemeId || 'default';
@@ -339,6 +351,10 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setActiveTheme,
     subscriptionsEnabled,
     bundlesEnabled,
+    purchaseNotifierEnabled,
+    purchaseNotifierDelay,
+    purchaseNotifierMinGap,
+    purchaseNotifierMaxGap,
     feedbackRequiredForExam,
     setFeedbackRequiredForExam,
     clearFeedbackRequired,
@@ -346,6 +362,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     organizations, activeOrg, isInitializing, refreshConfig, setActiveOrgById,
     updateActiveOrg, updateConfigData, updateExamInOrg, examPrices, suggestedBooks,
     hitCount, availableThemes, activeTheme, subscriptionsEnabled, bundlesEnabled,
+    purchaseNotifierEnabled, purchaseNotifierDelay, purchaseNotifierMinGap, purchaseNotifierMaxGap,
     feedbackRequiredForExam
   ]);
 

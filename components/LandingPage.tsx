@@ -1,5 +1,4 @@
 
-
 import React, { FC, useEffect, useRef } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useNavigate } from "react-router-dom";
@@ -109,7 +108,7 @@ const LandingPage: FC = () => {
 
             {/* Right Side: Login Box */}
             <div className="w-full max-w-md bg-[rgb(var(--color-card-rgb))] p-8 rounded-2xl shadow-2xl border border-[rgb(var(--color-border-rgb))]">
-                {activeOrg.logo && <img src={activeOrg.logo} alt={`${activeOrg.name} Logo`} className="h-20 w-20 mx-auto mb-4 object-contain" />}
+                {activeOrg.logoUrl && <img src={activeOrg.logoUrl} alt={`${activeOrg.name} Logo`} className="h-20 w-20 mx-auto mb-4 object-contain" crossOrigin="anonymous" />}
                 <h2 className="text-2xl font-bold text-center text-[rgb(var(--color-text-strong-rgb))] mb-2">Get Started</h2>
                 <p className="text-[rgb(var(--color-text-muted-rgb))] text-center mb-6">
                     Log in or create an account to access your dashboard and begin your journey.
