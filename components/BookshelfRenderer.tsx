@@ -96,13 +96,14 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                         target="_blank" 
                                         rel="noopener noreferrer"
                                         className={`mco-book-btn ${buttonClass}`}
+                                        style={{ minWidth: '150px' }} // Re-added min-width for visibility
                                     >
                                         <BookUp size={16} /> Buy on {store.name}
                                     </a>
                                 )
                             })
                         ) : (
-                            <span className="mco-book-btn" style={{ cursor: 'default', background: '#f1f5f9', color: '#94a3b8', border: '1px solid #cbd5e1' }}>Links Coming Soon</span>
+                            <span className="mco-book-btn" style={{ cursor: 'default', background: '#f1f5f9', color: '#94a3b8', border: '1px solid #cbd5e1', minWidth: '150px' }}>Links Coming Soon</span>
                         )}
                     </div>
                 </div>
@@ -147,13 +148,14 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                             target="_blank" 
                                             rel="noopener noreferrer"
                                             className={buttonClass}
+                                            style={{ minWidth: '100px' }} // Re-added min-width for visibility
                                         >
                                             <BookUp size={14} /> Buy on {store.name}
                                         </a>
                                     )
                                 })
                             ) : (
-                                <span className="mco-book-card-sidebar__button" style={{ cursor: 'default', background: '#e2e8f0', color: '#64748b', border: '1px solid #cbd5e1' }}>Links Coming Soon</span>
+                                <span className="mco-book-card-sidebar__button" style={{ cursor: 'default', background: '#e2e8f0', color: '#64748b', border: '1px solid #cbd5e1', minWidth: '100px' }}>Links Coming Soon</span>
                             )}
                         </div>
                     </div>
@@ -188,13 +190,14 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                             target="_blank" 
                                             rel="noopener noreferrer"
                                             className={buttonClass}
+                                            style={{ minWidth: '150px' }} // Re-added min-width for visibility
                                         >
                                             <ShoppingCart size={16} /> Buy on {store.name}
                                         </a>
                                     )
                                 })
                             ) : (
-                                <span className="mco-book-btn" style={{ cursor: 'default', background: '#f1f5f9', color: '#94a3b8', border: '1px solid #cbd5e1' }}>Links Coming Soon</span>
+                                <span className="mco-book-btn" style={{ cursor: 'default', background: '#f1f5f9', color: '#94a3b8', border: '1px solid #cbd5e1', minWidth: '150px' }}>Links Coming Soon</span>
                             )}
                         </div>
                     </div>
