@@ -58,7 +58,7 @@ body {
     border-radius: 6px;
     overflow: hidden;
     display: flex;
-    height: 130px; /* Increased height */
+    height: 150px; /* Increased height */
     background: rgb(var(--color-card-rgb));
     transition: border-color 0.2s;
 }
@@ -118,15 +118,16 @@ body {
     gap: 6px;
     background: rgb(var(--color-accent-rgb));
     color: rgb(var(--color-text-strong-rgb));
-    font-size: 0.8rem; /* Increased font size */
+    font-size: 0.75rem; /* Reduced font size */
     font-weight: 700;
-    padding: 7px 14px; /* Increased padding */
+    padding: 6px 12px; /* Reduced padding */
     border-radius: 4px;
     text-decoration: none;
     align-self: flex-start;
     transition: background-color 0.2s;
     border: 1px solid rgb(var(--color-accent-rgb)); /* Added border for consistency */
     min-width: 100px; /* Ensure minimum width */
+    box-sizing: border-box; /* Explicitly set for consistency */
 }
 
 .mco-book-card-sidebar__button:hover {

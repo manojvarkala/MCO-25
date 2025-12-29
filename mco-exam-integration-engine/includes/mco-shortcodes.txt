@@ -368,12 +368,12 @@ if (!function_exists('mco_render_book_card_php')) {
                                     $is_primary = $store['key'] === ($primary_link_info['key'] ?? '');
                                     $button_class = $is_primary ? 'mco-book-card-sidebar__button mco-book-card-sidebar__button--primary' : 'mco-book-card-sidebar__button mco-book-card-sidebar__button--secondary';
                                     return '
-                                        <a href="' . esc_url($store['url']) . '" target="_blank" rel="noopener noreferrer" class="' . $button_class . '" style="min-width: 100px;">
+                                        <a href="' . esc_url($store['url']) . '" target="_blank" rel="noopener noreferrer" class="' . $button_class . '" style="min-width: 100px; box-sizing: border-box;">
                                             ' . mco_get_svg_icon('book-up') . ' Buy on ' . esc_html($store['name']) . '
                                         </a>';
                                 }, $all_stores))
                             ) : (
-                                '<span class="mco-book-card-sidebar__button" style="cursor: default; background: #e2e8f0; color: #64748b; border: 1px solid #cbd5e1; min-width: 100px;">Links Coming Soon</span>'
+                                '<span class="mco-book-card-sidebar__button" style="cursor: default; background: #e2e8f0; color: #64748b; border: 1px solid #cbd5e1; min-width: 100px; box-sizing: border-box;">Links Coming Soon</span>'
                             )) . '
                         </div>
                     </div>
@@ -393,12 +393,12 @@ if (!function_exists('mco_render_book_card_php')) {
                                     $is_primary = $store['key'] === ($primary_link_info['key'] ?? '');
                                     $button_class = $is_primary ? 'mco-book-btn mco-book-btn--primary' : 'mco-book-btn mco-book-btn--secondary';
                                     return '
-                                        <a href="' . esc_url($store['url']) . '" target="_blank" rel="noopener noreferrer" class="' . $button_class . '" style="min-width: 150px;">
+                                        <a href="' . esc_url($store['url']) . '" target="_blank" rel="noopener noreferrer" class="' . $button_class . '" style="min-width: 150px; box-sizing: border-box;">
                                             ' . mco_get_svg_icon('book-up') . ' Buy on ' . esc_html($store['name']) . '
                                         </a>';
                                 }, $all_stores))
                             ) : (
-                                '<span class="mco-book-btn" style="cursor: default; background: #f1f5f9; color: #94a3b8; border: 1px solid #cbd5e1; min-width: 150px;">Links Coming Soon</span>'
+                                '<span class="mco-book-btn" style="cursor: default; background: #f1f5f9; color: #94a3b8; border: 1px solid #cbd5e1; min-width: 150px; box-sizing: border-box;">Links Coming Soon</span>'
                             )) . '
                     </div>
                 </div>
@@ -422,12 +422,12 @@ if (!function_exists('mco_render_book_card_php')) {
                                     $is_primary = $store['key'] === ($primary_link_info['key'] ?? '');
                                     $button_class = $is_primary ? 'mco-book-btn mco-book-btn--primary' : 'mco-book-btn mco-book-btn--secondary';
                                     return '
-                                        <a href="' . esc_url($store['url']) . '" target="_blank" rel="noopener noreferrer" class="' . $button_class . '" style="min-width: 150px;">
+                                        <a href="' . esc_url($store['url']) . '" target="_blank" rel="noopener noreferrer" class="' . $button_class . '" style="min-width: 150px; box-sizing: border-box;">
                                             ' . mco_get_svg_icon('cart') . ' Buy on ' . esc_html($store['name']) . '
                                         </a>';
                                 }, $all_stores))
                             ) : (
-                                '<span class="mco-book-btn" style="cursor: default; background: #f1f5f9; color: #94a3b8; border: 1px solid #cbd5e1; min-width: 150px;">Links Coming Soon</span>'
+                                '<span class="mco-book-btn" style="cursor: default; background: #f1f5f9; color: #94a3b8; border: 1px solid #cbd5e1; min-width: 150px; box-sizing: border-box;">Links Coming Soon</span>'
                             )) . '
                         </div>
                     </div>
