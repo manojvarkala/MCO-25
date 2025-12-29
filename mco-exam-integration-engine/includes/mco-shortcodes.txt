@@ -473,7 +473,7 @@ if (!function_exists('mco_book_showcase_shortcode')) {
         }
 
         $config_data = mco_get_app_config_data();
-        $raw_books = $config_data['suggestedBooks'];
+        $raw_books = $config_data['suggestedBooks'] ?? []; // Ensure it's an array, even if null/undefined
         
         ob_start();
         mco_load_shortcode_css();
@@ -485,7 +485,7 @@ if (!function_exists('mco_book_showcase_shortcode')) {
             $book['permalink'] = $book['permalink'] ?? '';
             $book['affiliateLinks'] = $book['affiliateLinks'] ?? ['com' => '', 'in' => '', 'ae' => ''];
             return $book;
-        }, $raw_books);
+        }, (array)$raw_books); // Cast to array to prevent error if $raw_books is not an array
         $books_json = json_encode($decoded_books);
         $unique_id = 'mco-bookshelf-root-' . uniqid();
         
@@ -506,8 +506,9 @@ if (!function_exists('mco_book_showcase_shortcode')) {
             const container = document.getElementById('<?php echo $unique_id; ?>');
             if (container) {
                 const props = JSON.parse(container.dataset.props || '{}');
+                // The PHP passes an array of books directly in `props`
                 const root = ReactDOM.createRoot(container);
-                root.render(React.createElement(BookshelfRenderer, { ...props, type: 'showcase' }));
+                root.render(React.createElement(BookshelfRenderer, { books: props, type: 'showcase' }));
             }
         </script>
         <div data-props='<?php echo esc_attr($books_json); ?>' id="<?php echo $unique_id; ?>" class="mco-book-grid"></div>
@@ -715,7 +716,7 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
         }
 
         $config_data = mco_get_app_config_data();
-        $raw_books = $config_data['suggestedBooks'];
+        $raw_books = $config_data['suggestedBooks'] ?? []; // Ensure it's an array, even if null/undefined
         
         // Shuffle and slice books if there are any
         if (!empty($raw_books)) {
@@ -734,7 +735,7 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
             $book['permalink'] = $book['permalink'] ?? '';
             $book['affiliateLinks'] = $book['affiliateLinks'] ?? ['com' => '', 'in' => '', 'ae' => ''];
             return $book;
-        }, $random_books));
+        }, (array)$random_books)); // Cast to array to prevent error if $random_books is not an array
         
         $unique_sidebar_id = 'mco-sidebar-books-root-' . uniqid();
         ?>
@@ -759,8 +760,9 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
             const container = document.getElementById('<?php echo $unique_sidebar_id; ?>');
             if (container) {
                 const props = JSON.parse(container.dataset.props || '{}');
+                // The PHP passes an array of books directly in `props`
                 const root = ReactDOM.createRoot(container);
-                root.render(React.createElement(BookshelfRenderer, { ...props, type: 'sidebar' }));
+                root.render(React.createElement(BookshelfRenderer, { books: props, type: 'sidebar' }));
             }
         </script>
         <div data-props='<?php echo esc_attr($sidebar_books_json); ?>' id="<?php echo $unique_sidebar_id; ?>" class="mco-study-hall-sidebar__grid"></div>

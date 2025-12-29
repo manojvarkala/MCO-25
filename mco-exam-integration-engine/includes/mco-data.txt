@@ -27,6 +27,7 @@ if (!function_exists('mco_get_default_certificate_templates')) {
 
 if (!function_exists('mco_get_full_snapshot_data')) {
     function mco_get_full_snapshot_data($is_blueprint = false) {
+        error_log('MCO DATA DEBUG: mco_get_full_snapshot_data called. is_blueprint: ' . ($is_blueprint ? 'true' : 'false'));
         // Ensure mco_get_app_config_data exists before calling it.
         if (!function_exists('mco_get_app_config_data')) {
             error_log('MCO DATA ERR: mco_get_app_config_data function not found in mco-data.php.');
@@ -42,6 +43,7 @@ if (!function_exists('mco_get_full_snapshot_data')) {
             $image = $custom_logo_id ? wp_get_attachment_image_src($custom_logo_id, 'full') : false;
             $logo_url = (string)($image[0] ?? ''); // Ensure it's a string
         }
+        error_log('MCO DATA DEBUG: Logo URL resolved to: ' . $logo_url);
 
         $snapshot = [
             "version" => current_time('YmdHis'),
@@ -77,16 +79,18 @@ if (!function_exists('mco_get_full_snapshot_data')) {
             $snapshot['organizations'][0]['suggestedBooks'] = [];
             $snapshot['examPrices'] = [];
         }
-
+        error_log('MCO DATA DEBUG: Full snapshot data generated successfully.');
         return $snapshot;
     }
 }
 
 if (!function_exists('mco_get_app_config_data')) {
     function mco_get_app_config_data() {
+        error_log('MCO DATA DEBUG: mco_get_app_config_data called.');
         // Try to fetch from transient first
         $cached_data = get_transient('mco_app_config_data');
         if ($cached_data !== false) {
+            error_log('MCO DATA DEBUG: Fetched config from transient cache.');
             return $cached_data;
         }
 
@@ -96,7 +100,9 @@ if (!function_exists('mco_get_app_config_data')) {
         $books = [];
 
         // --- Fetch Exam Programs ---
+        error_log('MCO DATA DEBUG: Fetching exam programs.');
         $program_posts = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish']);
+        error_log('MCO DATA DEBUG: Found ' . count($program_posts) . ' exam programs.');
 
         foreach ($program_posts as $p) {
             $program_id_app_format = 'prod-'.$p->ID;
@@ -191,9 +197,11 @@ if (!function_exists('mco_get_app_config_data')) {
                 'thumbnailUrl' => $category_thumbnail_url // Add thumbnail to category
             ];
         }
+        error_log('MCO DATA DEBUG: Processed exam programs and categories.');
 
         // --- Fetch Subscription Products directly ---
         if (class_exists('WC_Subscriptions') && class_exists('WooCommerce')) {
+            error_log('MCO DATA DEBUG: Fetching subscription products.');
             $subscription_products = wc_get_products([
                 'type' => 'subscription',
                 'status' => 'publish',
@@ -216,9 +224,11 @@ if (!function_exists('mco_get_app_config_data')) {
                     ];
                 }
             }
+            error_log('MCO DATA DEBUG: Processed subscription products.');
         }
 
         // --- Fetch Recommended Books ---
+        error_log('MCO DATA DEBUG: Fetching recommended books.');
         $book_posts = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
         foreach ($book_posts as $bp) {
             $book_id = (string)get_post_meta($bp->ID, '_mco_book_id', true);
@@ -251,6 +261,7 @@ if (!function_exists('mco_get_app_config_data')) {
                 ];
             }
         }
+        error_log('MCO DATA DEBUG: Processed recommended books.');
         
         $final_data = [
             'exams' => $exams, 
@@ -260,7 +271,7 @@ if (!function_exists('mco_get_app_config_data')) {
         ];
 
         set_transient('mco_app_config_data', $final_data, HOUR_IN_SECONDS); // Cache for 1 hour
-
+        error_log('MCO DATA DEBUG: Final config data saved to transient.');
         return $final_data;
     }
 }

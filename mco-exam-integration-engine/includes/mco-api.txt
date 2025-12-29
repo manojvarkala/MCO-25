@@ -393,10 +393,16 @@ if (!function_exists('mco_api_get_full_config')) {
     function mco_api_get_full_config(WP_REST_Request $request) {
         // Ensure mco_get_full_snapshot_data is available from mco-data.php
         if (!function_exists('mco_get_full_snapshot_data')) {
-            error_log('Error: mco_get_full_snapshot_data function not found in mco-api.php. Ensure mco-data.php is loaded.');
+            error_log('MCO API ERR: mco_get_full_snapshot_data function not found. Ensure mco-data.php is loaded.');
             return new WP_Error('mco_provider_missing', 'Data provider not found. Check plugin includes.', ['status' => 500]);
         }
-        return new WP_REST_Response(mco_get_full_snapshot_data(false), 200);
+        $snapshot_data = mco_get_full_snapshot_data(false);
+        if (is_wp_error($snapshot_data)) {
+            error_log('MCO API ERR: mco_get_full_snapshot_data returned WP_Error: ' . $snapshot_data->get_error_message());
+            return $snapshot_data; // Return the error if data generation failed
+        }
+        error_log('MCO API DEBUG: Successfully retrieved snapshot data for /config endpoint.');
+        return new WP_REST_Response($snapshot_data, 200);
     }
 }
 
@@ -825,12 +831,12 @@ if (!function_exists('mco_api_notify_admin')) {
         $full_message .= "Message:\n{$message}\n\n";
         $full_message .= "Context:\n" . print_r($context, true);
 
-        if (wp_mail(get_option('admin_email'), "[MCO App] {$subject}", $full_message)) {
-            error_log("MCO NOTIFY: Admin notification sent for: {$subject}.");
-            return new WP_REST_Response(['success' => true, 'message' => 'Notification sent to admin.'], 200);
+        if (wp_mail(get_option('admin_email'), "[MCO App] {$email_subject}", $full_message)) { // Use $email_subject
+            error_log("MCO NOTIFY: Email sent from {$user_email} (Category: {$subject_category}).");
+            return new WP_REST_Response(['success' => true, 'message' => 'Feedback sent!'], 200);
         } else {
-            error_log("MCO NOTIFY ERR: Failed to send admin notification for: {$subject}.");
-            return new WP_Error('mail_fail', 'Failed to send admin notification.', ['status' => 500]);
+            error_log("MCO NOTIFY ERR: Failed to send email from {$user_email}.");
+            return new WP_Error('mail_fail', 'Failed to send email. Check SMTP settings.', ['status' => 500]);
         }
     }
 }
