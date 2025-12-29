@@ -294,25 +294,38 @@ if (!function_exists('mco_get_geo_primary_link_info')) {
             'ae' => 'Amazon.ae'
         ];
         
-        // 1. Prioritize override geo key if provided and valid
+        $chosen_key = null;
+
+        // 1. Prioritize override geo key from URL parameter (React app navigation)
         if (!empty($override_geo_key) && isset($links[$override_geo_key]) && !empty($links[$override_geo_key])) {
-            return [ 
-                'key' => $override_geo_key, 
-                'url' => $links[$override_geo_key], 
-                'domainName' => $domainMap[$override_geo_key] ?? 'Amazon.com' 
-            ];
+            $chosen_key = $override_geo_key;
+        } 
+        
+        // 2. If no override from URL, check for client-side preference via cookie
+        if (empty($chosen_key) && isset($_COOKIE['mco_wp_geo_pref'])) {
+            $cookie_geo_key = sanitize_text_field($_COOKIE['mco_wp_geo_pref']);
+            if (isset($links[$cookie_geo_key]) && !empty($links[$cookie_geo_key])) {
+                $chosen_key = $cookie_geo_key;
+            }
         }
 
-        // 2. Fallback to fixed priority (in, ae, com)
-        $priority = ['in', 'ae', 'com'];
-        foreach ($priority as $key) {
-            if (isset($links[$key]) && !empty($links[$key])) {
-                return [ 
-                    'key' => $key, 
-                    'url' => $links[$key], 
-                    'domainName' => $domainMap[$key] 
-                ];
+        // 3. Fallback to React app's default priority if no explicit key is found
+        if (empty($chosen_key)) {
+            $fallback_priority = ['com', 'in', 'ae']; // Matches React app's fallback order
+            foreach ($fallback_priority as $key) {
+                if (isset($links[$key]) && !empty($links[$key])) {
+                    $chosen_key = $key;
+                    break;
+                }
             }
+        }
+        
+        if (!empty($chosen_key)) {
+            return [ 
+                'key' => $chosen_key, 
+                'url' => $links[$chosen_key], 
+                'domainName' => $domainMap[$chosen_key] ?? 'Amazon.com' 
+            ];
         }
         
         return null; // No valid links found
@@ -1062,6 +1075,31 @@ if (!function_exists('mco_set_react_app_base_url_for_js')) {
     }
     // Use wp_footer to ensure mco_get_exam_app_url() has been evaluated in the request.
     add_action('wp_footer', 'mco_set_react_app_base_url_for_js');
+}
+
+/**
+ * --- INJECT CLIENT-SIDE GEO PREFERENCE SCRIPT ---
+ * Reads localStorage.mco_preferred_geo_key (set by React app) and saves it to a session cookie.
+ * This allows PHP to retrieve the client's geo preference on direct WordPress page loads.
+ */
+if (!function_exists('mco_inject_geo_preference_script')) {
+    function mco_inject_geo_preference_script() {
+        ?>
+        <script>
+            (function() {
+                const preferredGeoKey = localStorage.getItem('mco_preferred_geo_key');
+                if (preferredGeoKey) {
+                    // Set a session cookie (expires when browser closes)
+                    document.cookie = `mco_wp_geo_pref=${preferredGeoKey}; path=/; SameSite=Lax`;
+                } else {
+                    // Clear the cookie if no preference is stored in localStorage
+                    document.cookie = `mco_wp_geo_pref=; Max-Age=0; path=/; SameSite=Lax`;
+                }
+            })();
+        </script>
+        <?php
+    }
+    add_action('wp_footer', 'mco_inject_geo_preference_script');
 }
 
 

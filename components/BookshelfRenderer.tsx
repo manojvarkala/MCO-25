@@ -32,6 +32,8 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
 
     // Try preferred geo link first
     if (links[preferredKey] && links[preferredKey].trim() !== '') {
+        // Store the preferred key in localStorage
+        localStorage.setItem('mco_preferred_geo_key', preferredKey);
         return { url: links[preferredKey], domainName: preferredDomainName, key: preferredKey };
     }
 
@@ -43,9 +45,13 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
             let domainName = 'Amazon.com';
             if (key === 'in') domainName = 'Amazon.in';
             if (key === 'ae') domainName = 'Amazon.ae';
+            // Store the fallback key in localStorage
+            localStorage.setItem('mco_preferred_geo_key', key);
             return { url: links[key], domainName, key };
         }
     }
+    // If no link is found, ensure localStorage is cleared or set to a default
+    localStorage.removeItem('mco_preferred_geo_key');
     return null;
 };
 
