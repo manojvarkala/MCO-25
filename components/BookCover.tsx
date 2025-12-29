@@ -166,8 +166,9 @@ const MCOStyleA: FC<{ book: BookCoverProps['book']; color: { bg: string; text: s
     );
 };
 
-const MCOStyleB: FC<{ book: BookCoverProps['book']; color: { bg: string; text: string; accent: string; } }> = ({ book, color }) => (
-    <div style={{
+const MCOStyleB: FC<{ book: BookCoverProps['book']; color: { bg: string; text: string; accent: string; } }> = ({ book, color }) => {
+    return (
+        <div style={{
             position: 'relative',
             width: '100%',
             height: '100%',
