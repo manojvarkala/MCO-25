@@ -153,7 +153,7 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                     )
                                 })
                             ) : (
-                                <span className="mco-book-card-sidebar__button" style={{ cursor: 'default', background: '#e2e8f0', color: '#64748b', border: '1px solid #cbd5e1' }}>Coming Soon</span>
+                                <span className="mco-book-card-sidebar__button" style={{ cursor: 'default', background: '#e2e8f0', color: '#64748b', border: '1px solid #cbd5e1' }}>Links Coming Soon</span>
                             )}
                         </div>
                     </div>

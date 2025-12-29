@@ -499,17 +499,55 @@ if (!function_exists('mco_book_showcase_shortcode')) {
         </div>
         
         <script type="module">
-            import React from 'react';
-            import ReactDOM from 'react-dom/client';
-            import BookshelfRenderer from '/components/BookshelfRenderer.tsx'; // Adjust path if necessary
+            (async () => {
+                // Ensure React and ReactDOM are available globally
+                if (typeof window.React === 'undefined' || typeof window.ReactDOM === 'undefined') {
+                    const loadScript = (src) => new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = src;
+                        script.type = 'module';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                    try {
+                        // Load React and ReactDOM from esm.sh
+                        await Promise.all([
+                            loadScript('https://esm.sh/react@18.2.0?bundle'),
+                            loadScript('https://esm.sh/react-dom@18.2.0/client?bundle')
+                        ]);
+                        console.log("React and ReactDOM loaded dynamically for shortcode.");
+                    } catch (error) {
+                        console.error("Failed to load React/ReactDOM dynamically for shortcode:", error);
+                        const container = document.getElementById('<?php echo $unique_id; ?>');
+                        if (container) {
+                            container.innerHTML = '<p style="color:red;">Error: React rendering components could not be loaded. Check console for details.</p>';
+                        }
+                        return;
+                    }
+                }
 
-            const container = document.getElementById('<?php echo $unique_id; ?>');
-            if (container) {
-                const props = JSON.parse(container.dataset.props || '{}');
-                // The PHP passes an array of books directly in `props`
-                const root = ReactDOM.createRoot(container);
-                root.render(React.createElement(BookshelfRenderer, { books: props, type: 'showcase' }));
-            }
+                // Construct the base URL for the built React app, assuming components are in /assets/
+                const appBaseUrl = window.mcoReactAppBaseUrl || '<?php echo esc_url(mco_get_exam_app_url()); ?>';
+                const componentPath = `${appBaseUrl.replace(/\/$/, '')}/assets/BookshelfRenderer.js`; // FIX: Changed path to /assets/
+
+                try {
+                    const module = await import(componentPath);
+                    const BookshelfRenderer = module.default;
+                    const container = document.getElementById('<?php echo $unique_id; ?>');
+                    if (container) {
+                        const props = JSON.parse(container.dataset.props || '{}');
+                        const root = window.ReactDOM.createRoot(container);
+                        root.render(React.createElement(BookshelfRenderer, { books: props, type: 'showcase' }));
+                    }
+                } catch (error) {
+                    console.error("Failed to load or render BookshelfRenderer:", error);
+                    const container = document.getElementById('<?php echo $unique_id; ?>');
+                    if (container) {
+                        container.innerHTML = `<p style="color:red;">Error loading books: ${error.message}. Please check console for details.</p>`;
+                    }
+                }
+            })();
         </script>
         <div data-props='<?php echo esc_attr($books_json); ?>' id="<?php echo $unique_id; ?>" class="mco-book-grid"></div>
         <?php
@@ -544,16 +582,54 @@ if (!function_exists('mco_render_single_book_content')) {
         </div>
 
         <script type="module">
-            import React from 'react';
-            import ReactDOM from 'react-dom/client';
-            import BookshelfRenderer from '/components/BookshelfRenderer.tsx'; // Adjust path if necessary
+            (async () => {
+                // Ensure React and ReactDOM are available globally
+                if (typeof window.React === 'undefined' || typeof window.ReactDOM === 'undefined') {
+                    const loadScript = (src) => new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = src;
+                        script.type = 'module';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
 
-            const container = document.getElementById('<?php echo $unique_id; ?>');
-            if (container) {
-                const props = JSON.parse(container.dataset.props || '{}');
-                const root = ReactDOM.createRoot(container);
-                root.render(React.createElement(BookshelfRenderer, { books: [props], type: 'single' }));
-            }
+                    try {
+                        await Promise.all([
+                            loadScript('https://esm.sh/react@18.2.0?bundle'),
+                            loadScript('https://esm.sh/react-dom@18.2.0/client?bundle')
+                        ]);
+                        console.log("React and ReactDOM loaded dynamically for single book.");
+                    } catch (error) {
+                        console.error("Failed to load React/ReactDOM dynamically for single book:", error);
+                        const container = document.getElementById('<?php echo $unique_id; ?>');
+                        if (container) {
+                            container.innerHTML = '<p style="color:red;">Error: React rendering components could not be loaded. Check console for details.</p>';
+                        }
+                        return;
+                    }
+                }
+
+                const appBaseUrl = window.mcoReactAppBaseUrl || '<?php echo esc_url(mco_get_exam_app_url()); ?>';
+                const componentPath = `${appBaseUrl.replace(/\/$/, '')}/assets/BookshelfRenderer.js`; // FIX: Changed path to /assets/
+
+                try {
+                    const module = await import(componentPath);
+                    const BookshelfRenderer = module.default;
+                    const container = document.getElementById('<?php echo $unique_id; ?>');
+                    if (container) {
+                        const props = JSON.parse(container.dataset.props || '{}');
+                        const root = window.ReactDOM.createRoot(container);
+                        root.render(React.createElement(BookshelfRenderer, { books: [props], type: 'single' }));
+                    }
+                } catch (error) {
+                    console.error("Failed to load or render BookshelfRenderer (single book):", error);
+                    const container = document.getElementById('<?php echo $unique_id; ?>');
+                    if (container) {
+                        container.innerHTML = `<p style="color:red;">Error loading single book: ${error.message}. Please check console for details.</p>`;
+                    }
+                }
+            })();
         </script>
         <div data-props='<?php echo esc_attr($book_json); ?>' id="<?php echo $unique_id; ?>"></div>
         <?php
@@ -574,11 +650,12 @@ if (!function_exists('mco_single_book_shortcode')) {
         $book = current(array_filter($config_data['suggestedBooks'] ?? [], function($b) use ($book_id_meta) { return ($b['id'] ?? '') === $book_id_meta; }));
 
         if (!$book) {
+            // If book not found in config_data, create a fallback structure from post data
             $book = [
-                'id' => $book_id_meta,
+                'id' => $book_id_meta ?: 'book-'.$post->ID, // Ensure an ID
                 'title' => get_the_title($post),
                 'description' => $post->post_content,
-                'thumbnailUrl' => get_post_meta($post->ID, '_mco_thumbnail_url', true),
+                'thumbnailUrl' => get_post_meta($post->ID, '_mco_thumbnail_url', true) ?: get_the_post_thumbnail_url($post->ID, 'large'),
                 'permalink' => get_permalink($post->ID),
                 'affiliateLinks' => [
                     'com' => get_post_meta($post->ID, '_mco_link_com', true),
@@ -616,16 +693,54 @@ if (!function_exists('mco_render_single_program_content')) {
         </div>
 
         <script type="module">
-            import React from 'react';
-            import ReactDOM from 'react-dom/client';
-            import ProgramRenderer from '/components/ProgramRenderer.tsx'; // New component to create
+            (async () => {
+                // Ensure React and ReactDOM are available globally
+                if (typeof window.React === 'undefined' || typeof window.ReactDOM === 'undefined') {
+                    const loadScript = (src) => new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = src;
+                        script.type = 'module';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
 
-            const container = document.getElementById('<?php echo $unique_id; ?>');
-            if (container) {
-                const props = JSON.parse(container.dataset.props || '{}');
-                const root = ReactDOM.createRoot(container);
-                root.render(React.createElement(ProgramRenderer, { program: props }));
-            }
+                    try {
+                        await Promise.all([
+                            loadScript('https://esm.sh/react@18.2.0?bundle'),
+                            loadScript('https://esm.sh/react-dom@18.2.0/client?bundle')
+                        ]);
+                        console.log("React and ReactDOM loaded dynamically for single program.");
+                    } catch (error) {
+                        console.error("Failed to load React/ReactDOM dynamically for single program:", error);
+                        const container = document.getElementById('<?php echo $unique_id; ?>');
+                        if (container) {
+                            container.innerHTML = '<p style="color:red;">Error: React rendering components could not be loaded. Check console for details.</p>';
+                        }
+                        return;
+                    }
+                }
+
+                const appBaseUrl = window.mcoReactAppBaseUrl || '<?php echo esc_url(mco_get_exam_app_url()); ?>';
+                const componentPath = `${appBaseUrl.replace(/\/$/, '')}/assets/ProgramRenderer.js`; // FIX: Changed path to /assets/
+
+                try {
+                    const module = await import(componentPath);
+                    const ProgramRenderer = module.default;
+                    const container = document.getElementById('<?php echo $unique_id; ?>');
+                    if (container) {
+                        const props = JSON.parse(container.dataset.props || '{}');
+                        const root = window.ReactDOM.createRoot(container);
+                        root.render(React.createElement(ProgramRenderer, { program: props }));
+                    }
+                } catch (error) {
+                    console.error("Failed to load or render ProgramRenderer (single program):", error);
+                    const container = document.getElementById('<?php echo $unique_id; ?>');
+                    if (container) {
+                        container.innerHTML = `<p style="color:red;">Error loading single program: ${error.message}. Please check console for details.</p>`;
+                    }
+                }
+            })();
         </script>
         <div data-props='<?php echo esc_attr($program_json); ?>' id="<?php echo $unique_id; ?>"></div>
         <?php
@@ -735,7 +850,7 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
             $book['permalink'] = $book['permalink'] ?? '';
             $book['affiliateLinks'] = $book['affiliateLinks'] ?? ['com' => '', 'in' => '', 'ae' => ''];
             return $book;
-        }, (array)$random_books)); // Cast to array to prevent error if $random_books is not an array
+        }, (array)$random_books)); // Cast to array to prevent error if $raw_books is not an array
         
         $unique_sidebar_id = 'mco-sidebar-books-root-' . uniqid();
         ?>
@@ -753,17 +868,54 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
         </div>
 
         <script type="module">
-            import React from 'react';
-            import ReactDOM from 'react-dom/client';
-            import BookshelfRenderer from '/components/BookshelfRenderer.tsx'; // Adjust path if necessary
+            (async () => {
+                // Ensure React and ReactDOM are available globally
+                if (typeof window.React === 'undefined' || typeof window.ReactDOM === 'undefined') {
+                    const loadScript = (src) => new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = src;
+                        script.type = 'module';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
 
-            const container = document.getElementById('<?php echo $unique_sidebar_id; ?>');
-            if (container) {
-                const props = JSON.parse(container.dataset.props || '{}');
-                // The PHP passes an array of books directly in `props`
-                const root = ReactDOM.createRoot(container);
-                root.render(React.createElement(BookshelfRenderer, { books: props, type: 'sidebar' }));
-            }
+                    try {
+                        await Promise.all([
+                            loadScript('https://esm.sh/react@18.2.0?bundle'),
+                            loadScript('https://esm.sh/react-dom@18.2.0/client?bundle')
+                        ]);
+                        console.log("React and ReactDOM loaded dynamically for sidebar.");
+                    } catch (error) {
+                        console.error("Failed to load React/ReactDOM dynamically for sidebar:", error);
+                        const container = document.getElementById('<?php echo $unique_sidebar_id; ?>');
+                        if (container) {
+                            container.innerHTML = '<p style="color:red;">Error: React rendering components could not be loaded. Check console for details.</p>';
+                        }
+                        return;
+                    }
+                }
+            
+                const appBaseUrl = window.mcoReactAppBaseUrl || '<?php echo esc_url(mco_get_exam_app_url()); ?>';
+                const componentPath = `${appBaseUrl.replace(/\/$/, '')}/assets/BookshelfRenderer.js`; // FIX: Changed path to /assets/
+
+                try {
+                    const module = await import(componentPath);
+                    const BookshelfRenderer = module.default;
+                    const container = document.getElementById('<?php echo $unique_sidebar_id; ?>');
+                    if (container) {
+                        const props = JSON.parse(container.dataset.props || '{}');
+                        const root = window.ReactDOM.createRoot(container);
+                        root.render(React.createElement(BookshelfRenderer, { books: props, type: 'sidebar' }));
+                    }
+                } catch (error) {
+                    console.error("Failed to load or render BookshelfRenderer (sidebar):", error);
+                    const container = document.getElementById('<?php echo $unique_sidebar_id; ?>');
+                    if (container) {
+                        container.innerHTML = `<p style="color:red;">Error loading sidebar books: ${error.message}. Please check console for details.</p>`;
+                    }
+                }
+            })();
         </script>
         <div data-props='<?php echo esc_attr($sidebar_books_json); ?>' id="<?php echo $unique_sidebar_id; ?>" class="mco-study-hall-sidebar__grid"></div>
         <?php
@@ -823,6 +975,25 @@ if (!function_exists('mco_redirect_to_app_with_token')) {
             '<div id="mco-app-root"><div class="mco-form-container" style="text-align:center;"><p>Redirecting to exam portal...</p><a href="' . esc_url($redirect_url) . '" class="mco-button">Click here if not redirected</a></div></div>';
     }
 }
+
+/**
+ * --- GLOBAL JS VARIABLE INJECTION ---
+ * Injects the React App's base URL into the global JavaScript scope.
+ * This is crucial for dynamically loading React components within shortcodes,
+ * allowing them to locate their built assets relative to the app's root.
+ */
+if (!function_exists('mco_set_react_app_base_url_for_js')) {
+    function mco_set_react_app_base_url_for_js() {
+        $app_url = mco_get_exam_app_url();
+        if (!empty($app_url)) {
+            // Ensure the URL does not end with a slash for consistent path construction
+            echo '<script>window.mcoReactAppBaseUrl = "' . rtrim(esc_url($app_url), '/') . '";</script>' . "\n";
+        }
+    }
+    // Use wp_footer to ensure mco_get_exam_app_url() has been evaluated in the request.
+    add_action('wp_footer', 'mco_set_react_app_base_url_for_js');
+}
+
 
 // --- SHORTCODE REGISTRATION ---
 add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');

@@ -1,6 +1,4 @@
 
-
-
 import React, { FC } from 'react';
 import type { RecommendedBook } from '../types.ts';
 import { useAppContext } from '../context/AppContext.tsx';
