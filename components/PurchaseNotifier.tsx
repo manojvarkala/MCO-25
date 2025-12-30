@@ -27,7 +27,7 @@ export default function PurchaseNotifier() {
 <div id="mco-purchase-notifier" style="display: none; position: fixed; bottom: 1.5rem; left: 1.5rem; z-index: 9999; background-color: white; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); border: 1px solid #e5e7eb; width: 100%; max-width: 320px; font-family: sans-serif;">
     <div style="display: flex; align-items: flex-start;">
         <div style="background-color: #dcfce7; padding: 0.5rem; border-radius: 9999px; margin-right: 1rem;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 0 0 0 2-1.61L23 6H6"/></svg>
         </div>
         <div style="flex: 1;">
             <p id="mco-notifier-text" style="font-weight: bold; color: #1f2937; margin: 0;"></p>
