@@ -1,7 +1,8 @@
+
 import React from 'react';
 import toast from 'react-hot-toast';
 import { Copy } from 'lucide-react';
-import { useAppContext } from './AppContext.tsx';
+import { useAppContext } from '../context/AppContext.tsx';
 
 export default function PurchaseNotifier() {
     const { activeOrg } = useAppContext();
