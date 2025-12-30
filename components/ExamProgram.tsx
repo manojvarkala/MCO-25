@@ -1,5 +1,4 @@
 
-
 import React, { FC, useMemo, useState, useEffect } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useParams, useNavigate, Link } from "react-router-dom";
@@ -8,7 +7,7 @@ import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { RecommendedBook, TestResult } from '../types.ts';
 import { BookOpen, ChevronLeft, ChevronRight, Edit } from 'lucide-react';
-import { BookCover } from '../assets/BookCover.tsx'; // Named import
+import BookCover from '../assets/BookCover.tsx'; // Default import
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';
@@ -382,7 +381,7 @@ const ExamProgram: FC = () => {
                     <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                         {recommendedBooksForProgram.map(book => {
-                            const linkData = getGeoAffiliateLink(book, userGeoCountryCode); // Pass userGeoCountryCode
+                            const linkData = getGeoAffiliateLink(book as RecommendedBook, userGeoCountryCode); // Pass userGeoCountryCode
                             if (!linkData) return null;
                             return (
                                 <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full flex-shrink-0 flex flex-col transform hover:-translate-y-1 transition-transform duration-200">

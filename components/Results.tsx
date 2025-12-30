@@ -1,5 +1,4 @@
 
-
 import React, { FC, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useParams, useNavigate } from "react-router-dom";
@@ -13,7 +12,7 @@ import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-import { BookCover } from '../assets/BookCover.tsx'; // Named import
+import BookCover from '../assets/BookCover.tsx'; // Default import
 import ShareableResult from './ShareableResult.tsx';
 import ShareButtons from './ShareButtons.tsx';
 
@@ -229,6 +228,7 @@ const Results: FC = () => {
 
                 Please provide your expert feedback below.
             `;
+            // FIX: Corrected prompt to be passed in `contents` property of generateContentParameters object
             const feedback = await googleSheetsService.getAIFeedback(prompt, token);
             
             if (feedback.startsWith("We're sorry")) {
@@ -495,7 +495,7 @@ const Results: FC = () => {
                     <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                         {recommendedBooksForExam.map(book => {
-                            const linkData = getGeoAffiliateLink(book, userGeoCountryCode); // Pass userGeoCountryCode
+                            const linkData = getGeoAffiliateLink(book as RecommendedBook, userGeoCountryCode); // Pass userGeoCountryCode
                             if (!linkData) return null;
                             return (
                                 <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full flex-shrink-0 flex flex-col transform hover:-translate-y-1 transition-transform duration-200">

@@ -1,4 +1,5 @@
 
+
 import React, { FC } from 'react';
 import type { RecommendedBook } from '../types.ts';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -235,8 +236,8 @@ const McoProceduralCover: FC<{ book: BookCoverProps['book'] }> = ({ book }) => {
 
 
 // --- Main BookCover Component ---
-// FIX: Changed to a named export to resolve "Module has no default export" error.
-export const BookCover: FC<BookCoverProps> = ({ book, className }) => {
+// FIX: Changed to a default export to align with component import patterns and resolve module export errors.
+const BookCover: FC<BookCoverProps> = ({ book, className }) => {
   const { activeOrg } = useAppContext();
 
   if (typeof book.thumbnailUrl === 'string' && book.thumbnailUrl) {
@@ -258,4 +259,4 @@ export const BookCover: FC<BookCoverProps> = ({ book, className }) => {
   );
 };
 
-// No default export as it is now a named export.
+export default BookCover;

@@ -1,4 +1,5 @@
 
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 // FIX: Replaced specific named imports from 'react-router-dom' with a namespace import to resolve module export errors.
@@ -51,6 +52,8 @@ import AdminToolbar from './components/AdminToolbar.tsx';
 import DebugSidebar from './components/DebugSidebar.tsx';
 import VolunteerOnboarding from './components/VolunteerOnboarding.tsx';
 import BetaRegistration from './components/BetaRegistration.tsx';
+import WooCommerceStyling from './components/WooCommerceStyling.tsx';
+import PurchaseNotifier from './components/PurchaseNotifier.tsx'; // Notifier script component
 import { getApiBaseUrl } from './services/apiConfig.ts';
 
 // Helper component for routes requiring authentication
@@ -66,7 +69,6 @@ const ProtectedRoute: FC<{ children: ReactNode; adminOnly?: boolean }> = ({ chil
     }
     return <>{children}</>;
 };
-
 
 const AppContent: FC = () => {
     const { user, isMasquerading, isEffectivelyAdmin, logout } = useAuth();
@@ -187,4 +189,110 @@ const AppContent: FC = () => {
                             <ProtectedRoute><Certificate /></ProtectedRoute>
                         } />
 
+                        {/* Admin Routes */}
+                        <ReactRouter.Route path="/admin/*" element={
+                            <ProtectedRoute adminOnly><AdminLayout>
+                                <ReactRouter.Routes>
+                                    <ReactRouter.Route path="/" element={<Admin />} />
+                                    <ReactRouter.Route path="/analytics" element={<SalesAnalytics />} />
+                                    <ReactRouter.Route path="/exam-analytics" element={<ExamAnalytics />} />
+                                    <ReactRouter.Route path="/beta-analytics" element={<BetaTesterAnalytics />} />
+                                    <ReactRouter.Route path="/programs" element={<ExamProgramCustomizer />} />
+                                    <ReactRouter.Route path="/products" element={<ProductCustomizer />} />
+                                    <ReactRouter.Route path="/content-engine" element={<ContentEngine />} />
+                                    <ReactRouter.Route path="/integration" element={<Integration />} />
+                                    <ReactRouter.Route path="/history" element={<DevelopmentHistory />} />
+                                    <ReactRouter.Route path="/handbook" element={<Handbook />} />
+                                    <ReactRouter.Route path="/woo-styling" element={<WooCommerceStyling />} />
+                                    <ReactRouter.Route path="/purchase-notifier" element={<PurchaseNotifier />} />
+                                </ReactRouter.Routes>
+                            </AdminLayout></ProtectedRoute>
+                        } />
+
+                        {/* Public Documentation & Info Pages */}
+                        <ReactRouter.Route path="/instructions" element={<Instructions />} />
+                        <ReactRouter.Route path="/user-guide" element={<UserGuide />} />
+                        <ReactRouter.Route path="/about-us" element={<AboutUs />} />
+                        <ReactRouter.Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                        <ReactRouter.Route path="/refund-policy" element={<RefundPolicy />} />
+                        <ReactRouter.Route path="/terms-of-service" element={<TermsOfService />} />
+                        <ReactRouter.Route path="/pricing" element={<Pricing />} />
+                        <ReactRouter.Route path="/feedback" element={<Feedback />} />
+                        <ReactRouter.Route path="/faq" element={<FAQ />} />
+
+                        {/* General Content Pages */}
+                        <ReactRouter.Route path="/dashboard" element={<SidebarLayout><Dashboard /></SidebarLayout>} />
+                        <ReactRouter.Route path="/bookstore" element={<SidebarLayout><BookStore /></SidebarLayout>} />
+                        <ReactRouter.Route path="/program/:programId" element={<SidebarLayout><ExamProgram /></SidebarLayout>} />
+                        <ReactRouter.Route path="/results/:testId" element={<SidebarLayout><Results /></SidebarLayout>} />
+                        <ReactRouter.Route path="/profile" element={<SidebarLayout><Profile /></SidebarLayout>} />
                         
+                        {/* Catch-all for unknown routes (optional) */}
+                        <ReactRouter.Route path="*" element={<ReactRouter.Navigate to="/" replace />} />
+
+                    </ReactRouter.Routes>
+                </main>
+            </div>
+            {!isTestPage && <Footer />}
+            <Toaster
+                position="top-right"
+                reverseOrder={false}
+                toastOptions={{
+                    duration: 3000,
+                    style: {
+                        background: 'rgb(var(--color-card-rgb))',
+                        color: 'rgb(var(--color-text-strong-rgb))',
+                        border: '1px solid rgb(var(--color-border-rgb))'
+                    },
+                    success: {
+                        iconTheme: {
+                            primary: 'rgb(var(--color-primary-rgb))',
+                            secondary: 'rgb(var(--color-background-rgb))',
+                        },
+                    },
+                    error: {
+                        iconTheme: {
+                            primary: 'rgb(239, 68, 68)',
+                            secondary: 'rgb(var(--color-background-rgb))',
+                        },
+                    },
+                }}
+            >
+                {(t) => (
+                    <ToastBar toast={t}>
+                        {({ icon, message }) => (
+                            <>
+                                {icon}
+                                {message}
+                                {t.type !== 'loading' && (
+                                    <button onClick={() => toast.dismiss(t.id)} className="ml-2 text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))]">
+                                        <X size={16} />
+                                    </button>
+                                )}
+                            </>
+                        )}
+                    </ToastBar>
+                )}
+            </Toaster>
+            {isEffectivelyAdmin && !isTestPage && <AdminToolbar onToggleDebug={() => setIsDebugSidebarOpen(true)} />}
+            {isEffectivelyAdmin && !isTestPage && (
+                <DebugSidebar isOpen={isDebugSidebarOpen} onClose={() => setIsDebugSidebarOpen(false)} />
+            )}
+            {!isTestPage && <LivePurchaseNotification />}
+        </div>
+    );
+};
+
+const App: FC = () => {
+  return (
+    <ReactRouter.BrowserRouter>
+      <AuthProvider>
+        <AppProvider>
+          <AppContent />
+        </AppProvider>
+      </AuthProvider>
+    </ReactRouter.BrowserRouter>
+  );
+};
+
+export default App;

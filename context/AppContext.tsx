@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
 import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook, Theme, FeedbackContext, AppContextType } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -155,7 +154,8 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     localStorage.removeItem('feedbackRequiredForExam');
   };
 
-  const setProcessedConfig = (config: any, processedData: any) => {
+  // Helper to set all relevant config states
+  const applyConfigToState = useCallback((config: any, processedData: any) => {
     if (processedData && processedData.processedOrgs && processedData.processedOrgs.length > 0) {
       setOrganizations(processedData.processedOrgs);
       setExamPrices(config.examPrices || null);
@@ -181,7 +181,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       return true;
     }
     return false;
-  };
+  }, [setOrganizations, setExamPrices, setSuggestedBooks, setActiveOrg, setAvailableThemes, setActiveThemeState, setSubscriptionsEnabled, setBundlesEnabled, setPurchaseNotifierEnabled, setPurchaseNotifierDelay, setPurchaseNotifierMinGap, setPurchaseNotifierMaxGap]); // Dependencies for applyConfigToState
 
     const fetchGeoLocation = useCallback(async () => {
         const GEO_CACHE_KEY = 'mco_user_geo_country_code';
@@ -217,17 +217,103 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     }, []);
 
+  const loadAppConfig = useCallback(async (forceRefresh = false) => {
+    setIsInitializing(true);
+    let configFound = false;
+    try {
+        const tenantConfig = getTenantConfig();
+        const cacheKey = `appConfigCache_${tenantConfig.apiBaseUrl}`;
+
+        let cachedConfig = null;
+        if (!forceRefresh) {
+            try {
+                const storedConfig = localStorage.getItem(cacheKey);
+                if (storedConfig) {
+                    cachedConfig = JSON.parse(storedConfig);
+                    // Process and set cached config immediately for faster UI
+                    const processed = processConfigData(cachedConfig);
+                    if (processed) {
+                        applyConfigToState(cachedConfig, processed); // Use the helper
+                        configFound = true;
+                    }
+                }
+            } catch (e) {
+                console.warn("AppContext: Failed to parse cached config, clearing cache.", e);
+                localStorage.removeItem(cacheKey);
+            }
+        }
+
+        // Always attempt to fetch latest config from API
+        const apiUrl = tenantConfig.apiBaseUrl + '/wp-json/mco-app/v1/config';
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            // Attempt to load from static JSON file if API fails and no config was loaded yet.
+            if (!configFound) {
+                const staticConfigUrl = tenantConfig.staticConfigPath;
+                console.warn(`AppContext: API failed, attempting to load static config from ${staticConfigUrl}`);
+                const staticResponse = await fetch(staticConfigUrl);
+                if (!staticResponse.ok) {
+                    throw new Error(`API and static config failed: ${response.statusText} / ${staticResponse.statusText}`);
+                }
+                const staticConfig = await staticResponse.json();
+                const processedStaticConfig = processConfigData(staticConfig);
+                if (processedStaticConfig) {
+                    applyConfigToState(staticConfig, processedStaticConfig);
+                    configFound = true;
+                    toast.success("Loaded content from local cache. Minor delay in updates possible.");
+                } else {
+                    throw new Error("Invalid static configuration format.");
+                }
+            } else {
+                // If API failed but we already loaded from cache, just log it.
+                console.warn(`AppContext: API update failed but cached config is active. Error: ${response.statusText}`);
+            }
+        } else {
+            const liveConfig = await response.json();
+            const processedLiveConfig = processConfigData(liveConfig);
+            if (processedLiveConfig) {
+                let shouldUpdate = true;
+                // If cached config exists and has a version, compare.
+                if (cachedConfig?.version && liveConfig.version) {
+                    shouldUpdate = liveConfig.version > cachedConfig.version;
+                }
+
+                if (shouldUpdate) {
+                    applyConfigToState(liveConfig, processedLiveConfig); // Use the helper
+                    localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
+                    configFound = true;
+                    if (cachedConfig && liveConfig.version && cachedConfig.version && liveConfig.version > cachedConfig.version) {
+                         toast.success("Content and features have been updated.");
+                    }
+                }
+            } else {
+                throw new Error("Invalid app configuration format from API.");
+            }
+        }
+    } catch (error: any) {
+        console.error("AppContext: Error loading app configuration:", error);
+        if (!configFound) { // Only show global error if no config could be loaded at all
+             toast.error(`Failed to load app configuration: ${error.message}`, { duration: 8000 });
+             // Clear activeOrg and orgs to trigger the "Connection Issue" fallback in App.tsx
+             setOrganizations([]);
+             setActiveOrg(null);
+        }
+    } finally {
+        setIsInitializing(false);
+    }
+}, [applyConfigToState]); // Dependencies for loadAppConfig
+
   useEffect(() => {
     loadAppConfig();
     fetchGeoLocation(); // Fetch geo location on app load
     googleSheetsService.recordSiteHit().then(data => {
         if (data && data.count) setHitCount(data.count);
     }).catch(() => {});
-  }, [fetchGeoLocation]);
+  }, [fetchGeoLocation, loadAppConfig]); // Add loadAppConfig to dependencies here
 
   const refreshConfig = async () => {
       setIsInitializing(true);
-      await loadAppConfig(true);
+      await loadAppConfig(true); // Force refresh
   };
 
   const setActiveOrgById = useCallback((orgId: string) => {

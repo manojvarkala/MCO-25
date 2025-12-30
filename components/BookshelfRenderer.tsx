@@ -1,7 +1,7 @@
 
 
 import React, { FC, useMemo } from 'react';
-import { BookCover } from './BookCover.tsx';
+import BookCover from './BookCover.tsx';
 import type { RecommendedBook } from '../types.ts';
 import { ShoppingCart, BookUp } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
