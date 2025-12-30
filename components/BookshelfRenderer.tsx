@@ -104,14 +104,13 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                         target="_blank" 
                                         rel="noopener noreferrer"
                                         className={`mco-book-btn ${buttonClass}`}
-                                        style={{ minWidth: '150px' }}
                                     >
                                         <BookUp size={16} /> Buy on {store.name}
                                     </a>
                                 )
                             })
                         ) : (
-                            <span className="mco-book-btn" style={{ cursor: 'default', background: '#f1f5f9', color: '#94a3b8', border: '1px solid #cbd5e1', minWidth: '150px' }}>Links Coming Soon</span>
+                            <span className="mco-book-btn" style={{ cursor: 'default', background: '#f1f5f9', color: '#94a3b8', border: '1px solid #cbd5e1' }}>Soon</span>
                         )}
                     </div>
                 </div>
@@ -127,17 +126,6 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
             { key: 'ae' as const, name: 'Amazon.ae', url: book.affiliateLinks?.ae }
         ].filter(store => store.url && store.url.trim() !== '');
 
-        const permalinkWithGeo = useMemo(() => {
-            if (!book.permalink) return '#';
-            const linkData = getGeoAffiliateLink(book);
-            if (linkData) {
-                const url = new URL(book.permalink);
-                url.searchParams.set('geo', linkData.key);
-                return url.toString();
-            }
-            return book.permalink;
-        }, [book.permalink, book.affiliateLinks]);
-
         const desc = (book.description || '').split(' ').slice(0, 20).join(' ') + '...';
         
         if (type === 'sidebar') {
@@ -147,33 +135,20 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                         <BookCover book={book} className="w-full h-full" />
                     </div>
                     <div className="mco-book-card-sidebar__content">
-                        {book.permalink ? (
-                            <a href={permalinkWithGeo} target="_blank" rel="noopener noreferrer" className="group">
-                                <h4 className="mco-book-card-sidebar__title group-hover:text-cyan-600 transition-colors">{decodeHtmlEntities(book.title)}</h4>
-                            </a>
-                        ) : (
-                            <h4 className="mco-book-card-sidebar__title">{decodeHtmlEntities(book.title)}</h4>
-                        )}
+                        <h4 className="mco-book-card-sidebar__title">{decodeHtmlEntities(book.title)}</h4>
                         <div className="mco-store-buttons-sidebar">
                             {allStores.length > 0 ? (
                                 allStores.map(store => {
                                     const isPrimary = store.key === primaryLinkInfo?.key;
                                     const buttonClass = isPrimary ? 'mco-book-card-sidebar__button mco-book-card-sidebar__button--primary' : 'mco-book-card-sidebar__button mco-book-card-sidebar__button--secondary';
                                     return (
-                                        <a 
-                                            key={store.key}
-                                            href={store.url}
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className={buttonClass}
-                                            style={{ minWidth: '100px' }}
-                                        >
-                                            <BookUp size={14} /> Buy on {store.name}
+                                        <a key={store.key} href={store.url} target="_blank" rel="noopener noreferrer" className={buttonClass}>
+                                            <BookUp size={14} /> {store.name}
                                         </a>
                                     )
                                 })
                             ) : (
-                                <span className="mco-book-card-sidebar__button" style={{ cursor: 'default', background: '#e2e8f0', color: '#64748b', border: '1px solid #cbd5e1', minWidth: '100px' }}>Soon</span>
+                                <span className="mco-book-card-sidebar__button" style={{ opacity: 0.5 }}>Soon</span>
                             )}
                         </div>
                     </div>
@@ -182,17 +157,11 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
         } else {
             return (
                 <div key={book.id} className="mco-book-card">
-                    <div className="mco-book-cover mco-book-cover--showcase">
+                    <div className="mco-book-cover">
                         <BookCover book={book} className="w-full h-full" />
                     </div>
                     <div className="mco-book-card__body">
-                        {book.permalink ? (
-                            <a href={permalinkWithGeo} style={{ textDecoration: 'none' }}>
-                                <h4 className="mco-book-card__title">{decodeHtmlEntities(book.title)}</h4>
-                            </a>
-                        ) : (
-                            <h4 className="mco-book-card__title">{decodeHtmlEntities(book.title)}</h4>
-                        )}
+                        <h4 className="mco-book-card__title">{decodeHtmlEntities(book.title)}</h4>
                         <p className="mco-book-card__desc">{decodeHtmlEntities(desc)}</p>
                     </div>
                     <div className="mco-book-card__footer">
@@ -202,20 +171,13 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                     const isPrimary = store.key === primaryLinkInfo?.key;
                                     const buttonClass = isPrimary ? 'mco-book-btn mco-book-btn--primary' : 'mco-book-btn mco-book-btn--secondary';
                                     return (
-                                        <a 
-                                            key={store.key}
-                                            href={store.url}
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className={buttonClass}
-                                            style={{ minWidth: '150px' }}
-                                        >
+                                        <a key={store.key} href={store.url} target="_blank" rel="noopener noreferrer" className={buttonClass}>
                                             <ShoppingCart size={16} /> Buy on {store.name}
                                         </a>
                                     )
                                 })
                             ) : (
-                                <span className="mco-book-btn" style={{ cursor: 'default', background: '#f1f5f9', color: '#94a3b8', border: '1px solid #cbd5e1', minWidth: '150px' }}>Soon</span>
+                                <span className="mco-book-btn">Soon</span>
                             )}
                         </div>
                     </div>
@@ -224,11 +186,7 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
         }
     };
 
-    return (
-        <>
-            {books.map(renderBookCard)}
-        </>
-    );
+    return <div className="mco-book-grid">{books.map(renderBookCard)}</div>;
 };
 
 export default BookshelfRenderer;

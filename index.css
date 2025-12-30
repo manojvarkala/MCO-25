@@ -5,165 +5,33 @@
     --font-serif-display: 'Source Serif 4', serif;
     --font-script: 'Dancing Script', cursive;
 
-    /* CRITICAL: Explicit fallback variables at root to prevent blackscreen on load failure */
-    --color-primary-rgb: 6, 182, 212; /* cyan-500 */
-    --color-primary-hover-rgb: 8, 145, 178; /* cyan-600 */
-    --color-secondary-rgb: 219, 39, 119; /* pink-600 */
-    --color-secondary-hover-rgb: 190, 24, 93; /* pink-700 */
-    --color-accent-rgb: 253, 224, 71; /* yellow-400 */
-    --color-background-rgb: 241, 245, 249; /* light-gray fallback */
-    --color-card-rgb: 255, 255, 255; /* white fallback */
-    --color-muted-rgb: 226, 232, 240;
-    --color-border-rgb: 203, 213, 225;
-    --color-text-strong-rgb: 15, 23, 42;
-    --color-text-default-rgb: 51, 65, 85;
-    --color-text-muted-rgb: 100, 116, 139;
-    --color-success-rgb: 74, 222, 128;
-    --color-danger-rgb: 248, 113, 113;
+    /* Fallback variables */
+    --color-primary-rgb: 6, 182, 212;
+    --color-primary-hover-rgb: 8, 145, 178;
+    --color-secondary-rgb: 219, 39, 119;
+    --color-secondary-hover-rgb: 190, 24, 93;
+    --color-accent-rgb: 253, 224, 71;
+    --color-background-rgb: 15, 23, 42;
+    --color-card-rgb: 30, 41, 59;
+    --color-muted-rgb: 51, 65, 85;
+    --color-border-rgb: 71, 85, 105;
+    --color-text-strong-rgb: 248, 250, 252;
+    --color-text-default-rgb: 226, 232, 240;
+    --color-text-muted-rgb: 148, 163, 184;
 }
 
-/* Base colors */
 body {
     background-color: rgb(var(--color-background-rgb));
     color: rgb(var(--color-text-default-rgb));
-    margin: 0;
-    padding: 0;
 }
 
-/* ================= THEME DEFINITIONS ================= */
-
-[data-theme="default"] {
-  --color-primary-rgb: 6, 182, 212; 
-  --color-primary-hover-rgb: 8, 145, 178;
-  --color-secondary-rgb: 219, 39, 119;
-  --color-secondary-hover-rgb: 190, 24, 93;
-  --color-accent-rgb: 253, 224, 71;
-  --color-background-rgb: 15, 23, 42;
-  --color-card-rgb: 30, 41, 59;
-  --color-muted-rgb: 51, 65, 85;
-  --color-border-rgb: 71, 85, 105;
-  --color-text-strong-rgb: 248, 250, 252;
-  --color-text-default-rgb: 226, 232, 240;
-  --color-text-muted-rgb: 148, 163, 184;
-  --color-success-rgb: 74, 222, 128;
-  --color-danger-rgb: 248, 113, 113;
-}
-
-/* --- Book Card & Button Styles --- */
-
-.mco-book-card-sidebar {
-    border: 1px solid rgb(var(--color-border-rgb));
-    border-radius: 6px;
-    overflow: hidden;
-    display: flex;
-    height: 150px;
-    background: rgb(var(--color-card-rgb));
-    transition: border-color 0.2s;
-}
-
-.mco-book-card-sidebar:hover {
-    border-color: rgb(var(--color-text-muted-rgb));
-}
-
-.mco-book-card-sidebar__cover {
-    width: 80px;
-    flex-shrink: 0;
-    border-right: 1px solid rgb(var(--color-muted-rgb));
-}
-
-.mco-book-card-sidebar__cover img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.mco-book-card-sidebar__content {
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    flex-grow: 1;
-    min-width: 0;
-}
-
-.mco-book-card-sidebar__title {
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin: 0 0 8px 0;
-    line-height: 1.3;
-    color: rgb(var(--color-text-strong-rgb));
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.mco-book-card-sidebar__title:hover {
-    color: rgb(var(--color-primary-rgb));
-}
-
-.mco-store-buttons-sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: auto;
-}
-
-.mco-book-card-sidebar__button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    background: rgb(var(--color-accent-rgb));
-    color: rgb(var(--color-text-strong-rgb));
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 6px 12px;
-    border-radius: 4px;
-    text-decoration: none;
-    align-self: flex-start;
-    transition: background-color 0.2s;
-    border: 1px solid rgb(var(--color-accent-rgb));
-    min-width: 100px;
-    box-sizing: border-box;
-}
-
-/* Common button styles */
-.mco-book-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    padding: 10px;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.9rem;
-    box-sizing: border-box;
-    transition: all 0.2s;
-    min-width: 150px;
-}
-
-.mco-book-btn--primary {
-    background: rgb(var(--color-accent-rgb));
-    color: rgb(var(--color-text-strong-rgb));
-    border: 1px solid rgb(var(--color-accent-rgb));
-}
-
-.mco-book-btn--secondary {
-    background: rgb(var(--color-muted-rgb));
-    color: rgb(var(--color-text-default-rgb));
-    border: 1px solid rgb(var(--color-border-rgb));
-}
-
-/* Unified Bookstore Grid - FIXED for "3 books only" bug */
+/* Unified Bookstore Grid - Definitive Fix for Row Clipping */
 .mco-book-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 32px;
     width: 100%;
-    grid-auto-rows: 1fr; /* Ensures cards in a row have equal height */
+    grid-auto-rows: 1fr;
 }
 
 .mco-book-card {
@@ -225,4 +93,42 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+/* Sidebar Specifics */
+.mco-book-card-sidebar {
+    border: 1px solid rgb(var(--color-border-rgb));
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    height: 150px;
+    background: rgb(var(--color-card-rgb));
+    margin-bottom: 15px;
+}
+
+.mco-book-card-sidebar__cover {
+    width: 80px;
+    flex-shrink: 0;
+    border-right: 1px solid rgb(var(--color-muted-rgb));
+}
+
+.mco-book-card-sidebar__content {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.mco-book-card-sidebar__title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+    color: rgb(var(--color-text-strong-rgb));
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
