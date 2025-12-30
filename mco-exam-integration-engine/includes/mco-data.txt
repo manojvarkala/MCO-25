@@ -28,12 +28,8 @@ if (!function_exists('mco_get_default_certificate_templates')) {
 if (!function_exists('mco_get_full_snapshot_data')) {
     function mco_get_full_snapshot_data($is_blueprint = false) {
         error_log('MCO DATA DEBUG: mco_get_full_snapshot_data called. is_blueprint: ' . ($is_blueprint ? 'true' : 'false'));
-        // Ensure mco_get_app_config_data exists before calling it.
-        if (!function_exists('mco_get_app_config_data')) {
-            error_log('MCO DATA ERR: mco_get_app_config_data function not found in mco-data.php.');
-            return new WP_Error('mco_data_missing', 'Core data function not available.', ['status' => 500]);
-        }
-        $dynamic_data = mco_get_app_config_data();
+        
+        $dynamic_data_raw = mco_fetch_and_process_dynamic_app_data();
         
         // Prioritize custom logo URL from plugin settings
         $logo_url = (string)get_option('mco_custom_logo_url', '');
@@ -46,7 +42,7 @@ if (!function_exists('mco_get_full_snapshot_data')) {
         error_log('MCO DATA DEBUG: Logo URL resolved to: ' . $logo_url);
 
         $snapshot = [
-            "version" => current_time('YmdHis'),
+            "version" => (string)get_option('mco_config_version', current_time('YmdHis')),
             "organizations" => [[
                 "id" => "org-mco", // Fixed ID for the primary organization
                 "name" => (string)get_bloginfo('name'), // Cast to string
@@ -64,12 +60,12 @@ if (!function_exists('mco_get_full_snapshot_data')) {
                 "purchaseNotifierMinGap" => (int)get_option('mco_purchase_notifier_min_gap', '8'),
                 "purchaseNotifierMaxGap" => (int)get_option('mco_purchase_notifier_max_gap', '23'),
                 "disclaimerText" => (string)get_option('mco_disclaimer_text', ''),
-                "exams" => (array)($dynamic_data['exams'] ?? []),
-                "examProductCategories" => (array)($dynamic_data['examProductCategories'] ?? []),
-                "suggestedBooks" => (array)($dynamic_data['suggestedBooks'] ?? []),
+                "exams" => (array)($dynamic_data_raw['exams'] ?? []),
+                "examProductCategories" => (array)($dynamic_data_raw['examProductCategories'] ?? []),
+                "suggestedBooks" => (array)($dynamic_data_raw['suggestedBooks'] ?? []),
                 "certificateTemplates" => array_values(get_option('mco_certificate_templates', mco_get_default_certificate_templates()))
             ]],
-            "examPrices" => (array)($dynamic_data['examPrices'] ?? [])
+            "examPrices" => (array)($dynamic_data_raw['examPrices'] ?? [])
         ];
 
         // For blueprint, clear content arrays
@@ -84,16 +80,14 @@ if (!function_exists('mco_get_full_snapshot_data')) {
     }
 }
 
-if (!function_exists('mco_get_app_config_data')) {
-    function mco_get_app_config_data() {
-        error_log('MCO DATA DEBUG: mco_get_app_config_data called.');
-        // Try to fetch from transient first
-        $cached_data = get_transient('mco_app_config_data');
-        if ($cached_data !== false) {
-            error_log('MCO DATA DEBUG: Fetched config from transient cache.');
-            return $cached_data;
-        }
-
+if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
+    /**
+     * Helper function to fetch and process dynamic app data from CPTs and WooCommerce.
+     * This is the core logic for gathering all content for the React app.
+     */
+    function mco_fetch_and_process_dynamic_app_data() {
+        error_log('MCO DATA DEBUG: mco_fetch_and_process_dynamic_app_data called.');
+        
         $exams = []; 
         $cats = []; 
         $prices = []; 
@@ -269,12 +263,43 @@ if (!function_exists('mco_get_app_config_data')) {
             'examPrices' => $prices, 
             'suggestedBooks' => $books
         ];
-
-        set_transient('mco_app_config_data', $final_data, HOUR_IN_SECONDS); // Cache for 1 hour
-        error_log('MCO DATA DEBUG: Final config data saved to transient.');
         return $final_data;
     }
 }
+
+
+if (!function_exists('mco_get_app_config_data')) {
+    /**
+     * Retrieves the full application configuration data, wrapped in an organization structure.
+     * This function is the primary entry point for the React app and for shortcodes needing
+     * the full configuration object.
+     * It uses a transient cache for performance.
+     */
+    function mco_get_app_config_data() {
+        error_log('MCO DATA DEBUG: mco_get_app_config_data (public) called.');
+        // Try to fetch from transient first
+        $cached_data = get_transient('mco_app_config_data_full_org_structure');
+        if ($cached_data !== false) {
+            error_log('MCO DATA DEBUG: Fetched full config from transient cache (mco_app_config_data_full_org_structure).');
+            return $cached_data;
+        }
+
+        // If not in cache, generate it from the full snapshot data
+        $full_snapshot = mco_get_full_snapshot_data(false);
+
+        if (is_wp_error($full_snapshot)) {
+            error_log('MCO DATA ERROR: Failed to get full snapshot data: ' . $full_snapshot->get_error_message());
+            return []; // Return empty array on error
+        }
+        
+        // Store the full snapshot structure in a transient
+        set_transient('mco_app_config_data_full_org_structure', $full_snapshot, HOUR_IN_SECONDS); // Cache for 1 hour
+        error_log('MCO DATA DEBUG: Full config data (with org structure) regenerated and saved to transient.');
+        
+        return $full_snapshot;
+    }
+}
+
 
 if (!function_exists('mco_get_available_themes')) {
     function mco_get_available_themes() {
