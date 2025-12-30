@@ -1,4 +1,5 @@
 
+
 export interface User {
   id: string;
   name: string;
@@ -249,4 +250,34 @@ export interface BetaTester {
     registrationDate: string; // ISO Date string
     expiryTimestamp: number; // Unix timestamp
     tokenRedeemed: boolean;
+}
+
+// Add userGeoCountryCode to AppContextType
+export interface AppContextType {
+  organizations: Organization[];
+  activeOrg: Organization | null;
+  isLoading: boolean;
+  isInitializing: boolean;
+  refreshConfig: () => Promise<void>;
+  setActiveOrgById: (orgId: string) => void;
+  updateActiveOrg: (updatedOrg: Organization) => void;
+  updateConfigData: (organizations: Organization[], examPrices: any) => void;
+  updateExamInOrg: (examId: string, updatedExamData: Partial<Exam>) => void;
+  inProgressExam: InProgressExamInfo | null;
+  examPrices: { [key: string]: any } | null;
+  suggestedBooks: RecommendedBook[];
+  hitCount: number | null;
+  availableThemes: Theme[];
+  activeTheme: string;
+  setActiveTheme: (themeId: string) => void;
+  subscriptionsEnabled: boolean;
+  bundlesEnabled: boolean;
+  purchaseNotifierEnabled: boolean;
+  purchaseNotifierDelay: number;
+  purchaseNotifierMinGap: number;
+  purchaseNotifierMaxGap: number;
+  feedbackRequiredForExam: FeedbackContext | null;
+  setFeedbackRequiredForExam: (context: FeedbackContext) => void;
+  clearFeedbackRequired: () => void;
+  userGeoCountryCode: string | null; // New field for client-side IP-based geo-location
 }

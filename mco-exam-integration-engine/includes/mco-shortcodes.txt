@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: MCO Comprehensive Shortcodes & WP Integration
- * VERSION: 8.0.0 (Emergency Repair - CSS Loader Restoration)
+ * VERSION: 8.1.0 (UI & Geolocation Enhancements)
  * =============================================================================
  */
 
@@ -189,9 +189,35 @@ if (!function_exists('mco_get_geo_primary_link_info')) {
         $links = array_filter(array_map('trim', $links));
         $domainMap = ['com' => 'Amazon.com', 'in' => 'Amazon.in', 'ae' => 'Amazon.ae'];
         $chosen = null;
-        if ($override_geo && !empty($links[$override_geo])) $chosen = $override_geo;
-        if (!$chosen && !empty($_COOKIE['mco_wp_geo_pref']) && !empty($links[$_COOKIE['mco_wp_geo_pref']])) $chosen = sanitize_text_field($_COOKIE['mco_wp_geo_pref']);
-        if (!$chosen) { foreach (['com', 'in', 'ae'] as $k) { if (!empty($links[$k])) { $chosen = $k; break; } } }
+
+        // Prioritize explicit override from URL (e.g., ?geo=in)
+        if ($override_geo && !empty($links[$override_geo])) {
+            $chosen = $override_geo;
+        }
+
+        // Second priority: User's IP-inferred country from frontend (stored as cookie 'mco_user_geo_country_code')
+        if (!$chosen && !empty($_COOKIE['mco_user_geo_country_code'])) {
+            $ip_country_code = strtolower(sanitize_text_field($_COOKIE['mco_user_geo_country_code']));
+            if ($ip_country_code === 'us' && !empty($links['com'])) $chosen = 'com';
+            else if ($ip_country_code === 'in' && !empty($links['in'])) $chosen = 'in';
+            else if ($ip_country_code === 'ae' && !empty($links['ae'])) $chosen = 'ae';
+            // Add more specific country mappings if needed
+        }
+        
+        // Third priority: Generic frontend geo preference (timezone-based, stored as cookie 'mco_wp_geo_pref')
+        if (!$chosen && !empty($_COOKIE['mco_wp_geo_pref']) && !empty($links[$_COOKIE['mco_wp_geo_pref']])) {
+            $chosen = sanitize_text_field($_COOKIE['mco_wp_geo_pref']);
+        }
+
+        // Fallback: Default priority order
+        if (!$chosen) { 
+            foreach (['com', 'in', 'ae'] as $k) { 
+                if (!empty($links[$k])) { 
+                    $chosen = $k; 
+                    break; 
+                } 
+            } 
+        }
         return $chosen ? ['key' => $chosen, 'url' => $links[$chosen], 'domainName' => $domainMap[$chosen]] : null;
     }
 }
@@ -205,20 +231,21 @@ if (!function_exists('mco_render_book_card_php')) {
         foreach ($stores as $key => $name) {
             if (!empty($book['affiliateLinks'][$key])) {
                 $is_p = $key === ($primary['key'] ?? '');
-                $s = 'display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:0.75rem;font-weight:700;padding:6px 12px;border-radius:4px;text-decoration:none;transition:background 0.2s;min-width:100px;box-sizing:border-box;white-space:nowrap;' . ($is_p ? 'background:#f59e0b;color:#fff;border:1px solid #f59e0b;' : 'background:#e2e8f0;color:#64748b;border:1px solid #cbd5e1;');
-                $all_stores_html .= '<a href="'.esc_url($book['affiliateLinks'][$key]).'" target="_blank" style="'.$s.'">'.mco_get_svg_icon('book-up').' Buy on '.$name.'</a>';
+                // Removed inline styles, added classes to be styled by index.css
+                $all_stores_html .= '<a href="'.esc_url($book['affiliateLinks'][$key]).'" target="_blank" class="mco-book-btn '.($is_p ? 'mco-book-btn--primary' : 'mco-book-btn--secondary').'">'.mco_get_svg_icon('book-up').' Buy on '.$name.'</a>';
             }
         }
         $title = $book['title'] ?? 'Untitled Book'; 
         $thumb = esc_url($book['thumbnailUrl'] ?? ''); 
-        $cover = !empty($thumb) ? '<img src="'.$thumb.'" style="width:100%;height:100%;object-fit:cover;">' : mco_render_procedural_cover_full($book, $type);
+        $cover = !empty($thumb) ? '<img src="'.$thumb.'" class="mco-book-cover-image">' : mco_render_procedural_cover_full($book, $type);
         
         if ($type === 'sidebar') {
-            return '<div class="mco-book-card-sidebar"><div class="mco-book-card-sidebar__cover">'.$cover.'</div><div class="mco-book-card-sidebar__content"><h4 class="mco-book-card-sidebar__title">'.esc_html($title).'</h4><div style="display:flex;flex-direction:column;gap:5px;">'.($all_stores_html ?: '<span>Soon</span>').'</div></div></div>';
+            return '<div class="mco-book-card-sidebar"><div class="mco-book-card-sidebar__cover">'.$cover.'</div><div class="mco-book-card-sidebar__content"><h4 class="mco-book-card-sidebar__title">'.esc_html($title).'</h4><div class="mco-store-buttons-sidebar">'.($all_stores_html ?: '<span class="mco-book-card-sidebar__button mco-book-card-sidebar__button--secondary" style="opacity: 0.5;">Soon</span>').'</div></div></div>';
         } elseif ($type === 'single') {
-            return '<div class="mco-single-book"><div style="height:400px;border-radius:12px;overflow:hidden;margin-bottom:30px;border:1px solid #e2e8f0;">'.$cover.'</div><h1 style="font-size:2.5rem;font-weight:800;margin-bottom:20px;">'.esc_html($title).'</h1><div style="font-size:1.1rem;line-height:1.8;color:#475569;margin-bottom:40px;">'.wp_kses_post($book['description']??'').'</div><div style="display:flex;gap:15px;flex-wrap:wrap;">'.$all_stores_html.'</div></div>';
+            // Refactored to use classes instead of inline styles
+            return '<div class="mco-single-book-view"><div class="mco-single-book-view__cover">'.$cover.'</div><div class="mco-single-book-view__details"><h1 class="mco-single-book-view__title">'.esc_html($title).'</h1><div class="mco-single-book-view__description">'.wp_kses_post($book['description']??'').'</div><div class="mco-single-book-view__buttons">'.$all_stores_html.'</div></div></div>';
         } else {
-            return '<div class="mco-book-card"><div class="mco-book-cover" style="height:320px;">'.$cover.'</div><div class="mco-book-card__body"><h4 class="mco-book-card__title">'.esc_html($title).'</h4><p class="mco-book-card__desc">'.esc_html(wp_trim_words($book['description']??'', 20)).'</p></div><div class="mco-book-card__footer"><div style="display:flex;flex-direction:column;gap:10px;">'.$all_stores_html.'</div></div></div>';
+            return '<div class="mco-book-card"><div class="mco-book-cover">'.$cover.'</div><div class="mco-book-card__body"><h4 class="mco-book-card__title">'.esc_html($title).'</h4><p class="mco-book-card__desc">'.esc_html(wp_trim_words($book['description']??'', 20)).'</p></div><div class="mco-book-card__footer"><div class="mco-store-buttons">'.$all_stores_html.'</div></div></div>';
         }
     }
 }
@@ -226,8 +253,8 @@ if (!function_exists('mco_render_book_card_php')) {
 if (!function_exists('mco_render_program_card')) {
     function mco_render_program_card($data, $url) {
         $u = rtrim($url, '/') . '/program/' . $data['id']; $thumb = $data['thumbnailUrl'] ?? '';
-        $c = !empty($thumb) ? '<img src="'.esc_url($thumb).'" style="width:100%;height:100%;object-fit:cover;">' : mco_render_procedural_cover_full(['title'=>$data['name']], 'program');
-        return '<div class="mco-book-card"><div class="mco-book-cover" style="height:320px;">'.$c.'</div><div class="mco-book-card__body"><a href="'.esc_url($u).'" style="text-decoration:none;"><h4 class="mco-book-card__title">'.esc_html($data['name']).'</h4></a><p class="mco-book-card__desc">'.esc_html(wp_trim_words($data['description'], 20)).'</p></div><div class="mco-book-card__footer"><a href="'.esc_url($u).'" class="mco-card__button" style="background:#0891b2;color:#fff;">View Details '.mco_get_svg_icon('external-link').'</a></div></div>';
+        $c = !empty($thumb) ? '<img src="'.esc_url($thumb).'" class="mco-book-cover-image">' : mco_render_procedural_cover_full(['title'=>$data['name']], 'program');
+        return '<div class="mco-book-card"><div class="mco-book-cover">'.$c.'</div><div class="mco-book-card__body"><a href="'.esc_url($u).'" style="text-decoration:none;"><h4 class="mco-book-card__title">'.esc_html($data['name']).'</h4></a><p class="mco-book-card__desc">'.esc_html(wp_trim_words($data['description'], 20)).'</p></div><div class="mco-book-card__footer"><a href="'.esc_url($u).'" class="mco-card__button" style="background:#0891b2;color:#fff;">View Details '.mco_get_svg_icon('external-link').'</a></div></div>';
     }
 }
 
@@ -455,7 +482,13 @@ if (!function_exists('mco_set_react_app_base_url_for_js')) {
 
 if (!function_exists('mco_inject_geo_preference_script')) {
     function mco_inject_geo_preference_script() {
-        echo '<script>(function(){const k=localStorage.getItem("mco_preferred_geo_key");if(k)document.cookie=`mco_wp_geo_pref=${k}; path=/; SameSite=Lax`;})();</script>';
+        // Now also reads IP-based preference if available
+        echo '<script>(function(){
+            const ipGeoKey = localStorage.getItem("mco_user_geo_country_code");
+            const tzGeoKey = localStorage.getItem("mco_preferred_geo_key");
+            const finalGeoKey = ipGeoKey || tzGeoKey;
+            if(finalGeoKey) document.cookie=`mco_wp_geo_pref=${finalGeoKey}; path=/; SameSite=Lax`;
+        })();</script>';
     }
     add_action('wp_footer', 'mco_inject_geo_preference_script');
 }

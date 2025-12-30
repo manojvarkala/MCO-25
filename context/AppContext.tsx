@@ -1,38 +1,12 @@
 
+
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
-import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook, Theme, FeedbackContext } from '../types.ts';
+import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook, Theme, FeedbackContext, AppContextType } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext.tsx';
 import { getTenantConfig, TenantConfig } from '../services/apiConfig.ts';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 
-interface AppContextType {
-  organizations: Organization[];
-  activeOrg: Organization | null;
-  isLoading: boolean;
-  isInitializing: boolean;
-  refreshConfig: () => Promise<void>;
-  setActiveOrgById: (orgId: string) => void;
-  updateActiveOrg: (updatedOrg: Organization) => void;
-  updateConfigData: (organizations: Organization[], examPrices: any) => void;
-  updateExamInOrg: (examId: string, updatedExamData: Partial<Exam>) => void;
-  inProgressExam: InProgressExamInfo | null;
-  examPrices: { [key: string]: any } | null;
-  suggestedBooks: RecommendedBook[];
-  hitCount: number | null;
-  availableThemes: Theme[];
-  activeTheme: string;
-  setActiveTheme: (themeId: string) => void;
-  subscriptionsEnabled: boolean;
-  bundlesEnabled: boolean;
-  purchaseNotifierEnabled: boolean;
-  purchaseNotifierDelay: number;
-  purchaseNotifierMinGap: number;
-  purchaseNotifierMaxGap: number;
-  feedbackRequiredForExam: FeedbackContext | null;
-  setFeedbackRequiredForExam: (context: FeedbackContext) => void;
-  clearFeedbackRequired: () => void;
-}
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -161,6 +135,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [purchaseNotifierMinGap, setPurchaseNotifierMinGap] = useState<number>(8);
   const [purchaseNotifierMaxGap, setPurchaseNotifierMaxGap] = useState<number>(23);
   const [feedbackRequiredForExam, setFeedbackRequiredForExamState] = useState<FeedbackContext | null>(null);
+  const [userGeoCountryCode, setUserGeoCountryCode] = useState<string | null>(() => localStorage.getItem('mco_user_geo_country_code') || null);
   
   const { user } = useAuth();
   
@@ -208,90 +183,47 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     return false;
   };
 
-  const loadAppConfig = async (bypassCache: boolean = false) => {
-    const tenantConfig: TenantConfig = getTenantConfig();
-    const cacheKey = `appConfigCache_${tenantConfig.apiBaseUrl}`;
-    let configLoaded = false;
-    
-    if (!bypassCache) {
+    const fetchGeoLocation = useCallback(async () => {
+        const GEO_CACHE_KEY = 'mco_user_geo_country_code';
+        const GEO_CACHE_EXPIRY_KEY = 'mco_user_geo_country_code_expiry';
+        const now = Date.now();
+        
         try {
-            const cachedConfigJSON = localStorage.getItem(cacheKey);
-            if (cachedConfigJSON) {
-                const cachedConfig = JSON.parse(cachedConfigJSON);
-                const processedData = processConfigData(cachedConfig);
-                if (processedData) {
-                    configLoaded = setProcessedConfig(cachedConfig, processedData);
-                    console.log("AppContext: Loaded config from localStorage.");
-                }
-            }
-        } catch (e) {
-            console.error("AppContext: Error loading config from localStorage, clearing cache.", e);
-            localStorage.removeItem(cacheKey);
-        }
-    }
+            const cachedCode = localStorage.getItem(GEO_CACHE_KEY);
+            const cachedExpiry = localStorage.getItem(GEO_CACHE_EXPIRY_KEY);
 
-    try {
-        console.log(`AppContext: Attempting to fetch live config from ${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config`);
-        const response = await fetch(`${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config`);
-        if (response.ok) {
-            const liveConfig = await response.json();
-            const processedData = processConfigData(liveConfig);
-            if (processedData) {
-                const changed = setProcessedConfig(liveConfig, processedData);
-                if (changed) {
-                    localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
-                    console.log("AppContext: Fetched and updated live config.");
-                } else {
-                    console.log("AppContext: Live config is same as cached, no update needed.");
+            if (cachedCode && cachedExpiry && now < parseInt(cachedExpiry, 10)) {
+                setUserGeoCountryCode(cachedCode);
+                console.log("AppContext: Loaded geo country code from cache.");
+                return;
+            }
+
+            console.log("AppContext: Fetching fresh geo country code from IP API.");
+            const response = await fetch('https://ipapi.co/json/');
+            if (response.ok) {
+                const data = await response.json();
+                const countryCode = data.country_code;
+                if (countryCode) {
+                    setUserGeoCountryCode(countryCode);
+                    localStorage.setItem(GEO_CACHE_KEY, countryCode);
+                    localStorage.setItem(GEO_CACHE_EXPIRY_KEY, (now + 3600 * 1000).toString()); // Cache for 1 hour
+                    console.log(`AppContext: Fetched geo country code: ${countryCode}`);
                 }
-                configLoaded = true;
             } else {
-                console.error("AppContext: Failed to process live config data structure.");
+                console.warn(`AppContext: Failed to fetch geo location. Status: ${response.status}`);
             }
-        } else {
-            console.error(`AppContext: Failed to fetch live config. HTTP Status: ${response.status} - ${response.statusText}`);
-            throw new Error(`Failed to fetch live config: ${response.statusText}`);
+        } catch (error) {
+            console.error("AppContext: Error fetching geo location:", error);
         }
-    } catch (apiError: any) {
-        console.error("AppContext: Error fetching live config, attempting static fallback:", apiError);
-        // Only attempt static fallback if live API failed AND no config has been loaded yet
-        if (!configLoaded) {
-            try {
-                console.log(`AppContext: Attempting to load static config from ${tenantConfig.staticConfigPath}`);
-                const response = await fetch(tenantConfig.staticConfigPath);
-                if (response.ok) {
-                    const staticConfig = await response.json();
-                    const processedData = processConfigData(staticConfig);
-                    if (processedData) {
-                        setProcessedConfig(staticConfig, processedData);
-                        console.log("AppContext: Loaded static config as fallback.");
-                        configLoaded = true;
-                    } else {
-                        console.error("AppContext: Failed to process static config data structure.");
-                    }
-                } else {
-                    console.error(`AppContext: Failed to fetch static config. HTTP Status: ${response.status} - ${response.statusText}`);
-                }
-            } catch (staticError: any) {
-                console.error("AppContext: Error fetching static config fallback.", staticError);
-            }
-        }
-    } finally {
-        if (!configLoaded) {
-            // If after all attempts, no config is loaded, ensure activeOrg is null and set error state
-            setActiveOrg(null);
-            console.error("AppContext: No configuration loaded after all attempts. activeOrg remains null.");
-        }
-        setIsInitializing(false);
-    }
-  };
+    }, []);
 
   useEffect(() => {
     loadAppConfig();
+    fetchGeoLocation(); // Fetch geo location on app load
     googleSheetsService.recordSiteHit().then(data => {
         if (data && data.count) setHitCount(data.count);
     }).catch(() => {});
-  }, []);
+  }, [fetchGeoLocation]);
 
   const refreshConfig = async () => {
       setIsInitializing(true);
@@ -358,12 +290,13 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     feedbackRequiredForExam,
     setFeedbackRequiredForExam,
     clearFeedbackRequired,
+    userGeoCountryCode, // Added to context value
   }), [
     organizations, activeOrg, isInitializing, refreshConfig, setActiveOrgById,
     updateActiveOrg, updateConfigData, updateExamInOrg, examPrices, suggestedBooks,
     hitCount, availableThemes, activeTheme, subscriptionsEnabled, bundlesEnabled,
     purchaseNotifierEnabled, purchaseNotifierDelay, purchaseNotifierMinGap, purchaseNotifierMaxGap,
-    feedbackRequiredForExam
+    feedbackRequiredForExam, userGeoCountryCode // Added to dependencies
   ]);
 
   return (

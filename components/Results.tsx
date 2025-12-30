@@ -1,6 +1,5 @@
 
 
-
 import React, { FC, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useParams, useNavigate } from "react-router-dom";
@@ -14,48 +13,84 @@ import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-import BookCover from '../assets/BookCover.tsx';
+import { BookCover } from '../assets/BookCover.tsx'; // Named import
 import ShareableResult from './ShareableResult.tsx';
 import ShareButtons from './ShareButtons.tsx';
 
 type UserCertVisibility = 'NONE' | 'USER_EARNED' | 'REVIEW_PENDING';
 
-// Unified geo-affiliate link logic
-const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
+// Unified geo-affiliate link logic - NOW USES APP CONTEXT FOR IP-BASED GEO
+const getGeoAffiliateLink = (book: RecommendedBook, userGeoCountryCode: string | null): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
     if (!book.affiliateLinks) {
         return null;
     }
     const links = book.affiliateLinks;
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     
-    let preferredKey: keyof RecommendedBook['affiliateLinks'] = 'com';
-    let preferredDomainName = 'Amazon.com';
+    // Map country codes to Amazon keys
+    const countryToAmazonKey: Record<string, keyof RecommendedBook['affiliateLinks']> = {
+        'us': 'com', // United States
+        'in': 'in',  // India
+        'ae': 'ae',  // United Arab Emirates
+        'gb': 'com', // United Kingdom
+        'ca': 'com', // Canada
+        'au': 'com', // Australia
+        // Add more mappings as needed
+    };
+    const domainNames: Record<string, string> = { com: 'Amazon.com', in: 'Amazon.in', ae: 'Amazon.ae' };
 
-    const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
-    if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
-        preferredKey = 'in';
-        preferredDomainName = 'Amazon.in';
-    } else if (gccTimezones.some(tz => timeZone === tz)) {
-        preferredKey = 'ae';
-        preferredDomainName = 'Amazon.ae';
-    }
+    let finalKey: keyof RecommendedBook['affiliateLinks'] | null = null;
+    let finalDomainName: string | null = null;
 
-    // Try preferred geo link first
-    if (links[preferredKey] && links[preferredKey].trim() !== '') {
-        return { url: links[preferredKey], domainName: preferredDomainName, key: preferredKey };
-    }
-
-    // Fallback in a defined priority order
-    const fallbackPriority: (keyof RecommendedBook['affiliateLinks'])[] = ['com', 'in', 'ae'];
-    for (const key of fallbackPriority) {
-        if (key === preferredKey) continue; // Already tried
-        if (links[key] && links[key].trim() !== '') {
-            let domainName = 'Amazon.com';
-            if (key === 'in') domainName = 'Amazon.in';
-            if (key === 'ae') domainName = 'Amazon.ae';
-            return { url: links[key], domainName, key };
+    // 1. Prioritize IP-based country code if available and valid
+    if (userGeoCountryCode && countryToAmazonKey[userGeoCountryCode.toLowerCase()]) {
+        const preferredKey = countryToAmazonKey[userGeoCountryCode.toLowerCase()];
+        if (links[preferredKey] && links[preferredKey].trim() !== '') {
+            finalKey = preferredKey;
+            finalDomainName = domainNames[preferredKey] || `Amazon.${preferredKey}`;
         }
     }
+
+    // 2. Fallback to timezone-based inference if IP-based didn't yield a valid link
+    if (!finalKey) {
+        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        let preferredKeyFromTimezone: keyof RecommendedBook['affiliateLinks'] = 'com';
+        
+        const gccTimezones = [ 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat' ];
+        if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Asia/Calcutta')) {
+            preferredKeyFromTimezone = 'in';
+        } else if (gccTimezones.some(tz => timeZone === tz)) {
+            preferredKeyFromTimezone = 'ae';
+        }
+
+        if (links[preferredKeyFromTimezone] && links[preferredKeyFromTimezone].trim() !== '') {
+            finalKey = preferredKeyFromTimezone;
+            finalDomainName = domainNames[preferredKeyFromTimezone] || `Amazon.${preferredKeyFromTimezone}`;
+        }
+    }
+
+    // 3. Final fallback: Use a default priority order if no specific match yet
+    if (!finalKey) {
+        const fallbackPriority: (keyof RecommendedBook['affiliateLinks'])[] = ['com', 'in', 'ae'];
+        for (const key of fallbackPriority) {
+            if (links[key] && links[key].trim() !== '') {
+                finalKey = key;
+                finalDomainName = domainNames[key] || `Amazon.${key}`;
+                break;
+            }
+        }
+    }
+
+    if (finalKey && finalDomainName) {
+        // Store the FINAL chosen key in localStorage for WordPress shortcodes to read via cookie
+        try {
+            localStorage.setItem('mco_preferred_geo_key', finalKey);
+            localStorage.setItem('mco_user_geo_country_code', userGeoCountryCode || 'UNKNOWN'); // Also persist IP-based for debug
+        } catch(e) {
+            console.error("Failed to set geo preference in localStorage", e);
+        }
+        return { url: links[finalKey], domainName: finalDomainName, key: finalKey };
+    }
+
     return null;
 };
 
@@ -75,7 +110,7 @@ const Results: FC = () => {
     const { testId } = useParams<{ testId: string }>();
     const navigate = useNavigate();
     const { user, token, isSubscribed, paidExamIds, isEffectivelyAdmin, isBetaTester } = useAuth();
-    const { activeOrg, suggestedBooks } = useAppContext();
+    const { activeOrg, suggestedBooks, userGeoCountryCode } = useAppContext(); // Get userGeoCountryCode
 
     const [result, setResult] = useState<TestResult | null>(null);
     const [exam, setExam] = useState<Exam | null>(null);
@@ -98,7 +133,7 @@ const Results: FC = () => {
             const testResult = googleSheetsService.getTestResult(user, testId);
             if (testResult) {
                 setResult(testResult);
-                const examConfig = activeOrg.exams.find(e => e.id === testResult.examId);
+                const examConfig = activeOrg.exams.find(e => e && e.id === testResult.examId);
                 setExam(examConfig || null);
             } else {
                 toast.error("Test result not found.");
@@ -460,7 +495,7 @@ const Results: FC = () => {
                     <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                         {recommendedBooksForExam.map(book => {
-                            const linkData = getGeoAffiliateLink(book);
+                            const linkData = getGeoAffiliateLink(book, userGeoCountryCode); // Pass userGeoCountryCode
                             if (!linkData) return null;
                             return (
                                 <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full flex-shrink-0 flex flex-col transform hover:-translate-y-1 transition-transform duration-200">

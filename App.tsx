@@ -1,8 +1,8 @@
 
-
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
-import { Routes, Route, BrowserRouter, Navigate, useLocation } from "react-router-dom";
+// FIX: Replaced specific named imports from 'react-router-dom' with a namespace import to resolve module export errors.
+import * as ReactRouter from "react-router-dom";
 import { Toaster, ToastBar, toast } from 'react-hot-toast';
 import { X, AlertTriangle, WifiOff, RefreshCw, Server } from 'lucide-react';
 
@@ -56,13 +56,13 @@ import { getApiBaseUrl } from './services/apiConfig.ts';
 // Helper component for routes requiring authentication
 const ProtectedRoute: FC<{ children: ReactNode; adminOnly?: boolean }> = ({ children, adminOnly = false }) => {
     const { user, isEffectivelyAdmin } = useAuth();
-    const location = useLocation();
+    const location = ReactRouter.useLocation();
 
     if (!user) {
-        return <Navigate to="/" state={{ from: location }} replace />;
+        return <ReactRouter.Navigate to="/" state={{ from: location }} replace />;
     }
     if (adminOnly && !isEffectivelyAdmin) {
-        return <Navigate to="/dashboard" state={{ from: location }} replace />;
+        return <ReactRouter.Navigate to="/dashboard" state={{ from: location }} replace />;
     }
     return <>{children}</>;
 };
@@ -71,7 +71,7 @@ const ProtectedRoute: FC<{ children: ReactNode; adminOnly?: boolean }> = ({ chil
 const AppContent: FC = () => {
     const { user, isMasquerading, isEffectivelyAdmin, logout } = useAuth();
     const { activeOrg, activeTheme, isInitializing } = useAppContext();
-    const location = useLocation();
+    const location = ReactRouter.useLocation();
     const [isDebugSidebarOpen, setIsDebugSidebarOpen] = useState(false);
 
     const isTestPage = location.pathname.startsWith('/test/');
@@ -168,146 +168,23 @@ const AppContent: FC = () => {
             )}
             <div className="flex-grow w-full relative">
                 <main className={mainClasses}>
-                    <Routes>
-                        <Route path="/" element={<LandingPage />} />
-                        <Route path="/auth" element={<Login />} />
-                        <Route path="/checkout/:productSlug" element={<Checkout />} />
-                        <Route path="/verify" element={<VerifyPage />} />
-                        <Route path="/verify/:certId" element={<VerifyCertificate />} />
-                        <Route path="/onboard/:token" element={<VolunteerOnboarding />} />
-                        <Route path="/beta-signup" element={<BetaRegistration />} />
+                    <ReactRouter.Routes>
+                        <ReactRouter.Route path="/" element={<LandingPage />} />
+                        <ReactRouter.Route path="/auth" element={<Login />} />
+                        <ReactRouter.Route path="/checkout/:productSlug" element={<Checkout />} />
+                        <ReactRouter.Route path="/verify" element={<VerifyPage />} />
+                        <ReactRouter.Route path="/verify/:certId" element={<VerifyCertificate />} />
+                        <ReactRouter.Route path="/onboard/:token" element={<VolunteerOnboarding />} />
+                        <ReactRouter.Route path="/beta-signup" element={<BetaRegistration />} />
                         
-                        <Route path="/test/:examId" element={
+                        <ReactRouter.Route path="/test/:examId" element={
                             <ProtectedRoute><Test /></ProtectedRoute>
                         } />
-                        <Route path="/certificate/sample" element={
+                        <ReactRouter.Route path="/certificate/sample" element={
                             <ProtectedRoute><Certificate /></ProtectedRoute>
                         } />
-                        <Route path="/certificate/:testId" element={
+                        <ReactRouter.Route path="/certificate/:testId" element={
                             <ProtectedRoute><Certificate /></ProtectedRoute>
                         } />
 
-                        {/* Routes with Sidebar */}
-                        <Route path="/dashboard" element={
-                            <SidebarLayout><Dashboard /></SidebarLayout>
-                        } />
-                        <Route path="/instructions" element={
-                            <SidebarLayout><Instructions /></SidebarLayout>
-                        } />
-                        <Route path="/pricing" element={
-                            <SidebarLayout><Pricing /></SidebarLayout>
-                        } />
-                        <Route path="/feedback" element={
-                            <SidebarLayout><Feedback /></SidebarLayout>
-                        } />
-                        <Route path="/user-guide" element={
-                            <SidebarLayout><UserGuide /></SidebarLayout>
-                        } />
-                        <Route path="/about-us" element={
-                            <SidebarLayout><AboutUs /></SidebarLayout>
-                        } />
-                        <Route path="/privacy-policy" element={
-                            <SidebarLayout><PrivacyPolicy /></SidebarLayout>
-                        } />
-                        <Route path="/refund-policy" element={
-                            <SidebarLayout><RefundPolicy /></SidebarLayout>
-                        } />
-                        <Route path="/terms-of-service" element={
-                            <SidebarLayout><TermsOfService /></SidebarLayout>
-                        } />
-                        <Route path="/bookstore" element={
-                            <SidebarLayout><BookStore /></SidebarLayout>
-                        } />
-                        <Route path="/program/:programId" element={
-                            <SidebarLayout><ExamProgram /></SidebarLayout>
-                        } />
-                        <Route path="/faq" element={
-                            <SidebarLayout><FAQ /></SidebarLayout>
-                        } />
-                        <Route path="/profile" element={
-                            <ProtectedRoute><SidebarLayout><Profile /></SidebarLayout></ProtectedRoute>
-                        } />
-                        <Route path="/results/:testId" element={
-                            <ProtectedRoute><SidebarLayout><Results /></SidebarLayout></ProtectedRoute>
-                        } />
                         
-                        {/* Admin Routes with dedicated layout */}
-                        <Route path="/admin/analytics" element={
-                            <ProtectedRoute adminOnly={true}><AdminLayout><SalesAnalytics /></AdminLayout></ProtectedRoute>
-                        } />
-                        <Route path="/admin/exam-analytics" element={
-                            <ProtectedRoute adminOnly={true}><AdminLayout><ExamAnalytics /></AdminLayout></ProtectedRoute>
-                        } />
-                        <Route path="/admin/beta-analytics" element={
-                            <ProtectedRoute adminOnly={true}><AdminLayout><BetaTesterAnalytics /></AdminLayout></ProtectedRoute>
-                        } />
-                        <Route path="/admin/products" element={
-                            <ProtectedRoute adminOnly={true}><AdminLayout><ProductCustomizer /></AdminLayout></ProtectedRoute>
-                        } />
-                        <Route path="/admin/programs" element={
-                            <ProtectedRoute adminOnly={true}><AdminLayout><ExamProgramCustomizer /></AdminLayout></ProtectedRoute>
-                        } />
-                        <Route path="/admin/content-engine" element={
-                            <ProtectedRoute adminOnly={true}><AdminLayout><ContentEngine /></AdminLayout></ProtectedRoute>
-                        } />
-                        <Route path="/admin/integration" element={
-                            <ProtectedRoute adminOnly={true}><AdminLayout><Integration /></AdminLayout></ProtectedRoute>
-                        } />
-                        <Route path="/admin/history" element={
-                            <ProtectedRoute adminOnly={true}><AdminLayout><DevelopmentHistory /></AdminLayout></ProtectedRoute>
-                        } />
-                        <Route path="/admin/handbook" element={
-                            <ProtectedRoute adminOnly={true}><AdminLayout><Handbook /></AdminLayout></ProtectedRoute>
-                        } />
-                        <Route path="/admin" element={
-                            <ProtectedRoute adminOnly={true}><AdminLayout><Admin /></AdminLayout></ProtectedRoute>
-                        } />
-                    
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                </main>
-            </div>
-            {!isTestPage && <Footer />}
-            {!isTestPage && <LivePurchaseNotification />}
-            
-            {/* Global Admin Tools */}
-            {isEffectivelyAdmin && <AdminToolbar onToggleDebug={() => setIsDebugSidebarOpen(true)} />}
-            <DebugSidebar isOpen={isDebugSidebarOpen && isEffectivelyAdmin} onClose={() => setIsDebugSidebarOpen(false)} />
-        </div>
-    );
-};
-
-const App: FC = () => {
-  return (
-    <AuthProvider>
-      <AppProvider>
-        <BrowserRouter>
-            <AppContent />
-            <Toaster position="top-right" reverseOrder={false}>
-              {(t) => (
-                <ToastBar toast={t}>
-                  {({ icon, message }) => (
-                    <>
-                      {icon}
-                      {message}
-                      {t.type !== 'loading' && (
-                        <button
-                          className="ml-4 p-1 rounded-full hover:bg-black/10 transition-colors"
-                          onClick={() => toast.dismiss(t.id)}
-                          aria-label="Dismiss"
-                        >
-                          <X size={16} />
-                        </button>
-                      )}
-                    </>
-                  )}
-                </ToastBar>
-              )}
-            </Toaster>
-        </BrowserRouter>
-      </AppProvider>
-    </AuthProvider>
-  );
-};
-
-export default App;
