@@ -1,10 +1,9 @@
 
 import React, { FC, useMemo } from 'react';
-// FIX: Changed import of BookCover from default to named import to align with the module's export type.
 import { BookCover } from './BookCover.tsx';
 import type { RecommendedBook } from '../types.ts';
 import { ShoppingCart, BookUp } from 'lucide-react';
-import { useAppContext } from '../context/AppContext.tsx'; // Import useAppContext for activeOrg
+import { useAppContext } from '../context/AppContext.tsx';
 
 interface BookshelfRendererProps {
     books: RecommendedBook[];
@@ -30,28 +29,31 @@ const getGeoAffiliateLink = (book: RecommendedBook): { url: string; domainName: 
         preferredDomainName = 'Amazon.ae';
     }
 
-    // Try preferred geo link first
-    if (links[preferredKey] && links[preferredKey].trim() !== '') {
-        // Store the preferred key in localStorage
-        localStorage.setItem('mco_preferred_geo_key', preferredKey);
-        return { url: links[preferredKey], domainName: preferredDomainName, key: preferredKey };
-    }
-
-    // Fallback in a defined priority order
+    // Determine the active key (preferred or global fallback)
     const fallbackPriority: (keyof RecommendedBook['affiliateLinks'])[] = ['com', 'in', 'ae'];
-    for (const key of fallbackPriority) {
-        if (key === preferredKey) continue; // Already tried
-        if (links[key] && links[key].trim() !== '') {
-            let domainName = 'Amazon.com';
-            if (key === 'in') domainName = 'Amazon.in';
-            if (key === 'ae') domainName = 'Amazon.ae';
-            // Store the fallback key in localStorage
-            localStorage.setItem('mco_preferred_geo_key', key);
-            return { url: links[key], domainName, key };
+    let finalKey: keyof RecommendedBook['affiliateLinks'] | null = null;
+    
+    if (links[preferredKey] && links[preferredKey].trim() !== '') {
+        finalKey = preferredKey;
+    } else {
+        for (const key of fallbackPriority) {
+            if (links[key] && links[key].trim() !== '') {
+                finalKey = key;
+                break;
+            }
         }
     }
-    // If no link is found, ensure localStorage is cleared or set to a default
-    localStorage.removeItem('mco_preferred_geo_key');
+
+    if (finalKey) {
+        // Sync to localStorage for WordPress side to read via cookie injector
+        try {
+            localStorage.setItem('mco_preferred_geo_key', finalKey);
+        } catch(e) {}
+        
+        const domainNames: Record<string, string> = { com: 'Amazon.com', in: 'Amazon.in', ae: 'Amazon.ae' };
+        return { url: links[finalKey], domainName: domainNames[finalKey] || 'Amazon.com', key: finalKey };
+    }
+
     return null;
 };
 
@@ -82,17 +84,6 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
             { key: 'ae' as const, name: 'Amazon.ae', url: book.affiliateLinks?.ae }
         ].filter(store => store.url && store.url.trim() !== '');
 
-        const permalinkWithGeo = useMemo(() => {
-            if (!book.permalink) return '#';
-            const linkData = getGeoAffiliateLink(book);
-            if (linkData) {
-                const url = new URL(book.permalink);
-                url.searchParams.set('geo', linkData.key);
-                return url.toString();
-            }
-            return book.permalink;
-        }, [book.permalink, book.affiliateLinks]);
-
         return (
             <div className="mco-single-book-card">
                 <div className="mco-single-book-card__cover">
@@ -113,7 +104,7 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                         target="_blank" 
                                         rel="noopener noreferrer"
                                         className={`mco-book-btn ${buttonClass}`}
-                                        style={{ minWidth: '150px' }} // Re-added min-width for visibility
+                                        style={{ minWidth: '150px' }}
                                     >
                                         <BookUp size={16} /> Buy on {store.name}
                                     </a>
@@ -128,7 +119,6 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
         );
     }
 
-    // Render multiple books for showcase or sidebar
     const renderBookCard = (book: RecommendedBook) => {
         const primaryLinkInfo = getGeoAffiliateLink(book);
         const allStores = [
@@ -176,20 +166,20 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                             target="_blank" 
                                             rel="noopener noreferrer"
                                             className={buttonClass}
-                                            style={{ minWidth: '100px' }} // Re-added min-width for visibility
+                                            style={{ minWidth: '100px' }}
                                         >
                                             <BookUp size={14} /> Buy on {store.name}
                                         </a>
                                     )
                                 })
                             ) : (
-                                <span className="mco-book-card-sidebar__button" style={{ cursor: 'default', background: '#e2e8f0', color: '#64748b', border: '1px solid #cbd5e1', minWidth: '100px' }}>Links Coming Soon</span>
+                                <span className="mco-book-card-sidebar__button" style={{ cursor: 'default', background: '#e2e8f0', color: '#64748b', border: '1px solid #cbd5e1', minWidth: '100px' }}>Soon</span>
                             )}
                         </div>
                     </div>
                 </div>
             );
-        } else { // 'showcase' type
+        } else {
             return (
                 <div key={book.id} className="mco-book-card">
                     <div className="mco-book-cover mco-book-cover--showcase">
@@ -218,14 +208,14 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                             target="_blank" 
                                             rel="noopener noreferrer"
                                             className={buttonClass}
-                                            style={{ minWidth: '150px' }} // Re-added min-width for visibility
+                                            style={{ minWidth: '150px' }}
                                         >
                                             <ShoppingCart size={16} /> Buy on {store.name}
                                         </a>
                                     )
                                 })
                             ) : (
-                                <span className="mco-book-btn" style={{ cursor: 'default', background: '#f1f5f9', color: '#94a3b8', border: '1px solid #cbd5e1', minWidth: '150px' }}>Links Coming Soon</span>
+                                <span className="mco-book-btn" style={{ cursor: 'default', background: '#f1f5f9', color: '#94a3b8', border: '1px solid #cbd5e1', minWidth: '150px' }}>Soon</span>
                             )}
                         </div>
                     </div>

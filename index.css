@@ -1,5 +1,3 @@
-
-
 /* Base styles and fonts */
 :root {
     --font-main: 'Inter', sans-serif;
@@ -34,7 +32,6 @@ body {
 
 /* ================= THEME DEFINITIONS ================= */
 
-/* --- 1. Default (Cyberpunk) Theme --- */
 [data-theme="default"] {
   --color-primary-rgb: 6, 182, 212; 
   --color-primary-hover-rgb: 8, 145, 178;
@@ -52,14 +49,14 @@ body {
   --color-danger-rgb: 248, 113, 113;
 }
 
-/* --- Book Card & Button Styles (For React App) --- */
+/* --- Book Card & Button Styles --- */
 
 .mco-book-card-sidebar {
     border: 1px solid rgb(var(--color-border-rgb));
     border-radius: 6px;
     overflow: hidden;
     display: flex;
-    height: 150px; /* Increased height */
+    height: 150px;
     background: rgb(var(--color-card-rgb));
     transition: border-color 0.2s;
 }
@@ -86,7 +83,7 @@ body {
     flex-direction: column;
     justify-content: center;
     flex-grow: 1;
-    min-width: 0; /* Important for text-overflow to work in flex children */
+    min-width: 0;
 }
 
 .mco-book-card-sidebar__title {
@@ -113,42 +110,27 @@ body {
 }
 
 .mco-book-card-sidebar__button {
-    display: inline-flex; /* Changed from block for icon alignment */
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     background: rgb(var(--color-accent-rgb));
     color: rgb(var(--color-text-strong-rgb));
-    font-size: 0.75rem; /* Reduced font size */
+    font-size: 0.75rem;
     font-weight: 700;
-    padding: 6px 12px; /* Reduced padding */
+    padding: 6px 12px;
     border-radius: 4px;
     text-decoration: none;
     align-self: flex-start;
     transition: background-color 0.2s;
-    border: 1px solid rgb(var(--color-accent-rgb)); /* Added border for consistency */
-    min-width: 100px; /* Ensure minimum width */
-    box-sizing: border-box; /* Explicitly set for consistency */
-}
-
-.mco-book-card-sidebar__button:hover {
-    background: rgba(var(--color-accent-rgb), 0.8);
-}
-
-.mco-book-card-sidebar__button--secondary {
-    background: rgb(var(--color-muted-rgb));
-    color: rgb(var(--color-text-default-rgb));
-    border: 1px solid rgb(var(--color-border-rgb));
-}
-
-.mco-book-card-sidebar__button--secondary:hover {
-    background: rgb(var(--color-border-rgb));
-    color: rgb(var(--color-text-strong-rgb));
+    border: 1px solid rgb(var(--color-accent-rgb));
+    min-width: 100px;
+    box-sizing: border-box;
 }
 
 /* Common button styles */
 .mco-book-btn {
-    display: inline-flex; /* Use flex for icon alignment */
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
@@ -160,7 +142,7 @@ body {
     font-size: 0.9rem;
     box-sizing: border-box;
     transition: all 0.2s;
-    min-width: 150px; /* Ensure minimum width */
+    min-width: 150px;
 }
 
 .mco-book-btn--primary {
@@ -169,84 +151,78 @@ body {
     border: 1px solid rgb(var(--color-accent-rgb));
 }
 
-.mco-book-btn--primary:hover {
-    background: rgba(var(--color-accent-rgb), 0.8);
-}
-
 .mco-book-btn--secondary {
     background: rgb(var(--color-muted-rgb));
     color: rgb(var(--color-text-default-rgb));
     border: 1px solid rgb(var(--color-border-rgb));
 }
 
-.mco-book-btn--secondary:hover {
-    background: rgb(var(--color-border-rgb));
-    color: rgb(var(--color-text-strong-rgb));
-}
-
-/* Showcase Grid */
+/* Unified Bookstore Grid - FIXED for "3 books only" bug */
 .mco-book-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 30px;
+    gap: 32px;
+    width: 100%;
+    grid-auto-rows: 1fr; /* Ensures cards in a row have equal height */
 }
 
 .mco-book-card {
     background: rgb(var(--color-card-rgb));
     border: 1px solid rgb(var(--color-border-rgb));
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
     height: 100%;
 }
 
 .mco-book-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 20px -5px rgba(0,0,0,0.1);
+    transform: translateY(-6px);
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
 }
 
 .mco-book-card .mco-book-cover {
-    height: 300px;
+    height: 320px;
+    flex-shrink: 0;
     border-bottom: 1px solid rgb(var(--color-muted-rgb));
 }
 
 .mco-book-card__body {
-    padding: 20px;
+    padding: 24px;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
 }
 
 .mco-book-card__title {
-    font-size: 1.15rem;
-    font-weight: 700;
+    font-size: 1.25rem;
+    font-weight: 800;
     color: rgb(var(--color-text-strong-rgb));
-    margin: 0 0 10px 0;
-    line-height: 1.3;
+    margin: 0 0 12px 0;
+    line-height: 1.25;
 }
 
 .mco-book-card__desc {
-    font-size: 0.9rem;
-    color: rgb(var(--color-text-muted-rgb));
+    font-size: 0.95rem;
+    color: rgb(var(--color-text-default-rgb));
     line-height: 1.6;
     margin: 0;
     display: -webkit-box;
-    -webkit-line-clamp: 4;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
 .mco-book-card__footer {
-    padding: 16px 20px;
-    border-top: 1px solid rgb(var(--color-muted-rgb));
-    background: rgba(var(--color-muted-rgb), 0.5);
+    padding: 20px 24px;
+    border-top: 1px solid rgb(var(--color-border-rgb));
+    background: rgba(var(--color-muted-rgb), 0.3);
 }
 
 .mco-store-buttons {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
