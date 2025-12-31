@@ -205,8 +205,10 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 const countryCode = data.country_code;
                 if (countryCode) {
                     setUserGeoCountryCode(countryCode);
-                    localStorage.setItem(GEO_CACHE_KEY, countryCode);
+                    localStorage.setItem(GEO_CACHE_KEY, countryCode); // Keep localStorage for app
                     localStorage.setItem(GEO_CACHE_EXPIRY_KEY, (now + 3600 * 1000).toString()); // Cache for 1 hour
+                    // FIX: Also set as a cookie for PHP shortcodes to read
+                    document.cookie = `mco_user_geo_country_code=${countryCode}; path=/; max-age=3600; SameSite=Lax`;
                     console.log(`AppContext: Fetched geo country code: ${countryCode}`);
                 }
             } else {

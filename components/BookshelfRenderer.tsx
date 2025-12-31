@@ -1,5 +1,4 @@
 
-
 import React, { FC, useMemo } from 'react';
 import BookCover from './BookCover.tsx'; // Corrected to default import
 import type { RecommendedBook } from '../types.ts';
@@ -79,10 +78,11 @@ const getGeoAffiliateLink = (book: RecommendedBook, userGeoCountryCode: string |
     if (finalKey && finalDomainName) {
         // Store the FINAL chosen key in localStorage for WordPress shortcodes to read via cookie
         try {
-            localStorage.setItem('mco_preferred_geo_key', finalKey);
-            localStorage.setItem('mco_user_geo_country_code', userGeoCountryCode || 'UNKNOWN'); // Also persist IP-based for debug
+            // FIX: Set cookies for PHP shortcodes to read
+            document.cookie = `mco_user_geo_country_code=${userGeoCountryCode || 'UNKNOWN'}; path=/; max-age=3600; SameSite=Lax`;
+            document.cookie = `mco_wp_geo_pref=${finalKey}; path=/; max-age=3600; SameSite=Lax`; 
         } catch(e) {
-            console.error("Failed to set geo preference in localStorage", e);
+            console.error("Failed to set geo preference in cookie", e);
         }
         return { url: links[finalKey], domainName: finalDomainName, key: finalKey };
     }

@@ -93,7 +93,12 @@ if (!function_exists('mco_get_svg_icon')) {
 if (!function_exists('mco_get_hash_of_string')) {
     function mco_get_hash_of_string($str) {
         $hash = 0; if (empty($str)) return $hash;
-        for ($i = 0; $i < strlen($str); $i++) { $hash = ($hash * 31 + ord($str[$i])); }
+        for ($i = 0; $i < strlen($str); $i++) { 
+            // FIX: Use bitwise operations to keep hash within integer limits and prevent float conversion warnings.
+            // This is a common method for simple string hashing to prevent overflow into float.
+            $hash = (($hash << 5) - $hash) + ord($str[$i]);
+            $hash = $hash & 0x7FFFFFFF; // Keep within signed 31-bit integer to prevent float conversion.
+        }
         return $hash;
     }
 }
@@ -523,8 +528,7 @@ if (!function_exists('mco_program_grid_shortcode')) {
         <div id="mco-app-root">
             <div class="mco-wrapper">
                 <div class="mco-book-grid">
-                    <?php 
-                    foreach ($programs_data as $program): 
+                    <?php foreach ($programs_data as $program): 
                         // To render with thumbnail, ensure category has a thumbnailUrl
                         $program_with_thumb = [
                             'id' => $program['id'],
@@ -875,8 +879,11 @@ if (!function_exists('mco_auto_inject_template')) {
         // Handle Archive Pages: Inject card view for items in the loop
         if (is_post_type_archive('mco_exam_program') && in_the_loop() && is_main_query()) {
             global $post;
+            ob_start(); // Start output buffer for the loop item
             $card_html = mco_render_program_card_php(['id' => 'prod-'.$post->ID, 'name' => $post->post_title, 'description' => $post->post_content, 'thumbnailUrl' => get_the_post_thumbnail_url($post->ID, 'medium_large')], mco_get_exam_app_url());
-            
+            echo $card_html; // Echo the card HTML
+            $loop_content = ob_get_clean(); // Get the buffered content
+
             // Ensure CSS is loaded, but only once per page load to avoid bloat
             // We capture it into a variable to prepend to the first card
             $styles = '';
@@ -887,7 +894,7 @@ if (!function_exists('mco_auto_inject_template')) {
                 $css_loaded = true;
             }
             
-            return $styles . $card_html;
+            return $styles . $loop_content;
         }
         return $content;
     }
