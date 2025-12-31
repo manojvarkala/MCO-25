@@ -177,6 +177,7 @@ const Certificate: FC = () => {
     const { organization, template, examName } = certData;
 
     // FIX: Prioritize local base64 logo for PDF rendering, fall back to external URL
+    // Use the organization ID for lookup, which is a string like "org-annapoorna"
     const orgLogoSrc = localLogos[organization.id] || organization.logoUrl;
     // Determine if crossOrigin is needed (only for external URLs, not base64)
     const orgLogoCrossOrigin = orgLogoSrc && !orgLogoSrc.startsWith('data:image') ? "anonymous" : undefined;
@@ -198,7 +199,7 @@ const Certificate: FC = () => {
     };
 
     const processedBody = sanitizeBody(template.body)
-        .replace(/{examName}/g, `<strong>${examName}</strong>`);
+        .replace(/{examName}/g, `<strong>${decodeHtmlEntities(examName)}</strong>`); // FIX: Decode HTML entities for examName in body
     
     const classicBody = processedBody.replace(/{finalScore}%/g, `<strong>${certData.finalScore.toFixed(0)}%</strong>`);
     const modernBody = processedBody.replace(/{finalScore}%/g, '');

@@ -58,7 +58,7 @@ if (!function_exists('mco_save_custom_meta_data')) {
     add_action('save_post', 'mco_save_custom_meta_data');
     function mco_save_custom_meta_data($post_id) {
         // Exam Programs
-        if (isset($_POST['mco_exam_meta_box_nonce']) && wp_verify_nonce($_POST['mco_exam_meta_box_nonce'], 'mco_save_exam_meta_box_data')) {
+        if (isset($_POST['mco_exam_meta_box_nonce']) && wp_verify_nonce((string)$_POST['mco_exam_meta_box_nonce'], 'mco_save_exam_meta_box_data')) { // Cast nonce to string
             if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
             if (!current_user_can('edit_post', $post_id)) return;
             
@@ -81,8 +81,9 @@ if (!function_exists('mco_save_custom_meta_data')) {
             foreach ($fields as $key => $sanitize_func) {
                 $post_key = str_replace('_mco_', 'mco_', $key);
                 if (isset($_POST[$post_key])) {
-                    update_post_meta($post_id, $key, call_user_func($sanitize_func, $_POST[$post_key]));
+                    update_post_meta($post_id, $key, call_user_func($sanitize_func, (string)$_POST[$post_key])); // Cast to string
                 } else {
+                    // For checkboxes, if not set, update to '0'
                     if (in_array($key, ['_mco_is_proctored', '_mco_certificate_enabled', '_mco_practice_certificate_enabled'])) {
                         update_post_meta($post_id, $key, '0');
                     }
@@ -90,7 +91,7 @@ if (!function_exists('mco_save_custom_meta_data')) {
             }
             
             if (isset($_POST['mco_recommended_book_ids']) && is_array($_POST['mco_recommended_book_ids'])) {
-                $sanitized_ids = array_map('intval', $_POST['mco_recommended_book_ids']);
+                $sanitized_ids = array_map('intval', (array)$_POST['mco_recommended_book_ids']); // Cast to array
                 update_post_meta($post_id, '_mco_recommended_book_ids', $sanitized_ids);
             } else {
                 delete_post_meta($post_id, '_mco_recommended_book_ids');
@@ -98,13 +99,13 @@ if (!function_exists('mco_save_custom_meta_data')) {
 
             if (isset($_POST['mco_sections']) && is_array($_POST['mco_sections'])) {
                 $sanitized_sections = [];
-                foreach ($_POST['mco_sections'] as $section) {
+                foreach ((array)$_POST['mco_sections'] as $section) { // Cast to array
                     if (!empty($section['name']) && !empty($section['start']) && !empty($section['end'])) {
                         $sanitized_sections[] = [
-                            'id' => sanitize_title($section['name']),
-                            'name' => sanitize_text_field($section['name']),
-                            'startQuestion' => intval($section['start']),
-                            'endQuestion' => intval($section['end'])
+                            'id' => sanitize_title((string)($section['name'] ?? '')), // Cast to string
+                            'name' => sanitize_text_field((string)($section['name'] ?? '')), // Cast to string
+                            'startQuestion' => (int)($section['start'] ?? 0), // Cast to int
+                            'endQuestion' => (int)($section['end'] ?? 0) // Cast to int
                         ];
                     }
                 }
@@ -115,7 +116,7 @@ if (!function_exists('mco_save_custom_meta_data')) {
         }
         
         // Recommended Books
-        if (isset($_POST['mco_book_nonce']) && wp_verify_nonce($_POST['mco_book_nonce'], 'mco_save_book_meta_data')) {
+        if (isset($_POST['mco_book_nonce']) && wp_verify_nonce((string)$_POST['mco_book_nonce'], 'mco_save_book_meta_box_data')) { // Cast nonce to string
             if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
             if (!current_user_can('edit_post', $post_id)) return;
 
@@ -130,7 +131,7 @@ if (!function_exists('mco_save_custom_meta_data')) {
             foreach ($book_fields as $key => $sanitize_func) {
                 $post_key = str_replace('_mco_', 'mco_', $key);
                 if (isset($_POST[$post_key])) {
-                    update_post_meta($post_id, $key, call_user_func($sanitize_func, $_POST[$post_key]));
+                    update_post_meta($post_id, $key, call_user_func($sanitize_func, (string)$_POST[$post_key])); // Cast to string
                 }
             }
         }
@@ -142,29 +143,29 @@ if (!function_exists('mco_exam_program_meta_box_callback')) {
     function mco_exam_program_meta_box_callback($post) {
         wp_nonce_field('mco_save_exam_meta_box_data', 'mco_exam_meta_box_nonce');
         
-        $practice_override = get_post_meta($post->ID, '_mco_practice_exam_title_override', true);
-        $cert_override = get_post_meta($post->ID, '_mco_cert_exam_title_override', true);
-        $source_url = get_post_meta($post->ID, '_mco_question_source_url', true);
-        $sku = get_post_meta($post->ID, '_mco_certification_exam_sku', true);
-        $is_proctored = get_post_meta($post->ID, '_mco_is_proctored', true);
-        $cert_enabled = get_post_meta($post->ID, '_mco_certificate_enabled', true);
-        $practice_cert_enabled = get_post_meta($post->ID, '_mco_practice_certificate_enabled', true);
-        $recommended_books = get_post_meta($post->ID, '_mco_recommended_book_ids', true) ?: array();
-        $sections = get_post_meta($post->ID, '_mco_exam_sections', true) ?: array();
-        $template_id = get_post_meta($post->ID, '_mco_certificate_template_id', true);
+        $practice_override = (string)get_post_meta($post->ID, '_mco_practice_exam_title_override', true); // Cast to string
+        $cert_override = (string)get_post_meta($post->ID, '_mco_cert_exam_title_override', true); // Cast to string
+        $source_url = (string)get_post_meta($post->ID, '_mco_question_source_url', true); // Cast to string
+        $sku = (string)get_post_meta($post->ID, '_mco_certification_exam_sku', true); // Cast to string
+        $is_proctored = (string)get_post_meta($post->ID, '_mco_is_proctored', true); // Cast to string
+        $cert_enabled = (string)get_post_meta($post->ID, '_mco_certificate_enabled', true); // Cast to string
+        $practice_cert_enabled = (string)get_post_meta($post->ID, '_mco_practice_certificate_enabled', true); // Cast to string
+        $recommended_books = (array)get_post_meta($post->ID, '_mco_recommended_book_ids', true) ?: array(); // Cast to array
+        $sections = (array)get_post_meta($post->ID, '_mco_exam_sections', true) ?: array(); // Cast to array
+        $template_id = (string)get_post_meta($post->ID, '_mco_certificate_template_id', true); // Cast to string
         
-        $practice_questions = get_post_meta($post->ID, '_mco_practice_questions', true);
-        $practice_duration = get_post_meta($post->ID, '_mco_practice_duration', true);
-        $cert_questions = get_post_meta($post->ID, '_mco_cert_questions', true);
-        $cert_duration = get_post_meta($post->ID, '_mco_cert_duration', true);
-        $pass_score = get_post_meta($post->ID, '_mco_pass_score', true);
+        $practice_questions = (string)get_post_meta($post->ID, '_mco_practice_questions', true); // Cast to string
+        $practice_duration = (string)get_post_meta($post->ID, '_mco_practice_duration', true); // Cast to string
+        $cert_questions = (string)get_post_meta($post->ID, '_mco_cert_questions', true); // Cast to string
+        $cert_duration = (string)get_post_meta($post->ID, '_mco_cert_duration', true); // Cast to string
+        $pass_score = (string)get_post_meta($post->ID, '_mco_pass_score', true); // Cast to string
 
         // Ensure mco_get_default_certificate_templates is available from mco-data.php
         if (!function_exists('mco_get_default_certificate_templates')) {
             error_log('mco_get_default_certificate_templates function not found. Ensure mco-data.php is loaded correctly.');
             $all_templates = []; // Fallback to empty if function is missing
         } else {
-            $all_templates = get_option('mco_certificate_templates', mco_get_default_certificate_templates());
+            $all_templates = (array)get_option('mco_certificate_templates', mco_get_default_certificate_templates()); // Cast to array
         }
         $all_books = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
 
@@ -220,7 +221,7 @@ if (!function_exists('mco_exam_program_meta_box_callback')) {
                         <option value="">-- Use Default Template --</option>
                         <?php foreach ($all_templates as $id => $template): ?>
                             <option value="<?php echo esc_attr($id); ?>" <?php selected($template_id, $id); ?>>
-                                <?php echo esc_html($template['name']); ?>
+                                <?php echo esc_html((string)($template['name'] ?? '')); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -252,9 +253,9 @@ if (!function_exists('mco_exam_program_meta_box_callback')) {
                     <div id="mco-sections-container">
                         <?php if (!empty($sections)): foreach ($sections as $index => $section): ?>
                         <div class="mco-section-item">
-                            <input type="text" name="mco_sections[<?php echo $index; ?>][name]" placeholder="Section Name" value="<?php echo esc_attr($section['name']); ?>">
-                            <input type="number" name="mco_sections[<?php echo $index; ?>][start]" placeholder="Start Q" value="<?php echo esc_attr($section['startQuestion']); ?>" min="1">
-                            <input type="number" name="mco_sections[<?php echo $index; ?>][end]" placeholder="End Q" value="<?php echo esc_attr($section['endQuestion']); ?>" min="1">
+                            <input type="text" name="mco_sections[<?php echo (int)$index; ?>][name]" placeholder="Section Name" value="<?php echo esc_attr((string)($section['name'] ?? '')); ?>">
+                            <input type="number" name="mco_sections[<?php echo (int)$index; ?>][start]" placeholder="Start Q" value="<?php echo esc_attr((string)($section['startQuestion'] ?? '')); ?>" min="1">
+                            <input type="number" name="mco_sections[<?php echo (int)$index; ?>][end]" placeholder="End Q" value="<?php echo esc_attr((string)($section['endQuestion'] ?? '')); ?>" min="1">
                             <button type="button" class="button mco-remove-section">Remove</button>
                         </div>
                         <?php endforeach; endif; ?>
@@ -265,7 +266,7 @@ if (!function_exists('mco_exam_program_meta_box_callback')) {
         </table>
         <script>
             jQuery(document).ready(function($) {
-                var sectionIndex = <?php echo count($sections); ?>;
+                var sectionIndex = <?php echo (int)count($sections); ?>; // Cast to int
                 $('#mco-add-section').on('click', function() {
                     var newSection = '<div class="mco-section-item">' +
                         '<input type="text" name="mco_sections[' + sectionIndex + '][name]" placeholder="Section Name">' +

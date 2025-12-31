@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import toast from 'react-hot-toast';
 import LogoSpinner from './LogoSpinner.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
-import { AlertTriangle, LogIn, RefreshCw, Trash2, Shield, Key } from 'lucide-react';
+import { AlertTriangle, LogIn, RefreshCw, Trash2, Shield, Key, Server } from 'lucide-react'; // FIX: Added Server icon for consistency
 
 const Login: FC = () => {
     const { loginWithToken, user, logout } = useAuth();
@@ -110,6 +110,8 @@ const Login: FC = () => {
         const isHeaderError = error.includes('Authorization');
         const isKeyError = error.includes('Security Key');
         const isLoopError = error.includes('Loop');
+        const isConnectionBlocked = error.includes('Connection Blocked');
+
 
         return (
              <div className="flex flex-col items-center justify-center py-20 px-4">
@@ -141,7 +143,7 @@ RewriteCond %{HTTP:Authorization} .
 RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 </IfModule>`}
                                 </code></pre>
-                                <p className="mt-2 text-xs">After adding this, **clear all caches** (WordPress, server, CDN).</p>
+                                <p className="mt-2 text-xs">After adding this, **clear all caches** (WordPress, server, CDN) and **re-save permalinks** in WordPress.</p>
                             </div>
                         )}
                         {isKeyError && (
@@ -150,6 +152,19 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
                                 <p className="mb-2">The security key (<code>MCO_JWT_SECRET</code>) in your browser's token does not match the one defined in your WordPress <code>wp-config.php</code> file.</p>
                                 <p className="mb-2"><strong>Fix:</strong> Ensure the <code>MCO_JWT_SECRET</code> in your <code>wp-config.php</code> is identical to the one your WordPress site is using to generate tokens. If you recently changed it, this error is expected until new tokens are generated with the new key.</p>
                                 <p className="mt-2 text-xs">After fixing, click "Hard Reset & Retry Login".</p>
+                            </div>
+                        )}
+                        {isConnectionBlocked && (
+                            <div className="text-red-700">
+                                <h4 className="font-bold text-red-800 mt-4 mb-2 flex items-center gap-2"><Server size={16}/> API Connection Blocked</h4>
+                                <p className="mb-2">The browser could not reach the backend API endpoint. This is a critical server-side issue.</p>
+                                <ul className="list-disc list-inside text-sm mt-2 space-y-1">
+                                    <li><strong>PHP Fatal Error:</strong> Check your WordPress <code>wp-content/debug.log</code> file for any PHP fatal errors. A fatal error will completely stop the API from responding.</li>
+                                    <li><strong>WordPress Permalinks:</strong> Go to WordPress Admin &gt; Settings &gt; Permalinks and simply click "Save Changes" to flush rewrite rules.</li>
+                                    <li><strong>API URL Config:</strong> In WordPress Admin &gt; Exam App Engine &gt; Main Settings, ensure the "App URL(s)" matches the URL you are viewing this app on (e.g., <code>https://exams.yourdomain.com</code>).</li>
+                                    <li><strong>CORS:</strong> If your frontend (e.g., <code>app.domain.com</code>) is different from your backend (e.g., <code>api.domain.com</code>), ensure your CORS settings are correct in WordPress Admin &gt; Exam App Engine &gt; Main Settings (App URL(s) field).</li>
+                                </ul>
+                                <p className="mt-2 text-xs">After checking, click "Hard Reset & Retry Login".</p>
                             </div>
                         )}
                     </div>

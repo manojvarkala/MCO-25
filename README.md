@@ -105,9 +105,9 @@ The application should now be running locally, proxying all API requests to your
 
 ## Deployment
 
-1.  **Build the Application**:
+11.  **Build the Application**:
     `npm run build`
-2.  **Deploy**:
+12. **Deploy**:
     The command will create a `dist` directory containing the optimized, static production build. Deploy the contents of this directory to any static hosting provider (e.g., Vercel, Netlify, AWS S3).
     
 ---

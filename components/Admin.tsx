@@ -2,7 +2,6 @@
 import React, { FC, useState, useCallback, ReactNode, useEffect, useMemo } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { Link } from "react-router-dom";
-import { Settings, Paintbrush, DatabaseZap, DownloadCloud, FileSpreadsheet, Cpu, Loader, CheckCircle, XCircle, RefreshCw, Trash2, Bug, ShoppingCart, BarChart3, FileText, DollarSign } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -10,6 +9,8 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
+// FIX: Added missing Lucide-React icon imports
+import { CheckCircle, XCircle, Cpu, FileSpreadsheet, RefreshCw, BarChart3, ShoppingCart, DollarSign, FileText, Paintbrush, DatabaseZap, Trash2, DownloadCloud } from 'lucide-react';
 
 interface HealthStatus {
     [key: string]: { success: boolean; message: string; data?: any } | { [key: string]: string };
@@ -55,7 +56,7 @@ const HealthListItem: FC<{ title: string; status?: { success: boolean; message: 
         <div className="flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg">
             <div className="flex items-center gap-3">
                 { !status ? (
-                    <Loader size={18} className="animate-spin text-[rgb(var(--color-text-muted-rgb))]" />
+                    <Spinner size="sm" className="animate-spin text-[rgb(var(--color-text-muted-rgb))]" />
                 ) : status.success ? (
                     <CheckCircle size={18} className="text-green-500" />
                 ) : (
@@ -125,7 +126,7 @@ const Admin: FC = () => {
                 ]);
                 setHealthStatus(status);
                 if (activeOrg) {
-                    const certExamIds = activeOrg.exams.filter(e => !e.isPractice).map(e => e.id);
+                    const certExamIds = activeOrg.exams.filter(e => e && !e.isPractice).map(e => e.id);
                     const relevantStats = stats.filter((stat: ExamStat) => certExamIds.includes(stat.id));
                     setExamStats(relevantStats);
                 }
@@ -169,7 +170,7 @@ const Admin: FC = () => {
     
     const generateCsvPostRequest = async (action: string, nonceName: string, nonceKey: string, setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>) => {
         setIsGenerating(true);
-        if (!healthStatus || !healthStatus.nonces || !healthStatus.nonces[nonceKey]) {
+        if (!healthStatus || !healthStatus.nonces || !(healthStatus.nonces as any)[nonceKey]) { // FIX: Cast healthStatus.nonces to any
             toast.error("Could not generate CSV: Security token is missing. Please refresh the page.");
             setIsGenerating(false);
             return;
@@ -190,7 +191,7 @@ const Admin: FC = () => {
             const nonceInput = document.createElement('input');
             nonceInput.type = 'hidden';
             nonceInput.name = nonceName;
-            nonceInput.value = healthStatus.nonces[nonceKey];
+            nonceInput.value = (healthStatus.nonces as any)[nonceKey]; // FIX: Cast healthStatus.nonces to any
             form.appendChild(nonceInput);
 
             document.body.appendChild(form);

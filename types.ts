@@ -176,6 +176,7 @@ export interface WordpressAuthor {
 export interface WordpressCategory {
     term_id: number;
     name: string;
+    slug: string;
 }
 
 export interface PostCreationData {

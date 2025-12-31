@@ -31,18 +31,23 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     }
 
     try {
-        console.log(`MCO API: Requesting ${method} ${fullUrl}`);
+        console.log(`MCO API: Attempting ${method} ${fullUrl}`);
         const response = await fetch(fullUrl, config);
         const responseText = await response.text();
+        console.log(`MCO API: Received response for ${fullUrl} - Status: ${response.status}, Body: ${responseText.substring(0, 200)}...`);
+
 
         if (!response.ok) {
-            console.error(`MCO API: Server returned ${response.status}`, responseText);
             let errorData;
             try {
                 errorData = JSON.parse(responseText);
             } catch (e) {
-                throw new Error(`Server Error: ${response.status}. The backend might be experiencing issues.`);
+                // If responseText is not JSON, it might be an HTML error page or empty.
+                console.error(`MCO API: Server returned ${response.status} with non-JSON response. Raw body:`, responseText);
+                throw new Error(`Server Error: ${response.status}. The backend might be misconfigured or experiencing a PHP fatal error. Check wp-content/debug.log for details.`);
             }
+
+            console.error(`MCO API: Server returned ${response.status}`, errorData);
 
             if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_auth_invalid_token') {
                 localStorage.removeItem('examUser');
@@ -59,7 +64,7 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     } catch (error: any) {
         console.error("MCO API Connection Error:", error);
         if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-             throw new Error("Connection Blocked: The browser could not reach the API. This is usually caused by: 1. Permalinks not set to 'Post Name' in WP. 2. Missing .htaccess rules. 3. CORS blocking the request.");
+             throw new Error("Connection Blocked: The browser could not reach the API. This is usually caused by: 1. A PHP Fatal Error on the server (check wp-content/debug.log). 2. WordPress Permalinks not set to 'Post Name'. 3. Missing .htaccess rules for Authorization headers. 4. Incorrect API URL config.");
         }
         throw error;
     }
@@ -92,10 +97,11 @@ export const googleSheetsService = {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
-                contents: prompt,
+                contents: [{ text: prompt }], // FIX: Ensure contents is an array of objects
             });
             return response.text as string;
         } catch (error: any) {
+            console.error("Gemini API Error:", error);
             return "AI feedback service is currently unavailable.";
         }
     },
@@ -104,7 +110,7 @@ export const googleSheetsService = {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
-            contents: `Write an SEO blog post about preparing for the ${programTitle} certification. Description: ${programDescription}. Keywords: ${keywords}.`,
+            contents: [{ text: `Write an SEO blog post about preparing for the ${programTitle} certification. Description: ${programDescription}. Keywords: ${keywords}. Hashtags: ${hashtags}.` }], // FIX: Ensure contents is an array of objects and include hashtags
         });
         return response.text as string;
     },
@@ -174,10 +180,12 @@ export const googleSheetsService = {
         return await apiFetch('/debug-details', 'GET', token);
     },
     getExamStats: async (token: string): Promise<ExamStat[]> => {
-        return await apiFetch('/exam-stats', 'GET', token);
+        const response = await apiFetch('/exam-stats', 'GET', token);
+        return Array.isArray(response) ? response : Object.values(response || {});
     },
     adminGetBetaTesters: async (token: string): Promise<BetaTester[]> => {
-        return await apiFetch('/admin/beta-testers', 'GET', token);
+        const response = await apiFetch('/admin/beta-testers', 'GET', token);
+        return Array.isArray(response) ? response : Object.values(response || {});
     },
     adminResendBetaEmail: async (token: string, userId: string): Promise<{ success: boolean, message: string }> => {
         return await apiFetch('/admin/resend-beta-email', 'POST', token, { userId });

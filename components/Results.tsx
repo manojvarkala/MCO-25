@@ -1,4 +1,5 @@
 
+
 import React, { FC, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useParams, useNavigate } from "react-router-dom";
@@ -82,10 +83,10 @@ const getGeoAffiliateLink = (book: RecommendedBook, userGeoCountryCode: string |
     if (finalKey && finalDomainName) {
         // Store the FINAL chosen key in localStorage for WordPress shortcodes to read via cookie
         try {
-            localStorage.setItem('mco_preferred_geo_key', finalKey);
-            localStorage.setItem('mco_user_geo_country_code', userGeoCountryCode || 'UNKNOWN'); // Also persist IP-based for debug
+            document.cookie = `mco_preferred_geo_key=${finalKey}; path=/; max-age=3600; SameSite=Lax`; // FIX: Set as cookie
+            document.cookie = `mco_user_geo_country_code=${userGeoCountryCode || 'UNKNOWN'}; path=/; max-age=3600; SameSite=Lax`; // FIX: Set as cookie
         } catch(e) {
-            console.error("Failed to set geo preference in localStorage", e);
+            console.error("Failed to set geo preference in cookie", e);
         }
         return { url: links[finalKey], domainName: finalDomainName, key: finalKey };
     }
@@ -210,7 +211,7 @@ const Results: FC = () => {
 
             const prompt = `
                 You are an expert tutor for medical coding certification exams.
-                A student just took a practice test for the "${exam.name}" exam and got the following questions wrong.
+                A student just took a practice test for the "${decodeHtmlEntities(exam.name)}" exam and got the following questions wrong.
                 For each question, provide a detailed but concise explanation of why the correct answer is right and why the student's chosen answer was wrong.
                 Focus on the core concepts being tested. Use clear, easy-to-understand language.
                 Organize the feedback by question. Use markdown for formatting.
