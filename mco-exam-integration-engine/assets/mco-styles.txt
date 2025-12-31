@@ -1,5 +1,3 @@
-
-
 /* 
    MCO PLUGIN STYLES 
    Strictly scoped to prevent conflicts with WordPress Admin or Themes.
@@ -147,6 +145,7 @@
     color: #1d2327;
 }
 
+
 /* --- FRONTEND SHORTCODE STYLES --- 
    Scoped to prevent bleeding into the WP theme
 */
@@ -157,11 +156,38 @@
 .mco-showcase-layout *::after,
 .mco-book-grid *,
 .mco-book-grid *::before,
-.mco-book-grid *::after {
+.mco-book-grid *::after,
+.mco-program-list *,
+.mco-program-list *::before,
+.mco-program-list *::after,
+.mco-program-group *,
+.mco-program-group *::before,
+.mco-program-group *::after,
+.mco-card *,
+.mco-card *::before,
+.mco-card *::after,
+.mco-study-hall-sidebar *,
+.mco-study-hall-sidebar *::before,
+.mco-study-hall-sidebar *::after,
+.mco-single-book-view *,
+.mco-single-book-view *::before,
+.mco-single-book-view *::after {
     box-sizing: border-box;
 }
 
-/* Procedural Book Covers (minimal CSS, actual rendering by React) */
+/* Reset for specific elements within shortcodes to ensure consistency */
+.mco-showcase-layout h1, .mco-showcase-layout h2, .mco-showcase-layout h3, .mco-showcase-layout h4, .mco-showcase-layout p, .mco-showcase-layout ul, .mco-showcase-layout ol, .mco-showcase-layout li {
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+}
+
+.mco-showcase-layout a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Procedural Book Covers */
 .mco-book-cover {
     position: relative;
     overflow: hidden;
@@ -179,7 +205,7 @@
     object-fit: cover;
 }
 
-.mco-book-cover > div[data-procedural-cover] {
+.mco-book-cover > div[class*="mco-proc-cover-"] {
     width: 100%;
     height: 100%;
 }
@@ -192,6 +218,7 @@
     gap: 30px;
     font-family: system-ui, -apple-system, sans-serif;
     margin-bottom: 40px;
+    width: 100%; /* Ensure it takes full width */
 }
 
 @media(min-width: 900px) {
@@ -207,7 +234,7 @@
         width: 320px;
         flex-shrink: 0;
         position: sticky;
-        top: 20px;
+        top: 20px; /* Adjust as needed for header */
     }
 }
 
@@ -218,12 +245,21 @@
     margin-bottom: 40px;
 }
 
+.mco-subscription-grid .mco-card {
+    min-height: 350px; /* Ensure cards have consistent height */
+}
+
+.mco-program-list {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
 .mco-program-group {
     background-color: #fff;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     padding: 24px;
-    margin-bottom: 24px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
@@ -232,8 +268,6 @@
     font-weight: 700;
     margin: 0 0 10px 0;
     color: #0f172a;
-    border: none;
-    padding: 0;
     line-height: 1.3;
 }
 
@@ -373,7 +407,7 @@
     padding-bottom: 10px;
 }
 
-/* FIX: Added display flex to grid for consistent layout before JS loads */
+/* Grid for sidebar books */
 .mco-study-hall-sidebar__grid {
     display: flex;
     flex-direction: column;
@@ -385,7 +419,7 @@
     border-radius: 6px;
     overflow: hidden;
     display: flex;
-    height: 150px; /* Increased height */
+    height: 100px; /* Adjusted to fit the provided shortcode logic */
     background: #fff;
     transition: border-color 0.2s;
 }
@@ -395,7 +429,7 @@
 }
 
 .mco-book-card-sidebar__cover {
-    width: 80px;
+    width: 70px; /* Adjusted to fit the provided shortcode logic */
     flex-shrink: 0;
     border-right: 1px solid #f1f5f9;
 }
@@ -406,8 +440,26 @@
     object-fit: cover;
 }
 
+/* Procedural Cover Tweaks for Sidebar Small Size */
+.mco-book-card-sidebar__cover [class*="mco-proc-cover-"] {
+    padding: 5px !important; /* Smaller padding */
+    justify-content: center;
+    width: 100% !important;
+    height: 100% !important;
+}
+.mco-book-card-sidebar__cover [class*="mco-proc-cover-"] h4 {
+    font-size: 9px !important; /* Smaller text */
+    line-height: 1.1 !important;
+    margin: 0 !important;
+    display: block !important;
+}
+.mco-book-card-sidebar__cover [class*="mco-proc-cover-"] span {
+    display: none !important; /* Hide supertitles to save space */
+}
+
+
 .mco-book-card-sidebar__content {
-    padding: 12px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -418,7 +470,7 @@
 .mco-book-card-sidebar__title {
     font-size: 0.95rem;
     font-weight: 600;
-    margin: 0 0 8px 0;
+    margin: 0 0 5px 0;
     line-height: 1.3;
     color: #1e293b;
     display: -webkit-box;
@@ -473,35 +525,21 @@
     line-height: 1.4;
 }
 
-/* Book Showcase (Main Grid) */
+/* Book Grid (Main Showcase & Program Grid) */
 .mco-wrapper {
     font-family: system-ui, -apple-system, sans-serif;
     max-width: 1200px;
     margin: 0 auto;
 }
 
-/* FIX: Added display flex to grid for consistent layout before JS loads */
+/* This is the main grid for books and programs */
 .mco-book-grid {
-    display: flex; 
-    flex-wrap: wrap; /* Allow items to wrap */
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Auto-fill with min 280px wide columns */
     gap: 30px;
+    width: 100%;
+    grid-auto-rows: 1fr; /* Ensures equal height rows */
 }
-.mco-book-grid .mco-book-card {
-    flex: 1 1 calc(33.333% - 20px); /* Adjust for 3 columns on larger screens */
-    min-width: 260px; /* Ensure minimum width */
-    max-width: 100%;
-}
-@media (max-width: 768px) {
-    .mco-book-grid .mco-book-card {
-        flex: 1 1 calc(50% - 15px); /* Adjust for 2 columns on medium screens */
-    }
-}
-@media (max-width: 500px) {
-    .mco-book-grid .mco-book-card {
-        flex: 1 1 100%; /* Single column on small screens */
-    }
-}
-
 
 .mco-book-card {
     background: #fff;
@@ -557,9 +595,149 @@
     background: #f8fafc;
 }
 
-/* Store Buttons Grid */
+/* Store Buttons Grid (for main book cards) */
 .mco-store-buttons {
     display: flex;
     flex-direction: column;
     gap: 8px;
+}
+
+
+/* Single Book/Program View */
+.mco-single-book-view {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column; /* Stack on mobile */
+    gap: 30px;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+@media (min-width: 768px) {
+    .mco-single-book-view {
+        flex-direction: row; /* Two columns on larger screens */
+        align-items: flex-start;
+    }
+}
+
+.mco-single-book-view__cover {
+    width: 100%;
+    height: 400px; /* Fixed height for consistency */
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0; /* Don't let it shrink */
+    background: #f0f0f1; /* Placeholder for procedural covers */
+}
+@media (min-width: 768px) {
+    .mco-single-book-view__cover {
+        width: 300px; /* Fixed width on larger screens */
+        height: 400px; /* Adjust height to match aspect ratio, e.g., 2:3 or 3:4 */
+    }
+}
+
+.mco-single-book-view__cover .mco-book-cover-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mco-single-book-view__details {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.mco-single-book-view__title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0 0 20px 0;
+    line-height: 1.2;
+}
+
+.mco-single-book-view__description {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #64748b;
+    margin-bottom: 40px;
+    flex-grow: 1; /* Push buttons to bottom */
+}
+
+.mco-single-book-view__buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-top: auto; /* Align buttons to the bottom */
+}
+
+/* Procedural Covers - Annapoorna Styles */
+.mco-proc-cover-annapoorna-a, .mco-proc-cover-annapoorna-b { 
+    position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 1.5rem; box-sizing: border-box; overflow: hidden; 
+}
+.mco-proc-cover-annapoorna-a__pattern-bg { 
+    position: absolute; inset: 0; opacity: 0.2; clip-path: polygon(0 0, 100% 0, 0 100%); 
+}
+.mco-proc-cover-annapoorna-a__content { 
+    position: relative; z-index: 10; 
+}
+.mco-proc-cover-annapoorna-a__super-title { 
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; display: block; margin-bottom: 0.5rem; 
+}
+.mco-proc-cover-annapoorna-a__title { 
+    font-weight: 800; font-size: 1.25rem; line-height: 1.2; margin: 0; 
+}
+
+.mco-proc-cover-annapoorna-b { 
+    justify-content: flex-end; text-align: left; 
+}
+.mco-proc-cover-annapoorna-b__shape { 
+    position: absolute; right: -20%; top: -20%; width: 70%; height: 70%; border-radius: 50%; opacity: 0.5; mix-blend-mode: multiply; 
+}
+.mco-proc-cover-annapoorna-b__content { 
+    position: relative; z-index: 10; 
+}
+.mco-proc-cover-annapoorna-b__title { 
+    font-weight: 800; font-size: 1.5rem; line-height: 1.1; margin: 0 0 0.5rem 0; 
+}
+.mco-proc-cover-annapoorna-b__super-title { 
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; 
+}
+
+
+/* Procedural Covers - MCO Styles */
+.mco-proc-cover-mco-a {
+    position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; padding: 1.5rem; box-sizing: border-box; overflow: hidden;
+}
+.mco-proc-cover-mco-a__bg-word {
+    position: absolute; bottom: -0.5rem; right: -0.5rem; font-size: 9rem; font-weight: 900; line-height: 1; user-select: none; z-index: 0;
+    font-family: 'Inter', sans-serif; /* Fallback for font-display */
+}
+.mco-proc-cover-mco-a__content {
+    position: relative; z-index: 10;
+}
+.mco-proc-cover-mco-a__title {
+    font-weight: 800; font-size: 1.5rem; line-height: 1.2; margin: 0;
+}
+
+.mco-proc-cover-mco-b {
+    position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 1.5rem; box-sizing: border-box; overflow: hidden;
+}
+.mco-proc-cover-mco-b__accent-line {
+    position: absolute; top: 1rem; left: 0; width: 0.25rem; height: 25%;
+}
+.mco-proc-cover-mco-b__header {
+    display: flex; flex-direction: column;
+}
+.mco-proc-cover-mco-b__super-title {
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; display: block; margin-bottom: 0.5rem;
+}
+.mco-proc-cover-mco-b__title {
+    font-weight: 800; font-size: 1.25rem; line-height: 1.2; margin: 0;
+}
+.mco-proc-cover-mco-b__logo-text {
+    align-self: flex-end; font-size: 3rem; font-weight: 900; opacity: 0.1; user-select: none;
+    font-family: 'Inter', sans-serif; /* Fallback for font-display */
 }

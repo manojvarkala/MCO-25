@@ -3,8 +3,20 @@ if (!defined('ABSPATH')) exit;
 
 /**
  * MCO Data Engine: Re-formatted for high-density JSON export.
- * All functions are wrapped in `if (!function_exists())` for robustness.
  */
+
+// Core App URL accessor - CRITICAL. Re-added if (!function_exists()) for robustness.
+if (!function_exists('mco_get_exam_app_url')) {
+    function mco_get_exam_app_url() {
+        error_log('MCO DATA: mco_get_exam_app_url() function is executing.'); // Debug log
+        $urls = get_option('mco_exam_app_url', '');
+        $url_list = preg_split('/\r\n|\r|\n/', $urls);
+        return trim($url_list[0]);
+    }
+    error_log('MCO DATA DEBUG: mco_get_exam_app_url defined.');
+}
+
+
 if (!function_exists('mco_get_default_certificate_templates')) {
     function mco_get_default_certificate_templates() { 
         return [
@@ -23,8 +35,11 @@ if (!function_exists('mco_get_default_certificate_templates')) {
             ]
         ]; 
     }
+    error_log('MCO DATA DEBUG: mco_get_default_certificate_templates defined (if not exists).');
 }
 
+
+// Full snapshot data provider - CRITICAL. Re-added if (!function_exists()) for robustness.
 if (!function_exists('mco_get_full_snapshot_data')) {
     function mco_get_full_snapshot_data($is_blueprint = false) {
         error_log('MCO DATA DEBUG: mco_get_full_snapshot_data called. is_blueprint: ' . ($is_blueprint ? 'true' : 'false'));
@@ -78,13 +93,12 @@ if (!function_exists('mco_get_full_snapshot_data')) {
         error_log('MCO DATA DEBUG: Full snapshot data generated successfully.');
         return $snapshot;
     }
+    error_log('MCO DATA DEBUG: mco_get_full_snapshot_data defined.');
 }
 
+
+// Helper to fetch and process dynamic app data - CRITICAL. Re-added if (!function_exists()) for robustness.
 if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
-    /**
-     * Helper function to fetch and process dynamic app data from CPTs and WooCommerce.
-     * This is the core logic for gathering all content for the React app.
-     */
     function mco_fetch_and_process_dynamic_app_data() {
         error_log('MCO DATA DEBUG: mco_fetch_and_process_dynamic_app_data called.');
         
@@ -265,16 +279,12 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
         ];
         return $final_data;
     }
+    error_log('MCO DATA DEBUG: mco_fetch_and_process_dynamic_app_data defined.');
 }
 
 
+// Public app config data provider - CRITICAL. Re-added if (!function_exists()) for robustness.
 if (!function_exists('mco_get_app_config_data')) {
-    /**
-     * Retrieves the full application configuration data, wrapped in an organization structure.
-     * This function is the primary entry point for the React app and for shortcodes needing
-     * the full configuration object.
-     * It uses a transient cache for performance.
-     */
     function mco_get_app_config_data() {
         error_log('MCO DATA DEBUG: mco_get_app_config_data (public) called.');
         // Try to fetch from transient first
@@ -298,6 +308,7 @@ if (!function_exists('mco_get_app_config_data')) {
         
         return $full_snapshot;
     }
+    error_log('MCO DATA DEBUG: mco_get_app_config_data defined.');
 }
 
 
@@ -311,4 +322,5 @@ if (!function_exists('mco_get_available_themes')) {
             ['id'=>'noir','name'=>'Noir']
         ];
     }
+    error_log('MCO DATA DEBUG: mco_get_available_themes defined (if not exists).');
 }

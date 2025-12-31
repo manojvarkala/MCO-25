@@ -16,16 +16,22 @@ if (!defined('ABSPATH')) exit;
 define('MCO_PLUGIN_FILE', __FILE__);
 define('MCO_PLUGIN_PATH', plugin_dir_path(MCO_PLUGIN_FILE));
 define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
+error_log('MCO PLUGIN: Main plugin file loaded. MCO_PLUGIN_PATH: ' . MCO_PLUGIN_PATH); // Debug log
 $plugin_data = get_file_data(MCO_PLUGIN_FILE, array('Version' => 'Version'));
 define('MCO_PLUGIN_VERSION', $plugin_data['Version']);
 
 // --- INCLUDES ---
 // Order matters: CPTs first so they are registered before shortcodes/api might need them
 require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
+error_log('MCO PLUGIN: mco-cpts.php required.'); // Debug log
 require_once MCO_PLUGIN_PATH . 'includes/mco-data.php'; // Contains core data functions, used by API and shortcodes
+error_log('MCO PLUGIN: mco-data.php required. Checking for mco_get_exam_app_url: ' . (function_exists('mco_get_exam_app_url') ? 'YES' : 'NO')); // Debug log
 require_once MCO_PLUGIN_PATH . 'includes/mco-api.php'; // Main API routes and JWT logic
+error_log('MCO PLUGIN: mco-api.php required.'); // Debug log
 require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; // WordPress Admin pages
+error_log('MCO PLUGIN: mco-admin.php required.'); // Debug log
 require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php'; // WordPress Shortcodes
+error_log('MCO PLUGIN: mco-shortcodes.php required.'); // Debug log
 
 // --- FORCE REGISTRATION OPTION ---
 if (!function_exists('mco_force_registration_option')) {
@@ -66,12 +72,13 @@ if (!function_exists('mco_sso_login_redirect')) {
             }
 
             // Ensure mco_get_exam_app_url and mco_generate_exam_jwt are defined (from mco-api.php)
-            if (!function_exists('mco_get_exam_app_url') || !function_exists('mco_generate_exam_jwt')) {
-                error_log('MCO SSO ERR: Critical API functions not defined. Check mco-api.php.');
+            // Removed redundant check for mco_get_exam_app_url as it will be explicitly defined.
+            if (!function_exists('mco_generate_exam_jwt')) {
+                error_log('MCO SSO ERR: Critical API function mco_generate_exam_jwt not defined. Check mco-api.php.'); // Debug log for SSO
                 return; // Let the shortcode handle the error message if it renders.
             }
 
-            $app_url = mco_get_exam_app_url(); // Defined in mco-api.php
+            $app_url = mco_get_exam_app_url(); // Defined in mco-data.php (now guaranteed to be defined)
             if (!$app_url) {
                 error_log('MCO SSO ERR: App URL configuration missing.');
                 return; // Config missing
