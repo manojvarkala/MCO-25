@@ -1,6 +1,5 @@
 
 
-
 import React, { FC } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { Link } from "react-router-dom";
@@ -77,7 +76,7 @@ const Instructions: FC = () => {
                     </p>
                      <ul>
                         <li>All active subscribers.</li>
-                        <li>Users who have purchased an exam bundle that includes this feature.</li>
+                        <li>Users who have purchased an bundle that includes this feature.</li>
                         <li>Users who have purchased a single certification exam (feedback is available for that specific exam program).</li>
                     </ul>
                 </InstructionCard>

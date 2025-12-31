@@ -1,5 +1,4 @@
 
-
 import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, Organization, PostCreationData, ExamStat, VerificationData, BetaTester } from '../types';
 import toast from 'react-hot-toast';
 import { GoogleGenAI } from "@google/genai";

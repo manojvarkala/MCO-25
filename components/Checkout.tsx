@@ -1,11 +1,5 @@
 
 
-
-
-
-
-
-
 import React, { FC, useEffect, useMemo } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useParams } from "react-router-dom";
