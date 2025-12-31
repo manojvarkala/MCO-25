@@ -1,5 +1,4 @@
 
-
 import type { Organization } from '../types.ts';
 
 declare const __DEV__: boolean;

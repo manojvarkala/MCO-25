@@ -1,6 +1,4 @@
 
-
-
 import React, { FC, useEffect, useRef, useState } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useLocation, useNavigate } from "react-router-dom";
@@ -8,7 +6,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import toast from 'react-hot-toast';
 import LogoSpinner from './LogoSpinner.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
-import { AlertTriangle, LogIn, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertTriangle, LogIn, RefreshCw, Trash2, Shield, Key } from 'lucide-react';
 
 const Login: FC = () => {
     const { loginWithToken, user, logout } = useAuth();
@@ -130,6 +128,29 @@ const Login: FC = () => {
                         <p>We encountered an issue verifying your session with the server.</p>
                         {isLoopError && (
                              <p><strong>Diagnosis:</strong> Your WordPress site is serving a cached page with an old security token. The "Hard Reset" below forces a fresh request.</p>
+                        )}
+                        {isHeaderError && (
+                            <div className="text-red-700">
+                                <h4 className="font-bold text-red-800 mt-4 mb-2 flex items-center gap-2"><Shield size={16}/> Server Configuration Issue</h4>
+                                <p className="mb-2">Your web server is likely stripping the <code>Authorization</code> header from requests. This is a common issue with Apache/LiteSpeed servers.</p>
+                                <p className="mb-2"><strong>Fix:</strong> Add the following to the very top of your WordPress <code>.htaccess</code> file, BEFORE any other rules:</p>
+                                <pre className="bg-red-100 p-2 rounded my-2 text-xs text-red-800 whitespace-pre-wrap font-mono"><code>
+{`<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>`}
+                                </code></pre>
+                                <p className="mt-2 text-xs">After adding this, **clear all caches** (WordPress, server, CDN).</p>
+                            </div>
+                        )}
+                        {isKeyError && (
+                            <div className="text-red-700">
+                                <h4 className="font-bold text-red-800 mt-4 mb-2 flex items-center gap-2"><Key size={16}/> Security Key Mismatch</h4>
+                                <p className="mb-2">The security key (<code>MCO_JWT_SECRET</code>) in your browser's token does not match the one defined in your WordPress <code>wp-config.php</code> file.</p>
+                                <p className="mb-2"><strong>Fix:</strong> Ensure the <code>MCO_JWT_SECRET</code> in your <code>wp-config.php</code> is identical to the one your WordPress site is using to generate tokens. If you recently changed it, this error is expected until new tokens are generated with the new key.</p>
+                                <p className="mt-2 text-xs">After fixing, click "Hard Reset & Retry Login".</p>
+                            </div>
                         )}
                     </div>
 

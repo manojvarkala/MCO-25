@@ -20,8 +20,10 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
      */
     function mco_fetch_remote_csv_content($url) {
         if (empty($url)) {
+            error_log('MCO FETCH ERROR: Source URL cannot be empty.');
             return new WP_Error('empty_url', 'Source URL cannot be empty.', ['status' => 400]);
         }
+        error_log('MCO FETCH DEBUG: Attempting to fetch URL: ' . $url);
 
         $args = [
             'timeout'     => 45,
@@ -37,7 +39,12 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
         // TIER 1: WP Native
         $response = wp_remote_get(esc_url_raw($url), $args);
         if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
+            error_log('MCO FETCH DEBUG: Tier 1 (WP Native) successful for ' . $url);
             return ['body' => wp_remote_retrieve_body($response), 'code' => 200, 'tier' => 1];
+        } elseif (is_wp_error($response)) {
+            error_log('MCO FETCH DEBUG: Tier 1 (WP Native) failed for ' . $url . ': ' . $response->get_error_message());
+        } else {
+            error_log('MCO FETCH DEBUG: Tier 1 (WP Native) failed for ' . $url . ' with HTTP code: ' . wp_remote_retrieve_response_code($response));
         }
 
         // TIER 2: PHP cURL
@@ -52,16 +59,26 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
             $body = curl_exec($ch);
             $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            if ($http_code === 200 && !empty($body)) return ['body' => $body, 'code' => 200, 'tier' => 2];
+            if ($http_code === 200 && !empty($body)) {
+                error_log('MCO FETCH DEBUG: Tier 2 (cURL) successful for ' . $url);
+                return ['body' => $body, 'code' => 200, 'tier' => 2];
+            } else {
+                error_log('MCO FETCH DEBUG: Tier 2 (cURL) failed for ' . $url . ' with HTTP code: ' . $http_code . ', error: ' . curl_error($ch));
+            }
         }
 
         // TIER 3: Stream
         if (ini_get('allow_url_fopen')) {
             $context = stream_context_create(['http' => ['timeout' => 45]]);
             $body = @file_get_contents($url, false, $context);
-            if ($body !== false) return ['body' => $body, 'code' => 200, 'tier' => 3];
+            if ($body !== false) {
+                error_log('MCO FETCH DEBUG: Tier 3 (Stream) successful for ' . $url);
+                return ['body' => $body, 'code' => 200, 'tier' => 3];
+            } else {
+                error_log('MCO FETCH DEBUG: Tier 3 (Stream) failed for ' . $url . ', error: ' . (error_get_last()['message'] ?? 'Unknown stream error'));
+            }
         }
-
+        error_log('MCO FETCH ERROR: All network fetch tiers failed for ' . $url);
         return new WP_Error('network_fail', 'All network fetch tiers failed.', ['status' => 503]);
     }
 }
@@ -85,9 +102,15 @@ if (!function_exists('mco_base64url_decode')) {
  */
 if (!function_exists('mco_generate_exam_jwt')) {
     function mco_generate_exam_jwt($user_id) {
-        if (!defined('MCO_JWT_SECRET')) return null;
+        if (!defined('MCO_JWT_SECRET')) {
+            error_log('MCO JWT ERROR: MCO_JWT_SECRET not defined.');
+            return null;
+        }
         $user = get_user_by('ID', $user_id);
-        if (!$user) return null;
+        if (!$user) {
+            error_log('MCO JWT ERROR: User not found for ID: ' . $user_id);
+            return null;
+        }
 
         $paid_exam_skus = get_user_meta($user_id, 'mco_paid_exams', true) ?: [];
         $is_subscribed = false;
@@ -137,18 +160,33 @@ if (!function_exists('mco_generate_exam_jwt')) {
  */
 if (!function_exists('mco_verify_exam_jwt')) {
     function mco_verify_exam_jwt($token) {
-        if (!defined('MCO_JWT_SECRET') || empty(MCO_JWT_SECRET)) return new WP_Error('config_err', 'Security key missing.', ['status' => 500]);
+        if (!defined('MCO_JWT_SECRET') || empty(MCO_JWT_SECRET)) {
+            error_log('MCO JWT VERIFY ERROR: MCO_JWT_SECRET not defined or empty.');
+            return new WP_Error('config_err', 'Security key missing.', ['status' => 500]);
+        }
         $parts = explode('.', $token);
-        if (count($parts) !== 3) return new WP_Error('jwt_invalid', 'Malformed token.', ['status' => 401]);
+        if (count($parts) !== 3) {
+            error_log('MCO JWT VERIFY ERROR: Malformed token parts count (' . count($parts) . ').');
+            return new WP_Error('jwt_invalid', 'Malformed token.', ['status' => 401]);
+        }
 
         list($header, $payload, $signature) = $parts;
         $expected_sig = mco_base64url_encode(hash_hmac('sha256', "$header.$payload", MCO_JWT_SECRET, true));
-        if (!hash_equals($signature, $expected_sig)) return new WP_Error('jwt_tampered', 'Identity verification failed.', ['status' => 403]);
+        if (!hash_equals($signature, $expected_sig)) {
+            error_log('MCO JWT VERIFY ERROR: Signature mismatch. Token might be tampered or wrong secret key used. Received: ' . $signature . ', Expected: ' . $expected_sig);
+            return new WP_Error('jwt_tampered', 'Identity verification failed.', ['status' => 403]);
+        }
 
         $decoded = json_decode(mco_base64url_decode($payload), true);
-        if (!$decoded) return new WP_Error('jwt_payload_err', 'Invalid payload.', ['status' => 401]);
-        if (isset($decoded['exp']) && $decoded['exp'] < time()) return new WP_Error('jwt_auth_expired_token', 'Session expired.', ['status' => 403]);
-
+        if (!$decoded) {
+            error_log('MCO JWT VERIFY ERROR: Could not decode payload. Base64 decoded payload: ' . mco_base64url_decode($payload));
+            return new WP_Error('jwt_payload_err', 'Invalid payload.', ['status' => 401]);
+        }
+        if (isset($decoded['exp']) && $decoded['exp'] < time()) {
+            error_log('MCO JWT VERIFY ERROR: Token expired. Expiration: ' . date('Y-m-d H:i:s', $decoded['exp']) . ', Current: ' . date('Y-m-d H:i:s', time()));
+            return new WP_Error('jwt_auth_expired_token', 'Session expired.', ['status' => 403]);
+        }
+        error_log('MCO JWT VERIFY DEBUG: Token successfully verified for user ID: ' . ($decoded['user']['id'] ?? 'N/A'));
         return $decoded;
     }
 }
@@ -159,7 +197,8 @@ if (!function_exists('mco_verify_exam_jwt')) {
 if (!function_exists('mco_handle_cors_preflight')) {
     function mco_handle_cors_preflight($served, $result, $request, $server) {
         $origin = get_http_origin();
-        error_log("MCO CORS DEBUG: PREFLIGHT - Incoming Origin: " . ($origin ? $origin : 'N/A'));
+        error_log("MCO CORS DEBUG: PREFLIGHT - Incoming Origin: " . ($origin ? $origin : 'N/A') . " for route: " . $request->get_route());
+        
         if (!$origin) {
             error_log("MCO CORS DEBUG: PREFLIGHT - No Origin header. Returning served status.");
             return $served;
@@ -176,7 +215,8 @@ if (!function_exists('mco_handle_cors_preflight')) {
         } else {
             error_log("MCO CORS DEBUG: PREFLIGHT - Configured Allowed Origins: " . implode(', ', $allowed_origins));
             foreach ($allowed_origins as $allowed) {
-                if (rtrim($allowed, '/') === rtrim($origin, '/')) {
+                // FIX: Ensure $origin is not empty before passing to rtrim
+                if (!empty($origin) && rtrim($allowed, '/') === rtrim($origin, '/')) {
                     $is_allowed = true;
                     break;
                 }
@@ -216,7 +256,8 @@ if (!function_exists('mco_add_cors_headers_to_response')) {
             else {
                 error_log("MCO CORS DEBUG: RESPONSE - Configured Allowed Origins: " . implode(', ', $allowed_origins));
                 foreach ($allowed_origins as $allowed) {
-                    if (rtrim($allowed, '/') === rtrim($origin, '/')) { 
+                    // FIX: Ensure $origin is not empty before passing to rtrim
+                    if (!empty($origin) && rtrim($allowed, '/') === rtrim($origin, '/')) { 
                         $is_allowed = true; 
                         break; 
                     }
@@ -776,7 +817,7 @@ if (!function_exists('mco_api_get_exam_stats')) {
             $user_engagements = maybe_unserialize($row->meta_value);
             if (is_array($user_engagements)) {
                 foreach ($user_engagements as $exam_id => $count) {
-                    $all_engagements[$exam_id] = ($all_engagements[$exam_id] ?? 0) + $count;
+                    $all_engagements[$exam_id] = ($all_engagements[$exam_id] ?? 0) + 1; // FIX: Ensure engagement count is incremented by 1 per record, not by the value in meta.
                 }
             }
         }
@@ -794,7 +835,7 @@ if (!function_exists('mco_api_get_exam_stats')) {
             // WooCommerce Sales Data (only for non-practice exams with a product SKU)
             $total_sales = 0;
             $total_revenue = 0;
-            if (!$exam_config['isPractice'] && class_exists('WooCommerce')) {
+            if (!$exam_config['isPractice'] && isset($exam_config['productSku']) && class_exists('WooCommerce')) { // FIX: Added isset($exam_config['productSku'])
                 $product_id = wc_get_product_id_by_sku($exam_config['productSku']);
                 if ($product_id) {
                     $product = wc_get_product($product_id);
@@ -842,16 +883,18 @@ if (!function_exists('mco_api_admin_get_beta_testers')) {
         $formatted_testers = [];
 
         foreach ($all_testers as $tester_data) {
-            $user = get_user_by('email', $tester_data['email']);
+            // Ensure $tester_data['email'] is set and is a string
+            $email = isset($tester_data['email']) ? (string)$tester_data['email'] : '';
+            $user = !empty($email) ? get_user_by('email', $email) : false; // Use false as non-user value
             $user_id = $user ? $user->ID : null;
             
             $token_redeemed = get_user_meta($user_id, '_mco_is_beta_tester', true) === '1';
             $expiry_timestamp = (int)get_user_meta($user_id, '_mco_beta_expiry', true);
 
             $formatted_testers[] = [
-                'id' => $user_id ? (string)$user_id : 'unregistered-'.md5($tester_data['email']),
+                'id' => $user_id ? (string)$user_id : 'unregistered-'.md5($email), // Use email hash if no WP user
                 'name' => $user ? $user->display_name : ($tester_data['fullName'] ?? 'N/A'),
-                'email' => $tester_data['email'],
+                'email' => $email,
                 'country' => $tester_data['country'] ?? 'N/A', // Assuming country might be collected
                 'registrationDate' => $tester_data['registrationDate'] ?? 'N/A',
                 'expiryTimestamp' => $expiry_timestamp,
@@ -875,7 +918,7 @@ if (!function_exists('mco_api_admin_resend_beta_email')) {
         $found_index = -1;
 
         foreach ($all_testers as $index => $tester) {
-            if (($tester['email'] ?? '') === $user->user_email) {
+            if (isset($tester['email']) && ($tester['email'] === $user->user_email)) { // FIX: Added isset check for $tester['email']
                 $found_tester = $tester;
                 $found_index = $index;
                 break;
@@ -905,12 +948,15 @@ if (!function_exists('mco_api_admin_resend_beta_email')) {
 if (!function_exists('mco_api_admin_get_system_status')) {
     function mco_api_admin_get_system_status(WP_REST_Request $request) {
         $status = [];
+        error_log("MCO ADMIN STATUS: Starting system status check.");
 
         // 1. JWT Secret Check
         $status['jwt_secret'] = [
             'success' => defined('MCO_JWT_SECRET') && !empty(MCO_JWT_SECRET),
             'message' => defined('MCO_JWT_SECRET') && !empty(MCO_JWT_SECRET) ? 'Defined' : 'Not Defined!',
         ];
+        error_log("MCO ADMIN STATUS: JWT Secret Check - " . ($status['jwt_secret']['success'] ? 'OK' : 'FAIL') . ": " . $status['jwt_secret']['message']);
+
 
         // 2. App URL Config
         $app_urls_raw = get_option('mco_exam_app_url', '');
@@ -920,18 +966,24 @@ if (!function_exists('mco_api_admin_get_system_status')) {
             'message' => !empty($app_urls) ? 'Configured' : 'Missing App URL(s).',
             'data' => $app_urls
         ];
+        error_log("MCO ADMIN STATUS: App URL Config - " . ($status['app_url_config']['success'] ? 'OK' : 'FAIL') . ": " . $status['app_url_config']['message']);
+
 
         // 3. WooCommerce Active
         $status['woocommerce'] = [
             'success' => class_exists('WooCommerce'),
             'message' => class_exists('WooCommerce') ? 'Active' : 'Not Active.',
         ];
+        error_log("MCO ADMIN STATUS: WooCommerce Check - " . ($status['woocommerce']['success'] ? 'OK' : 'FAIL') . ": " . $status['woocommerce']['message']);
+
 
         // 4. WooCommerce Subscriptions Active
         $status['wc_subscriptions'] = [
             'success' => class_exists('WC_Subscriptions'),
             'message' => class_exists('WC_Subscriptions') ? 'Active' : 'Not Active.',
         ];
+        error_log("MCO ADMIN STATUS: WC Subscriptions Check - " . ($status['wc_subscriptions']['success'] ? 'OK' : 'FAIL') . ": " . $status['wc_subscriptions']['message']);
+
 
         // 5. Google Sheet Accessibility (test a known sheet if configured)
         $test_sheet_url = 'https://docs.google.com/spreadsheets/d/1KP0NqEOMS_0sohfwCpO9JNRcWMaoJqfTYEda0YOwkcY/pub?output=csv'; // Use a known test sheet
@@ -939,8 +991,10 @@ if (!function_exists('mco_api_admin_get_system_status')) {
         $status['google_sheet'] = [
             'success' => !is_wp_error($sheet_fetch) && ($sheet_fetch['code'] ?? 0) === 200,
             'message' => !is_wp_error($sheet_fetch) ? 'Accessible' : ('Failed to access test sheet: ' . $sheet_fetch->get_error_message()),
-            'data' => !is_wp_error($sheet_fetch) ? substr($sheet_fetch['body'], 0, 200) . '...' : null
+            'data' => !is_wp_error($sheet_fetch) ? (is_array($sheet_fetch) && isset($sheet_fetch['body']) ? substr($sheet_fetch['body'], 0, 200) . '...' : null) : null // FIX: Check if $sheet_fetch is array before accessing 'body'
         ];
+        error_log("MCO ADMIN STATUS: Google Sheet Check - " . ($status['google_sheet']['success'] ? 'OK' : 'FAIL') . ": " . $status['google_sheet']['message']);
+
         
         // 6. Admin Nonces for CSV Generation
         $status['nonces'] = [
@@ -949,41 +1003,58 @@ if (!function_exists('mco_api_admin_get_system_status')) {
             'generate_tenant_blueprint' => wp_create_nonce('mco_generate_tenant_blueprint_nonce'),
             'generate_full_snapshot' => wp_create_nonce('mco_generate_full_snapshot_nonce')
         ];
+        error_log("MCO ADMIN STATUS: Nonces generated.");
 
         // 7. API Connection (Test internal loopback for auth)
-        $api_test_response = wp_remote_get(rest_url('mco-app/v1/debug-details'), [
-            'headers' => [
-                'Authorization' => 'Bearer ' . mco_generate_exam_jwt(get_current_user_id()), // Simulate auth
-            ],
-            'timeout' => 10,
-            'sslverify' => false,
-        ]);
+        $current_user_id = get_current_user_id();
+        $test_jwt = mco_generate_exam_jwt($current_user_id);
+        error_log("MCO ADMIN STATUS: Generated test JWT for user ID: " . $current_user_id . ", token empty: " . (empty($test_jwt) ? 'YES' : 'NO'));
 
-        if (is_wp_error($api_test_response)) {
-            $status['api_connection'] = [
+        if (empty($test_jwt)) {
+             $status['api_connection'] = [
                 'success' => false,
-                'message' => 'Connection to self-API failed: ' . $api_test_response->get_error_message(),
+                'message' => 'Cannot generate test JWT. Check MCO_JWT_SECRET in wp-config.php.',
+                'data' => null,
             ];
+             error_log("MCO ADMIN STATUS: API Connection Check - FAIL (Cannot generate test JWT).");
         } else {
-            $response_code = wp_remote_retrieve_response_code($api_test_response);
-            $response_body = wp_remote_retrieve_body($api_test_response);
-            $body_decoded = json_decode($response_body, true);
+            $api_test_response = wp_remote_get(rest_url('mco-app/v1/debug-details'), [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $test_jwt, // Simulate auth
+                ],
+                'timeout' => 10,
+                'sslverify' => false,
+            ]);
 
-            if ($response_code === 200) {
-                $status['api_connection'] = [
-                    'success' => true,
-                    'message' => 'API reachable and authenticated.',
-                    'data' => $body_decoded
-                ];
-            } else {
+            if (is_wp_error($api_test_response)) {
                 $status['api_connection'] = [
                     'success' => false,
-                    'message' => "API reachable but returned status {$response_code}: " . ($body_decoded['message'] ?? $response_body),
-                    'data' => $body_decoded ?? $response_body
+                    'message' => 'Connection to self-API failed: ' . $api_test_response->get_error_message(),
                 ];
+                error_log("MCO ADMIN STATUS: API Connection Check - FAIL (wp_remote_get error): " . $api_test_response->get_error_message());
+            } else {
+                $response_code = wp_remote_retrieve_response_code($api_test_response);
+                $response_body = wp_remote_retrieve_body($api_test_response);
+                $body_decoded = json_decode($response_body, true);
+
+                if ($response_code === 200) {
+                    $status['api_connection'] = [
+                        'success' => true,
+                        'message' => 'API reachable and authenticated.',
+                        'data' => $body_decoded
+                    ];
+                    error_log("MCO ADMIN STATUS: API Connection Check - OK. Response: " . substr($response_body, 0, 100));
+                } else {
+                    $status['api_connection'] = [
+                        'success' => false,
+                        'message' => "API reachable but returned status {$response_code}: " . ($body_decoded['message'] ?? $response_body),
+                        'data' => $body_decoded ?? $response_body
+                    ];
+                    error_log("MCO ADMIN STATUS: API Connection Check - FAIL (HTTP {$response_code}). Response body: " . substr($response_body, 0, 100));
+                }
             }
         }
-        
+        error_log("MCO ADMIN STATUS: Finished system status check.");
         return new WP_REST_Response($status, 200);
     }
 }
@@ -1005,7 +1076,7 @@ if (!function_exists('mco_api_admin_test_sheet_url')) {
             return new WP_REST_Response([
                 'success' => true,
                 'message' => 'Successfully fetched content.',
-                'dataPreview' => substr($fetch_result['body'], 0, 500) . '...' // Return first 500 chars for preview
+                'dataPreview' => (is_array($fetch_result) && isset($fetch_result['body'])) ? substr($fetch_result['body'], 0, 500) . '...' : null // FIX: Check if $fetch_result is array before accessing 'body'
             ], 200);
         }
     }
@@ -1391,9 +1462,9 @@ if (!function_exists('mco_api_get_debug_details')) {
         $sheet_fetch = mco_fetch_remote_csv_content($test_sheet_url);
         
         $sheet_test_status = [
-            'success' => !is_wp_error($sheet_fetch) && ($sheet_fetch['code'] ?? 0) === 200,
+            'success' => !is_wp_error($sheet_fetch) && (is_array($sheet_fetch) && ($sheet_fetch['code'] ?? 0) === 200), // FIX: Added is_array check
             'message' => !is_wp_error($sheet_fetch) ? 'Test sheet accessible.' : ('Failed to access test sheet: ' . $sheet_fetch->get_error_message()),
-            'data' => !is_wp_error($sheet_fetch) ? substr($sheet_fetch['body'], 0, 100) . '...' : null
+            'data' => (is_array($sheet_fetch) && isset($sheet_fetch['body'])) ? substr($sheet_fetch['body'], 0, 100) . '...' : null // FIX: Added is_array check
         ];
 
         return new WP_REST_Response([
