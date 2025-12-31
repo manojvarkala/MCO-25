@@ -725,7 +725,13 @@ if (!function_exists('mco_api_redeem_tester_token')) {
         if (((int)($found_tester['expiryTimestamp'] ?? 0)) < time()) return new WP_Error('400', 'This token has expired.'); // Cast to int
         // FIX: Remove redundant (bool) cast and direct assignment to temporary expression
         if (isset($found_tester['tokenRedeemed']) && $found_tester['tokenRedeemed']) { // Check if already redeemed
-             return new WP_REST_Response(['token' => mco_generate_exam_jwt((int)$user->ID)], 200); // Cast to int
+             // User object may not be available here, as the user might not be created yet.
+             // If already redeemed and user exists, just return new JWT
+            $user_from_email = get_user_by('email', (string)$found_tester['email']);
+            if ($user_from_email) {
+                 return new WP_REST_Response(['token' => mco_generate_exam_jwt((int)$user_from_email->ID)], 200);
+            }
+             return new WP_Error('400', 'This token has already been redeemed.'); // Token redeemed but user not found
         }
 
         // Mark token as redeemed
@@ -825,13 +831,17 @@ if (!function_exists('mco_api_get_exam_stats')) {
         
         $all_engagements = [];
         foreach ($engagement_meta as $row) {
-            $user_engagements = maybe_unserialize((string)$row->meta_value); // Cast to string
-            if (is_array($user_engagements)) {
-                foreach ((array)$user_engagements as $exam_id => $count) { // Cast to array
-                    $exam_id_str = (string)$exam_id; // Cast to string
-                    // FIX: Ensure initialization before incrementing
-                    $current_engagement_count = (int)($all_engagements[$exam_id_str] ?? 0); 
-                    $all_engagements[$exam_id_str] = $current_engagement_count + 1; // FIX: Ensure assignment to variable
+            $user_engagements_raw = (string)($row->meta_value ?? ''); // Ensure it's a string, even if null from DB
+            $unserialized_data = maybe_unserialize($user_engagements_raw);
+            
+            // Ensure $user_engagements is always an array before proceeding
+            $user_engagements = is_array($unserialized_data) ? $unserialized_data : []; 
+
+            if (!empty($user_engagements)) { // Only iterate if there's actual data
+                foreach ($user_engagements as $exam_id => $count) {
+                    $exam_id_str = (string)$exam_id;
+                    $current_engagement_count = (int)($all_engagements[$exam_id_str] ?? 0);
+                    $all_engagements[$exam_id_str] = $current_engagement_count + 1;
                 }
             }
         }
@@ -1528,13 +1538,4 @@ if (!function_exists('mco_register_rest_routes')) {
         register_rest_route($namespace, '/admin/update-exam-program', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_update_exam_program'], $admin_auth));
         register_rest_route($namespace, '/admin/upsert-product', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_upsert_product'], $admin_auth));
         register_rest_route($namespace, '/admin/create-exam-program', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_create_exam_program'], $admin_auth));
-        register_rest_route($namespace, '/admin/delete-post', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_delete_post'], $admin_auth));
-        register_rest_route($namespace, '/admin/post-creation-data', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_post_creation_data'], $admin_auth));
-        register_rest_route($namespace, '/admin/create-post-from-app', array_merge(['methods' => 'POST', 'callback' => 'mco_api_create_post_from_app'], $admin_auth));
-        register_rest_route($namespace, '/admin/toggle-beta-status', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_toggle_beta_status'], $admin_auth));
-    }
-}
-
-add_action('rest_api_init', 'mco_register_rest_routes');
-add_filter('rest_post_dispatch', 'mco_add_cors_headers_to_response', 10, 3);
-add_action('rest_pre_serve_request', 'mco_handle_cors_preflight', 10, 4);
+        register_rest_route
