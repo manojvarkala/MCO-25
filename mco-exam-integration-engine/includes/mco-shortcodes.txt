@@ -1,687 +1,756 @@
 <?php
+/**
+ * =============================================================================
+ * MODULE: MCO Comprehensive Shortcodes & WP Integration
+ * VERSION: 8.1.0 (UI & Geolocation Enhancements)
+ * =============================================================================
+ */
+
 if (!defined('ABSPATH')) exit;
 
-// --- COMPATIBILITY LAYER ---
-// These functions are primarily defined in mco-api.php.
-// This compatibility layer provides a fallback or ensures they are always callable.
-if (!function_exists('mco_get_exam_app_url')) {
-    function mco_get_exam_app_url($all = false) {
-        $urls = get_option('mco_exam_app_url', '');
-        $url_list = array_filter(array_map('trim', explode("\n", $urls)));
-        return $all ? $url_list : (isset($url_list[0]) ? $url_list[0] : '');
-    }
-}
-if (!function_exists('mco_get_app_config_data')) {
-    function mco_get_app_config_data() {
-        // This function is usually provided by mco-data.php
-        if (function_exists('mco_get_full_snapshot_data')) {
-            // Simplified return for shortcode context, assuming `mco_get_full_snapshot_data` returns what's needed.
-            $snapshot = mco_get_full_snapshot_data(false); // Pass false to get full data
-            return $snapshot['organizations'][0] ?? []; // Assume single organization model for shortcode
-        }
-        return [];
-    }
-}
-if (!function_exists('mco_generate_exam_jwt')) {
-    // This function is usually provided by mco-api.php.
-    // This fallback would only be used if mco-api.php wasn't loaded or didn't define it.
-    // It's a minimal stub, not a full JWT implementation for safety.
-    function mco_generate_exam_jwt($user_id) {
-        // Fallback for when mco-api.php's full JWT generation isn't available
-        error_log('MCO SHORTCODE: Using JWT fallback, full API not loaded.');
-        if (!defined('MCO_JWT_SECRET')) return null;
+// --- 1. CORE DATA & CONFIG ACCESSORS ---
+// These functions are defined in mco-data.php and mco-api.php
+// The shortcodes will call the canonical functions directly.
+// mco_get_exam_app_url is defined in mco-data.php
+// mco_get_app_config_data is defined in mco-data.php
+// mco_generate_exam_jwt is defined in mco-api.php
 
-        $user = get_user_by('ID', $user_id);
-        if (!$user) return null;
 
-        $header = base64_encode(json_encode(['typ' => 'JWT', 'alg' => 'HS256']));
-        $payload = base64_encode(json_encode([
-            'iss' => get_bloginfo('url'),
-            'iat' => time(),
-            'exp' => time() + (14 * DAY_IN_SECONDS), // Short expiry for fallback
-            'user' => [
-                'id' => (string)$user->ID,
-                'name' => $user->display_name,
-                'email' => $user->user_email,
-                'isAdmin' => user_can($user->ID, 'manage_options')
-            ],
-            'paidExamIds' => [], // Empty for fallback
-            'isSubscribed' => false,
-            'subscriptionInfo' => null,
-            'isBetaTester' => false
-        ]));
-        
-        $signature = hash_hmac('sha256', "{$header}.{$payload}", MCO_JWT_SECRET, true);
-        return rtrim(strtr($header, '+/', '-_'), '=') . "." . rtrim(strtr($payload, '+/', '-_'), '=') . "." . rtrim(strtr(base64_encode($signature), '+/', '-_'), '=');
-    }
-}
-
-// --- CSS LOADER HELPER ---
+// --- 2. STYLING & ASSETS (FIXED UNDEFINED ERROR) ---
 if (!function_exists('mco_load_shortcode_css')) {
     function mco_load_shortcode_css() {
+        // Try to load external CSS file first (recommended)
         $css_path = MCO_PLUGIN_PATH . 'assets/mco-styles.css';
+        
         if (file_exists($css_path)) {
             $css = file_get_contents($css_path);
             if ($css) {
-                // Minify CSS by removing comments and extra whitespace
-                $css = preg_replace('!/\*[^*]*\*+([^/][^*]*\*+)*/!', '', $css);
-                $css = str_replace(array("\r\n", "\r", "\n", "\t", '  ', '    ', '    '), '', $css);
+                // Optional: minify whitespace a bit
+                $css = preg_replace('/\s+/', ' ', $css);
                 echo '<style>' . $css . '</style>';
                 return;
             }
         }
-        echo mco_get_scoped_css();
+
+        // ────────────────────────────────────────────────────────────────
+        // Complete fallback inline CSS – merged & improved (January 2026 style)
+        // ────────────────────────────────────────────────────────────────
+        echo '<style>
+            :root {
+                --mco-primary: #0891b2;
+                --mco-p-hover: #0e7490;
+                --mco-bg: #f8fafc;
+                --mco-text: #334155;
+                --mco-border: #e2e8f0;
+            }
+
+            .mco-wrapper {
+                font-family: Inter, system-ui, -apple-system, sans-serif;
+                color: var(--mco-text);
+                max-width: 1200px;
+                margin: 0 auto;
+                background: var(--mco-bg);
+            }
+
+            .mco-showcase-layout {
+                display: flex;
+                flex-direction: column;
+                gap: 40px;
+                margin: 20px 0;
+            }
+
+            @media (min-width: 992px) {
+                .mco-showcase-layout {
+                    flex-direction: row;
+                }
+                .mco-showcase-main {
+                    flex: 1;
+                }
+                .mco-study-hall-sidebar {
+                    width: 320px;
+                    flex-shrink: 0;
+                    position: sticky;
+                    top: 20px;
+                    align-self: start;
+                }
+            }
+
+            /* Program / Category Groups */
+            .mco-program-group {
+                background: #fff;
+                border: 1px solid var(--mco-border);
+                border-radius: 12px;
+                padding: 24px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+                margin-bottom: 30px;
+            }
+
+            .mco-program-group__title {
+                font-size: 1.5rem;
+                font-weight: 800;
+                margin: 0 0 16px;
+                color: #0f172a;
+            }
+
+            .mco-program-group__cards {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 20px;
+            }
+
+            /* General Card Styles */
+            .mco-card,
+            .mco-book-card {
+                display: flex;
+                flex-direction: column;
+                border-radius: 10px;
+                overflow: hidden;
+                height: 100%;
+                color: #fff;
+                transition: transform 0.25s ease;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+                background: #fff;
+            }
+
+            .mco-card:hover,
+            .mco-book-card:hover {
+                transform: translateY(-6px);
+            }
+
+            .mco-card__header {
+                padding: 12px 16px;
+                font-size: 0.75rem;
+                font-weight: 700;
+                background: rgba(0,0,0,0.1);
+            }
+
+            .mco-card__body {
+                padding: 20px;
+                flex-grow: 1;
+                color: #0f172a;
+            }
+
+            .mco-card__subtitle {
+                font-size: 1.2rem;
+                font-weight: 700;
+                margin: 0 0 10px;
+                line-height: 1.2;
+            }
+
+            .mco-card__footer {
+                padding: 16px;
+                background: rgba(0,0,0,0.03);
+            }
+
+            /* Buttons */
+            .mco-card__button,
+            .mco-book-card__button {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                width: 100%;
+                padding: 12px;
+                border-radius: 6px;
+                font-weight: 700;
+                text-decoration: none;
+                border: none;
+                cursor: pointer;
+                transition: all 0.2s;
+                font-size: 0.9rem;
+            }
+
+            .mco-card__button--primary {
+                background-color: var(--mco-primary);
+                color: white;
+                border: 1px solid rgba(255,255,255,0.25);
+            }
+
+            .mco-card__button--primary:hover {
+                background-color: var(--mco-p-hover);
+            }
+
+            .mco-card__button--purchase {
+                background-color: #fbbf24;
+                color: #78350f;
+            }
+
+            .mco-card__button--purchase:hover {
+                background-color: #f59e0b;
+            }
+
+            /* Gradients */
+            .mco-gradient--practice {
+                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            }
+
+            .mco-gradient--cert {
+                background: linear-gradient(135deg, #059669 0%, #065f46 100%);
+            }
+
+            /* Sidebar Book Cards */
+            .mco-book-card-sidebar {
+                display: flex;
+                gap: 12px;
+                background: #fff;
+                border: 1px solid var(--mco-border);
+                border-radius: 8px;
+                padding: 10px;
+                margin-bottom: 12px;
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+
+            .mco-book-card-sidebar:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+            }
+
+            .mco-book-card-sidebar__cover {
+                width: 60px;
+                height: 80px;
+                flex-shrink: 0;
+                background: #e2e8f0;
+                border-radius: 4px;
+                overflow: hidden;
+            }
+
+            .mco-book-card-sidebar__cover img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+            /* Additional useful classes from second version */
+            .mco-best-value-tag {
+                position: absolute;
+                top: -10px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #fbbf24;
+                color: #78350f;
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-size: 0.7rem;
+                font-weight: 800;
+                text-transform: uppercase;
+            }
+
+            .mco-study-hall-sidebar__title {
+                font-size: 1.25rem;
+                font-weight: 700;
+                margin: 0 0 20px;
+                color: #0f172a;
+                border-bottom: 1px solid var(--mco-border);
+                padding-bottom: 10px;
+            }
+
+            .mco-study-hall-sidebar__disclaimer {
+                font-size: 0.7rem;
+                color: #94a3b8;
+                margin-top: 20px;
+                text-align: center;
+                line-height: 1.4;
+            }
+        </style>';
     }
 }
+add_action('wp_head', 'mco_load_shortcode_css');
 
-// --- ICON HELPER ---
+// --- 3. ICON HELPER ---
 if (!function_exists('mco_get_svg_icon')) {
     function mco_get_svg_icon($name) {
         $icons = [
             'practice' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
             'cert' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>',
-            'cart' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 0 0 0 2-1.61L23 6H6"/></svg>',
+            'cart' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',
             'bundle' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
             'check' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
             'star' => '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
             'book' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+            'external-link' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
+            'book-open' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>',
+            'book-up' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V15A2.5 2.5 0 0 1 6.5 12H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/><path d="M10 12l2-2l2 2"/><path d="M12 18V8"/></svg>',
             'user' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
             'lock' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
             'unlock' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>',
             'search' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
             'filter' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></polygon></svg>',
-            'arrow-right' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></polyline></svg>',
-            'chevron-down' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></polyline></svg>',
-            'external-link' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
-            'book-open' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>',
-            // ADDED for use in shortcodes for button icons
-            'book-up' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V15A2.5 2.5 0 0 1 6.5 12H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/><path d="M10 12l2-2l2 2"/><path d="M12 18V8"/></svg>',
+            'arrow-right' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
+            'chevron-down' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
         ];
         return $icons[$name] ?? '';
     }
 }
 
-// --- SCOPED CSS GENERATOR (Fallback) ---
-if (!function_exists('mco_get_scoped_css')) {
-    function mco_get_scoped_css() {
-        return '<style>
-        /* Full Frontend Styles Fallback */
-        #mco-app-root { font-family: system-ui, -apple-system, sans-serif; --mco-primary: #0891b2; --mco-primary-hover: #0e7490; --mco-text: #334155; --mco-bg: #fff; --mco-border: #e2e8f0; color: #334155; line-height: 1.5; }
-        #mco-app-root *, #mco-app-root *::before, #mco-app-root *::after { box-sizing: border-box; }
-        /* (Styles truncated for brevity, but would act as fallback) */
-        </style>';
-    }
-}
-
-// --- PROCEDURAL COVER LOGIC (PHP Native Rendering) ---
-if (!function_exists('mco_decode_html_entities_php')) {
-    function mco_decode_html_entities_php($html) {
-        if (!is_string($html)) return $html;
-        return html_entity_decode($html, ENT_QUOTES, 'UTF-8');
-    }
-}
-
-if (!function_exists('mco_get_hash_of_string_php')) {
-    function mco_get_hash_of_string_php($str) {
-        $hash = 0;
-        if (empty($str)) return $hash;
-        $len = strlen($str);
-        // Using a large prime for modulo to prevent overflow before final result.
-        // This effectively keeps the hash within a manageable integer range,
-        // preventing it from turning into a float.
-        $prime_mod = 2147483647; // A large prime, which fits within a 32-bit signed integer.
-        
-        for ($i = 0; $i < $len; $i++) {
-            $char_code = ord($str[$i]);
-            // Perform arithmetic, then modulo to prevent overflow.
-            // Ensure the result remains positive after modulo if intermediate result was negative.
-            $hash = ($hash * 31 + $char_code) % $prime_mod;
-            if ($hash < 0) { // Ensure hash is always positive
-                $hash += $prime_mod;
-            }
+// --- 4. PROCEDURAL COVER LOGIC (PHP) ---
+if (!function_exists('mco_get_hash_of_string')) {
+    function mco_get_hash_of_string($str) {
+        $hash = 0; if (empty($str)) return $hash;
+        for ($i = 0; $i < strlen($str); $i++) { 
+            // FIX: Use bitwise operations to keep hash within integer limits and prevent float conversion warnings.
+            // This is a common method for simple string hashing to prevent overflow into float.
+            $hash = (($hash << 5) - $hash) + ord($str[$i]);
+            $hash = $hash & 0x7FFFFFFF; // Keep within signed 31-bit integer to prevent float conversion.
         }
-        return $hash; // This will always be a positive integer within $prime_mod
+        return $hash;
     }
 }
 
-if (!function_exists('mco_render_annapoorna_procedural_cover_php_full')) {
-    function mco_render_annapoorna_procedural_cover_php_full($item_data, $type = 'showcase') {
-        $title = mco_decode_html_entities_php($item_data['title'] ?? '');
-        $hash = mco_get_hash_of_string_php($title);
-        $styleIndex = abs($hash) % 2;
-        $colorIndex = floor(abs($hash) / 2) % 5;
-
-        $colorsA = [
-            ['bg' => '#4338ca', 'pattern' => '#3730a3', 'text' => '#ffffff'], // Indigo
-            ['bg' => '#0f766e', 'pattern' => '#115e59', 'text' => '#ffffff'], // Teal
-            ['bg' => '#334155', 'pattern' => '#1e293b', 'text' => '#ffffff'], // Slate
-            ['bg' => '#1e40af', 'pattern' => '#1e3a8a', 'text' => '#ffffff'], // Blue
-            ['bg' => '#374151', 'pattern' => '#1f2937', 'text' => '#ffffff'], // Gray
-        ];
+if (!function_exists('mco_render_annapoorna_procedural_cover_php')) {
+    function mco_render_annapoorna_procedural_cover_php($item_data, $type = 'book') {
+        $title = html_entity_decode($item_data['title'], ENT_QUOTES, 'UTF-8');
+        $hash = mco_get_hash_of_string($title);
+        $styleIndex = abs($hash) % 2; $colorIndex = floor(abs($hash) / 2) % 5;
         
-        $colorsB = [
-            ['bg' => '#dbeafe', 'shape' => '#93c5fd', 'text' => '#1e3a8a'], // Blue
-            ['bg' => '#d1fae5', 'shape' => '#6ee7b7', 'text' => '#064e3b'], // Emerald
-            ['bg' => '#ffe4e6', 'shape' => '#fda4af', 'text' => '#881337'], // Rose
-            ['bg' => '#ede9fe', 'shape' => '#c4b5fd', 'text' => '#4c1d95'], // Violet
-            ['bg' => '#f1f5f9', 'shape' => '#cbd5e1', 'text' => '#0f172a'], // Slate
-        ];
+        $superTitle = ($type === 'program') ? 'Certification Program' : 'Study Material';
+        $subTitle = ($type === 'program') ? 'Exam Prep' : 'Official Guide';
+
+        // SVG Pattern for Style A (circles)
+        $svgPattern = '<svg width="100%" height="100%" style="position:absolute;inset:0;opacity:0.1;"><defs><pattern id="p-' . $hash . '" patternUnits="userSpaceOnUse" width="20" height="20"><circle cx="10" cy="10" r="1" fill="white"/></pattern></defs><rect width="100%" height="100%" fill="url(#p-' . $hash . ')"/></svg>';
 
         if ($styleIndex === 0) {
-            $color = $colorsA[$colorIndex];
-            $fontSizeTitle = '1.25rem'; // Standardized for PHP render
-            $fontSizeSub = '0.75rem'; // Standardized for PHP render
-
-            return '
-            <div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 1.5rem; box-sizing: border-box; background-color: ' . esc_attr($color['bg']) . '; color: ' . esc_attr($color['text']) . '; overflow: hidden;">
-                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; clip-path: polygon(0 0, 100% 0, 0 100%); opacity: 0.2; background-color: ' . esc_attr($color['pattern']) . ';">
-                     <svg width="100%" height="100%" style="position: absolute; inset: 0; opacity: 0.1;">
-                        <defs>
-                            <pattern id="annapoorna-pattern-a-'. uniqid() .'" patternUnits="userSpaceOnUse" width="20" height="20">
-                                <circle cx="10" cy="10" r="1" fill="white" />
-                            </pattern>
-                        </defs>
-                        <rect width="100%" height="100%" fill="url(#annapoorna-pattern-a-'. uniqid() .')" />
-                    </svg>
-                </div>
-                <div style="position: relative; z-index: 10;">
-                    <span style="font-size: ' . esc_attr($fontSizeSub) . '; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; display: block; margin-bottom: 0.5rem; color: inherit;">Study Material</span>
-                    <h4 style="font-weight: 800; font-size: ' . esc_attr($fontSizeTitle) . '; line-height: 1.2; margin: 0; color: inherit;">' . esc_html($title) . '</h4>
-                </div>
-            </div>';
-        } else {
-            $color = $colorsB[$colorIndex];
-            $fontSizeTitle = '1.5rem'; // Standardized for PHP render
-            $fontSizeSub = '0.75rem'; // Standardized for PHP render
+            // Style A: Centered with pattern
+            $colorsA = [
+                ['bg' => 'background-color: #4338ca;', 'pattern' => 'background-color: #3730a3;', 'text' => 'color: #ffffff;'],
+                ['bg' => 'background-color: #0f766e;', 'pattern' => 'background-color: #115e59;', 'text' => 'color: #ffffff;'],
+                ['bg' => 'background-color: #334155;', 'pattern' => 'background-color: #1e293b;', 'text' => 'color: #ffffff;'],
+                ['bg' => 'background-color: #1e40af;', 'pattern' => 'background-color: #1e3a8a;', 'text' => 'color: #ffffff;'],
+                ['bg' => 'background-color: #374151;', 'pattern' => 'background-color: #1f2937;', 'text' => 'color: #ffffff;'],
+            ];
+            $c = $colorsA[$colorIndex];
             
-            return '
-            <div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; text-align: left; padding: 1.5rem; box-sizing: border-box; background-color: ' . esc_attr($color['bg']) . '; color: ' . esc_attr($color['text']) . '; overflow: hidden;">
-                <div style="position: absolute; right: -20%; top: -20%; width: 70%; height: 70%; border-radius: 50%; opacity: 0.5; mix-blend-mode: multiply; background-color: ' . esc_attr($color['shape']) . ';"></div>
-                <div style="position: relative; z-index: 10;">
-                    <h4 style="font-weight: 800; font-size: ' . esc_attr($fontSizeTitle) . '; line-height: 1.1; margin: 0 0 0.5rem 0; color: inherit;">' . esc_html($title) . '</h4>
-                    <span style="font-size: ' . esc_attr($fontSizeSub) . '; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: inherit;">Official Guide</span>
+            ob_start(); ?>
+            <div class="mco-proc-cover-annapoorna-a" style="<?php echo esc_attr($c['bg']); ?> <?php echo esc_attr($c['text']); ?>">
+                <div class="mco-proc-cover-annapoorna-a__pattern-bg" style="<?php echo esc_attr($c['pattern']); ?>"><?php echo $svgPattern; ?></div>
+                <div class="mco-proc-cover-annapoorna-a__content">
+                    <span class="mco-proc-cover-annapoorna-a__super-title"><?php echo esc_html($superTitle); ?></span>
+                    <h4 class="mco-proc-cover-annapoorna-a__title"><?php echo esc_html($title); ?></h4>
                 </div>
-            </div>';
+            </div>
+            <?php return ob_get_clean();
+        } else {
+            // Style B: Circle shape, bottom-left
+            $colorsB = [
+                ['bg' => 'background-color: #dbeafe;', 'shape' => 'background-color: #93c5fd;', 'text' => 'color: #1e3a8a;'], // blue
+                ['bg' => 'background-color: #d1fae5;', 'shape' => 'background-color: #6ee7b7;', 'text' => 'color: #064e3b;'], // emerald
+                ['bg' => 'background-color: #ffe4e6;', 'shape' => 'background-color: #fda4af;', 'text' => 'color: #881337;'], // rose
+                ['bg' => 'background-color: #ede9fe;', 'shape' => 'background-color: #c4b5fd;', 'text' => 'color: #4c1d95;'], // violet
+                ['bg' => 'background-color: #f1f5f9;', 'shape' => 'background-color: #cbd5e1;', 'text' => 'color: #0f172a;'], // slate
+            ];
+            $c = $colorsB[$colorIndex];
+
+            ob_start(); ?>
+            <div class="mco-proc-cover-annapoorna-b" style="<?php echo esc_attr($c['bg']); ?> <?php echo esc_attr($c['text']); ?>">
+                <div class="mco-proc-cover-annapoorna-b__shape" style="<?php echo esc_attr($c['shape']); ?>"></div>
+                <div class="mco-proc-cover-annapoorna-b__content">
+                    <h4 class="mco-proc-cover-annapoorna-b__title"><?php echo esc_html($title); ?></h4>
+                    <span class="mco-proc-cover-annapoorna-b__super-title"><?php echo esc_html($subTitle); ?></span>
+                </div>
+            </div>
+            <?php return ob_get_clean();
         }
     }
 }
 
-if (!function_exists('mco_render_mco_procedural_cover_php_full')) {
-   function mco_render_mco_procedural_cover_php_full($item_data, $type = 'showcase') {
-        $title = mco_decode_html_entities_php($item_data['title'] ?? '');
-        $hash = mco_get_hash_of_string_php($title);
-        $styleIndex = abs($hash) % 2;
-        $colorIndex = floor(abs($hash) / 2) % 4;
+if (!function_exists('mco_render_mco_procedural_cover_php')) {
+   function mco_render_mco_procedural_cover_php($item_data, $type = 'book') {
+        $title = html_entity_decode($item_data['title'], ENT_QUOTES, 'UTF-8');
+        $hash = mco_get_hash_of_string($title);
+        $styleIndex = abs($hash) % 2; $colorIndex = floor(abs($hash) / 2) % 4;
         
-        $colorsA = [
-            ['bg' => '#1f2937', 'text' => '#f9fafb', 'bgWord' => '#374151'], // Gray
-            ['bg' => '#1e3a8a', 'text' => '#eff6ff', 'bgWord' => '#3b82f6'], // Blue
-            ['bg' => '#064e3b', 'text' => '#ecfdf5', 'bgWord' => '#34d399'], // Green
-            ['bg' => '#3730a3', 'text' => '#e0e7ff', 'bgWord' => '#6366f1'], // Indigo
-        ];
-        $colorsB = [
-            ['bg' => '#111827', 'text' => '#ffffff', 'accent' => '#f59e0b'], // Gray-Amber
-            ['bg' => '#1e293b', 'text' => '#ffffff', 'accent' => '#0ea5e9'], // Slate-Sky
-            ['bg' => '#262626', 'text' => '#ffffff', 'accent' => '#84cc16'], // Zinc-Lime
-            ['bg' => '#292524', 'text' => '#ffffff', 'accent' => '#f43f5e'], // Stone-Rose
-        ];
+        $superTitle = ($type === 'program') ? 'Certification Program' : 'Study Material';
+        $subTitle = ($type === 'program') ? 'Exam Prep' : 'Official Guide';
 
+        $colorsA = [['bg' => 'background-color: #1f2937;', 'text' => 'color: #f9fafb;', 'bgWord' => 'color: #374151;'], ['bg' => 'background-color: #1e3a8a;', 'text' => 'color: #eff6ff;', 'bgWord' => 'color: #3b82f6;'], ['bg' => 'background-color: #064e3b;', 'text' => 'color: #ecfdf5;', 'bgWord' => 'color: #34d399;'], ['bg' => 'background-color: #3730a3;', 'text' => 'color: #e0e7ff;', 'bgWord' => 'color: #6366f1;']];
+        $colorsB = [['bg' => 'background-color: #111827;', 'text' => 'color: #ffffff;', 'accent' => 'background-color: #f59e0b;'], ['bg' => 'background-color: #1e293b;', 'text' => 'color: #ffffff;', 'accent' => 'background-color: #0ea5e9;'], ['bg' => 'background-color: #262626;', 'text' => 'color: #ffffff;', 'accent' => 'background-color: #84cc16;'], ['bg' => 'background-color: #292524;', 'text' => 'color: #ffffff;', 'accent' => 'background-color: #f43f5e;']];
         if ($styleIndex === 0) {
-            $color = $colorsA[$colorIndex];
-            $titleWords = explode(' ', $title);
-            $bgWord = '';
-            foreach ($titleWords as $word) {
-                if (strlen($word) > 4) {
-                    $bgWord = strtoupper($word);
-                    break;
-                }
-            }
-            if (empty($bgWord) && !empty($titleWords)) {
-                $bgWord = strtoupper($titleWords[0]);
-            }
-            
-            return '
-            <div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; padding: 1.5rem; box-sizing: border-box; background-color: ' . esc_attr($color['bg']) . '; color: ' . esc_attr($color['text']) . '; overflow: hidden;">
-                <div style="position: absolute; bottom: -0.5rem; right: -0.5rem; font-size: 9rem; font-weight: 900; font-family: var(--font-display, sans-serif); line-height: 1; user-select: none; z-index: 0; color: ' . esc_attr($color['bgWord']) . ';">
-                    ' . esc_html($bgWord) . '
+            $c = $colorsA[$colorIndex];
+            $words = explode(' ', $title); $bgWord = strtoupper(strlen($words[0]) > 4 ? $words[0] : (isset($words[1]) ? $words[1] : $words[0]));
+            ob_start(); ?>
+            <div class="mco-proc-cover-mco-a" style="<?php echo esc_attr($c['bg']); ?> <?php echo esc_attr($c['text']); ?>">
+                <div class="mco-proc-cover-mco-a__bg-word" style="<?php echo esc_attr($c['bgWord']); ?>"><?php echo esc_html($bgWord); ?></div>
+                <div class="mco-proc-cover-mco-a__content">
+                    <h4 class="mco-proc-cover-mco-a__title"><?php echo esc_html($title); ?></h4>
                 </div>
-                <div style="position: relative; z-index: 10;">
-                    <h4 style="font-weight: 800; font-size: 1.5rem; line-height: 1.2; margin: 0; color: inherit;">' . esc_html($title) . '</h4>
-                </div>
-            </div>';
+            </div>
+            <?php return ob_get_clean();
         } else {
-            $color = $colorsB[$colorIndex];
-            return '
-            <div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 1.5rem; box-sizing: border-box; background-color: ' . esc_attr($color['bg']) . '; color: ' . esc_attr($color['text']) . '; overflow: hidden;">
-                <div style="position: absolute; top: 1rem; left: 0; width: 0.25rem; height: 25%; background-color: ' . esc_attr($color['accent']) . ';"></div>
-                <div>
-                     <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: ' . esc_attr('0.1em') . '; opacity: 0.8; display: block; margin-bottom: 0.5rem; color: inherit;">Reference Material</span>
-                    <h4 style="font-weight: 800; font-size: 1.25rem; line-height: 1.2; margin: 0; color: inherit;">' . esc_html($title) . '</h4>
+            $c = $colorsB[$colorIndex];
+            ob_start(); ?>
+            <div class="mco-proc-cover-mco-b" style="<?php echo esc_attr($c['bg']); ?> <?php echo esc_attr($c['text']); ?>">
+                <div class="mco-proc-cover-mco-b__accent-line" style="<?php echo esc_attr($c['accent']); ?>"></div>
+                <div class="mco-proc-cover-mco-b__header">
+                    <span class="mco-proc-cover-mco-b__super-title"><?php echo esc_html($superTitle); ?></span>
+                    <h4 class="mco-proc-cover-mco-b__title"><?php echo esc_html($title); ?></h4>
                 </div>
-                <div style="align-self: flex-end; font-size: 3rem; font-weight: 900; opacity: 0.1; user-select: none; font-family: var(--font-display, sans-serif); color: inherit;">
-                    MCO
-                </div>
-            </div>';
+                <div class="mco-proc-cover-mco-b__logo-text">MCO</div>
+            </div>
+            <?php return ob_get_clean();
         }
    }
 }
 
-if (!function_exists('mco_render_procedural_cover_full')) {
-    function mco_render_procedural_cover_full($item_data, $type = 'showcase') {
-        $config_data = function_exists('mco_get_app_config_data') ? mco_get_app_config_data() : [];
-        $active_org_id = $config_data['id'] ?? 'org-annapoorna'; // Default to Annapoorna
-
-        if ($active_org_id === 'org-medical-coding-online') {
-            return mco_render_mco_procedural_cover_php_full($item_data, $type);
+if (!function_exists('mco_render_procedural_cover')) {
+    function mco_render_procedural_cover($item_data, $type = 'book') {
+        $config_data = mco_get_app_config_data();
+        $org_id = $config_data['organizations'][0]['id'] ?? 'org-annapoorna'; // Access nested config data
+        
+        if ($org_id === 'org-medical-coding-online') {
+            return mco_render_mco_procedural_cover_php($item_data, $type);
         }
-        return mco_render_annapoorna_procedural_cover_php_full($item_data, $type);
+        return mco_render_annapoorna_procedural_cover_php($item_data, $type);
     }
 }
 
 
-// --- GEO-CODING HELPER (PHP Native) ---
+// --- 5. GEO & AFFILIATE LOGIC ---
 if (!function_exists('mco_get_geo_primary_link_info')) {
-    function mco_get_geo_primary_link_info($links, $override_geo_key = null) {
+    function mco_get_geo_primary_link_info($links, $override_geo = null) {
         if (empty($links) || !is_array($links)) return null;
-        
-        // Filter out empty or whitespace-only links
-        $links = array_filter(array_map('trim', $links)); 
+        $links = array_filter(array_map('trim', $links));
         if (empty($links)) return null;
 
-        $domainMap = [
-            'com' => 'Amazon.com', 
-            'in' => 'Amazon.in', 
-            'ae' => 'Amazon.ae'
+        $domainMap = ['com' => 'Amazon.com', 'in' => 'Amazon.in', 'ae' => 'Amazon.ae'];
+        $chosen = null;
+
+        // 1. Prioritize explicit override from URL (e.g., ?geo=in)
+        if ($override_geo && !empty($links[$override_geo])) {
+            $chosen = $override_geo;
+        }
+
+        // 2. Second priority: User's IP-inferred country from frontend (stored as cookie 'mco_user_geo_country_code')
+        if (!$chosen && isset($_COOKIE['mco_user_geo_country_code']) && !empty($_COOKIE['mco_user_geo_country_code'])) {
+            $ip_country_code = strtolower(sanitize_text_field($_COOKIE['mco_user_geo_country_code']));
+            if ($ip_country_code === 'us' && !empty($links['com'])) $chosen = 'com';
+            else if ($ip_country_code === 'in' && !empty($links['in'])) $chosen = 'in';
+            else if ($ip_country_code === 'ae' && !empty($links['ae'])) $chosen = 'ae';
+            // Add more specific country mappings if needed
+        }
+        
+        // 3. Third priority: Generic frontend geo preference (timezone-based, stored as cookie 'mco_wp_geo_pref')
+        if (!$chosen && isset($_COOKIE['mco_wp_geo_pref']) && !empty($_COOKIE['mco_wp_geo_pref']) && !empty($links[sanitize_text_field($_COOKIE['mco_wp_geo_pref'])])) {
+            $chosen = sanitize_text_field($_COOKIE['mco_wp_geo_pref']);
+        }
+
+        // 4. Fallback: Default priority order
+        if (!$chosen) { 
+            foreach (['com', 'in', 'ae'] as $k) { 
+                if (!empty($links[$k])) { 
+                    $chosen = $k; 
+                    break; 
+                } 
+            } 
+        }
+        return $chosen ? ['key' => $chosen, 'url' => $links[$chosen], 'domainName' => $domainMap[$chosen]] : null;
+    }
+}
+
+// --- 6. RENDERERS (CARDS & PAGES) ---
+if (!function_exists('mco_render_book_card_php')) {
+    function mco_render_book_card_php($book_data, $type = 'showcase') {
+        $primary_link_info = mco_get_geo_primary_link_info($book_data['affiliateLinks'] ?? [], $_GET['geo'] ?? null);
+        $all_stores = [
+            'com' => ['name' => 'Amazon.com', 'url' => $book_data['affiliateLinks']['com'] ?? ''],
+            'in' => ['name' => 'Amazon.in', 'url' => $book_data['affiliateLinks']['in'] ?? ''],
+            'ae' => ['name' => 'Amazon.ae', 'url' => $book_data['affiliateLinks']['ae'] ?? '']
         ];
         
-        $chosen_key = null;
-
-        // 1. Prioritize override geo key from URL parameter (React app navigation)
-        if (!empty($override_geo_key) && isset($links[$override_geo_key]) && !empty($links[$override_geo_key])) {
-            $chosen_key = $override_geo_key;
-        } 
-        
-        // 2. If no override from URL, check for client-side preference via cookie
-        if (empty($chosen_key) && isset($_COOKIE['mco_wp_geo_pref'])) {
-            $cookie_geo_key = sanitize_text_field($_COOKIE['mco_wp_geo_pref']);
-            if (isset($links[$cookie_geo_key]) && !empty($links[$cookie_geo_key])) {
-                $chosen_key = $cookie_geo_key;
+        $buttons_html = '';
+        foreach ($all_stores as $key => $store) {
+            if (!empty($store['url'])) {
+                $is_primary = $key === ($primary_link_info['key'] ?? '');
+                $class = $is_primary ? 'mco-book-btn mco-book-btn--primary' : 'mco-book-btn mco-book-btn--secondary';
+                $buttons_html .= '<a href="'.esc_url($store['url']).'" target="_blank" rel="noopener noreferrer" class="'.esc_attr($class).'">'.mco_get_svg_icon('book-up').' Buy on '.esc_html($store['name']).'</a>';
             }
         }
+        if (empty($buttons_html)) $buttons_html = '<span class="mco-book-btn mco-book-btn--disabled">Coming Soon</span>';
 
-        // 3. Fallback to React app's default priority if no explicit key is found
-        if (empty($chosen_key)) {
-            $fallback_priority = ['com', 'in', 'ae']; // Matches React app's fallback order
-            foreach ($fallback_priority as $key) {
-                if (isset($links[$key]) && !empty($links[$key])) {
-                    $chosen_key = $key;
-                    break;
-                }
-            }
-        }
-        
-        if (!empty($chosen_key)) {
-            return [ 
-                'key' => $chosen_key, 
-                'url' => $links[$chosen_key], 
-                'domainName' => $domainMap[$chosen_key] ?? 'Amazon.com' 
-            ];
-        }
-        
-        return null; // No valid links found
-    }
-}
+        $title = html_entity_decode($book_data['title'] ?? 'Untitled Book', ENT_QUOTES, 'UTF-8');
+        $thumbnail_url = esc_url($book_data['thumbnailUrl'] ?? ''); 
+        $cover_html = !empty($thumbnail_url) ? '<img src="'.$thumbnail_url.'" class="mco-book-cover-image" alt="'.esc_attr($title).'">' : mco_render_procedural_cover($book_data, 'book');
+        $description = wp_kses_post($book_data['description']??''); // FIX: Removed html_entity_decode
+        $trimmed_description = wp_trim_words($description, 20, '...');
 
-if (!function_exists('mco_render_book_card_php')) {
-    function mco_render_book_card_php($book, $type = 'showcase') {
-        // Get geo override from URL parameter
-        $geo_override_from_url = isset($_GET['geo']) ? sanitize_text_field($_GET['geo']) : null;
-        $primary_link_info = mco_get_geo_primary_link_info($book['affiliateLinks'] ?? [], $geo_override_from_url);
-        $all_stores = [];
-        if (!empty($book['affiliateLinks'])) {
-            $stores = [
-                'com' => ['name' => 'Amazon.com', 'url' => $book['affiliateLinks']['com'] ?? ''],
-                'in' => ['name' => 'Amazon.in', 'url' => $book['affiliateLinks']['in'] ?? ''],
-                'ae' => ['name' => 'Amazon.ae', 'url' => $book['affiliateLinks']['ae'] ?? '']
-            ];
-            foreach ($stores as $key => $store) {
-                if (!empty($store['url'])) {
-                    $all_stores[] = ['key' => $key, 'name' => $store['name'], 'url' => $store['url']];
-                }
-            }
-        }
-
-        $title = mco_decode_html_entities_php($book['title'] ?? '');
-        $description = mco_decode_html_entities_php($book['description'] ?? '');
-        $short_desc = wp_trim_words($description, 20, '...');
-        $thumbnail_url = esc_url($book['thumbnailUrl'] ?? '');
-        $permalink = esc_url($book['permalink'] ?? '#');
-
-        $cover_html = '';
-        if (!empty($thumbnail_url)) {
-            $crossorigin = str_starts_with($thumbnail_url, 'data:image') ? '' : 'crossorigin="anonymous"';
-            $cover_html = '<img src="' . $thumbnail_url . '" alt="' . esc_attr($title) . '" style="width:100%;height:100%;object-fit:cover;" ' . $crossorigin . '>';
-        } else {
-            $cover_html = mco_render_procedural_cover_full($book, $type);
-        }
-
-        if ($type === 'sidebar') {
-            return '
-                <div class="mco-book-card-sidebar">
-                    <div class="mco-book-card-sidebar__cover">
-                        ' . $cover_html . '
-                    </div>
-                    <div class="mco-book-card-sidebar__content">
-                        ' . (!empty($permalink) ? '<a href="' . $permalink . '" target="_blank" rel="noopener noreferrer" class="group">' : '') . '
-                            <h4 class="mco-book-card-sidebar__title ' . (!empty($permalink) ? 'group-hover:text-cyan-600 transition-colors' : '') . '">' . esc_html($title) . '</h4>
-                        ' . (!empty($permalink) ? '</a>' : '') . '
-                        <div class="mco-store-buttons-sidebar">
-                            ' . (count($all_stores) > 0 ? (
-                                implode('', array_map(function($store) use ($primary_link_info) {
-                                    $is_primary = $store['key'] === ($primary_link_info['key'] ?? '');
-                                    // Consolidated and explicit inline styles
-                                    $button_style = 'display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.75rem; font-weight: 700; padding: 6px 12px; border-radius: 4px; text-decoration: none; align-self: flex-start; transition: background-color 0.2s; min-width: 100px; box-sizing: border-box; white-space: nowrap; text-align: center;';
-                                    if ($is_primary) {
-                                        $button_style .= ' background-color: #f59e0b; color: #fff; border: 1px solid #f59e0b;';
-                                    } else {
-                                        $button_style .= ' background-color: #e2e8f0; color: #64748b; border: 1px solid #cbd5e1;';
-                                    }
-                                    return '
-                                        <a href="' . esc_url($store['url']) . '" target="_blank" rel="noopener noreferrer" class="' . ($is_primary ? 'mco-book-card-sidebar__button mco-book-card-sidebar__button--primary' : 'mco-book-card-sidebar__button mco-book-card-sidebar__button--secondary') . '" style="' . $button_style . '">
-                                            ' . mco_get_svg_icon('book-up') . ' Buy on ' . esc_html($store['name']) . '
-                                        </a>';
-                                }, $all_stores))
-                            ) : (
-                                '<span class="mco-book-card-sidebar__button" style="cursor: default; background: #e2e8f0; color: #64748b; border: 1px solid #cbd5e1; min-width: 100px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.75rem; font-weight: 700; padding: 6px 12px; border-radius: 4px; text-decoration: none; align-self: flex-start; white-space: nowrap;">Links Coming Soon</span>'
-                            )) . '
-                        </div>
-                    </div>
-                </div>';
-        } elseif ($type === 'single') {
-            return '
-            <div class="mco-single-book-card">
-                <div class="mco-single-book-card__cover">
-                    ' . $cover_html . '
-                </div>
-                <div class="mco-single-book-card__details">
-                    <h1 style="position: relative; z-index: 2;">' . esc_html($title) . '</h1>
-                    <div class="mco-single-book-card__description">' . wp_kses_post($description) . '</div>
-                    <div class="mco-single-book-card__buttons">
-                        ' . (count($all_stores) > 0 ? (
-                            implode('', array_map(function($store) use ($primary_link_info) {
-                                    $is_primary = $store['key'] === ($primary_link_info['key'] ?? '');
-                                    // Consolidated and explicit inline styles
-                                    $button_style = 'display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: auto; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 1.1rem; box-sizing: border-box; transition: all 0.2s; min-width: 150px; text-align: center; white-space: nowrap;';
-                                    if ($is_primary) {
-                                        $button_style .= ' background-color: #facc15; color: #1e293b; border: 1px solid #eab308;';
-                                    } else {
-                                        $button_style .= ' background-color: #e2e8f0; color: #475569; border: 1px solid #cbd5e1;';
-                                    }
-                                    return '
-                                        <a href="' . esc_url($store['url']) . '" target="_blank" rel="noopener noreferrer" class="' . ($is_primary ? 'mco-book-btn mco-book-btn--primary' : 'mco-book-btn mco-book-btn--secondary') . '" style="' . $button_style . '">
-                                            ' . mco_get_svg_icon('book-up') . ' Buy on ' . esc_html($store['name']) . '
-                                        </a>';
-                                }, $all_stores))
-                            ) : (
-                                '<span class="mco-book-btn" style="cursor: default; background: #f1f5f9; color: #94a3b8; border: 1px solid #cbd5e1; min-width: 150px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: auto; padding: 12px 30px; font-size: 1.1rem; text-align: center; white-space: nowrap;">Links Coming Soon</span>'
-                            )) . '
+        ob_start(); // Start output buffer
+        if ($type === 'sidebar') { ?>
+            <div class="mco-book-card-sidebar">
+                <div class="mco-book-card-sidebar__cover"><?php echo $cover_html; ?></div>
+                <div class="mco-book-card-sidebar__content">
+                    <h4 class="mco-book-card-sidebar__title"><?php echo esc_html($title); ?></h4>
+                    <div class="mco-store-buttons-sidebar">
+                        <a href="<?php echo esc_url($primary_link_info['url'] ?? '#'); ?>" target="_blank" rel="noopener noreferrer" class="mco-book-card-sidebar__button">
+                            Buy on <?php echo esc_html($primary_link_info['domainName'] ?? 'Amazon'); ?>
+                        </a>
                     </div>
                 </div>
-            </div>';
-        } else { // showcase
-            return '
-                <div class="mco-book-card">
-                    <div class="mco-book-cover mco-book-cover--showcase">
-                        ' . $cover_html . '
-                    </div>
-                    <div class="mco-book-card__body">
-                        ' . (!empty($permalink) ? '<a href="' . $permalink . '" style="text-decoration: none;">' : '') . '
-                            <h4 class="mco-book-card__title">' . esc_html($title) . '</h4>
-                        ' . (!empty($permalink) ? '</a>' : '') . '
-                        <p class="mco-book-card__desc">' . esc_html($short_desc) . '</p>
-                    </div>
-                    <div class="mco-book-card__footer">
-                        <div class="mco-store-buttons">
-                            ' . (count($all_stores) > 0 ? (
-                                implode('', array_map(function($store) use ($primary_link_info) {
-                                    $is_primary = $store['key'] === ($primary_link_info['key'] ?? '');
-                                    // Consolidated and explicit inline styles
-                                    $button_style = 'display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9rem; box-sizing: border-box; transition: all 0.2s; min-width: 150px; text-align: center; white-space: nowrap;';
-                                    if ($is_primary) {
-                                        $button_style .= ' background-color: #facc15; color: #1e293b; border: 1px solid #eab308;';
-                                    } else {
-                                        $button_style .= ' background-color: #e2e8f0; color: #475569; border: 1px solid #cbd5e1;';
-                                    }
-                                    return '
-                                        <a href="' . esc_url($store['url']) . '" target="_blank" rel="noopener noreferrer" class="' . ($is_primary ? 'mco-book-btn mco-book-btn--primary' : 'mco-book-btn mco-book-btn--secondary') . '" style="' . $button_style . '">
-                                            ' . mco_get_svg_icon('cart') . ' Buy on ' . esc_html($store['name']) . '
-                                        </a>';
-                                }, $all_stores))
-                            ) : (
-                                '<span class="mco-book-btn" style="cursor: default; background: #f1f5f9; color: #94a3b8; border: 1px solid #cbd5e1; min-width: 150px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9rem; white-space: nowrap;">Links Coming Soon</span>'
-                            )) . '
-                        </div>
-                    </div>
-                </div>';
-        }
+            </div>
+        <?php } elseif ($type === 'single') { ?>
+            <div class="mco-single-book-view">
+                <div class="mco-single-book-view__cover"><?php echo $cover_html; ?></div>
+                <div class="mco-single-book-view__details">
+                    <h1 class="mco-single-book-view__title"><?php echo esc_html($title); ?></h1>
+                    <div class="mco-single-book-view__description"><?php echo $description; ?></div>
+                    <div class="mco-single-book-view__buttons"><?php echo $buttons_html; ?></div>
+                </div>
+            </div>
+        <?php } else { // showcase ?>
+            <div class="mco-book-card">
+                <div class="mco-book-cover"><?php echo $cover_html; ?></div>
+                <div class="mco-book-card__body">
+                    <h4 class="mco-book-card__title"><?php echo esc_html($title); ?></h4>
+                    <p class="mco-book-card__desc"><?php echo esc_html($trimmed_description); ?></p>
+                </div>
+                <div class="mco-book-card__footer">
+                    <div class="mco-store-buttons"><?php echo $buttons_html; ?></div>
+                </div>
+            </div>
+        <?php }
+        return ob_get_clean(); // End output buffer and return its content
     }
 }
 
-// --- LOGIN SHORTCODE ---
-if (!function_exists('mco_exam_login_shortcode')) {
-    function mco_exam_login_shortcode() {
-        if (is_user_logged_in() && isset($_POST['mco_update_name_nonce']) && wp_verify_nonce($_POST['mco_update_name_nonce'], 'mco_update_name_action')) {
-            $full_name = sanitize_text_field($_POST['full_name']);
-            if (!empty($full_name) && strpos(trim($full_name), ' ') === false) { // FIX: Only redirect if full name is valid
-                return mco_render_name_update_form('Please enter your full first and last name.');
-            }
-            if (!empty($full_name)) { // Proceed only if full_name is provided
-                $user_id = get_current_user_id();
-                wp_update_user(['ID' => $user_id, 'display_name' => $full_name]);
-                $name_parts = explode(' ', $full_name, 2);
-                update_user_meta($user_id, 'first_name', $name_parts[0]);
-                if (isset($name_parts[1])) update_user_meta($user_id, 'last_name', $name_parts[1]);
-                return mco_redirect_to_app_with_token();
-            } else {
-                return mco_render_name_update_form('Please enter your full first and last name.');
-            }
-        }
+if (!function_exists('mco_render_program_card_php')) {
+    function mco_render_program_card_php($program_data, $app_url) {
+        $thumbnail_url = $program_data['thumbnailUrl'] ?? '';
+        $cover_html = !empty($thumbnail_url) ? '<img src="'.esc_url($thumbnail_url).'" class="mco-book-cover-image" alt="'.esc_attr($program_data['name']).'">' : mco_render_procedural_cover($program_data, 'program');
+        $trimmed_description = wp_trim_words(wp_kses_post($program_data['description']), 20, '...'); // FIX: Removed html_entity_decode
+        $program_link = rtrim($app_url, '/') . '/program/' . $program_data['id'];
 
-        if (is_user_logged_in()) {
-            $user = wp_get_current_user();
-            if (strpos(trim($user->display_name), ' ') === false) { // No space means it's likely not a full name
-                return mco_render_name_update_form();
-            }
-            return mco_redirect_to_app_with_token();
-        }
-
-        $login_url = wp_login_url(get_permalink());
-        if (!headers_sent()) { wp_redirect($login_url); exit; }
-        mco_load_shortcode_css();
-        return '<script>window.location.href="' . esc_url($login_url) . '";</script><div id="mco-app-root"><div class="mco-form-container" style="text-align:center;"><p>Redirecting to login...</p><a href="' . esc_url($login_url) . '" class="mco-button">Click here if not redirected</a></div></div>';
+        ob_start(); ?>
+        <div class="mco-book-card">
+            <div class="mco-book-cover"><?php echo $cover_html; ?></div>
+            <div class="mco-book-card__body">
+                <a href="<?php echo esc_url($program_link); ?>" style="text-decoration:none;"><h4 class="mco-book-card__title"><?php echo esc_html(html_entity_decode($program_data['name'], ENT_QUOTES, 'UTF-8')); ?></h4></a>
+                <p class="mco-book-card__desc"><?php echo esc_html($trimmed_description); ?></p>
+            </div>
+            <div class="mco-book-card__footer">
+                <div class="mco-store-buttons">
+                    <a href="<?php echo esc_url($program_link); ?>" class="mco-book-btn mco-book-btn--primary">
+                        View Program <?php echo mco_get_svg_icon('external-link'); ?>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <?php return ob_get_clean(); // End output buffer and return its content
     }
 }
 
-// --- EXAM SHOWCASE SHORTCODE (List View) ---
+// --- 7. THE MASTER [mco_exam_showcase] SHORTCODE ---
 if (!function_exists('mco_exam_showcase_shortcode')) {
     function mco_exam_showcase_shortcode($atts) {
-        $atts = shortcode_atts(['id' => ''], $atts, 'exam_program');
-        $program_id_str = sanitize_text_field($atts['id']);
-        
-        $query_args = ['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC'];
-        if (!empty($program_id_str)) {
-            $post_id_from_app_id = (int) str_replace('prod-', '', $program_id_str);
-            if ($post_id_from_app_id > 0) $query_args['p'] = $post_id_from_app_id;
-            else { $query_args['name'] = $program_id_str; $query_args['posts_per_page'] = 1; }
-        }
-        
-        $programs = get_posts($query_args);
-        if (empty($programs)) return '<p>No exam programs found.</p>';
-        
-        // Ensure mco_get_app_config_data and mco_get_exam_app_url are defined
-        if (!function_exists('mco_get_app_config_data') || !function_exists('mco_get_exam_app_url')) {
-            return '<p>Application is not configured correctly. Missing core functions.</p>';
-        }
-
-        $config_data = mco_get_app_config_data();
+        $atts = shortcode_atts(['id' => ''], $atts); 
+        $config = mco_get_app_config_data(); // Calls the updated function for full org structure
         $app_url = mco_get_exam_app_url();
-        if (!$config_data || !$app_url) return '<p>Application is not configured correctly.</p>';
 
-        ob_start();
-        mco_load_shortcode_css();
+        // Safely access active organization data
+        $active_org_config = $config['organizations'][0] ?? []; 
         
-        $subscriptions_enabled = get_option('mco_subscriptions_enabled', '1') === '1';
-        $bundles_enabled = get_option('mco_bundles_enabled', '1') === '1';
+        // FIX for TypeError: array_filter(): Argument #1 ($array) must be of type array, null given
+        // Ensure $exam_product_categories is always an array
+        $exam_product_categories = (isset($active_org_config['examProductCategories']) && is_array($active_org_config['examProductCategories'])) 
+                                   ? $active_org_config['examProductCategories'] 
+                                   : [];
+
+        $all_exams = $active_org_config['exams'] ?? [];
+        $all_prices = $config['examPrices'] ?? []; // examPrices is top-level
+        
         $is_subscribed = (is_user_logged_in() && class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription') && wcs_user_has_subscription(get_current_user_id(), '', 'active'));
+        $owned_exams = is_user_logged_in() ? (get_user_meta(get_current_user_id(), 'mco_paid_exams', true) ?: []) : [];
+
+        ob_start(); // Start main output buffer
         
-        echo '<div class="mco-showcase-layout">';
-        echo '<div class="mco-showcase-main">';
-        
-        if (!$is_subscribed && empty($program_id_str) && $subscriptions_enabled) {
-            $monthly_sub = $config_data['examPrices']['sub-monthly'] ?? null;
-            $yearly_sub = $config_data['examPrices']['sub-yearly'] ?? null;
-            if (($monthly_sub && isset($monthly_sub['productId'])) || ($yearly_sub && isset($yearly_sub['productId']))) {
-                echo '<div class="mco-subscription-grid">';
-                if ($monthly_sub && isset($monthly_sub['productId'])) {
-                    $monthly_url = get_site_url() . '/cart/?add-to-cart=' . $monthly_sub['productId'];
-                    echo '<div class="mco-card mco-gradient--sub-monthly"><h3 class="mco-sub-card__title">Monthly Subscription</h3><p class="mco-sub-card__description">Perfect for focused, short-term preparation.</p><div class="mco-sub-card__price">';
-                    if (isset($monthly_sub['regularPrice']) && $monthly_sub['regularPrice'] > $monthly_sub['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($monthly_sub['regularPrice'], 2) . '</span> ';
-                    echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($monthly_sub['price'], 2) . '</span><span class="mco-sub-card__price-unit">/month</span></div><ul class="mco-sub-card__features"><li>' . mco_get_svg_icon('check') . '<span>Unlimited Access to ALL Practice Exams</span></li><li>' . mco_get_svg_icon('check') . '<span>Unlimited AI-Powered Feedback & Study Guides</span></li><li>' . mco_get_svg_icon('check') . '<span>Cancel Anytime</span></li></ul><div class="mco-card__footer"><a href="' . esc_url($monthly_url) . '" class="mco-card__button mco-card__button--primary">Subscribe Now</a></div></div>';
+        ?>
+        <div class="mco-showcase-layout">
+            <div class="mco-showcase-main">
+                <?php
+                // A. SUBSCRIPTION GRID
+                $subscriptions_enabled = $active_org_config['subscriptionsEnabled'] ?? true;
+                if ($subscriptions_enabled && !$is_subscribed) {
+                    $monthly_sub_data = $all_prices['sub-monthly'] ?? null; 
+                    $yearly_sub_data = $all_prices['sub-yearly'] ?? null;
+
+                    if (($monthly_sub_data && isset($monthly_sub_data['productId'])) || ($yearly_sub_data && isset($yearly_sub_data['productId']))) { ?>
+                        <div class="mco-subscription-grid">
+                            <?php if ($monthly_sub_data && isset($monthly_sub_data['productId'])) {
+                                $monthly_url = get_site_url() . '/cart/?add-to-cart=' . $monthly_sub_data['productId']; ?>
+                                <div class="mco-card mco-gradient--sub-monthly" style="padding:30px; text-align:center; border:none;">
+                                    <h3 class="mco-sub-card__title">Monthly Plan</h3>
+                                    <p style="font-size:2.5rem; font-weight:800; margin:10px 0;">$<?php echo number_format_i18n($monthly_sub_data['price'], 2); ?></p>
+                                    <ul class="mco-sub-card__features">
+                                        <li><?php echo mco_get_svg_icon('check'); ?><span>Unlimited Access to ALL Practice Exams</span></li>
+                                        <li><?php echo mco_get_svg_icon('check'); ?><span>Unlimited AI-Powered Feedback & Study Guides</span></li>
+                                        <li><?php echo mco_get_svg_icon('check'); ?><span>Cancel Anytime</span></li>
+                                    </ul>
+                                    <div class="mco-card__footer"><a href="<?php echo esc_url($monthly_url); ?>" class="mco-card__button mco-card__button--primary">Subscribe Now</a></div>
+                                </div>
+                            <?php } ?>
+                            <?php if ($yearly_sub_data && isset($yearly_sub_data['productId'])) {
+                                $yearly_url = get_site_url() . '/cart/?add-to-cart=' . $yearly_sub_data['productId']; ?>
+                                <div class="mco-card mco-gradient--sub-yearly mco-card--best-value"><div class="mco-best-value-tag"><?php echo mco_get_svg_icon('star'); ?> Best Value</div><h3 class="mco-sub-card__title">Yearly Plan</h3><p style="font-size:2.5rem; font-weight:800; margin:10px 0;">$<?php echo number_format_i18n($yearly_sub_data['price'], 2); ?></p>
+                                    <p style="text-align:center; font-size: 0.875rem; color: #fcd34d; font-weight: 600;">Saves over 35%!</p>
+                                    <ul class="mco-sub-card__features">
+                                        <li><?php echo mco_get_svg_icon('check'); ?><span>All Monthly features</span></li>
+                                        <li><?php echo mco_get_svg_icon('check'); ?><span>Access All Exam Programs</span></li>
+                                        <li><?php echo mco_get_svg_icon('check'); ?><span>Billed Annually</span></li>
+                                    </ul>
+                                    <div class="mco-card__footer"><a href="<?php echo esc_url($yearly_url); ?>" class="mco-card__button mco-card__button--primary">Subscribe & Save</a></div>
+                                </div>
+                            <?php } ?>
+                        </div>
+                    <?php }
                 }
-                if ($yearly_sub && isset($yearly_sub['productId'])) {
-                    $yearly_url = get_site_url() . '/cart/?add-to-cart=' . $yearly_sub['productId'];
-                    echo '<div class="mco-card mco-gradient--sub-yearly mco-card--best-value"><div class="mco-best-value-tag">' . mco_get_svg_icon('star') . ' Best Value</div><h3 class="mco-sub-card__title">Yearly Subscription</h3><p class="mco-sub-card__description">For continuous learning and preparing for multiple certifications.</p><div class="mco-sub-card__price">';
-                    if (isset($yearly_sub['regularPrice']) && $yearly_sub['regularPrice'] > $yearly_sub['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($yearly_sub['regularPrice'], 2) . '</span> ';
-                    echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($yearly_sub['price'], 2) . '</span><span class="mco-sub-card__price-unit">/year</span></div><p style="text-align:center; font-size: 0.875rem; color: #fcd34d; font-weight: 600;">Saves over 35%!</p><ul class="mco-sub-card__features"><li>' . mco_get_svg_icon('check') . '<span>All Monthly features</span></li><li>' . mco_get_svg_icon('check') . '<span>Access All Exam Programs</span></li><li>' . mco_get_svg_icon('check') . '<span>Billed Annually</span></li></ul><div class="mco-card__footer"><a href="' . esc_url($yearly_url) . '" class="mco-card__button mco-card__button--primary">Subscribe & Save</a></div></div>';
-                }
-                echo '</div>';
-            }
-        }
-
-        echo '<div class="mco-showcase-grid">';
-        foreach ($programs as $program_post) {
-            $app_program_id = 'prod-' . $program_post->ID;
-            $program_category = current(array_filter($config_data['examProductCategories'], function($c) use ($app_program_id) { return $c['id'] === $app_program_id; }));
-            if (!$program_category) continue;
-            
-            $practice_exam = current(array_filter($config_data['exams'], function($e) use ($program_category) { return $e['id'] === $program_category['practiceExamId']; }));
-            $cert_exam = current(array_filter($config_data['exams'], function($e) use ($program_category) { return $e['id'] === $program_category['certificationExamId']; }));
-            
-            $program_link_url = rtrim($app_url, '/') . '/program/' . $app_program_id;
-
-            echo '<div class="mco-program-group" id="' . esc_attr($app_program_id) . '"><a href="' . esc_url($program_link_url) . '"><h2 class="mco-program-group__title">' . esc_html(html_entity_decode($program_category['name'], ENT_QUOTES, 'UTF-8')) . '</h2></a><div class="mco-program-group__description">' . wp_kses_post(html_entity_decode($program_category['description'], ENT_QUOTES, 'UTF-8')) . '</div><div class="mco-program-group__cards">';
-
-            if ($practice_exam) {
-                echo '<div class="mco-card mco-gradient--practice-1"><div class="mco-card__header"><span>' . mco_get_svg_icon('practice') . '</span> Practice Exam</div><div class="mco-card__body"><h3 class="mco-card__subtitle">' . esc_html(html_entity_decode($practice_exam['name'], ENT_QUOTES, 'UTF-8')) . '</h3><div class="mco-card__stats"><span>' . esc_html($practice_exam['numberOfQuestions']) . ' Qs</span><span>' . esc_html($practice_exam['durationMinutes']) . ' Mins</span><span>' . esc_html($practice_exam['passScore']) . '% Pass</span></div></div><div class="mco-card__footer"><a href="' . esc_url(mco_get_exam_app_url() . '/test/' . $practice_exam['id']) . '" class="mco-card__button mco-card__button--primary">Start Practice</a></div></div>';
-            }
-
-            if ($cert_exam) {
-                $product_id = wc_get_product_id_by_sku($cert_exam['productSku']);
-                $is_purchased = false;
-                if (is_user_logged_in()) {
-                    $user_id = get_current_user_id();
-                    $is_purchased = $is_subscribed || ($product_id ? wc_customer_bought_product('', $user_id, $product_id) : false);
-                }
-                $button_text = $is_purchased ? 'Start Exam' : 'Add to Cart';
-                $button_icon = $is_purchased ? mco_get_svg_icon('practice') : mco_get_svg_icon('cart');
-                $button_url = $is_purchased ? mco_get_exam_app_url() . '/test/' . $cert_exam['id'] : ($product_id ? get_site_url() . '/cart/?add-to-cart=' . $product_id : '#');
-                $button_class = $is_purchased ? 'mco-card__button--primary' : 'mco-card__button--purchase';
-
-                echo '<div class="mco-card mco-gradient--cert-1"><div class="mco-card__header"><span>' . mco_get_svg_icon('cert') . '</span> Certification Exam</div><div class="mco-card__body"><h3 class="mco-card__subtitle">' . esc_html(html_entity_decode($cert_exam['name'], ENT_QUOTES, 'UTF-8')) . '</h3>';
-                if (!$is_purchased && $cert_exam['price'] > 0) {
-                    echo '<div style="text-align: center; margin-bottom: 1rem;">';
-                    if (isset($cert_exam['regularPrice']) && $cert_exam['regularPrice'] > $cert_exam['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($cert_exam['regularPrice'], 2) . '</span> ';
-                    echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($cert_exam['price'], 2) . '</span></div>';
-                }
-                echo '<div class="mco-card__stats"><span>' . esc_html($cert_exam['numberOfQuestions']) . ' Qs</span><span>' . esc_html($cert_exam['durationMinutes']) . ' Mins</span><span>' . esc_html($cert_exam['passScore']) . '% Pass</span></div></div><div class="mco-card__footer"><a href="' . esc_url($button_url) . '" class="mco-card__button ' . $button_class . '">' . $button_icon . ' ' . $button_text . '</a></div></div>';
-
-                if ($bundles_enabled) {
-                    $subscription_bundle_sku = $cert_exam['productSku'] . '-1mo-addon';
-                    $practice_bundle_sku = $cert_exam['productSku'] . '-1';
-                    
-                    $bundle_data = null;
-                    $bundle_type = null;
-
-                    // Check subscription bundle first (higher priority)
-                    if (isset($config_data['examPrices'][$subscription_bundle_sku]) && ($config_data['examPrices'][$subscription_bundle_sku]['isBundle'] ?? false)) {
-                        $bundle_data = $config_data['examPrices'][$subscription_bundle_sku];
-                        $bundle_type = 'subscription';
-                    } elseif (isset($config_data['examPrices'][$practice_bundle_sku]) && ($config_data['examPrices'][$practice_bundle_sku]['isBundle'] ?? false)) {
-                        $bundle_data = $config_data['examPrices'][$practice_bundle_sku];
-                        $bundle_type = 'practice';
+                
+                // B. PROGRAM GROUPS ?>
+                <div class="mco-program-list">
+                    <?php 
+                    $categories_to_display = $exam_product_categories; 
+                    if ($atts['id']) {
+                        $categories_to_display = array_filter($exam_product_categories, fn($c)=>$c['id']===$atts['id']);
                     }
                     
-                    if ($bundle_data) {
-                        $bundle_url = isset($bundle_data['productId']) ? get_site_url() . '/cart/?add-to-cart=' . $bundle_data['productId'] : '#';
-                        $gradient_class = $bundle_type === 'subscription' ? 'mco-gradient--bundle-sub' : 'mco-gradient--bundle-practice';
-                        $subtitle_text = $bundle_type === 'subscription' ? 'Exam + Subscription' : 'Exam Bundle';
-                        $desc_text = $bundle_type === 'subscription' ? 'Get This Exam PLUS 1-Month Full Access' : 'Get This Exam PLUS 1-Month Practice Access';
+                    foreach ($categories_to_display as $cat) {
+                        $practice_exam = current(array_filter($all_exams, fn($e)=>$e['id']===$cat['practiceExamId']));
+                        $cert_exam = current(array_filter($all_exams, fn($e)=>$e['id']===$cat['certificationExamId']));
                         
-                        echo '<div class="mco-card ' . $gradient_class . '"><div class="mco-card__header"><span>' . mco_get_svg_icon('bundle') . '</span> ' . esc_html($subtitle_text) . '</div><div class="mco-card__body"><h3 class="mco-card__subtitle">' . esc_html($desc_text) . '</h3>';
-                        if (isset($bundle_data['price'])) {
-                            echo '<div style="text-align: center; margin-bottom: 1rem;">';
-                            if (isset($bundle_data['regularPrice']) && $bundle_data['regularPrice'] > $bundle_data['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($bundle_data['regularPrice'], 2) . '</span>';
-                            echo '<span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$' . number_format_i18n($bundle_data['price'], 2) . '</span></div>';
-                        }
-                        echo '</div><div class="mco-card__footer"><a href="' . esc_url($bundle_url) . '" class="mco-card__button mco-card__button--purchase">' . mco_get_svg_icon('cart') . ' Purchase Bundle</a></div></div>';
-                    }
-                }
-            }
-            echo '</div></div>';
-        }
-        echo '</div>'; // end showcase-grid
-        echo '</div>'; // end showcase-main
-        echo '<div class="mco-study-hall-sidebar">';
-        echo mco_render_study_hall_sidebar();
-        echo '</div>'; // end sidebar
-        echo '</div>'; // end layout
+                        $program_link_url = rtrim($app_url, '/') . '/program/' . $cat['id'];
+                        ?>
+                        <div class="mco-program-group" id="<?php echo esc_attr($cat['id']); ?>">
+                            <a href="<?php echo esc_url($program_link_url); ?>">
+                                <h2 class="mco-program-group__title"><?php echo esc_html($cat['name']); ?></h2>
+                            </a>
+                            <div class="mco-program-group__description"><?php echo wp_kses_post($cat['description']); ?></div>
+                            <div class="mco-program-group__cards">
+                                <?php if ($practice_exam) { ?>
+                                    <div class="mco-card mco-gradient--practice-1">
+                                        <div class="mco-card__header"><span><?php echo mco_get_svg_icon('practice'); ?></span> Practice Exam</div>
+                                        <div class="mco-card__body">
+                                            <h4 class="mco-card__subtitle"><?php echo esc_html(html_entity_decode($practice_exam['name'], ENT_QUOTES, 'UTF-8')); ?></h4>
+                                            <div class="mco-card__stats">
+                                                <span><?php echo esc_html($practice_exam['numberOfQuestions']); ?> Qs</span>
+                                                <span><?php echo esc_html($practice_exam['durationMinutes']); ?> Mins</span>
+                                                <span><?php echo esc_html($practice_exam['passScore']); ?>% Pass</span>
+                                            </div>
+                                        </div>
+                                        <div class="mco-card__footer">
+                                            <a href="<?php echo esc_url($app_url . '/test/' . $practice_exam['id']); ?>" class="mco-card__button mco-card__button--primary">Start Practice</a>
+                                        </div>
+                                    </div>
+                                <?php } ?>
+                                
+                                <?php if ($cert_exam) {
+                                    $product_id = isset($cert_exam['productSku']) ? wc_get_product_id_by_sku($cert_exam['productSku']) : 0;
+                                    $is_purchased = false;
+                                    if (is_user_logged_in() && $product_id) {
+                                        $user_id = get_current_user_id();
+                                        $is_purchased = $is_subscribed || (function_exists('wc_customer_bought_product') && wc_customer_bought_product('', $user_id, $product_id));
+                                    }
+                                    $button_text = $is_purchased ? 'Start Exam' : 'Buy for $' . number_format_i18n($cert_exam['price'], 2);
+                                    $button_icon = $is_purchased ? mco_get_svg_icon('practice') : mco_get_svg_icon('cart');
+                                    $button_url = $is_purchased ? $app_url . '/test/' . $cert_exam['id'] : ($product_id ? get_site_url() . '/cart/?add-to-cart=' . $product_id : '#');
+                                    $button_class = $is_purchased ? 'mco-card__button--primary' : 'mco-card__button--purchase';
+                                    ?>
+                                    <div class="mco-card mco-gradient--cert-1">
+                                        <div class="mco-card__header"><span><?php echo mco_get_svg_icon('cert'); ?></span> Certification Exam</div>
+                                        <div class="mco-card__body">
+                                            <h4 class="mco-card__subtitle"><?php echo esc_html(html_entity_decode($cert_exam['name'], ENT_QUOTES, 'UTF-8')); ?></h4>
+                                            <?php if (!$is_purchased && $cert_exam['price'] > 0) { ?>
+                                                <div style="text-align: center; margin-bottom: 1rem;">
+                                                    <?php if (isset($cert_exam['regularPrice']) && $cert_exam['regularPrice'] > $cert_exam['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($cert_exam['regularPrice'], 2) . '</span> '; ?>
+                                                    <span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$<?php echo number_format_i18n($cert_exam['price'], 2); ?></span>
+                                                </div>
+                                            <?php } ?>
+                                            <div class="mco-card__stats">
+                                                <span><?php echo esc_html($cert_exam['numberOfQuestions']); ?> Qs</span>
+                                                <span><?php echo esc_html($cert_exam['durationMinutes']); ?> Mins</span>
+                                                <span><?php echo esc_html($cert_exam['passScore']); ?>% Pass</span>
+                                            </div>
+                                        </div>
+                                        <div class="mco-card__footer">
+                                            <a href="<?php echo esc_url($button_url); ?>" class="mco-card__button <?php echo esc_attr($button_class); ?>"><?php echo $button_icon; ?> <?php echo esc_html($button_text); ?></a>
+                                        </div>
+                                    </div>
+                                    
+                                    <?php
+                                    // Addon Bundle
+                                    $bundles_enabled = $active_org_config['bundlesEnabled'] ?? true;
+                                    if ($bundles_enabled && isset($cert_exam['productSku'])) {
+                                        $subscription_bundle_sku = $cert_exam['productSku'] . '-1mo-addon';
+                                        $practice_bundle_sku = $cert_exam['productSku'] . '-1';
+                                        
+                                        $bundle_data = null;
+                                        $bundle_type = null;
 
-        return ob_get_clean();
+                                        if (isset($all_prices[$subscription_bundle_sku])) {
+                                            $bundle_data = $all_prices[$subscription_bundle_sku];
+                                            $bundle_type = 'subscription';
+                                        } elseif (isset($all_prices[$practice_bundle_sku])) {
+                                            $bundle_data = $all_prices[$practice_bundle_sku];
+                                            $bundle_type = 'practice';
+                                        }
+                                        
+                                        if ($bundle_data) {
+                                            $bundle_url = isset($bundle_data['productId']) ? get_site_url() . '/cart/?add-to-cart=' . $bundle_data['productId'] : '#';
+                                            $gradient_class = $bundle_type === 'subscription' ? 'mco-gradient--bundle-sub' : 'mco-gradient--bundle-practice';
+                                            $subtitle_text = $bundle_type === 'subscription' ? 'Exam + 1mo Premium' : 'Exam Bundle';
+                                            $desc_text = $bundle_type === 'subscription' ? 'Get This Exam PLUS 1-Month Full Access' : 'Get This Exam PLUS 1-Month Practice Access';
+                                            ?>
+                                            <div class="mco-card <?php echo esc_attr($gradient_class); ?>">
+                                                <div class="mco-card__header"><span><?php echo mco_get_svg_icon('bundle'); ?></span> <?php echo esc_html($subtitle_text); ?></div>
+                                                <div class="mco-card__body">
+                                                    <h3 class="mco-card__subtitle"><?php echo esc_html($desc_text); ?></h3>
+                                                    <?php if (isset($bundle_data['price'])) { ?>
+                                                        <div style="text-align: center; margin-bottom: 1rem;">
+                                                            <?php if (isset($bundle_data['regularPrice']) && $bundle_data['regularPrice'] > $bundle_data['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($bundle_data['regularPrice'], 2) . '</span> '; ?>
+                                                            <span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$<?php echo number_format_i18n($bundle_data['price'], 2); ?></span>
+                                                        </div>
+                                                    <?php } ?>
+                                                </div>
+                                                <div class="mco-card__footer">
+                                                    <a href="<?php echo esc_url($bundle_url); ?>" class="mco-card__button mco-card__button--purchase"><?php echo mco_get_svg_icon('cart'); ?> Purchase Bundle</a>
+                                                </div>
+                                            </div>
+                                        <?php } // Closes if ($bundle_data)
+                                    } // Closes if ($bundles_enabled)
+                                } // Closes if ($cert_exam) ?>
+                            </div>
+                        </div>
+                    <?php } // Closes foreach ($categories_to_display) ?>
+                </div>
+            </div>
+            <div class="mco-study-hall-sidebar">
+                <?php echo mco_render_study_hall_sidebar(); ?>
+            </div>
+        </div>
+        <?php return ob_get_clean(); // End main output buffer
     }
 }
 
-// --- PROGRAM GRID SHORTCODE (Category Page Style) ---
+// --- 8. PROGRAM GRID SHORTCODE (Category Page Style) ---
 if (!function_exists('mco_program_grid_shortcode')) {
     function mco_program_grid_shortcode() {
-        // Ensure mco_get_app_config_data is defined
-        if (!function_exists('mco_get_app_config_data')) {
-            return '<p>Application is not configured correctly. Missing core functions.</p>';
-        }
+        $config = mco_get_app_config_data();
+        $active_org_config = $config['organizations'][0] ?? [];
+        $programs_data = $active_org_config['examProductCategories'] ?? []; // This is safe now
 
-        $config_data = mco_get_app_config_data();
-        if (empty($config_data['examProductCategories'])) return '<p>No exam programs found.</p>';
+        if (empty($programs_data)) return '<p>No exam programs found.</p>';
         
-        // Pass program_posts and related data from config_data directly
-        $programs = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC']);
-        
-        ob_start();
-        mco_load_shortcode_css();
         $app_url = mco_get_exam_app_url();
-        ?>
+
+        ob_start(); ?>
         <div id="mco-app-root">
             <div class="mco-wrapper">
                 <div class="mco-book-grid">
                     <?php 
-                    foreach ($programs as $program_post) {
-                        $app_program_id = 'prod-' . $program_post->ID;
-                        $program_category = current(array_filter($config_data['examProductCategories'], function($c) use ($app_program_id) { return $c['id'] === $app_program_id; }));
-                        
-                        // If category is not found, skip rendering to prevent errors
-                        if (!$program_category) {
-                            error_log("MCO SHORTCODE: Program category not found for post ID: {$program_post->ID}. Skipping rendering.");
-                            continue; 
-                        }
-
-                        $item_data = [
-                            'id' => $app_program_id, // Use app-specific ID for React
-                            'title' => $program_post->post_title,
-                            'description' => $program_post->post_content,
-                            'thumbnailUrl' => $program_category['thumbnailUrl'] ?? '', // Use pre-fetched thumbnail from app_config_data
-                            'permalink' => rtrim($app_url, '/') . '/program/' . $app_program_id,
+                    foreach ($programs_data as $program): 
+                        // To render with thumbnail, ensure category has a thumbnailUrl
+                        $program_with_thumb = [
+                            'id' => $program['id'],
+                            'name' => $program['name'],
+                            'description' => $program['description'],
+                            'thumbnailUrl' => $program['thumbnailUrl'] ?? '', // Add thumbnail URL here
                         ];
-                        echo mco_render_program_card($item_data, $app_url);
-                    }
-                    ?>
+                        echo mco_render_program_card_php($program_with_thumb, $app_url);
+                    endforeach; ?>
                 </div>
             </div>
         </div>
@@ -690,92 +759,232 @@ if (!function_exists('mco_program_grid_shortcode')) {
     }
 }
 
-// --- HELPER: RENDER SINGLE PROGRAM CARD ---
-if (!function_exists('mco_render_program_card')) {
-    function mco_render_program_card($program_data, $app_url) {
-        // Ensure mco_render_procedural_cover and mco_get_svg_icon are defined
-        if (!function_exists('mco_render_procedural_cover_full') || !function_exists('mco_get_svg_icon')) {
-            return '<p>Application is not configured correctly. Missing core functions.</p>';
-        }
-
-        $app_program_id = $program_data['id'] ?? ('prod-' . ($program_data['ID'] ?? ''));
-        $program_url = rtrim($app_url, '/') . '/program/' . $app_program_id;
-        
-        $thumbnail_url = $program_data['thumbnailUrl'] ?? '';
-        
-        $coverHtml = !empty($thumbnail_url) 
-            ? '<img src="' . esc_url($thumbnail_url) . '" style="width:100%;height:100%;object-fit:cover;" crossorigin="' . (str_starts_with($thumbnail_url, 'data:image') ? '' : 'anonymous') . '">'
-            : mco_render_procedural_cover_full(['title' => $program_data['title']], 'program'); // Simplified to let React handle procedural covers
-        
-        $desc = wp_trim_words(html_entity_decode($program_data['description'] ?? '', ENT_QUOTES, 'UTF-8'), 20, '...');
-        
-        return '
-        <div class="mco-book-card">
-            <div class="mco-book-cover">' . $coverHtml . '</div>
-            <div class="mco-book-card__body">
-                <a href="' . esc_url($program_url) . '" style="text-decoration:none;"><h4 class="mco-book-card__title">' . esc_html(html_entity_decode($program_data['title'] ?? '', ENT_QUOTES, 'UTF-8')) . '</h4></a>
-                <p class="mco-book-card__desc">' . esc_html($desc) . '</p>
-            </div>
-            <div class="mco-book-card__footer">
-                <div class="mco-store-buttons">
-                    <a href="' . esc_url($program_url) . '" class="mco-book-btn mco-book-btn--primary">
-                        View Program ' . mco_get_svg_icon('external-link') . '
-                    </a>
-                </div>
-            </div>
-        </div>';
-    }
-}
-
-// --- BOOK SHOWCASE SHORTCODE (PHP Native) ---
+// --- 9. BOOK SHOWCASE SHORTCODE ---
 if (!function_exists('mco_book_showcase_shortcode')) {
     function mco_book_showcase_shortcode() {
-        if (!function_exists('mco_get_app_config_data')) {
-            return '<p>Application is not configured correctly. Missing core functions.</p>';
-        }
+        $config = mco_get_app_config_data();
+        $active_org_config = $config['organizations'][0] ?? [];
+        $books_data = $active_org_config['suggestedBooks'] ?? []; // This is safe now
 
-        $config_data = mco_get_app_config_data();
-        $raw_books = $config_data['suggestedBooks'] ?? [];
-        
+        if (empty($books_data)) return '<p>No recommended books found.</p>';
+
         ob_start();
-        mco_load_shortcode_css();
         
-        $books_html = '';
-        foreach ((array)$raw_books as $book) {
-            $books_html .= mco_render_book_card_php($book, 'showcase');
-        }
+        // Inject JS array of books for geo-coding
+        $books_json = json_encode($books_data);
+        $unique_id = 'mco-books-grid-' . uniqid();
         
         ?>
         <div id="mco-app-root">
             <div class="mco-wrapper">
-                <div class="mco-book-grid">
-                    <?php echo $books_html; ?>
+                <div id="<?php echo esc_attr($unique_id); ?>" class="mco-book-grid">
+                     <p class="mco-loading-text" style="grid-column: 1/-1; text-align: center;">Loading books...</p>
                 </div>
             </div>
         </div>
+        
+        <script>
+        (function() {
+            var books = <?php echo $books_json; ?>;
+            var container = document.getElementById('<?php echo esc_js($unique_id); ?>');
+            
+            function getGeoStore() {
+                var preferredKey = 'com'; // Default fallback
+                try {
+                    // Try to get country code from cookie first (set by React app)
+                    var geoCookie = document.cookie.split('; ').find(row => row.startsWith('mco_user_geo_country_code='));
+                    if (geoCookie) {
+                        var countryCode = geoCookie.split('=')[1].toLowerCase();
+                        if (countryCode === 'in') preferredKey = 'in';
+                        else if (countryCode === 'ae') preferredKey = 'ae';
+                        // Add more country mappings as needed
+                    } else {
+                        // Fallback to timezone-based if no cookie (mimic React logic)
+                        var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                        var gcc = ['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat'];
+                        if (tz.indexOf('Asia/Kolkata') !== -1 || tz.indexOf('Asia/Calcutta') !== -1) preferredKey = 'in';
+                        else if (gcc.indexOf(tz) !== -1) preferredKey = 'ae';
+                    }
+                } catch(e) { console.warn("Error getting geo store from JS:", e); }
+                return preferredKey;
+            }
+            
+            function getHash(str) {
+                var hash = 0; if (!str || str.length === 0) return hash;
+                for (var i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
+                return hash;
+            }
+
+            var stores = {'com': 'Amazon.com', 'in': 'Amazon.in', 'ae': 'Amazon.ae'};
+            
+            // Replicated PHP procedural cover logic in JS for client-side rendering consistency
+            function renderProceduralCover(bookTitle, type) {
+                var hash = getHash(bookTitle);
+                var styleIndex = Math.abs(hash) % 2;
+                var colorIndex = Math.floor(Math.abs(hash) / 2) % 5; // Annapoorna has 5 color sets
+                
+                var superTitle = (type === 'program') ? 'Certification Program' : 'Study Material';
+                var subTitle = (type === 'program') ? 'Exam Prep' : 'Official Guide';
+
+                var svgPattern = '<svg width="100%" height="100%" style="position:absolute;inset:0;opacity:0.1;"><defs><pattern id="p-' + hash + '" patternUnits="userSpaceOnUse" width="20" height="20"><circle cx="10" cy="10" r="1" fill="white"/></pattern></defs><rect width="100%" height="100%" fill="url(#p-' + hash + ')"/></svg>';
+
+                if (styleIndex === 0) {
+                    var colorsA = [
+                        {bg:'background-color: #4338ca;', pattern:'background-color: #3730a3;', text:'color: #ffffff;'},
+                        {bg:'background-color: #0f766e;', pattern:'background-color: #115e59;', text:'color: #ffffff;'},
+                        {bg:'background-color: #334155;', pattern:'background-color: #1e293b;', text:'color: #ffffff;'},
+                        {bg:'background-color: #1e40af;', pattern:'background-color: #1e3a8a;', text:'color: #ffffff;'},
+                        {bg:'background-color: #374151;', pattern:'background-color: #1f2937;', text:'color: #ffffff;'}
+                    ];
+                    var c = colorsA[colorIndex];
+                    
+                    return '<div class="mco-proc-cover-annapoorna-a" style="' + c.bg + c.text + '">' +
+                            '<div class="mco-proc-cover-annapoorna-a__pattern-bg" style="' + c.pattern + '">' + svgPattern + '</div>' +
+                            '<div class="mco-proc-cover-annapoorna-a__content">' +
+                            '<span class="mco-proc-cover-annapoorna-a__super-title">' + superTitle + '</span>' +
+                            '<h4 class="mco-proc-cover-annapoorna-a__title">' + bookTitle + '</h4>' +
+                            '</div></div>';
+                } else {
+                    var colorsB = [
+                        {bg:'background-color: #dbeafe;', shape:'background-color: #93c5fd;', text:'color: #1e3a8a;'},
+                        {bg:'background-color: #d1fae5;', shape:'background-color: #6ee7b7;', text:'color: #064e3b;'},
+                        {bg:'background-color: #ffe4e6;', shape:'background-color: #fda4af;', text:'color: #881337;'},
+                        {bg:'background-color: #ede9fe;', shape:'background-color: #c4b5fd;', text:'color: #4c1d95;'},
+                        {bg:'background-color: #f1f5f9;', shape:'background-color: #cbd5e1;', text:'color: #0f172a;'}
+                    ];
+                    var c = colorsB[colorIndex];
+                    return '<div class="mco-proc-cover-annapoorna-b" style="' + c.bg + c.text + '">' +
+                            '<div class="mco-proc-cover-annapoorna-b__shape" style="' + c.shape + '"></div>' +
+                            '<div class="mco-proc-cover-annapoorna-b__content">' +
+                            '<h4 class="mco-proc-cover-annapoorna-b__title">' + bookTitle + '</h4>' +
+                            '<span class="mco-proc-cover-annapoorna-b__super-title">' + subTitle + '</span>' +
+                            '</div></div>';
+                }
+            }
+
+
+            function renderBook(book) {
+                var preferred = getGeoStore();
+                var links = book.affiliateLinks;
+                var buttonsHtml = '';
+                
+                if (links[preferred]) {
+                    buttonsHtml += '<a href="' + links[preferred] + '" class="mco-book-btn mco-book-btn--primary" target="_blank">Buy on ' + stores[preferred] + '</a>';
+                }
+                
+                var others = ['com', 'in', 'ae'].filter(function(k) { return k !== preferred; });
+                var hasOthers = false;
+                var otherHtml = '<div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">';
+                
+                others.forEach(function(k) {
+                    if (links[k]) {
+                        hasOthers = true;
+                        otherHtml += '<a href="' + links[k] + '" class="mco-book-btn mco-book-btn--secondary" target="_blank" style="flex:1; font-size:0.85em; padding:8px;">' + stores[k] + '</a>';
+                    }
+                });
+                otherHtml += '</div>';
+                
+                if (hasOthers) buttonsHtml += otherHtml;
+                if (!buttonsHtml) buttonsHtml = '<span class="mco-book-btn">Coming Soon</span>';
+                
+                var coverHtml = '';
+                if (book.thumbnailUrl) {
+                    coverHtml = '<img src="' + book.thumbnailUrl + '" style="width:100%;height:100%;object-fit:cover;">';
+                } else {
+                     coverHtml = renderProceduralCover(book.title, 'book');
+                }
+
+                var titleHtml = '<h4 class="mco-book-card__title">' + book.title + '</h4>';
+                if (book.permalink) {
+                    titleHtml = '<a href="' + book.permalink + '" style="text-decoration:none;">' + titleHtml + '</a>';
+                }
+                var desc = book.description.split(' ').slice(0, 20).join(' ') + '...';
+
+                return `
+                <div class="mco-book-card">
+                    <div class="mco-book-cover">${coverHtml}</div>
+                    <div class="mco-book-card__body">
+                        ${titleHtml}
+                        <p class="mco-book-card__desc">${desc}</p>
+                    </div>
+                    <div class="mco-book-card__footer">
+                        <div class="mco-store-buttons">${buttonsHtml}</div>
+                    </div>
+                </div>
+                `;
+            }
+            
+            if (books && books.length > 0) {
+                container.innerHTML = books.map(renderBook).join('');
+            } else {
+                container.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">No books found.</p>';
+            }
+
+        })();
+        </script>
+        <style>
+            .mco-book-btn--secondary { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+            .mco-book-btn--secondary:hover { background: #e2e8f0; color: #1e293b; }
+            .mco-loading-text { color: #94a3b8; font-size: 0.9rem; font-style: italic; }
+            /* Procedural Cover Styles for JS-rendered elements */
+            .mco-proc-cover-annapoorna-a, .mco-proc-cover-annapoorna-b { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 1.5rem; box-sizing: border-box; overflow: hidden; }
+            .mco-proc-cover-annapoorna-a__pattern-bg { position: absolute; inset: 0; opacity: 0.2; clip-path: polygon(0 0, 100% 0, 0 100%); }
+            .mco-proc-cover-annapoorna-a__content { position: relative; z-index: 10; }
+            .mco-proc-cover-annapoorna-a__super-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; display: block; margin-bottom: 0.5rem; }
+            .mco-proc-cover-annapoorna-a__title { font-weight: 800; font-size: 1.25rem; line-height: 1.2; margin: 0; }
+
+            .mco-proc-cover-annapoorna-b { justify-content: flex-end; text-align: left; }
+            .mco-proc-cover-annapoorna-b__shape { position: absolute; right: -20%; top: -20%; width: 70%; height: 70%; border-radius: 50%; opacity: 0.5; mix-blend-mode: multiply; }
+            .mco-proc-cover-annapoorna-b__content { position: relative; z-index: 10; }
+            .mco-proc-cover-annapoorna-b__title { font-weight: 800; font-size: 1.5rem; line-height: 1.1; margin: 0 0 0.5rem 0; }
+            .mco-proc-cover-annapoorna-b__super-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; }
+        </style>
         <?php
         
         return ob_get_clean();
     }
 }
 
-// --- SINGLE BOOK RENDERER (PHP Native) ---
+// --- 10. SINGLE BOOK RENDERER ---
 if (!function_exists('mco_render_single_book_content')) {
-    function mco_render_single_book_content($book_data_arr, $content_override = '') {
-        if (!$book_data_arr) return '';
+    function mco_render_single_book_content($book_data, $content_override = '') {
+        if (!$book_data) return '';
         ob_start();
-        mco_load_shortcode_css();
         
-        $book_data_arr['title'] = strip_tags(html_entity_decode($book_data_arr['title'] ?? '', ENT_QUOTES, 'UTF-8'), '<strong><em>');
-        $book_data_arr['description'] = !empty($content_override) ? $content_override : (html_entity_decode($book_data_arr['description'] ?? '', ENT_QUOTES, 'UTF-8'));
-        $book_data_arr['thumbnailUrl'] = $book_data_arr['thumbnailUrl'] ?? '';
-        $book_data_arr['permalink'] = $book_data_arr['permalink'] ?? '';
-        $book_data_arr['affiliateLinks'] = $book_data_arr['affiliateLinks'] ?? ['com' => '', 'in' => '', 'ae' => ''];
+        $title = html_entity_decode($book_data['title'], ENT_QUOTES, 'UTF-8');
+        $description = !empty($content_override) ? $content_override : wp_kses_post($book_data['description']); // FIX: Removed html_entity_decode
+        $thumbnail_url = esc_url($book_data['thumbnailUrl'] ?? '');
+
+        $cover_html = !empty($thumbnail_url) ? '<img src="'.$thumbnail_url.'" class="mco-book-cover-image" alt="'.esc_attr($title).'">' : mco_render_procedural_cover($book_data, 'book');
+        
+        $primary_link_info = mco_get_geo_primary_link_info($book_data['affiliateLinks'] ?? [], $_GET['geo'] ?? null);
+        $all_stores = [
+            'com' => ['name' => 'Amazon.com', 'url' => $book_data['affiliateLinks']['com'] ?? ''],
+            'in' => ['name' => 'Amazon.in', 'url' => $book_data['affiliateLinks']['in'] ?? ''],
+            'ae' => ['name' => 'Amazon.ae', 'url' => $book_data['affiliateLinks']['ae'] ?? '']
+        ];
+
+        $buttons_html = '';
+        foreach ($all_stores as $key => $store) {
+            if (!empty($store['url'])) {
+                $is_primary = $key === ($primary_link_info['key'] ?? '');
+                $class = $is_primary ? 'mco-book-btn mco-book-btn--primary' : 'mco-book-btn mco-book-btn--secondary';
+                $buttons_html .= '<a href="'.esc_url($store['url']).'" target="_blank" rel="noopener noreferrer" class="'.esc_attr($class).'">'.mco_get_svg_icon('book-up').' Buy on '.esc_html($store['name']).'</a>';
+            }
+        }
+        if (empty($buttons_html)) $buttons_html = '<span class="mco-book-btn mco-book-btn--disabled">Coming Soon</span>';
         
         ?>
         <div id="mco-app-root">
             <div class="mco-wrapper">
-                <?php echo mco_render_book_card_php($book_data_arr, 'single'); ?>
+                <div class="mco-single-book-view">
+                    <div class="mco-single-book-view__cover"><?php echo $cover_html; ?></div>
+                    <div class="mco-single-book-view__details">
+                        <h1 class="mco-single-book-view__title"><?php echo esc_html($title); ?></h1>
+                        <div class="mco-single-book-view__description"><?php echo $description; ?></div>
+                        <div class="mco-single-book-view__buttons"><?php echo $buttons_html; ?></div>
+                    </div>
+                </div>
             </div>
         </div>
         <?php
@@ -786,109 +995,60 @@ if (!function_exists('mco_render_single_book_content')) {
 if (!function_exists('mco_single_book_shortcode')) {
     function mco_single_book_shortcode() {
         global $post;
-        // Ensure mco_get_app_config_data is defined
-        if (!function_exists('mco_get_app_config_data')) {
-            return '<p>Application is not configured correctly. Missing core functions.</p>';
-        }
+        $config = mco_get_app_config_data();
+        $active_org_config = $config['organizations'][0] ?? [];
+        $books_data = $active_org_config['suggestedBooks'] ?? []; // This is safe now
 
-        $config_data = mco_get_app_config_data();
         $book_id_meta = get_post_meta($post->ID, '_mco_book_id', true);
-        $book = current(array_filter($config_data['suggestedBooks'] ?? [], function($b) use ($book_id_meta) { return ($b['id'] ?? '') === $book_id_meta; }));
+        $book_from_config = current(array_filter($books_data, function($b) use ($book_id_meta) { return $b['id'] === $book_id_meta; }));
 
-        if (!$book) {
-            // If book not found in config_data, create a fallback structure from post data
-            $book = [
-                'id' => $book_id_meta ?: 'book-'.$post->ID, // Ensure an ID
-                'title' => get_the_title($post),
-                'description' => $post->post_content,
-                'thumbnailUrl' => get_post_meta($post->ID, '_mco_thumbnail_url', true) ?: get_the_post_thumbnail_url($post->ID, 'large'),
-                'permalink' => get_permalink($post->ID),
-                'affiliateLinks' => [
-                    'com' => get_post_meta($post->ID, '_mco_link_com', true),
-                    'in' => get_post_meta($post->ID, '_mco_link_in', true),
-                    'ae' => get_post_meta($post->ID, '_mco_link_ae', true),
-                ]
-            ];
-        }
+        $book = $book_from_config ?: [
+            'id' => $book_id_meta,
+            'title' => get_the_title($post),
+            'description' => $post->post_content,
+            'thumbnailUrl' => get_post_meta($post->ID, '_mco_thumbnail_url', true),
+            'affiliateLinks' => [
+                'com' => get_post_meta($post->ID, '_mco_link_com', true),
+                'in' => get_post_meta($post->ID, '_mco_link_in', true),
+                'ae' => get_post_meta($post->ID, '_mco_link_ae', true),
+            ]
+        ];
         return mco_render_single_book_content($book, $post->post_content);
     }
 }
 
-// --- SINGLE PROGRAM RENDERER (PHP) ---
-if (!function_exists('mco_render_single_program_content')) {
-    function mco_render_single_program_content($program_data_arr) {
-        if (!$program_data_arr) return '';
-        ob_start();
-        mco_load_shortcode_css();
-        
-        $program_data_arr['title'] = html_entity_decode($program_data_arr['title'] ?? '', ENT_QUOTES, 'UTF-8');
-        $program_data_arr['description'] = html_entity_decode($program_data_arr['description'] ?? '', ENT_QUOTES, 'UTF-8');
-        $program_data_arr['thumbnailUrl'] = $program_data_arr['thumbnailUrl'] ?? '';
-        $program_data_arr['id'] = $program_data_arr['id'] ?? ('prod-' . ($program_data_arr['ID'] ?? ''));
 
-        $program_json = json_encode($program_data_arr);
-        $unique_id = 'mco-single-program-root-' . uniqid();
+// --- 11. SINGLE PROGRAM RENDERER (PHP) ---
+if (!function_exists('mco_render_single_program_content')) {
+    function mco_render_single_program_content($program_data) {
+        if (!$program_data) return '';
+        ob_start();
+        
+        $title = html_entity_decode($program_data['name'], ENT_QUOTES, 'UTF-8');
+        $description = wp_kses_post($program_data['description']); // FIX: Removed html_entity_decode
+        $thumbnail_url = esc_url($program_data['thumbnailUrl'] ?? '');
+        $app_link = rtrim(mco_get_exam_app_url(), '/') . '/program/' . $program_data['id'];
+
+        $cover_html = !empty($thumbnail_url) ? '<img src="'.$thumbnail_url.'" class="mco-book-cover-image" alt="'.esc_attr($title).'">' : mco_render_procedural_cover($program_data, 'program');
 
         ?>
         <div id="mco-app-root">
             <div class="mco-wrapper">
-                <div id="<?php echo $unique_id; ?>">
-                    <p class="mco-loading-text">Loading program details...</p>
+                <div class="mco-single-book-view">
+                    <div class="mco-single-book-view__cover"><?php echo $cover_html; ?></div>
+                    <div class="mco-single-book-view__details">
+                        <h1 class="mco-single-book-view__title"><?php echo esc_html($title); ?></h1>
+                        <div class="mco-single-book-view__description"><?php echo $description; ?></div>
+                        
+                        <div class="mco-single-book-view__buttons">
+                            <a href="<?php echo esc_url($app_link); ?>" style="display: inline-flex; align-items: center; justify-content: center; width: auto; padding: 12px 30px; font-size: 1.1rem;" class="mco-book-btn mco-book-btn--primary">
+                                View Program Details <?php echo mco_get_svg_icon('external-link'); ?>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <script type="module">
-            (async () => {
-                // Ensure React and ReactDOM are available globally
-                if (typeof window.React === 'undefined' || typeof window.ReactDOM === 'undefined') {
-                    const loadScript = (src) => new Promise((resolve, reject) => {
-                        const script = document.createElement('script');
-                        script.src = src;
-                        script.type = 'module';
-                        script.onload = resolve;
-                        script.onerror = reject;
-                        document.head.appendChild(script);
-                    });
-
-                    try {
-                        await Promise.all([
-                            loadScript('https://esm.sh/react@18.2.0?bundle'),
-                            loadScript('https://esm.sh/react-dom@18.2.0/client?bundle')
-                        ]);
-                        console.log("React and ReactDOM loaded dynamically for single program.");
-                    } catch (error) {
-                        console.error("Failed to load React/ReactDOM dynamically for single program:", error);
-                        const container = document.getElementById('<?php echo $unique_id; ?>');
-                        if (container) {
-                            container.innerHTML = '<p style="color:red;">Error: React rendering components could not be loaded. Check console for details.</p>';
-                        }
-                        return;
-                    }
-                }
-
-                const appBaseUrl = window.mcoReactAppBaseUrl || '<?php echo esc_url(mco_get_exam_app_url()); ?>';
-                const componentPath = `${appBaseUrl.replace(/\/$/, '')}/dist/assets/ProgramRenderer.js`; // FIX: Changed path to /dist/assets/
-
-                try {
-                    const module = await import(componentPath);
-                    const ProgramRenderer = module.default;
-                    const container = document.getElementById('<?php echo $unique_id; ?>');
-                    if (container) {
-                        const props = JSON.parse(container.dataset.props || '{}');
-                        const root = window.ReactDOM.createRoot(container);
-                        root.render(React.createElement(ProgramRenderer, { program: props }));
-                    }
-                } catch (error) {
-                    console.error("Failed to load or render ProgramRenderer (single program):", error);
-                    const container = document.getElementById('<?php echo $unique_id; ?>');
-                    if (container) {
-                        container.innerHTML = `<p style="color:red;">Error loading single program: ${error.message}. Please check console for details.</p>`;
-                    }
-                }
-            })();
-        </script>
-        <div data-props='<?php echo esc_attr($program_json); ?>' id="<?php echo $unique_id; ?>"></div>
         <?php
         return ob_get_clean();
     }
@@ -897,20 +1057,26 @@ if (!function_exists('mco_render_single_program_content')) {
 if (!function_exists('mco_single_program_shortcode')) {
     function mco_single_program_shortcode() {
         global $post;
+        $config = mco_get_app_config_data();
+        $active_org_config = $config['organizations'][0] ?? [];
+        $categories_data = $active_org_config['examProductCategories'] ?? []; // This is safe now
+
+        $program_id_app_format = 'prod-' . $post->ID;
+        $program_data_from_config = current(array_filter($categories_data, function($c) use ($program_id_app_format) { return $c['id'] === $program_id_app_format; }));
         
-        $program_data = [
-            'id' => 'prod-' . $post->ID,
-            'title' => get_the_title($post),
+        $program_data = $program_data_from_config ?: [
+            'id' => $program_id_app_format,
+            'name' => get_the_title($post),
             'description' => $post->post_content,
-            'thumbnailUrl' => get_post_meta($post->ID, '_mco_thumbnail_url', true), // Prioritize custom meta for single post
-            'ID' => $post->ID // Pass WP post ID for thumbnail check in render function
+            'thumbnailUrl' => get_the_post_thumbnail_url($post->ID, 'large'),
         ];
         
         return mco_render_single_program_content($program_data);
     }
 }
 
-// --- AUTO INJECT TEMPLATE ---
+
+// --- 12. AUTO INJECT TEMPLATE ---
 if (!function_exists('mco_auto_inject_template')) {
     add_filter('the_content', 'mco_auto_inject_template');
 
@@ -918,37 +1084,19 @@ if (!function_exists('mco_auto_inject_template')) {
         static $css_loaded = false;
 
         if (is_singular('mco_recommended_book') && in_the_loop() && is_main_query()) {
-            return mco_single_book_shortcode();
+            return mco_render_single_book_content(['id' => get_post_meta(get_the_ID(), '_mco_book_id', true), 'title' => get_the_title(), 'description' => get_the_content(), 'thumbnailUrl' => get_the_post_thumbnail_url(), 'affiliateLinks' => []], get_the_content());
         }
         if (is_singular('mco_exam_program') && in_the_loop() && is_main_query()) {
+            return mco_render_single_program_content(['id' => 'prod-'.get_the_ID(), 'name' => get_the_title(), 'description' => get_the_content(), 'thumbnailUrl' => get_the_post_thumbnail_url()]);
+        }
+        // Handle Archive Pages: Inject card view for items in the loop
+        if (is_post_type_archive('mco_exam_program') && in_the_loop() && is_main_query()) {
             global $post;
-            // Ensure mco_get_app_config_data is defined
-            if (!function_exists('mco_get_app_config_data')) {
-                return '<p>Application is not configured correctly. Missing core functions.</p>';
-            }
+            ob_start(); // Start output buffer for the loop item
+            $card_html = mco_render_program_card_php(['id' => 'prod-'.$post->ID, 'name' => $post->post_title, 'description' => $post->post_content, 'thumbnailUrl' => get_the_post_thumbnail_url($post->ID, 'medium_large')], mco_get_exam_app_url());
+            echo $card_html; // Echo the card HTML
+            $loop_content = ob_get_clean(); // Get the buffered content
 
-            $config_data = mco_get_app_config_data();
-            $app_url = mco_get_exam_app_url();
-
-            $app_program_id = 'prod-' . $post->ID;
-            $program_category = current(array_filter($config_data['examProductCategories'], function($c) use ($app_program_id) { return $c['id'] === $app_program_id; }));
-            
-            // If category is not found, skip rendering to prevent errors
-            if (!$program_category) {
-                error_log("MCO SHORTCODE: Program category not found for post ID: {$post->ID}. Skipping rendering.");
-                return ''; 
-            }
-
-            $item_data = [
-                'id' => $app_program_id, // Pass WP Post ID for thumbnail fallback
-                'title' => $post->post_title,
-                'description' => $post->post_content,
-                'thumbnailUrl' => $program_category['thumbnailUrl'] ?? '', // Use pre-fetched thumbnail from app_config_data
-                'permalink' => rtrim($app_url, '/') . '/program/' . $app_program_id,
-            ];
-
-            $card_html = mco_render_program_card($item_data, $app_url);
-            
             // Ensure CSS is loaded, but only once per page load to avoid bloat
             // We capture it into a variable to prepend to the first card
             $styles = '';
@@ -959,44 +1107,54 @@ if (!function_exists('mco_auto_inject_template')) {
                 $css_loaded = true;
             }
             
-            return $styles . $card_html;
+            return $styles . $loop_content;
         }
         return $content;
     }
 }
 
+
+// --- 13. STUDY HALL SIDEBAR RENDERER ---
 if (!function_exists('mco_render_study_hall_sidebar')) {
     function mco_render_study_hall_sidebar() {
-        if (!function_exists('mco_get_app_config_data')) {
-            return '<p style="color:#dc2626;font-size:0.9rem;">Application is not configured correctly. Missing core functions for sidebar.</p>';
-        }
+        $config = mco_get_app_config_data();
+        $active_org_config = $config['organizations'][0] ?? [];
+        $all_books = $active_org_config['suggestedBooks'] ?? []; // This is safe now
 
-        $config_data = mco_get_app_config_data();
-        $raw_books = $config_data['suggestedBooks'] ?? []; 
-        
-        // Shuffle and slice books if there are any
-        if (!empty($raw_books)) {
-            shuffle($raw_books);
-            $random_books = array_slice($raw_books, 0, 5);
-        } else {
-            $random_books = [];
-        }
+        if (empty($all_books)) return '';
 
-        ob_start();
-        
-        $books_html = '';
-        foreach ((array)$random_books as $book) {
-            $books_html .= mco_render_book_card_php($book, 'sidebar');
-        }
+        shuffle($all_books);
+        $random_books = array_slice($all_books, 0, 5);
 
-        ?>
+        ob_start(); ?>
         <div class="mco-study-hall-sidebar">
             <h3 class="mco-study-hall-sidebar__title">
                 <?php echo mco_get_svg_icon('book-open'); ?>
                 <span>Study Hall</span>
             </h3>
             <div class="mco-study-hall-sidebar__grid">
-                <?php echo $books_html; ?>
+                <?php foreach ($random_books as $book):
+                    $link_data = mco_get_geo_primary_link_info($book['affiliateLinks'] ?? [], $_GET['geo'] ?? null);
+                    if (!$link_data) continue;
+
+                    $book_cover_html = !empty($book['thumbnailUrl']) ? '<img src="' . esc_url($book['thumbnailUrl']) . '" alt="' . esc_attr($book['title']) . '">' : mco_render_procedural_cover($book, 'book');
+                    
+                    $permalink = isset($book['permalink']) ? $book['permalink'] : '';
+                ?>
+                <div class="mco-book-card-sidebar">
+                    <div class="mco-book-card-sidebar__cover"><?php echo $book_cover_html; ?></div>
+                    <div class="mco-book-card-sidebar__content">
+                        <?php if ($permalink): ?>
+                            <a href="<?php echo esc_url($permalink); ?>" style="text-decoration:none;"><h4 class="mco-book-card-sidebar__title"><?php echo esc_html(html_entity_decode($book['title'], ENT_QUOTES, 'UTF-8')); ?></h4></a>
+                        <?php else: ?>
+                            <h4 class="mco-book-card-sidebar__title"><?php echo esc_html(html_entity_decode($book['title'], ENT_QUOTES, 'UTF-8')); ?></h4>
+                        <?php endif; ?>
+                        <a href="<?php echo esc_url($link_data['url']); ?>" target="_blank" rel="noopener noreferrer" class="mco-book-card-sidebar__button">
+                            Buy on <?php echo esc_html($link_data['domainName']); ?>
+                        </a>
+                    </div>
+                </div>
+                <?php endforeach; ?>
             </div>
             <p class="mco-study-hall-sidebar__disclaimer">
                 Using our affiliate links doesn't cost you extra and helps support our platform. Note: Book availability may vary by region. Thank you!
@@ -1007,11 +1165,11 @@ if (!function_exists('mco_render_study_hall_sidebar')) {
     }
 }
 
+// --- 14. LOGIN SHORTCODE & HELPERS ---
 if (!function_exists('mco_render_name_update_form')) {
     function mco_render_name_update_form($error_msg = '') {
         $redirect_to = isset($_GET['redirect_to']) ? $_GET['redirect_to'] : '';
         ob_start();
-        mco_load_shortcode_css();
         ?>
         <div id="mco-app-root">
             <div class="mco-form-container">
@@ -1029,6 +1187,7 @@ if (!function_exists('mco_render_name_update_form')) {
                 </form>
             </div>
         </div>
+        <style>/* Minimal form styles here to prevent dependency */ .mco-form-container { max-width: 400px; margin: 50px auto; padding: 30px; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; } .mco-form-container h2 { font-size: 1.5rem; color: #333; margin-bottom: 15px; } .mco-form-container p { font-size: 0.9rem; color: #666; margin-bottom: 20px; } .mco-form-container label { display: block; text-align: left; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; color: #555; } .mco-form-container input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px; } .mco-button { background: #0891b2; color: #fff; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: background 0.2s; } .mco-button:hover { background: #0e7490; } .mco-error { color: #d9534f; background: #fdf3f2; border: 1px solid #d9534f; padding: 10px; border-radius: 5px; margin-bottom: 15px; }</style>
         <?php
         return ob_get_clean();
     }
@@ -1036,12 +1195,6 @@ if (!function_exists('mco_render_name_update_form')) {
 
 if (!function_exists('mco_redirect_to_app_with_token')) {
     function mco_redirect_to_app_with_token() {
-        // Ensure mco_generate_exam_jwt and mco_get_exam_app_url are defined (from mco-api.php)
-        if (!function_exists('mco_generate_exam_jwt') || !function_exists('mco_get_exam_app_url')) {
-            error_log('MCO SHORTCODE REDIRECT ERR: Critical API functions not defined. Check mco-api.php.');
-            return '<p>Error: Application is not configured correctly. Missing core functions.</p>';
-        }
-
         $token = mco_generate_exam_jwt(get_current_user_id());
         if (!$token) {
             return '<p>Error: Could not generate authentication token.</p>';
@@ -1053,60 +1206,145 @@ if (!function_exists('mco_redirect_to_app_with_token')) {
         $site_url = get_site_url();
         $redirect_url = add_query_arg(['token' => $token, 'api_url' => $site_url], rtrim($app_url, '/') . '/auth');
         
-        nocache_headers();
-        wp_redirect($redirect_url);
+        // JS redirect is safer if headers are sent, but meta refresh is a good fallback
+        return '<meta http-equiv="refresh" content="0;url=' . esc_url($redirect_url) . '">' .
+               '<script>window.location.href="' . esc_url($redirect_url) . '";</script>' .
+               '<div id="mco-app-root"><div class="mco-form-container" style="text-align:center;"><p>Redirecting to exam portal...</p><a href="' . esc_url($redirect_url) . '" class="mco-button">Click here if not redirected</a></div></div>';
+    }
+}
+if (!function_exists('mco_exam_login_shortcode')) {
+    function mco_exam_login_shortcode($atts = []) {
+        // Extract shortcode attributes if needed in future (e.g. custom redirect URL)
+        $atts = shortcode_atts([], $atts, 'mco_exam_login');
+
+        // If user is not logged in → show login prompt
+        if (!is_user_logged_in()) {
+            $login_url = wp_login_url(get_permalink());
+            return '<div class="mco-wrapper" style="text-align:center; padding: 60px 0;">
+                <h3>Please Log In to Access the Exam</h3>
+                <p>You need to be logged in to continue.</p>
+                <a href="' . esc_url($login_url) . '" class="mco-card__button mco-card__button--primary">
+                    Log In Now
+                </a>
+            </div>';
+        }
+
+        $user = wp_get_current_user();
+        $display_name = trim($user->display_name);
+
+        // Handle form submission to update full name
+        if (isset($_POST['mco_update_name_nonce']) 
+            && wp_verify_nonce($_POST['mco_update_name_nonce'], 'mco_update_name_action')) {
+            
+            $full_name = sanitize_text_field($_POST['full_name'] ?? '');
+            $full_name = trim($full_name);
+
+            if (!empty($full_name) && strpos($full_name, ' ') !== false) {
+                // Update user display name and first/last name
+                wp_update_user([
+                    'ID'          => $user->ID,
+                    'display_name' => $full_name,
+                ]);
+
+                $name_parts = explode(' ', $full_name, 2);
+                update_user_meta($user->ID, 'first_name', $name_parts[0]);
+                if (isset($name_parts[1])) {
+                    update_user_meta($user->ID, 'last_name', $name_parts[1]);
+                }
+
+                // Immediately redirect to app with fresh token
+                return mco_redirect_to_app_with_token($user->ID);
+            } else {
+                // Invalid name → show form with error
+                return mco_render_name_update_form('Please enter your full first and last name (e.g., John Smith).');
+            }
+        }
+
+        // If already logged in but display name has no space (incomplete name)
+        if (strpos($display_name, ' ') === false) {
+            return mco_render_name_update_form();
+        }
+
+        // All good → redirect to exam app with token
+        $token = mco_generate_exam_jwt($user->ID);
+        $app_url = mco_get_exam_app_url();
+        $redirect = add_query_arg(
+            ['token' => $token, 'api_url' => get_site_url()],
+            rtrim($app_url, '/') . '/auth'
+        );
+
+        // Safe redirect (handles headers already sent)
+        if (!headers_sent()) {
+            wp_redirect($redirect);
+            exit;
+        }
+
+        // Fallback JS redirect
+        return '<script>window.location.href="' . esc_url($redirect) . '";</script>
+            <div class="mco-wrapper" style="text-align:center; padding: 60px 0;">
+                <p>Redirecting to exam application...</p>
+                <a href="' . esc_url($redirect) . '" class="mco-card__button mco-card__button--primary">
+                    Click here if not redirected
+                </a>
+            </div>';
+    }
+}
+
+/**
+ * Render the full-name update form (used when name is missing or invalid)
+ */
+function mco_render_name_update_form($error = '') {
+    $error_html = $error ? '<p style="color:#dc2626; font-weight:600;">' . esc_html($error) . '</p>' : '';
+
+    return '<div class="mco-wrapper" style="max-width:500px; margin: 40px auto; padding: 30px; background:#fff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+        <h3 style="margin-top:0; color:#0f172a;">One Last Step</h3>
+        <p>Please enter your full name (first and last) to continue to the exam.</p>
+        ' . $error_html . '
+        <form method="post" style="display:flex; flex-direction:column; gap:16px;">
+            ' . wp_nonce_field('mco_update_name_action', 'mco_update_name_nonce', true, false) . '
+            <input type="text" name="full_name" placeholder="e.g., John Smith" required 
+                   style="padding:12px; border:1px solid #e2e8f0; border-radius:6px; font-size:1rem;">
+            <button type="submit" class="mco-card__button mco-card__button--primary">
+                Save Name & Continue to Exam
+            </button>
+        </form>
+    </div>';
+}
+
+/**
+ * Helper: Generate token and redirect to app (used after name update)
+ */
+function mco_redirect_to_app_with_token($user_id = null) {
+    if (!$user_id) $user_id = get_current_user_id();
+    
+    $token = mco_generate_exam_jwt($user_id);
+    $app_url = mco_get_exam_app_url();
+    $redirect = add_query_arg(
+        ['token' => $token, 'api_url' => get_site_url()],
+        rtrim($app_url, '/') . '/auth'
+    );
+
+    if (!headers_sent()) {
+        wp_redirect($redirect);
         exit;
     }
+
+    return '<script>window.location.href="' . esc_url($redirect) . '";</script>
+        <div class="mco-wrapper" style="text-align:center; padding:60px 0;">
+            <p>Redirecting to exam application...</p>
+            <a href="' . esc_url($redirect) . '" class="mco-card__button mco-card__button--primary">
+                Click here if not redirected
+            </a>
+        </div>';
 }
 
-/**
- * --- GLOBAL JS VARIABLE INJECTION ---
- * Injects the React App's base URL into the global JavaScript scope.
- * This is crucial for dynamically loading React components within shortcodes,
- * allowing them to locate their built assets relative to the app's root.
- */
-if (!function_exists('mco_set_react_app_base_url_for_js')) {
-    function mco_set_react_app_base_url_for_js() {
-        $app_url = mco_get_exam_app_url();
-        if (!empty($app_url)) {
-            // Ensure the URL does not end with a slash for consistent path construction
-            echo '<script>window.mcoReactAppBaseUrl = "' . rtrim(esc_url($app_url), '/') . '";</script>' . "\n";
-        }
-    }
-    // Use wp_footer to ensure mco_get_exam_app_url() has been evaluated in the request.
-    add_action('wp_footer', 'mco_set_react_app_base_url_for_js');
-}
-
-/**
- * --- INJECT CLIENT-SIDE GEO PREFERENCE SCRIPT ---
- * Reads localStorage.mco_preferred_geo_key (set by React app) and saves it to a session cookie.
- * This allows PHP to retrieve the client's geo preference on direct WordPress page loads.
- */
-if (!function_exists('mco_inject_geo_preference_script')) {
-    function mco_inject_geo_preference_script() {
-        ?>
-        <script>
-            (function() {
-                const preferredGeoKey = localStorage.getItem('mco_preferred_geo_key');
-                if (preferredGeoKey) {
-                    // Set a session cookie (expires when browser closes)
-                    document.cookie = `mco_wp_geo_pref=${preferredGeoKey}; path=/; SameSite=Lax`;
-                } else {
-                    // Clear the cookie if no preference is stored in localStorage
-                    document.cookie = `mco_wp_geo_pref=; Max-Age=0; path=/; SameSite=Lax`;
-                }
-            })();
-        </script>
-        <?php
-    }
-    add_action('wp_footer', 'mco_inject_geo_preference_script');
-}
+add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
 
 
-// --- SHORTCODE REGISTRATION ---
+// --- 15. SHORTCODE REGISTRATION ---
 add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
 add_shortcode('mco_exam_showcase', 'mco_exam_showcase_shortcode');
-add_shortcode('mco_program_grid', 'mco_program_grid_shortcode'); // New grid shortcode for category pages
-add_shortcode('mco_single_program', 'mco_single_program_shortcode'); // New single item shortcode
+add_shortcode('mco_program_grid', 'mco_program_grid_shortcode');
+add_shortcode('mco_single_program', 'mco_single_program_shortcode');
 add_shortcode('mco_book_showcase', 'mco_book_showcase_shortcode');
 add_shortcode('mco_single_book', 'mco_single_book_shortcode');

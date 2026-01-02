@@ -635,73 +635,122 @@ function mco_api_admin_clear_all_results(WP_REST_Request $request) {
     return new WP_REST_Response(['success' => true, 'message' => 'All user exam results have been deleted.'], 200);
 }
 
+/**
+ * REST API endpoint to update an Exam Program (admin only)
+ * 
+ * @param WP_REST_Request $request
+ * @return WP_REST_Response|WP_Error
+ */
 function mco_api_admin_update_exam_program(WP_REST_Request $request) {
     $params = $request->get_json_params();
-    $programId = $params['programId'];
-    $updateData = $params['updateData']; // Structured data
-    
-    $post_id = (int) str_replace('prod-', '', $programId);
-    if (!$post_id) return new WP_Error('invalid_id', 'Invalid Program ID', ['status' => 400]);
+
+    // Validate & sanitize programId (expected format: 'prod-123')
+    $program_id_raw = isset($params['programId']) ? (string) $params['programId'] : '';
+    $updateData     = isset($params['updateData']) ? (array) $params['updateData'] : [];
+
+    $post_id = (int) str_replace('prod-', '', $program_id_raw);
+
+    // Security & existence checks
+    if (!$post_id || get_post_type($post_id) !== 'mco_exam_program') {
+        return new WP_Error('invalid_id', 'Invalid or non-existent Exam Program ID', ['status' => 400]);
+    }
+
+    // 1. Prepare base post updates (title & content)
+    $post_updates = ['ID' => $post_id];
 
     if (isset($updateData['category']['name'])) {
-        wp_update_post(['ID' => $post_id, 'post_title' => sanitize_text_field($updateData['category']['name'])]);
+        $post_updates['post_title'] = sanitize_text_field($updateData['category']['name']);
     }
-    
+
     if (isset($updateData['category']['description'])) {
-         wp_update_post(['ID' => $post_id, 'post_content' => wp_kses_post($updateData['category']['description'])]);
+        $post_updates['post_content'] = wp_kses_post($updateData['category']['description']);
     }
-    
+
+    // Only update post if there are actual changes
+    if (count($post_updates) > 1) {
+        $result = wp_update_post($post_updates, true);
+        if (is_wp_error($result)) {
+            return $result;
+        }
+    }
+
+    // 2. Shared / Category metadata
     if (isset($updateData['category']['questionSourceUrl'])) {
         update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($updateData['category']['questionSourceUrl']));
     }
 
-    // Practice Exam Updates
-    if (isset($updateData['practiceExam'])) {
-        foreach ($updateData['practiceExam'] as $k => $v) {
-            if ($k === 'name') update_post_meta($post_id, '_mco_practice_exam_title_override', sanitize_text_field($v));
-            if ($k === 'numberOfQuestions') update_post_meta($post_id, '_mco_practice_questions', intval($v));
-            if ($k === 'durationMinutes') update_post_meta($post_id, '_mco_practice_duration', intval($v));
-            if ($k === 'certificateEnabled') update_post_meta($post_id, '_mco_practice_certificate_enabled', $v ? '1' : '0');
+    // 3. Practice Exam settings
+    if (isset($updateData['practiceExam']) && is_array($updateData['practiceExam'])) {
+        $pe = $updateData['practiceExam'];
+
+        if (isset($pe['name'])) {
+            update_post_meta($post_id, '_mco_practice_exam_title_override', sanitize_text_field($pe['name']));
+        }
+
+        if (isset($pe['numberOfQuestions'])) {
+            update_post_meta($post_id, '_mco_practice_questions', (int) $pe['numberOfQuestions']);
+        }
+
+        if (isset($pe['durationMinutes'])) {
+            update_post_meta($post_id, '_mco_practice_duration', (int) $pe['durationMinutes']);
+        }
+
+        if (isset($pe['certificateEnabled'])) {
+            update_post_meta($post_id, '_mco_practice_certificate_enabled', $pe['certificateEnabled'] ? '1' : '0');
         }
     }
 
-    // Cert Exam Updates
-    if (isset($updateData['certExam'])) {
-        foreach ($updateData['certExam'] as $k => $v) {
-            if ($k === 'name') update_post_meta($post_id, '_mco_cert_exam_title_override', sanitize_text_field($v));
-            if ($k === 'productSku') update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($v));
-            if ($k === 'numberOfQuestions') update_post_meta($post_id, '_mco_cert_questions', intval($v));
-            if ($k === 'durationMinutes') update_post_meta($post_id, '_mco_cert_duration', intval($v));
-             if ($k === 'passScore') update_post_meta($post_id, '_mco_pass_score', intval($v));
-            if ($k === 'isProctored') update_post_meta($post_id, '_mco_is_proctored', $v ? '1' : '0');
-             if ($k === 'certificateEnabled') update_post_meta($post_id, '_mco_certificate_enabled', $v ? '1' : '0');
-             if ($k === 'certificateTemplateId') update_post_meta($post_id, '_mco_certificate_template_id', sanitize_text_field($v));
-             
-             if ($k === 'recommendedBookIds') {
-                 // Expecting array of string book IDs (e.g. ['book-cpc'])
-                 // Need to convert to post IDs for storage
-                 $book_post_ids = [];
-                 if (is_array($v)) {
-                     foreach($v as $bid) {
-                         $args = ['post_type'=>'mco_recommended_book', 'meta_key'=>'_mco_book_id', 'meta_value'=>$bid, 'posts_per_page'=>1, 'fields'=>'ids'];
-                         $found = get_posts($args);
-                         if (!empty($found)) $book_post_ids[] = $found[0];
-                     }
-                 }
-                 update_post_meta($post_id, '_mco_recommended_book_ids', $book_post_ids);
-             }
+    // 4. Certification Exam settings (this whole section was missing in the old version!)
+    if (isset($updateData['certExam']) && is_array($updateData['certExam'])) {
+        $ce = $updateData['certExam'];
+
+        $fields = [
+            'productSku'           => ['meta' => '_mco_certification_exam_sku',           'sanitize' => 'sanitize_text_field'],
+            'numberOfQuestions'    => ['meta' => '_mco_cert_questions',                   'sanitize' => 'intval'],
+            'durationMinutes'      => ['meta' => '_mco_cert_duration',                    'sanitize' => 'intval'],
+            'passScore'            => ['meta' => '_mco_pass_score',                       'sanitize' => 'intval'],
+            'isProctored'          => ['meta' => '_mco_is_proctored',                     'sanitize' => fn($v) => $v ? '1' : '0'],
+            'certificateEnabled'   => ['meta' => '_mco_certificate_enabled',              'sanitize' => fn($v) => $v ? '1' : '0'],
+            'certificateTemplateId' => ['meta' => '_mco_certificate_template_id',         'sanitize' => 'sanitize_text_field'],
+        ];
+
+        foreach ($fields as $key => $config) {
+            if (isset($ce[$key])) {
+                $value = $config['sanitize']($ce[$key]);
+                update_post_meta($post_id, $config['meta'], $value);
+            }
+        }
+
+        // Special handling: recommendedBookIds → convert book external IDs → internal post IDs
+        if (isset($ce['recommendedBookIds']) && is_array($ce['recommendedBookIds'])) {
+            $book_post_ids = [];
+            foreach ($ce['recommendedBookIds'] as $external_book_id) {
+                $args = [
+                    'post_type'      => 'mco_recommended_book',
+                    'meta_key'       => '_mco_book_id',
+                    'meta_value'     => sanitize_text_field($external_book_id),
+                    'posts_per_page' => 1,
+                    'fields'         => 'ids',
+                    'post_status'    => 'publish',
+                ];
+
+                $found = get_posts($args);
+                if (!empty($found)) {
+                    $book_post_ids[] = (int) $found[0];
+                }
+            }
+            update_post_meta($post_id, '_mco_recommended_book_ids', $book_post_ids);
         }
     }
-    
-    // Clear cache so frontend sees update immediately
-    delete_transient('mco_app_config_data');
-    
-    // Return updated full config
-    if (function_exists('mco_get_full_snapshot_data')) {
-        $config = mco_get_full_snapshot_data(false);
-        return new WP_REST_Response($config, 200);
-    }
-    return new WP_REST_Response(['success' => true], 200);
+
+    // 5. Invalidate app caches
+    delete_transient('mco_app_config_data_full_org_structure');
+
+    return new WP_REST_Response([
+        'success' => true,
+        'id'      => $post_id,
+        'message' => 'Exam program updated successfully'
+    ], 200);
 }
 
 function mco_api_admin_upsert_product(WP_REST_Request $request) {

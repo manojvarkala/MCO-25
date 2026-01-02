@@ -30,24 +30,16 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     }
 
     try {
-        console.log(`MCO API: Attempting ${method} ${fullUrl}`);
         const response = await fetch(fullUrl, config);
         const responseText = await response.text();
-        console.log(`MCO API: Received response for ${fullUrl} - Status: ${response.status}, Body: ${responseText.substring(0, 200)}...`);
-
 
         if (!response.ok) {
             let errorData;
             try {
                 errorData = JSON.parse(responseText);
             } catch (e) {
-                // If responseText is not JSON, it might be an HTML error page or empty.
-                console.error(`MCO API: Server returned ${response.status} with non-JSON response. Raw body:`, responseText);
-                throw new Error(`Server Error: ${response.status}. The backend might be misconfigured or experiencing a PHP fatal error. Check wp-content/debug.log for details.`);
+                throw new Error(`Server Error: ${response.status}. The backend might be misconfigured.`);
             }
-
-            console.error(`MCO API: Server returned ${response.status}`, errorData);
-
             if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_auth_invalid_token') {
                 localStorage.removeItem('examUser');
                 localStorage.removeItem('authToken');
@@ -55,15 +47,13 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 authError.code = errorData?.code;
                 throw authError;
             }
-            
             throw new Error(errorData?.message || `Error ${response.status}: ${response.statusText}`);
         }
         
         return responseText ? JSON.parse(responseText) : {};
     } catch (error: any) {
-        console.error("MCO API Connection Error:", error);
         if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-             throw new Error("Connection Blocked: The browser could not reach the API. This is usually caused by: 1. A PHP Fatal Error on the server (check wp-content/debug.log). 2. WordPress Permalinks not set to 'Post Name'. 3. Missing .htaccess rules for Authorization headers. 4. Incorrect API URL config.");
+             throw new Error("Connection Blocked: The browser could not reach the API.");
         }
         throw error;
     }
@@ -96,9 +86,9 @@ export const googleSheetsService = {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
-                contents: [{ text: prompt }], // FIX: Ensure contents is an array of objects
+                contents: [{ parts: [{ text: prompt }] }],
             });
-            return response.text as string;
+            return response.text || "AI study guide could not be generated.";
         } catch (error: any) {
             console.error("Gemini API Error:", error);
             return "AI feedback service is currently unavailable.";
@@ -109,9 +99,9 @@ export const googleSheetsService = {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
-            contents: [{ text: `Write an SEO blog post about preparing for the ${programTitle} certification. Description: ${programDescription}. Keywords: ${keywords}. Hashtags: ${hashtags}.` }], // FIX: Ensure contents is an array of objects and include hashtags
+            contents: [{ parts: [{ text: `Write an SEO blog post about preparing for the ${programTitle} certification. Description: ${programDescription}. Keywords: ${keywords}. Hashtags: ${hashtags}.` }] }],
         });
-        return response.text as string;
+        return response.text || "";
     },
     syncResults: (user: User, token: string): Promise<TestResult[]> => {
         if (syncPromise) return syncPromise;
@@ -135,13 +125,17 @@ export const googleSheetsService = {
         return await apiFetch('/questions-from-sheet', 'POST', token, { sheetUrl: exam.questionSourceUrl, count: exam.numberOfQuestions });
     },
     submitTest: async (user: User, examId: string, userAnswers: UserAnswer[], questions: Question[], token: string, proctoringViolations: number): Promise<TestResult> => {
-        const correctCount = userAnswers.filter(ua => questions.find(q => q.id === ua.questionId)?.correctAnswer === ua.answer + 1).length;
+        const correctCount = userAnswers.filter(ua => {
+            const q = questions.find(q => q.id === ua.questionId);
+            return q && q.correctAnswer === ua.answer + 1;
+        }).length;
+        
         const result: TestResult = {
             testId: `test_${user.id}_${examId}_${Date.now()}`,
             userId: user.id,
             examId,
             answers: userAnswers,
-            score: (correctCount / questions.length) * 100,
+            score: questions.length > 0 ? (correctCount / questions.length) * 100 : 0,
             correctCount,
             totalQuestions: questions.length,
             timestamp: Date.now(),
@@ -154,6 +148,7 @@ export const googleSheetsService = {
             })),
             proctoringViolations
         };
+        
         await apiFetch('/submit-result', 'POST', token, result);
         return result;
     },

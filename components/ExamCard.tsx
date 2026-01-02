@@ -1,7 +1,5 @@
 
-
 import React, { FC, useState } from 'react';
-// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useNavigate, Link } from "react-router-dom";
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -58,7 +56,8 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
     
     let buttonText = 'Start Practice';
     let buttonAction: () => void;
-    let buttonClasses = "w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50";
+    // FIX: Changed Practice button to use primary brand cyan (bg-cyan-600) instead of green or white
+    let buttonClasses = "w-full flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg transition shadow-md disabled:opacity-50";
     let icon = <PlayCircle size={18} />;
 
     if (!isPractice) { // Certification Exam
@@ -71,10 +70,11 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                 }
                 navigate(`/test/${exam.id}`);
             };
+            buttonClasses = "w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition shadow-md disabled:opacity-50";
         } else {
             buttonText = isRedirecting ? 'Preparing...' : `Buy for $${price.toFixed(2)}`;
             icon = isRedirecting ? <Spinner /> : <ShoppingCart size={18} />;
-            buttonClasses = "w-full flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50";
+            buttonClasses = "w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50";
             buttonAction = async () => {
                 if (!user || !token) {
                     toast.error("Please log in to make a purchase.");

@@ -1,7 +1,5 @@
 
-
 import React, { FC, useState, useEffect, useRef } from 'react';
-// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -14,7 +12,6 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppContext } from '../context/AppContext.tsx';
 import Seal from '../assets/Seal.tsx';
-// FIX: Import localLogos as a map
 import { localLogos } from '../assets/localLogos.ts';
 
 const decodeHtmlEntities = (text: string | undefined): string => {
@@ -24,7 +21,6 @@ const decodeHtmlEntities = (text: string | undefined): string => {
         textarea.innerHTML = text;
         return textarea.textContent || textarea.innerText || '';
     } catch (e) {
-        console.error("Could not decode HTML entities", e);
         return text;
     }
 };
@@ -82,7 +78,6 @@ const Certificate: FC = () => {
             return;
         }
 
-        // For real certificates, always use the organization's default theme setting
         setEffectiveTheme(certificateThemeIdFromOrg);
 
         const fetchCertificateData = async () => {
@@ -110,26 +105,26 @@ const Certificate: FC = () => {
                     }
 
                     const templateId = exam?.certificateTemplateId || (exam?.isPractice ? 'cert-practice' : 'cert-completion');
-                    const template = activeOrg.certificateTemplates.find(t => t.id === templateId);
+                    const template = activeOrg.certificateTemplates.find(t => t.id === templateId) || activeOrg.certificateTemplates[0];
 
-                    if (exam && template) {
+                    if (template) {
                         const fullCertData: CertificateData = {
                             ...partialData,
                             organization: activeOrg,
                             template: template,
-                            totalQuestions: exam.numberOfQuestions
+                            totalQuestions: exam?.numberOfQuestions || 0
                         };
                         setCertData(fullCertData);
                     } else {
-                        toast.error("Certificate configuration missing in the app.");
+                        toast.error("Certificate template missing.");
                         navigate('/dashboard');
                     }
                 } else {
-                    toast.error("Certificate not earned or result not found.");
+                    toast.error("Certificate result not found.");
                     navigate('/dashboard');
                 }
             } catch (error: any) {
-                toast.error(error.message || "Failed to load certificate data.");
+                toast.error(error.message || "Failed to load certificate.");
                 navigate('/dashboard');
             } finally {
                 setIsLoading(false);
@@ -154,13 +149,12 @@ const Certificate: FC = () => {
             const pdfHeight = pdf.internal.pageSize.getHeight();
             
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Certificate-of-Completion-${certData.candidateName.replace(/\s+/g, '_')}.pdf`);
+            pdf.save(`Certificate-${certData.candidateName.replace(/\s+/g, '_')}.pdf`);
             toast.dismiss(toastId);
             toast.success("Certificate downloaded!");
         } catch(error) {
             toast.dismiss(toastId);
-            toast.error("Could not download PDF. Please try again.");
-            console.error(error);
+            toast.error("Could not download PDF.");
         } finally {
             setIsDownloading(false);
         }
@@ -176,34 +170,24 @@ const Certificate: FC = () => {
 
     const { organization, template, examName } = certData;
 
-    // FIX: Prioritize local base64 logo for PDF rendering, fall back to external URL
-    // Use the organization ID for lookup, which is a string like "org-annapoorna"
-    const orgLogoSrc = localLogos[organization.id] || organization.logoUrl;
-    // Determine if crossOrigin is needed (only for external URLs, not base64)
+    // Use organization ID or website part for logo lookup
+    const orgKey = organization.id || organization.website?.split('.')[0] || 'default';
+    const orgLogoSrc = localLogos[orgKey] || organization.logoUrl;
     const orgLogoCrossOrigin = orgLogoSrc && !orgLogoSrc.startsWith('data:image') ? "anonymous" : undefined;
-
-    const isSig1Base64 = template.signature1ImageUrl && template.signature1ImageUrl.startsWith('data:image');
-    const isSig2Base64 = template.signature2ImageUrl && template.signature2ImageUrl.startsWith('data:image');
-    
-    const verificationUrl = `${window.location.origin}/verify/${certData.certificateNumber}`;
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(verificationUrl)}`;
 
     const sanitizeBody = (body: string) => {
         let sanitized = body || '';
-        // Remove common prefixes, case-insensitively
         sanitized = sanitized.replace(/^this is to certify that/i, '').trim();
         sanitized = sanitized.replace(/^this certifies that/i, '').trim();
-        // Robustly remove the candidate name placeholder, with or without surrounding tags
         sanitized = sanitized.replace(/<strong>{\s*candidateName\s*}<\/strong>|{\s*candidateName\s*}/gi, '').trim();
         return sanitized;
     };
 
     const processedBody = sanitizeBody(template.body)
-        .replace(/{examName}/g, `<strong>${decodeHtmlEntities(examName)}</strong>`); // FIX: Decode HTML entities for examName in body
+        .replace(/{examName}/g, `<strong>${decodeHtmlEntities(examName)}</strong>`); 
     
     const classicBody = processedBody.replace(/{finalScore}%/g, `<strong>${certData.finalScore.toFixed(0)}%</strong>`);
     const modernBody = processedBody.replace(/{finalScore}%/g, '');
-
 
     const classicCertificate = (
         <div className="cert-container-classic">
@@ -211,10 +195,9 @@ const Certificate: FC = () => {
                 <div className="cert-border-line">
                     <div className="cert-content-wrapper">
                          <div className="cert-content-inner">
-                            {/* Header */}
                             <header className="cert-header">
-                                {orgLogoSrc && ( // FIX: Use orgLogoSrc for dynamic source
-                                    <img src={orgLogoSrc} crossOrigin={orgLogoCrossOrigin} alt={`${organization.name} Logo`} className="cert-logo" />
+                                {orgLogoSrc && (
+                                    <img src={orgLogoSrc} crossOrigin={orgLogoCrossOrigin} alt="Logo" className="cert-logo" />
                                 )}
                                 <div className="cert-brain-icon">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-slate-200">
@@ -234,29 +217,24 @@ const Certificate: FC = () => {
                                     <p className="cert-org-address">{organization.address || organization.website}</p>
                                 </div>
                             </header>
-                            
-                            {/* Main Body */}
                             <main className="cert-body">
                                 <p className="cert-title-main">{template.title}</p>
                                 <p className="cert-text-normal mt-4">This is to certify that</p>
                                 <h2 className="cert-candidate-name">{certData.candidateName}</h2>
                                 <p className="cert-text-normal max-w-xl mx-auto" dangerouslySetInnerHTML={{ __html: classicBody }} />
                             </main>
-
-                            {/* Footer */}
                             <footer className="cert-footer">
                                 <div className="cert-footer-item">
                                     <div className="cert-item-value"><p>{certData.date}</p></div>
                                     <hr className="cert-hr"/>
                                     <div className="cert-item-label-group"><p className="cert-item-label">Date of Completion</p></div>
                                 </div>
-
                                 <div className="cert-footer-item">
                                     <div className="cert-signatures-container">
                                         {template.signature1Name && (
                                             <div className="cert-signature-block">
                                                 <div className="cert-item-value">
-                                                    {template.signature1ImageUrl ? <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} /> : <p className="cert-signature-text">{template.signature1Name}</p>}
+                                                    {template.signature1ImageUrl ? <img src={template.signature1ImageUrl} crossOrigin="anonymous" alt="Sig" /> : <p className="cert-signature-text">{template.signature1Name}</p>}
                                                 </div>
                                                 <hr className="cert-hr"/>
                                                 <div className="cert-item-label-group">
@@ -265,32 +243,14 @@ const Certificate: FC = () => {
                                                 </div>
                                             </div>
                                         )}
-                                        {template.signature2Name && (
-                                            <div className="cert-signature-block">
-                                                <div className="cert-item-value">
-                                                    {template.signature2ImageUrl ? <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} /> : <p className="cert-signature-text">{template.signature2Name}</p>}
-                                                </div>
-                                                <hr className="cert-hr"/>
-                                                <div className="cert-item-label-group">
-                                                    <p className="cert-item-label font-semibold">{template.signature2Name}</p>
-                                                    <p className="cert-item-label">{template.signature2Title}</p>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
-                                
                                 <div className="cert-footer-item">
                                     <div className="cert-item-value"><p>{certData.certificateNumber}</p></div>
                                     <hr className="cert-hr"/>
                                     <div className="cert-item-label-group"><p className="cert-item-label">Certificate Number</p></div>
                                 </div>
                             </footer>
-
-                            <div className="cert-qr-footer">
-                                <img src={qrCodeUrl} alt="Verification QR Code" className="cert-qr-code" />
-                                <p>Verify at: <br/> {verificationUrl}</p>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -302,13 +262,9 @@ const Certificate: FC = () => {
         <div className="cert-container-modern">
             <div className="cert-modern-sidebar">
                 <div className="cert-modern-sidebar__header">
-                    {orgLogoSrc && <img src={orgLogoSrc} crossOrigin={orgLogoCrossOrigin} alt={`${organization.name} Logo`} className="cert-logo-modern" />}
+                    {orgLogoSrc && <img src={orgLogoSrc} crossOrigin={orgLogoCrossOrigin} alt="Logo" className="cert-logo-modern" />}
                     <h3 className="cert-org-name-modern mt-4">{organization.name}</h3>
                     <p className="cert-org-website-modern">{organization.website}</p>
-                </div>
-                <div className="cert-qr-footer-modern">
-                    <img src={qrCodeUrl} alt="Verification QR Code" className="cert-qr-code-modern" />
-                    <p className="cert-verification-text">To verify this certificate, scan the QR code or visit:<br />{verificationUrl}</p>
                 </div>
             </div>
             <div className="cert-main-panel">
@@ -328,18 +284,10 @@ const Certificate: FC = () => {
                     <div className="cert-signatures-container-modern">
                         {template.signature1Name && (
                             <div className="cert-signature-block-modern">
-                                {template.signature1ImageUrl ? <img src={template.signature1ImageUrl} crossOrigin={isSig1Base64 ? undefined : "anonymous"} alt={template.signature1Name} className="cert-signature-image-modern" /> : <p className="cert-signature-text-modern">{template.signature1Name}</p>}
+                                {template.signature1ImageUrl ? <img src={template.signature1ImageUrl} crossOrigin="anonymous" alt="Sig" className="cert-signature-image-modern" /> : <p className="cert-signature-text-modern">{template.signature1Name}</p>}
                                 <div className="cert-signature-line"></div>
                                 <p className="cert-signature-name">{template.signature1Name}</p>
                                 <p className="cert-signature-title">{template.signature1Title}</p>
-                            </div>
-                        )}
-                         {template.signature2Name && (
-                            <div className="cert-signature-block-modern">
-                                {template.signature2ImageUrl ? <img src={template.signature2ImageUrl} crossOrigin={isSig2Base64 ? undefined : "anonymous"} alt={template.signature2Name} className="cert-signature-image-modern" /> : <p className="cert-signature-text-modern">{template.signature2Name}</p>}
-                                <div className="cert-signature-line"></div>
-                                <p className="cert-signature-name">{template.signature2Name}</p>
-                                <p className="cert-signature-title">{template.signature2Title}</p>
                             </div>
                         )}
                     </div>
@@ -350,34 +298,20 @@ const Certificate: FC = () => {
     );
     
     return (
-        <>
         <div className="max-w-5xl mx-auto bg-slate-100 p-4 sm:p-6 rounded-lg">
             <div className="flex justify-between items-center mb-6">
-                 <button
-                    onClick={() => navigate(-1)}
-                    className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition"
-                >
-                    <ArrowLeft size={16} />
-                    <span>Back</span>
+                 <button onClick={() => navigate(-1)} className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition">
+                    <ArrowLeft size={16} /><span>Back</span>
                 </button>
-                <button
-                    onClick={handleDownload}
-                    disabled={isDownloading}
-                    className="inline-flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400"
-                >
-                    {isDownloading ? <Spinner /> : <Download size={16} />}
-                    <span>{isDownloading ? 'Downloading...' : 'Download PDF'}</span>
+                <button onClick={handleDownload} disabled={isDownloading} className="inline-flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-slate-400">
+                    {isDownloading ? <Spinner /> : <Download size={16} />}<span>{isDownloading ? 'Downloading...' : 'Download PDF'}</span>
                 </button>
             </div>
-            
             <div ref={certificatePrintRef} className="cert-base">
-                {isBetaTester && testId !== 'sample' && (
-                    <div className="watermark-overlay">BETA TESTER COPY</div>
-                )}
+                {isBetaTester && testId !== 'sample' && <div className="watermark-overlay">BETA TESTER COPY</div>}
                 {effectiveTheme === 'modern' ? modernCertificate : classicCertificate}
             </div>
         </div>
-        </>
     );
 };
 export default Certificate;
