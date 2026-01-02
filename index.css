@@ -22,7 +22,6 @@
 }
 
 /* --- THEME OVERRIDES --- */
-
 [data-theme="professional"] {
     --color-primary-rgb: 4, 120, 87;
     --color-primary-hover-rgb: 5, 150, 105;
@@ -80,19 +79,17 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* --- BOOKSTORE LAYOUT FIXES --- */
-
+/* --- BOOKSTORE & BUTTONS --- */
 .mco-book-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 24px;
-    width: 100%;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
 }
 
 .mco-book-card {
     background: rgb(var(--color-card-rgb));
     border: 1px solid rgb(var(--color-border-rgb));
-    border-radius: 12px;
+    border-radius: 1rem;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -100,67 +97,235 @@ body {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.mco-book-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
 .mco-book-cover {
-    height: 240px;
-    flex-shrink: 0;
-    overflow: hidden;
+    height: 280px;
     background: rgb(var(--color-muted-rgb));
+    border-bottom: 1px solid rgb(var(--color-border-rgb));
 }
 
 .mco-book-card__body {
-    padding: 1.25rem;
+    padding: 1.5rem;
     flex-grow: 1;
-    display: flex;
-    flex-direction: column;
 }
 
 .mco-book-card__title {
-    font-size: 1.1rem;
-    font-weight: 700;
+    font-size: 1.25rem;
+    font-weight: 800;
     color: rgb(var(--color-text-strong-rgb));
     margin-bottom: 0.5rem;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    line-height: 1.3;
 }
 
 .mco-book-card__desc {
     font-size: 0.875rem;
-    color: rgb(var(--color-text-default-rgb));
-    opacity: 0.8;
-    line-height: 1.5;
-    margin-bottom: 1rem;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    line-height: 1.6;
+    color: rgb(var(--color-text-muted-rgb));
 }
 
 .mco-book-card__footer {
-    padding: 1rem 1.25rem;
-    background: rgba(var(--color-muted-rgb), 0.2);
+    padding: 1.25rem 1.5rem;
+    background: rgba(var(--color-muted-rgb), 0.3);
     border-top: 1px solid rgb(var(--color-border-rgb));
-    margin-top: auto;
 }
 
 .mco-store-buttons {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0.75rem;
 }
 
-/* Animations */
-@keyframes progress {
-    0% { width: 0%; }
-    100% { width: 100%; }
+.mco-book-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    text-decoration: none;
 }
-.animate-progress {
-    animation: progress 4.5s linear forwards;
+
+.mco-book-btn--primary {
+    background: #fbbf24;
+    color: #78350f;
+}
+
+.mco-book-btn--primary:hover {
+    background: #f59e0b;
+}
+
+.mco-book-btn--secondary {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
+.mco-book-btn--secondary:hover {
+    background: #e2e8f0;
+}
+
+/* --- CERTIFICATE BASE STYLES --- */
+.cert-base {
+    width: 1123px; /* A4 Landscape at 96 DPI */
+    height: 794px;
+    background-color: #fff;
+    margin: 0 auto;
+    position: relative;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.watermark-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 8rem;
+    font-weight: 900;
+    color: rgba(0, 0, 0, 0.05);
+    pointer-events: none;
+    z-index: 50;
+    white-space: nowrap;
+}
+
+/* CLASSIC THEME */
+.cert-container-classic {
+    padding: 20px;
+    height: 100%;
+}
+
+.cert-border-pattern {
+    border: 15px solid #1e293b;
+    height: 100%;
+    padding: 10px;
+    position: relative;
+}
+
+.cert-border-line {
+    border: 2px solid #e2e8f0;
+    height: 100%;
+    padding: 40px;
+    background: radial-gradient(circle at 100% 100%, #f8fafc 0%, #ffffff 100%);
+}
+
+.cert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 60px;
+}
+
+.cert-logo {
+    height: 90px;
+    width: auto;
+    object-contain: true;
+}
+
+.cert-org-details {
+    text-align: right;
+}
+
+.cert-org-name {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.cert-body {
+    text-align: center;
+    margin-bottom: 80px;
+}
+
+.cert-title-main {
+    font-size: 3.5rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #1e293b;
+    margin-bottom: 1rem;
+}
+
+.cert-candidate-name {
+    font-family: var(--font-script);
+    font-size: 5rem;
+    color: #0891b2;
+    margin: 2rem 0;
+}
+
+.cert-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: auto;
+}
+
+.cert-footer-item {
+    text-align: center;
+    width: 280px;
+}
+
+.cert-hr {
+    border: none;
+    border-top: 2px solid #94a3b8;
+    margin: 10px 0;
+}
+
+.cert-item-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+/* MODERN THEME */
+.cert-container-modern {
+    display: flex;
+    height: 100%;
+}
+
+.cert-modern-sidebar {
+    width: 260px;
+    background: #0f172a;
+    color: white;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+}
+
+.cert-logo-modern {
+    width: 100%;
+    margin-bottom: 2rem;
+}
+
+.cert-main-panel {
+    flex: 1;
+    padding: 60px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.cert-title-main-modern {
+    font-size: 4rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+}
+
+.cert-candidate-name-modern {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: #0891b2;
+    margin: 1.5rem 0;
+}
+
+.cert-modern-seal {
+    position: absolute;
+    bottom: 60px;
+    right: 60px;
+    width: 140px;
+    height: 140px;
 }
