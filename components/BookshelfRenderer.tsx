@@ -115,7 +115,7 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                 <div className="mco-book-card__footer">
                     <div className="mco-store-buttons">
                         {allStores.map(store => {
-                            const isPrimary = store.key === primaryLinkInfo?.key;
+                            const isPrimary = store.key === (primaryLinkInfo?.key || 'com');
                             return (
                                 <a 
                                     key={store.key} 
