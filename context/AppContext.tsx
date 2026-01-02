@@ -6,7 +6,6 @@ import { useAuth } from './AuthContext.tsx';
 import { getTenantConfig, TenantConfig } from '../services/apiConfig.ts';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 
-
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const useAppContext = (): AppContextType => {
@@ -61,7 +60,8 @@ const processConfigData = (configData: any) => {
             name: decodeHtmlEntities(getField(cat, ['name', 'post_title', 'title'])),
             description: decodeHtmlEntities(getField(cat, ['description', 'post_content', 'content'])),
             practiceExamId: getField(cat, ['practiceExamId', 'practice_exam_id'], '').toString(),
-            certificationExamId: getField(cat, ['certificationExamId', 'certification_exam_id'], '').toString()
+            certificationExamId: getField(cat, ['certificationExamId', 'certification_exam_id'], '').toString(),
+            questionSourceUrl: getField(cat, ['questionSourceUrl', 'question_source_url'], '')
         }));
 
         const exams = ensureArray<any>(rawOrg.exams).map((exam: any) => {
@@ -92,7 +92,8 @@ const processConfigData = (configData: any) => {
             ...book,
             id: getField(book, ['id', 'book_id']).toString(),
             title: decodeHtmlEntities(getField(book, ['title', 'post_title'])),
-            description: decodeHtmlEntities(getField(book, ['description', 'post_content']))
+            description: decodeHtmlEntities(getField(book, ['description', 'post_content'])),
+            affiliateLinks: getField(book, ['affiliateLinks'], { com: '', in: '', ae: '' })
         }));
 
         allSuggestedBooks = [...allSuggestedBooks, ...books];
@@ -102,7 +103,6 @@ const processConfigData = (configData: any) => {
             id: getField(rawOrg, ['id', 'ID']).toString(),
             name: decodeHtmlEntities(getField(rawOrg, ['name', 'post_title'])),
             website: getField(rawOrg, ['website', 'url']),
-            // FIX: Map logoUrl correctly, providing fallbacks for older configurations
             logoUrl: getField(rawOrg, ['logoUrl', 'logo', 'logo_url', 'custom_logo_url']), 
             exams,
             examProductCategories: categories,
@@ -136,8 +136,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [feedbackRequiredForExam, setFeedbackRequiredForExamState] = useState<FeedbackContext | null>(null);
   const [userGeoCountryCode, setUserGeoCountryCode] = useState<string | null>(() => localStorage.getItem('mco_user_geo_country_code') || null);
   
-  const { user } = useAuth();
-  
   const setActiveTheme = (themeId: string) => {
       setActiveThemeState(themeId);
       try {
@@ -154,7 +152,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     localStorage.removeItem('feedbackRequiredForExam');
   };
 
-  // Helper to set all relevant config states
   const applyConfigToState = useCallback((config: any, processedData: any) => {
     if (processedData && processedData.processedOrgs && processedData.processedOrgs.length > 0) {
       setOrganizations(processedData.processedOrgs);
@@ -181,7 +178,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       return true;
     }
     return false;
-  }, [setOrganizations, setExamPrices, setSuggestedBooks, setActiveOrg, setAvailableThemes, setActiveThemeState, setSubscriptionsEnabled, setBundlesEnabled, setPurchaseNotifierEnabled, setPurchaseNotifierDelay, setPurchaseNotifierMinGap, setPurchaseNotifierMaxGap]); // Dependencies for applyConfigToState
+  }, []);
 
     const fetchGeoLocation = useCallback(async () => {
         const GEO_CACHE_KEY = 'mco_user_geo_country_code';
@@ -194,25 +191,19 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
             if (cachedCode && cachedExpiry && now < parseInt(cachedExpiry, 10)) {
                 setUserGeoCountryCode(cachedCode);
-                console.log("AppContext: Loaded geo country code from cache.");
                 return;
             }
 
-            console.log("AppContext: Fetching fresh geo country code from IP API.");
             const response = await fetch('https://ipapi.co/json/');
             if (response.ok) {
                 const data = await response.json();
                 const countryCode = data.country_code;
                 if (countryCode) {
                     setUserGeoCountryCode(countryCode);
-                    localStorage.setItem(GEO_CACHE_KEY, countryCode); // Keep localStorage for app
-                    localStorage.setItem(GEO_CACHE_EXPIRY_KEY, (now + 3600 * 1000).toString()); // Cache for 1 hour
-                    // FIX: Also set as a cookie for PHP shortcodes to read
+                    localStorage.setItem(GEO_CACHE_KEY, countryCode);
+                    localStorage.setItem(GEO_CACHE_EXPIRY_KEY, (now + 3600 * 1000).toString());
                     document.cookie = `mco_user_geo_country_code=${countryCode}; path=/; max-age=3600; SameSite=Lax`;
-                    console.log(`AppContext: Fetched geo country code: ${countryCode}`);
                 }
-            } else {
-                console.warn(`AppContext: Failed to fetch geo location. Status: ${response.status}`);
             }
         } catch (error) {
             console.error("AppContext: Error fetching geo location:", error);
@@ -232,90 +223,58 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 const storedConfig = localStorage.getItem(cacheKey);
                 if (storedConfig) {
                     cachedConfig = JSON.parse(storedConfig);
-                    // Process and set cached config immediately for faster UI
                     const processed = processConfigData(cachedConfig);
                     if (processed) {
-                        applyConfigToState(cachedConfig, processed); // Use the helper
+                        applyConfigToState(cachedConfig, processed);
                         configFound = true;
                     }
                 }
             } catch (e) {
-                console.warn("AppContext: Failed to parse cached config, clearing cache.", e);
                 localStorage.removeItem(cacheKey);
             }
         }
 
-        // Always attempt to fetch latest config from API
         const apiUrl = tenantConfig.apiBaseUrl + '/wp-json/mco-app/v1/config';
         const response = await fetch(apiUrl);
         if (!response.ok) {
-            // Attempt to load from static JSON file if API fails and no config was loaded yet.
             if (!configFound) {
                 const staticConfigUrl = tenantConfig.staticConfigPath;
-                console.warn(`AppContext: API failed, attempting to load static config from ${staticConfigUrl}`);
                 const staticResponse = await fetch(staticConfigUrl);
-                if (!staticResponse.ok) {
-                    throw new Error(`API and static config failed: ${response.statusText} / ${staticResponse.statusText}`);
+                if (staticResponse.ok) {
+                    const staticConfig = await staticResponse.json();
+                    const processedStaticConfig = processConfigData(staticConfig);
+                    if (processedStaticConfig) {
+                        applyConfigToState(staticConfig, processedStaticConfig);
+                        configFound = true;
+                    }
                 }
-                const staticConfig = await staticResponse.json();
-                const processedStaticConfig = processConfigData(staticConfig);
-                if (processedStaticConfig) {
-                    applyConfigToState(staticConfig, processedStaticConfig);
-                    configFound = true;
-                    toast.success("Loaded content from local cache. Minor delay in updates possible.");
-                } else {
-                    throw new Error("Invalid static configuration format.");
-                }
-            } else {
-                // If API failed but we already loaded from cache, just log it.
-                console.warn(`AppContext: API update failed but cached config is active. Error: ${response.statusText}`);
             }
         } else {
             const liveConfig = await response.json();
             const processedLiveConfig = processConfigData(liveConfig);
             if (processedLiveConfig) {
-                let shouldUpdate = true;
-                // If cached config exists and has a version, compare.
-                if (cachedConfig?.version && liveConfig.version) {
-                    shouldUpdate = liveConfig.version > cachedConfig.version;
-                }
-
-                if (shouldUpdate) {
-                    applyConfigToState(liveConfig, processedLiveConfig); // Use the helper
-                    localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
-                    configFound = true;
-                    if (cachedConfig && liveConfig.version && cachedConfig.version && liveConfig.version > cachedConfig.version) {
-                         toast.success("Content and features have been updated.");
-                    }
-                }
-            } else {
-                throw new Error("Invalid app configuration format from API.");
+                applyConfigToState(liveConfig, processedLiveConfig);
+                localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
+                configFound = true;
             }
         }
     } catch (error: any) {
         console.error("AppContext: Error loading app configuration:", error);
-        if (!configFound) { // Only show global error if no config could be loaded at all
-             toast.error(`Failed to load app configuration: ${error.message}`, { duration: 8000 });
-             // Clear activeOrg and orgs to trigger the "Connection Issue" fallback in App.tsx
-             setOrganizations([]);
-             setActiveOrg(null);
-        }
     } finally {
         setIsInitializing(false);
     }
-}, [applyConfigToState]); // Dependencies for loadAppConfig
+}, [applyConfigToState]);
 
   useEffect(() => {
     loadAppConfig();
-    fetchGeoLocation(); // Fetch geo location on app load
+    fetchGeoLocation();
     googleSheetsService.recordSiteHit().then(data => {
         if (data && data.count) setHitCount(data.count);
     }).catch(() => {});
-  }, [fetchGeoLocation, loadAppConfig]); // Add loadAppConfig to dependencies here
+  }, [fetchGeoLocation, loadAppConfig]);
 
   const refreshConfig = async () => {
-      setIsInitializing(true);
-      await loadAppConfig(true); // Force refresh
+      await loadAppConfig(true);
   };
 
   const setActiveOrgById = useCallback((orgId: string) => {
@@ -339,7 +298,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (newActiveOrg) {
             setActiveOrg(newActiveOrg);
         }
-    }, [activeOrg?.id, organizations]);
+    }, [activeOrg?.id]);
 
   const updateExamInOrg = useCallback((examId: string, updatedExamData: Partial<Exam>) => {
     setActiveOrg(prevOrg => {
@@ -378,13 +337,13 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     feedbackRequiredForExam,
     setFeedbackRequiredForExam,
     clearFeedbackRequired,
-    userGeoCountryCode, // Added to context value
+    userGeoCountryCode,
   }), [
     organizations, activeOrg, isInitializing, refreshConfig, setActiveOrgById,
     updateActiveOrg, updateConfigData, updateExamInOrg, examPrices, suggestedBooks,
     hitCount, availableThemes, activeTheme, subscriptionsEnabled, bundlesEnabled,
     purchaseNotifierEnabled, purchaseNotifierDelay, purchaseNotifierMinGap, purchaseNotifierMaxGap,
-    feedbackRequiredForExam, userGeoCountryCode // Added to dependencies
+    feedbackRequiredForExam, userGeoCountryCode
   ]);
 
   return (

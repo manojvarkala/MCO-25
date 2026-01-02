@@ -6,7 +6,7 @@
     --font-serif-display: 'Source Serif 4', serif;
     --font-script: 'Dancing Script', cursive;
 
-    /* Fallback variables to prevent white/black screen flicker */
+    /* Default (Cyberpunk) Theme */
     --color-primary-rgb: 6, 182, 212;
     --color-primary-hover-rgb: 8, 145, 178;
     --color-secondary-rgb: 219, 39, 119;
@@ -21,18 +21,72 @@
     --color-text-muted-rgb: 148, 163, 184;
 }
 
+/* --- THEME OVERRIDES --- */
+
+[data-theme="professional"] {
+    --color-primary-rgb: 4, 120, 87;
+    --color-primary-hover-rgb: 5, 150, 105;
+    --color-secondary-rgb: 59, 130, 246;
+    --color-background-rgb: 241, 245, 249;
+    --color-card-rgb: 255, 255, 255;
+    --color-muted-rgb: 248, 250, 252;
+    --color-border-rgb: 226, 232, 240;
+    --color-text-strong-rgb: 15, 23, 42;
+    --color-text-default-rgb: 51, 65, 85;
+    --color-text-muted-rgb: 100, 116, 139;
+}
+
+[data-theme="serene"] {
+    --color-primary-rgb: 96, 165, 250;
+    --color-secondary-rgb: 52, 211, 153;
+    --color-accent-rgb: 251, 146, 60;
+    --color-background-rgb: 240, 253, 250;
+    --color-card-rgb: 255, 255, 255;
+    --color-muted-rgb: 240, 249, 255;
+    --color-border-rgb: 204, 251, 241;
+    --color-text-strong-rgb: 19, 78, 74;
+    --color-text-default-rgb: 20, 184, 166;
+    --color-text-muted-rgb: 94, 234, 212;
+}
+
+[data-theme="academic"] {
+    --color-primary-rgb: 127, 29, 29;
+    --color-secondary-rgb: 161, 98, 7;
+    --color-accent-rgb: 217, 119, 6;
+    --color-background-rgb: 254, 252, 251;
+    --color-card-rgb: 255, 255, 255;
+    --color-muted-rgb: 255, 247, 237;
+    --color-border-rgb: 254, 215, 170;
+    --color-text-strong-rgb: 69, 10, 10;
+    --color-text-default-rgb: 120, 113, 108;
+    --color-text-muted-rgb: 168, 162, 158;
+}
+
+[data-theme="noir"] {
+    --color-primary-rgb: 229, 231, 235;
+    --color-secondary-rgb: 139, 92, 246;
+    --color-background-rgb: 31, 41, 55;
+    --color-card-rgb: 17, 24, 39;
+    --color-muted-rgb: 55, 65, 81;
+    --color-border-rgb: 75, 85, 99;
+    --color-text-strong-rgb: 255, 255, 255;
+    --color-text-default-rgb: 209, 213, 219;
+    --color-text-muted-rgb: 156, 163, 175;
+}
+
 body {
     background-color: rgb(var(--color-background-rgb));
     color: rgb(var(--color-text-default-rgb));
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Unified Bookstore Grid - Definitive Fix for Row Clipping and Layout Integrity */
+/* --- BOOKSTORE LAYOUT FIXES --- */
+
 .mco-book-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 32px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
     width: 100%;
-    grid-auto-rows: 1fr;
 }
 
 .mco-book-card {
@@ -42,47 +96,47 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
     height: 100%;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .mco-book-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-.mco-book-card .mco-book-cover {
-    height: 320px;
+.mco-book-cover {
+    height: 240px;
     flex-shrink: 0;
-    border-bottom: 1px solid rgb(var(--color-muted-rgb));
-}
-.mco-book-cover-image { /* Added for PHP rendered image */
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    overflow: hidden;
+    background: rgb(var(--color-muted-rgb));
 }
 
 .mco-book-card__body {
-    padding: 24px;
+    padding: 1.25rem;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
 }
 
 .mco-book-card__title {
-    font-size: 1.25rem;
-    font-weight: 800;
+    font-size: 1.1rem;
+    font-weight: 700;
     color: rgb(var(--color-text-strong-rgb));
-    margin: 0 0 12px 0;
-    line-height: 1.25;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .mco-book-card__desc {
-    font-size: 0.95rem;
+    font-size: 0.875rem;
     color: rgb(var(--color-text-default-rgb));
-    line-height: 1.6;
-    margin: 0;
+    opacity: 0.8;
+    line-height: 1.5;
+    margin-bottom: 1rem;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -90,310 +144,23 @@ body {
 }
 
 .mco-book-card__footer {
-    padding: 20px 24px;
+    padding: 1rem 1.25rem;
+    background: rgba(var(--color-muted-rgb), 0.2);
     border-top: 1px solid rgb(var(--color-border-rgb));
-    background: rgba(var(--color-muted-rgb), 0.3);
+    margin-top: auto;
 }
 
 .mco-store-buttons {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-}
-.mco-store-buttons-sidebar { /* Added for sidebar */
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.mco-book-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     gap: 8px;
-    width: 100%;
-    padding: 10px;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: all 0.2s;
-    border: 1px solid transparent; /* Added default border */
 }
 
-.mco-book-btn--primary {
-    background: rgb(var(--color-accent-rgb));
-    color: rgb(var(--color-text-strong-rgb));
-    border-color: rgb(var(--color-accent-rgb));
+/* Animations */
+@keyframes progress {
+    0% { width: 0%; }
+    100% { width: 100%; }
 }
-.mco-book-btn--primary:hover {
-    background: rgba(var(--color-accent-rgb), 0.8);
-    border-color: rgba(var(--color-accent-rgb), 0.8);
-}
-
-.mco-book-btn--secondary {
-    background: rgb(var(--color-muted-rgb));
-    color: rgb(var(--color-text-default-rgb));
-    border-color: rgb(var(--color-border-rgb));
-}
-.mco-book-btn--secondary:hover {
-    background: rgb(var(--color-border-rgb));
-    color: rgb(var(--color-text-strong-rgb));
-}
-.mco-book-btn--disabled {
-    cursor: default; 
-    background: rgb(var(--color-muted-rgb));
-    color: rgb(var(--color-text-muted-rgb)); 
-    border-color: rgb(var(--color-border-rgb));
-    opacity: 0.7;
-}
-
-
-/* Single Book View (PHP generated) */
-.mco-single-book-view {
-    background: rgb(var(--color-card-rgb));
-    border: 1px solid rgb(var(--color-border-rgb));
-    border-radius: 12px;
-    padding: 30px;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    display: flex;
-    flex-direction: column; /* Stack on mobile */
-    gap: 30px;
-}
-
-@media (min-width: 768px) {
-    .mco-single-book-view {
-        flex-direction: row; /* Two columns on larger screens */
-        align-items: flex-start;
-    }
-}
-
-.mco-single-book-view__cover {
-    width: 100%;
-    height: 400px; /* Fixed height for consistency */
-    border-radius: 8px;
-    overflow: hidden;
-    flex-shrink: 0; /* Don't let it shrink */
-    background: rgb(var(--color-muted-rgb)); /* Placeholder for procedural covers */
-}
-@media (min-width: 768px) {
-    .mco-single-book-view__cover {
-        width: 300px; /* Fixed width on larger screens */
-        height: 400px; /* Adjust height to match aspect ratio, e.g., 2:3 or 3:4 */
-    }
-}
-
-.mco-single-book-view__cover .mco-book-cover-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.mco-single-book-view__details {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.mco-single-book-view__title {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: rgb(var(--color-text-strong-rgb));
-    margin: 0 0 20px 0;
-    line-height: 1.2;
-}
-
-.mco-single-book-view__description {
-    font-size: 1.1rem;
-    line-height: 1.8;
-    color: rgb(var(--color-text-default-rgb));
-    margin-bottom: 40px;
-    flex-grow: 1; /* Push buttons to bottom */
-}
-
-.mco-single-book-view__buttons {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
-    margin-top: auto; /* Align buttons to the bottom */
-}
-
-
-/* Sidebar Specifics */
-.mco-book-card-sidebar {
-    border: 1px solid rgb(var(--color-border-rgb));
-    border-radius: 6px;
-    overflow: hidden;
-    display: flex;
-    height: 150px;
-    background: rgb(var(--color-card-rgb));
-    margin-bottom: 15px;
-}
-
-.mco-book-card-sidebar__cover {
-    width: 80px;
-    flex-shrink: 0;
-    border-right: 1px solid rgb(var(--color-muted-rgb));
-}
-
-.mco-book-card-sidebar__content {
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    flex-grow: 1;
-    min-width: 0;
-}
-
-.mco-book-card-sidebar__title {
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin: 0 0 8px 0;
-    line-height: 1.3;
-    color: rgb(var(--color-text-strong-rgb));
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.mco-book-card-sidebar__title:hover {
-    color: #0891b2;
-}
-
-.mco-book-card-sidebar__button {
-    display: inline-flex; /* Changed from block for icon alignment */
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    font-size: 0.75rem; /* Reduced font size */
-    font-weight: 700;
-    padding: 6px 12px; /* Reduced padding */
-    border-radius: 4px;
-    text-decoration: none;
-    align-self: flex-start;
-    transition: background-color 0.2s;
-    border: 1px solid transparent; /* Added default border */
-    min-width: 100px; /* Ensure minimum width */
-    box-sizing: border-box; /* Explicitly set for consistency */
-}
-
-.mco-book-card-sidebar__button--primary {
-    background: #f59e0b;
-    color: #fff;
-    border-color: #f59e0b;
-}
-
-.mco-book-card-sidebar__button--primary:hover {
-    background: #d97706;
-}
-
-.mco-book-card-sidebar__button--secondary {
-    background: #e2e8f0;
-    color: #64748b;
-    border-color: #cbd5e1;
-}
-
-.mco-book-card-sidebar__button--secondary:hover {
-    background: #cbd5e1;
-    color: #1e293b;
-}
-
-.mco-study-hall-sidebar__disclaimer {
-    font-size: 0.7rem;
-    color: #94a3b8;
-    margin-top: 20px;
-    text-align: center;
-    line-height: 1.4;
-}
-
-/* Book Showcase (Main Grid) */
-.mco-wrapper {
-    font-family: system-ui, -apple-system, sans-serif;
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-/* FIX: Added display flex to grid for consistent layout before JS loads */
-.mco-book-grid {
-    display: flex; 
-    flex-wrap: wrap; /* Allow items to wrap */
-    gap: 30px;
-}
-.mco-book-grid .mco-book-card {
-    flex: 1 1 calc(33.333% - 20px); /* Adjust for 3 columns on larger screens */
-    min-width: 260px; /* Ensure minimum width */
-    max-width: 100%;
-}
-@media (max-width: 768px) {
-    .mco-book-grid .mco-book-card {
-        flex: 1 1 calc(50% - 15px); /* Adjust for 2 columns on medium screens */
-    }
-}
-@media (max-width: 500px) {
-    .mco-book-grid .mco-book-card {
-        flex: 1 1 100%; /* Single column on small screens */
-    }
-}
-
-
-.mco-book-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    transition: transform 0.2s, box-shadow 0.2s;
-    height: 100%;
-}
-
-.mco-book-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 20px -5px rgba(0,0,0,0.1);
-}
-
-.mco-book-card .mco-book-cover {
-    height: 300px;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-.mco-book-card__body {
-    padding: 20px;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.mco-book-card__title {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0 0 10px 0;
-    line-height: 1.3;
-}
-
-.mco-book-card__desc {
-    font-size: 0.9rem;
-    color: #64748b;
-    line-height: 1.6;
-    margin: 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.mco-book-card__footer {
-    padding: 16px 20px;
-    border-top: 1px solid #f1f5f9;
-    background: #f8fafc;
-}
-
-/* Store Buttons Grid */
-.mco-store-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+.animate-progress {
+    animation: progress 4.5s linear forwards;
 }
