@@ -25,16 +25,15 @@ body {
     background-color: rgb(var(--color-background-rgb));
     color: rgb(var(--color-text-default-rgb));
     transition: background-color 0.3s ease, color 0.3s ease;
-    font-family: var(--font-main);
 }
 
-/* --- BOOKSTORE GRID SYSTEM --- */
+/* --- INDUSTRIAL BOOKSTORE GRID --- */
 .mco-book-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 2.5rem;
     align-items: stretch;
-    grid-auto-rows: 1fr; /* Crucial: ensures all items in a row have equal height */
+    grid-auto-rows: 1fr; /* Ensures equal height in rows */
 }
 
 .mco-book-card {
@@ -43,7 +42,7 @@ body {
     border-radius: 1.25rem;
     overflow: hidden;
     display: flex;
-    flex-direction: column; /* Allows footer to stick to bottom */
+    flex-direction: column;
     height: 100%;
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
@@ -60,13 +59,6 @@ body {
     background: rgb(var(--color-muted-rgb));
     border-bottom: 1px solid rgb(var(--color-border-rgb));
     flex-shrink: 0;
-    overflow: hidden;
-}
-
-.mco-book-cover img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
 }
 
 .mco-book-card__body {
@@ -82,30 +74,21 @@ body {
     color: rgb(var(--color-text-strong-rgb));
     margin-bottom: 0.75rem;
     line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
 }
 
 .mco-book-card__desc {
     font-size: 0.875rem;
     line-height: 1.6;
     color: rgb(var(--color-text-muted-rgb));
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
 }
 
 .mco-book-card__footer {
     padding: 1.25rem 1.5rem;
     background: rgba(var(--color-muted-rgb), 0.3);
     border-top: 1px solid rgb(var(--color-border-rgb));
-    margin-top: auto;
 }
 
-/* --- BUTTONS & STORES --- */
+/* --- BUTTONS & AMBER BRANDING --- */
 .mco-store-buttons {
     display: flex;
     flex-direction: column;
@@ -124,19 +107,11 @@ body {
     font-size: 0.875rem;
     transition: all 0.2s;
     text-decoration: none;
-    cursor: pointer;
-    border: none;
 }
 
 .mco-book-btn--primary {
     background: #fbbf24;
     color: #78350f;
-    box-shadow: 0 4px 6px -1px rgba(251, 191, 36, 0.2);
-}
-
-.mco-book-btn--primary:hover {
-    background: #f59e0b;
-    transform: scale(1.02);
 }
 
 .mco-book-btn--secondary {
@@ -145,52 +120,7 @@ body {
     border: 1px solid #cbd5e1;
 }
 
-.mco-book-btn--secondary:hover {
-    background: #e2e8f0;
-}
-
-/* --- STUDY HALL SIDEBAR --- */
-.mco-book-card-sidebar {
-    display: flex;
-    gap: 1rem;
-    background: rgb(var(--color-card-rgb));
-    border: 1px solid rgb(var(--color-border-rgb));
-    border-radius: 1rem;
-    padding: 0.75rem;
-    margin-bottom: 1.25rem;
-    transition: border-color 0.2s;
-}
-
-.mco-book-card-sidebar__cover {
-    width: 80px;
-    height: 110px;
-    flex-shrink: 0;
-    background: rgb(var(--color-muted-rgb));
-    border-radius: 0.5rem;
-    overflow: hidden;
-    border: 1px solid rgb(var(--color-border-rgb));
-}
-
-.mco-book-card-sidebar__content {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-width: 0;
-}
-
-.mco-book-card-sidebar__title {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: rgb(var(--color-text-strong-rgb));
-    margin-bottom: 0.5rem;
-    line-height: 1.2;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
+/* Sidebar Specific Amber Button */
 .mco-book-card-sidebar__button {
     display: inline-flex;
     align-items: center;
@@ -205,45 +135,23 @@ body {
     text-decoration: none;
     transition: all 0.2s;
     text-transform: uppercase;
-    width: fit-content;
 }
 
-.mco-book-card-sidebar__button:hover {
-    background: #f59e0b;
-}
-
-/* --- CERTIFICATES --- */
+/* --- CERTIFICATE THEMES --- */
 .cert-base {
-    width: 1123px; 
-    height: 794px;
-    background-color: #fff;
-    margin: 0 auto;
-    position: relative;
-    box-sizing: border-box;
-    overflow: hidden;
-    color: #1e293b;
-    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+    width: 1123px; height: 794px;
+    background-color: #fff; margin: 0 auto;
+    position: relative; box-sizing: border-box;
+    overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
 }
 
 .cert-container-classic { padding: 30px; height: 100%; }
 .cert-border-pattern { border: 20px solid #1e293b; height: 100%; padding: 15px; position: relative; }
-.cert-border-line { border: 2px solid #e2e8f0; height: 100%; padding: 50px; text-align: center; display: flex; flex-direction: column; }
-.cert-title-main { font-size: 3.5rem; font-weight: 900; text-transform: uppercase; color: #1e293b; letter-spacing: 0.05em; }
-.cert-candidate-name { font-family: var(--font-script); font-size: 5.5rem; color: #0891b2; margin: 2rem 0; }
-.cert-hr { border: none; border-top: 2px solid #cbd5e1; margin: 10px 0; }
+.cert-border-line { border: 2px solid #e2e8f0; height: 100%; padding: 50px; text-align: center; }
+.cert-candidate-name { font-family: var(--font-script); font-size: 5rem; color: #0891b2; margin: 2rem 0; }
 
 .cert-container-modern { display: flex; height: 100%; }
-.cert-modern-sidebar { width: 300px; background: #0f172a; color: white; padding: 60px 40px; display: flex; flex-direction: column; }
-.cert-main-panel { flex: 1; padding: 80px; text-align: left; display: flex; flex-direction: column; background: #fff; }
-.cert-title-main-modern { font-size: 4rem; font-weight: 800; color: #0f172a; margin-bottom: 2.5rem; line-height: 1; }
-.cert-candidate-name-modern { font-size: 4.5rem; font-weight: 800; color: #0891b2; margin-bottom: 2rem; border-bottom: 4px solid #0891b2; padding-bottom: 10px; width: fit-content; }
-
-.watermark-overlay {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    font-size: 8rem; font-weight: 900;
-    color: rgba(0,0,0,0.04);
-    pointer-events: none; z-index: 100;
-    white-space: nowrap;
-}
+.cert-modern-sidebar { width: 280px; background: #0f172a; color: white; padding: 50px; display: flex; flex-direction: column; }
+.cert-main-panel { flex: 1; padding: 70px; display: flex; flex-direction: column; background: #fff; text-align: left; }
+.cert-title-main-modern { font-size: 4rem; font-weight: 800; color: #0f172a; margin-bottom: 2rem; }
+.cert-candidate-name-modern { font-size: 4rem; font-weight: 800; color: #0891b2; margin-bottom: 2rem; }

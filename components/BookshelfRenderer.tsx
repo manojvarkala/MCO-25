@@ -23,7 +23,7 @@ const getGeoAffiliateLink = (book: RecommendedBook, userGeoCountryCode: string |
     if (!finalKey) {
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         if (tz.includes('Asia/Kolkata')) finalKey = 'in';
-        else if (['Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Kuwait', 'Asia/Muscat'].includes(tz)) finalKey = 'ae';
+        else if (['Asia/Dubai', 'Asia/Riyadh'].includes(tz)) finalKey = 'ae';
         else finalKey = 'com';
     }
     if (finalKey && links[finalKey]) return { url: links[finalKey], domainName: domainNames[finalKey] || 'Amazon', key: finalKey };
@@ -51,7 +51,7 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                             <div className="mco-book-card-sidebar__content">
                                 <h4 className="mco-book-card-sidebar__title">{book.title}</h4>
                                 <a href={primary?.url || '#'} target="_blank" rel="noopener noreferrer" className="mco-book-card-sidebar__button">
-                                    <BookUp size={14} /> Buy on {primary?.domainName.split('.')[1] || 'Amazon'}
+                                    <BookUp size={14} /> Buy
                                 </a>
                             </div>
                         </div>
