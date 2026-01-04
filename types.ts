@@ -1,5 +1,3 @@
-
-
 export interface User {
   id: string;
   name: string;
@@ -13,11 +11,13 @@ export interface SubscriptionInfo {
 }
 
 export interface TokenPayload {
+  iss: string;
+  iat: number;
+  exp: number;
   user: User;
   paidExamIds: string[];
   isSubscribed: boolean;
   subscriptionInfo?: SubscriptionInfo | null;
-  exp?: number;
   isBetaTester?: boolean;
 }
 
@@ -52,13 +52,6 @@ export interface TestResult {
   proctoringViolations: number;
 }
 
-export interface ExamSection {
-  id: string;
-  name: string;
-  startQuestion: number;
-  endQuestion: number;
-}
-
 export interface Exam {
   id: string;
   name: string;
@@ -76,7 +69,6 @@ export interface Exam {
   isProctored: boolean;
   recommendedBookIds: string[];
   productSlug: string;
-  sections?: ExamSection[];
 }
 
 export interface ExamProductCategory {
@@ -86,6 +78,7 @@ export interface ExamProductCategory {
   practiceExamId: string;
   certificationExamId: string;
   questionSourceUrl?: string;
+  thumbnailUrl?: string;
 }
 
 export interface CertificateTemplate {
@@ -188,8 +181,6 @@ export interface ExamStat {
     id: string;
     name: string;
     isPractice: boolean;
-    programId: string;
-    programName: string;
     attempts: number;
     averageScore: number;
     passRate: number;
@@ -200,6 +191,7 @@ export interface ExamStat {
     totalScoreSum?: number;
     ctr?: number;
     country?: string;
+    programName?: string;
 }
 
 export interface InProgressExamInfo {
@@ -248,12 +240,11 @@ export interface BetaTester {
     name: string;
     email: string;
     country: string;
-    registrationDate: string; // ISO Date string
-    expiryTimestamp: number; // Unix timestamp
+    registrationDate: string; 
+    expiryTimestamp: number;
     tokenRedeemed: boolean;
 }
 
-// Add userGeoCountryCode to AppContextType
 export interface AppContextType {
   organizations: Organization[];
   activeOrg: Organization | null;
@@ -280,5 +271,5 @@ export interface AppContextType {
   feedbackRequiredForExam: FeedbackContext | null;
   setFeedbackRequiredForExam: (context: FeedbackContext) => void;
   clearFeedbackRequired: () => void;
-  userGeoCountryCode: string | null; // New field for client-side IP-based geo-location
+  userGeoCountryCode: string | null;
 }

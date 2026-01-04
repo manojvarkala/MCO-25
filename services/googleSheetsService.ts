@@ -1,4 +1,3 @@
-
 import type { Question, TestResult, CertificateData, UserAnswer, User, Exam, ApiCertificateData, DebugData, Organization, PostCreationData, ExamStat, VerificationData, BetaTester } from '../types';
 import toast from 'react-hot-toast';
 import { GoogleGenAI } from "@google/genai";
@@ -60,6 +59,7 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
 };
 
 export const googleSheetsService = {
+    // PUBLIC ENDPOINTS
     registerBetaTester: async (registrationData: any): Promise<{ success: boolean; message: string; onboarding_token?: string; user_email?: string; }> => {
         return await apiFetch('/register-tester', 'POST', null, registrationData);
     },
@@ -69,39 +69,73 @@ export const googleSheetsService = {
     redeemTesterToken: async (testerToken: string): Promise<{ token: string }> => {
         return await apiFetch('/redeem-tester-token', 'POST', null, { testerToken });
     },
-    createCheckoutSession: async (token: string, sku: string): Promise<{ checkoutUrl: string }> => {
-        return await apiFetch('/create-checkout-session', 'POST', token, { sku });
-    },
     recordSiteHit: async (): Promise<{ count: number }> => {
         return await apiFetch('/hit', 'POST', null);
     },
-    notifyAdmin: async (token: string, subject: string, message: string, context: object): Promise<void> => {
-        try {
-            await apiFetch('/notify-admin', 'POST', token, { subject, message, context });
-        } catch (e) {}
+    verifyCertificate: async (certId: string): Promise<VerificationData> => {
+        return await apiFetch(`/verify-certificate/${certId}`, 'GET', null);
+    },
+
+    // USER ENDPOINTS
+    createCheckoutSession: async (token: string, sku: string): Promise<{ checkoutUrl: string }> => {
+        return await apiFetch('/create-checkout-session', 'POST', token, { sku });
     },
     getAIFeedback: async (prompt: string, token: string): Promise<string> => {
         if (!process.env.API_KEY) return "AI Service not configured.";
         try {
+            // FIX: Correct initialization of GoogleGenAI using named parameter apiKey.
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            // FIX: Use string for contents as per newest SDK guidelines.
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
-                contents: [{ parts: [{ text: prompt }] }],
+                contents: prompt,
             });
+            // FIX: Access response.text property directly (not a function call).
             return response.text || "AI study guide could not be generated.";
         } catch (error: any) {
             console.error("Gemini API Error:", error);
             return "AI feedback service is currently unavailable.";
         }
     },
-    generateAIPostContent: async (programTitle: string, programDescription: string, keywords: string, hashtags: string): Promise<string> => {
-        if (!process.env.API_KEY) throw new Error("AI key missing.");
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: [{ parts: [{ text: `Write an SEO blog post about preparing for the ${programTitle} certification. Description: ${programDescription}. Keywords: ${keywords}. Hashtags: ${hashtags}.` }] }],
-        });
-        return response.text || "";
+    // FIX: Added missing generateAIPostContent method used in components/ContentEngine.tsx.
+    generateAIPostContent: async (name: string, description: string, keywords: string, hashtags: string): Promise<string> => {
+        if (!process.env.API_KEY) return "AI Service not configured.";
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const systemInstruction = "You are an expert SEO content writer specializing in educational and certification-based websites. Your task is to generate an engaging, well-structured, and SEO-friendly blog post. The output must be formatted using WordPress block editor syntax (Gutenberg blocks).";
+            
+            const userPrompt = `
+Generate a blog post based on the following details:
+
+Program Title: "${name}"
+Program Description: "${description}"
+${keywords ? `Keywords to include: ${keywords}` : ''}
+${hashtags ? `Hashtags to include: ${hashtags}` : ''}
+
+The blog post should include these sections:
+1. An engaging introduction.
+2. "Why This Certification Matters"
+3. "What You'll Learn"
+4. "Career Opportunities"
+5. A strong concluding paragraph.
+
+Ensure all text is wrapped in appropriate WordPress block syntax. Return only the content blocks.
+            `.trim();
+
+            // FIX: Use string for contents and pass systemInstruction in config as per guidelines.
+            const response = await ai.models.generateContent({
+                model: 'gemini-3-flash-preview',
+                contents: userPrompt,
+                config: {
+                    systemInstruction: systemInstruction,
+                }
+            });
+            // FIX: Access response.text property directly.
+            return response.text || "AI content could not be generated.";
+        } catch (error: any) {
+            console.error("Gemini API Error:", error);
+            return "AI content service is currently unavailable.";
+        }
     },
     syncResults: (user: User, token: string): Promise<TestResult[]> => {
         if (syncPromise) return syncPromise;
@@ -152,8 +186,8 @@ export const googleSheetsService = {
         await apiFetch('/submit-result', 'POST', token, result);
         return result;
     },
-    getCertificateData: async (token: string, testId: string, isAdminView: boolean = false): Promise<ApiCertificateData> => {
-        return await apiFetch(`/certificate-data/${testId}${isAdminView ? '?admin_view=true' : ''}`, 'GET', token);
+    getCertificateData: async (token: string, testId: string): Promise<ApiCertificateData> => {
+        return await apiFetch(`/certificate-data/${testId}`, 'GET', token);
     },
     updateUserName: async (token: string, fullName: string): Promise<{ message: string }> => {
         return await apiFetch('/update-name', 'POST', token, { fullName });
@@ -164,12 +198,11 @@ export const googleSheetsService = {
     submitReview: async (token: string, examId: string, rating: number, reviewText: string): Promise<{ success: boolean }> => {
         return await apiFetch('/submit-review', 'POST', token, { examId, rating, reviewText });
     },
-    verifyCertificate: async (certId: string): Promise<VerificationData> => {
-        return await apiFetch(`/verify-certificate/${certId}`, 'GET', null);
-    },
     logEngagement: async (token: string, examId: string): Promise<void> => {
         apiFetch('/log-engagement', 'POST', token, { examId }).catch(() => {});
     },
+
+    // ADMIN ENDPOINTS
     getDebugDetails: async (token: string): Promise<DebugData> => {
         return await apiFetch('/debug-details', 'GET', token);
     },
@@ -211,13 +244,16 @@ export const googleSheetsService = {
     adminDeletePost: async (token: string, postId: string, postType: string): Promise<any> => {
         return await apiFetch('/admin/delete-post', 'POST', token, { postId, postType });
     },
+    adminToggleBetaStatus: async (token: string, status: boolean): Promise<{ token: string }> => {
+        return await apiFetch('/admin/toggle-beta-status', 'POST', token, { isBetaTester: status });
+    },
     getPostCreationData: async (token: string): Promise<PostCreationData> => {
         return await apiFetch('/admin/post-creation-data', 'GET', token);
     },
     createPostFromApp: async (token: string, postPayload: any): Promise<{ success: boolean, post_id: number, post_url: string }> => {
         return await apiFetch('/admin/create-post-from-app', 'POST', token, postPayload);
     },
-    adminToggleBetaStatus: async (token: string, status: boolean): Promise<{ token: string }> => {
-        return await apiFetch('/admin/toggle-beta-status', 'POST', token, { isBetaTester: status });
-    },
+    adminSetIntroVideo: async (token: string, programId: string, videoUrl: string): Promise<any> => {
+        return await apiFetch('/admin/set-intro-video', 'POST', token, { programId, videoUrl });
+    }
 };

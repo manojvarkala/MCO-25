@@ -1,6 +1,11 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+/**
+ * MCO DATA ENGINE - V6.0 (High Density JSON)
+ * Integrated with Transients for Production Performance
+ */
+
 if (!function_exists('mco_get_exam_app_url')) {
     function mco_get_exam_app_url() {
         $urls = (string)get_option('mco_exam_app_url', '');
@@ -9,15 +14,29 @@ if (!function_exists('mco_get_exam_app_url')) {
     }
 }
 
+if (!function_exists('mco_get_app_config_data')) {
+    function mco_get_app_config_data() {
+        $cache_key = 'mco_app_config_data_full_org_structure';
+        $cached = get_transient($cache_key);
+        if ($cached !== false) return $cached;
+
+        $snapshot = mco_get_full_snapshot_data(false);
+        set_transient($cache_key, $snapshot, HOUR_IN_SECONDS);
+        return $snapshot;
+    }
+}
+
 if (!function_exists('mco_get_full_snapshot_data')) {
     function mco_get_full_snapshot_data($is_blueprint = false) {
         $dynamic = mco_fetch_and_process_dynamic_app_data();
+        
         $logo = (string)get_option('mco_custom_logo_url', '');
         if (empty($logo)) {
             $logo_id = get_theme_mod('custom_logo');
             $image = $logo_id ? wp_get_attachment_image_src((int)$logo_id, 'full') : false;
             $logo = (string)($image[0] ?? '');
         }
+
         $snapshot = [
             "version" => (string)get_option('mco_config_version', current_time('YmdHis')),
             "organizations" => [[
@@ -26,44 +45,148 @@ if (!function_exists('mco_get_full_snapshot_data')) {
                 "website" => (string)parse_url(get_bloginfo('url'), PHP_URL_HOST),
                 "address" => (string)get_option('mco_organization_address', ''),
                 "logoUrl" => $logo,
-                "availableThemes" => [['id'=>'default','name'=>'Cyberpunk'],['id'=>'professional','name'=>'Professional'],['id'=>'serene','name'=>'Serene'],['id'=>'academic','name'=>'Academic'],['id'=>'noir','name'=>'Noir']],
+                "introVideoUrl" => (string)get_option('mco_intro_video_url', ''),
+                "availableThemes" => [
+                    ['id'=>'default','name'=>'Cyberpunk'],
+                    ['id'=>'professional','name'=>'Professional'],
+                    ['id'=>'serene','name'=>'Serene'],
+                    ['id'=>'academic','name'=>'Academic'],
+                    ['id'=>'noir','name'=>'Noir']
+                ],
                 "activeThemeId" => (string)get_option('mco_active_theme_id', 'default'),
                 "certificateThemeId" => (string)get_option('mco_certificate_theme_id', 'classic'),
+                "subscriptionsEnabled" => get_option('mco_subscriptions_enabled', '1') === '1',
+                "bundlesEnabled" => get_option('mco_bundles_enabled', '1') === '1',
+                "purchaseNotifierEnabled" => get_option('mco_purchase_notifier_enabled', '1') === '1',
+                "purchaseNotifierDelay" => (int)get_option('mco_purchase_notifier_delay', '7'),
+                "purchaseNotifierMinGap" => (int)get_option('mco_purchase_notifier_min_gap', '8'),
+                "purchaseNotifierMaxGap" => (int)get_option('mco_purchase_notifier_max_gap', '23'),
+                "disclaimerText" => (string)get_option('mco_disclaimer_text', ''),
                 "exams" => $is_blueprint ? [] : $dynamic['exams'],
                 "examProductCategories" => $is_blueprint ? [] : $dynamic['examProductCategories'],
                 "suggestedBooks" => $is_blueprint ? [] : $dynamic['suggestedBooks'],
-                "certificateTemplates" => array_values((array)get_option('mco_certificate_templates', [])),
-                "subscriptionsEnabled" => get_option('mco_subscriptions_enabled', '1') === '1',
-                "bundlesEnabled" => get_option('mco_bundles_enabled', '1') === '1'
+                "certificateTemplates" => array_values((array)get_option('mco_certificate_templates', mco_get_default_certificate_templates()))
             ]],
-            "examPrices" => $dynamic['examPrices']
+            "examPrices" => $is_blueprint ? [] : $dynamic['examPrices']
         ];
         return $snapshot;
     }
 }
 
+if (!function_exists('mco_get_default_certificate_templates')) {
+    function mco_get_default_certificate_templates() { 
+        return [
+            'cert-practice' => [
+                'id' => 'cert-practice', 'name' => 'Default Practice Certificate', 
+                'title' => 'Certificate of Proficiency', 
+                'body' => "This certifies that <strong>{candidateName}</strong> has successfully demonstrated proficiency in the <strong>{examName}</strong> practice exam, achieving a score of <strong>{finalScore}%</strong>.",
+                'signature1Name' => 'Manoj Balakrishnan', 'signature1Title' => 'CEO, Annapoorna Infotech', 'signature1ImageUrl' => ''
+            ],
+            'cert-completion' => [
+                'id' => 'cert-completion', 'name' => 'Default Completion Certificate', 
+                'title' => 'Certificate of Achievement', 
+                'body' => "This is to certify that <strong>{candidateName}</strong> has successfully completed the rigorous requirements of the <strong>{examName}</strong> and is hereby awarded this certificate upon achieving a passing score of <strong>{finalScore}%</strong>.",
+                'signature1Name' => 'Manoj Balakrishnan', 'signature1Title' => 'CEO, Annapoorna Infotech', 'signature1ImageUrl' => '',
+                'signature2Name' => 'Staff', 'signature2Title' => 'Lead Instructor', 'signature2ImageUrl' => ''
+            ]
+        ]; 
+    }
+}
+
 function mco_fetch_and_process_dynamic_app_data() {
     $exams = []; $cats = []; $prices = []; $books = [];
+    
     $programs = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish']);
     foreach ($programs as $p) {
         $sku = (string)get_post_meta($p->ID, '_mco_certification_exam_sku', true);
         $url = (string)get_post_meta($p->ID, '_mco_question_source_url', true);
         $thumb = (string)get_post_meta($p->ID, '_mco_thumbnail_url', true) ?: (get_the_post_thumbnail_url($p->ID, 'large') ?: '');
         
-        $exams[] = ['id' => 'prac-'.$p->ID, 'name' => $p->post_title . ' Practice', 'isPractice' => true, 'questionSourceUrl' => $url];
+        // Add Practice
+        $exams[] = [
+            'id' => 'prac-'.$p->ID, 
+            'name' => $p->post_title . ' Practice', 
+            'isPractice' => true, 
+            'questionSourceUrl' => $url,
+            'numberOfQuestions' => (int)get_post_meta($p->ID, '_mco_practice_questions', true) ?: 20,
+            'durationMinutes' => (int)get_post_meta($p->ID, '_mco_practice_duration', true) ?: 30,
+            'passScore' => 70,
+            'certificateEnabled' => get_post_meta($p->ID, '_mco_practice_certificate_enabled', true) === '1'
+        ];
+
+        // Add Certificate
         if($sku) {
-            $exams[] = ['id' => $sku, 'name' => $p->post_title, 'productSku' => $sku, 'questionSourceUrl' => $url, 'certificateEnabled' => get_post_meta($p->ID, '_mco_certificate_enabled', true) === '1'];
+            $product_id = wc_get_product_id_by_sku($sku);
+            $product = $product_id ? wc_get_product($product_id) : null;
+            
+            $exams[] = [
+                'id' => $sku, 
+                'name' => $p->post_title, 
+                'productSku' => $sku, 
+                'questionSourceUrl' => $url,
+                'numberOfQuestions' => (int)get_post_meta($p->ID, '_mco_cert_questions', true) ?: 50,
+                'durationMinutes' => (int)get_post_meta($p->ID, '_mco_cert_duration', true) ?: 90,
+                'passScore' => (int)get_post_meta($p->ID, '_mco_pass_score', true) ?: 70,
+                'certificateEnabled' => get_post_meta($p->ID, '_mco_certificate_enabled', true) === '1',
+                'isProctored' => get_post_meta($p->ID, '_mco_is_proctored', true) === '1',
+                'price' => $product ? (float)$product->get_price() : 0,
+                'regularPrice' => $product ? (float)$product->get_regular_price() : 0
+            ];
+
+            if ($product) {
+                $prices[$sku] = [
+                    'productId' => (string)$product->get_id(),
+                    'price' => (float)$product->get_price(),
+                    'regularPrice' => (float)$product->get_regular_price(),
+                    'name' => $product->get_name(),
+                    'isBundle' => (string)get_post_meta($product->get_id(), '_mco_is_bundle', true) === 'yes',
+                    'bundledSkus' => (array)get_post_meta($product->get_id(), '_mco_bundled_skus', true) ?: []
+                ];
+            }
         }
-        $cats[] = ['id' => 'prod-'.$p->ID, 'name' => $p->post_title, 'description' => $p->post_content, 'practiceExamId' => 'prac-'.$p->ID, 'certificationExamId' => $sku, 'thumbnailUrl' => $thumb];
+
+        $cats[] = [
+            'id' => 'prod-'.$p->ID, 
+            'name' => $p->post_title, 
+            'description' => $p->post_content, 
+            'practiceExamId' => 'prac-'.$p->ID, 
+            'certificationExamId' => $sku, 
+            'thumbnailUrl' => $thumb
+        ];
     }
+
     $book_posts = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1]);
     foreach($book_posts as $bp) {
         $books[] = [
-            'id' => get_post_meta($bp->ID, '_mco_book_id', true), 'title' => $bp->post_title, 'description' => $bp->post_content,
+            'id' => get_post_meta($bp->ID, '_mco_book_id', true),
+            'title' => $bp->post_title,
+            'description' => $bp->post_content,
             'thumbnailUrl' => get_post_meta($bp->ID, '_mco_thumbnail_url', true) ?: get_the_post_thumbnail_url($bp->ID, 'large'),
-            'affiliateLinks' => ['com' => get_post_meta($bp->ID, '_mco_link_com', true), 'in' => get_post_meta($bp->ID, '_mco_link_in', true), 'ae' => get_post_meta($bp->ID, '_mco_link_ae', true)]
+            'affiliateLinks' => [
+                'com' => get_post_meta($bp->ID, '_mco_link_com', true),
+                'in' => get_post_meta($bp->ID, '_mco_link_in', true),
+                'ae' => get_post_meta($bp->ID, '_mco_link_ae', true)
+            ]
         ];
     }
+    
+    // Add Subscriptions to Prices
+    if (class_exists('WooCommerce')) {
+        foreach (['sub-monthly', 'sub-yearly'] as $sub_sku) {
+            $pid = wc_get_product_id_by_sku($sub_sku);
+            if ($pid) {
+                $sub = wc_get_product($pid);
+                $prices[$sub_sku] = [
+                    'productId' => (string)$pid,
+                    'price' => (float)$sub->get_price(),
+                    'regularPrice' => (float)$sub->get_regular_price(),
+                    'name' => $sub->get_name(),
+                    'type' => 'subscription'
+                ];
+            }
+        }
+    }
+
     return ['exams' => $exams, 'examProductCategories' => $cats, 'examPrices' => $prices, 'suggestedBooks' => $books];
 }
 ?>
