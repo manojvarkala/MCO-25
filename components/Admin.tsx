@@ -8,7 +8,7 @@ import Spinner from './Spinner.tsx';
 import { 
     CheckCircle, XCircle, Cpu, FileSpreadsheet, RefreshCw, BarChart3, 
     Settings2, DatabaseZap, FileUp, DownloadCloud, ToggleLeft, 
-    ToggleRight, Search, Activity, LayoutDashboard, ShieldAlert, Check, Palette
+    ToggleRight, Search, Activity, LayoutDashboard, ShieldAlert, Check, Palette, AlertCircle
 } from 'lucide-react';
 
 interface HealthStatus {
@@ -94,16 +94,10 @@ const Admin: FC = () => {
 
     const handleSyncSettings = async (updates: Partial<typeof localSettings>) => {
         if (!token) return;
-        const next = { ...localSettings, ...updates };
-        setLocalSettings(next);
-        const tid = toast.loading("Syncing industrial settings...");
-        try {
-            await googleSheetsService.adminUpdateGlobalSettings(token, next);
-            await refreshConfig();
-            toast.success("Settings saved successfully", { id: tid });
-        } catch (e: any) {
-            toast.error(e.message, { id: tid });
-        }
+        
+        // NOTE: Your provided v5.0.1 API does not have /admin/update-global-settings yet.
+        toast.error("Settings saved locally, but backend endpoint is missing in your API file. Update mco-api.php to support this.");
+        setLocalSettings({ ...localSettings, ...updates });
     };
 
     const runSheetTest = async () => {
@@ -180,31 +174,17 @@ const Admin: FC = () => {
                 {activeTab === 'appearance' && (
                     <div className="space-y-6">
                         <h2 className="text-3xl font-extrabold mb-6 flex items-center gap-3"><Settings2 className="text-cyan-500" /> UI Configuration</h2>
-                        <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden">
+                        <div className="bg-amber-900/20 border border-amber-500/30 p-4 rounded-xl mb-4 flex items-start gap-3">
+                            <AlertCircle className="text-amber-500 mt-1" size={20} />
+                            <p className="text-sm text-amber-200">Note: Saving UI changes requires the <code>/admin/update-global-settings</code> endpoint which is missing in your provided API file.</p>
+                        </div>
+                        <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden opacity-50 pointer-events-none">
                             <div className="p-6 space-y-4">
                                 <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl">
                                     <div><p className="font-bold">Purchase Notifier</p><p className="text-xs text-slate-400 italic">Social proof popups for visitors</p></div>
-                                    <button onClick={() => handleSyncSettings({ purchaseNotifierEnabled: !localSettings.purchaseNotifierEnabled })} className="text-cyan-500">
-                                        {localSettings.purchaseNotifierEnabled ? <ToggleRight size={40} /> : <ToggleLeft size={40} className="text-slate-600" />}
+                                    <button className="text-slate-600">
+                                        <ToggleLeft size={40} />
                                     </button>
-                                </div>
-                            </div>
-                            <div className="p-6 bg-slate-800/50 border-t border-slate-700">
-                                <h3 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2"><Palette size={16}/> Global Application Theme</h3>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                                    {availableThemes.map(t => (
-                                        <button 
-                                            key={t.id} 
-                                            onClick={() => handleSyncSettings({ activeThemeId: t.id })} 
-                                            className={`relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${localSettings.activeThemeId === t.id ? 'border-cyan-500 bg-cyan-500/10' : 'border-slate-700 hover:border-slate-500'}`}
-                                        >
-                                            {localSettings.activeThemeId === t.id && <div className="absolute top-2 right-2 bg-cyan-500 rounded-full p-1"><Check className="text-white" size={10}/></div>}
-                                            <div className="flex w-full gap-1 h-6 rounded overflow-hidden">
-                                                {themeColors[t.id]?.map((c, i) => <div key={i} className="flex-1" style={{ backgroundColor: c }}></div>)}
-                                            </div>
-                                            <span className="text-[10px] font-black uppercase tracking-widest">{t.name}</span>
-                                        </button>
-                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -215,7 +195,7 @@ const Admin: FC = () => {
                     <div className="space-y-6">
                         <h2 className="text-3xl font-extrabold mb-6 flex items-center gap-3"><FileSpreadsheet className="text-cyan-500" /> Dataset Validation</h2>
                         <div className="bg-slate-900 p-8 rounded-2xl border border-slate-700">
-                            <p className="text-slate-400 mb-6 font-medium">Input a Google Sheet URL to verify its CSV structure and public accessibility before assigning it to an exam program.</p>
+                            <p className="text-slate-400 mb-6 font-medium">Input a Google Sheet URL to verify its CSV structure (standard 6-column format) before assigning it.</p>
                             <div className="flex gap-3">
                                 <input 
                                     type="url" 

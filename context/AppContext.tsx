@@ -221,7 +221,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             } catch (e) { localStorage.removeItem(cacheKey); }
         }
 
-        // Attempt Live API
         const apiUrl = tenantConfig.apiBaseUrl ? `${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config` : '/wp-json/mco-app/v1/config';
         try {
             const response = await fetch(apiUrl, { mode: 'cors' });
@@ -238,7 +237,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             console.warn("AppContext: Live API fetch failed. Falling back to static JSON.", fetchErr);
         }
 
-        // Fallback to Static JSON bundled with the app
         if (!configFound) {
             try {
                 const staticResponse = await fetch(tenantConfig.staticConfigPath);
