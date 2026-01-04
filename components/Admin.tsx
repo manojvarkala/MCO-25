@@ -16,10 +16,9 @@ interface HealthStatus {
     wc_subscriptions?: { success: boolean; message: string; data?: any };
     app_url_config?: { success: boolean; message: string; data?: any };
     google_sheet?: { success: boolean; message: string; data?: any };
-    nonces?: { [key: string]: string };
 }
 
-const HealthListItem: FC<{ title: string; status?: { success: boolean; message: string; data?: any }; onDetails: (data: any) => void }> = ({ title, status, onDetails }) => {
+const HealthListItem: FC<{ title: string; status?: { success: boolean; message: string; data?: any }; onDetails?: (data: any) => void }> = ({ title, status, onDetails }) => {
     return (
         <div className="flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg">
             <div className="flex items-center gap-3">
@@ -36,7 +35,7 @@ const HealthListItem: FC<{ title: string; status?: { success: boolean; message: 
                 <p className={`font-medium ${status && !status.success ? 'text-red-400' : 'text-[rgb(var(--color-text-muted-rgb))]'}`}>
                     { !status ? 'Checking...' : status.message }
                 </p>
-                {status?.data && (
+                {status?.data && onDetails && (
                     <button onClick={() => onDetails(status.data)} className="text-xs font-semibold text-[rgb(var(--color-primary-rgb))] hover:underline">
                         Details
                     </button>
@@ -57,10 +56,7 @@ const StatCard: FC<{ title: string; value: string | number; icon: ReactNode }> =
 );
 
 const Admin: FC = () => {
-    const { activeOrg, activeTheme, setActiveTheme, availableThemes } = useAppContext();
     const { token } = useAuth();
-    const [isGeneratingWooCsv, setIsGeneratingWooCsv] = useState(false);
-    const [isGeneratingProgramsCsv, setIsGeneratingProgramsCsv] = useState(false);
     const [isClearingCache, setIsClearingCache] = useState(false);
     const [detailsModalData, setDetailsModalData] = useState<any>(null);
 
@@ -117,9 +113,9 @@ const Admin: FC = () => {
         setIsClearingCache(true);
         try {
             const result = await apiCall(token);
-            toast.success(result.message);
+            toast.success(result.message || "Operation successful");
         } catch (error: any) {
-            toast.error(error.message);
+            toast.error(error.message || "Action failed");
         } finally {
             setIsClearingCache(false);
         }
@@ -157,12 +153,12 @@ const Admin: FC = () => {
                     Production Health Audit
                 </h2>
                 <div className="space-y-2">
-                    <HealthListItem title="REST API Integration" status={healthStatus?.api_connection} onDetails={setDetailsModalData} />
-                    <HealthListItem title="JWT Security Secret" status={healthStatus?.jwt_secret} onDetails={setDetailsModalData} />
-                    <HealthListItem title="WooCommerce Core" status={healthStatus?.woocommerce} onDetails={setDetailsModalData} />
-                    <HealthListItem title="Recurring Subscriptions" status={healthStatus?.wc_subscriptions} onDetails={setDetailsModalData} />
-                    <HealthListItem title="Dynamic App Routing" status={healthStatus?.app_url_config} onDetails={setDetailsModalData} />
-                    <HealthListItem title="External Question Sync" status={healthStatus?.google_sheet} onDetails={setDetailsModalData} />
+                    <HealthListItem title="REST API Integration" status={healthStatus?.api_connection} />
+                    <HealthListItem title="JWT Security Secret" status={healthStatus?.jwt_secret} />
+                    <HealthListItem title="WooCommerce Core" status={healthStatus?.woocommerce} />
+                    <HealthListItem title="Recurring Subscriptions" status={healthStatus?.wc_subscriptions} />
+                    <HealthListItem title="Dynamic App Routing" status={healthStatus?.app_url_config} />
+                    <HealthListItem title="External Question Sync" status={healthStatus?.google_sheet} />
                 </div>
             </div>
 
@@ -172,9 +168,9 @@ const Admin: FC = () => {
                     Performance Aggregate
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <StatCard title="Total Exam Sales" value={summaryStats.totalSales} icon={<ShoppingCart className="text-[rgb(var(--color-primary-rgb))]" />} />
-                    <StatCard title="Est. Gross Revenue" value={`$${summaryStats.totalRevenue.toFixed(2)}`} icon={<DollarSign className="text-[rgb(var(--color-primary-rgb))]" />} />
-                    <StatCard title="All-Time Attempts" value={summaryStats.totalAttempts} icon={<FileText className="text-[rgb(var(--color-primary-rgb))]" />} />
+                    <StatCard title="Total Exam Sales" value={summaryStats.totalSales.toLocaleString()} icon={<ShoppingCart className="text-[rgb(var(--color-primary-rgb))]" />} />
+                    <StatCard title="Est. Gross Revenue" value={`$${summaryStats.totalRevenue.toLocaleString()}`} icon={<DollarSign className="text-[rgb(var(--color-primary-rgb))]" />} />
+                    <StatCard title="All-Time Attempts" value={summaryStats.totalAttempts.toLocaleString()} icon={<FileText className="text-[rgb(var(--color-primary-rgb))]" />} />
                 </div>
             </div>
 
