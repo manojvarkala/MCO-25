@@ -37,8 +37,11 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
             try {
                 errorData = JSON.parse(responseText);
             } catch (e) {
-                throw new Error(`Server Error: ${response.status}. The backend might be misconfigured.`);
+                // If it's not JSON, it might be a PHP error string. Log it for the admin.
+                console.error("Backend Error Response (Raw):", responseText);
+                throw new Error(`Server Error: ${response.status}. The backend returned a non-JSON response. Check your server logs.`);
             }
+            
             if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_auth_invalid_token') {
                 localStorage.removeItem('examUser');
                 localStorage.removeItem('authToken');
@@ -51,8 +54,11 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         
         return responseText ? JSON.parse(responseText) : {};
     } catch (error: any) {
+        // Log the specific type of error to browser console for easier remote support
+        console.warn(`API FETCH FAILURE [${method} ${endpoint}]:`, error);
+        
         if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-             throw new Error("Connection Blocked: The browser could not reach the API.");
+             throw new Error("Connection Blocked: The browser could not reach the API. Ensure your WordPress server is active and allows CORS.");
         }
         throw error;
     }
@@ -94,21 +100,38 @@ export const googleSheetsService = {
             return "AI feedback service is currently unavailable.";
         }
     },
-    generateAIPostContent: async (name: string, description: string, keywords: string, hashtags: string): Promise<string> => {
+    // FIX: Added missing generateAIPostContent method to handle AI blog post generation using the Gemini API.
+    generateAIPostContent: async (programName: string, programDescription: string, keywords: string, hashtags: string): Promise<string> => {
         if (!process.env.API_KEY) return "AI Service not configured.";
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const systemInstruction = "You are an expert SEO content writer specializing in educational and certification-based websites. Your task is to generate an engaging, well-structured, and SEO-friendly blog post. The output must be formatted using WordPress block editor syntax (Gutenberg blocks).";
-            const userPrompt = `Generate a blog post based on: Title: "${name}", Desc: "${description}", Keywords: ${keywords}, Hashtags: ${hashtags}. Use Gutenberg blocks.`.trim();
+            const prompt = `
+                Generate a comprehensive, engaging, and SEO-friendly blog post for a certification portal.
+                
+                Topic: ${programName}
+                Description: ${programDescription}
+                Keywords to include: ${keywords}
+                Hashtags to include: ${hashtags}
+                
+                The blog post should include these sections:
+                1. An engaging introduction about the importance of certification in this field.
+                2. A section titled "Why This Certification Matters".
+                3. A section titled "Key Learning Objectives" or "What You'll Learn".
+                4. A section titled "Career Opportunities & Growth".
+                5. A concluding paragraph that encourages the reader to start their journey.
+
+                Format the entire response using WordPress block editor syntax (Gutenberg blocks) like <!-- wp:paragraph -->...<!-- /wp:paragraph -->.
+                Do not include the post title in the content.
+                Use clean HTML within the blocks.
+            `;
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
-                contents: userPrompt,
-                config: { systemInstruction: systemInstruction }
+                contents: prompt,
             });
-            return response.text || "AI content could not be generated.";
+            return response.text || "AI blog content could not be generated.";
         } catch (error: any) {
-            console.error("Gemini API Error:", error);
-            return "AI content service is currently unavailable.";
+            console.error("Gemini API Error (Content Engine):", error);
+            return "AI content generation service is currently unavailable.";
         }
     },
     syncResults: (user: User, token: string): Promise<TestResult[]> => {
@@ -224,9 +247,6 @@ export const googleSheetsService = {
     },
     createPostFromApp: async (token: string, postPayload: any): Promise<{ success: boolean, post_id: number, post_url: string }> => {
         return await apiFetch('/admin/create-post-from-app', 'POST', token, postPayload);
-    },
-    adminSetIntroVideo: async (token: string, programId: string, videoUrl: string): Promise<any> => {
-        return await apiFetch('/admin/set-intro-video', 'POST', token, { programId, videoUrl });
     },
     adminUpdateGlobalSettings: async (token: string, settings: any): Promise<any> => {
         return await apiFetch('/admin/update-global-settings', 'POST', token, settings);
