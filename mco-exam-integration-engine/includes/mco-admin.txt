@@ -490,7 +490,7 @@ if (!function_exists('mco_handle_csv_upload')) {
             if ($row === false) { // Typically an error or unexpected EOF if inside loop
                  error_log('MCO CSV IMPORT: Skipping row ' . $row_num . ' due to fgetcsv returning FALSE (malformed line or error).');
                  $skipped_count++;
-                 $error_rows[] = ['row_num' => $row_num, 'row_data' => 'fgetcsv returned FALSE (malformed line or error).', 'reason' => 'Malformed line in CSV.'];
+                 $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Malformed line in CSV.'];
                  continue;
             }
             
@@ -668,7 +668,7 @@ if (!function_exists('mco_handle_csv_upload')) {
                         update_post_meta($pid, '_mco_thumbnail_url', esc_url_raw(trim((string)($row[4] ?? ''))));
                         // FIX: Added permalink field
                         update_post_meta($pid, '_mco_permalink', esc_url_raw(trim((string)($row[5] ?? '')))); // Cast to string
-                        // FIX: Adjusted index for correct column mapping for affiliate links
+                        // FIX: Adjusted index for correct column mapping for affiliate links (Rows 405-407)
                         update_post_meta($pid, '_mco_link_com', esc_url_raw(trim((string)($row[6] ?? ''))));
                         update_post_meta($pid, '_mco_link_in', esc_url_raw(trim((string)($row[7] ?? ''))));
                         update_post_meta($pid, '_mco_link_ae', esc_url_raw(trim((string)($row[8] ?? ''))));

@@ -147,7 +147,8 @@ if (!function_exists('mco_verify_exam_jwt')) {
 
         $decoded = json_decode(mco_base64url_decode($payload), true);
         if (!$decoded) return new WP_Error('jwt_payload_err', 'Invalid payload.', ['status' => 401]);
-        if (isset($decoded['exp']) && $decoded['exp'] < time()) return new WP_Error('jwt_auth_expired_token', 'Session expired.', ['status' => 403]);
+        // Aligned fix for Line 125: Added 5-minute leeway for server clock drift
+        if (isset($decoded['exp']) && ($decoded['exp'] + 300) < time()) return new WP_Error('jwt_auth_expired_token', 'Session expired.', ['status' => 403]);
 
         return $decoded;
     }
@@ -165,23 +166,31 @@ if (!function_exists('mco_handle_cors_preflight')) {
             return $served;
         }
 
-        // Verify if origin is allowed based on plugin settings
-        $allowed_raw = get_option('mco_exam_app_url', '');
-        $allowed_origins = array_filter(array_map('trim', explode("\n", $allowed_raw)));
-        
         $is_allowed = false;
-        if (empty($allowed_origins)) {
-            $is_allowed = true; // Insecure fallback, but prevents blocking if not configured
-            error_log("MCO CORS DEBUG: PREFLIGHT - No allowed origins configured. Allowing all (insecure fallback).");
-        } else {
-            error_log("MCO CORS DEBUG: PREFLIGHT - Configured Allowed Origins: " . implode(', ', $allowed_origins));
-            foreach ($allowed_origins as $allowed) {
-                if (rtrim($allowed, '/') === rtrim($origin, '/')) {
-                    $is_allowed = true;
-                    break;
+        
+        // FIX: Hardcoded Localhost/127.0.0.1 allowance for seamless development (Line 144)
+        if (strpos($origin, 'localhost') !== false || strpos($origin, '127.0.0.1') !== false) {
+            $is_allowed = true;
+        }
+
+        // Verify if origin is allowed based on plugin settings
+        if (!$is_allowed) {
+            $allowed_raw = get_option('mco_exam_app_url', '');
+            $allowed_origins = array_filter(array_map('trim', explode("\n", $allowed_raw)));
+            
+            if (empty($allowed_origins)) {
+                $is_allowed = true; // Insecure fallback, but prevents blocking if not configured
+                error_log("MCO CORS DEBUG: PREFLIGHT - No allowed origins configured. Allowing all (insecure fallback).");
+            } else {
+                error_log("MCO CORS DEBUG: PREFLIGHT - Configured Allowed Origins: " . implode(', ', $allowed_origins));
+                foreach ($allowed_origins as $allowed) {
+                    if (rtrim($allowed, '/') === rtrim($origin, '/')) {
+                        $is_allowed = true;
+                        break;
+                    }
                 }
+                error_log("MCO CORS DEBUG: PREFLIGHT - Origin '$origin' " . ($is_allowed ? "IS" : "IS NOT") . " in allowed list.");
             }
-            error_log("MCO CORS DEBUG: PREFLIGHT - Origin '$origin' " . ($is_allowed ? "IS" : "IS NOT") . " in allowed list.");
         }
 
         if ($request->get_method() === 'OPTIONS' && strpos($request->get_route(), '/mco-app/v1/') !== false) {
@@ -205,23 +214,29 @@ if (!function_exists('mco_add_cors_headers_to_response')) {
             $origin = get_http_origin();
             error_log("MCO CORS DEBUG: RESPONSE - Incoming Origin: " . ($origin ? $origin : 'N/A') . " for route: " . $request->get_route());
             
-            $allowed_raw = get_option('mco_exam_app_url', '');
-            $allowed_origins = array_filter(array_map('trim', explode("\n", $allowed_raw)));
-            
             $is_allowed = false;
-            if (empty($allowed_origins)) {
+            if ($origin && (strpos($origin, 'localhost') !== false || strpos($origin, '127.0.0.1') !== false)) {
                 $is_allowed = true;
-                error_log("MCO CORS DEBUG: RESPONSE - No allowed origins configured. Allowing all (insecure fallback).");
             }
-            else {
-                error_log("MCO CORS DEBUG: RESPONSE - Configured Allowed Origins: " . implode(', ', $allowed_origins));
-                foreach ($allowed_origins as $allowed) {
-                    if (rtrim($allowed, '/') === rtrim($origin, '/')) { 
-                        $is_allowed = true; 
-                        break; 
-                    }
+
+            if (!$is_allowed) {
+                $allowed_raw = get_option('mco_exam_app_url', '');
+                $allowed_origins = array_filter(array_map('trim', explode("\n", $allowed_raw)));
+                
+                if (empty($allowed_origins)) {
+                    $is_allowed = true;
+                    error_log("MCO CORS DEBUG: RESPONSE - No allowed origins configured. Allowing all (insecure fallback).");
                 }
-                error_log("MCO CORS DEBUG: RESPONSE - Origin '$origin' " . ($is_allowed ? "IS" : "IS NOT") . " in allowed list.");
+                else {
+                    error_log("MCO CORS DEBUG: RESPONSE - Configured Allowed Origins: " . implode(', ', $allowed_origins));
+                    foreach ($allowed_origins as $allowed) {
+                        if (rtrim($allowed, '/') === rtrim($origin, '/')) { 
+                            $is_allowed = true; 
+                            break; 
+                        }
+                    }
+                    error_log("MCO CORS DEBUG: RESPONSE - Origin '$origin' " . ($is_allowed ? "IS" : "IS NOT") . " in allowed list.");
+                }
             }
 
             $allow_origin_header_value = $is_allowed ? $origin : (isset($allowed_origins[0]) ? $allowed_origins[0] : '*');
@@ -1090,7 +1105,7 @@ if (!function_exists('mco_api_admin_update_exam_program')) {
                 $book_post_ids = [];
                 foreach($book_str_ids as $bsid) {
                     if(empty($bsid)) continue;
-                    $args = ['post_type' => 'mco_recommended_book', 'meta_key' => '_mco_book_id', 'meta_value' => $bsid, 'posts_per_page' => 1, 'fields' => 'ids'];
+                    $args = ['post_type' => 'mco_recommended_book', 'meta_key' => '_mco_book_id', 'meta_value' => $book_sku, 'posts_per_page' => 1, 'fields' => 'ids'];
                     $found = get_posts($args);
                     if(!empty($found)) $book_post_ids[] = $found[0];
                 }
@@ -1302,11 +1317,9 @@ if (!function_exists('mco_api_get_post_creation_data')) {
         $authors = get_users(['role__in' => ['administrator', 'editor', 'author'], 'fields' => ['ID', 'display_name']]);
         $formatted_authors = array_map(fn($author) => ['ID' => (string)$author->ID, 'display_name' => $author->display_name], $authors);
 
-        $categories = get_terms(['taxonomy' => 'category', 'hide_empty' => false, 'fields' => 'id=>name']);
-        $formatted_categories = [];
-        foreach ($categories as $term_id => $name) {
-            $formatted_categories[] = ['term_id' => $term_id, 'name' => $name];
-        }
+        // Aligned fix for Lines 777-781: Corrected category data structure
+        $categories = get_terms(['taxonomy' => 'category', 'hide_empty' => false]);
+        $formatted_categories = array_map(fn($cat) => ['term_id' => $cat->term_id, 'name' => $cat->name], $categories);
 
         return new WP_REST_Response([
             'authors' => $formatted_authors,
@@ -1319,7 +1332,8 @@ if (!function_exists('mco_api_create_post_from_app')) {
     function mco_api_create_post_from_app(WP_REST_Request $request) {
         $p = $request->get_json_params();
         $post_title = sanitize_text_field($p['post_title'] ?? '');
-        $post_content = wp_kses_post($p['post_content'] ?? '');
+        // Aligned fix for Line 791: Preserved block comments for Gutenberg
+        $post_content = $p['post_content'] ?? ''; 
         $post_status = sanitize_text_field($p['post_status'] ?? 'future');
         $post_date = sanitize_text_field($p['post_date'] ?? '');
         $post_author = (int)($p['post_author'] ?? get_current_user_id());
@@ -1446,9 +1460,25 @@ if (!function_exists('mco_register_rest_routes')) {
         register_rest_route($namespace, '/admin/post-creation-data', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_post_creation_data'], $admin_auth));
         register_rest_route($namespace, '/admin/create-post-from-app', array_merge(['methods' => 'POST', 'callback' => 'mco_api_create_post_from_app'], $admin_auth));
         register_rest_route($namespace, '/admin/toggle-beta-status', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_toggle_beta_status'], $admin_auth));
+        
+        // Aligned fix for Line 860: Added Global Settings Route
+        register_rest_route($namespace, '/admin/update-global-settings', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_update_global_settings'], $admin_auth));
     }
 }
 
 add_action('rest_api_init', 'mco_register_rest_routes');
 add_filter('rest_post_dispatch', 'mco_add_cors_headers_to_response', 10, 3);
 add_action('rest_pre_serve_request', 'mco_handle_cors_preflight', 10, 4);
+
+/**
+ * GLOBAL SETTINGS HANDLER
+ */
+if (!function_exists('mco_api_admin_update_global_settings')) {
+    function mco_api_admin_update_global_settings(WP_REST_Request $request) {
+        $d = $request->get_json_params();
+        if (isset($d['activeThemeId'])) update_option('mco_active_theme_id', sanitize_text_field($d['activeThemeId']));
+        if (isset($d['purchaseNotifierEnabled'])) update_option('mco_purchase_notifier_enabled', $d['purchaseNotifierEnabled'] ? '1' : '0');
+        delete_transient('mco_app_config_data_full_org_structure');
+        return new WP_REST_Response(['success' => true], 200);
+    }
+}
