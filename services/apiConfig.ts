@@ -37,8 +37,7 @@ export const getTenantConfig = (): TenantConfig => {
     }
 
     // 2. Development Mode (Localhost)
-    // FIX: Use empty string to trigger the Vite Proxy in vite.config.ts
-    // This is the most reliable way to avoid CORS "Connection Blocked" errors during dev.
+    // FIX: Using empty string ensures the Vite Proxy is triggered, bypassing CORS errors during dev.
     if (isDev && (hostname === 'localhost' || hostname === '127.0.0.1')) {
         return {
             apiBaseUrl: '', 
