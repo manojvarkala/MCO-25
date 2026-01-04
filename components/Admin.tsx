@@ -1,13 +1,13 @@
-import React, { FC, useState, useCallback, ReactNode, useEffect, useMemo } from 'react';
+import React, { FC, useState, useCallback, ReactNode, useEffect, useMemo, useRef } from 'react';
 import { Link } from "react-router-dom";
 import { useAppContext } from '../context/AppContext.tsx';
-import type { ExamStat } from '../types.ts';
+import type { ExamStat, Theme } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import Spinner from './Spinner.tsx';
 import { getApiBaseUrl } from '../services/apiConfig.ts';
-import { CheckCircle, XCircle, Cpu, FileSpreadsheet, RefreshCw, BarChart3, ShoppingCart, DollarSign, FileText, Paintbrush, DatabaseZap, Trash2, DownloadCloud } from 'lucide-react';
+import { CheckCircle, XCircle, Cpu, FileSpreadsheet, RefreshCw, BarChart3, ShoppingCart, DollarSign, FileText, Paintbrush, DatabaseZap, Trash2, DownloadCloud, ToggleLeft, ToggleRight, Search, FileUp, Settings2 } from 'lucide-react';
 
 interface HealthStatus {
     api_connection?: { success: boolean; message: string; data?: any };
@@ -57,6 +57,7 @@ const StatCard: FC<{ title: string; value: string | number; icon: ReactNode }> =
 
 const Admin: FC = () => {
     const { token } = useAuth();
+    const { activeOrg, availableThemes, activeTheme, refreshConfig } = useAppContext();
     const [isClearingCache, setIsClearingCache] = useState(false);
     const [detailsModalData, setDetailsModalData] = useState<any>(null);
 
@@ -64,6 +65,31 @@ const Admin: FC = () => {
     const [examStats, setExamStats] = useState<ExamStat[] | null>(null);
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [dataLoadError, setDataLoadError] = useState<string | null>(null);
+
+    // Feature Toggle States
+    const [localSettings, setLocalSettings] = useState({
+        subscriptionsEnabled: activeOrg?.subscriptionsEnabled ?? true,
+        bundlesEnabled: activeOrg?.bundlesEnabled ?? true,
+        purchaseNotifierEnabled: activeOrg?.purchaseNotifierEnabled ?? true,
+        activeThemeId: activeTheme
+    });
+    const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
+
+    // Sheet Checker State
+    const [testSheetUrl, setTestSheetUrl] = useState('');
+    const [isTestingSheet, setIsTestingSheet] = useState(false);
+    const [sheetTestResult, setSheetTestResult] = useState<{success: boolean, message: string} | null>(null);
+
+    useEffect(() => {
+        if (activeOrg) {
+            setLocalSettings({
+                subscriptionsEnabled: activeOrg.subscriptionsEnabled ?? true,
+                bundlesEnabled: activeOrg.bundlesEnabled ?? true,
+                purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
+                activeThemeId: activeTheme
+            });
+        }
+    }, [activeOrg, activeTheme]);
 
     useEffect(() => {
         if (!token) return;
@@ -109,7 +135,6 @@ const Admin: FC = () => {
                 break;
             default: return;
         }
-
         setIsClearingCache(true);
         try {
             const result = await apiCall(token);
@@ -121,8 +146,56 @@ const Admin: FC = () => {
         }
     };
 
+    const handleSettingToggle = async (key: keyof typeof localSettings) => {
+        if (!token) return;
+        const nextVal = !localSettings[key];
+        const updated = { ...localSettings, [key]: nextVal };
+        setLocalSettings(updated);
+        setIsUpdatingSettings(true);
+        try {
+            await googleSheetsService.adminUpdateGlobalSettings(token, updated);
+            await refreshConfig();
+            toast.success("Settings synchronized with WordPress");
+        } catch (e: any) {
+            toast.error(e.message);
+            setLocalSettings({ ...localSettings }); // rollback
+        } finally {
+            setIsUpdatingSettings(false);
+        }
+    };
+
+    const handleThemeChange = async (themeId: string) => {
+        if (!token) return;
+        const updated = { ...localSettings, activeThemeId: themeId };
+        setLocalSettings(updated);
+        setIsUpdatingSettings(true);
+        try {
+            await googleSheetsService.adminUpdateGlobalSettings(token, updated);
+            await refreshConfig();
+            toast.success(`Default theme set to ${themeId}`);
+        } catch (e: any) {
+            toast.error(e.message);
+        } finally {
+            setIsUpdatingSettings(false);
+        }
+    };
+
+    const runSheetTest = async () => {
+        if (!testSheetUrl || !token) return;
+        setIsTestingSheet(true);
+        setSheetTestResult(null);
+        try {
+            const res = await googleSheetsService.adminTestSheetUrl(token, testSheetUrl);
+            setSheetTestResult(res);
+        } catch (e: any) {
+            setSheetTestResult({ success: false, message: e.message });
+        } finally {
+            setIsTestingSheet(false);
+        }
+    };
+
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 pb-20">
             {detailsModalData && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-[rgb(var(--color-card-rgb))] rounded-lg shadow-lg w-full max-w-2xl max-h-[80vh] flex flex-col">
@@ -139,7 +212,12 @@ const Admin: FC = () => {
                 </div>
             )}
 
-            <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">System Administration</h1>
+            <div className="flex justify-between items-center">
+                <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">System Administration</h1>
+                <div className="bg-green-500/10 text-green-500 px-3 py-1 rounded-full text-xs font-bold border border-green-500/20">
+                    ADMIN VERIFIED
+                </div>
+            </div>
 
             {dataLoadError && (
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg text-red-700 text-sm">
@@ -147,50 +225,164 @@ const Admin: FC = () => {
                 </div>
             )}
 
-            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <h2 className="text-2xl font-bold flex items-center mb-6">
-                    <Cpu className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    Production Health Audit
-                </h2>
-                <div className="space-y-2">
-                    <HealthListItem title="REST API Integration" status={healthStatus?.api_connection} />
-                    <HealthListItem title="JWT Security Secret" status={healthStatus?.jwt_secret} />
-                    <HealthListItem title="WooCommerce Core" status={healthStatus?.woocommerce} />
-                    <HealthListItem title="Recurring Subscriptions" status={healthStatus?.wc_subscriptions} />
-                    <HealthListItem title="Dynamic App Routing" status={healthStatus?.app_url_config} />
-                    <HealthListItem title="External Question Sync" status={healthStatus?.google_sheet} />
+            {/* --- TOP ROW: HEALTH & STATS --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-xl font-bold flex items-center mb-6">
+                        <Cpu className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Production Health Audit
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <HealthListItem title="REST API" status={healthStatus?.api_connection} />
+                        <HealthListItem title="JWT Security" status={healthStatus?.jwt_secret} />
+                        <HealthListItem title="WooCommerce" status={healthStatus?.woocommerce} />
+                        <HealthListItem title="Subscriptions" status={healthStatus?.wc_subscriptions} />
+                    </div>
+                </div>
+
+                <div className="bg-[rgb(var(--color-card-rgb))] p-6 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))] flex flex-col justify-center">
+                    <h2 className="text-lg font-bold flex items-center mb-4">
+                        <BarChart3 className="mr-2 text-[rgb(var(--color-primary-rgb))]" />
+                        Revenue Snapshot
+                    </h2>
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <span className="text-slate-400">Total Sales</span>
+                            <span className="font-bold">{summaryStats.totalSales.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-slate-400">Gross Rev</span>
+                            <span className="font-bold text-green-400">${summaryStats.totalRevenue.toLocaleString()}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <h2 className="text-2xl font-bold flex items-center mb-6">
-                    <BarChart3 className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    Performance Aggregate
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <StatCard title="Total Exam Sales" value={summaryStats.totalSales.toLocaleString()} icon={<ShoppingCart className="text-[rgb(var(--color-primary-rgb))]" />} />
-                    <StatCard title="Est. Gross Revenue" value={`$${summaryStats.totalRevenue.toLocaleString()}`} icon={<DollarSign className="text-[rgb(var(--color-primary-rgb))]" />} />
-                    <StatCard title="All-Time Attempts" value={summaryStats.totalAttempts.toLocaleString()} icon={<FileText className="text-[rgb(var(--color-primary-rgb))]" />} />
+            {/* --- ROW 2: APPEARANCE & UI TOOLS --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold flex items-center mb-6">
+                        <Settings2 className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Appearance & UI Settings
+                    </h2>
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg">
+                            <div>
+                                <p className="font-semibold">Purchase Notifier</p>
+                                <p className="text-xs text-slate-400">Toggle live social proof popups</p>
+                            </div>
+                            <button onClick={() => handleSettingToggle('purchaseNotifierEnabled')}>
+                                {localSettings.purchaseNotifierEnabled ? <ToggleRight className="text-green-500" size={32} /> : <ToggleLeft className="text-slate-500" size={32} />}
+                            </button>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-[rgb(var(--color-muted-rgb))] rounded-lg">
+                            <div>
+                                <p className="font-semibold">Bundle System</p>
+                                <p className="text-xs text-slate-400">Enable Exam + Sub packages</p>
+                            </div>
+                            <button onClick={() => handleSettingToggle('bundlesEnabled')}>
+                                {localSettings.bundlesEnabled ? <ToggleRight className="text-green-500" size={32} /> : <ToggleLeft className="text-slate-500" size={32} />}
+                            </button>
+                        </div>
+                        <div className="pt-4">
+                            <p className="text-sm font-bold mb-3 uppercase tracking-wider text-slate-500">Default Global Theme</p>
+                            <div className="flex gap-2 flex-wrap">
+                                {availableThemes.map(t => (
+                                    <button 
+                                        key={t.id} 
+                                        onClick={() => handleThemeChange(t.id)}
+                                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${localSettings.activeThemeId === t.id ? 'bg-[rgb(var(--color-primary-rgb))] text-white' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'}`}
+                                    >
+                                        {t.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold flex items-center mb-6">
+                        <FileSpreadsheet className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Google Sheet URL Checker
+                    </h2>
+                    <p className="text-sm text-slate-400 mb-4">Validate if your Question Sheet is properly "Published to Web" as CSV.</p>
+                    <div className="flex gap-2 mb-4">
+                        <input 
+                            type="url" 
+                            placeholder="https://docs.google.com/spreadsheets/d/..." 
+                            className="flex-grow p-3 rounded-lg bg-slate-900 border border-slate-700 text-sm focus:border-cyan-500 outline-none"
+                            value={testSheetUrl}
+                            onChange={e => setTestSheetUrl(e.target.value)}
+                        />
+                        <button 
+                            onClick={runSheetTest}
+                            disabled={isTestingSheet || !testSheetUrl}
+                            className="bg-cyan-600 hover:bg-cyan-700 text-white p-3 rounded-lg flex items-center gap-2 font-bold disabled:opacity-50"
+                        >
+                            {isTestingSheet ? <RefreshCw className="animate-spin" size={18} /> : <Search size={18} />}
+                            Test
+                        </button>
+                    </div>
+                    {sheetTestResult && (
+                        <div className={`p-4 rounded-lg flex items-start gap-3 ${sheetTestResult.success ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                            {sheetTestResult.success ? <CheckCircle size={20} /> : <XCircle size={20} />}
+                            <div>
+                                <p className="font-bold">{sheetTestResult.success ? 'Accessible' : 'Link Failed'}</p>
+                                <p className="text-xs opacity-80">{sheetTestResult.message}</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
-                <h2 className="text-2xl font-bold flex items-center mb-4">
-                    <DatabaseZap className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
-                    Industrial Data Utilities
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 bg-[rgb(var(--color-muted-rgb))] rounded-lg">
-                        <h3 className="font-bold mb-2">Global Config</h3>
-                        <button onClick={() => handleCacheClear('config')} disabled={isClearingCache} className="w-full py-2 bg-blue-600 text-white rounded font-bold">Clear Cache</button>
+            {/* --- ROW 3: BULK DATA & MAINTENANCE --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                 <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold flex items-center mb-6">
+                        <FileUp className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Bulk Data Management
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="p-4 bg-[rgb(var(--color-muted-rgb))] rounded-xl border border-slate-700">
+                            <p className="text-xs font-bold text-slate-500 mb-2 uppercase">Templates</p>
+                            <div className="space-y-2">
+                                <a href="/template-exam-programs.csv" download className="block text-sm text-cyan-400 hover:underline flex items-center gap-2">
+                                    <DownloadCloud size={14} /> Exam Programs CSV
+                                </a>
+                                <a href="/template-recommended-books.csv" download className="block text-sm text-cyan-400 hover:underline flex items-center gap-2">
+                                    <DownloadCloud size={14} /> Book Store CSV
+                                </a>
+                            </div>
+                        </div>
+                        <div className="p-4 bg-slate-900 rounded-xl border border-slate-700 flex flex-col justify-center text-center">
+                            <p className="text-xs font-bold text-slate-500 mb-2 uppercase">Import Hub</p>
+                            <button className="bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg text-sm font-bold transition">
+                                Launch WP Import
+                            </button>
+                            <p className="text-[10px] text-slate-500 mt-2 italic">Redirects to WordPress CSV Suite</p>
+                        </div>
                     </div>
-                    <div className="p-4 bg-[rgb(var(--color-muted-rgb))] rounded-lg">
-                        <h3 className="font-bold mb-2">Question Sheets</h3>
-                        <button onClick={() => handleCacheClear('questions')} disabled={isClearingCache} className="w-full py-2 bg-blue-600 text-white rounded font-bold">Flush Transient</button>
-                    </div>
-                    <div className="p-4 bg-red-900/30 border border-red-500 rounded-lg">
-                        <h3 className="font-bold text-red-200 mb-2">Permanent Results</h3>
-                        <button onClick={() => handleCacheClear('results')} disabled={isClearingCache} className="w-full py-2 bg-red-600 text-white rounded font-bold">Purge All</button>
+                </div>
+
+                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))]">
+                    <h2 className="text-2xl font-bold flex items-center mb-4">
+                        <DatabaseZap className="mr-3 text-[rgb(var(--color-primary-rgb))]" />
+                        Industrial Admin UI Tools
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-4 bg-[rgb(var(--color-muted-rgb))] rounded-lg">
+                            <h3 className="text-xs font-bold text-slate-400 mb-2 uppercase">App Cache</h3>
+                            <button onClick={() => handleCacheClear('config')} disabled={isClearingCache} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs">Flush Config</button>
+                        </div>
+                        <div className="p-4 bg-[rgb(var(--color-muted-rgb))] rounded-lg">
+                             <h3 className="text-xs font-bold text-slate-400 mb-2 uppercase">Sheet Data</h3>
+                            <button onClick={() => handleCacheClear('questions')} disabled={isClearingCache} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs">Purge Sheets</button>
+                        </div>
+                        <div className="p-4 bg-red-900/30 border border-red-500/30 rounded-lg">
+                            <h3 className="text-xs font-bold text-red-300 mb-2 uppercase">Wipe Results</h3>
+                            <button onClick={() => handleCacheClear('results')} disabled={isClearingCache} className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded font-bold text-xs">Wipe Database</button>
+                        </div>
                     </div>
                 </div>
             </div>

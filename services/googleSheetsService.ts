@@ -83,54 +83,28 @@ export const googleSheetsService = {
     getAIFeedback: async (prompt: string, token: string): Promise<string> => {
         if (!process.env.API_KEY) return "AI Service not configured.";
         try {
-            // FIX: Correct initialization of GoogleGenAI using named parameter apiKey.
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            // FIX: Use string for contents as per newest SDK guidelines.
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
                 contents: prompt,
             });
-            // FIX: Access response.text property directly (not a function call).
             return response.text || "AI study guide could not be generated.";
         } catch (error: any) {
             console.error("Gemini API Error:", error);
             return "AI feedback service is currently unavailable.";
         }
     },
-    // FIX: Added missing generateAIPostContent method used in components/ContentEngine.tsx.
     generateAIPostContent: async (name: string, description: string, keywords: string, hashtags: string): Promise<string> => {
         if (!process.env.API_KEY) return "AI Service not configured.";
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const systemInstruction = "You are an expert SEO content writer specializing in educational and certification-based websites. Your task is to generate an engaging, well-structured, and SEO-friendly blog post. The output must be formatted using WordPress block editor syntax (Gutenberg blocks).";
-            
-            const userPrompt = `
-Generate a blog post based on the following details:
-
-Program Title: "${name}"
-Program Description: "${description}"
-${keywords ? `Keywords to include: ${keywords}` : ''}
-${hashtags ? `Hashtags to include: ${hashtags}` : ''}
-
-The blog post should include these sections:
-1. An engaging introduction.
-2. "Why This Certification Matters"
-3. "What You'll Learn"
-4. "Career Opportunities"
-5. A strong concluding paragraph.
-
-Ensure all text is wrapped in appropriate WordPress block syntax. Return only the content blocks.
-            `.trim();
-
-            // FIX: Use string for contents and pass systemInstruction in config as per guidelines.
+            const userPrompt = `Generate a blog post based on: Title: "${name}", Desc: "${description}", Keywords: ${keywords}, Hashtags: ${hashtags}. Use Gutenberg blocks.`.trim();
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
                 contents: userPrompt,
-                config: {
-                    systemInstruction: systemInstruction,
-                }
+                config: { systemInstruction: systemInstruction }
             });
-            // FIX: Access response.text property directly.
             return response.text || "AI content could not be generated.";
         } catch (error: any) {
             console.error("Gemini API Error:", error);
@@ -163,7 +137,6 @@ Ensure all text is wrapped in appropriate WordPress block syntax. Return only th
             const q = questions.find(q => q.id === ua.questionId);
             return q && q.correctAnswer === ua.answer + 1;
         }).length;
-        
         const result: TestResult = {
             testId: `test_${user.id}_${examId}_${Date.now()}`,
             userId: user.id,
@@ -182,7 +155,6 @@ Ensure all text is wrapped in appropriate WordPress block syntax. Return only th
             })),
             proctoringViolations
         };
-        
         await apiFetch('/submit-result', 'POST', token, result);
         return result;
     },
@@ -255,5 +227,8 @@ Ensure all text is wrapped in appropriate WordPress block syntax. Return only th
     },
     adminSetIntroVideo: async (token: string, programId: string, videoUrl: string): Promise<any> => {
         return await apiFetch('/admin/set-intro-video', 'POST', token, { programId, videoUrl });
+    },
+    adminUpdateGlobalSettings: async (token: string, settings: any): Promise<any> => {
+        return await apiFetch('/admin/update-global-settings', 'POST', token, settings);
     }
 };
