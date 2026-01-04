@@ -96,7 +96,7 @@ const Admin: FC = () => {
         if (!token) return;
         const next = { ...localSettings, ...updates };
         setLocalSettings(next);
-        const tid = toast.loading("Syncing settings to database...");
+        const tid = toast.loading("Syncing industrial settings...");
         try {
             await googleSheetsService.adminUpdateGlobalSettings(token, next);
             await refreshConfig();
@@ -155,6 +155,24 @@ const Admin: FC = () => {
                             <HealthCard title="WooCommerce Subscriptions" status={health?.wc_subscriptions} />
                             <HealthCard title="App URL Configuration" status={health?.app_url_config} />
                             <HealthCard title="Google Sheet Accessibility" status={health?.sheet_accessibility} />
+                        </div>
+
+                        <div className="mt-10 bg-slate-900 border border-slate-700 rounded-2xl p-6">
+                            <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><BarChart3 size={20} className="text-cyan-500" /> Platform KPIs</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                <div className="p-4 bg-slate-800 rounded-xl">
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Total Purchases</p>
+                                    <p className="text-3xl font-black mt-1 text-white">{stats?.reduce((acc, s) => acc + (s.totalSales || 0), 0).toLocaleString()}</p>
+                                </div>
+                                <div className="p-4 bg-slate-800 rounded-xl">
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Estimated Revenue</p>
+                                    <p className="text-3xl font-black mt-1 text-emerald-400">${stats?.reduce((acc, s) => acc + (s.totalRevenue || 0), 0).toLocaleString()}</p>
+                                </div>
+                                <div className="p-4 bg-slate-800 rounded-xl">
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Exam Attempts</p>
+                                    <p className="text-3xl font-black mt-1 text-cyan-400">{stats?.reduce((acc, s) => acc + (s.attempts || 0), 0).toLocaleString()}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -232,6 +250,13 @@ const Admin: FC = () => {
                                 <div className="space-y-3">
                                     <button onClick={flushCache} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl border border-slate-700 flex items-center justify-center gap-2"><RefreshCw size={18}/> Flush Config Cache</button>
                                     <button onClick={() => { if(confirm("This will PERMANENTLY erase all historical exam attempts for ALL users. Proceed?")) googleSheetsService.adminClearAllResults(token!) }} className="w-full py-3 bg-rose-900/20 hover:bg-rose-900/40 text-rose-400 font-bold rounded-xl border border-rose-900/50">Wipe All Test Records</button>
+                                </div>
+                            </div>
+                            <div className="bg-slate-900 p-6 rounded-2xl border border-slate-700 flex flex-col">
+                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><DownloadCloud size={20} className="text-cyan-400"/> Bulk Templates</h3>
+                                <div className="space-y-2 flex-1">
+                                    <a href="/template-exam-programs.csv" download className="block p-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition text-sm">Exam Program Schema</a>
+                                    <a href="/template-recommended-books.csv" download className="block p-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition text-sm">Recommended Books Schema</a>
                                 </div>
                             </div>
                          </div>
