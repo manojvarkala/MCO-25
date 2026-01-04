@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
 import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook, Theme, FeedbackContext, AppContextType } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -68,7 +67,6 @@ const processConfigData = (configData: any) => {
             const rawId = getField(exam, ['id', 'ID', 'post_id']);
             if (!rawId) return null;
             const id = rawId.toString();
-            
             const category = categories.find(c => c.certificationExamId === id || c.practiceExamId === id);
             const categoryUrl = category ? category.questionSourceUrl : undefined;
 
@@ -157,10 +155,8 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setOrganizations(processedData.processedOrgs);
       setExamPrices(config.examPrices || null);
       setSuggestedBooks(processedData.allSuggestedBooks);
-      
       const newActiveOrg = processedData.processedOrgs.find(o => o.id === localStorage.getItem('activeOrgId')) || processedData.processedOrgs[0];
       setActiveOrg(newActiveOrg);
-
       if (newActiveOrg) {
           localStorage.setItem('activeOrgId', newActiveOrg.id);
           setAvailableThemes(newActiveOrg.availableThemes || []);
@@ -170,7 +166,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
           setPurchaseNotifierDelay(newActiveOrg.purchaseNotifierDelay ?? 7);
           setPurchaseNotifierMinGap(newActiveOrg.purchaseNotifierMinGap ?? 8);
           setPurchaseNotifierMaxGap(newActiveOrg.purchaseNotifierMaxGap ?? 23);
-
           const savedTheme = localStorage.getItem('mco_active_theme');
           const defaultTheme = newActiveOrg.activeThemeId || 'default';
           setActiveThemeState(savedTheme || defaultTheme);
@@ -184,16 +179,13 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const GEO_CACHE_KEY = 'mco_user_geo_country_code';
         const GEO_CACHE_EXPIRY_KEY = 'mco_user_geo_country_code_expiry';
         const now = Date.now();
-        
         try {
             const cachedCode = localStorage.getItem(GEO_CACHE_KEY);
             const cachedExpiry = localStorage.getItem(GEO_CACHE_EXPIRY_KEY);
-
             if (cachedCode && cachedExpiry && now < parseInt(cachedExpiry, 10)) {
                 setUserGeoCountryCode(cachedCode);
                 return;
             }
-
             const response = await fetch('https://ipapi.co/json/');
             if (response.ok) {
                 const data = await response.json();
@@ -205,9 +197,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                     document.cookie = `mco_user_geo_country_code=${countryCode}; path=/; max-age=3600; SameSite=Lax`;
                 }
             }
-        } catch (error) {
-            console.error("AppContext: Error fetching geo location:", error);
-        }
+        } catch (error) { console.error("Geo lookup error:", error); }
     }, []);
 
   const loadAppConfig = useCallback(async (forceRefresh = false) => {
@@ -217,45 +207,50 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const tenantConfig = getTenantConfig();
         const cacheKey = `appConfigCache_${tenantConfig.apiBaseUrl}`;
 
-        let cachedConfig = null;
         if (!forceRefresh) {
             try {
                 const storedConfig = localStorage.getItem(cacheKey);
                 if (storedConfig) {
-                    cachedConfig = JSON.parse(storedConfig);
+                    const cachedConfig = JSON.parse(storedConfig);
                     const processed = processConfigData(cachedConfig);
                     if (processed) {
                         applyConfigToState(cachedConfig, processed);
                         configFound = true;
                     }
                 }
-            } catch (e) {
-                localStorage.removeItem(cacheKey);
-            }
+            } catch (e) { localStorage.removeItem(cacheKey); }
         }
 
         const apiUrl = tenantConfig.apiBaseUrl + '/wp-json/mco-app/v1/config';
-        const response = await fetch(apiUrl);
-        if (!response.ok) {
-            if (!configFound) {
-                const staticConfigUrl = tenantConfig.staticConfigPath;
-                const staticResponse = await fetch(staticConfigUrl);
+        try {
+            const response = await fetch(apiUrl, { mode: 'cors' });
+            if (response.ok) {
+                const liveConfig = await response.json();
+                const processed = processConfigData(liveConfig);
+                if (processed) {
+                    applyConfigToState(liveConfig, processed);
+                    localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
+                    configFound = true;
+                }
+            } else if (!configFound) {
+                const staticResponse = await fetch(tenantConfig.staticConfigPath);
                 if (staticResponse.ok) {
                     const staticConfig = await staticResponse.json();
-                    const processedStaticConfig = processConfigData(staticConfig);
-                    if (processedStaticConfig) {
-                        applyConfigToState(staticConfig, processedStaticConfig);
+                    const processed = processConfigData(staticConfig);
+                    if (processed) {
+                        applyConfigToState(staticConfig, processed);
                         configFound = true;
                     }
                 }
             }
-        } else {
-            const liveConfig = await response.json();
-            const processedLiveConfig = processConfigData(liveConfig);
-            if (processedLiveConfig) {
-                applyConfigToState(liveConfig, processedLiveConfig);
-                localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
-                configFound = true;
+        } catch (fetchErr) {
+            if (!configFound) {
+                const staticResponse = await fetch(tenantConfig.staticConfigPath);
+                if (staticResponse.ok) {
+                    const staticConfig = await staticResponse.json();
+                    const processed = processConfigData(staticConfig);
+                    if (processed) applyConfigToState(staticConfig, processed);
+                }
             }
         }
     } catch (error: any) {
@@ -295,9 +290,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setOrganizations(newOrganizations);
         setExamPrices(newExamPrices);
         const newActiveOrg = newOrganizations.find(o => o.id === activeOrg?.id) || newOrganizations[0] || null;
-        if (newActiveOrg) {
-            setActiveOrg(newActiveOrg);
-        }
+        if (newActiveOrg) setActiveOrg(newActiveOrg);
     }, [activeOrg?.id]);
 
   const updateExamInOrg = useCallback((examId: string, updatedExamData: Partial<Exam>) => {
@@ -312,31 +305,13 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, []);
   
   const value = useMemo(() => ({
-    organizations,
-    activeOrg,
-    isLoading: isInitializing,
-    isInitializing,
-    refreshConfig,
-    setActiveOrgById,
-    updateActiveOrg,
-    updateConfigData,
-    updateExamInOrg,
-    inProgressExam: null,
-    examPrices,
-    suggestedBooks,
-    hitCount,
-    availableThemes,
-    activeTheme,
-    setActiveTheme,
-    subscriptionsEnabled,
-    bundlesEnabled,
-    purchaseNotifierEnabled,
-    purchaseNotifierDelay,
-    purchaseNotifierMinGap,
-    purchaseNotifierMaxGap,
-    feedbackRequiredForExam,
-    setFeedbackRequiredForExam,
-    clearFeedbackRequired,
+    organizations, activeOrg, isLoading: isInitializing, isInitializing,
+    refreshConfig, setActiveOrgById, updateActiveOrg, updateConfigData,
+    updateExamInOrg, inProgressExam: null, examPrices, suggestedBooks,
+    hitCount, availableThemes, activeTheme, setActiveTheme,
+    subscriptionsEnabled, bundlesEnabled, purchaseNotifierEnabled,
+    purchaseNotifierDelay, purchaseNotifierMinGap, purchaseNotifierMaxGap,
+    feedbackRequiredForExam, setFeedbackRequiredForExam, clearFeedbackRequired,
     userGeoCountryCode,
   }), [
     organizations, activeOrg, isInitializing, refreshConfig, setActiveOrgById,

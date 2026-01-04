@@ -1,4 +1,3 @@
-
 import React, { FC, useMemo, useState, useEffect } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useParams, useNavigate, Link } from "react-router-dom";
@@ -7,7 +6,8 @@ import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { RecommendedBook, TestResult } from '../types.ts';
 import { BookOpen, ChevronLeft, ChevronRight, Edit } from 'lucide-react';
-import BookCover from '../assets/BookCover.tsx'; // Default import
+// FIX: Corrected import path for BookCover.tsx which is in the components folder.
+import BookCover from './BookCover.tsx'; 
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';
@@ -29,7 +29,6 @@ const getGeoAffiliateLink = (book: RecommendedBook, userGeoCountryCode: string |
         'gb': 'com', // United Kingdom
         'ca': 'com', // Canada
         'au': 'com', // Australia
-        // Add more mappings as needed
     };
     const domainNames: Record<string, string> = { com: 'Amazon.com', in: 'Amazon.in', ae: 'Amazon.ae' };
 
@@ -76,10 +75,9 @@ const getGeoAffiliateLink = (book: RecommendedBook, userGeoCountryCode: string |
     }
 
     if (finalKey && finalDomainName) {
-        // Store the FINAL chosen key in localStorage for WordPress shortcodes to read via cookie
         try {
             localStorage.setItem('mco_preferred_geo_key', finalKey);
-            localStorage.setItem('mco_user_geo_country_code', userGeoCountryCode || 'UNKNOWN'); // Also persist IP-based for debug
+            localStorage.setItem('mco_user_geo_country_code', userGeoCountryCode || 'UNKNOWN');
         } catch(e) {
             console.error("Failed to set geo preference in localStorage", e);
         }
@@ -116,7 +114,7 @@ const decodeHtmlEntities = (html: string): string => {
 const ExamProgram: FC = () => {
     const { programId } = useParams<{ programId: string }>();
     const navigate = useNavigate();
-    const { activeOrg, suggestedBooks, isInitializing, examPrices, subscriptionsEnabled, bundlesEnabled, userGeoCountryCode } = useAppContext(); // Get userGeoCountryCode
+    const { activeOrg, suggestedBooks, isInitializing, examPrices, subscriptionsEnabled, bundlesEnabled, userGeoCountryCode } = useAppContext();
     const { user, paidExamIds, isSubscribed, isEffectivelyAdmin } = useAuth();
     
     const [results, setResults] = useState<TestResult[]>([]);
@@ -183,55 +181,18 @@ const ExamProgram: FC = () => {
         };
     }, [programId, activeOrg]);
 
-    // DYNAMIC BUNDLE FINDER
     const foundBundle = useMemo(() => {
         if (!bundlesEnabled || !programData?.certExam?.productSku || !examPrices) return null;
-
         const certSku = programData.certExam.productSku;
-
-        // 1. Strict Match (Matches PHP/Shortcode Logic)
-        // This relies on the convention [sku]-1mo-addon or [sku]-1
         const subBundleSku = `${certSku}-1mo-addon`;
         const practiceBundleSku = `${certSku}-1`;
 
-        // Check subscription bundle first (higher priority)
         if (examPrices[subBundleSku] && examPrices[subBundleSku].isBundle) {
-             // IMPORTANT: Inject SKU so ExamBundleCard works
-             return { 
-                 product: { ...examPrices[subBundleSku], sku: subBundleSku }, 
-                 type: 'subscription' as const 
-             };
+             return { product: { ...examPrices[subBundleSku], sku: subBundleSku }, type: 'subscription' as const };
         }
-        // Check practice bundle
         if (examPrices[practiceBundleSku] && examPrices[practiceBundleSku].isBundle) {
-             return { 
-                 product: { ...examPrices[practiceBundleSku], sku: practiceBundleSku }, 
-                 type: 'practice' as const 
-             };
+             return { product: { ...examPrices[practiceBundleSku], sku: practiceBundleSku }, type: 'practice' as const };
         }
-
-        // 2. Fallback: Metadata Search (For custom bundles that have the _mco_is_bundle meta set)
-        // Must transform to array with SKU to search properly
-        const allPricesWithSku = Object.entries(examPrices).map(([sku, data]) => ({ ...data, sku }));
-
-        const eligibleBundles = allPricesWithSku.filter((p: any) => 
-            p.isBundle && 
-            Array.isArray(p.bundledSkus) && 
-            p.bundledSkus.includes(certSku)
-        );
-
-        if (eligibleBundles.length > 0) {
-             const subBundle = eligibleBundles.find((p: any) => 
-                p.bundledSkus.some((s: string) => 
-                    s.startsWith('sub-') || (examPrices[s] && examPrices[s].type?.includes('subscription'))
-                )
-            );
-            if (subBundle) {
-                return { product: subBundle, type: 'subscription' as const };
-            }
-            return { product: eligibleBundles[0], type: 'practice' as const };
-        }
-
         return null;
     }, [programData, examPrices, bundlesEnabled]);
 
@@ -252,10 +213,8 @@ const ExamProgram: FC = () => {
     }
 
     const { category, practiceExam, certExam } = programData;
-    
     const certAttempts = user && certExam ? results.filter(r => r.examId === certExam.id).length : undefined;
     const fullDescription = certExam?.description || practiceExam?.description || category.description;
-    
     const shareUrl = `${window.location.origin}/program/${category.id}`;
     const shareTitle = stripHtml(category.name);
     const shareText = `Check out the ${shareTitle} program on ${activeOrg.name}! Great for certification prep.`;
@@ -310,69 +269,20 @@ const ExamProgram: FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
                 {practiceExam && (
-                    <ExamCard 
-                        exam={practiceExam} 
-                        programId={category.id} 
-                        isPractice={true} 
-                        isPurchased={false} 
-                        activeOrg={activeOrg} 
-                        examPrices={examPrices} 
-                        hideDetailsLink={true}
-                    />
+                    <ExamCard exam={practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} hideDetailsLink={true} />
                 )}
                 {certExam && (
-                    <ExamCard 
-                        exam={certExam} 
-                        programId={category.id} 
-                        isPractice={false} 
-                        isPurchased={paidExamIds.includes(certExam.productSku)} 
-                        activeOrg={activeOrg} 
-                        examPrices={examPrices}
-                        hideDetailsLink={true}
-                        attemptsMade={certAttempts}
-                    />
+                    <ExamCard exam={certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} hideDetailsLink={true} attemptsMade={certAttempts} />
                 )}
-                
                 {foundBundle && certExam && (
-                    <ExamBundleCard
-                        type={foundBundle.type}
-                        bundleDataRaw={foundBundle.product}
-                        activeOrg={activeOrg}
-                        examPrices={examPrices}
-                    />
+                    <ExamBundleCard type={foundBundle.type} bundleDataRaw={foundBundle.product} activeOrg={activeOrg} examPrices={examPrices} />
                 )}
             </div>
 
-            {/* Check subscription toggle */}
             {subscriptionsEnabled && !isSubscribed && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-                    <SubscriptionOfferCard
-                        planName="Monthly Subscription"
-                        price={monthlyPrice}
-                        regularPrice={monthlyRegularPrice}
-                        priceUnit="month"
-                        url={monthlySubUrl}
-                        features={[
-                            'Unlimited Practice Exams',
-                            'Unlimited AI Feedback',
-                            'Cancel Anytime',
-                        ]}
-                        gradientClass="bg-gradient-to-br from-cyan-500 to-sky-600"
-                    />
-                    <SubscriptionOfferCard
-                        planName="Yearly Subscription"
-                        price={yearlyPrice}
-                        regularPrice={yearlyRegularPrice}
-                        priceUnit="year"
-                        url={yearlySubUrl}
-                        features={[
-                            'All Monthly features',
-                            'Access All Exam Programs',
-                            'Saves over 35%!',
-                        ]}
-                        isBestValue={true}
-                        gradientClass="bg-gradient-to-br from-purple-600 to-indigo-700"
-                    />
+                    <SubscriptionOfferCard planName="Monthly Subscription" price={monthlyPrice} regularPrice={monthlyRegularPrice} priceUnit="month" url={monthlySubUrl} features={['Unlimited Practice Exams', 'Unlimited AI Feedback', 'Cancel Anytime']} gradientClass="bg-gradient-to-br from-cyan-500 to-sky-600" />
+                    <SubscriptionOfferCard planName="Yearly Subscription" price={yearlyPrice} regularPrice={yearlyRegularPrice} priceUnit="year" url={yearlySubUrl} features={['All Monthly features', 'Access All Exam Programs', 'Saves over 35%!']} isBestValue={true} gradientClass="bg-gradient-to-br from-purple-600 to-indigo-700" />
                 </div>
             )}
 
@@ -381,7 +291,7 @@ const ExamProgram: FC = () => {
                     <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                         {recommendedBooksForProgram.map(book => {
-                            const linkData = getGeoAffiliateLink(book as RecommendedBook, userGeoCountryCode); // Pass userGeoCountryCode
+                            const linkData = getGeoAffiliateLink(book as RecommendedBook, userGeoCountryCode);
                             if (!linkData) return null;
                             return (
                                 <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full flex-shrink-0 flex flex-col transform hover:-translate-y-1 transition-transform duration-200">

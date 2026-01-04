@@ -1,4 +1,3 @@
-
 import React, { FC, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 // FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
 import { useParams, useNavigate } from "react-router-dom";
@@ -12,7 +11,8 @@ import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-import BookCover from '../assets/BookCover.tsx'; // Default import
+// FIX: Corrected import path for BookCover.tsx which is in the components folder.
+import BookCover from './BookCover.tsx'; 
 import ShareableResult from './ShareableResult.tsx';
 import ShareButtons from './ShareButtons.tsx';
 
@@ -33,7 +33,6 @@ const getGeoAffiliateLink = (book: RecommendedBook, userGeoCountryCode: string |
         'gb': 'com', // United Kingdom
         'ca': 'com', // Canada
         'au': 'com', // Australia
-        // Add more mappings as needed
     };
     const domainNames: Record<string, string> = { com: 'Amazon.com', in: 'Amazon.in', ae: 'Amazon.ae' };
 
@@ -80,10 +79,9 @@ const getGeoAffiliateLink = (book: RecommendedBook, userGeoCountryCode: string |
     }
 
     if (finalKey && finalDomainName) {
-        // Store the FINAL chosen key in localStorage for WordPress shortcodes to read via cookie
         try {
-            document.cookie = `mco_preferred_geo_key=${finalKey}; path=/; max-age=3600; SameSite=Lax`; // FIX: Set as cookie
-            document.cookie = `mco_user_geo_country_code=${userGeoCountryCode || 'UNKNOWN'}; path=/; max-age=3600; SameSite=Lax`; // FIX: Set as cookie
+            document.cookie = `mco_preferred_geo_key=${finalKey}; path=/; max-age=3600; SameSite=Lax`;
+            document.cookie = `mco_user_geo_country_code=${userGeoCountryCode || 'UNKNOWN'}; path=/; max-age=3600; SameSite=Lax`;
         } catch(e) {
             console.error("Failed to set geo preference in cookie", e);
         }
@@ -109,7 +107,7 @@ const Results: FC = () => {
     const { testId } = useParams<{ testId: string }>();
     const navigate = useNavigate();
     const { user, token, isSubscribed, paidExamIds, isEffectivelyAdmin, isBetaTester } = useAuth();
-    const { activeOrg, suggestedBooks, userGeoCountryCode } = useAppContext(); // Get userGeoCountryCode
+    const { activeOrg, suggestedBooks, userGeoCountryCode } = useAppContext();
 
     const [result, setResult] = useState<TestResult | null>(null);
     const [exam, setExam] = useState<Exam | null>(null);
@@ -228,7 +226,6 @@ const Results: FC = () => {
 
                 Please provide your expert feedback below.
             `;
-            // FIX: Corrected prompt to be passed in `contents` property of generateContentParameters object
             const feedback = await googleSheetsService.getAIFeedback(prompt, token);
             
             if (feedback.startsWith("We're sorry")) {
@@ -495,7 +492,7 @@ const Results: FC = () => {
                     <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                         {recommendedBooksForExam.map(book => {
-                            const linkData = getGeoAffiliateLink(book as RecommendedBook, userGeoCountryCode); // Pass userGeoCountryCode
+                            const linkData = getGeoAffiliateLink(book as RecommendedBook, userGeoCountryCode);
                             if (!linkData) return null;
                             return (
                                 <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full flex-shrink-0 flex flex-col transform hover:-translate-y-1 transition-transform duration-200">
