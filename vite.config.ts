@@ -1,4 +1,3 @@
-
 import path from 'path';
 import { defineConfig, loadEnv, UserConfig } from 'vite';
 import { fileURLToPath } from 'url';
@@ -10,17 +9,15 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, __dirname, '');
     
     const config: UserConfig = {
-      base: '/', // Use root path for assets
+      base: '/', 
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        // FIX: Define a global constant to check for development mode to resolve type errors.
-        '__DEV__': mode === 'development' // Completed the line here
+        '__DEV__': mode === 'development'
       },
-      plugins: [], // Added an empty plugins array
+      plugins: [], 
       resolve: {
         alias: {
-          // You might not need all of these, but they are common aliases
           '@': path.resolve(__dirname, './src'),
           '@components': path.resolve(__dirname, './src/components'),
           '@services': path.resolve(__dirname, './src/services'),
@@ -30,21 +27,31 @@ export default defineConfig(({ mode }) => {
       },
       server: {
         proxy: {
-            // Proxy API requests to your WordPress backend in development
+            // FIX: Robust proxying for WordPress REST API
             '/wp-json': {
-                target: env.VITE_API_TARGET_URL || 'http://localhost:80', // Fallback for VITE_API_TARGET_URL
+                target: env.VITE_API_TARGET_URL || 'http://localhost:80', 
                 changeOrigin: true,
-                rewrite: (path) => path, // Do not rewrite the path
-                secure: false, // Set to true for HTTPS backends
+                secure: false,
+                cookieDomainRewrite: "localhost",
+                configure: (proxy, _options) => {
+                    proxy.on('error', (err, _req, _res) => {
+                      console.log('proxy error', err);
+                    });
+                    proxy.on('proxyReq', (proxyReq, req, _res) => {
+                      // console.log('Sending Request to the Target:', req.method, req.url);
+                    });
+                    proxy.on('proxyRes', (proxyRes, req, _res) => {
+                      // console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+                    });
+                },
             },
         },
       },
       build: {
-        outDir: 'dist', // Output directory
-        emptyOutDir: true, // Clean the output directory before building
+        outDir: 'dist',
+        emptyOutDir: true,
         rollupOptions: {
             output: {
-                // Ensure consistent naming for static assets
                 assetFileNames: (assetInfo) => {
                     if (assetInfo.name && assetInfo.name.endsWith('.css')) {
                         return 'assets/css/[name].[hash].css';

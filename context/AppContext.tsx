@@ -203,10 +203,10 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const loadAppConfig = useCallback(async (forceRefresh = false) => {
     setIsInitializing(true);
     let configFound = false;
-    try {
-        const tenantConfig = getTenantConfig();
-        const cacheKey = `appConfigCache_${tenantConfig.apiBaseUrl}`;
+    const tenantConfig = getTenantConfig();
+    const cacheKey = `appConfigCache_${tenantConfig.apiBaseUrl}`;
 
+    try {
         if (!forceRefresh) {
             try {
                 const storedConfig = localStorage.getItem(cacheKey);
@@ -221,7 +221,8 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             } catch (e) { localStorage.removeItem(cacheKey); }
         }
 
-        const apiUrl = tenantConfig.apiBaseUrl + '/wp-json/mco-app/v1/config';
+        // Attempt Live API
+        const apiUrl = tenantConfig.apiBaseUrl ? `${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config` : '/wp-json/mco-app/v1/config';
         try {
             const response = await fetch(apiUrl, { mode: 'cors' });
             if (response.ok) {
@@ -232,7 +233,14 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                     localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
                     configFound = true;
                 }
-            } else if (!configFound) {
+            }
+        } catch (fetchErr) {
+            console.warn("AppContext: Live API fetch failed. Falling back to static JSON.", fetchErr);
+        }
+
+        // Fallback to Static JSON bundled with the app
+        if (!configFound) {
+            try {
                 const staticResponse = await fetch(tenantConfig.staticConfigPath);
                 if (staticResponse.ok) {
                     const staticConfig = await staticResponse.json();
@@ -242,19 +250,12 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                         configFound = true;
                     }
                 }
-            }
-        } catch (fetchErr) {
-            if (!configFound) {
-                const staticResponse = await fetch(tenantConfig.staticConfigPath);
-                if (staticResponse.ok) {
-                    const staticConfig = await staticResponse.json();
-                    const processed = processConfigData(staticConfig);
-                    if (processed) applyConfigToState(staticConfig, processed);
-                }
+            } catch (staticErr) {
+                console.error("AppContext: Static configuration load failed.", staticErr);
             }
         }
     } catch (error: any) {
-        console.error("AppContext: Error loading app configuration:", error);
+        console.error("AppContext: Fatal error loading app configuration:", error);
     } finally {
         setIsInitializing(false);
     }
