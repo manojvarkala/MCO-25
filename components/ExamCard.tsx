@@ -27,7 +27,6 @@ const decodeHtml = (html: string): string => {
         tempDiv.innerHTML = html;
         return tempDiv.textContent || tempDiv.innerText || '';
     } catch (e) {
-        console.error("Could not parse HTML string for decoding", e);
         return html;
     }
 };
@@ -56,30 +55,31 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
     
     let buttonText = 'Start Practice';
     let buttonAction: () => void;
-    // FIX: Changed Practice button to use primary brand cyan (bg-cyan-600) instead of green or white
+    // Practice/Navigation = Cyan
     let buttonClasses = "w-full flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg transition shadow-md disabled:opacity-50";
     let icon = <PlayCircle size={18} />;
 
-    if (!isPractice) { // Certification Exam
+    if (!isPractice) { 
         if (canTake) {
             buttonText = 'Start Exam';
             buttonAction = () => {
                 if (isDisabled) {
-                    toast.error("You must submit feedback for previous beta exams to unlock this test.");
+                    toast.error("Submit feedback for previous exams to unlock.");
                     return;
                 }
                 navigate(`/test/${exam.id}`);
             };
-            buttonClasses = "w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition shadow-md disabled:opacity-50";
+            // Success/Action = Green
+            buttonClasses = "w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg transition shadow-md disabled:opacity-50";
         } else {
             buttonText = isRedirecting ? 'Preparing...' : `Buy for $${price.toFixed(2)}`;
             icon = isRedirecting ? <Spinner /> : <ShoppingCart size={18} />;
-            buttonClasses = "w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50";
+            // Commerce/Amazon-style = Amber (High contrast text)
+            buttonClasses = "w-full flex items-center justify-center gap-2 bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] font-bold py-3 px-4 rounded-lg transition disabled:opacity-50";
             buttonAction = async () => {
                 if (!user || !token) {
-                    toast.error("Please log in to make a purchase.");
-                    const loginUrl = `https://www.${activeOrg.website}/exam-login/`;
-                    window.location.href = loginUrl;
+                    toast.error("Please log in to purchase.");
+                    window.location.href = `https://www.${activeOrg.website}/exam-login/`;
                     return;
                 }
                 setIsRedirecting(true);
@@ -87,12 +87,12 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                     const { checkoutUrl } = await googleSheetsService.createCheckoutSession(token, exam.productSku);
                     window.location.href = checkoutUrl;
                 } catch (error: any) {
-                    toast.error(`Could not prepare checkout: ${error.message}`);
+                    toast.error(`Checkout error: ${error.message}`);
                     setIsRedirecting(false);
                 }
             };
         }
-    } else { // Practice Exam
+    } else {
         buttonAction = () => navigate(`/test/${exam.id}`);
     }
 
@@ -100,47 +100,45 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
     const attemptsRemaining = maxAttempts - (attemptsMade || 0);
     const isAttemptsExceeded = !isPractice && attemptsMade !== undefined && attemptsRemaining <= 0 && !isSubscribed && !isBetaTester;
 
-
     return (
-        <div className={`bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))] p-6 flex flex-col ${isDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
+        <div className={`bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))] p-6 flex flex-col ${isDisabled ? 'opacity-60 grayscale-[0.5]' : ''}`}>
             <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${isPractice ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
+                    <div className={`p-2 rounded-lg ${isPractice ? 'bg-cyan-100 text-cyan-600' : 'bg-emerald-100 text-emerald-600'}`}>
                         {isPractice ? <BookOpen size={20} /> : <Award size={20} />}
                     </div>
                     <div>
                         <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] leading-tight">{decodeHtml(exam.name)}</h3>
-                        <p className="text-sm text-[rgb(var(--color-text-muted-rgb))]">{isPractice ? 'Practice Test' : 'Certification Exam'}</p>
+                        <p className="text-xs uppercase tracking-wider font-bold text-[rgb(var(--color-text-muted-rgb))] mt-1">{isPractice ? 'Practice Test' : 'Certification'}</p>
                     </div>
                 </div>
             </div>
 
-            <p className="text-[rgb(var(--color-text-default-rgb))] text-sm flex-grow mb-4 line-clamp-3">
+            <p className="text-[rgb(var(--color-text-default-rgb))] text-sm flex-grow mb-4 line-clamp-3 leading-relaxed">
                 {stripHtml(exam.description)}
             </p>
 
             <div className="space-y-2 text-sm text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                <div className="flex items-center gap-2"><HelpCircle size={16} /> <span>{exam.numberOfQuestions} Questions</span></div>
-                <div className="flex items-center gap-2"><Clock size={16} /> <span>{exam.durationMinutes > 0 ? `${exam.durationMinutes} Minutes` : 'Untimed'}</span></div>
-                <div className="flex items-center gap-2"><CheckCircle size={16} /> <span>{exam.passScore}% Passing Score</span></div>
+                <div className="flex items-center gap-2"><HelpCircle size={16} className="text-cyan-500" /> <span>{exam.numberOfQuestions} Questions</span></div>
+                <div className="flex items-center gap-2"><Clock size={16} className="text-cyan-500" /> <span>{exam.durationMinutes > 0 ? `${exam.durationMinutes} Minutes` : 'Untimed'}</span></div>
                 {!isPractice && attemptsMade !== undefined && (
                     <div className="flex items-center gap-2">
-                        <History size={16} /> 
-                        <span>Attempts: {attemptsMade}/{maxAttempts} ({attemptsRemaining <= 0 ? 'Exceeded' : `${attemptsRemaining} Remaining`})</span>
+                        <History size={16} className="text-cyan-500" /> 
+                        <span className={attemptsRemaining <= 0 ? 'text-red-400 font-bold' : ''}>Attempts: {attemptsMade}/{maxAttempts}</span>
                     </div>
                 )}
             </div>
 
             <div className="mt-auto pt-4 border-t border-[rgb(var(--color-border-rgb))]">
                 {!isPractice && !canTake && regularPrice > price && (
-                    <div className="flex justify-between items-center text-sm mb-2">
+                    <div className="flex justify-between items-center text-sm mb-3">
                         <span className="text-[rgb(var(--color-text-muted-rgb))] line-through">${regularPrice.toFixed(2)}</span>
-                        <span className="font-bold text-lg text-red-500">Save ${((regularPrice - price) || 0).toFixed(2)}!</span>
+                        <span className="font-black px-2 py-0.5 bg-red-100 text-red-600 rounded text-xs uppercase tracking-tighter">Save ${((regularPrice - price) || 0).toFixed(2)}</span>
                     </div>
                 )}
                 
                 {isAttemptsExceeded ? (
-                    <p className="text-red-500 text-sm font-semibold text-center mt-2">All attempts used. Purchase to reset.</p>
+                    <div className="bg-red-50 text-red-700 p-3 rounded-lg text-xs font-bold text-center">Attempts Exceeded. Purchase to reset.</div>
                 ) : (
                     <button
                         onClick={buttonAction}
@@ -152,8 +150,8 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                 )}
                 
                 {!hideDetailsLink && (
-                    <Link to={`/program/${programId}`} className="block text-center mt-3 text-sm font-semibold text-[rgb(var(--color-primary-rgb))] hover:underline">
-                        View Program Details
+                    <Link to={`/program/${programId}`} className="block text-center mt-3 text-sm font-bold text-cyan-500 hover:text-cyan-400 transition">
+                        Full Program Details →
                     </Link>
                 )}
             </div>

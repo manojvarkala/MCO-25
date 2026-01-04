@@ -19,6 +19,10 @@
     --color-text-strong-rgb: 248, 250, 252;
     --color-text-default-rgb: 226, 232, 240;
     --color-text-muted-rgb: 148, 163, 184;
+    
+    --color-amber: #fbbf24;
+    --color-amber-hover: #f59e0b;
+    --color-amber-text: #78350f;
 }
 
 body {
@@ -33,7 +37,7 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 2.5rem;
     align-items: stretch;
-    grid-auto-rows: 1fr; /* Ensures equal height in rows */
+    grid-auto-rows: 1fr;
 }
 
 .mco-book-card {
@@ -103,21 +107,31 @@ body {
     width: 100%;
     padding: 0.875rem;
     border-radius: 0.75rem;
-    font-weight: 700;
+    font-weight: 800;
     font-size: 0.875rem;
     transition: all 0.2s;
     text-decoration: none;
+    border: none;
+    cursor: pointer;
 }
 
 .mco-book-btn--primary {
-    background: #fbbf24;
-    color: #78350f;
+    background: var(--color-amber);
+    color: var(--color-amber-text) !important;
+}
+
+.mco-book-btn--primary:hover {
+    background: var(--color-amber-hover);
 }
 
 .mco-book-btn--secondary {
-    background: #f1f5f9;
-    color: #475569;
-    border: 1px solid #cbd5e1;
+    background: rgba(var(--color-muted-rgb), 0.5);
+    color: rgb(var(--color-text-strong-rgb));
+    border: 1px solid rgb(var(--color-border-rgb));
+}
+
+.mco-book-btn--secondary:hover {
+    background: rgb(var(--color-muted-rgb));
 }
 
 /* Sidebar Specific Amber Button */
@@ -126,8 +140,8 @@ body {
     align-items: center;
     justify-content: center;
     gap: 4px;
-    background: #fbbf24;
-    color: #78350f;
+    background: var(--color-amber);
+    color: var(--color-amber-text) !important;
     font-size: 0.75rem;
     font-weight: 800;
     padding: 6px 14px;
@@ -135,6 +149,10 @@ body {
     text-decoration: none;
     transition: all 0.2s;
     text-transform: uppercase;
+}
+
+.mco-book-card-sidebar__button:hover {
+    background: var(--color-amber-hover);
 }
 
 /* --- CERTIFICATE THEMES --- */
