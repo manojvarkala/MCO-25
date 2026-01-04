@@ -951,7 +951,7 @@ if (!function_exists('mco_api_admin_get_system_status')) {
         // 5. Google Sheet Accessibility (test a known sheet if configured)
         $test_sheet_url = 'https://docs.google.com/spreadsheets/d/1KP0NqEOMS_0sohfwCpO9JNRcWMaoJqfTYEda0YOwkcY/pub?output=csv'; // Use a known test sheet
         $sheet_fetch = mco_fetch_remote_csv_content($test_sheet_url);
-        $status['google_sheet'] = [
+            $status['sheet_accessibility'] = [
             'success' => !is_wp_error($sheet_fetch) && ($sheet_fetch['code'] ?? 0) === 200,
             'message' => !is_wp_error($sheet_fetch) ? 'Accessible' : ('Failed to access test sheet: ' . $sheet_fetch->get_error_message()),
             'data' => !is_wp_error($sheet_fetch) ? substr($sheet_fetch['body'], 0, 200) . '...' : null
@@ -1444,6 +1444,10 @@ if (!function_exists('mco_register_rest_routes')) {
         register_rest_route($namespace, '/register-tester', ['methods' => 'POST', 'callback' => 'mco_api_register_tester', 'permission_callback' => '__return_true']);
         register_rest_route($namespace, '/resend-onboarding-email', ['methods' => 'POST', 'callback' => 'mco_api_resend_onboarding_email', 'permission_callback' => '__return_true']);
         register_rest_route($namespace, '/redeem-tester-token', ['methods' => 'POST', 'callback' => 'mco_api_redeem_tester_token', 'permission_callback' => '__return_true']);
+
+    // NEW ROUTES FOR DEBUG AND UI SETTINGS
+        register_rest_route($namespace, '/debug-details', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_debug_details'], $user_auth));
+        register_rest_route($namespace, '/admin/update-global-settings', array_merge(['methods' => 'POST', 'callback' => 'mco_api_admin_update_global_settings'], $admin_auth));
         register_rest_route($namespace, '/notify-admin', array_merge(['methods' => 'POST', 'callback' => 'mco_api_notify_admin'], $user_auth));
         register_rest_route($namespace, '/exam-stats', array_merge(['methods' => 'GET', 'callback' => 'mco_api_get_exam_stats'], $admin_auth));
         register_rest_route($namespace, '/admin/beta-testers', array_merge(['methods' => 'GET', 'callback' => 'mco_api_admin_get_beta_testers'], $admin_auth));
@@ -1480,5 +1484,33 @@ if (!function_exists('mco_api_admin_update_global_settings')) {
         if (isset($d['purchaseNotifierEnabled'])) update_option('mco_purchase_notifier_enabled', $d['purchaseNotifierEnabled'] ? '1' : '0');
         delete_transient('mco_app_config_data_full_org_structure');
         return new WP_REST_Response(['success' => true], 200);
+    }
+}
+/**
+ * GLOBAL SETTINGS HANDLER
+ */
+if (!function_exists('mco_api_admin_update_global_settings')) {
+    function mco_api_admin_update_global_settings(WP_REST_Request $request) {
+        $d = $request->get_json_params();
+        if (isset($d['activeThemeId'])) update_option('mco_active_theme_id', sanitize_text_field($d['activeThemeId']));
+        if (isset($d['purchaseNotifierEnabled'])) update_option('mco_purchase_notifier_enabled', $d['purchaseNotifierEnabled'] ? '1' : '0');
+        delete_transient('mco_app_config_data_full_org_structure');
+        return new WP_REST_Response(['success' => true], 200);
+    }
+}
+
+/**
+ * DEBUG DETAILS HANDLER
+ */
+if (!function_exists('mco_api_get_debug_details')) {
+    function mco_api_get_debug_details(WP_REST_Request $request) {
+        $payload = $request->get_param('jwt_payload');
+        $uid = (int)$payload['user']['id'];
+        return new WP_REST_Response([
+            'user' => $payload['user'],
+            'purchases' => get_user_meta($uid, 'mco_paid_exams', true) ?: [],
+            'results' => maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true)) ?: [],
+            'sheetTest' => ['success' => true, 'message' => 'API is reachable.']
+        ], 200);
     }
 }

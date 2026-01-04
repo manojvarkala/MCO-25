@@ -58,7 +58,13 @@ if (!function_exists('mco_load_shortcode_css')) {
                 gap: 40px;
                 margin: 20px 0;
             }
-
+            .mco-book-btn--cyan {
+                background: var(--mco-primary);
+                color: #ffffff;
+            }
+            .mco-book-btn--cyan:hover {
+                background: var(--mco-p-hover);
+            }
             @media (min-width: 992px) {
                 .mco-showcase-layout {
                     flex-direction: row;
@@ -419,12 +425,15 @@ if (!function_exists('mco_get_geo_primary_link_info')) {
         }
 
         // 2. Second priority: User's IP-inferred country from frontend (stored as cookie 'mco_user_geo_country_code')
-        if (!$chosen && isset($_COOKIE['mco_user_geo_country_code']) && !empty($_COOKIE['mco_user_geo_country_code'])) {
+            if (!$chosen && isset($_COOKIE['mco_user_geo_country_code']) && !empty($_COOKIE['mco_user_geo_country_code'])) {
             $ip_country_code = strtolower(sanitize_text_field($_COOKIE['mco_user_geo_country_code']));
-            if ($ip_country_code === 'us' && !empty($links['com'])) $chosen = 'com';
-            else if ($ip_country_code === 'in' && !empty($links['in'])) $chosen = 'in';
-            else if ($ip_country_code === 'ae' && !empty($links['ae'])) $chosen = 'ae';
-            // Add more specific country mappings if needed
+            $map = [
+                'us' => 'com', 'gb' => 'com', 'ca' => 'com', 'au' => 'com', 
+                'in' => 'in', 
+                'ae' => 'ae', 'sa' => 'ae', 'qa' => 'ae'
+            ];
+            $mapped_key = isset($map[$ip_country_code]) ? $map[$ip_country_code] : 'com';
+            if (!empty($links[$mapped_key])) $chosen = $mapped_key;
         }
         
         // 3. Third priority: Generic frontend geo preference (timezone-based, stored as cookie 'mco_wp_geo_pref')
@@ -525,7 +534,7 @@ if (!function_exists('mco_render_program_card_php')) {
             </div>
             <div class="mco-book-card__footer">
                 <div class="mco-store-buttons">
-                    <a href="<?php echo esc_url($program_link); ?>" class="mco-book-btn mco-book-btn--primary">
+                    <a href="<?php echo esc_url($program_link); ?>" class="mco-book-btn mco-book-btn--cyan">
                         View Program <?php echo mco_get_svg_icon('external-link'); ?>
                     </a>
                 </div>
@@ -795,9 +804,8 @@ if (!function_exists('mco_book_showcase_shortcode')) {
                     var geoCookie = document.cookie.split('; ').find(row => row.startsWith('mco_user_geo_country_code='));
                     if (geoCookie) {
                         var countryCode = geoCookie.split('=')[1].toLowerCase();
-                        if (countryCode === 'in') preferredKey = 'in';
-                        else if (countryCode === 'ae') preferredKey = 'ae';
-                        // Add more country mappings as needed
+                        var map = { 'in': 'in', 'ae': 'ae', 'sa': 'ae', 'us': 'com', 'gb': 'com', 'ca': 'com', 'au': 'com' };
+                        preferredKey = map[countryCode] || 'com';
                     } else {
                         // Fallback to timezone-based if no cookie (mimic React logic)
                         var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
