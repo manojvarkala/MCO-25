@@ -1,4 +1,3 @@
-
 import React, { FC, useState } from 'react';
 import { useNavigate, Link } from "react-router-dom";
 import toast from 'react-hot-toast';
@@ -26,9 +25,7 @@ const decodeHtml = (html: string): string => {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
         return tempDiv.textContent || tempDiv.innerText || '';
-    } catch (e) {
-        return html;
-    }
+    } catch (e) { return html; }
 };
 
 const stripHtml = (html: string): string => {
@@ -37,9 +34,7 @@ const stripHtml = (html: string): string => {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
         return tempDiv.textContent || tempDiv.innerText || '';
-    } catch (e) {
-        return html;
-    }
+    } catch (e) { return html; }
 };
 
 const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, activeOrg, examPrices, hideDetailsLink = false, attemptsMade, isDisabled = false }) => {
@@ -48,53 +43,41 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
     const [isRedirecting, setIsRedirecting] = useState(false);
 
     const canTake = isPractice || isPurchased || isSubscribed || isBetaTester;
-    
     const priceInfo = examPrices && exam.productSku ? examPrices[exam.productSku] : null;
     const price = priceInfo?.price ?? (exam.price || 0);
     const regularPrice = priceInfo?.regularPrice ?? (exam.regularPrice || 0);
     
-    let buttonText = 'Start Practice';
-    let buttonAction: () => void;
-    // Practice/Navigation = Cyan
-    let buttonClasses = "w-full flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg transition shadow-md disabled:opacity-50";
-    let icon = <PlayCircle size={18} />;
+    let buttonText = isPractice ? 'Start Practice' : (canTake ? 'Start Exam' : `Buy for $${price.toFixed(2)}`);
+    let icon = isRedirecting ? <Spinner size="sm" /> : (isPractice || canTake ? <PlayCircle size={18} /> : <ShoppingCart size={18} />);
+    
+    // Explicit differentiation: mco-btn-owned (Cyan) vs mco-btn-buy (Amber)
+    const buttonBase = "mco-card__button ";
+    const buttonVariant = canTake ? "mco-card__button--primary mco-btn-owned" : "mco-book-btn--primary mco-btn-buy";
+    const buttonClasses = `${buttonBase} ${buttonVariant} disabled:opacity-50`;
 
-    if (!isPractice) { 
-        if (canTake) {
-            buttonText = 'Start Exam';
-            buttonAction = () => {
-                if (isDisabled) {
-                    toast.error("Submit feedback for previous exams to unlock.");
-                    return;
-                }
-                navigate(`/test/${exam.id}`);
-            };
-            // Success/Action = Green
-            buttonClasses = "w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg transition shadow-md disabled:opacity-50";
-        } else {
-            buttonText = isRedirecting ? 'Preparing...' : `Buy for $${price.toFixed(2)}`;
-            icon = isRedirecting ? <Spinner /> : <ShoppingCart size={18} />;
-            // Commerce/Amazon-style = Amber (High contrast text)
-            buttonClasses = "w-full flex items-center justify-center gap-2 bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] font-bold py-3 px-4 rounded-lg transition disabled:opacity-50";
-            buttonAction = async () => {
-                if (!user || !token) {
-                    toast.error("Please log in to purchase.");
-                    window.location.href = `https://www.${activeOrg.website}/exam-login/`;
-                    return;
-                }
-                setIsRedirecting(true);
-                try {
-                    const { checkoutUrl } = await googleSheetsService.createCheckoutSession(token, exam.productSku);
-                    window.location.href = checkoutUrl;
-                } catch (error: any) {
-                    toast.error(`Checkout error: ${error.message}`);
-                    setIsRedirecting(false);
-                }
-            };
+    const buttonAction = async () => {
+        if (isDisabled) {
+            toast.error("Complete required feedback to unlock.");
+            return;
         }
-    } else {
-        buttonAction = () => navigate(`/test/${exam.id}`);
-    }
+        if (isPractice || canTake) {
+            navigate(`/test/${exam.id}`);
+            return;
+        }
+        if (!user || !token) {
+            toast.error("Please log in to purchase.");
+            window.location.href = `https://www.${activeOrg.website}/exam-login/`;
+            return;
+        }
+        setIsRedirecting(true);
+        try {
+            const { checkoutUrl } = await googleSheetsService.createCheckoutSession(token, exam.productSku);
+            window.location.href = checkoutUrl;
+        } catch (error: any) {
+            toast.error(`Error: ${error.message}`);
+            setIsRedirecting(false);
+        }
+    };
 
     const maxAttempts = isPractice ? 10 : 3;
     const attemptsRemaining = maxAttempts - (attemptsMade || 0);
@@ -113,50 +96,29 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                     </div>
                 </div>
             </div>
-
-            <p className="text-[rgb(var(--color-text-default-rgb))] text-sm flex-grow mb-4 line-clamp-3 leading-relaxed">
-                {stripHtml(exam.description)}
-            </p>
-
+            <p className="text-[rgb(var(--color-text-default-rgb))] text-sm flex-grow mb-4 line-clamp-3 leading-relaxed">{stripHtml(exam.description)}</p>
             <div className="space-y-2 text-sm text-[rgb(var(--color-text-muted-rgb))] mb-6">
                 <div className="flex items-center gap-2"><HelpCircle size={16} className="text-cyan-500" /> <span>{exam.numberOfQuestions} Questions</span></div>
                 <div className="flex items-center gap-2"><Clock size={16} className="text-cyan-500" /> <span>{exam.durationMinutes > 0 ? `${exam.durationMinutes} Minutes` : 'Untimed'}</span></div>
                 {!isPractice && attemptsMade !== undefined && (
-                    <div className="flex items-center gap-2">
-                        <History size={16} className="text-cyan-500" /> 
-                        <span className={attemptsRemaining <= 0 ? 'text-red-400 font-bold' : ''}>Attempts: {attemptsMade}/{maxAttempts}</span>
-                    </div>
+                    <div className="flex items-center gap-2"><History size={16} className="text-cyan-500" /> <span className={attemptsRemaining <= 0 ? 'text-red-400 font-bold' : ''}>Attempts: {attemptsMade}/{maxAttempts}</span></div>
                 )}
             </div>
-
             <div className="mt-auto pt-4 border-t border-[rgb(var(--color-border-rgb))]">
                 {!isPractice && !canTake && regularPrice > price && (
                     <div className="flex justify-between items-center text-sm mb-3">
                         <span className="text-[rgb(var(--color-text-muted-rgb))] line-through">${regularPrice.toFixed(2)}</span>
-                        <span className="font-black px-2 py-0.5 bg-red-100 text-red-600 rounded text-xs uppercase tracking-tighter">Save ${((regularPrice - price) || 0).toFixed(2)}</span>
+                        <span className="font-black px-2 py-0.5 bg-red-100 text-red-600 rounded text-xs uppercase">Save ${((regularPrice - price) || 0).toFixed(2)}</span>
                     </div>
                 )}
-                
                 {isAttemptsExceeded ? (
                     <div className="bg-red-50 text-red-700 p-3 rounded-lg text-xs font-bold text-center">Attempts Exceeded. Purchase to reset.</div>
                 ) : (
-                    <button
-                        onClick={buttonAction}
-                        disabled={isRedirecting || isAttemptsExceeded || isDisabled}
-                        className={buttonClasses}
-                    >
-                        {icon} {buttonText}
-                    </button>
+                    <button onClick={buttonAction} disabled={isRedirecting || isAttemptsExceeded || isDisabled} className={buttonClasses}>{icon} {buttonText}</button>
                 )}
-                
-                {!hideDetailsLink && (
-                    <Link to={`/program/${programId}`} className="block text-center mt-3 text-sm font-bold text-cyan-500 hover:text-cyan-400 transition">
-                        Full Program Details →
-                    </Link>
-                )}
+                {!hideDetailsLink && <Link to={`/program/${programId}`} className="block text-center mt-3 text-sm font-bold text-cyan-500 hover:text-cyan-400">Full Details →</Link>}
             </div>
         </div>
     );
 };
-
 export default ExamCard;

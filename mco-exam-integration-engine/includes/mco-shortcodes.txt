@@ -25,7 +25,7 @@ if (!function_exists('mco_load_shortcode_css')) {
         if (file_exists($css_path)) {
             $css = file_get_contents($css_path);
             if ($css) {
-                // Optional: minify whitespace a bit
+                // Optional: basic minification
                 $css = preg_replace('/\s+/', ' ', $css);
                 echo '<style>' . $css . '</style>';
                 return;
@@ -33,230 +33,250 @@ if (!function_exists('mco_load_shortcode_css')) {
         }
 
         // ────────────────────────────────────────────────────────────────
-        // Complete fallback inline CSS – merged & improved (January 2026 style)
+        // Consolidated & cleaned inline fallback CSS (conflict-free)
+        // Cyan buttons → white text (modern + better contrast)
         // ────────────────────────────────────────────────────────────────
         echo '<style>
-            :root {
-                --mco-primary: #0891b2;
-                --mco-p-hover: #0e7490;
-                --mco-bg: #f8fafc;
-                --mco-text: #334155;
-                --mco-border: #e2e8f0;
-            }
+        :root {
+            --mco-primary: #0891b2;        /* Brand Cyan */
+            --mco-p-hover: #0e7490;
+            --mco-amber: #fbbf24;          /* Commerce Amber */
+            --mco-amber-hover: #f59e0b;
+            --mco-amber-text: #78350f;     /* High contrast dark text */
+            --mco-bg: #f8fafc;
+            --mco-text: #334155;
+            --mco-border: #e2e8f0;
+        }
 
-            .mco-wrapper {
-                font-family: Inter, system-ui, -apple-system, sans-serif;
-                color: var(--mco-text);
-                max-width: 1200px;
-                margin: 0 auto;
-                background: var(--mco-bg);
-            }
+        .mco-wrapper {
+            font-family: Inter, system-ui, -apple-system, sans-serif;
+            color: var(--mco-text);
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--mco-bg);
+        }
 
+        .mco-showcase-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            margin: 20px 0;
+        }
+
+        @media (min-width: 992px) {
             .mco-showcase-layout {
-                display: flex;
-                flex-direction: column;
-                gap: 40px;
-                margin: 20px 0;
+                flex-direction: row;
             }
-            .mco-book-btn--cyan {
-                background: var(--mco-primary);
-                color: #ffffff;
+            .mco-showcase-main {
+                flex: 1;
             }
-            .mco-book-btn--cyan:hover {
-                background: var(--mco-p-hover);
-            }
-            @media (min-width: 992px) {
-                .mco-showcase-layout {
-                    flex-direction: row;
-                }
-                .mco-showcase-main {
-                    flex: 1;
-                }
-                .mco-study-hall-sidebar {
-                    width: 320px;
-                    flex-shrink: 0;
-                    position: sticky;
-                    top: 20px;
-                    align-self: start;
-                }
-            }
-
-            /* Program / Category Groups */
-            .mco-program-group {
-                background: #fff;
-                border: 1px solid var(--mco-border);
-                border-radius: 12px;
-                padding: 24px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-                margin-bottom: 30px;
-            }
-
-            .mco-program-group__title {
-                font-size: 1.5rem;
-                font-weight: 800;
-                margin: 0 0 16px;
-                color: #0f172a;
-            }
-
-            .mco-program-group__cards {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-                gap: 20px;
-            }
-
-            /* General Card Styles */
-            .mco-card,
-            .mco-book-card {
-                display: flex;
-                flex-direction: column;
-                border-radius: 10px;
-                overflow: hidden;
-                height: 100%;
-                color: #fff;
-                transition: transform 0.25s ease;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-                background: #fff;
-            }
-
-            .mco-card:hover,
-            .mco-book-card:hover {
-                transform: translateY(-6px);
-            }
-
-            .mco-card__header {
-                padding: 12px 16px;
-                font-size: 0.75rem;
-                font-weight: 700;
-                background: rgba(0,0,0,0.1);
-            }
-
-            .mco-card__body {
-                padding: 20px;
-                flex-grow: 1;
-                color: #0f172a;
-            }
-
-            .mco-card__subtitle {
-                font-size: 1.2rem;
-                font-weight: 700;
-                margin: 0 0 10px;
-                line-height: 1.2;
-            }
-
-            .mco-card__footer {
-                padding: 16px;
-                background: rgba(0,0,0,0.03);
-            }
-
-            /* Buttons */
-            .mco-card__button,
-            .mco-book-card__button {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 8px;
-                width: 100%;
-                padding: 12px;
-                border-radius: 6px;
-                font-weight: 700;
-                text-decoration: none;
-                border: none;
-                cursor: pointer;
-                transition: all 0.2s;
-                font-size: 0.9rem;
-            }
-
-            .mco-card__button--primary {
-                background-color: var(--mco-primary);
-                color: white;
-                border: 1px solid rgba(255,255,255,0.25);
-            }
-
-            .mco-card__button--primary:hover {
-                background-color: var(--mco-p-hover);
-            }
-
-            .mco-card__button--purchase {
-                background-color: #fbbf24;
-                color: #78350f;
-            }
-
-            .mco-card__button--purchase:hover {
-                background-color: #f59e0b;
-            }
-
-            /* Gradients */
-            .mco-gradient--practice {
-                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            }
-
-            .mco-gradient--cert {
-                background: linear-gradient(135deg, #059669 0%, #065f46 100%);
-            }
-
-            /* Sidebar Book Cards */
-            .mco-book-card-sidebar {
-                display: flex;
-                gap: 12px;
-                background: #fff;
-                border: 1px solid var(--mco-border);
-                border-radius: 8px;
-                padding: 10px;
-                margin-bottom: 12px;
-                transition: transform 0.2s, box-shadow 0.2s;
-            }
-
-            .mco-book-card-sidebar:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 12px rgba(0,0,0,0.08);
-            }
-
-            .mco-book-card-sidebar__cover {
-                width: 60px;
-                height: 80px;
+            .mco-study-hall-sidebar {
+                width: 320px;
                 flex-shrink: 0;
-                background: #e2e8f0;
-                border-radius: 4px;
-                overflow: hidden;
+                position: sticky;
+                top: 20px;
+                align-self: start;
             }
+        }
 
-            .mco-book-card-sidebar__cover img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
+        /* Program / Category Groups */
+        .mco-program-group {
+            background: #fff;
+            border: 1px solid var(--mco-border);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
 
-            /* Additional useful classes from second version */
-            .mco-best-value-tag {
-                position: absolute;
-                top: -10px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: #fbbf24;
-                color: #78350f;
-                padding: 4px 12px;
-                border-radius: 20px;
-                font-size: 0.7rem;
-                font-weight: 800;
-                text-transform: uppercase;
-            }
+        .mco-program-group__title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin: 0 0 16px;
+            color: #0f172a;
+        }
 
-            .mco-study-hall-sidebar__title {
-                font-size: 1.25rem;
-                font-weight: 700;
-                margin: 0 0 20px;
-                color: #0f172a;
-                border-bottom: 1px solid var(--mco-border);
-                padding-bottom: 10px;
-            }
+        .mco-program-group__cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
 
-            .mco-study-hall-sidebar__disclaimer {
-                font-size: 0.7rem;
-                color: #94a3b8;
-                margin-top: 20px;
-                text-align: center;
-                line-height: 1.4;
-            }
+        /* General Card Styles */
+        .mco-card,
+        .mco-book-card {
+            display: flex;
+            flex-direction: column;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 100%;
+            color: #fff;
+            transition: transform 0.25s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            background: #fff;
+        }
+
+        .mco-card:hover,
+        .mco-book-card:hover {
+            transform: translateY(-6px);
+        }
+
+        .mco-card__header {
+            padding: 12px 16px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: rgba(0,0,0,0.1);
+        }
+
+        .mco-card__body {
+            padding: 20px;
+            flex-grow: 1;
+            color: #0f172a;
+        }
+
+        .mco-card__subtitle {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin: 0 0 10px;
+            line-height: 1.2;
+        }
+
+        .mco-card__footer {
+            padding: 16px;
+            background: rgba(0,0,0,0.03);
+        }
+
+        /* ── Primary Buttons (Practice / Exam / Cyan) ── */
+        a.mco-card__button--primary,
+        a.mco-book-btn--cyan,
+        .mco-book-btn--cyan {
+            background-color: var(--mco-primary) !important;
+            color: #ffffff !important;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none !important;
+            border: none !important;
+            font-weight: 700 !important;
+            padding: 12px 16px !important;
+            border-radius: 6px !important;
+            transition: background-color 0.2s;
+        }
+
+        a.mco-card__button--primary:hover,
+        a.mco-book-btn--cyan:hover,
+        .mco-book-btn--cyan:hover {
+            background-color: var(--mco-p-hover) !important;
+            color: #ffffff !important;
+        }
+
+        /* ── Commerce / Amazon / Purchase Buttons (Amber) ── */
+        a.mco-book-btn--primary,
+        a.mco-card__button--purchase,
+        .mco-book-card-sidebar__button {
+            background-color: var(--mco-amber) !important;
+            color: var(--mco-amber-text) !important;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px !important;
+            border-radius: 6px !important;
+            font-weight: 800 !important;
+            text-decoration: none !important;
+            border: none !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            transition: background-color 0.2s;
+        }
+
+        a.mco-book-btn--primary:hover,
+        a.mco-card__button--purchase:hover,
+        .mco-book-card-sidebar__button:hover {
+            background-color: var(--mco-amber-hover) !important;
+        }
+
+        /* Secondary buttons */
+        a.mco-book-btn--secondary {
+            background-color: #f1f5f9 !important;
+            color: #475569 !important;
+            border: 1px solid #cbd5e1 !important;
+            display: flex !important;
+        }
+
+        /* Gradients */
+        .mco-gradient--practice,
+        .mco-gradient--practice-1 {
+            background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%) !important;
+        }
+
+        .mco-gradient--cert,
+        .mco-gradient--cert-1 {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+        }
+
+        /* Sidebar Book Cards */
+        .mco-book-card-sidebar {
+            display: flex;
+            gap: 12px;
+            background: #fff;
+            border: 1px solid var(--mco-border);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 12px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .mco-book-card-sidebar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+        }
+
+        .mco-book-card-sidebar__cover {
+            width: 60px;
+            height: 80px;
+            flex-shrink: 0;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .mco-book-card-sidebar__cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Misc useful classes */
+        .mco-best-value-tag {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fbbf24;
+            color: #78350f;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .mco-study-hall-sidebar__title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0 0 20px;
+            color: #0f172a;
+            border-bottom: 1px solid var(--mco-border);
+            padding-bottom: 10px;
+        }
+
+        .mco-study-hall-sidebar__disclaimer {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 20px;
+            text-align: center;
+            line-height: 1.4;
+        }
         </style>';
     }
 }
@@ -268,7 +288,7 @@ if (!function_exists('mco_get_svg_icon')) {
         $icons = [
             'practice' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
             'cert' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>',
-            'cart' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',
+            'cart' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 0 0 0 2-1.61L23 6H6"/></svg>',
             'bundle' => '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
             'check' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
             'star' => '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
@@ -468,8 +488,9 @@ if (!function_exists('mco_render_book_card_php')) {
         foreach ($all_stores as $key => $store) {
             if (!empty($store['url'])) {
                 $is_primary = $key === ($primary_link_info['key'] ?? '');
-                $class = $is_primary ? 'mco-book-btn mco-book-btn--primary' : 'mco-book-btn mco-book-btn--secondary';
-                $buttons_html .= '<a href="'.esc_url($store['url']).'" target="_blank" rel="noopener noreferrer" class="'.esc_attr($class).'">'.mco_get_svg_icon('book-up').' Buy on '.esc_html($store['name']).'</a>';
+            // Ensure BOTH the base class 'mco-book-btn' and the modifier are present
+            $class = $is_primary ? 'mco-book-btn mco-book-btn--primary' : 'mco-book-btn mco-book-btn--secondary';
+            $buttons_html .= '<a href="'.esc_url($store['url']).'" target="_blank" rel="noopener noreferrer" class="'.esc_attr($class).'">'.mco_get_svg_icon('book-up').' Buy on '.esc_html($store['name']).'</a>';
             }
         }
         if (empty($buttons_html)) $buttons_html = '<span class="mco-book-btn mco-book-btn--disabled">Coming Soon</span>';
@@ -656,12 +677,13 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
                                     $button_text = $is_purchased ? 'Start Exam' : 'Buy for $' . number_format_i18n($cert_exam['price'], 2);
                                     $button_icon = $is_purchased ? mco_get_svg_icon('practice') : mco_get_svg_icon('cart');
                                     $button_url = $is_purchased ? $app_url . '/test/' . $cert_exam['id'] : ($product_id ? get_site_url() . '/cart/?add-to-cart=' . $product_id : '#');
-                                    $button_class = $is_purchased ? 'mco-card__button--primary' : 'mco-card__button--purchase';
+                                    // If purchased: Brand Cyan. If not: Amazon Amber.
+                                    $button_class = $is_purchased ? 'mco-card__button--primary' : 'mco-book-btn--primary';
                                     ?>
                                     <div class="mco-card mco-gradient--cert-1">
                                         <div class="mco-card__header"><span><?php echo mco_get_svg_icon('cert'); ?></span> Certification Exam</div>
                                         <div class="mco-card__body">
-                                            <h4 class="mco-card__subtitle"><?php echo esc_html(html_entity_decode($cert_exam['name'], ENT_QUOTES, 'UTF-8')); ?></h4>
+                                   <h4 class="mco-card__subtitle"><?php echo esc_html(html_entity_decode($cert_exam['name'], ENT_QUOTES, 'UTF-8')); ?></h4>
                                             <?php if (!$is_purchased && $cert_exam['price'] > 0) { ?>
                                                 <div style="text-align: center; margin-bottom: 1rem;">
                                                     <?php if (isset($cert_exam['regularPrice']) && $cert_exam['regularPrice'] > $cert_exam['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($cert_exam['regularPrice'], 2) . '</span> '; ?>
@@ -877,7 +899,8 @@ if (!function_exists('mco_book_showcase_shortcode')) {
                 var buttonsHtml = '';
                 
                 if (links[preferred]) {
-                    buttonsHtml += '<a href="' + links[preferred] + '" class="mco-book-btn mco-book-btn--primary" target="_blank">Buy on ' + stores[preferred] + '</a>';
+                    // Uses mco-book-btn--primary which is now Amber in our CSS
+                    buttonsHtml += '<a href="' + links[preferred] + '" class="mco-book-btn mco-book-btn--primary" style="color: #78350f !important;" target="_blank">Buy on ' + stores[preferred] + '</a>';
                 }
                 
                 var others = ['com', 'in', 'ae'].filter(function(k) { return k !== preferred; });
