@@ -1,4 +1,3 @@
-
 :root {
     --font-main: 'Inter', sans-serif;
     --color-primary-rgb: 6, 182, 212;
@@ -18,7 +17,7 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/* FORCED GRID STRUCTURE */
+/* FORCED GRID STRUCTURE - FIXES BOOKSTORE LAYOUT */
 .mco-book-grid, 
 .mco-program-group__cards,
 .mco-grid-container { 

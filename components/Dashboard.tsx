@@ -1,4 +1,3 @@
-
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, Link } from "react-router-dom";
 import toast from 'react-hot-toast';
@@ -117,7 +116,6 @@ const Dashboard: FC = () => {
                     let dashboardBundle = null;
                     if (bundlesEnabled && category.certExam?.productSku && examPrices) {
                         const certSku = category.certExam.productSku;
-                        // Support multiple SKU patterns for addons
                         const subBundleSku = `${certSku}-1mo-addon`;
                         const practiceBundleSku = `${certSku}-1`;
 
