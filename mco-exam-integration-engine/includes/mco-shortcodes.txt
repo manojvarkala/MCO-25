@@ -19,19 +19,7 @@ if (!defined('ABSPATH')) exit;
 // --- 2. STYLING & ASSETS (FIXED UNDEFINED ERROR) ---
 if (!function_exists('mco_load_shortcode_css')) {
     function mco_load_shortcode_css() {
-        // Try to load external CSS file first (recommended)
-        $css_path = MCO_PLUGIN_PATH . 'assets/mco-styles.css';
-        
-        if (file_exists($css_path)) {
-            $css = file_get_contents($css_path);
-            if ($css) {
-                // Optional: basic minification
-                $css = preg_replace('/\s+/', ' ', $css);
-                echo '<style>' . $css . '</style>';
-                return;
-            }
-        }
-
+       
         // ────────────────────────────────────────────────────────────────
         // Consolidated & cleaned inline fallback CSS (conflict-free)
         // Cyan buttons → white text (modern + better contrast)
@@ -678,7 +666,7 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
                                     $button_icon = $is_purchased ? mco_get_svg_icon('practice') : mco_get_svg_icon('cart');
                                     $button_url = $is_purchased ? $app_url . '/test/' . $cert_exam['id'] : ($product_id ? get_site_url() . '/cart/?add-to-cart=' . $product_id : '#');
                                     // If purchased: Brand Cyan. If not: Amazon Amber.
-                                    $button_class = $is_purchased ? 'mco-card__button--primary' : 'mco-book-btn--primary';
+                                    $button_class = $is_purchased ? 'mco-card__button-cyan' : 'mco-book-btn--primary';
                                     ?>
                                     <div class="mco-card mco-gradient--cert-1">
                                         <div class="mco-card__header"><span><?php echo mco_get_svg_icon('cert'); ?></span> Certification Exam</div>
@@ -1370,7 +1358,6 @@ function mco_redirect_to_app_with_token($user_id = null) {
 }
 
 add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');
-
 
 // --- 15. SHORTCODE REGISTRATION ---
 add_shortcode('mco_exam_login', 'mco_exam_login_shortcode');

@@ -1,7 +1,7 @@
 import React, { FC } from 'react';
 import BookCover from './BookCover.tsx'; 
 import type { RecommendedBook } from '../types.ts';
-import { ShoppingCart, BookUp } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 
 interface BookshelfRendererProps {
@@ -40,36 +40,45 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
     const { userGeoCountryCode } = useAppContext();
     if (!books || books.length === 0) return <p className="text-center text-slate-500 py-10 italic">No study materials listed.</p>;
 
+    if (type === 'sidebar') {
+        return (
+            <div className="flex flex-col gap-4">
+                {books.map(book => {
+                    const primary = getGeoAffiliateLink(book, userGeoCountryCode);
+                    return (
+                        <div key={book.id} className="mco-book-card-sidebar">
+                            <div className="mco-book-card-sidebar__cover"><BookCover book={book} className="w-full h-full" /></div>
+                            <div className="mco-book-card-sidebar__content">
+                                <h4 className="mco-book-card-sidebar__title line-clamp-2">{book.title}</h4>
+                                <a href={primary?.url || '#'} target="_blank" rel="noopener noreferrer" className="mco-book-card-sidebar__button">
+                                    Buy on {primary?.domainName || 'Amazon'}
+                                </a>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+
     return (
-        <div className={type === 'showcase' ? 'mco-book-grid' : 'space-y-4'}>
+        <div className="mco-book-grid">
             {books.map(book => {
                 const primary = getGeoAffiliateLink(book, userGeoCountryCode);
                 const keys: (keyof RecommendedBook['affiliateLinks'])[] = ['com', 'in', 'ae'];
                 const sortedStores = primary ? [primary.key, ...keys.filter(k => k !== primary.key)] : keys;
                 const storeData = {
-                    com: { name: 'Amazon.com', icon: <ShoppingCart size={16}/> },
-                    in: { name: 'Amazon.in', icon: <ShoppingCart size={16}/> },
-                    ae: { name: 'Amazon.ae', icon: <ShoppingCart size={16}/> }
+                    com: { name: 'Amazon.com' },
+                    in: { name: 'Amazon.in' },
+                    ae: { name: 'Amazon.ae' }
                 };
-
-                if (type === 'sidebar') {
-                    return (
-                        <div key={book.id} className="mco-book-card-sidebar">
-                            <div className="mco-book-card-sidebar__cover"><BookCover book={book} className="w-full h-full" /></div>
-                            <div className="mco-book-card-sidebar__content">
-                                <h4 className="mco-book-card-sidebar__title">{book.title}</h4>
-                                <a href={primary?.url || '#'} target="_blank" rel="noopener noreferrer" className="mco-book-card-sidebar__button">Buy on {primary?.domainName || 'Amazon'}</a>
-                            </div>
-                        </div>
-                    );
-                }
 
                 return (
                     <div key={book.id} className="mco-book-card">
                         <div className="mco-book-cover"><BookCover book={book} className="w-full h-full" /></div>
                         <div className="mco-book-card__body">
-                            <h4 className="mco-book-card__title">{book.title}</h4>
-                            <p className="mco-book-card__desc line-clamp-3">{book.description}</p>
+                            <h4 className="mco-book-card__title line-clamp-2">{book.title}</h4>
+                            <p className="mco-book-card__desc line-clamp-4">{book.description}</p>
                         </div>
                         <div className="mco-book-card__footer">
                             <div className="mco-store-buttons">
@@ -80,7 +89,7 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                     return (
                                         <a key={key} href={url} target="_blank" rel="noopener noreferrer" 
                                            className={`mco-book-btn ${isPrimary ? 'mco-book-btn--primary' : 'mco-book-btn--secondary'}`}>
-                                            {storeData[key].icon} Buy on {storeData[key].name}
+                                            <ShoppingCart size={16}/> Buy on {storeData[key].name}
                                         </a>
                                     );
                                 })}
