@@ -1,6 +1,4 @@
-
 import React, { FC, useEffect, useState, useMemo, useRef, useCallback } from 'react';
-// FIX: Standardized named imports from react-router-dom using single quotes.
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -12,35 +10,31 @@ import { Award, BarChart2, CheckCircle, ChevronDown, ChevronUp, Download, Send, 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-// FIX: Corrected import path for BookCover.tsx which is in the components folder.
 import BookCover from './BookCover.tsx'; 
 import ShareableResult from './ShareableResult.tsx';
 import ShareButtons from './ShareButtons.tsx';
 
 type UserCertVisibility = 'NONE' | 'USER_EARNED' | 'REVIEW_PENDING';
 
-// Unified geo-affiliate link logic - NOW USES APP CONTEXT FOR IP-BASED GEO
 const getGeoAffiliateLink = (book: RecommendedBook, userGeoCountryCode: string | null): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
     if (!book.affiliateLinks) {
         return null;
     }
     const links = book.affiliateLinks;
     
-    // Map country codes to Amazon keys
     const countryToAmazonKey: Record<string, keyof RecommendedBook['affiliateLinks']> = {
-        'us': 'com', // United States
-        'in': 'in',  // India
-        'ae': 'ae',  // United Arab Emirates
-        'gb': 'com', // United Kingdom
-        'ca': 'com', // Canada
-        'au': 'com', // Australia
+        'us': 'com', 
+        'in': 'in',  
+        'ae': 'ae',  
+        'gb': 'com', 
+        'ca': 'com', 
+        'au': 'com', 
     };
     const domainNames: Record<string, string> = { com: 'Amazon.com', in: 'Amazon.in', ae: 'Amazon.ae' };
 
     let finalKey: keyof RecommendedBook['affiliateLinks'] | null = null;
     let finalDomainName: string | null = null;
 
-    // 1. Prioritize IP-based country code if available and valid
     if (userGeoCountryCode && countryToAmazonKey[userGeoCountryCode.toLowerCase()]) {
         const preferredKey = countryToAmazonKey[userGeoCountryCode.toLowerCase()];
         if (links[preferredKey] && links[preferredKey].trim() !== '') {
@@ -49,7 +43,6 @@ const getGeoAffiliateLink = (book: RecommendedBook, userGeoCountryCode: string |
         }
     }
 
-    // 2. Fallback to timezone-based inference if IP-based didn't yield a valid link
     if (!finalKey) {
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         let preferredKeyFromTimezone: keyof RecommendedBook['affiliateLinks'] = 'com';
@@ -67,7 +60,6 @@ const getGeoAffiliateLink = (book: RecommendedBook, userGeoCountryCode: string |
         }
     }
 
-    // 3. Final fallback: Use a default priority order if no specific match yet
     if (!finalKey) {
         const fallbackPriority: (keyof RecommendedBook['affiliateLinks'])[] = ['com', 'in', 'ae'];
         for (const key of fallbackPriority) {
@@ -400,10 +392,6 @@ const Results: FC = () => {
                 </div>
 
                 <div className="flex flex-wrap justify-center gap-4">
-                    <button
-                        onClick={() => navigate('/dashboard')}
-                        className="px-6 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition"
-                    ) : (
                     <button
                         onClick={() => navigate('/dashboard')}
                         className="px-6 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition"

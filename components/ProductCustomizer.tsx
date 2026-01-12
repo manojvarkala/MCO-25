@@ -1,4 +1,3 @@
-
 import React, { FC, useState, useMemo, useCallback, ReactNode, useEffect } from 'react';
 // FIX: Standardized named import from react-router-dom using single quotes.
 import { Link } from 'react-router-dom';
@@ -432,7 +431,7 @@ const BulkEditPanel: FC<{
 
 
 const ProductCustomizer: FC = () => {
-    const { examPrices, updateConfigData } = useAppContext();
+    const { examPrices, refreshConfig } = useAppContext();
     const { token } = useAuth();
     const [activeTab, setActiveTab] = useState<TabType>('all');
     
@@ -481,4 +480,199 @@ const ProductCustomizer: FC = () => {
             if (product.isBundle) {
                 product.type = 'bundle';
                 bundles.push(product);
-            } else if
+            } else if (product.subscriptionPeriod) {
+                product.type = 'subscription';
+                subs.push(product);
+            } else {
+                simples.push(product);
+            }
+        });
+        
+        return { allProducts: all, simpleProducts: simples, subscriptionProducts: subs, bundleProducts: bundles };
+    }, [examPrices]);
+
+    // FIX: Completed missing handleSave logic to persist changes and refresh the application state.
+    const handleSave = async (productData: any) => {
+        if (!token) return;
+        setIsSaving(true);
+        const tid = toast.loading("Saving changes to store...");
+        try {
+            await googleSheetsService.adminUpsertProduct(token, productData);
+            toast.success("Product updated successfully!", { id: tid });
+            setModalState({ type: null });
+            await refreshConfig();
+        } catch (e: any) {
+            toast.error(e.message || "Failed to save product", { id: tid });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // FIX: Completed missing handleBulkSave logic to update multiple products in batch.
+    const handleBulkSave = async (sale: string, regular: string) => {
+        if (!token || selectedSkus.length === 0) return;
+        setIsBulkSaving(true);
+        const toastId = toast.loading(`Updating ${selectedSkus.length} products...`);
+        try {
+            for (const sku of selectedSkus) {
+                const p = allProducts.find(p => p.sku === sku);
+                if (p) {
+                    const updateData: any = {
+                        sku: p.sku,
+                        name: p.name,
+                        price: sale ? parseFloat(sale) : parseFloat(p.salePrice),
+                        regularPrice: regular ? parseFloat(regular) : parseFloat(p.regularPrice)
+                    };
+                    // Preserve subscription metadata if applicable
+                    if (p.type === 'subscription') {
+                        updateData.subscription_period = p.subscriptionPeriod;
+                        updateData.subscription_period_interval = p.subscriptionPeriodInterval;
+                        updateData.subscription_length = p.subscriptionLength;
+                    }
+                    // Preserve bundle metadata if applicable
+                    if (p.type === 'bundle') {
+                        updateData.isBundle = true;
+                        updateData.bundled_skus = p.bundledSkus;
+                    }
+                    await googleSheetsService.adminUpsertProduct(token, updateData);
+                }
+            }
+            toast.success("Bulk update successful!", { id: toastId });
+            setSelectedSkus([]);
+            await refreshConfig();
+        } catch (e: any) {
+            toast.error(e.message || "Bulk update failed", { id: toastId });
+        } finally {
+            setIsBulkSaving(false);
+        }
+    };
+
+    const filteredProducts = useMemo(() => {
+        if (activeTab === 'all') return allProducts;
+        if (activeTab === 'simple') return simpleProducts;
+        if (activeTab === 'subscription') return subscriptionProducts;
+        if (activeTab === 'bundle') return bundleProducts;
+        return [];
+    }, [activeTab, allProducts, simpleProducts, subscriptionProducts, bundleProducts]);
+
+    // FIX: Added missing return statement to fix 'Type () => void is not assignable to type FC' error.
+    return (
+        <div className="space-y-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3">
+                    <ShoppingCart /> Product Customizer
+                </h1>
+                <div className="flex flex-wrap gap-2">
+                    <button onClick={() => setModalState({ type: 'simple' })} className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg font-bold hover:bg-emerald-600 transition shadow-sm"><PlusCircle size={18}/> New Simple</button>
+                    <button onClick={() => setModalState({ type: 'subscription' })} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 transition shadow-sm"><PlusCircle size={18}/> New Sub</button>
+                    <button onClick={() => setModalState({ type: 'bundle' })} className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg font-bold hover:bg-purple-600 transition shadow-sm"><PlusCircle size={18}/> New Bundle</button>
+                </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 border-b border-[rgb(var(--color-border-rgb))] pb-4">
+                <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>All Products ({allProducts.length})</TabButton>
+                <TabButton active={activeTab === 'simple'} onClick={() => setActiveTab('simple')}>Single Exams ({simpleProducts.length})</TabButton>
+                <TabButton active={activeTab === 'subscription'} onClick={() => setActiveTab('subscription')}>Subscriptions ({subscriptionProducts.length})</TabButton>
+                <TabButton active={activeTab === 'bundle'} onClick={() => setActiveTab('bundle')}>Bundles ({bundleProducts.length})</TabButton>
+            </div>
+
+            {selectedSkus.length > 0 && (
+                <BulkEditPanel selectedCount={selectedSkus.length} isSaving={isBulkSaving} onCancel={() => setSelectedSkus([])} onSave={handleBulkSave} />
+            )}
+
+            <div className="bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))] overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-muted-rgb))] uppercase text-xs font-bold">
+                            <tr>
+                                <th className="p-4 w-10">
+                                    <input 
+                                        type="checkbox" 
+                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        onChange={e => setSelectedSkus(e.target.checked ? filteredProducts.map(p => p.sku) : [])} 
+                                        checked={filteredProducts.length > 0 && selectedSkus.length === filteredProducts.length} 
+                                    />
+                                </th>
+                                <th className="p-4">Product Name / SKU</th>
+                                <th className="p-4">Type</th>
+                                <th className="p-4">Price</th>
+                                <th className="p-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[rgb(var(--color-border-rgb))]">
+                            {filteredProducts.map(p => (
+                                <tr key={p.sku} className="hover:bg-[rgba(var(--color-primary-rgb),0.02)] transition-colors">
+                                    <td className="p-4">
+                                        <input 
+                                            type="checkbox" 
+                                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                            checked={selectedSkus.includes(p.sku)} 
+                                            onChange={() => setSelectedSkus(prev => prev.includes(p.sku) ? prev.filter(s => s !== p.sku) : [...prev, p.sku])} 
+                                        />
+                                    </td>
+                                    <td className="p-4">
+                                        <p className="font-bold text-[rgb(var(--color-text-strong-rgb))]">{p.name}</p>
+                                        <p className="text-[10px] font-mono text-slate-500 mt-0.5">{p.sku}</p>
+                                    </td>
+                                    <td className="p-4">
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                            p.type === 'bundle' ? 'bg-purple-100 text-purple-600' : 
+                                            p.type === 'subscription' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'
+                                        }`}>
+                                            {p.type}
+                                        </span>
+                                    </td>
+                                    <td className="p-4">
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="font-bold text-base">${parseFloat(p.salePrice).toFixed(2)}</span>
+                                            {parseFloat(p.regularPrice) > parseFloat(p.salePrice) && (
+                                                <span className="text-xs line-through text-slate-400">${parseFloat(p.regularPrice).toFixed(2)}</span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="p-4 text-right">
+                                        <button onClick={() => setModalState({ type: p.type as TabType, product: p })} className="p-2 text-slate-400 hover:text-[rgb(var(--color-primary-rgb))] hover:bg-[rgba(var(--color-primary-rgb),0.1)] rounded-lg transition-all">
+                                            <Edit size={16}/>
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                {filteredProducts.length === 0 && (
+                    <div className="p-12 text-center text-slate-400 italic bg-white">
+                        No products found in this category.
+                    </div>
+                )}
+            </div>
+
+            <UpsertSimpleProductModal 
+                isOpen={modalState.type === 'simple'} 
+                productToEdit={modalState.product} 
+                isSaving={isSaving} 
+                onClose={() => setModalState({ type: null })} 
+                onSave={handleSave} 
+            />
+            <UpsertSubscriptionModal 
+                isOpen={modalState.type === 'subscription'} 
+                productToEdit={modalState.product} 
+                isSaving={isSaving} 
+                onClose={() => setModalState({ type: null })} 
+                onSave={handleSave} 
+            />
+            <UpsertBundleModal 
+                isOpen={modalState.type === 'bundle'} 
+                productToEdit={modalState.product} 
+                isSaving={isSaving} 
+                onClose={() => setModalState({ type: null })} 
+                onSave={handleSave} 
+                simpleProducts={simpleProducts} 
+                subscriptionProducts={subscriptionProducts} 
+            />
+        </div>
+    );
+};
+
+// FIX: Added missing default export to satisfy module requirements in App.tsx.
+export default ProductCustomizer;
