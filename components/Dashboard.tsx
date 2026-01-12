@@ -1,6 +1,4 @@
-
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
-// FIX: Standardized named imports from react-router-dom using single quotes.
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -87,7 +85,7 @@ const Dashboard: FC = () => {
     }, [examPrices, bundlesEnabled]);
 
     if (isInitializing || isLoading || !activeOrg) {
-        return <div className="text-center py-10"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading dashboard...</p></div>;
+        return <div className="flex flex-col items-center justify-center min-h-[60vh]"><Spinner size="lg" /><p className="mt-2 text-[rgb(var(--color-text-muted-rgb))]">Loading dashboard...</p></div>;
     }
 
     return (
@@ -118,9 +116,7 @@ const Dashboard: FC = () => {
                     let dashboardBundle = null;
                     if (bundlesEnabled && category.certExam?.productSku && examPrices) {
                         const certSku = category.certExam.productSku;
-                        // Support for 1-month subscription addon bundles
                         const addonSku = `${certSku}-1mo-addon`;
-
                         if (examPrices[addonSku]) {
                             dashboardBundle = { product: { ...examPrices[addonSku], sku: addonSku }, type: 'subscription' as const };
                         }
@@ -139,7 +135,7 @@ const Dashboard: FC = () => {
                                 {category.certExam && (
                                     <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} hideDetailsLink={true} attemptsMade={user ? results.filter(r => r.examId === category.certExam!.id).length : 0} />
                                 )}
-                                {dashboardBundle && (
+                                {bundlesEnabled && dashboardBundle && (
                                     <ExamBundleCard type={dashboardBundle.type} bundleDataRaw={dashboardBundle.product} activeOrg={activeOrg} examPrices={examPrices} />
                                 )}
                             </div>
@@ -148,7 +144,7 @@ const Dashboard: FC = () => {
                 })}
             </div>
 
-            {featuredBundles.length > 0 && (
+            {bundlesEnabled && featuredBundles.length > 0 && (
                 <div>
                     <h2 className="text-2xl font-bold text-[rgb(var(--color-text-strong-rgb))] mb-4">Curated Exam Bundles</h2>
                     <div className="mco-grid-container">

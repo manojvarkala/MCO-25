@@ -24,14 +24,12 @@ add_action('plugins_loaded', function() {
         }
     }
 
-    // Always allow if user is an administrator or origin matches settings
     if ($is_allowed || is_admin() || current_user_can('manage_options')) {
         header("Access-Control-Allow-Origin: $origin");
         header("Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE");
         header("Access-Control-Allow-Credentials: true");
         header("Access-Control-Allow-Headers: Authorization, Content-Type, X-Requested-With, X-WP-Nonce");
         
-        // Intercept Preflight
         if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
             status_header(200);
             exit;
@@ -39,7 +37,43 @@ add_action('plugins_loaded', function() {
     }
 }, 1);
 
-// 2. JWT GENERATOR
+// 2. JWT VALIDATION CALLBACKS (Fixes App-side Fatal Errors)
+function mco_api_validate_jwt($request) {
+    if (!defined('MCO_JWT_SECRET')) return new WP_Error('mco_error', 'JWT Secret not defined in wp-config.php', ['status' => 500]);
+
+    $auth_header = $request->get_header('Authorization');
+    if (!$auth_header) return new WP_Error('jwt_auth_missing_token', 'Authorization header missing', ['status' => 403]);
+
+    list($token) = sscanf($auth_header, 'Bearer %s');
+    if (!$token) return new WP_Error('jwt_auth_invalid_token', 'Invalid token format', ['status' => 403]);
+
+    $parts = explode('.', $token);
+    if (count($parts) !== 3) return new WP_Error('jwt_invalid', 'Invalid token structure', ['status' => 403]);
+
+    list($headb64, $bodyb64, $sigb64) = $parts;
+    $sig = base64_decode(str_replace(['-', '_'], ['+', '/'], $sigb64));
+    $expected_sig = hash_hmac('sha256', "$headb64.$bodyb64", MCO_JWT_SECRET, true);
+
+    if (!hash_equals($sig, $expected_sig)) return new WP_Error('jwt_tampered', 'Security signature mismatch', ['status' => 403]);
+
+    $payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $bodyb64)), true);
+    if (!$payload || ($payload['exp'] ?? 0) < time()) return new WP_Error('jwt_auth_expired_token', 'Session expired', ['status' => 403]);
+
+    $request->set_param('mco_user_id', $payload['user']['id']);
+    return true;
+}
+
+function mco_api_validate_admin_jwt($request) {
+    $valid = mco_api_validate_jwt($request);
+    if (is_wp_error($valid)) return $valid;
+
+    $user_id = $request->get_param('mco_user_id');
+    if (!user_can($user_id, 'manage_options')) return new WP_Error('rest_forbidden', 'Admin access required', ['status' => 403]);
+
+    return true;
+}
+
+// 3. JWT GENERATOR
 if (!function_exists('mco_generate_exam_jwt')) {
     function mco_generate_exam_jwt($user_id) {
         if (!defined('MCO_JWT_SECRET')) return false;
@@ -50,7 +84,6 @@ if (!function_exists('mco_generate_exam_jwt')) {
         $issuedAt = time();
         $expire = $issuedAt + (DAY_IN_SECONDS * 7);
         
-        // Gather Entitlements
         $paid_exams = get_user_meta($user_id, 'mco_paid_exams', true) ?: [];
         $is_subscribed = false;
         if (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription')) {
