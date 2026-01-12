@@ -7,8 +7,8 @@ import { googleSheetsService } from '../services/googleSheetsService.ts';
 import Spinner from './Spinner.tsx';
 import { 
     CheckCircle, XCircle, Cpu, FileSpreadsheet, RefreshCw, BarChart3, 
-    Settings2, DatabaseZap, FileUp, DownloadCloud, ToggleLeft, 
-    ToggleRight, Search, Activity, LayoutDashboard, ShieldAlert, Check, Palette, AlertCircle
+    Settings2, DatabaseZap, DownloadCloud, ToggleLeft, 
+    ToggleRight, Search, Activity, LayoutDashboard, ShieldAlert, Palette, Check
 } from 'lucide-react';
 
 interface HealthStatus {
@@ -44,6 +44,15 @@ const HealthCard: FC<{ title: string; status?: { success: boolean; message: stri
         </span>
     </div>
 );
+
+// Theme Definitions sync with context colors
+const THEME_COLORS: Record<string, string[]> = {
+    default: ['#06b6d4', '#db2777', '#fde047', '#0f172a'],
+    professional: ['#047857', '#3b82f6', '#eab308', '#f1f5f9'],
+    serene: ['#60a5fa', '#34d399', '#fb923c', '#f0fdfa'],
+    academic: ['#7f1d1d', '#a16207', '#d97706', '#fafaf9'],
+    noir: ['#e5e7eb', '#8b5cf6', '#eab308', '#1f2937']
+};
 
 const Admin: FC = () => {
     const { token } = useAuth();
@@ -93,12 +102,10 @@ const Admin: FC = () => {
         
         try {
             const newSettings = { ...localSettings, ...updates };
-            // Real API call to update the global options in WordPress
             await googleSheetsService.adminUpdateGlobalSettings(token, newSettings);
             
             setLocalSettings(newSettings);
-            // Refresh the app context to fetch the latest config and reflect toggles immediately
-            await refreshConfig();
+            await refreshConfig(); // Critical to reflect changes in UI
             
             toast.success("Platform settings synchronized!", { id: toastId });
         } catch (e: any) {
@@ -141,25 +148,27 @@ const Admin: FC = () => {
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-10 pb-20">
             <aside className="lg:w-64 space-y-2">
                 <NavItem id="diagnostics" label="Diagnostics" icon={<Activity size={18}/>} active={activeTab === 'diagnostics'} onClick={setActiveTab} />
-                <NavItem id="appearance" label="UI & Styling" icon={<Settings2 size={18}/>} active={activeTab === 'appearance'} onClick={setActiveTab} />
+                <NavItem id="appearance" label="UI & Styling" icon={<Palette size={18}/>} active={activeTab === 'appearance'} onClick={setActiveTab} />
                 <NavItem id="content" label="Sheet Tools" icon={<FileSpreadsheet size={18}/>} active={activeTab === 'content'} onClick={setActiveTab} />
                 <NavItem id="bulk" label="Bulk Center" icon={<DatabaseZap size={18}/>} active={activeTab === 'bulk'} onClick={setActiveTab} />
             </aside>
 
             <main className="flex-1 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 {activeTab === 'diagnostics' && (
-                    <div>
-                        <h2 className="text-3xl font-extrabold mb-6 flex items-center gap-3"><Cpu className="text-cyan-500" /> Production Health Audit</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <HealthCard title="Backend API Connection" status={health?.api_connection} />
-                            <HealthCard title="JWT Secret Key" status={health?.jwt_secret} />
-                            <HealthCard title="WooCommerce Plugin" status={health?.woocommerce} />
-                            <HealthCard title="WooCommerce Subscriptions" status={health?.wc_subscriptions} />
-                            <HealthCard title="App URL Configuration" status={health?.app_url_config} />
-                            <HealthCard title="Google Sheet Accessibility" status={health?.sheet_accessibility} />
+                    <div className="space-y-8">
+                        <div>
+                            <h2 className="text-3xl font-extrabold mb-6 flex items-center gap-3"><Cpu className="text-cyan-500" /> Production Health Audit</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <HealthCard title="Backend API Connection" status={health?.api_connection} />
+                                <HealthCard title="JWT Secret Key" status={health?.jwt_secret} />
+                                <HealthCard title="WooCommerce Plugin" status={health?.woocommerce} />
+                                <HealthCard title="WooCommerce Subscriptions" status={health?.wc_subscriptions} />
+                                <HealthCard title="App URL Configuration" status={health?.app_url_config} />
+                                <HealthCard title="Google Sheet Accessibility" status={health?.sheet_accessibility} />
+                            </div>
                         </div>
 
-                        <div className="mt-10 bg-slate-900 border border-slate-700 rounded-2xl p-6">
+                        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6">
                             <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><BarChart3 size={20} className="text-cyan-500" /> Platform KPIs</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                 <div className="p-4 bg-slate-800 rounded-xl">
@@ -180,41 +189,75 @@ const Admin: FC = () => {
                 )}
 
                 {activeTab === 'appearance' && (
-                    <div className="space-y-6">
-                        <h2 className="text-3xl font-extrabold mb-6 flex items-center gap-3"><Settings2 className="text-cyan-500" /> UI Configuration</h2>
-                        <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden">
-                            <div className="p-6 space-y-4">
-                                <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl">
-                                    <div><p className="font-bold text-white">Purchase Notifier</p><p className="text-xs text-slate-400 italic">Social proof popups for visitors</p></div>
-                                    <button 
-                                        onClick={() => handleSyncSettings({ purchaseNotifierEnabled: !localSettings.purchaseNotifierEnabled })}
-                                        disabled={isSavingSettings}
-                                        className={`transition-colors ${localSettings.purchaseNotifierEnabled ? 'text-cyan-500' : 'text-slate-600'}`}
-                                    >
-                                        {localSettings.purchaseNotifierEnabled ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
-                                    </button>
-                                </div>
+                    <div className="space-y-10">
+                        <div className="space-y-6">
+                            <h2 className="text-3xl font-extrabold mb-6 flex items-center gap-3"><Settings2 className="text-cyan-500" /> Feature Management</h2>
+                            <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden">
+                                <div className="p-6 space-y-4">
+                                    <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl border border-slate-700/50">
+                                        <div><p className="font-bold text-white">Purchase Notifier</p><p className="text-xs text-slate-400 italic">Social proof popups for visitors</p></div>
+                                        <button 
+                                            onClick={() => handleSyncSettings({ purchaseNotifierEnabled: !localSettings.purchaseNotifierEnabled })}
+                                            disabled={isSavingSettings}
+                                            className={`transition-colors ${localSettings.purchaseNotifierEnabled ? 'text-cyan-500' : 'text-slate-600'}`}
+                                        >
+                                            {localSettings.purchaseNotifierEnabled ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
+                                        </button>
+                                    </div>
 
-                                <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl">
-                                    <div><p className="font-bold text-white">Subscription System</p><p className="text-xs text-slate-400 italic">Toggle monthly/yearly access plans</p></div>
-                                    <button 
-                                        onClick={() => handleSyncSettings({ subscriptionsEnabled: !localSettings.subscriptionsEnabled })}
-                                        disabled={isSavingSettings}
-                                        className={`transition-colors ${localSettings.subscriptionsEnabled ? 'text-cyan-500' : 'text-slate-600'}`}
-                                    >
-                                        {localSettings.subscriptionsEnabled ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
-                                    </button>
-                                </div>
+                                    <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl border border-slate-700/50">
+                                        <div><p className="font-bold text-white">Subscription System</p><p className="text-xs text-slate-400 italic">Toggle monthly/yearly access plans</p></div>
+                                        <button 
+                                            onClick={() => handleSyncSettings({ subscriptionsEnabled: !localSettings.subscriptionsEnabled })}
+                                            disabled={isSavingSettings}
+                                            className={`transition-colors ${localSettings.subscriptionsEnabled ? 'text-cyan-500' : 'text-slate-600'}`}
+                                        >
+                                            {localSettings.subscriptionsEnabled ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
+                                        </button>
+                                    </div>
 
-                                <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl">
-                                    <div><p className="font-bold text-white">Product Bundles</p><p className="text-xs text-slate-400 italic">Enable complex exam + access packages</p></div>
-                                    <button 
-                                        onClick={() => handleSyncSettings({ bundlesEnabled: !localSettings.bundlesEnabled })}
-                                        disabled={isSavingSettings}
-                                        className={`transition-colors ${localSettings.bundlesEnabled ? 'text-cyan-500' : 'text-slate-600'}`}
-                                    >
-                                        {localSettings.bundlesEnabled ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
-                                    </button>
+                                    <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl border border-slate-700/50">
+                                        <div><p className="font-bold text-white">Product Bundles</p><p className="text-xs text-slate-400 italic">Enable complex exam + access packages</p></div>
+                                        <button 
+                                            onClick={() => handleSyncSettings({ bundlesEnabled: !localSettings.bundlesEnabled })}
+                                            disabled={isSavingSettings}
+                                            className={`transition-colors ${localSettings.bundlesEnabled ? 'text-cyan-500' : 'text-slate-600'}`}
+                                        >
+                                            {localSettings.bundlesEnabled ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <h2 className="text-3xl font-extrabold flex items-center gap-3"><Palette className="text-cyan-500" /> Platform Theme</h2>
+                            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6">
+                                <p className="text-slate-400 mb-6 font-medium">Select the global theme for all users. This selection is synchronized with your WordPress settings.</p>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                    {(availableThemes || []).map(theme => {
+                                        const isActive = localSettings.activeThemeId === theme.id;
+                                        const colors = THEME_COLORS[theme.id] || ['#ccc', '#ccc', '#ccc', '#ccc'];
+                                        
+                                        return (
+                                            <button
+                                                key={theme.id}
+                                                onClick={() => handleSyncSettings({ activeThemeId: theme.id })}
+                                                disabled={isSavingSettings}
+                                                className={`relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 group ${
+                                                    isActive 
+                                                        ? 'bg-cyan-500/10 border-cyan-500 ring-4 ring-cyan-500/20' 
+                                                        : 'bg-slate-800 border-slate-700 hover:border-slate-500'
+                                                }`}
+                                            >
+                                                {isActive && <div className="absolute -top-2 -right-2 bg-cyan-500 text-white rounded-full p-1 shadow-lg"><Check size={14} strokeWidth={4}/></div>}
+                                                <div className="flex w-full h-8 rounded overflow-hidden shadow-inner border border-slate-700">
+                                                    {colors.map((c, i) => <div key={i} className="flex-1" style={{ backgroundColor: c }}></div>)}
+                                                </div>
+                                                <span className={`font-bold text-xs uppercase tracking-widest ${isActive ? 'text-cyan-400' : 'text-slate-400'}`}>{theme.name}</span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
