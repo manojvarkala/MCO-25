@@ -1,9 +1,8 @@
 
-
 import React, { FC, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
-import { Link, useNavigate } from "react-router-dom";
+// FIX: Standardized named imports from react-router-dom using single quotes.
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import { Send, MessageSquare, CreditCard, Star } from 'lucide-react';

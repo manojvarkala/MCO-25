@@ -1,6 +1,7 @@
 
 import React, { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useParams, useNavigate } from "react-router-dom";
+// FIX: Standardized named imports from react-router-dom using single quotes.
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Question, UserAnswer, Exam, ExamProgress } from '../types.ts';

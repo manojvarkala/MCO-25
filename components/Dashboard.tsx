@@ -1,5 +1,7 @@
+
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, Link } from "react-router-dom";
+// FIX: Standardized named imports from react-router-dom using single quotes.
+import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -106,7 +108,7 @@ const Dashboard: FC = () => {
                 </div>
                 {user && token && (
                     <button onClick={handleSync} disabled={isSyncing} className="flex items-center gap-2 bg-[rgb(var(--color-muted-rgb))] hover:bg-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-default-rgb))] font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50">
-                        <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} /> {isSyncing ? 'Sync My Exams'}
+                        <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} /> {isSyncing ? 'Syncing...' : 'Sync My Exams'}
                     </button>
                 )}
             </div>

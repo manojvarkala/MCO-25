@@ -1,6 +1,7 @@
+
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
-// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
-import * as ReactRouter from "react-router-dom";
+// FIX: Replaced wildcard import with standard named imports using single quotes to resolve module member errors.
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster, ToastBar, toast } from 'react-hot-toast';
 import { X, AlertTriangle, WifiOff, RefreshCw, Server } from 'lucide-react';
 
@@ -55,16 +56,18 @@ import { getApiBaseUrl } from './services/apiConfig.ts';
 
 const ProtectedRoute: FC<{ children: ReactNode; adminOnly?: boolean }> = ({ children, adminOnly = false }) => {
     const { user, isEffectivelyAdmin } = useAuth();
-    const location = ReactRouter.useLocation();
-    if (!user) return <ReactRouter.Navigate to="/" state={{ from: location }} replace />;
-    if (adminOnly && !isEffectivelyAdmin) return <ReactRouter.Navigate to="/dashboard" state={{ from: location }} replace />;
+    // FIX: Removed ReactRouter prefix.
+    const location = useLocation();
+    if (!user) return <Navigate to="/" state={{ from: location }} replace />;
+    if (adminOnly && !isEffectivelyAdmin) return <Navigate to="/dashboard" state={{ from: location }} replace />;
     return <>{children}</>;
 };
 
 const AppContent: FC = () => {
     const { user, isMasquerading, isEffectivelyAdmin } = useAuth();
     const { activeOrg, activeTheme, isInitializing } = useAppContext();
-    const location = ReactRouter.useLocation();
+    // FIX: Removed ReactRouter prefix.
+    const location = useLocation();
     const [isDebugSidebarOpen, setIsDebugSidebarOpen] = useState(false);
 
     const isTestPage = location.pathname.startsWith('/test/');
@@ -144,47 +147,48 @@ const AppContent: FC = () => {
             )}
             <div className="flex-grow w-full relative">
                 <main className={mainClasses}>
-                    <ReactRouter.Routes>
-                        <ReactRouter.Route path="/" element={<LandingPage />} />
-                        <ReactRouter.Route path="/auth" element={<Login />} />
-                        <ReactRouter.Route path="/checkout/:productSlug" element={<Checkout />} />
-                        <ReactRouter.Route path="/verify" element={<VerifyPage />} />
-                        <ReactRouter.Route path="/verify/:certId" element={<VerifyCertificate />} />
-                        <ReactRouter.Route path="/onboard/:token" element={<VolunteerOnboarding />} />
-                        <ReactRouter.Route path="/beta-signup" element={<BetaRegistration />} />
-                        <ReactRouter.Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
-                        <ReactRouter.Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
-                        <ReactRouter.Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
-                        <ReactRouter.Route path="/admin/*" element={<ProtectedRoute adminOnly><AdminLayout><ReactRouter.Routes>
-                                <ReactRouter.Route path="/" element={<Admin />} />
-                                <ReactRouter.Route path="/analytics" element={<SalesAnalytics />} />
-                                <ReactRouter.Route path="/exam-analytics" element={<ExamAnalytics />} />
-                                <ReactRouter.Route path="/beta-analytics" element={<BetaTesterAnalytics />} />
-                                <ReactRouter.Route path="/programs" element={<ExamProgramCustomizer />} />
-                                <ReactRouter.Route path="/products" element={<ProductCustomizer />} />
-                                <ReactRouter.Route path="/content-engine" element={<ContentEngine />} />
-                                <ReactRouter.Route path="/integration" element={<Integration />} />
-                                <ReactRouter.Route path="/history" element={<DevelopmentHistory />} />
-                                <ReactRouter.Route path="/handbook" element={<Handbook />} />
-                                <ReactRouter.Route path="/woo-styling" element={<WooCommerceStyling />} />
-                                <ReactRouter.Route path="/purchase-notifier" element={<PurchaseNotifier />} />
-                            </ReactRouter.Routes></AdminLayout></ProtectedRoute>} />
-                        <ReactRouter.Route path="/instructions" element={<Instructions />} />
-                        <ReactRouter.Route path="/user-guide" element={<UserGuide />} />
-                        <ReactRouter.Route path="/about-us" element={<AboutUs />} />
-                        <ReactRouter.Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                        <ReactRouter.Route path="/refund-policy" element={<RefundPolicy />} />
-                        <ReactRouter.Route path="/terms-of-service" element={<TermsOfService />} />
-                        <ReactRouter.Route path="/pricing" element={<Pricing />} />
-                        <ReactRouter.Route path="/feedback" element={<Feedback />} />
-                        <ReactRouter.Route path="/faq" element={<FAQ />} />
-                        <ReactRouter.Route path="/dashboard" element={<SidebarLayout><Dashboard /></SidebarLayout>} />
-                        <ReactRouter.Route path="/bookstore" element={<SidebarLayout><BookStore /></SidebarLayout>} />
-                        <ReactRouter.Route path="/program/:programId" element={<SidebarLayout><ExamProgram /></SidebarLayout>} />
-                        <ReactRouter.Route path="/results/:testId" element={<SidebarLayout><Results /></SidebarLayout>} />
-                        <ReactRouter.Route path="/profile" element={<SidebarLayout><Profile /></SidebarLayout>} />
-                        <ReactRouter.Route path="*" element={<ReactRouter.Navigate to="/" replace />} />
-                    </ReactRouter.Routes>
+                    {/* FIX: Removed ReactRouter prefix. */}
+                    <Routes>
+                        <Route path="/" element={<LandingPage />} />
+                        <Route path="/auth" element={<Login />} />
+                        <Route path="/checkout/:productSlug" element={<Checkout />} />
+                        <Route path="/verify" element={<VerifyPage />} />
+                        <Route path="/verify/:certId" element={<VerifyCertificate />} />
+                        <Route path="/onboard/:token" element={<VolunteerOnboarding />} />
+                        <Route path="/beta-signup" element={<BetaRegistration />} />
+                        <Route path="/test/:examId" element={<ProtectedRoute><Test /></ProtectedRoute>} />
+                        <Route path="/certificate/sample" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
+                        <Route path="/certificate/:testId" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
+                        <Route path="/admin/*" element={<ProtectedRoute adminOnly><AdminLayout><Routes>
+                                <Route path="/" element={<Admin />} />
+                                <Route path="/analytics" element={<SalesAnalytics />} />
+                                <Route path="/exam-analytics" element={<ExamAnalytics />} />
+                                <Route path="/beta-analytics" element={<BetaTesterAnalytics />} />
+                                <Route path="/programs" element={<ExamProgramCustomizer />} />
+                                <Route path="/products" element={<ProductCustomizer />} />
+                                <Route path="/content-engine" element={<ContentEngine />} />
+                                <Route path="/integration" element={<Integration />} />
+                                <Route path="/history" element={<DevelopmentHistory />} />
+                                <Route path="/handbook" element={<Handbook />} />
+                                <Route path="/woo-styling" element={<WooCommerceStyling />} />
+                                <Route path="/purchase-notifier" element={<PurchaseNotifier />} />
+                            </Routes></AdminLayout></ProtectedRoute>} />
+                        <Route path="/instructions" element={<Instructions />} />
+                        <Route path="/user-guide" element={<UserGuide />} />
+                        <Route path="/about-us" element={<AboutUs />} />
+                        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                        <Route path="/refund-policy" element={<RefundPolicy />} />
+                        <Route path="/terms-of-service" element={<TermsOfService />} />
+                        <Route path="/pricing" element={<Pricing />} />
+                        <Route path="/feedback" element={<Feedback />} />
+                        <Route path="/faq" element={<FAQ />} />
+                        <Route path="/dashboard" element={<SidebarLayout><Dashboard /></SidebarLayout>} />
+                        <Route path="/bookstore" element={<SidebarLayout><BookStore /></SidebarLayout>} />
+                        <Route path="/program/:programId" element={<SidebarLayout><ExamProgram /></SidebarLayout>} />
+                        <Route path="/results/:testId" element={<SidebarLayout><Results /></SidebarLayout>} />
+                        <Route path="/profile" element={<SidebarLayout><Profile /></SidebarLayout>} />
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
                 </main>
             </div>
             {!isTestPage && <Footer />}
@@ -198,13 +202,14 @@ const AppContent: FC = () => {
 
 const App: FC = () => {
   return (
-    <ReactRouter.BrowserRouter>
+    // FIX: Removed ReactRouter prefix.
+    <BrowserRouter>
       <AuthProvider>
         <AppProvider>
           <AppContent />
         </AppProvider>
       </AuthProvider>
-    </ReactRouter.BrowserRouter>
+    </BrowserRouter>
   );
 };
 

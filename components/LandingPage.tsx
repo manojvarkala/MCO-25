@@ -1,7 +1,7 @@
 
 import React, { FC, useEffect, useRef } from 'react';
-// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
-import { useNavigate } from "react-router-dom";
+// FIX: Standardized named import from react-router-dom using single quotes.
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LogIn, UserPlus, FileText, Award, Sparkles, Beaker } from 'lucide-react';

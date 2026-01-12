@@ -1,7 +1,7 @@
 
 import React, { FC, useEffect, useRef, useState } from 'react';
-// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
-import { useLocation, useNavigate } from "react-router-dom";
+// FIX: Standardized named imports from react-router-dom using single quotes.
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import toast from 'react-hot-toast';
 import LogoSpinner from './LogoSpinner.tsx';

@@ -1,8 +1,7 @@
 
-
 import React, { FC } from 'react';
-// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
-import { Link } from "react-router-dom";
+// FIX: Standardized named import from react-router-dom using single quotes.
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { Users } from 'lucide-react';

@@ -1,6 +1,7 @@
+
 import React, { FC, useEffect, useState, useMemo, useRef, useCallback } from 'react';
-// FIX: Standardize react-router-dom import to use double quotes to resolve module export errors.
-import { useParams, useNavigate } from "react-router-dom";
+// FIX: Standardized named imports from react-router-dom using single quotes.
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -399,6 +400,10 @@ const Results: FC = () => {
                 </div>
 
                 <div className="flex flex-wrap justify-center gap-4">
+                    <button
+                        onClick={() => navigate('/dashboard')}
+                        className="px-6 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition"
+                    ) : (
                     <button
                         onClick={() => navigate('/dashboard')}
                         className="px-6 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition"

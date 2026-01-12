@@ -3,7 +3,7 @@
  * =============================================================================
  * PLUGIN: MCO Exam Integration Engine
  * MODULE: Industrial API Controller (Full Production Version)
- * VERSION: 5.0.6 (Full Logic Restored & Auth/Sheets Fix)
+ * VERSION: 5.1.0 (Sheets CDN & Settings Fix)
  * AUTHOR: Annapoorna Infotech
  * LICENSE: GPL v2 or later
  * =============================================================================
@@ -16,23 +16,32 @@ if (!defined('ABSPATH')) {
 
 if (!function_exists('mco_fetch_remote_csv_content')) {
     /**
-     * INDUSTRIAL MULTI-TIER FETCHER (Hardened with Referer)
+     * INDUSTRIAL MULTI-TIER FETCHER (Optimized for Google CDN)
      */
     function mco_fetch_remote_csv_content($url) {
         if (empty($url)) {
             return new WP_Error('empty_url', 'Source URL cannot be empty.', ['status' => 400]);
         }
 
+        // AUTO-FIX: Ensure Google Sheet URLs are in CSV export format
+        if (strpos($url, 'docs.google.com/spreadsheets') !== false && strpos($url, 'output=csv') === false) {
+             $url = preg_replace('/\/edit.*$/', '/pub?output=csv', $url);
+             if (strpos($url, 'pub?output=csv') === false) {
+                 $url = rtrim($url, '/') . '/pub?output=csv';
+             }
+        }
+
         $site_url = get_bloginfo('url');
         $args = [
             'timeout'     => 45,
             'redirection' => 10,
-            'user-agent'  => 'MCO-Industrial-Engine/5.0.6; ' . $site_url,
-            'sslverify'   => false,
+            'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 MCO-Industrial/5.1.0',
+            'sslverify'   => false, // Critical to avoid 'failed to reach google CDN' errors on shared hosting
             'headers'     => [
                 'Cache-Control' => 'no-cache',
                 'Pragma'        => 'no-cache',
-                'Referer'       => $site_url
+                'Referer'       => $site_url,
+                'Accept'        => 'text/csv,text/plain,*/*'
             ]
         ];
 
@@ -42,7 +51,7 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
             return ['body' => wp_remote_retrieve_body($response), 'code' => 200, 'tier' => 1];
         }
 
-        // TIER 2: PHP cURL
+        // TIER 2: PHP cURL (Fallback)
         if (function_exists('curl_init')) {
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
@@ -50,7 +59,7 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_TIMEOUT, 45);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'MCO-Industrial-Engine/5.0.6');
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 MCO-Industrial/5.1.0');
             curl_setopt($ch, CURLOPT_REFERER, $site_url);
             $body = curl_exec($ch);
             $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -58,14 +67,7 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
             if ($http_code === 200 && !empty($body)) return ['body' => $body, 'code' => 200, 'tier' => 2];
         }
 
-        // TIER 3: Stream
-        if (ini_get('allow_url_fopen')) {
-            $context = stream_context_create(['http' => ['timeout' => 45, 'header' => "Referer: $site_url\r\n"]]);
-            $body = @file_get_contents($url, false, $context);
-            if ($body !== false) return ['body' => $body, 'code' => 200, 'tier' => 3];
-        }
-
-        return new WP_Error('network_fail', 'All network fetch tiers failed. Ensure the sheet is Published to Web as CSV.', ['status' => 503]);
+        return new WP_Error('network_fail', 'Failed to reach Google CDN. Check if Sheet is "Published to Web" as CSV.', ['status' => 503]);
     }
 }
 
@@ -157,7 +159,7 @@ if (!function_exists('mco_verify_exam_jwt')) {
 }
 
 /**
- * ENHANCED CORS HANDLING (Industrial Grade)
+ * ENHANCED CORS HANDLING
  */
 if (!function_exists('mco_handle_cors_preflight')) {
     function mco_handle_cors_preflight($served, $result, $request, $server) {
@@ -224,13 +226,12 @@ if (!function_exists('mco_add_cors_headers_to_response')) {
 }
 
 /**
- * GATEKEEPERS (Hardened with Auth Fallbacks)
+ * GATEKEEPERS (Auth Resilience)
  */
 if (!function_exists('mco_api_permission_check')) {
     function mco_api_permission_check(WP_REST_Request $request) {
         $auth = $request->get_header('authorization');
         
-        // Fallback for servers stripping Authorization header
         if (empty($auth)) {
             $look_in = ['HTTP_AUTHORIZATION', 'REDIRECT_HTTP_AUTHORIZATION', 'X_AUTHORIZATION', 'X-Authorization'];
             foreach ($look_in as $key) {
@@ -242,7 +243,7 @@ if (!function_exists('mco_api_permission_check')) {
         }
 
         if (empty($auth) || !preg_match('/Bearer\s+(.*)$/i', $auth, $matches)) {
-            return new WP_Error('jwt_auth_missing_token', 'Authorization required. Server may be stripping headers.', ['status' => 401]);
+            return new WP_Error('jwt_auth_missing_token', 'Authorization required.', ['status' => 401]);
         }
 
         $payload = mco_verify_exam_jwt($matches[1]);
@@ -713,7 +714,7 @@ if (!function_exists('mco_api_admin_get_system_status')) {
         
         $test_sheet = 'https://docs.google.com/spreadsheets/d/1KP0NqEOMS_0sohfwCpO9JNRcWMaoJqfTYEda0YOwkcY/pub?output=csv';
         $sheet_fetch = mco_fetch_remote_csv_content($test_sheet);
-        $status['sheet_accessibility'] = ['success' => !is_wp_error($sheet_fetch), 'message' => !is_wp_error($sheet_fetch) ? 'Accessible' : 'Failed to reach Google CDN.'];
+        $status['sheet_accessibility'] = ['success' => !is_wp_error($sheet_fetch), 'message' => !is_wp_error($sheet_fetch) ? 'Accessible' : 'Failed to reach Google CDN. Check if Sheet is "Published to Web".'];
         
         $status['api_connection'] = ['success' => true, 'message' => 'Online'];
         return new WP_REST_Response($status, 200);
@@ -733,6 +734,8 @@ if (!function_exists('mco_api_admin_test_sheet_url')) {
 if (!function_exists('mco_api_admin_clear_config_cache')) {
     function mco_api_admin_clear_config_cache(WP_REST_Request $request) {
         delete_transient('mco_app_config_data_full_org_structure');
+        delete_transient('mco_app_config_data_full');
+        delete_transient('mco_app_config_data');
         update_option('mco_config_version', current_time('YmdHis'));
         return new WP_REST_Response(['success' => true], 200);
     }
@@ -776,6 +779,8 @@ if (!function_exists('mco_api_admin_update_exam_program')) {
         }
 
         delete_transient('mco_app_config_data_full_org_structure');
+        delete_transient('mco_app_config_data_full');
+        delete_transient('mco_app_config_data');
         update_option('mco_config_version', current_time('YmdHis'));
         return new WP_REST_Response(['success' => true], 200);
     }
@@ -798,6 +803,8 @@ if (!function_exists('mco_api_admin_upsert_product')) {
         if (!empty($p['isBundle'])) { update_post_meta($pid, '_mco_is_bundle', 'yes'); update_post_meta($pid, '_mco_bundled_skus', (array)$p['bundled_skus']); }
         
         delete_transient('mco_app_config_data_full_org_structure');
+        delete_transient('mco_app_config_data_full');
+        delete_transient('mco_app_config_data');
         update_option('mco_config_version', current_time('YmdHis'));
         return new WP_REST_Response(['success' => true, 'productId' => $pid], 200);
     }
@@ -865,6 +872,27 @@ if (!function_exists('mco_api_get_debug_details')) {
 }
 
 /**
+ * GLOBAL SETTINGS HANDLER
+ */
+if (!function_exists('mco_api_admin_update_global_settings')) {
+    function mco_api_admin_update_global_settings(WP_REST_Request $request) {
+        $d = $request->get_json_params();
+        if (isset($d['activeThemeId'])) update_option('mco_active_theme_id', sanitize_text_field($d['activeThemeId']));
+        if (isset($d['purchaseNotifierEnabled'])) update_option('mco_purchase_notifier_enabled', $d['purchaseNotifierEnabled'] ? '1' : '0');
+        if (isset($d['subscriptionsEnabled'])) update_option('mco_subscriptions_enabled', $d['subscriptionsEnabled'] ? '1' : '0');
+        if (isset($d['bundlesEnabled'])) update_option('mco_bundles_enabled', $d['bundlesEnabled'] ? '1' : '0');
+        
+        // Comprehensive cache purging
+        delete_transient('mco_app_config_data_full_org_structure');
+        delete_transient('mco_app_config_data_full');
+        delete_transient('mco_app_config_data');
+        
+        update_option('mco_config_version', current_time('YmdHis'));
+        return new WP_REST_Response(['success' => true, 'message' => 'Platform settings synchronized.'], 200);
+    }
+}
+
+/**
  * MASTER ROUTE REGISTRY
  */
 add_action('rest_api_init', function () {
@@ -909,21 +937,4 @@ add_action('rest_api_init', function () {
 
 add_filter('rest_post_dispatch', 'mco_add_cors_headers_to_response', 10, 3);
 add_action('rest_pre_serve_request', 'mco_handle_cors_preflight', 10, 4);
-
-/**
- * GLOBAL SETTINGS HANDLER (Implementation Corrected)
- */
-if (!function_exists('mco_api_admin_update_global_settings')) {
-    function mco_api_admin_update_global_settings(WP_REST_Request $request) {
-        $d = $request->get_json_params();
-        if (isset($d['activeThemeId'])) update_option('mco_active_theme_id', sanitize_text_field($d['activeThemeId']));
-        if (isset($d['purchaseNotifierEnabled'])) update_option('mco_purchase_notifier_enabled', $d['purchaseNotifierEnabled'] ? '1' : '0');
-        if (isset($d['subscriptionsEnabled'])) update_option('mco_subscriptions_enabled', $d['subscriptionsEnabled'] ? '1' : '0');
-        if (isset($d['bundlesEnabled'])) update_option('mco_bundles_enabled', $d['bundlesEnabled'] ? '1' : '0');
-        
-        delete_transient('mco_app_config_data_full_org_structure');
-        update_option('mco_config_version', current_time('YmdHis'));
-        return new WP_REST_Response(['success' => true, 'message' => 'Platform settings synchronized.'], 200);
-    }
-}
 ?>
