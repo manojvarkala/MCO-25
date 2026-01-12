@@ -26,11 +26,11 @@ if (!function_exists('mco_admin_enqueue_scripts')) {
     add_action('admin_enqueue_scripts', 'mco_admin_enqueue_scripts');
     function mco_admin_enqueue_scripts($hook) {
         $screen = get_current_screen();
-        if (!$screen || ((string)$screen->post_type !== 'mco_exam_program' && (string)$screen->base !== 'toplevel_page_mco-exam-engine' && (string)$screen->base !== 'exam-app-engine_page_mco-exam-engine')) { // Cast to string
+        if (!$screen || ((string)$screen->post_type !== 'mco_exam_program' && (string)$screen->base !== 'toplevel_page_mco-exam-engine' && (string)$screen->base !== 'exam-app-engine_page_mco-exam-engine')) {
             return;
         }
-        if (defined('MCO_PLUGIN_URL')) {
-            wp_enqueue_style('mco-admin-styles', (string)MCO_PLUGIN_URL . 'assets/mco-styles.css', [], (string)MCO_PLUGIN_VERSION); // Cast to string
+        if (defined('MCO_PLUGIN_URL') && defined('MCO_VERSION')) {
+            wp_enqueue_style('mco-admin-styles', (string)MCO_PLUGIN_URL . 'assets/mco-styles.css', [], (string)MCO_VERSION);
         }
     }
 }
@@ -48,63 +48,59 @@ if (!function_exists('mco_admin_upload_notices')) {
     add_action('admin_notices', 'mco_admin_upload_notices');
     function mco_admin_upload_notices() {
         // Only show on our admin page
-        if (!isset($_GET['page']) || (string)$_GET['page'] !== 'mco-exam-engine') { // Cast to string
+        if (!isset($_GET['page']) || (string)$_GET['page'] !== 'mco-exam-engine') {
             return;
         }
 
         // Display general success messages if present
         if (isset($_GET['message'])) {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(urldecode((string)$_GET['message'])) . '</p></div>'; // Cast to string
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(urldecode((string)$_GET['message'])) . '</p></div>';
         }
-        // The $_GET['errors'] handling is now removed as CSV errors are handled by transient
     }
 }
 
 
 if (!function_exists('mco_exam_engine_admin_page')) {
     function mco_exam_engine_admin_page() {
-        // Moved admin notices to a separate function `mco_admin_upload_notices` hooked to `admin_notices`.
-        // This ensures they render correctly at the top of the admin page.
-
-        if (isset($_POST['mco_save_settings_nonce']) && wp_verify_nonce((string)$_POST['mco_save_settings_nonce'], 'mco_save_settings')) { // Cast to string
-            $form_action = sanitize_text_field((string)($_POST['mco_form_action'] ?? '')); // Cast to string
+        if (isset($_POST['mco_save_settings_nonce']) && wp_verify_nonce((string)$_POST['mco_save_settings_nonce'], 'mco_save_settings')) {
+            $form_action = sanitize_text_field((string)($_POST['mco_form_action'] ?? ''));
 
             if ($form_action === 'save_main_settings') {
-                update_option('mco_exam_app_url', sanitize_textarea_field((string)($_POST['mco_exam_app_url'] ?? ''))); // Cast to string
-                update_option('mco_custom_logo_url', sanitize_textarea_field((string)($_POST['mco_custom_logo_url'] ?? ''))); // Cast to string
-                update_option('mco_intro_video_url', esc_url_raw((string)($_POST['mco_intro_video_url'] ?? ''))); // Cast to string
-                update_option('mco_disclaimer_text', wp_kses_post((string)($_POST['mco_disclaimer_text'] ?? ''))); // Cast to string
-                update_option('mco_organization_address', sanitize_text_field((string)($_POST['mco_organization_address'] ?? ''))); // Cast to string
+                update_option('mco_exam_app_url', sanitize_textarea_field((string)($_POST['mco_exam_app_url'] ?? '')));
+                update_option('mco_custom_logo_url', sanitize_textarea_field((string)($_POST['mco_custom_logo_url'] ?? '')));
+                update_option('mco_intro_video_url', esc_url_raw((string)($_POST['mco_intro_video_url'] ?? '')));
+                update_option('mco_disclaimer_text', wp_kses_post((string)($_POST['mco_disclaimer_text'] ?? '')));
+                update_option('mco_organization_address', sanitize_text_field((string)($_POST['mco_organization_address'] ?? '')));
                 
                 $enable_reg = isset($_POST['mco_users_can_register']) ? 1 : 0;
-                update_option('users_can_register', (int)$enable_reg); // Cast to int
-                update_option('mco_force_enable_registration', (int)$enable_reg); // Cast to int
+                update_option('users_can_register', (int)$enable_reg);
+                update_option('mco_force_enable_registration', (int)$enable_reg);
                 
-                update_option('mco_subscriptions_enabled', (string)(isset($_POST['mco_subscriptions_enabled']) ? '1' : '0')); // Cast to string
-                update_option('mco_bundles_enabled', (string)(isset($_POST['mco_bundles_enabled']) ? '1' : '0')); // Cast to string
-                update_option('mco_purchase_notifier_enabled', (string)(isset($_POST['mco_purchase_notifier_enabled']) ? '1' : '0')); // Cast to string
-                update_option('mco_purchase_notifier_delay', sanitize_text_field((string)($_POST['mco_purchase_notifier_delay'] ?? '7'))); // Cast to string
-                update_option('mco_purchase_notifier_min_gap', sanitize_text_field((string)($_POST['mco_purchase_notifier_min_gap'] ?? '8'))); // Cast to string
-                update_option('mco_purchase_notifier_max_gap', sanitize_text_field((string)($_POST['mco_purchase_notifier_max_gap'] ?? '23'))); // Cast to string
+                update_option('mco_subscriptions_enabled', (string)(isset($_POST['mco_subscriptions_enabled']) ? '1' : '0'));
+                update_option('mco_bundles_enabled', (string)(isset($_POST['mco_bundles_enabled']) ? '1' : '0'));
+                update_option('mco_purchase_notifier_enabled', (string)(isset($_POST['mco_purchase_notifier_enabled']) ? '1' : '0'));
+                update_option('mco_purchase_notifier_delay', sanitize_text_field((string)($_POST['mco_purchase_notifier_delay'] ?? '7')));
+                update_option('mco_purchase_notifier_min_gap', sanitize_text_field((string)($_POST['mco_purchase_notifier_min_gap'] ?? '8')));
+                update_option('mco_purchase_notifier_max_gap', sanitize_text_field((string)($_POST['mco_purchase_notifier_max_gap'] ?? '23')));
                 delete_transient('mco_app_config_data');
                 update_option('mco_config_version', current_time('YmdHis'));
                 echo '<div class="notice notice-success is-dismissible"><p>Settings saved and config cache cleared.</p></div>';
 
             } elseif ($form_action === 'save_theme_settings') {
-                update_option('mco_active_theme_id', sanitize_text_field((string)($_POST['mco_active_theme_id'] ?? ''))); // Cast to string
+                update_option('mco_active_theme_id', sanitize_text_field((string)($_POST['mco_active_theme_id'] ?? '')));
                 delete_transient('mco_app_config_data');
                 update_option('mco_config_version', current_time('YmdHis'));
                 echo '<div class="notice notice-success is-dismissible"><p>Theme settings saved.</p></div>';
 
             } elseif ($form_action === 'save_certificate_templates') {
-                $templates_data = (array)($_POST['mco_templates'] ?? []); // Cast to array
+                $templates_data = (array)($_POST['mco_templates'] ?? []);
                 $sanitized_templates = [];
                 foreach ($templates_data as $id => $template) {
-                    $template_id = (string)$id; // Cast to string
-                    if (isset($template['delete']) && (string)$template['delete'] === '1' && !in_array($template_id, ['cert-practice', 'cert-completion'])) continue; // Cast to string
+                    $template_id = (string)$id;
+                    if (isset($template['delete']) && (string)$template['delete'] === '1' && !in_array($template_id, ['cert-practice', 'cert-completion'])) continue;
                     $new_id = $template_id;
                     if (strpos($template_id, 'new_template_') === 0 && isset($template['name']) && !empty($template['name'])) {
-                        $new_id = 'cert-' . sanitize_title((string)$template['name']); // Cast to string
+                        $new_id = 'cert-' . sanitize_title((string)$template['name']);
                     }
                     $sanitized_templates[$new_id] = [
                         'id' => (string)$new_id,
@@ -120,7 +116,7 @@ if (!function_exists('mco_exam_engine_admin_page')) {
                     ];
                 }
                 update_option('mco_certificate_templates', $sanitized_templates);
-                update_option('mco_certificate_theme_id', sanitize_text_field((string)($_POST['mco_certificate_theme_id'] ?? ''))); // Cast to string
+                update_option('mco_certificate_theme_id', sanitize_text_field((string)($_POST['mco_certificate_theme_id'] ?? '')));
                 delete_transient('mco_app_config_data');
                 update_option('mco_config_version', current_time('YmdHis'));
                 echo '<div class="notice notice-success is-dismissible"><p>Certificate templates saved and cache cleared.</p></div>';
@@ -139,7 +135,7 @@ if (!function_exists('mco_exam_engine_admin_page')) {
             }
         }
 
-        $active_tab = isset($_GET['tab']) ? sanitize_text_field((string)$_GET['tab']) : 'main_settings'; // Cast to string
+        $active_tab = isset($_GET['tab']) ? sanitize_text_field((string)$_GET['tab']) : 'main_settings';
         ?>
         <div class="wrap mco-admin-wrap">
             <h1>Settings & Tools</h1>
@@ -152,7 +148,6 @@ if (!function_exists('mco_exam_engine_admin_page')) {
             </h2>
             <div class="tab-content" style="margin-top: 20px;">
                 <?php
-                // Ensure functions exist before calling them
                 $func = 'mco_render_' . $active_tab . '_tab';
                 if (function_exists($func)) $func();
                 ?>
@@ -164,7 +159,7 @@ if (!function_exists('mco_exam_engine_admin_page')) {
 
 if (!function_exists('mco_render_main_settings_tab')) {
     function mco_render_main_settings_tab() { 
-        $current_address = (string)get_option('mco_organization_address', ''); // Cast to string
+        $current_address = (string)get_option('mco_organization_address', '');
     ?>
         <form method="post" action="?page=mco-exam-engine&tab=main_settings">
             <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
@@ -194,7 +189,7 @@ if (!function_exists('mco_render_certificate_templates_tab')) {
     function mco_render_certificate_templates_tab() {
         $saved_templates = get_option('mco_certificate_templates');
         $templates = (empty($saved_templates) || !is_array($saved_templates)) ? mco_get_default_certificate_templates() : $saved_templates;
-        $cert_theme = (string)get_option('mco_certificate_theme_id', 'classic'); // Cast to string
+        $cert_theme = (string)get_option('mco_certificate_theme_id', 'classic');
         ?>
         <form method="post" action="?page=mco-exam-engine&tab=certificate_templates">
             <?php wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce'); ?>
@@ -256,24 +251,23 @@ if (!function_exists('mco_render_certificate_templates_tab')) {
 
 if (!function_exists('mco_render_theme_selector_tab')) {
     function mco_render_theme_selector_tab() {
-        if (!function_exists('mco_get_available_themes')) return '<p>Theme data not available.</p>'; // Safety check
+        if (!function_exists('mco_get_available_themes')) return '<p>Theme data not available.</p>';
         $themes = mco_get_available_themes();
-        $active = (string)get_option('mco_active_theme_id', 'default'); // Cast to string
+        $active = (string)get_option('mco_active_theme_id', 'default');
         
-        // FIX: Define theme colors directly in PHP for robust rendering, mirroring React component.
         $theme_colors_php = [
-            'default' => ['#06b6d4','#db2777','#fde047','#0f172a'], // cyberpunk
-            'professional' => ['#047857','#3b82f6','#eab308','#f1f5f9'], // professional
-            'serene' => ['#60a5fa','#34d399','#fb923c','#f0fdfa'], // serene
-            'academic' => ['#7f1d1d','#a16207','#d97706','#fafaf9'], // academic
-            'noir' => ['#e5e7eb','#8b5cf6','#eab308','#1f2937'] // noir
+            'default' => ['#06b6d4','#db2777','#fde047','#0f172a'],
+            'professional' => ['#047857','#3b82f6','#eab308','#f1f5f9'],
+            'serene' => ['#60a5fa','#34d399','#fb923c','#f0fdfa'],
+            'academic' => ['#7f1d1d','#a16207','#d97706','#fafaf9'],
+            'noir' => ['#e5e7eb','#8b5cf6','#eab308','#1f2937']
         ];
 
         echo '<form method="post" action="?page=mco-exam-engine&tab=theme_selector">';
         wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce');
         echo '<input type="hidden" name="mco_form_action" value="save_theme_settings"><h2>Application Theme</h2><div class="mco-theme-selector-grid">';
         foreach ($themes as $t) {
-            $c = $theme_colors_php[(string)$t['id']] ?? ['#ccc', '#ccc', '#ccc', '#ccc']; // Fallback (Cast to string)
+            $c = $theme_colors_php[(string)$t['id']] ?? ['#ccc', '#ccc', '#ccc', '#ccc'];
             echo '<label class="mco-theme-card '.($active===(string)$t['id']?'mco-theme-card--selected':'').'"><input type="radio" name="mco_active_theme_id" value="'.esc_attr((string)$t['id']).'" class="mco-theme-radio" '.checked($active,(string)$t['id'],false).'><div class="mco-theme-swatches"><div class="mco-theme-swatch" style="background:'.esc_attr($c[0]).'"></div><div class="mco-theme-swatch" style="background:'.esc_attr($c[1]).'"></div><div class="mco-theme-swatch" style="background:'.esc_attr($c[2]).'"></div><div class="mco-theme-swatch" style="background:'.esc_attr($c[3]).'"></div></div><p class="mco-theme-name">'.esc_html((string)$t['name']).'</p></label>';
         }
         echo '</div>'; submit_button(); echo '</form>';
@@ -331,20 +325,18 @@ if (!function_exists('mco_render_bulk_data_tab')) {
             </tr>
         </table>
         <?php
-        // Display errors from the last CSV upload using a transient
-        $errors_from_upload = get_transient('mco_csv_upload_errors_' . (string)get_current_user_id()); // Cast to string
-        if ($errors_from_upload !== false && is_array($errors_from_upload) && !empty($errors_from_upload)) { // Add is_array check
+        $errors_from_upload = get_transient('mco_csv_upload_errors_' . (string)get_current_user_id());
+        if ($errors_from_upload !== false && is_array($errors_from_upload) && !empty($errors_from_upload)) {
             echo '<div class="notice notice-error is-dismissible" style="margin-top: 20px;">';
             echo '<h3><strong>Errors from Last Import:</strong></h3><ul>';
             foreach ($errors_from_upload as $error) {
-                $rowData = isset($error['row_data']) ? (string)$error['row_data'] : 'N/A'; // Cast to string
-                // Directly display var_export output or fallback to simple esc_html
+                $rowData = isset($error['row_data']) ? (string)$error['row_data'] : 'N/A';
                 $displayData = '<pre style="background-color: #f0f0f0; padding: 5px; border-radius: 3px; font-size: 0.8em; margin-top: 5px; overflow-x: auto;">' . esc_html($rowData) . '</pre>';
 
                 echo '<li>Row ' . esc_html((string)($error['row_num'] ?? 'N/A')) . ': ' . esc_html((string)($error['reason'] ?? 'Unknown reason')) . ' (Data: ' . $displayData . ')</li>';
             }
             echo '</ul></div>';
-            delete_transient('mco_csv_upload_errors_' . (string)get_current_user_id()); // Clear after display (Cast to string)
+            delete_transient('mco_csv_upload_errors_' . (string)get_current_user_id());
         }
         ?>
         <?php
@@ -373,18 +365,17 @@ if (!function_exists('mco_handle_generate_programs_csv')) {
         fputcsv($output, ['program_title','program_description','practice_exam_name_override','cert_exam_name_override','question_source_url','certification_exam_sku','is_proctored','certificate_enabled','recommended_book_ids','practice_questions','practice_duration','cert_questions','cert_duration','pass_score','status']);
         $posts = get_posts(['post_type'=>'mco_exam_program','posts_per_page'=>-1]);
         foreach ($posts as $p) {
-            // Convert book post IDs back to string IDs for export
-            $book_post_ids = (array)get_post_meta($p->ID,'_mco_recommended_book_ids',true) ?: []; // Cast to array
+            $book_post_ids = (array)get_post_meta($p->ID,'_mco_recommended_book_ids',true) ?: [];
             $book_string_ids = [];
             if (is_array($book_post_ids)) {
                 foreach($book_post_ids as $bpid) {
-                    $s_id = (string)get_post_meta((int)$bpid, '_mco_book_id', true); // Cast bpid to int, result to string
+                    $s_id = (string)get_post_meta((int)$bpid, '_mco_book_id', true);
                     if($s_id) $book_string_ids[] = $s_id;
                 }
             }
 
             fputcsv($output, [
-                (string)$p->post_title, (string)$p->post_content, // Cast to string
+                (string)$p->post_title, (string)$p->post_content,
                 (string)get_post_meta($p->ID,'_mco_practice_exam_title_override',true),
                 (string)get_post_meta($p->ID,'_mco_cert_exam_title_override',true),
                 (string)get_post_meta($p->ID,'_mco_question_source_url',true),
@@ -397,7 +388,7 @@ if (!function_exists('mco_handle_generate_programs_csv')) {
                 (string)get_post_meta($p->ID,'_mco_cert_questions',true),
                 (string)get_post_meta($p->ID,'_mco_cert_duration',true),
                 (string)get_post_meta($p->ID,'_mco_pass_score',true),
-                (string)$p->post_status // Cast to string
+                (string)$p->post_status
             ]);
         }
         fclose($output); exit;
@@ -410,31 +401,28 @@ if (!function_exists('mco_handle_generate_books_csv')) {
         check_admin_referer('mco_generate_books_csv_nonce');
         header('Content-Type: text/csv'); header('Content-Disposition: attachment; filename="books.csv"');
         $output = fopen('php://output', 'w');
-        // FIX: Ensure all expected fields are in the header.
         fputcsv($output, ['book_id','title','description','status','thumbnail_url','permalink','link_com','link_in','link_ae']);
         $posts = get_posts(['post_type'=>'mco_recommended_book','posts_per_page'=>-1]);
         foreach ($posts as $p) {
-            // Safely get thumbnail URL
-            $thumbnail_url = (string)get_post_meta($p->ID, '_mco_thumbnail_url', true); // Cast to string
+            $thumbnail_url = (string)get_post_meta($p->ID, '_mco_thumbnail_url', true);
             if (empty($thumbnail_url) && function_exists('get_post_thumbnail_url')) {
-                $thumbnail_url = (string)get_post_thumbnail_url($p->ID, 'large') ?: ''; // Cast to string
+                $thumbnail_url = (string)get_post_thumbnail_url($p->ID, 'large') ?: '';
             }
             $thumbnail_url = esc_url_raw($thumbnail_url);
 
-            // Safely get permalink
-            $permalink = (string)get_post_meta($p->ID, '_mco_permalink', true); // Prefer custom meta (Cast to string)
+            $permalink = (string)get_post_meta($p->ID, '_mco_permalink', true);
             if (empty($permalink) && function_exists('get_permalink')) {
-                $permalink = (string)get_permalink($p->ID) ?: ''; // Cast to string
+                $permalink = (string)get_permalink($p->ID) ?: '';
             }
-            $permalink = esc_url($permalink);     // Ensure it's a safe URL
+            $permalink = esc_url($permalink);
 
             fputcsv($output, [
                 (string)get_post_meta($p->ID,'_mco_book_id',true),
-                (string)$p->post_title, // Cast to string
-                (string)$p->post_content, // Cast to string
-                (string)$p->post_status, // Cast to string
-                $thumbnail_url, // Use the safely retrieved URL
-                $permalink,     // Use the safely retrieved permalink
+                (string)$p->post_title,
+                (string)$p->post_content,
+                (string)$p->post_status,
+                $thumbnail_url,
+                $permalink,
                 (string)get_post_meta($p->ID,'_mco_link_com',true),
                 (string)get_post_meta($p->ID,'_mco_link_in',true),
                 (string)get_post_meta($p->ID,'_mco_link_ae',true)
@@ -453,8 +441,8 @@ if (!function_exists('mco_handle_generate_products_csv')) {
         fputcsv($output, ['Type','SKU','Name','Published','Virtual','Regular price','Sale price']);
         $posts = get_posts(['post_type'=>'mco_exam_program','posts_per_page'=>-1]);
         foreach ($posts as $p) {
-            $sku = (string)get_post_meta($p->ID,'_mco_certification_exam_sku',true); // Cast to string
-            if(!empty($sku)) fputcsv($output, ['simple', $sku, (string)$p->post_title . ' Certification', 1, 1, 49.99, '']); // Cast to string
+            $sku = (string)get_post_meta($p->ID,'_mco_certification_exam_sku',true);
+            if(!empty($sku)) fputcsv($output, ['simple', $sku, (string)$p->post_title . ' Certification', 1, 1, 49.99, '']);
         }
         fclose($output); exit;
     }
@@ -466,39 +454,34 @@ if (!function_exists('mco_handle_csv_upload')) {
         check_admin_referer('mco_bulk_import_nonce');
         if (empty($_FILES['csv_file']['tmp_name'])) wp_die('No file uploaded');
         
-        $type = sanitize_text_field((string)($_POST['import_type'] ?? '')); // Cast to string
-        $handle = fopen((string)$_FILES['csv_file']['tmp_name'], 'r'); // Cast to string
+        $type = sanitize_text_field((string)($_POST['import_type'] ?? ''));
+        $handle = fopen((string)$_FILES['csv_file']['tmp_name'], 'r');
         if (!$handle) wp_die('Could not open uploaded file.');
 
-        $row_num = 1; // Start at 1 for header
-        $header = fgetcsv($handle, 0, ','); // Use comma delimiter for header
+        $row_num = 1;
+        $header = fgetcsv($handle, 0, ',');
         
         $processed_count = 0;
         $skipped_count = 0;
         $error_rows = [];
 
-        while (($row = fgetcsv($handle, 0, ',')) !== FALSE) { // Use comma delimiter for data rows
-            $row_num++; // Increment for each data row
+        while (($row = fgetcsv($handle, 0, ',')) !== FALSE) {
+            $row_num++;
             
-            // Explicitly handle different fgetcsv return values
-            if ($row === null) { // Typically an empty line in the file
-                error_log('MCO CSV IMPORT: Skipping row ' . $row_num . ' due to fgetcsv returning NULL (empty line).');
+            if ($row === null) {
                 $skipped_count++;
-                $error_rows[] = ['row_num' => $row_num, 'row_data' => 'fgetcsv returned NULL (empty line).', 'reason' => 'Empty line in CSV.'];
+                $error_rows[] = ['row_num' => $row_num, 'row_data' => 'Empty line', 'reason' => 'Empty line in CSV.'];
                 continue;
             }
-            if ($row === false) { // Typically an error or unexpected EOF if inside loop
-                 error_log('MCO CSV IMPORT: Skipping row ' . $row_num . ' due to fgetcsv returning FALSE (malformed line or error).');
+            if ($row === false) {
                  $skipped_count++;
-                 $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Malformed line in CSV.'];
+                 $error_rows[] = ['row_num' => $row_num, 'row_data' => 'Malformed line', 'reason' => 'Malformed line in CSV.'];
                  continue;
             }
             
-            // Filter out rows that are arrays but contain only empty strings or nulls (effectively empty)
             if (!is_array($row) || empty(array_filter($row, fn($v) => $v !== null && $v !== ''))) {
-                error_log('MCO CSV IMPORT: Skipping row ' . $row_num . ' due to effectively empty content: ' . var_export($row, true));
                 $skipped_count++;
-                $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Effectively empty row (contains only empty/null values).'];
+                $error_rows[] = ['row_num' => $row_num, 'row_data' => 'Effectively empty row', 'reason' => 'Row contains only empty/null values.'];
                 continue;
             }
 
@@ -506,30 +489,19 @@ if (!function_exists('mco_handle_csv_upload')) {
             if ($type === 'programs') {
                 try {
                     $expected_cols_programs = 15;
-                    // --- NEW DEBUG LOGGING START (Programs) ---
-                    error_log('MCO CSV IMPORT DEBUG (Program): Processing row ' . $row_num);
-                    error_log('MCO CSV IMPORT DEBUG (Program): Raw fgetcsv output: ' . var_export($row, true) . '; Column count: ' . (is_array($row) ? count($row) : 'N/A'));
-                    // --- NEW DEBUG LOGGING END (Programs) ---
-
                     if (count($row) < $expected_cols_programs) { 
-                        error_log('MCO CSV IMPORT: Skipping program row ' . $row_num . ' due to insufficient columns: ' . count($row) . ' found, ' . $expected_cols_programs . ' expected. Data: ' . esc_html(implode(', ', $row)));
                         $skipped_count++;
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Insufficient columns for program (' . count($row) . ' found, ' . $expected_cols_programs . ' expected).'];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => implode(',', $row), 'reason' => 'Insufficient columns for program.'];
                         continue;
                     }
 
-                    $post_title = sanitize_text_field(trim((string)($row[0] ?? ''))); // Cast to string
-                    $post_content = wp_kses_post(trim((string)($row[1] ?? ''))); // Cast to string
-                    $post_status = sanitize_text_field(trim((string)($row[14]??'publish'))); // Cast to string
+                    $post_title = sanitize_text_field(trim((string)($row[0] ?? '')));
+                    $post_content = wp_kses_post(trim((string)($row[1] ?? '')));
+                    $post_status = sanitize_text_field(trim((string)($row[14]??'publish')));
                     
-                    // --- NEW DEBUG LOGGING START (Programs) ---
-                    error_log('MCO CSV IMPORT DEBUG (Program): Post Title after trim for row ' . $row_num . ': "' . $post_title . '"');
-                    // --- NEW DEBUG LOGGING END (Programs) ---
-
                     if (empty($post_title)) {
-                        error_log('MCO CSV IMPORT: Skipping program row ' . $row_num . ' due to empty program title: ' . esc_html(implode(', ', $row)));
                         $skipped_count++;
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Program title (column 1) is empty.'];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => implode(',', $row), 'reason' => 'Program title is empty.'];
                         continue;
                     }
 
@@ -541,18 +513,12 @@ if (!function_exists('mco_handle_csv_upload')) {
                     ];
                     
                     $existing = get_page_by_title($post_title, OBJECT, 'mco_exam_program');
-                    if ($existing) $post_data['ID'] = (int)$existing->ID; // Cast to int
+                    if ($existing) $post_data['ID'] = (int)$existing->ID;
 
-                    $pid = wp_insert_post($post_data, true); // true to return WP_Error on failure
+                    $pid = wp_insert_post($post_data, true);
                     
                     if(is_wp_error($pid)) {
-                        error_log('MCO CSV IMPORT: Error inserting/updating program at row ' . $row_num . ': ' . (string)$pid->get_error_message() . ' for row: ' . esc_html(implode(', ', $row))); // Cast to string
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Post insertion/update failed: ' . (string)$pid->get_error_message()];
-                        continue;
-                    } elseif (empty($pid)) { // Check for silent failure (pid = 0)
-                        error_log('MCO CSV IMPORT: Silent failure inserting/updating program at row ' . $row_num . ': wp_insert_post returned 0. Data: ' . esc_html(implode(', ', $row)));
-                        $skipped_count++;
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Post insertion/update failed silently (e.g. invalid title).'];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => implode(',', $row), 'reason' => $pid->get_error_message()];
                         continue;
                     }
                     
@@ -564,7 +530,7 @@ if (!function_exists('mco_handle_csv_upload')) {
                         update_post_meta($pid, '_mco_is_proctored', sanitize_text_field(trim((string)($row[6]??'0'))));
                         update_post_meta($pid, '_mco_certificate_enabled', sanitize_text_field(trim((string)($row[7]??'0'))));
 
-                        $book_str_ids = array_map('trim', explode(',', trim((string)($row[8]??'')))); // Cast to string
+                        $book_str_ids = array_map('trim', explode(',', trim((string)($row[8]??''))));
                         $book_post_ids = [];
                         foreach($book_str_ids as $bsid) {
                             if(empty($bsid)) continue;
@@ -576,7 +542,7 @@ if (!function_exists('mco_handle_csv_upload')) {
                                 'fields' => 'ids'
                             ];
                             $found = get_posts($args);
-                            if(!empty($found)) $book_post_ids[] = (int)$found[0]; // Cast to int
+                            if(!empty($found)) $book_post_ids[] = (int)$found[0];
                         }
                         update_post_meta($pid, '_mco_recommended_book_ids', $book_post_ids);
                         
@@ -586,55 +552,34 @@ if (!function_exists('mco_handle_csv_upload')) {
                         update_post_meta($pid, '_mco_cert_duration', sanitize_text_field(trim((string)($row[12]??''))));
                         update_post_meta($pid, '_mco_pass_score', sanitize_text_field(trim((string)($row[13]??''))));
                         $processed_count++;
-                        error_log('MCO CSV IMPORT: Successfully processed program row ' . $row_num . ' (ID: ' . $pid . ')');
                     }
                 } catch (Exception $e) {
-                    error_log('MCO CSV IMPORT FATAL: Exception during program row ' . $row_num . ': ' . $e->getMessage() . ' for row: ' . esc_html(implode(', ', $row)));
                     $skipped_count++;
-                    $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Unhandled exception: ' . $e->getMessage()];
+                    $error_rows[] = ['row_num' => $row_num, 'row_data' => implode(',', $row), 'reason' => $e->getMessage()];
                 }
             } elseif ($type === 'books') {
                 try {
-                    // FIX: Changed from 8 to 9 to match actual CSV export header.
                     $expected_cols_books = 9;
-                    // --- NEW DEBUG LOGGING START (Books) ---
-                    error_log('MCO CSV IMPORT DEBUG (Book): RAW fgetcsv output for row ' . $row_num . ': ' . var_export($row, true) . '; Column count: ' . (is_array($row) ? count($row) : 'N/A'));
-                    // --- END NEW DEBUG LOGGING ---
-
-                    // This check is now less critical as empty/null rows are handled above, but useful for short/malformed
                     if (count($row) < $expected_cols_books) { 
-                        error_log('MCO CSV IMPORT: Skipping book row ' . $row_num . ' due to insufficient columns: ' . count($row) . ' found, ' . $expected_cols_books . ' expected. Data: ' . esc_html(implode(', ', $row)));
                         $skipped_count++;
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Insufficient columns for book (' . count($row) . ' found, ' . $expected_cols_books . ' expected).'];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => implode(',', $row), 'reason' => 'Insufficient columns for book.'];
                         continue;
                     }
 
-                    $book_id = sanitize_text_field(trim((string)($row[0] ?? ''))); // Cast to string
-                    
-                    // --- NEW DEBUG LOGGING START (Books) ---
-                    error_log('MCO CSV IMPORT DEBUG (Book): Book ID after trim for row ' . $row_num . ': "' . $book_id . '"');
-                    // --- NEW DEBUG LOGGING END (Books) ---
-
-                    // IMPORTANT: Ensure book_id is not empty or it can lead to creating many posts with empty book_id
+                    $book_id = sanitize_text_field(trim((string)($row[0] ?? '')));
                     if (empty($book_id)) {
-                        error_log('MCO CSV IMPORT: Skipping book row ' . $row_num . ' due to empty book_id: ' . esc_html(implode(', ', $row)));
                         $skipped_count++;
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Book ID (column 1) is empty.'];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => implode(',', $row), 'reason' => 'Book ID is empty.'];
                         continue;
                     }
 
-                    $post_title = sanitize_text_field(trim((string)($row[1] ?? ''))); // Cast to string
-                    // --- NEW DEBUG LOGGING START (Books) ---
-                    error_log('MCO CSV IMPORT DEBUG (Book): Post Title after trim for row ' . $row_num . ': "' . $post_title . '"');
-                    // --- NEW DEBUG LOGGING END (Books) ---
-
-                    $post_content = wp_kses_post(trim((string)($row[2] ?? ''))); // Cast to string
-                    $post_status = sanitize_text_field(trim((string)($row[3]??'publish'))); // Cast to string
+                    $post_title = sanitize_text_field(trim((string)($row[1] ?? '')));
+                    $post_content = wp_kses_post(trim((string)($row[2] ?? '')));
+                    $post_status = sanitize_text_field(trim((string)($row[3]??'publish')));
 
                     if (empty($post_title)) {
-                        error_log('MCO CSV IMPORT: Skipping book row ' . $row_num . ' due to empty book title: ' . esc_html(implode(', ', $row)));
                         $skipped_count++;
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Book title (column 2) is empty.'];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => implode(',', $row), 'reason' => 'Book title is empty.'];
                         continue;
                     }
 
@@ -645,40 +590,29 @@ if (!function_exists('mco_handle_csv_upload')) {
                         'post_type'     => 'mco_recommended_book'
                     ];
                     
-                    // Check existing by Book ID meta
                     $args = ['post_type'=>'mco_recommended_book', 'meta_key'=>'_mco_book_id', 'meta_value'=>$book_id, 'posts_per_page'=>1, 'fields'=>'ids'];
                     $existing = get_posts($args);
-                    if (!empty($existing)) $post_data['ID'] = (int)$existing[0]; // Cast to int
+                    if (!empty($existing)) $post_data['ID'] = (int)$existing[0];
 
-                    $pid = wp_insert_post($post_data, true); // true to return WP_Error on failure
+                    $pid = wp_insert_post($post_data, true);
                     
                     if(is_wp_error($pid)) {
-                        error_log('MCO CSV IMPORT: Error inserting/updating book at row ' . $row_num . ': ' . (string)$pid->get_error_message() . ' for row: ' . esc_html(implode(', ', $row))); // Cast to string
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Post insertion/update failed: ' . (string)$pid->get_error_message()];
-                        continue;
-                    } elseif (empty($pid)) { // Check for silent failure (pid = 0)
-                        error_log('MCO CSV IMPORT: Silent failure inserting/updating book at row ' . $row_num . ': wp_insert_post returned 0. Data: ' . esc_html(implode(', ', $row)));
-                        $skipped_count++;
-                        $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Post insertion/update failed silently (e.g. invalid title).'];
+                        $error_rows[] = ['row_num' => $row_num, 'row_data' => implode(',', $row), 'reason' => $pid->get_error_message()];
                         continue;
                     }
                     
                     if($pid) {
                         update_post_meta($pid, '_mco_book_id', $book_id);
                         update_post_meta($pid, '_mco_thumbnail_url', esc_url_raw(trim((string)($row[4] ?? ''))));
-                        // FIX: Added permalink field
-                        update_post_meta($pid, '_mco_permalink', esc_url_raw(trim((string)($row[5] ?? '')))); // Cast to string
-                        // FIX: Adjusted index for correct column mapping for affiliate links (Rows 405-407)
+                        update_post_meta($pid, '_mco_permalink', esc_url_raw(trim((string)($row[5] ?? ''))));
                         update_post_meta($pid, '_mco_link_com', esc_url_raw(trim((string)($row[6] ?? ''))));
                         update_post_meta($pid, '_mco_link_in', esc_url_raw(trim((string)($row[7] ?? ''))));
                         update_post_meta($pid, '_mco_link_ae', esc_url_raw(trim((string)($row[8] ?? ''))));
                         $processed_count++;
-                        error_log('MCO CSV IMPORT: Successfully processed book row ' . $row_num . ' (ID: ' . $pid . ')');
                     }
                 } catch (Exception $e) {
-                    error_log('MCO CSV IMPORT FATAL: Exception during book row ' . $row_num . ': ' . $e->getMessage() . ' for row: ' . esc_html(implode(', ', $row)));
                     $skipped_count++;
-                    $error_rows[] = ['row_num' => $row_num, 'row_data' => var_export($row, true), 'reason' => 'Unhandled exception: ' . $e->getMessage()];
+                    $error_rows[] = ['row_num' => $row_num, 'row_data' => implode(',', $row), 'reason' => $e->getMessage()];
                 }
             }
         }
@@ -691,9 +625,8 @@ if (!function_exists('mco_handle_csv_upload')) {
         } else {
             $redirect_url = add_query_arg('message', urlencode("Import completed, but no {$type} were processed. Skipped {$skipped_count} rows."), $redirect_url);
         }
-        // Store errors in a transient instead of passing via URL
         if (!empty($error_rows)) {
-            set_transient('mco_csv_upload_errors_' . (string)get_current_user_id(), $error_rows, 5 * MINUTE_IN_SECONDS); // Cast to string
+            set_transient('mco_csv_upload_errors_' . (string)get_current_user_id(), $error_rows, 5 * MINUTE_IN_SECONDS);
         }
 
         wp_redirect($redirect_url);
@@ -705,7 +638,6 @@ if (!function_exists('mco_handle_generate_tenant_blueprint')) {
     function mco_handle_generate_tenant_blueprint() {
         if (!current_user_can('manage_options')) wp_die('Permission denied.');
         check_admin_referer('mco_generate_tenant_blueprint_nonce');
-        // Ensure mco_get_full_snapshot_data is available from mco-data.php
         if (!function_exists('mco_get_full_snapshot_data')) {
             wp_die('Error: mco_get_full_snapshot_data function not found. Ensure mco-data.php is loaded.');
         }
@@ -718,7 +650,6 @@ if (!function_exists('mco_handle_generate_full_snapshot')) {
     function mco_handle_generate_full_snapshot() {
         if (!current_user_can('manage_options')) wp_die('Permission denied.');
         check_admin_referer('mco_generate_full_snapshot_nonce');
-        // Ensure mco_get_full_snapshot_data is available from mco-data.php
         if (!function_exists('mco_get_full_snapshot_data')) {
             wp_die('Error: mco_get_full_snapshot_data function not found. Ensure mco-data.php is loaded.');
         }
