@@ -45,14 +45,6 @@ const HealthCard: FC<{ title: string; status?: { success: boolean; message: stri
     </div>
 );
 
-const themeColors: { [key: string]: string[] } = {
-    default: ['#06b6d4','#db2777','#fde047','#0f172a'],
-    professional: ['#047857','#3b82f6','#eab308','#f1f5f9'],
-    serene: ['#60a5fa','#34d399','#fb923c','#f0fdfa'],
-    academic: ['#7f1d1d','#a16207','#d97706','#fafaf9'],
-    noir: ['#e5e7eb','#8b5cf6','#eab308','#1f2937']
-};
-
 const Admin: FC = () => {
     const { token } = useAuth();
     const { activeOrg, availableThemes, activeTheme, refreshConfig } = useAppContext();
@@ -61,6 +53,7 @@ const Admin: FC = () => {
     const [health, setHealth] = useState<HealthStatus | null>(null);
     const [stats, setStats] = useState<ExamStat[] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSavingSettings, setIsSavingSettings] = useState(false);
 
     const [localSettings, setLocalSettings] = useState({
         purchaseNotifierEnabled: activeOrg?.purchaseNotifierEnabled ?? true,
@@ -95,9 +88,24 @@ const Admin: FC = () => {
     const handleSyncSettings = async (updates: Partial<typeof localSettings>) => {
         if (!token) return;
         
-        // NOTE: Your provided v5.0.1 API does not have /admin/update-global-settings yet.
-        toast.error("Settings saved locally, but backend endpoint is missing in your API file. Update mco-api.php to support this.");
-        setLocalSettings({ ...localSettings, ...updates });
+        setIsSavingSettings(true);
+        const toastId = toast.loading("Syncing platform settings to WordPress...");
+        
+        try {
+            const newSettings = { ...localSettings, ...updates };
+            // Real API call to update the global options in WordPress
+            await googleSheetsService.adminUpdateGlobalSettings(token, newSettings);
+            
+            setLocalSettings(newSettings);
+            // Refresh the app context to fetch the latest config and reflect toggles immediately
+            await refreshConfig();
+            
+            toast.success("Platform settings synchronized!", { id: toastId });
+        } catch (e: any) {
+            toast.error(`Sync failed: ${e.message}`, { id: toastId });
+        } finally {
+            setIsSavingSettings(false);
+        }
     };
 
     const runSheetTest = async () => {
@@ -108,7 +116,7 @@ const Admin: FC = () => {
             const res = await googleSheetsService.adminTestSheetUrl(token, testUrl);
             setTestResult(res);
             if (res.success) toast.success("Google Sheets connection verified!");
-            else toast.error("Sheet inaccessible");
+            else toast.error("Sheet inaccessible or invalid format");
         } catch (e: any) {
             setTestResult({ success: false, message: e.message });
         } finally {
@@ -174,16 +182,38 @@ const Admin: FC = () => {
                 {activeTab === 'appearance' && (
                     <div className="space-y-6">
                         <h2 className="text-3xl font-extrabold mb-6 flex items-center gap-3"><Settings2 className="text-cyan-500" /> UI Configuration</h2>
-                        <div className="bg-amber-900/20 border border-amber-500/30 p-4 rounded-xl mb-4 flex items-start gap-3">
-                            <AlertCircle className="text-amber-500 mt-1" size={20} />
-                            <p className="text-sm text-amber-200">Note: Saving UI changes requires the <code>/admin/update-global-settings</code> endpoint which is missing in your provided API file.</p>
-                        </div>
-                        <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden opacity-50 pointer-events-none">
+                        <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden">
                             <div className="p-6 space-y-4">
                                 <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl">
-                                    <div><p className="font-bold">Purchase Notifier</p><p className="text-xs text-slate-400 italic">Social proof popups for visitors</p></div>
-                                    <button className="text-slate-600">
-                                        <ToggleLeft size={40} />
+                                    <div><p className="font-bold text-white">Purchase Notifier</p><p className="text-xs text-slate-400 italic">Social proof popups for visitors</p></div>
+                                    <button 
+                                        onClick={() => handleSyncSettings({ purchaseNotifierEnabled: !localSettings.purchaseNotifierEnabled })}
+                                        disabled={isSavingSettings}
+                                        className={`transition-colors ${localSettings.purchaseNotifierEnabled ? 'text-cyan-500' : 'text-slate-600'}`}
+                                    >
+                                        {localSettings.purchaseNotifierEnabled ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl">
+                                    <div><p className="font-bold text-white">Subscription System</p><p className="text-xs text-slate-400 italic">Toggle monthly/yearly access plans</p></div>
+                                    <button 
+                                        onClick={() => handleSyncSettings({ subscriptionsEnabled: !localSettings.subscriptionsEnabled })}
+                                        disabled={isSavingSettings}
+                                        className={`transition-colors ${localSettings.subscriptionsEnabled ? 'text-cyan-500' : 'text-slate-600'}`}
+                                    >
+                                        {localSettings.subscriptionsEnabled ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl">
+                                    <div><p className="font-bold text-white">Product Bundles</p><p className="text-xs text-slate-400 italic">Enable complex exam + access packages</p></div>
+                                    <button 
+                                        onClick={() => handleSyncSettings({ bundlesEnabled: !localSettings.bundlesEnabled })}
+                                        disabled={isSavingSettings}
+                                        className={`transition-colors ${localSettings.bundlesEnabled ? 'text-cyan-500' : 'text-slate-600'}`}
+                                    >
+                                        {localSettings.bundlesEnabled ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
                                     </button>
                                 </div>
                             </div>
@@ -195,7 +225,7 @@ const Admin: FC = () => {
                     <div className="space-y-6">
                         <h2 className="text-3xl font-extrabold mb-6 flex items-center gap-3"><FileSpreadsheet className="text-cyan-500" /> Dataset Validation</h2>
                         <div className="bg-slate-900 p-8 rounded-2xl border border-slate-700">
-                            <p className="text-slate-400 mb-6 font-medium">Input a Google Sheet URL to verify its CSV structure (standard 6-column format) before assigning it.</p>
+                            <p className="text-slate-400 mb-6 font-medium">Input a Google Sheet URL to verify its CSV structure. The system automatically converts "Share" links to CSV format.</p>
                             <div className="flex gap-3">
                                 <input 
                                     type="url" 

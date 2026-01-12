@@ -106,7 +106,7 @@ const Dashboard: FC = () => {
                 </div>
                 {user && token && (
                     <button onClick={handleSync} disabled={isSyncing} className="flex items-center gap-2 bg-[rgb(var(--color-muted-rgb))] hover:bg-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-default-rgb))] font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50">
-                        <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} /> {isSyncing ? 'Syncing...' : 'Sync My Exams'}
+                        <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} /> {isSyncing ? 'Sync My Exams'}
                     </button>
                 )}
             </div>
@@ -116,13 +116,11 @@ const Dashboard: FC = () => {
                     let dashboardBundle = null;
                     if (bundlesEnabled && category.certExam?.productSku && examPrices) {
                         const certSku = category.certExam.productSku;
-                        const subBundleSku = `${certSku}-1mo-addon`;
-                        const practiceBundleSku = `${certSku}-1`;
+                        // Support for 1-month subscription addon bundles
+                        const addonSku = `${certSku}-1mo-addon`;
 
-                        if (examPrices[subBundleSku]) {
-                            dashboardBundle = { product: { ...examPrices[subBundleSku], sku: subBundleSku }, type: 'subscription' as const };
-                        } else if (examPrices[practiceBundleSku]) {
-                            dashboardBundle = { product: { ...examPrices[practiceBundleSku], sku: practiceBundleSku }, type: 'practice' as const };
+                        if (examPrices[addonSku]) {
+                            dashboardBundle = { product: { ...examPrices[addonSku], sku: addonSku }, type: 'subscription' as const };
                         }
                     }
 

@@ -16,84 +16,72 @@ if (!defined('ABSPATH')) exit;
 define('MCO_PLUGIN_FILE', __FILE__);
 define('MCO_PLUGIN_PATH', plugin_dir_path(MCO_PLUGIN_FILE));
 define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
-error_log('MCO PLUGIN: Main plugin file loaded. MCO_PLUGIN_PATH: ' . MCO_PLUGIN_PATH); // Debug log
 $plugin_data = get_file_data(MCO_PLUGIN_FILE, array('Version' => 'Version'));
-define('MCO_PLUGIN_VERSION', (string)($plugin_data['Version'] ?? '1.0.0')); // Cast to string
+define('MCO_PLUGIN_VERSION', (string)($plugin_data['Version'] ?? '1.0.0'));
 
 // --- INCLUDES ---
-// Order matters: CPTs first so they are registered before shortcodes/api might need them
 require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
-error_log('MCO PLUGIN: mco-cpts.php required.'); // Debug log
-require_once MCO_PLUGIN_PATH . 'includes/mco-data.php'; // Contains core data functions, used by API and shortcodes
-error_log('MCO PLUGIN: mco-data.php required. Checking for mco_get_exam_app_url: ' . (function_exists('mco_get_exam_app_url') ? 'YES' : 'NO')); // Debug log
-require_once MCO_PLUGIN_PATH . 'includes/mco-api.php'; // Main API routes and JWT logic
-error_log('MCO PLUGIN: mco-api.php required.'); // Debug log
-require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; // WordPress Admin pages
-error_log('MCO PLUGIN: mco-admin.php required.'); // Debug log
-require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php'; // WordPress Shortcodes
-error_log('MCO PLUGIN: mco-shortcodes.php required.'); // Debug log
+require_once MCO_PLUGIN_PATH . 'includes/mco-data.php'; 
+require_once MCO_PLUGIN_PATH . 'includes/mco-api.php'; 
+require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; 
+require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php'; 
 
 // --- FORCE REGISTRATION OPTION ---
 if (!function_exists('mco_force_registration_option')) {
     add_filter('option_users_can_register', 'mco_force_registration_option');
     function mco_force_registration_option($value) {
-        if ((bool)get_option('mco_force_enable_registration', false)) { // Cast to bool
+        if ((bool)get_option('mco_force_enable_registration', false)) {
             return 1;
         }
-        return (int)$value; // Cast return to int
+        return (int)$value;
     }
 }
 
 // --- SINGLE SIGN-ON & LOGIN REDIRECTS ---
-// This must run on template_redirect to happen before headers are sent.
 if (!function_exists('mco_sso_login_redirect')) {
     function mco_sso_login_redirect() {
         global $post;
         
-        // Ensure $post is a valid object before accessing properties
         $is_login_page = is_a($post, 'WP_Post') && has_shortcode((string)$post->post_content, 'mco_exam_login');
         
-        // 1. HANDLE LOGGED OUT USERS (Force Redirect to WP Login)
+        // 1. HANDLE LOGGED OUT USERS
         if ($is_login_page && !is_user_logged_in()) {
             nocache_headers();
-            $current_url = (string)get_permalink(); // Cast to string
+            $current_url = (string)get_permalink();
             $login_url = wp_login_url($current_url);
             wp_redirect($login_url);
             exit;
         }
 
-        // 2. HANDLE LOGGED IN USERS (SSO Redirect to App)
+        // 2. HANDLE LOGGED IN USERS
         if (is_user_logged_in() && (isset($_GET['mco_sso_trigger']) || $is_login_page)) {
             $user = wp_get_current_user();
             
-            // If user hasn't set a full name yet, stop here. The shortcode will render the form.
-            if (strpos(trim((string)$user->display_name), ' ') === false && !isset($_POST['mco_update_name_action'])) { // Cast to string
+            // CRITICAL FIX FOR NONCE FAILURE: 
+            // If the user is submitting the name update form, STOP the automatic redirect 
+            // and let the shortcode handle the POST data first.
+            if ( ! empty($_POST['mco_update_name_nonce']) ) {
                 return;
             }
 
-            // Ensure mco_get_exam_app_url and mco_generate_exam_jwt are defined (from mco-api.php)
-            if (!function_exists('mco_get_exam_app_url')) {
-                 error_log('MCO SSO ERR: Critical API function mco_get_exam_app_url not defined. Check mco-data.php.');
-                 return;
-            }
-            if (!function_exists('mco_generate_exam_jwt')) {
-                error_log('MCO SSO ERR: Critical API function mco_generate_exam_jwt not defined. Check mco-api.php.'); // Debug log for SSO
-                return; // Let the shortcode handle the error message if it renders.
+            // If name is incomplete, stop here to allow shortcode to render the form.
+            if (strpos(trim((string)$user->display_name), ' ') === false) {
+                return;
             }
 
-            $app_url = (string)mco_get_exam_app_url(); // Defined in mco-data.php (now guaranteed to be defined)
-            if (empty($app_url)) {
-                error_log('MCO SSO ERR: App URL configuration missing.');
-                return; // Config missing
+            if (!function_exists('mco_get_exam_app_url') || !function_exists('mco_generate_exam_jwt')) {
+                 return;
+            }
+
+            $app_url = (string)mco_get_exam_app_url();
+            if (empty($app_url)) return;
+            
+            $token = mco_generate_exam_jwt((int)$user->ID);
+            if (empty($token)) {
+                wp_die('Authentication token generation failed.');
             }
             
-            $token = mco_generate_exam_jwt((int)$user->ID); // Defined in mco-api.php (Cast to int)
-            if (empty($token)) { // Check if token is empty string or null
-                wp_die('Could not generate authentication token. Ensure MCO_JWT_SECRET is defined in wp-config.php.');
-            }
-            
-            // FIX: Include api_url here too
-            $site_url = (string)get_site_url(); // Cast to string
+            $site_url = (string)get_site_url();
             $redirect_url = add_query_arg(['token' => (string)$token, 'api_url' => (string)$site_url], rtrim($app_url, '/') . '/auth');
             
             nocache_headers();
@@ -102,25 +90,5 @@ if (!function_exists('mco_sso_login_redirect')) {
         }
     }
 }
-add_action('template_redirect', 'mco_sso_login_redirect');
-
-// Activation/Deactivation Hooks
-register_activation_hook(__FILE__, 'mco_plugin_activate');
-register_deactivation_hook(__FILE__, 'mco_plugin_deactivate');
-
-if (!function_exists('mco_plugin_activate')) {
-    function mco_plugin_activate() {
-        // Explicitly call registration on activation to ensure rewrite rules can be flushed correctly immediately
-        if (function_exists('mco_register_custom_post_types')) {
-            mco_register_custom_post_types();
-        }
-        flush_rewrite_rules();
-    }
-}
-
-if (!function_exists('mco_plugin_deactivate')) {
-    function mco_plugin_deactivate() {
-        flush_rewrite_rules();
-    }
-}
+add_action('template_redirect', 'mco_sso_login_redirect', 5);
 ?>
