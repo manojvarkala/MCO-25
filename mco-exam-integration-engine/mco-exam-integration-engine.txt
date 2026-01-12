@@ -2,93 +2,52 @@
 /**
  * Plugin Name:       MCO Exam Integration Engine
  * Plugin URI:        https://annapoornainfo.com
- * Description:       Provides the backend API, user authentication (SSO), and content management for the React-based examination app.
- * Version:           3.9.9
+ * Description:       A modular, high-performance backend for the React Examination App.
+ * Version:           5.2.3
  * Author:            Annapoorna Infotech
- * Author URI:        https://annapoornainfo.com
  * License:           GPL v2 or later
- * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       mco-exam-engine
  */
+
 if (!defined('ABSPATH')) exit;
 
 // --- CONSTANTS ---
 define('MCO_PLUGIN_FILE', __FILE__);
 define('MCO_PLUGIN_PATH', plugin_dir_path(MCO_PLUGIN_FILE));
 define('MCO_PLUGIN_URL', plugin_dir_url(MCO_PLUGIN_FILE));
-$plugin_data = get_file_data(MCO_PLUGIN_FILE, array('Version' => 'Version'));
-define('MCO_PLUGIN_VERSION', (string)($plugin_data['Version'] ?? '1.0.0'));
+define('MCO_VERSION', '5.2.3');
 
-// --- INCLUDES ---
+/**
+ * 1. SECURITY & CORS (Load First)
+ * Handles Preflight and exact-origin handshaking to fix "Connection Blocked" errors.
+ */
+require_once MCO_PLUGIN_PATH . 'includes/mco-security.php';
+
+/**
+ * 2. DATA MODELS & CPTS
+ */
 require_once MCO_PLUGIN_PATH . 'includes/mco-cpts.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-data.php'; 
-require_once MCO_PLUGIN_PATH . 'includes/mco-api.php'; 
+
+/**
+ * 3. API ORCHESTRATION
+ */
+require_once MCO_PLUGIN_PATH . 'includes/mco-api-handlers.php';
+require_once MCO_PLUGIN_PATH . 'includes/mco-api-routes.php';
+
+/**
+ * 4. WORDPRESS UI INTEGRATION
+ */
 require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; 
 require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php'; 
 
-// --- FORCE REGISTRATION OPTION ---
-if (!function_exists('mco_force_registration_option')) {
-    add_filter('option_users_can_register', 'mco_force_registration_option');
-    function mco_force_registration_option($value) {
-        if ((bool)get_option('mco_force_enable_registration', false)) {
-            return 1;
-        }
-        return (int)$value;
+// --- ACTIVATION ---
+register_activation_hook(__FILE__, function() {
+    flush_rewrite_rules();
+    if (!get_option('mco_config_version')) {
+        update_option('mco_config_version', time());
     }
-}
+});
 
-// --- SINGLE SIGN-ON & LOGIN REDIRECTS ---
-if (!function_exists('mco_sso_login_redirect')) {
-    function mco_sso_login_redirect() {
-        global $post;
-        
-        $is_login_page = is_a($post, 'WP_Post') && has_shortcode((string)$post->post_content, 'mco_exam_login');
-        
-        // 1. HANDLE LOGGED OUT USERS
-        if ($is_login_page && !is_user_logged_in()) {
-            nocache_headers();
-            $current_url = (string)get_permalink();
-            $login_url = wp_login_url($current_url);
-            wp_redirect($login_url);
-            exit;
-        }
-
-        // 2. HANDLE LOGGED IN USERS
-        if (is_user_logged_in() && (isset($_GET['mco_sso_trigger']) || $is_login_page)) {
-            $user = wp_get_current_user();
-            
-            // CRITICAL FIX FOR NONCE FAILURE: 
-            // If the user is submitting the name update form, STOP the automatic redirect 
-            // and let the shortcode handle the POST data first.
-            if ( ! empty($_POST['mco_update_name_nonce']) ) {
-                return;
-            }
-
-            // If name is incomplete, stop here to allow shortcode to render the form.
-            if (strpos(trim((string)$user->display_name), ' ') === false) {
-                return;
-            }
-
-            if (!function_exists('mco_get_exam_app_url') || !function_exists('mco_generate_exam_jwt')) {
-                 return;
-            }
-
-            $app_url = (string)mco_get_exam_app_url();
-            if (empty($app_url)) return;
-            
-            $token = mco_generate_exam_jwt((int)$user->ID);
-            if (empty($token)) {
-                wp_die('Authentication token generation failed.');
-            }
-            
-            $site_url = (string)get_site_url();
-            $redirect_url = add_query_arg(['token' => (string)$token, 'api_url' => (string)$site_url], rtrim($app_url, '/') . '/auth');
-            
-            nocache_headers();
-            wp_redirect($redirect_url);
-            exit;
-        }
-    }
-}
-add_action('template_redirect', 'mco_sso_login_redirect', 5);
-?>
+add_filter('option_users_can_register', function($value) {
+    return (bool)get_option('mco_force_enable_registration', false) ? 1 : $value;
+});

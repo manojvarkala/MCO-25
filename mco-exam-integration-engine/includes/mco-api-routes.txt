@@ -1,0 +1,162 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+/**
+ * MCO ROUTE REGISTRY
+ * Maps every frontend service call to an industrial handler.
+ */
+
+add_action('rest_api_init', function() {
+    $namespace = 'mco-app/v1';
+
+    // --- PUBLIC ROUTES ---
+    register_rest_route($namespace, '/config', [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_get_config',
+        'permission_callback' => '__return_true'
+    ]);
+
+    register_rest_route($namespace, '/hit', [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_record_hit',
+        'permission_callback' => '__return_true'
+    ]);
+
+    register_rest_route($namespace, '/register-tester', [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_register_tester',
+        'permission_callback' => '__return_true'
+    ]);
+
+    register_rest_route($namespace, '/redeem-tester-token', [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_redeem_tester_token',
+        'permission_callback' => '__return_true'
+    ]);
+
+    register_rest_route($namespace, '/verify-certificate/(?P<id>[a-zA-Z0-9\-_]+)', [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_verify_certificate',
+        'permission_callback' => '__return_true'
+    ]);
+
+    // --- AUTHENTICATED USER ROUTES ---
+    $user_auth = ['permission_callback' => 'mco_api_validate_jwt'];
+
+    register_rest_route($namespace, '/user-results', array_merge($user_auth, [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_get_user_results'
+    ]));
+
+    register_rest_route($namespace, '/submit-result', array_merge($user_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_submit_result'
+    ]));
+
+    register_rest_route($namespace, '/questions-from-sheet', array_merge($user_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_questions_from_sheet'
+    ]));
+
+    register_rest_route($namespace, '/create-checkout-session', array_merge($user_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_create_checkout_session'
+    ]));
+
+    register_rest_route($namespace, '/certificate-data/(?P<id>[a-zA-Z0-9\-_]+)', array_merge($user_auth, [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_get_certificate_data'
+    ]));
+
+    register_rest_route($namespace, '/update-name', array_merge($user_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_update_name'
+    ]));
+
+    register_rest_route($namespace, '/submit-feedback', array_merge($user_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_submit_feedback'
+    ]));
+
+    register_rest_route($namespace, '/submit-review', array_merge($user_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_submit_review'
+    ]));
+
+    register_rest_route($namespace, '/log-engagement', array_merge($user_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_log_engagement'
+    ]));
+
+    // --- ADMIN PROTECTED ROUTES ---
+    $admin_auth = ['permission_callback' => 'mco_api_validate_admin_jwt'];
+
+    register_rest_route($namespace, '/admin/update-global-settings', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_update_settings'
+    ]));
+
+    register_rest_route($namespace, '/admin/system-status', array_merge($admin_auth, [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_admin_get_status'
+    ]));
+
+    register_rest_route($namespace, '/admin/beta-testers', array_merge($admin_auth, [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_admin_get_beta_testers'
+    ]));
+
+    register_rest_route($namespace, '/admin/update-exam-program', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_update_exam_program'
+    ]));
+
+    register_rest_route($namespace, '/admin/upsert-product', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_upsert_product'
+    ]));
+
+    register_rest_route($namespace, '/admin/post-creation-data', array_merge($admin_auth, [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_admin_get_post_creation_data'
+    ]));
+
+    register_rest_route($namespace, '/admin/create-post-from-app', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_create_post'
+    ]));
+});
+
+/**
+ * JWT Validator for WP REST
+ */
+function mco_api_validate_jwt($request) {
+    if (!defined('MCO_JWT_SECRET')) return new WP_Error('jwt_no_secret', 'Server Secret Missing', ['status' => 500]);
+    
+    $auth_header = $request->get_header('Authorization');
+    if (!$auth_header) return new WP_Error('jwt_auth_missing_token', 'Session header missing.', ['status' => 401]);
+
+    list($token) = sscanf($auth_header, 'Bearer %s');
+    $parts = explode('.', (string)$token);
+    if (count($parts) !== 3) return new WP_Error('jwt_invalid', 'Invalid Session Token', ['status' => 401]);
+
+    list($headb64, $bodyb64, $sigb64) = $parts;
+    $expected_sig = hash_hmac('sha256', "$headb64.$bodyb64", MCO_JWT_SECRET, true);
+    $sig = str_replace(['-', '_'], ['+', '/'], $sigb64);
+    
+    if (!hash_equals(base64_decode($sig), $expected_sig)) return new WP_Error('jwt_tampered', 'Identity verification failed.', ['status' => 401]);
+
+    $payload = json_decode(base64_decode($bodyb64), true);
+    if (!$payload || $payload['exp'] < time()) return new WP_Error('jwt_auth_expired_token', 'Session expired.', ['status' => 401]);
+
+    $request->set_param('mco_user_id', $payload['user']['id']);
+    return true;
+}
+
+function mco_api_validate_admin_jwt($request) {
+    $valid = mco_api_validate_jwt($request);
+    if (is_wp_error($valid)) return $valid;
+    $user_id = $request->get_param('mco_user_id');
+    if (!user_can($user_id, 'manage_options')) return new WP_Error('rest_forbidden', 'Administrative access required.', ['status' => 403]);
+    return true;
+}

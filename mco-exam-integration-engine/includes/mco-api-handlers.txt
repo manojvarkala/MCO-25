@@ -1,0 +1,222 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+/**
+ * MCO INDUSTRIAL HANDLERS
+ * High-performance business logic for the Examination App.
+ */
+
+// --- 1. CORE DATA & CONFIG ---
+
+function mco_handle_get_config() {
+    // Return cached organization settings and product mapping
+    return rest_ensure_response(mco_get_app_config_data());
+}
+
+function mco_handle_record_hit() {
+    // Atomic hit counter for site analytics
+    $count = (int)get_option('mco_site_hits', 0) + 1;
+    update_option('mco_site_hits', $count);
+    return rest_ensure_response(['count' => $count]);
+}
+
+// --- 2. EXAM PROXY & LOGIC ---
+
+function mco_handle_questions_from_sheet($request) {
+    $params = $request->get_json_params();
+    $url = $params['sheetUrl'] ?? '';
+    if (empty($url)) return new WP_Error('invalid_url', 'No sheet URL provided.');
+
+    // Normalize Google Sheets URL to CSV output
+    if (strpos($url, '/edit') !== false) {
+        $url = preg_replace('/\/edit.*$/', '/pub?output=csv', $url);
+    }
+
+    $cache_key = 'mco_sheet_' . md5($url);
+    $cached = get_transient($cache_key);
+    if ($cached !== false) return rest_ensure_response($cached);
+
+    $response = wp_remote_get($url, ['timeout' => 15]);
+    if (is_wp_error($response)) return $response;
+
+    $csv_data = wp_remote_retrieve_body($response);
+    $lines = str_getcsv($csv_data, "\n");
+    if (count($lines) < 2) return new WP_Error('no_data', 'Question sheet is empty or invalid.');
+
+    array_shift($lines); // Remove header
+    $questions = [];
+    foreach ($lines as $i => $line) {
+        $row = str_getcsv($line);
+        if (count($row) < 5) continue;
+
+        $questions[] = [
+            'id' => $i + 1,
+            'question' => $row[0],
+            'options' => array_slice($row, 1, 4),
+            'correctAnswer' => (int)($row[5] ?? 1)
+        ];
+    }
+
+    set_transient($cache_key, $questions, HOUR_IN_SECONDS);
+    return rest_ensure_response($questions);
+}
+
+// --- 3. E-COMMERCE INTEGRATION ---
+
+function mco_handle_create_checkout_session($request) {
+    if (!class_exists('WooCommerce')) return new WP_Error('no_woo', 'WooCommerce is not active.');
+    
+    $sku = $request->get_param('sku');
+    $product_id = wc_get_product_id_by_sku($sku);
+    if (!$product_id) return new WP_Error('not_found', "Product with SKU '$sku' not found.");
+
+    // Clear cart and force current SKU
+    WC()->cart->empty_cart();
+    WC()->cart->add_to_cart($product_id);
+    
+    return rest_ensure_response([
+        'checkoutUrl' => wc_get_checkout_url(),
+        'productId' => $product_id
+    ]);
+}
+
+// --- 4. USER DATA & AUTHENTICATION ---
+
+function mco_handle_get_user_results($request) {
+    $user_id = $request->get_param('mco_user_id');
+    $results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
+    return rest_ensure_response(array_values($results));
+}
+
+function mco_handle_submit_result($request) {
+    $user_id = $request->get_param('mco_user_id');
+    $new_result = $request->get_json_params();
+    
+    if (empty($new_result['testId'])) return new WP_Error('invalid_data', 'Missing unique testId');
+
+    $results = get_user_meta($user_id, 'mco_exam_results', true) ?: [];
+    $results[$new_result['testId']] = $new_result;
+    update_user_meta($user_id, 'mco_exam_results', $results);
+    
+    // Aggregator for Global Stats
+    $global = get_option('mco_global_exam_stats', []);
+    $eid = $new_result['examId'];
+    if (!isset($global[$eid])) $global[$eid] = ['attempts' => 0, 'passes' => 0, 'scores' => 0];
+    
+    $global[$eid]['attempts']++;
+    $global[$eid]['scores'] += (float)$new_result['score'];
+    // Assuming pass threshold from result object
+    update_option('mco_global_exam_stats', $global);
+
+    return rest_ensure_response(['success' => true]);
+}
+
+function mco_handle_update_name($request) {
+    $user_id = $request->get_param('mco_user_id');
+    $params = $request->get_json_params();
+    $name = sanitize_text_field($params['fullName'] ?? '');
+
+    if (empty($name)) return new WP_Error('invalid_name', 'Name cannot be empty.');
+
+    wp_update_user(['ID' => $user_id, 'display_name' => $name]);
+    return rest_ensure_response(['message' => 'Profile updated successfully.']);
+}
+
+// --- 5. BETA PROGRAM LOGIC ---
+
+function mco_handle_register_tester($request) {
+    $params = $request->get_json_params();
+    $email = sanitize_email($params['email'] ?? '');
+    
+    if (email_exists($email)) return new WP_Error('exists', 'User already in system.');
+
+    $user_id = wp_create_user($email, wp_generate_password(), $email);
+    if (is_wp_error($user_id)) return $user_id;
+
+    update_user_meta($user_id, 'mco_is_beta_tester', '1');
+    $token = wp_generate_uuid4();
+    update_user_meta($user_id, 'mco_tester_token', $token);
+
+    return rest_ensure_response([
+        'success' => true, 
+        'onboarding_token' => $token,
+        'user_email' => $email
+    ]);
+}
+
+function mco_handle_redeem_tester_token($request) {
+    $params = $request->get_json_params();
+    $token = sanitize_text_field($params['testerToken'] ?? '');
+
+    $users = get_users(['meta_key' => 'mco_tester_token', 'meta_value' => $token, 'number' => 1]);
+    if (empty($users)) return new WP_Error('invalid_token', 'Beta access token is invalid or expired.');
+
+    $user = $users[0];
+    update_user_meta($user->ID, 'mco_token_redeemed', '1');
+    delete_user_meta($user->ID, 'mco_tester_token');
+
+    // Return a fresh JWT for immediate login
+    if (!function_exists('mco_generate_exam_jwt')) return new WP_Error('core_error', 'JWT engine not loaded.');
+    
+    return rest_ensure_response(['token' => mco_generate_exam_jwt($user->ID)]);
+}
+
+// --- 6. ADMIN & PLATFORM MANAGEMENT ---
+
+function mco_handle_admin_update_settings($request) {
+    $params = $request->get_json_params();
+    
+    $settings_map = [
+        'activeThemeId' => 'mco_active_theme_id',
+        'purchaseNotifierEnabled' => 'mco_purchase_notifier_enabled',
+        'subscriptionsEnabled' => 'mco_subscriptions_enabled',
+        'bundlesEnabled' => 'mco_bundles_enabled'
+    ];
+
+    foreach ($settings_map as $key => $option_name) {
+        if (isset($params[$key])) {
+            $value = $params[$key];
+            if (is_bool($value)) $value = $value ? '1' : '0';
+            update_option($option_name, sanitize_text_field($value));
+        }
+    }
+
+    delete_transient('mco_app_config_data_full');
+    update_option('mco_config_version', current_time('YmdHis'));
+
+    return rest_ensure_response(['success' => true]);
+}
+
+function mco_handle_admin_create_post($request) {
+    $params = $request->get_json_params();
+    
+    $post_id = wp_insert_post([
+        'post_title'   => sanitize_text_field($params['post_title']),
+        'post_content' => wp_kses_post($params['post_content']),
+        'post_status'  => sanitize_text_field($params['post_status'] ?? 'publish'),
+        'post_author'  => $params['post_author'] ?? get_current_user_id(),
+        'post_date'    => $params['post_date'] ?? current_time('mysql'),
+        'post_category'=> [ (int)($params['post_category'] ?? 1) ]
+    ]);
+
+    if (is_wp_error($post_id)) return $post_id;
+
+    // Hook for social poster companion
+    do_action('mco_ai_post_created', $post_id);
+
+    return rest_ensure_response([
+        'success' => true,
+        'post_id' => $post_id,
+        'post_url' => get_edit_post_link($post_id, '')
+    ]);
+}
+
+function mco_handle_admin_get_status() {
+    return rest_ensure_response([
+        'api_connection' => ['success' => true, 'message' => 'Online'],
+        'jwt_secret' => ['success' => defined('MCO_JWT_SECRET'), 'message' => defined('MCO_JWT_SECRET') ? 'Valid' : 'Missing'],
+        'woocommerce' => ['success' => class_exists('WooCommerce'), 'message' => class_exists('WooCommerce') ? 'Active' : 'Missing'],
+        'server_time' => current_time('mysql'),
+        'config_version' => get_option('mco_config_version')
+    ]);
+}
