@@ -303,17 +303,15 @@ function mco_handle_admin_get_status() {
     $s = [];
     $s['api_connection'] = ['success' => true, 'message' => 'Online'];
     $s['jwt_secret'] = ['success' => defined('MCO_JWT_SECRET'), 'message' => defined('MCO_JWT_SECRET') ? 'Valid' : 'Missing'];
-    
     $is_woo = class_exists('WooCommerce');
     $s['woocommerce'] = ['success' => $is_woo, 'message' => $is_woo ? 'Active' : 'Missing'];
-    
+    $is_sub = class_exists('WC_Subscriptions');
+    $s['wc_subscriptions'] = ['success' => $is_sub, 'message' => $is_sub ? 'Active' : 'Inactive'];
     $app_urls = get_option('mco_exam_app_url', '');
     $s['app_url_config'] = ['success' => !empty($app_urls), 'message' => !empty($app_urls) ? 'Configured' : 'Empty'];
-    
     $test_sheet = 'https://docs.google.com/spreadsheets/d/1KP0NqEOMS_0sohfwCpO9JNRcWMaoJqfTYEda0YOwkcY/export?format=csv';
     $fetch = mco_fetch_remote_csv_content($test_sheet);
     $s['sheet_accessibility'] = ['success' => !is_wp_error($fetch), 'message' => !is_wp_error($fetch) ? 'Online' : 'Blocked'];
-    
     return new WP_REST_Response($s, 200);
 }
 
@@ -348,10 +346,19 @@ function mco_handle_admin_delete_post($request) {
     if ($p['postId']) wp_trash_post($p['postId']); 
     return new WP_REST_Response(['success' => true], 200); 
 }
+function mco_handle_admin_update_settings($request) {
+    $p = $request->get_json_params();
+    if (isset($p['activeThemeId'])) update_option('mco_active_theme_id', sanitize_text_field($p['activeThemeId']));
+    if (isset($p['purchaseNotifierEnabled'])) update_option('mco_purchase_notifier_enabled', $p['purchaseNotifierEnabled'] ? '1' : '0');
+    if (isset($p['subscriptionsEnabled'])) update_option('mco_subscriptions_enabled', $p['subscriptionsEnabled'] ? '1' : '0');
+    if (isset($p['bundlesEnabled'])) update_option('mco_bundles_enabled', $p['bundlesEnabled'] ? '1' : '0');
+    delete_transient('mco_app_config_data_full');
+    return new WP_REST_Response(['success' => true], 200);
+}
 function mco_handle_admin_toggle_beta_status() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_admin_get_post_creation_data() { return new WP_REST_Response(['authors'=>[],'categories'=>[]], 200); }
 function mco_handle_admin_create_post() { return new WP_REST_Response(['success'=>true], 200); }
-function mco_handle_admin_update_settings() { return new WP_REST_Response(['success'=>true], 200); }
+
 function mco_handle_register_tester() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_resend_onboarding_email() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_redeem_tester_token() { return new WP_REST_Response(['token'=>''], 200); }
