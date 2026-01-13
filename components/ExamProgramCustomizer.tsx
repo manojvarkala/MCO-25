@@ -34,7 +34,7 @@ const ExamEditor: FC<{
         setData(prev => ({ ...prev, [examType]: { ...prev[examType], [field]: value } }));
     };
 
-    const Label = ({ children }: { children: ReactNode }) => <label className="text-[10px] font-black uppercase tracking-widest text-slate-200 mb-1 block">{children}</label>;
+    const Label = ({ children }: { children: ReactNode }) => <label className="text-[10px] font-black uppercase tracking-widest text-white mb-1 block opacity-80">{children}</label>;
 
     return (
         <div className="bg-slate-900 p-6 rounded-b-xl space-y-6 shadow-inner border-t border-slate-700">
@@ -81,7 +81,7 @@ const ExamEditor: FC<{
                         <div><Label>Question Count</Label><input type="number" value={data.practiceExam?.numberOfQuestions || ''} onChange={e => handleExamChange('practiceExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
                         <div><Label>Duration (Mins)</Label><input type="number" value={data.practiceExam?.durationMinutes || ''} onChange={e => handleExamChange('practiceExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
                     </div>
-                    <label className="flex items-center gap-2 text-xs font-bold text-slate-200 pt-2">
+                    <label className="flex items-center gap-2 text-xs font-bold text-white pt-2 cursor-pointer">
                         <input type="checkbox" checked={data.practiceExam?.certificateEnabled || false} onChange={e => handleExamChange('practiceExam', 'certificateEnabled', e.target.checked)} className="rounded bg-slate-950 border-slate-600 text-cyan-500" />
                         Enable Completion Certificate
                     </label>
@@ -119,7 +119,7 @@ const ExamProgramCustomizer: FC = () => {
         try {
             await googleSheetsService.adminUpdateExamProgram(token, id, data);
             await refreshConfig();
-            toast.success("Program Synced Successfully");
+            toast.success("Program Updated Live");
             setExpandedId(null);
         } catch (e: any) { toast.error(e.message); }
         finally { setIsSaving(false); }

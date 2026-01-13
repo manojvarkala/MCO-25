@@ -20,7 +20,7 @@ interface HealthStatus {
     sheet_accessibility?: { success: boolean; message: string };
 }
 
-type AdminTab = 'diagnostics' | 'appearance' | 'content' | 'bulk';
+type AdminTab = 'diagnostics' | 'appearance' | 'bulk';
 
 const NavItem: FC<{ id: AdminTab; label: string; icon: ReactNode; active: boolean; onClick: (id: AdminTab) => void }> = ({ id, label, icon, active, onClick }) => (
     <button
@@ -36,7 +36,7 @@ const NavItem: FC<{ id: AdminTab; label: string; icon: ReactNode; active: boolea
 const HealthCard: FC<{ title: string; status?: { success: boolean; message: string } }> = ({ title, status }) => (
     <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3 overflow-hidden">
-            {!status ? (
+            {status === undefined ? (
                 <RefreshCw size={20} className="text-cyan-500 animate-spin flex-shrink-0" />
             ) : status.success ? (
                 <CheckCircle className="text-emerald-500 flex-shrink-0" size={20} />
@@ -45,8 +45,8 @@ const HealthCard: FC<{ title: string; status?: { success: boolean; message: stri
             )}
             <span className="font-bold text-white truncate">{title}</span>
         </div>
-        <span className={`text-[10px] font-black px-2 py-1 rounded ml-2 whitespace-nowrap ${!status ? 'bg-slate-800 text-slate-400' : status.success ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
-            {!status ? 'WAITING...' : status.message.toUpperCase()}
+        <span className={`text-[10px] font-black px-2 py-1 rounded ml-2 whitespace-nowrap ${status === undefined ? 'bg-slate-800 text-slate-400' : status.success ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+            {status === undefined ? 'WAITING...' : status.message.toUpperCase()}
         </span>
     </div>
 );
@@ -66,6 +66,18 @@ const Admin: FC = () => {
         subscriptionsEnabled: activeOrg?.subscriptionsEnabled ?? true,
         activeThemeId: activeTheme
     });
+
+    // Ensure UI toggles stay in sync with the actual Org config when refreshed
+    useEffect(() => {
+        if (activeOrg) {
+            setLocalSettings({
+                purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
+                bundlesEnabled: activeOrg.bundlesEnabled ?? true,
+                subscriptionsEnabled: activeOrg.subscriptionsEnabled ?? true,
+                activeThemeId: activeTheme
+            });
+        }
+    }, [activeOrg, activeTheme]);
 
     const loadData = async () => {
         if (!token) return;
@@ -89,13 +101,13 @@ const Admin: FC = () => {
     const handleSyncSettings = async (updates: Partial<typeof localSettings>) => {
         if (!token) return;
         setIsSavingSettings(true);
-        const tid = toast.loading("Syncing...");
+        const tid = toast.loading("Saving changes...");
         try {
             const newSettings = { ...localSettings, ...updates };
             await googleSheetsService.adminUpdateGlobalSettings(token, newSettings);
             setLocalSettings(newSettings);
             await refreshConfig();
-            toast.success("Settings Saved", { id: tid });
+            toast.success("Settings Saved Successfully", { id: tid });
         } catch (e: any) { toast.error(e.message, { id: tid }); }
         finally { setIsSavingSettings(false); }
     };
@@ -129,15 +141,15 @@ const Admin: FC = () => {
                             <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-white"><BarChart3 size={20} className="text-cyan-500" /> System Metrics</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                 <div className="p-6 bg-slate-950 rounded-xl border border-slate-800">
-                                    <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest mb-1">Sales Volume</p>
+                                    <p className="text-[10px] text-slate-200 font-black uppercase tracking-widest mb-1">Sales Volume</p>
                                     <p className="text-4xl font-black text-white">{stats?.reduce((acc, s) => acc + (s.totalSales || 0), 0).toLocaleString()}</p>
                                 </div>
                                 <div className="p-6 bg-slate-950 rounded-xl border border-slate-800">
-                                    <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest mb-1">Gross Revenue</p>
+                                    <p className="text-[10px] text-slate-200 font-black uppercase tracking-widest mb-1">Gross Revenue</p>
                                     <p className="text-4xl font-black text-emerald-400">${stats?.reduce((acc, s) => acc + (s.totalRevenue || 0), 0).toLocaleString()}</p>
                                 </div>
                                 <div className="p-6 bg-slate-950 rounded-xl border border-slate-800">
-                                    <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest mb-1">User Engagement</p>
+                                    <p className="text-[10px] text-slate-200 font-black uppercase tracking-widest mb-1">User Engagement</p>
                                     <p className="text-4xl font-black text-cyan-400">{stats?.reduce((acc, s) => acc + (s.attempts || 0), 0).toLocaleString()}</p>
                                 </div>
                             </div>
@@ -156,7 +168,7 @@ const Admin: FC = () => {
                                     { id: 'bundlesEnabled', label: 'Product Bundling', desc: 'Allow "Exam + Premium" add-on deals' }
                                 ].map(f => (
                                     <div key={f.id} className="flex items-center justify-between p-6 bg-slate-900 hover:bg-slate-800/50 transition-colors">
-                                        <div><p className="font-bold text-white text-lg">{f.label}</p><p className="text-sm text-slate-300 italic mt-1">{f.desc}</p></div>
+                                        <div><p className="font-bold text-white text-lg">{f.label}</p><p className="text-sm text-slate-200 italic mt-1">{f.desc}</p></div>
                                         <button 
                                             onClick={() => handleSyncSettings({ [f.id]: !(localSettings as any)[f.id] })}
                                             disabled={isSavingSettings}
