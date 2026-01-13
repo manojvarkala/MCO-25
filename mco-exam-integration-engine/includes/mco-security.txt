@@ -1,15 +1,140 @@
 <?php
 /**
  * =============================================================================
- * MODULE: Ground-Up Industrial Security & CORS
- * VERSION: 9.0.0 (Absolute Priority Handshake)
+ * MODULE: Nuclear Security & Global CORS Handshake
+ * VERSION: 12.0.0 (Absolute Interception)
  * =============================================================================
  */
 
 if (!defined('ABSPATH')) exit;
 
 /**
- * 1. BITWISE JWT UTILITIES
+ * 1. THE NUCLEAR HANDSHAKE
+ * Intercepts the request BEFORE any WordPress hooks if possible.
+ */
+function mco_nuclear_cors_handshake() {
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    if (empty($origin)) return;
+
+    // Determine if Origin is allowed (White-label check)
+    $is_allowed = false;
+    $hostname = parse_url($origin, PHP_URL_HOST);
+    
+    if ($hostname === 'localhost' || $hostname === '127.0.0.1' || strpos($hostname, '.local') !== false) {
+        $is_allowed = true;
+    } else {
+        $allowed_raw = get_option('mco_exam_app_url', '');
+        $allowed_origins = array_filter(array_map('trim', explode("\n", str_replace("\r", "", $allowed_raw))));
+        foreach ($allowed_origins as $allowed) {
+            if (rtrim(strtolower($allowed), '/') === rtrim(strtolower($origin), '/')) {
+                $is_allowed = true;
+                break;
+            }
+        }
+    }
+
+    if ($is_allowed) {
+        // Essential headers for credentialed REST requests
+        header("Access-Control-Allow-Origin: $origin");
+        header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+        header("Access-Control-Allow-Credentials: true");
+        header("Access-Control-Allow-Headers: Authorization, Content-Type, X-Requested-With, X-WP-Nonce, X-HTTP-Method-Override, Accept, Origin");
+        header("Access-Control-Expose-Headers: Content-Length, X-JSON");
+        header("Vary: Origin");
+
+        // PREFLIGHT NUCLEAR OPTION:
+        // If this is an OPTIONS request, send the status and DIE immediately.
+        // This prevents LiteSpeed/Apache from running auth checks that block the handshake.
+        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+            status_header(200);
+            exit;
+        }
+    }
+}
+
+// Hook at the earliest possible priority (0) on 'init' and 'rest_api_init'
+add_action('init', 'mco_nuclear_cors_handshake', 0);
+add_action('rest_api_init', 'mco_nuclear_cors_handshake', 0);
+
+/**
+ * 2. IDENTITY RECOVERY ENGINE
+ * Recovers Authorization headers even if the server environment strips them.
+ */
+function mco_api_validate_jwt($request) {
+    $auth = $request->get_header('authorization');
+   
+    // Check various server variables where the header might be hidden
+    if (empty($auth)) {
+        $check_keys = [
+            'HTTP_AUTHORIZATION', 
+            'REDIRECT_HTTP_AUTHORIZATION', 
+            'X_AUTHORIZATION', 
+            'X-Authorization',
+            'REDIRECT_HTTP_X_AUTHORIZATION'
+        ];
+        foreach ($check_keys as $key) {
+            if (!empty($_SERVER[$key])) {
+                $auth = $_SERVER[$key];
+                break;
+            }
+        }
+    }
+
+    if (empty($auth) || !preg_match('/Bearer\s+(.*)$/i', $auth, $matches)) {
+        return new WP_Error('jwt_auth_missing_token', 'Authorization header is missing. Check your .htaccess configuration.', ['status' => 401]);
+    }
+
+    $payload = mco_verify_exam_jwt($matches[1]);
+    if (is_wp_error($payload)) return $payload;
+
+    $request->set_param('jwt_payload', $payload);
+    return true;
+}
+
+/**
+ * 3. JWT VERIFICATION (Internal)
+ */
+function mco_verify_exam_jwt($token) {
+    if (!defined('MCO_JWT_SECRET') || empty(MCO_JWT_SECRET)) {
+        return new WP_Error('config_err', 'Security Key (MCO_JWT_SECRET) not defined in wp-config.php.', ['status' => 500]);
+    }
+    
+    $parts = explode('.', $token);
+    if (count($parts) !== 3) return new WP_Error('jwt_invalid', 'Malformed security token.', ['status' => 401]);
+
+    list($header, $payload, $signature) = $parts;
+    $expected_sig = mco_base64url_encode(hash_hmac('sha256', "$header.$payload", MCO_JWT_SECRET, true));
+    
+    if (!hash_equals($signature, $expected_sig)) {
+        return new WP_Error('jwt_tampered', 'Token verification failed. Signature mismatch.', ['status' => 403]);
+    }
+
+    $decoded = json_decode(mco_base64url_decode($payload), true);
+    if (!$decoded) return new WP_Error('jwt_payload_err', 'Invalid token payload.', ['status' => 401]);
+    
+    if (isset($decoded['exp']) && ($decoded['exp'] + 300) < time()) {
+        return new WP_Error('jwt_auth_expired_token', 'Your session has expired.', ['status' => 403]);
+    }
+
+    return $decoded;
+}
+
+/**
+ * 4. ADMIN VALIDATION
+ */
+function mco_api_validate_admin_jwt($request) {
+    $valid = mco_api_validate_jwt($request);
+    if (is_wp_error($valid)) return $valid;
+    
+    $payload = $request->get_param('jwt_payload');
+    if (empty($payload['user']['isAdmin'])) {
+        return new WP_Error('rest_forbidden', 'Administrative access required.', ['status' => 403]);
+    }
+    return true;
+}
+
+/**
+ * 5. JWT UTILITIES
  */
 if (!function_exists('mco_base64url_encode')) {
     function mco_base64url_encode($data) { return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($data)); }
@@ -23,116 +148,7 @@ if (!function_exists('mco_base64url_decode')) {
 }
 
 /**
- * 2. ABSOLUTE PRIORITY CORS HANDSHAKE
- * This fires at the earliest possible moment to solve "Connection Blocked".
- */
-function mco_absolute_cors_handshake() {
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    if (empty($origin)) return;
-
-    // Determine if Origin is allowed
-    $is_allowed = false;
-    if (strpos($origin, 'localhost') !== false || strpos($origin, '127.0.0.1') !== false) {
-        $is_allowed = true;
-    } else {
-        $allowed_raw = get_option('mco_exam_app_url', '');
-        $allowed_origins = array_filter(array_map('trim', explode("\n", $allowed_raw)));
-        foreach ($allowed_origins as $allowed) {
-            if (rtrim($allowed, '/') === rtrim($origin, '/')) {
-                $is_allowed = true;
-                break;
-            }
-        }
-    }
-
-    if ($is_allowed) {
-        // Force the headers required for cross-domain credentialed requests
-        header("Access-Control-Allow-Origin: $origin");
-        header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-        header("Access-Control-Allow-Credentials: true");
-        header("Access-Control-Allow-Headers: Authorization, Content-Type, X-Requested-With, X-WP-Nonce, X-HTTP-Method-Override");
-        header("Vary: Origin");
-
-        // CRITICAL: If this is the "handshake" (OPTIONS), exit immediately with 200 OK.
-        // This bypasses any potential 404s, 500s or auth checks in WordPress.
-        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-            status_header(200);
-            exit;
-        }
-    }
-}
-// Hook at priority 1 to ensure we run before almost everything else
-add_action('init', 'mco_absolute_cors_handshake', 1);
-
-/**
- * 3. JWT VERIFICATION ENGINE
- */
-function mco_verify_exam_jwt($token) {
-    if (!defined('MCO_JWT_SECRET') || empty(MCO_JWT_SECRET)) {
-        return new WP_Error('config_err', 'MCO_JWT_SECRET missing in wp-config.php.', ['status' => 500]);
-    }
-    
-    $parts = explode('.', $token);
-    if (count($parts) !== 3) return new WP_Error('jwt_invalid', 'Malformed token.', ['status' => 401]);
-
-    list($header, $payload, $signature) = $parts;
-    $expected_sig = mco_base64url_encode(hash_hmac('sha256', "$header.$payload", MCO_JWT_SECRET, true));
-    
-    if (!hash_equals($signature, $expected_sig)) {
-        return new WP_Error('jwt_tampered', 'Identity verification failed (Signature mismatch).', ['status' => 403]);
-    }
-
-    $decoded = json_decode(mco_base64url_decode($payload), true);
-    if (!$decoded) return new WP_Error('jwt_payload_err', 'Invalid payload encoding.', ['status' => 401]);
-    
-    if (isset($decoded['exp']) && ($decoded['exp'] + 300) < time()) {
-        return new WP_Error('jwt_auth_expired_token', 'Session expired.', ['status' => 403]);
-    }
-
-    return $decoded;
-}
-
-/**
- * 4. REST API PERMISSION WRAPPER
- */
-function mco_api_validate_jwt($request) {
-    $auth = $request->get_header('authorization');
-   
-    // Recovery Tier: Check for stripped headers
-    if (empty($auth)) {
-        $look_in = ['HTTP_AUTHORIZATION', 'REDIRECT_HTTP_AUTHORIZATION', 'X_AUTHORIZATION', 'X-Authorization'];
-        foreach ($look_in as $key) {
-            if (isset($_SERVER[$key]) && !empty($_SERVER[$key])) {
-                $auth = $_SERVER[$key];
-                break;
-            }
-        }
-    }
-
-    if (empty($auth) || !preg_match('/Bearer\s+(.*)$/i', $auth, $matches)) {
-        return new WP_Error('jwt_auth_missing_token', 'Authorization header missing.', ['status' => 401]);
-    }
-
-    $payload = mco_verify_exam_jwt($matches[1]);
-    if (is_wp_error($payload)) return $payload;
-
-    $request->set_param('jwt_payload', $payload);
-    return true;
-}
-
-function mco_api_validate_admin_jwt($request) {
-    $valid = mco_api_validate_jwt($request);
-    if (is_wp_error($valid)) return $valid;
-    
-    $payload = $request->get_param('jwt_payload');
-    if (empty($payload['user']['isAdmin'])) {
-        return new WP_Error('rest_forbidden', 'Admin access required.', ['status' => 403]);
-    }
-    return true;
-}
-
-/**
- * 5. JWT GENERATOR
+ * 6. JWT GENERATOR (Used by SSO)
  */
 if (!function_exists('mco_generate_exam_jwt')) {
     function mco_generate_exam_jwt($user_id) {

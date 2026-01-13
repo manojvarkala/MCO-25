@@ -1,63 +1,65 @@
 <?php
 /**
  * =============================================================================
- * MODULE: Industrial API Logic Handlers
- * VERSION: 7.5.0 (v5.0.6 Full Restoration)
+ * MODULE: Multi-Tier API Logic Handlers
+ * VERSION: 8.0.0 (Aggressive Outbound Engine)
  * =============================================================================
  */
 
 if (!defined('ABSPATH')) exit;
 
 /**
- * 1. MULTI-TIER NETWORK ENGINE
- * Restored the full verbose logic for fetching remote CSVs.
- * This function bypasses various server-level outbound blocks.
+ * AGGRESSIVE NETWORK FETCHER
+ * Tries 3 different methods to bypass server-level firewalls.
  */
 if (!function_exists('mco_fetch_remote_csv_content')) {
     function mco_fetch_remote_csv_content($url) {
-        if (empty($url)) return new WP_Error('empty_url', 'Source URL cannot be empty.', ['status' => 400]);
+        if (empty($url)) return new WP_Error('empty_url', 'Source URL missing.');
+        
+        $url = trim((string)$url);
         $site_url = get_bloginfo('url');
+        
+        // Browser-like arguments
         $args = [
-            'timeout' => 45,
-            'redirection' => 10,
-            'user-agent' => 'MCO-Industrial-Engine/7.5.0; ' . $site_url,
+            'timeout' => 30,
+            'redirection' => 5,
+            'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'sslverify' => false,
             'headers' => [
                 'Cache-Control' => 'no-cache',
-                'Pragma' => 'no-cache',
                 'Referer' => $site_url
             ]
         ];
 
-        // --- TIER 1: WP Native Remote GET ---
+        // --- METHOD 1: WP Remote Get (Standard) ---
         $response = wp_remote_get(esc_url_raw($url), $args);
         if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
-            return ['body' => wp_remote_retrieve_body($response), 'code' => 200, 'tier' => 1];
+            return ['body' => wp_remote_retrieve_body($response), 'method' => 'wp_remote'];
         }
 
-        // --- TIER 2: Direct PHP cURL (Bypasses some WP Filters) ---
+        // --- METHOD 2: PHP cURL (Bypasses many WP filters) ---
         if (function_exists('curl_init')) {
             $ch = curl_init(); 
             curl_setopt($ch, CURLOPT_URL, $url); 
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); 
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 45); 
-            curl_setopt($ch, CURLOPT_REFERER, $site_url);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30); 
+            curl_setopt($ch, CURLOPT_USERAGENT, $args['user-agent']);
             $body = curl_exec($ch); 
             $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE); 
             curl_close($ch);
             if ($http_code === 200 && !empty($body)) {
-                return ['body' => $body, 'code' => 200, 'tier' => 2];
+                return ['body' => $body, 'method' => 'curl'];
             }
         }
 
-        // --- TIER 3: Stream Context (Bypasses almost all application filters) ---
+        // --- METHOD 3: file_get_contents (The 'Nuclear' Fallback) ---
         if (ini_get('allow_url_fopen')) {
             $context = stream_context_create([
                 'http' => [
-                    'timeout' => 45,
-                    'header' => "Referer: $site_url\r\nUser-Agent: MCO-Industrial-Engine/7.5.0\r\n"
+                    'timeout' => 30,
+                    'header' => "User-Agent: " . $args['user-agent'] . "\r\n"
                 ],
                 'ssl' => [
                     'verify_peer' => false,
@@ -66,18 +68,18 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
             ]);
             $body = @file_get_contents($url, false, $context);
             if ($body !== false) {
-                return ['body' => $body, 'code' => 200, 'tier' => 3];
+                return ['body' => $body, 'method' => 'fopen'];
             }
         }
 
-        return new WP_Error('network_fail', 'Target unreachable. Ensure the sheet is Published to Web as CSV.', ['status' => 503]);
+        return new WP_Error('network_block', 'Server Outbound Blocked: Your hosting firewall is preventing connection to Google Sheets.');
     }
 }
 
-// --- 2. CORE CONFIG & TELEMETRY ---
+// --- HANDLERS ---
 
 function mco_handle_get_config() {
-    if (!function_exists('mco_get_app_config_data')) return new WP_Error('err', 'Data provider missing.', ['status' => 500]);
+    if (!function_exists('mco_get_app_config_data')) return new WP_Error('500', 'Data provider unavailable.');
     return new WP_REST_Response(mco_get_app_config_data(), 200);
 }
 
@@ -86,6 +88,80 @@ function mco_handle_record_hit() {
     $new_count = $count + 1;
     update_option('mco_site_hits', $new_count);
     return new WP_REST_Response(['count' => $new_count], 200);
+}
+
+function mco_handle_questions_from_sheet($request) {
+    $p = $request->get_json_params();
+    $url = $p['sheetUrl'] ?? '';
+    if (empty($url)) return new WP_Error('400', 'Sheet URL missing.');
+    
+    // Normalize URL
+    if (strpos($url, '/edit') !== false) $url = preg_replace('/\/edit.*$/', '/pub?output=csv', $url);
+    
+    $cache_key = 'mco_sheet_' . md5($url);
+    $cached = get_transient($cache_key);
+    if ($cached !== false) return new WP_REST_Response($cached, 200);
+
+    $fetch = mco_fetch_remote_csv_content($url);
+    if (is_wp_error($fetch)) return $fetch;
+   
+    $lines = preg_split('/\r\n|\r|\n/', (string)$fetch['body']);
+    array_shift($lines); // Remove header
+   
+    $questions = []; $idx = 1;
+    foreach ($lines as $line) {
+        $row = str_getcsv($line);
+        if (empty(array_filter($row))) continue;
+        if (count($row) >= 6) {
+            $questions[] = [
+                'id' => $idx++, 
+                'question' => $row[0], 
+                'options' => array_map('trim', array_slice($row, 1, 4)), 
+                'correctAnswer' => (int)$row[5]
+            ];
+        }
+    }
+    
+    set_transient($cache_key, $questions, HOUR_IN_SECONDS);
+    return new WP_REST_Response($questions, 200);
+}
+
+function mco_handle_get_user_results($request) {
+    $uid = (int)$request->get_param('jwt_payload')['user']['id'];
+    $results = maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true)) ?: [];
+    return new WP_REST_Response(array_values((array)$results), 200);
+}
+
+function mco_handle_submit_result($request) {
+    $uid = (int)$request->get_param('jwt_payload')['user']['id'];
+    $data = $request->get_json_params();
+    if (empty($data['testId'])) return new WP_Error('400', 'Test ID missing.');
+    
+    $history = maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true)) ?: [];
+    foreach ($history as $r) {
+        if (($r['testId'] ?? '') === $data['testId']) return new WP_REST_Response(['success' => true], 200);
+    }
+    
+    $data['server_timestamp'] = current_time('timestamp');
+    $history[] = $data;
+    update_user_meta($uid, 'mco_exam_results', $history);
+    
+    return new WP_REST_Response(['success' => true], 200);
+}
+
+function mco_handle_admin_get_status() {
+    $status = [];
+    $status['jwt_secret'] = ['success' => defined('MCO_JWT_SECRET') && !empty(MCO_JWT_SECRET), 'message' => defined('MCO_JWT_SECRET') ? 'Active' : 'Missing'];
+    $status['api_connection'] = ['success' => true, 'message' => 'Online'];
+    
+    $test_sheet = 'https://docs.google.com/spreadsheets/d/1KP0NqEOMS_0sohfwCpO9JNRcWMaoJqfTYEda0YOwkcY/pub?output=csv';
+    $sheet_fetch = mco_fetch_remote_csv_content($test_sheet);
+    $status['sheet_accessibility'] = [
+        'success' => !is_wp_error($sheet_fetch), 
+        'message' => !is_wp_error($sheet_fetch) ? 'Online (' . $sheet_fetch['method'] . ')' : 'Outbound Blocked'
+    ];
+    
+    return new WP_REST_Response($status, 200);
 }
 
 // --- 3. SYSTEM HEALTH & DIAGNOSTICS ---

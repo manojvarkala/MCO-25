@@ -21,7 +21,8 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     const config: RequestInit = {
         method,
         headers,
-        mode: 'cors'
+        mode: 'cors',
+        credentials: token ? 'include' : 'same-origin' // Ensure cookies/auth are sent correctly
     };
     
     if (method === 'POST') {
@@ -30,6 +31,17 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
 
     try {
         const response = await fetch(fullUrl, config);
+        
+        // Handle pre-parse level errors
+        if (response.status === 403 || response.status === 401) {
+            const text = await response.text();
+            if (text.includes('jwt_auth_expired_token') || text.includes('expired')) {
+                 localStorage.removeItem('examUser');
+                 localStorage.removeItem('authToken');
+                 throw new Error("Your session has expired. Please log in again.");
+            }
+        }
+
         const responseText = await response.text();
 
         if (!response.ok) {
@@ -38,25 +50,19 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
                 errorData = JSON.parse(responseText);
             } catch (e) {
                 console.error("Backend Error Response (Raw):", responseText);
-                throw new Error(`Server Error: ${response.status}. Check your server logs.`);
+                throw new Error(`Server Error: ${response.status}. Contact administrator.`);
             }
             
-            // Aligned with v5.0.1 PHP error codes
-            if (errorData?.code === 'jwt_auth_expired_token' || errorData?.code === 'jwt_invalid' || errorData?.code === 'jwt_tampered') {
-                localStorage.removeItem('examUser');
-                localStorage.removeItem('authToken');
-                const authError: any = new Error("Session expired. Please log in again.");
-                authError.code = errorData?.code;
-                throw authError;
-            }
             throw new Error(errorData?.message || `Error ${response.status}: ${response.statusText}`);
         }
         
         return responseText ? JSON.parse(responseText) : {};
     } catch (error: any) {
         console.warn(`API FETCH FAILURE [${method} ${endpoint}]:`, error);
+        
+        // Differentiate between CORS/Network blocks and logic errors
         if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-             throw new Error("Connection Blocked: Ensure your WordPress server allows CORS for this origin.");
+             throw new Error("Connection Blocked: Your browser could not establish a secure handshake with the server. Please check your CORS settings in WordPress.");
         }
         throw error;
     }
@@ -233,7 +239,6 @@ export const googleSheetsService = {
         return await apiFetch('/admin/create-post-from-app', 'POST', token, postPayload);
     },
     adminUpdateGlobalSettings: async (token: string, settings: any): Promise<any> => {
-        // NOTE: Ensure this route is registered in your mco-api.php if needed
         return await apiFetch('/admin/update-global-settings', 'POST', token, settings);
     }
 };
