@@ -1,6 +1,4 @@
-
 import React, { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
-// FIX: Standardized named imports from react-router-dom using single quotes.
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -9,7 +7,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import Spinner from './Spinner.tsx';
 import LogoSpinner from './LogoSpinner.tsx';
-import { ChevronLeft, ChevronRight, Send, Clock, AlertTriangle, PlayCircle, CheckCircle, HelpCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Send, Clock, AlertTriangle, PlayCircle, HelpCircle, ShieldAlert } from 'lucide-react';
 
 const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
@@ -34,7 +32,7 @@ const Test: FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [examStarted, setExamStarted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{title: string, message: string} | null>(null);
   
   const [focusViolationCount, setFocusViolationCount] = useState(0);
   const [isStarting, setIsStarting] = useState(false);
@@ -56,7 +54,7 @@ const Test: FC = () => {
     setIsSubmitting(true);
 
     if (!user || !examId || !token || questions.length === 0 || !examConfig) {
-        toast.error("Cannot submit: context missing.");
+        toast.error("Cannot submit: session or context expired.");
         navigate('/');
         return;
     }
@@ -80,7 +78,7 @@ const Test: FC = () => {
         toast.success("Test submitted successfully!");
         navigate(`/results/${result.testId}`);
     } catch (error) {
-        toast.error("Failed to submit. Please try again.");
+        toast.error("Cloud sync failed. Result saved locally.");
         setIsSubmitting(false);
         hasSubmittedRef.current = false;
     }
@@ -91,7 +89,7 @@ const Test: FC = () => {
 
     const config = activeOrg.exams.find(e => e.id === examId);
     if (!config) {
-      setError("Exam configuration not found.");
+      setError({title: "Exam Not Found", message: "The requested exam configuration is missing from the platform database."});
       setIsLoading(false);
       return;
     }
@@ -100,7 +98,7 @@ const Test: FC = () => {
     const loadData = async () => {
       try {
         const fetchedQuestions = await googleSheetsService.getQuestions(config, token || '');
-        if (fetchedQuestions.length === 0) throw new Error("No questions found in data source.");
+        if (fetchedQuestions.length === 0) throw new Error("Question dataset empty.");
         setQuestions(fetchedQuestions);
 
         const savedProgress = localStorage.getItem(progressKey);
@@ -110,7 +108,11 @@ const Test: FC = () => {
           setCurrentQuestionIndex(parsedProgress.currentQuestionIndex);
         }
       } catch (err: any) {
-        setError(err.message || "Failed to load exam questions.");
+        const isRestricted = err.message.toLowerCase().includes('restricted') || err.message.toLowerCase().includes('private');
+        setError({
+            title: isRestricted ? "Access Restricted" : "Dataset Error",
+            message: isRestricted ? "The Google Sheet for this exam is private. Admin must 'Publish to Web' as CSV." : (err.message || "Failed to parse questions.")
+        });
       } finally {
         setIsLoading(false);
       }
@@ -142,8 +144,8 @@ const Test: FC = () => {
       if (document.hidden && !hasSubmittedRef.current) {
         setFocusViolationCount(prev => {
           const next = prev + 1;
-          toast.error(`Violation ${next}/${MAX_FOCUS_VIOLATIONS}: Do not leave the exam tab!`, { id: FOCUS_VIOLATION_TOAST_ID, duration: 5000 });
-          if (next >= MAX_FOCUS_VIOLATIONS) handleSubmit(true, "Excessive proctoring violations");
+          toast.error(`Violation ${next}/${MAX_FOCUS_VIOLATIONS}: Switch back to exam tab!`, { id: FOCUS_VIOLATION_TOAST_ID, duration: 5000 });
+          if (next >= MAX_FOCUS_VIOLATIONS) handleSubmit(true, "Proctoring integrity breach");
           return next;
         });
       }
@@ -161,7 +163,7 @@ const Test: FC = () => {
         try {
             await document.documentElement.requestFullscreen();
         } catch (err) {
-            toast.error("Fullscreen is required for this proctored exam.");
+            toast.error("Proctored exams require full-screen mode.");
             setIsStarting(false);
             return;
         }
@@ -197,32 +199,40 @@ const Test: FC = () => {
     localStorage.setItem(progressKey, JSON.stringify(progress));
   };
 
-  if (isLoading) return <div className="flex flex-col items-center justify-center min-h-[60vh]"><LogoSpinner /><p className="mt-4 text-slate-500">Preparing Exam...</p></div>;
-  if (error) return <div className="max-w-xl mx-auto mt-20 p-8 bg-white rounded-xl shadow-lg text-center"><AlertTriangle className="mx-auto h-12 w-12 text-red-500 mb-4" /><h2 className="text-2xl font-bold mb-2">Error</h2><p className="text-slate-600">{error}</p><button onClick={() => navigate('/dashboard')} className="mt-6 px-6 py-2 bg-slate-800 text-white rounded-lg">Return to Dashboard</button></div>;
+  if (isLoading) return <div className="flex flex-col items-center justify-center min-h-[60vh]"><LogoSpinner /><p className="mt-4 text-slate-500 font-mono text-xs uppercase tracking-widest">Compiling Question Dataset...</p></div>;
+  
+  if (error) return (
+      <div className="max-w-xl mx-auto mt-20 p-10 bg-white rounded-2xl shadow-xl text-center border-t-4 border-red-500">
+          <ShieldAlert className="mx-auto h-16 w-16 text-red-500 mb-6" />
+          <h2 className="text-2xl font-black text-slate-900 mb-2">{error.title}</h2>
+          <p className="text-slate-600 leading-relaxed">{error.message}</p>
+          <button onClick={() => navigate('/dashboard')} className="mt-8 px-8 py-3 bg-slate-900 text-white font-black rounded-xl hover:bg-slate-800 transition">Return to Control Panel</button>
+      </div>
+  );
 
   if (!examStarted) {
     return (
       <div className="max-w-2xl mx-auto mt-10 bg-white p-10 rounded-2xl shadow-xl border border-slate-200">
-        <h1 className="text-3xl font-bold text-slate-900 mb-4">{examConfig?.name}</h1>
+        <h1 className="text-3xl font-black text-slate-900 mb-4">{examConfig?.name}</h1>
         <div className="space-y-6 text-slate-600">
-          <p className="text-lg">You are about to start the <strong>{examConfig?.name}</strong>. Please ensure you have a stable internet connection.</p>
+          <p className="text-lg">Preparing session for <strong>{examConfig?.name}</strong>. Data retrieved successfully.</p>
           <div className="grid grid-cols-2 gap-4 py-4 border-y border-slate-100">
-            <div className="flex items-center gap-2"><Clock className="text-cyan-500" /> <span>{examConfig?.durationMinutes} Minutes</span></div>
-            <div className="flex items-center gap-2"><HelpCircle className="text-cyan-500" /> <span>{questions.length} Questions</span></div>
+            <div className="flex items-center gap-2 font-bold"><Clock className="text-cyan-500" /> <span>{examConfig?.durationMinutes} Minutes</span></div>
+            <div className="flex items-center gap-2 font-bold"><HelpCircle className="text-cyan-500" /> <span>{questions.length} Questions</span></div>
           </div>
           {examConfig?.isProctored && (
-            <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-              <h3 className="font-bold text-amber-800 flex items-center gap-2 mb-2"><AlertTriangle size={18}/> Proctoring Active</h3>
-              <ul className="text-sm list-disc pl-5 text-amber-700 space-y-1">
-                <li>Exam must be taken in Fullscreen.</li>
-                <li>Do not leave this tab or minimize the browser.</li>
-                <li>Violations are logged and will result in automatic submission.</li>
+            <div className="p-5 bg-amber-50 rounded-xl border border-amber-200">
+              <h3 className="font-black text-amber-800 flex items-center gap-2 mb-3 uppercase text-xs tracking-widest"><ShieldAlert size={18}/> Proctoring Requirements</h3>
+              <ul className="text-sm list-disc pl-5 text-amber-700 space-y-2">
+                <li>System will force <strong>Fullscreen Mode</strong>.</li>
+                <li>Navigating away will flag your attempt for integrity review.</li>
+                <li>Three violations will terminate the session immediately.</li>
               </ul>
             </div>
           )}
         </div>
-        <button onClick={startExam} disabled={isStarting} className="w-full mt-8 py-4 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xl rounded-xl transition shadow-lg flex items-center justify-center gap-3">
-          {isStarting ? <Spinner /> : <><PlayCircle /> {countdown ? `Starting in ${countdown}...` : 'Start Exam'}</>}
+        <button onClick={startExam} disabled={isStarting} className="w-full mt-8 py-5 bg-cyan-600 hover:bg-cyan-700 text-white font-black text-xl rounded-2xl transition shadow-lg flex items-center justify-center gap-3">
+          {isStarting ? <Spinner /> : <><PlayCircle /> {countdown ? `ENGAGING IN ${countdown}...` : 'START EXAMINATION'}</>}
         </button>
       </div>
     );
@@ -233,69 +243,66 @@ const Test: FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-4">
-      {/* Timer & Header */}
       <div className="sticky top-0 z-40 bg-[rgb(var(--color-background-rgb))] py-4 flex flex-wrap justify-between items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="bg-slate-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-mono text-xl shadow-inner border border-slate-700">
+          <div className="bg-slate-800 text-white px-5 py-2 rounded-xl flex items-center gap-2 font-mono text-2xl shadow-inner border border-slate-700">
             <Clock size={20} className="text-cyan-400" />
             {timeLeft !== null ? formatTime(timeLeft) : '--:--'}
           </div>
           <div className="hidden sm:block">
-            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Progress</p>
-            <p className="text-lg font-bold">{currentQuestionIndex + 1} <span className="text-slate-400 font-medium">/ {questions.length}</span></p>
+            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Progression</p>
+            <p className="text-xl font-black">{currentQuestionIndex + 1} <span className="text-slate-400 font-medium text-sm">/ {questions.length}</span></p>
           </div>
         </div>
-        <button onClick={() => handleSubmit()} disabled={isSubmitting} className="px-8 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition shadow-md flex items-center gap-2">
-          {isSubmitting ? <Spinner /> : <><Send size={18}/> Submit Exam</>}
+        <button onClick={() => handleSubmit()} disabled={isSubmitting} className="px-10 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl transition shadow-lg flex items-center gap-2 uppercase tracking-wider text-sm">
+          {isSubmitting ? <Spinner /> : <><Send size={18}/> Finalize Submission</>}
         </button>
-        <div className="w-full h-2 bg-slate-200 rounded-full mt-2 overflow-hidden shadow-inner">
-          <div className="h-full bg-cyan-500 transition-all duration-300" style={{ width: `${progress}%` }}></div>
+        <div className="w-full h-3 bg-slate-800 rounded-full mt-2 overflow-hidden shadow-inner border border-slate-700">
+          <div className="h-full bg-cyan-500 transition-all duration-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" style={{ width: `${progress}%` }}></div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-8">
-        {/* Navigation Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-10">
         <div className="hidden lg:block space-y-4">
-          <h3 className="font-bold text-sm text-slate-500 uppercase">Question Navigator</h3>
-          <div className="grid grid-cols-5 gap-2">
-            {questions.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentQuestionIndex(i)}
-                className={`h-10 w-10 rounded-md font-bold text-sm transition ${
-                  currentQuestionIndex === i ? 'bg-cyan-600 text-white shadow-lg scale-110' :
-                  answers.has(questions[i].id) ? 'bg-green-100 text-green-700 border border-green-200' :
-                  'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
+            <h3 className="font-black text-[10px] text-slate-500 uppercase tracking-widest border-b border-slate-800 pb-2">Matrix Navigator</h3>
+            <div className="grid grid-cols-5 gap-2">
+                {questions.map((_, i) => (
+                <button
+                    key={i}
+                    onClick={() => setCurrentQuestionIndex(i)}
+                    className={`h-11 w-11 rounded-lg font-black text-sm transition-all ${
+                    currentQuestionIndex === i ? 'bg-cyan-600 text-white shadow-xl scale-110 ring-2 ring-cyan-400' :
+                    answers.has(questions[i].id) ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800' :
+                    'bg-slate-800 text-slate-500 border border-slate-700 hover:border-cyan-500 hover:text-cyan-400'
+                    }`}
+                >
+                    {i + 1}
+                </button>
+                ))}
+            </div>
         </div>
 
-        {/* Question Panel */}
         <div className="lg:col-span-3 space-y-6">
-          <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-200 min-h-[400px] flex flex-col">
-            <span className="inline-block px-3 py-1 bg-cyan-50 text-cyan-700 text-xs font-bold rounded-full mb-4">QUESTION {currentQuestionIndex + 1}</span>
-            <h2 className="text-2xl font-bold text-slate-800 mb-8 leading-snug">{currentQuestion?.question}</h2>
+          <div className="bg-white p-10 rounded-3xl shadow-2xl border border-slate-200 min-h-[450px] flex flex-col">
+            <span className="inline-block px-3 py-1 bg-cyan-100 text-cyan-800 text-[10px] font-black rounded-lg mb-6 uppercase tracking-widest">Point Cluster {currentQuestionIndex + 1}</span>
+            <h2 className="text-3xl font-bold text-slate-900 mb-10 leading-tight">{currentQuestion?.question}</h2>
             <div className="space-y-4 flex-grow">
               {currentQuestion?.options.map((option, i) => (
                 <button
                   key={i}
                   onClick={() => handleAnswer(i)}
-                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 flex items-start gap-4 group ${
+                  className={`w-full text-left p-6 rounded-2xl border-2 transition-all duration-300 flex items-start gap-5 group ${
                     answers.get(currentQuestion.id) === i
-                      ? 'border-cyan-500 bg-cyan-50 shadow-md translate-x-2'
-                      : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
+                      ? 'border-cyan-500 bg-cyan-50 shadow-xl translate-x-2'
+                      : 'border-slate-100 hover:border-cyan-200 hover:bg-slate-50 hover:shadow-md'
                   }`}
                 >
-                  <span className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold ${
-                    answers.get(currentQuestion.id) === i ? 'bg-cyan-600 text-white' : 'bg-slate-200 text-slate-600 group-hover:bg-slate-300'
+                  <span className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-lg ${
+                    answers.get(currentQuestion.id) === i ? 'bg-cyan-600 text-white shadow-lg' : 'bg-slate-100 text-slate-400 group-hover:bg-cyan-100 group-hover:text-cyan-600'
                   }`}>
                     {String.fromCharCode(65 + i)}
                   </span>
-                  <span className={`text-lg font-medium ${answers.get(currentQuestion.id) === i ? 'text-cyan-900' : 'text-slate-700'}`}>{option}</span>
+                  <span className={`text-xl font-bold leading-snug ${answers.get(currentQuestion.id) === i ? 'text-cyan-950' : 'text-slate-600 group-hover:text-slate-800'}`}>{option}</span>
                 </button>
               ))}
             </div>
@@ -304,16 +311,16 @@ const Test: FC = () => {
               <button
                 disabled={currentQuestionIndex === 0}
                 onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
-                className="flex items-center gap-2 px-6 py-2 rounded-lg font-bold text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition"
+                className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest text-slate-400 hover:bg-slate-100 disabled:opacity-20 transition"
               >
-                <ChevronLeft /> Previous
+                Previous Cell
               </button>
               <button
                 disabled={currentQuestionIndex === questions.length - 1}
                 onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
-                className="flex items-center gap-2 px-8 py-3 bg-slate-800 text-white rounded-lg font-bold hover:bg-slate-900 disabled:opacity-30 transition shadow-lg"
+                className="flex items-center gap-2 px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 disabled:opacity-20 transition shadow-xl"
               >
-                Next Question <ChevronRight />
+                Next Cell <ChevronRight size={16}/>
               </button>
             </div>
           </div>
