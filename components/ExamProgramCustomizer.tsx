@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, ExamProductCategory } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Settings, Edit, Save, Award, FileText, PlusCircle } from 'lucide-react';
+import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, AlertTriangle } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 interface EditableProgramData {
@@ -16,16 +16,19 @@ interface EditableProgramData {
 const ExamEditor: FC<{
     program: { category: ExamProductCategory; practiceExam?: Exam; certExam?: Exam; };
     onSave: (programId: string, data: EditableProgramData) => Promise<void>;
+    onDelete: (programId: string) => Promise<void>;
     onCancel: () => void;
     isSaving: boolean;
     unlinkedProducts: any[];
-}> = ({ program, onSave, onCancel, isSaving, unlinkedProducts }) => {
+}> = ({ program, onSave, onDelete, onCancel, isSaving, unlinkedProducts }) => {
     const [data, setData] = useState<EditableProgramData>({
         category: { ...program.category },
         practiceExam: program.practiceExam ? { ...program.practiceExam } : { id: program.category.practiceExamId, isPractice: true } as any,
         certExam: program.certExam ? { ...program.certExam } : { id: program.category.certificationExamId, isPractice: false } as any,
     });
     
+    const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+
     const handleCategoryChange = (field: keyof ExamProductCategory, value: string) => {
         setData(prev => ({ ...prev, category: { ...prev.category, [field]: value } }));
     };
@@ -88,11 +91,41 @@ const ExamEditor: FC<{
                 </div>
             </div>
             
-            <div className="flex justify-end gap-3 pt-6 border-t border-slate-700">
-                <button onClick={onCancel} disabled={isSaving} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition">Discard</button>
-                <button onClick={() => onSave(program.category.id, data)} disabled={isSaving} className="flex items-center gap-2 px-8 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-black transition shadow-lg disabled:opacity-50">
-                    {isSaving ? <Spinner size="sm" /> : <Save size={18} />} SAVE CHANGES
-                </button>
+            <div className="flex justify-between items-center pt-6 border-t border-slate-700">
+                <div className="flex gap-2">
+                    {!isConfirmingDelete ? (
+                        <button 
+                            onClick={() => setIsConfirmingDelete(true)} 
+                            disabled={isSaving}
+                            className="flex items-center gap-2 px-4 py-2 text-rose-400 hover:text-rose-300 border border-rose-900/50 hover:border-rose-800 rounded-lg text-xs font-bold transition uppercase tracking-tighter"
+                        >
+                            <Trash2 size={14} /> Delete Program
+                        </button>
+                    ) : (
+                        <button 
+                            onClick={() => onDelete(program.category.id)} 
+                            disabled={isSaving}
+                            className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-black transition animate-pulse shadow-lg shadow-rose-900/20"
+                        >
+                            <AlertTriangle size={14} /> CONFIRM TRASH
+                        </button>
+                    )}
+                    {isConfirmingDelete && (
+                        <button 
+                            onClick={() => setIsConfirmingDelete(false)} 
+                            className="px-4 py-2 text-slate-400 hover:text-white text-xs font-bold transition"
+                        >
+                            CANCEL
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex gap-3">
+                    <button onClick={onCancel} disabled={isSaving} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition">Discard</button>
+                    <button onClick={() => onSave(program.category.id, data)} disabled={isSaving} className="flex items-center gap-2 px-8 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-black transition shadow-lg disabled:opacity-50">
+                        {isSaving ? <Spinner size="sm" /> : <Save size={18} />} SAVE CHANGES
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -125,6 +158,22 @@ const ExamProgramCustomizer: FC = () => {
         finally { setIsSaving(false); }
     };
 
+    const handleDelete = async (id: string) => {
+        if (!token) return;
+        setIsSaving(true);
+        const tid = toast.loading("Trashing program...");
+        try {
+            await googleSheetsService.adminDeletePost(token, id, 'mco_exam_program');
+            await refreshConfig();
+            toast.success("Program moved to trash.", { id: tid });
+            setExpandedId(null);
+        } catch (e: any) { 
+            toast.error(e.message || "Failed to delete program.", { id: tid }); 
+        } finally { 
+            setIsSaving(false); 
+        }
+    };
+
     return (
         <div className="space-y-8">
             <h1 className="text-4xl font-black text-white font-display flex items-center gap-3"><Settings className="text-cyan-500" /> Program Master</h1>
@@ -147,6 +196,7 @@ const ExamProgramCustomizer: FC = () => {
                                 <ExamEditor 
                                     program={p} 
                                     onSave={handleSave} 
+                                    onDelete={handleDelete}
                                     onCancel={() => setExpandedId(null)} 
                                     isSaving={isSaving}
                                     unlinkedProducts={Object.entries(examPrices || {}).map(([sku, d]: [string, any]) => ({ sku, name: d.name }))}

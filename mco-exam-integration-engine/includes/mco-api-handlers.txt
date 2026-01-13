@@ -183,7 +183,17 @@ function mco_handle_admin_get_beta_testers() { return new WP_REST_Response([], 2
 function mco_handle_admin_resend_beta_email() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_admin_test_sheet_url() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_admin_create_exam_program() { return new WP_REST_Response(['success'=>true], 200); }
-function mco_handle_admin_delete_post() { return new WP_REST_Response(['success'=>true], 200); }
+
+function mco_handle_admin_delete_post($request) {
+    $p = $request->get_json_params();
+    $post_id = (int)str_replace('prod-', '', ($p['postId'] ?? ''));
+    if (!$post_id) return new WP_Error('400', 'ID missing.');
+    wp_trash_post($post_id);
+    delete_transient('mco_app_config_data');
+    delete_transient('mco_app_config_data_full');
+    return new WP_REST_Response(['success' => true], 200);
+}
+
 function mco_handle_admin_toggle_beta_status() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_admin_get_post_creation_data() { return new WP_REST_Response(['authors'=>[],'categories'=>[]], 200); }
 function mco_handle_admin_create_post() { return new WP_REST_Response(['success'=>true], 200); }
