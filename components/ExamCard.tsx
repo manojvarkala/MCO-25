@@ -1,6 +1,5 @@
 
 import React, { FC, useState } from 'react';
-// FIX: Standardized named imports from react-router-dom using single quotes.
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -52,9 +51,12 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
     let buttonText = isPractice ? 'Start Practice' : (canTake ? 'Start Exam' : `Buy for $${price.toFixed(2)}`);
     let icon = isRedirecting ? <Spinner size="sm" /> : (isPractice || canTake ? <PlayCircle size={18} /> : <ShoppingCart size={18} />);
     
-    // Explicit differentiation: mco-btn-owned (Cyan) vs mco-btn-buy (Amber)
+    // Gradient Selection
+    const cardGradient = isPractice ? 'mco-gradient--practice-1' : 'mco-gradient--cert-1';
+    
+    // Button Logic: White buttons on colored cards, Amber for commerce
     const buttonBase = "mco-card__button ";
-    const buttonVariant = canTake ? "mco-card__button--primary mco-btn-owned" : "mco-book-btn--primary mco-btn-buy";
+    const buttonVariant = canTake ? "mco-card__button--white" : "mco-card__button--amber";
     const buttonClasses = `${buttonBase} ${buttonVariant} disabled:opacity-50`;
 
     const buttonAction = async () => {
@@ -86,40 +88,79 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
     const isAttemptsExceeded = !isPractice && attemptsMade !== undefined && attemptsRemaining <= 0 && !isSubscribed && !isBetaTester;
 
     return (
-        <div className={`bg-[rgb(var(--color-card-rgb))] rounded-xl shadow-md border border-[rgb(var(--color-border-rgb))] p-6 flex flex-col ${isDisabled ? 'opacity-60 grayscale-[0.5]' : ''}`}>
-            <div className="flex items-start justify-between mb-4">
+        <div className={`mco-card ${cardGradient} rounded-xl shadow-lg p-6 flex flex-col relative overflow-hidden ${isDisabled ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+            {/* Header Area */}
+            <div className="flex items-start justify-between mb-4 relative z-10">
                 <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${isPractice ? 'bg-cyan-100 text-cyan-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                    <div className={`p-2 rounded-lg bg-white/20 text-white backdrop-blur-sm`}>
                         {isPractice ? <BookOpen size={20} /> : <Award size={20} />}
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold text-[rgb(var(--color-text-strong-rgb))] leading-tight">{decodeHtml(exam.name)}</h3>
-                        <p className="text-xs uppercase tracking-wider font-bold text-[rgb(var(--color-text-muted-rgb))] mt-1">{isPractice ? 'Practice Test' : 'Certification'}</p>
+                        <h3 className="text-xl font-bold text-white leading-tight">{decodeHtml(exam.name)}</h3>
+                        <p className="text-[10px] uppercase tracking-widest font-black text-white/70 mt-1">
+                            {isPractice ? 'Practice Test' : 'Certification Exam'}
+                        </p>
                     </div>
                 </div>
             </div>
-            <p className="text-[rgb(var(--color-text-default-rgb))] text-sm flex-grow mb-4 line-clamp-3 leading-relaxed">{stripHtml(exam.description)}</p>
-            <div className="space-y-2 text-sm text-[rgb(var(--color-text-muted-rgb))] mb-6">
-                <div className="flex items-center gap-2"><HelpCircle size={16} className="text-cyan-500" /> <span>{exam.numberOfQuestions} Questions</span></div>
-                <div className="flex items-center gap-2"><Clock size={16} className="text-cyan-500" /> <span>{exam.durationMinutes > 0 ? `${exam.durationMinutes} Minutes` : 'Untimed'}</span></div>
+
+            {/* Description */}
+            <p className="text-white/90 text-sm flex-grow mb-6 line-clamp-3 leading-relaxed relative z-10">
+                {stripHtml(exam.description)}
+            </p>
+
+            {/* Stats Row */}
+            <div className="grid grid-cols-2 gap-2 text-xs text-white mb-6 bg-black/20 p-3 rounded-lg border border-white/10 relative z-10">
+                <div className="flex items-center gap-2 font-bold">
+                    <HelpCircle size={14} className="text-white/60" /> 
+                    <span>{exam.numberOfQuestions} Qs</span>
+                </div>
+                <div className="flex items-center gap-2 font-bold">
+                    <Clock size={14} className="text-white/60" /> 
+                    <span>{exam.durationMinutes > 0 ? `${exam.durationMinutes}m` : 'Untimed'}</span>
+                </div>
                 {!isPractice && attemptsMade !== undefined && (
-                    <div className="flex items-center gap-2"><History size={16} className="text-cyan-500" /> <span className={attemptsRemaining <= 0 ? 'text-red-400 font-bold' : ''}>Attempts: {attemptsMade}/{maxAttempts}</span></div>
-                )}
-            </div>
-            <div className="mt-auto pt-4 border-t border-[rgb(var(--color-border-rgb))]">
-                {!isPractice && !canTake && regularPrice > price && (
-                    <div className="flex justify-between items-center text-sm mb-3">
-                        <span className="text-[rgb(var(--color-text-muted-rgb))] line-through">${regularPrice.toFixed(2)}</span>
-                        <span className="font-black px-2 py-0.5 bg-red-100 text-red-600 rounded text-xs uppercase">Save ${((regularPrice - price) || 0).toFixed(2)}</span>
+                    <div className="col-span-2 mt-1 pt-1 border-t border-white/10 flex items-center gap-2 font-bold">
+                        <History size={14} className="text-white/60" /> 
+                        <span className={attemptsRemaining <= 0 ? 'text-red-300 animate-pulse' : ''}>
+                            Attempts: {attemptsMade}/{maxAttempts}
+                        </span>
                     </div>
                 )}
-                {isAttemptsExceeded ? (
-                    <div className="bg-red-50 text-red-700 p-3 rounded-lg text-xs font-bold text-center">Attempts Exceeded. Purchase to reset.</div>
-                ) : (
-                    <button onClick={buttonAction} disabled={isRedirecting || isAttemptsExceeded || isDisabled} className={buttonClasses}>{icon} {buttonText}</button>
-                )}
-                {!hideDetailsLink && <Link to={`/program/${programId}`} className="block text-center mt-3 text-sm font-bold text-cyan-500 hover:text-cyan-400">Full Details →</Link>}
             </div>
+
+            {/* Footer Action */}
+            <div className="mt-auto relative z-10">
+                {!isPractice && !canTake && regularPrice > price && (
+                    <div className="flex justify-between items-center text-[10px] mb-3 bg-white/10 p-2 rounded border border-white/5">
+                        <span className="text-white/60 line-through">${regularPrice.toFixed(2)}</span>
+                        <span className="font-black text-yellow-300 uppercase tracking-tighter">Save ${((regularPrice - price) || 0).toFixed(2)}</span>
+                    </div>
+                )}
+                
+                {isAttemptsExceeded ? (
+                    <div className="bg-red-500/20 text-white p-3 rounded-lg text-[10px] font-black text-center border border-red-500/30">
+                        ATTEMPTS EXCEEDED. PURCHASE TO RESET.
+                    </div>
+                ) : (
+                    <button 
+                        onClick={buttonAction} 
+                        disabled={isRedirecting || isAttemptsExceeded || isDisabled} 
+                        className={buttonClasses}
+                    >
+                        {icon} <span className="uppercase">{buttonText}</span>
+                    </button>
+                )}
+                
+                {!hideDetailsLink && (
+                    <Link to={`/program/${programId}`} className="block text-center mt-4 text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white transition-colors">
+                        View Full Program Info →
+                    </Link>
+                )}
+            </div>
+
+            {/* Subtle background decoration */}
+            <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
         </div>
     );
 };

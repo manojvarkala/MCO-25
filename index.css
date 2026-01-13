@@ -1,3 +1,4 @@
+
 :root {
     --font-main: 'Inter', sans-serif;
     --color-primary-rgb: 6, 182, 212;
@@ -28,7 +29,38 @@ body {
     margin-top: 20px !important;
 }
 
-.mco-book-card { background: rgb(var(--color-card-rgb)); border: 1px solid rgb(var(--color-border-rgb)); border-radius: 1rem; overflow: hidden; display: flex; flex-direction: column; transition: 0.2s; height: 100% !important; }
+/* GRADIENTS */
+.mco-gradient--practice-1 { 
+    background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%) !important; 
+    border: none !important; 
+}
+.mco-gradient--cert-1 { 
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%) !important; 
+    border: none !important; 
+}
+.mco-gradient--sub-monthly { 
+    background: linear-gradient(135deg, #0891b2 0%, #155e75 100%) !important; 
+}
+.mco-gradient--sub-yearly { 
+    background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%) !important; 
+}
+
+/* CARD SYSTEM */
+.mco-card, .mco-book-card { 
+    background: rgb(var(--color-card-rgb)); 
+    border: 1px solid rgb(var(--color-border-rgb)); 
+    border-radius: 1rem; 
+    overflow: hidden; 
+    display: flex; 
+    flex-direction: column; 
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+    height: 100% !important; 
+}
+.mco-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
 .mco-book-cover { height: 280px; background: rgb(var(--color-muted-rgb)); border-bottom: 1px solid rgb(var(--color-border-rgb)); position: relative; }
 .mco-book-cover img { width: 100%; height: 100%; object-fit: cover; }
 
@@ -39,14 +71,15 @@ body {
 
 .mco-store-buttons { display: flex; flex-direction: column; gap: 0.6rem; }
 
+/* BUTTON SYSTEM */
 .mco-book-btn,
 .mco-card__button { 
     display: flex !important; 
     align-items: center !important; 
     justify-content: center !important; 
-    gap: 0.5rem !important; 
-    padding: 0.85rem 1.25rem !important; 
-    border-radius: 0.6rem !important; 
+    gap: 0.6rem !important; 
+    padding: 0.95rem 1.25rem !important; 
+    border-radius: 0.75rem !important; 
     font-weight: 800 !important; 
     font-size: 0.9rem !important; 
     text-decoration: none !important; 
@@ -56,21 +89,25 @@ body {
     width: 100% !important;
 }
 
-/* PRACTICE / START (Cyan + White Text) */
-.mco-card__button--primary,
-.mco-book-btn--cyan,
-.mco-btn-owned,
-.mco-card__button-cyan {
-    background-color: #0891b2 !important;
-    color: #ffffff !important;
+.mco-card__button--white {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1) !important;
+}
+.mco-card__button--white:hover {
+    background-color: #f1f5f9 !important;
+    transform: scale(1.02);
 }
 
-/* BUY / COMMERCE (Amber + Dark Brown Text) */
-.mco-book-btn--primary,
-.mco-card__button--purchase,
-.mco-btn-buy {
+.mco-card__button--amber,
+.mco-book-btn--primary {
     background-color: #fbbf24 !important;
     color: #78350f !important;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1) !important;
+}
+.mco-card__button--amber:hover {
+    background-color: #f59e0b !important;
+    transform: scale(1.02);
 }
 
 .mco-book-btn--secondary { 
