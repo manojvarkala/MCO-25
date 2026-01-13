@@ -1,7 +1,7 @@
-
 import React, { FC, useEffect, useMemo } from 'react';
-// FIX: Standardized named import from react-router-dom using single quotes.
-import { useParams } from 'react-router-dom';
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
+import * as ReactRouterDOM from 'react-router-dom';
+const { useParams } = ReactRouterDOM as any;
 import Spinner from './Spinner.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 

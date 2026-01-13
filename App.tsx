@@ -1,7 +1,7 @@
-
 import React, { FC, useState, useEffect, ReactNode, useMemo } from 'react';
-// FIX: Replaced wildcard import with standard named imports using single quotes to resolve module member errors.
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
+import * as ReactRouterDOM from 'react-router-dom';
+const { BrowserRouter, Routes, Route, Navigate, useLocation } = ReactRouterDOM as any;
 import { Toaster, ToastBar, toast } from 'react-hot-toast';
 import { X, AlertTriangle, WifiOff, RefreshCw, Server } from 'lucide-react';
 

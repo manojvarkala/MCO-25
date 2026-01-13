@@ -1,5 +1,7 @@
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
+import * as ReactRouterDOM from 'react-router-dom';
+const { useNavigate, Link } = ReactRouterDOM as any;
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';

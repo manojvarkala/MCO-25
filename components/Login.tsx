@@ -1,7 +1,7 @@
-
 import React, { FC, useEffect, useRef, useState } from 'react';
-// FIX: Standardized named imports from react-router-dom using single quotes.
-import { useLocation, useNavigate } from 'react-router-dom';
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
+import * as ReactRouterDOM from 'react-router-dom';
+const { useLocation, useNavigate } = ReactRouterDOM as any;
 import { useAuth } from '../context/AuthContext.tsx';
 import toast from 'react-hot-toast';
 import LogoSpinner from './LogoSpinner.tsx';

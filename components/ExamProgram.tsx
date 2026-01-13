@@ -1,7 +1,7 @@
-
 import React, { FC, useMemo, useState, useEffect } from 'react';
-// FIX: Standardized named imports from react-router-dom using single quotes.
-import { useParams, useNavigate, Link } from 'react-router-dom';
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
+import * as ReactRouterDOM from 'react-router-dom';
+const { useParams, useNavigate, Link } = ReactRouterDOM as any;
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -268,49 +268,4 @@ const ExamProgram: FC = () => {
                 <div className="prose max-w-none text-slate-600" dangerouslySetInnerHTML={{ __html: fullDescription }} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                {practiceExam && (
-                    <ExamCard exam={practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} hideDetailsLink={true} />
-                )}
-                {certExam && (
-                    <ExamCard exam={certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} hideDetailsLink={true} attemptsMade={certAttempts} />
-                )}
-                {foundBundle && certExam && (
-                    <ExamBundleCard type={foundBundle.type} bundleDataRaw={foundBundle.product} activeOrg={activeOrg} examPrices={examPrices} />
-                )}
-            </div>
-
-            {subscriptionsEnabled && !isSubscribed && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-                    <SubscriptionOfferCard planName="Monthly Subscription" price={monthlyPrice} regularPrice={monthlyRegularPrice} priceUnit="month" url={monthlySubUrl} features={['Unlimited Practice Exams', 'Unlimited AI Feedback', 'Cancel Anytime']} gradientClass="bg-gradient-to-br from-cyan-500 to-sky-600" />
-                    <SubscriptionOfferCard planName="Yearly Subscription" price={yearlyPrice} regularPrice={yearlyRegularPrice} priceUnit="year" url={yearlySubUrl} features={['All Monthly features', 'Access All Exam Programs', 'Saves over 35%!']} isBestValue={true} gradientClass="bg-gradient-to-br from-purple-600 to-indigo-700" />
-                </div>
-            )}
-
-            {recommendedBooksForProgram.length > 0 && (
-                <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                    <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                        {recommendedBooksForProgram.map(book => {
-                            const linkData = getGeoAffiliateLink(book as RecommendedBook, userGeoCountryCode);
-                            if (!linkData) return null;
-                            return (
-                                <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full flex-shrink-0 flex flex-col transform hover:-translate-y-1 transition-transform duration-200">
-                                    <BookCover book={book} className="w-full h-40"/>
-                                    <div className="p-4 flex flex-col flex-grow">
-                                        <h4 className="font-bold text-slate-800 text-sm mb-2 leading-tight flex-grow">{decodeHtmlEntities(book.title)}</h4>
-                                        <a href={linkData.url} target="_blank" rel="noopener noreferrer" className="mt-auto w-full flex items-center justify-center text-xs text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-2 py-1.5 transition-colors">
-                                            Buy on {linkData.domainName}
-                                        </a>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-export default ExamProgram;
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6

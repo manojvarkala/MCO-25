@@ -22,6 +22,39 @@ interface HealthStatus {
 
 type AdminTab = 'diagnostics' | 'appearance' | 'bulk';
 
+const themeColors: { [key: string]: { [key: string]: string } } = {
+    default: {
+        primary: 'rgb(6, 182, 212)',
+        secondary: 'rgb(219, 39, 119)',
+        accent: 'rgb(253, 224, 71)',
+        background: 'rgb(30, 41, 59)',
+    },
+    professional: {
+        primary: 'rgb(4, 120, 87)',
+        secondary: 'rgb(59, 130, 246)',
+        accent: 'rgb(234, 179, 8)',
+        background: 'rgb(241, 245, 249)',
+    },
+    serene: {
+        primary: 'rgb(96, 165, 250)',
+        secondary: 'rgb(52, 211, 153)',
+        accent: 'rgb(251, 146, 60)',
+        background: 'rgb(240, 253, 250)',
+    },
+    academic: {
+        primary: 'rgb(127, 29, 29)',
+        secondary: 'rgb(161, 98, 7)',
+        accent: 'rgb(217, 119, 6)',
+        background: 'rgb(254, 252, 251)',
+    },
+    noir: {
+        primary: 'rgb(229, 231, 235)',
+        secondary: 'rgb(139, 92, 246)',
+        accent: 'rgb(234, 179, 8)',
+        background: 'rgb(31, 41, 55)',
+    }
+};
+
 const NavItem: FC<{ id: AdminTab; label: string; icon: ReactNode; active: boolean; onClick: (id: AdminTab) => void }> = ({ id, label, icon, active, onClick }) => (
     <button
         onClick={() => onClick(id)}
@@ -53,7 +86,7 @@ const HealthCard: FC<{ title: string; status?: { success: boolean; message: stri
 
 const Admin: FC = () => {
     const { token } = useAuth();
-    const { activeOrg, availableThemes, activeTheme, refreshConfig } = useAppContext();
+    const { activeOrg, availableThemes, activeTheme, refreshConfig, setActiveTheme } = useAppContext();
     
     const [activeTab, setActiveTabState] = useState<AdminTab>(() => {
         return (sessionStorage.getItem('mco_admin_active_tab') as AdminTab) || 'diagnostics';
@@ -69,7 +102,6 @@ const Admin: FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSavingSettings, setIsSavingSettings] = useState(false);
 
-    // Initial state setup for visual consistency
     const [localSettings, setLocalSettings] = useState({
         purchaseNotifierEnabled: activeOrg?.purchaseNotifierEnabled ?? true,
         bundlesEnabled: activeOrg?.bundlesEnabled ?? true,
@@ -77,7 +109,6 @@ const Admin: FC = () => {
         activeThemeId: activeOrg?.activeThemeId ?? 'default'
     });
 
-    // Refresh local settings when the global context finishes re-syncing
     useEffect(() => {
         if (activeOrg) {
             setLocalSettings({
@@ -112,18 +143,21 @@ const Admin: FC = () => {
         if (!token) return;
         setIsSavingSettings(true);
         
-        // Optimistic UI state
         const nextSettings = { ...localSettings, ...updates };
         setLocalSettings(nextSettings);
 
-        const tid = toast.loading("Syncing platform design...");
+        // If updating theme, apply locally too for immediate feedback
+        if (updates.activeThemeId) {
+            setActiveTheme(updates.activeThemeId);
+        }
+
+        const tid = toast.loading("Updating Organization Preferences...");
         try {
             await googleSheetsService.adminUpdateGlobalSettings(token, nextSettings);
             await refreshConfig();
-            toast.success("Platform Updated Live", { id: tid });
+            toast.success("Platform Updated Globally", { id: tid });
         } catch (e: any) {
-            toast.error(e.message || "Save Failed", { id: tid });
-            // Revert state on failure
+            toast.error(e.message || "Sync Failed", { id: tid });
             if (activeOrg) {
                 setLocalSettings({
                     purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
@@ -220,6 +254,7 @@ const Admin: FC = () => {
                         <div className="space-y-6">
                             <h2 className="text-3xl font-black flex items-center gap-3 text-white"><Palette className="text-cyan-500" /> Branding Theme</h2>
                             <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 shadow-xl">
+                                <p className="text-slate-400 text-sm mb-6">Select the default appearance for all users visiting this tenant. Users can still override this individually in their profile.</p>
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                                     {(availableThemes || []).map(theme => (
                                         <button
@@ -232,11 +267,14 @@ const Admin: FC = () => {
                                             }`}
                                         >
                                             {localSettings.activeThemeId === theme.id && <Check className="absolute top-3 right-3 text-cyan-400" size={18} strokeWidth={3}/>}
-                                            <div className="w-full h-10 flex rounded-lg overflow-hidden border border-white/10">
-                                                <div className="flex-1 bg-cyan-500"></div>
-                                                <div className="flex-1 bg-pink-500"></div>
-                                                <div className="flex-1 bg-yellow-400"></div>
+                                            
+                                            <div className="flex justify-center space-x-1 w-full h-8 pointer-events-none">
+                                                <div className="w-1/4 rounded shadow-sm" style={{ backgroundColor: themeColors[theme.id]?.primary || '#ccc' }}></div>
+                                                <div className="w-1/4 rounded shadow-sm" style={{ backgroundColor: themeColors[theme.id]?.secondary || '#ccc' }}></div>
+                                                <div className="w-1/4 rounded shadow-sm" style={{ backgroundColor: themeColors[theme.id]?.accent || '#ccc' }}></div>
+                                                <div className="w-1/4 rounded shadow-sm" style={{ backgroundColor: themeColors[theme.id]?.background || '#ccc' }}></div>
                                             </div>
+
                                             <span className={`font-black text-[10px] uppercase tracking-tighter ${localSettings.activeThemeId === theme.id ? 'text-cyan-400' : 'text-slate-400'}`}>{theme.name}</span>
                                         </button>
                                     ))}

@@ -1,7 +1,7 @@
-
 import React, { FC, useState, useEffect } from 'react';
-// FIX: Standardized named import from react-router-dom using single quotes.
-import { useNavigate } from 'react-router-dom';
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
+import * as ReactRouterDOM from 'react-router-dom';
+const { useNavigate } = ReactRouterDOM as any;
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -10,7 +10,6 @@ import type { TestResult, Exam } from '../types.ts';
 import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight, Gift, Star, Paintbrush, Check, Shield } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
-// FIX: Define theme colors directly in the component for robust rendering.
 const themeColors: { [key: string]: { [key: string]: string } } = {
     default: {
         primary: 'rgb(6, 182, 212)',
@@ -59,19 +58,15 @@ const Profile: FC = () => {
     useEffect(() => {
         if (user && token) {
             setIsLoadingResults(true);
-    
-            // Immediately load and display any cached results for a better UX
             const cachedResults = googleSheetsService.getLocalTestResultsForUser(user.id);
             cachedResults.sort((a, b) => b.timestamp - a.timestamp);
             setResults(cachedResults);
     
-            // Sync with the server to get the latest data. The new syncResults handles race conditions.
             const performSync = async () => {
                 try {
-                    // syncResults now returns the up-to-date results array.
                     const updatedResults = await googleSheetsService.syncResults(user, token);
                     updatedResults.sort((a, b) => b.timestamp - a.timestamp);
-                    setResults(updatedResults); // This single update ensures the UI reflects the latest synced data.
+                    setResults(updatedResults);
                 } catch (error: any) {
                     toast.error(error.message || "Could not sync exam history.");
                 } finally {
@@ -123,7 +118,6 @@ const Profile: FC = () => {
         try {
             const response = await googleSheetsService.adminToggleBetaStatus(token, newStatus);
             if (response.token) {
-                // Use loginWithToken to refresh the session state without a full page reload
                 await loginWithToken(response.token, true);
                 toast.success(newStatus ? 'Beta Tester Mode Enabled' : 'Beta Tester Mode Disabled', { id: toastId });
             } else {
@@ -249,12 +243,11 @@ const Profile: FC = () => {
                                         <Check size={14} />
                                     </div>
                                 )}
-                                {/* FIX: Replaced dynamic classes with inline styles for robust rendering. */}
                                 <div className="flex justify-center space-x-1 h-8 pointer-events-none">
-                                    <div className="w-1/4 rounded" style={{ backgroundColor: themeColors[theme.id]?.primary || '#ccc' }}></div>
-                                    <div className="w-1/4 rounded" style={{ backgroundColor: themeColors[theme.id]?.secondary || '#ccc' }}></div>
-                                    <div className="w-1/4 rounded" style={{ backgroundColor: themeColors[theme.id]?.accent || '#ccc' }}></div>
-                                    <div className="w-1/4 rounded" style={{ backgroundColor: themeColors[theme.id]?.background || '#ccc' }}></div>
+                                    <div className="w-1/4 rounded shadow-sm" style={{ backgroundColor: themeColors[theme.id]?.primary || '#ccc' }}></div>
+                                    <div className="w-1/4 rounded shadow-sm" style={{ backgroundColor: themeColors[theme.id]?.secondary || '#ccc' }}></div>
+                                    <div className="w-1/4 rounded shadow-sm" style={{ backgroundColor: themeColors[theme.id]?.accent || '#ccc' }}></div>
+                                    <div className="w-1/4 rounded shadow-sm" style={{ backgroundColor: themeColors[theme.id]?.background || '#ccc' }}></div>
                                 </div>
                                 <p className="font-semibold text-center mt-2 text-slate-700 pointer-events-none">{theme.name}</p>
                             </button>

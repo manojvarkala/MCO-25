@@ -138,6 +138,8 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setActiveThemeState(themeId);
       try {
           localStorage.setItem('mco_active_theme', themeId);
+          // Directly update DOM to ensure instant reflection across components
+          document.documentElement.setAttribute('data-theme', themeId);
       } catch(e) {}
   };
 
@@ -166,9 +168,13 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
           setPurchaseNotifierDelay(newActiveOrg.purchaseNotifierDelay ?? 7);
           setPurchaseNotifierMinGap(newActiveOrg.purchaseNotifierMinGap ?? 8);
           setPurchaseNotifierMaxGap(newActiveOrg.purchaseNotifierMaxGap ?? 23);
+          
+          // Initial theme calculation
           const savedTheme = localStorage.getItem('mco_active_theme');
           const defaultTheme = newActiveOrg.activeThemeId || 'default';
-          setActiveThemeState(savedTheme || defaultTheme);
+          const themeToSet = savedTheme || defaultTheme;
+          setActiveThemeState(themeToSet);
+          document.documentElement.setAttribute('data-theme', themeToSet);
       }
       return true;
     }
