@@ -134,14 +134,13 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [feedbackRequiredForExam, setFeedbackRequiredForExamState] = useState<FeedbackContext | null>(null);
   const [userGeoCountryCode, setUserGeoCountryCode] = useState<string | null>(() => localStorage.getItem('mco_user_geo_country_code') || null);
   
-  const setActiveTheme = (themeId: string) => {
+  const setActiveTheme = useCallback((themeId: string) => {
       setActiveThemeState(themeId);
       try {
           localStorage.setItem('mco_active_theme', themeId);
-          // Directly update DOM to ensure instant reflection across components
           document.documentElement.setAttribute('data-theme', themeId);
       } catch(e) {}
-  };
+  }, []);
 
   const setFeedbackRequiredForExam = (context: FeedbackContext) => {
     setFeedbackRequiredForExamState(context);
@@ -159,6 +158,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setSuggestedBooks(processedData.allSuggestedBooks);
       const newActiveOrg = processedData.processedOrgs.find(o => o.id === localStorage.getItem('activeOrgId')) || processedData.processedOrgs[0];
       setActiveOrg(newActiveOrg);
+      
       if (newActiveOrg) {
           localStorage.setItem('activeOrgId', newActiveOrg.id);
           setAvailableThemes(newActiveOrg.availableThemes || []);
@@ -169,17 +169,17 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
           setPurchaseNotifierMinGap(newActiveOrg.purchaseNotifierMinGap ?? 8);
           setPurchaseNotifierMaxGap(newActiveOrg.purchaseNotifierMaxGap ?? 23);
           
-          // Initial theme calculation
-          const savedTheme = localStorage.getItem('mco_active_theme');
-          const defaultTheme = newActiveOrg.activeThemeId || 'default';
-          const themeToSet = savedTheme || defaultTheme;
-          setActiveThemeState(themeToSet);
-          document.documentElement.setAttribute('data-theme', themeToSet);
+          // Initial Theme Selection: 1. Local Storage, 2. Org Default, 3. Hardcoded Fallback
+          const storedTheme = localStorage.getItem('mco_active_theme');
+          const orgTheme = newActiveOrg.activeThemeId;
+          const finalTheme = storedTheme || orgTheme || 'default';
+          
+          setActiveTheme(finalTheme);
       }
       return true;
     }
     return false;
-  }, []);
+  }, [setActiveTheme]);
 
     const fetchGeoLocation = useCallback(async () => {
         const GEO_CACHE_KEY = 'mco_user_geo_country_code';
@@ -321,7 +321,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }), [
     organizations, activeOrg, isInitializing, refreshConfig, setActiveOrgById,
     updateActiveOrg, updateConfigData, updateExamInOrg, examPrices, suggestedBooks,
-    hitCount, availableThemes, activeTheme, subscriptionsEnabled, bundlesEnabled,
+    hitCount, availableThemes, activeTheme, setActiveTheme, subscriptionsEnabled, bundlesEnabled,
     purchaseNotifierEnabled, purchaseNotifierDelay, purchaseNotifierMinGap, purchaseNotifierMaxGap,
     feedbackRequiredForExam, userGeoCountryCode
   ]);
