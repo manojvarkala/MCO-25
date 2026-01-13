@@ -1,5 +1,5 @@
 import React, { FC, useEffect, useState, useMemo, useRef, useCallback } from 'react';
-// FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
 import * as ReactRouterDOM from 'react-router-dom';
 const { useParams, useNavigate } = ReactRouterDOM as any;
 import toast from 'react-hot-toast';
@@ -99,7 +99,8 @@ const decodeHtmlEntities = (html: string): string => {
 };
 
 const Results: FC = () => {
-    const { testId } = useParams<{ testId: string }>();
+    // FIX: Removed generic type from useParams to resolve "Untyped function calls may not accept type arguments" error.
+    const { testId } = useParams();
     const navigate = useNavigate();
     const { user, token, isSubscribed, paidExamIds, isEffectivelyAdmin, isBetaTester } = useAuth();
     const { activeOrg, suggestedBooks, userGeoCountryCode } = useAppContext();

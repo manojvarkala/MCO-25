@@ -1,5 +1,5 @@
 import React, { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
-// FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
 import * as ReactRouterDOM from 'react-router-dom';
 const { useParams, useNavigate } = ReactRouterDOM as any;
 import toast from 'react-hot-toast';
@@ -21,7 +21,8 @@ const MAX_FOCUS_VIOLATIONS = 3;
 const FOCUS_VIOLATION_TOAST_ID = 'focus-violation-toast';
 
 const Test: FC = () => {
-  const { examId } = useParams<{ examId: string }>();
+  // FIX: Removed generic type from useParams to resolve "Untyped function calls may not accept type arguments" error.
+  const { examId } = useParams();
   const navigate = useNavigate();
   const { user, isSubscribed, token, isBetaTester } = useAuth();
   const { activeOrg, isInitializing, setFeedbackRequiredForExam } = useAppContext();

@@ -26,7 +26,8 @@ const decodeHtmlEntities = (text: string | undefined): string => {
 };
 
 const Certificate: FC = () => {
-    const { testId = 'sample' } = useParams<{ testId?: string }>();
+    // FIX: Removed generic type from useParams to resolve "Untyped function calls may not accept type arguments" error.
+    const { testId = 'sample' } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
     const { user, token, isBetaTester } = useAuth();

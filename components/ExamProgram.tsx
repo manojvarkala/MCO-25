@@ -1,5 +1,5 @@
 import React, { FC, useMemo, useState, useEffect } from 'react';
-// FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
 import * as ReactRouterDOM from 'react-router-dom';
 const { useParams, useNavigate, Link } = ReactRouterDOM as any;
 import { useAuth } from '../context/AuthContext.tsx';
@@ -7,7 +7,6 @@ import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { RecommendedBook, TestResult } from '../types.ts';
 import { BookOpen, ChevronLeft, ChevronRight, Edit } from 'lucide-react';
-// FIX: Corrected import path for BookCover.tsx which is in the components folder.
 import BookCover from './BookCover.tsx'; 
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
@@ -15,28 +14,26 @@ import ExamBundleCard from './ExamBundleCard.tsx';
 import SubscriptionOfferCard from './SubscriptionOfferCard.tsx';
 import ShareButtons from './ShareButtons.tsx';
 
-// Unified geo-affiliate link logic - NOW USES APP CONTEXT FOR IP-BASED GEO
+// Unified geo-affiliate link logic
 const getGeoAffiliateLink = (book: RecommendedBook, userGeoCountryCode: string | null): { url: string; domainName: string; key: keyof RecommendedBook['affiliateLinks'] } | null => {
     if (!book.affiliateLinks) {
         return null;
     }
     const links = book.affiliateLinks;
     
-    // Map country codes to Amazon keys
     const countryToAmazonKey: Record<string, keyof RecommendedBook['affiliateLinks']> = {
-        'us': 'com', // United States
-        'in': 'in',  // India
-        'ae': 'ae',  // United Arab Emirates
-        'gb': 'com', // United Kingdom
-        'ca': 'com', // Canada
-        'au': 'com', // Australia
+        'us': 'com', 
+        'in': 'in',  
+        'ae': 'ae',  
+        'gb': 'com', 
+        'ca': 'com', 
+        'au': 'com', 
     };
     const domainNames: Record<string, string> = { com: 'Amazon.com', in: 'Amazon.in', ae: 'Amazon.ae' };
 
     let finalKey: keyof RecommendedBook['affiliateLinks'] | null = null;
     let finalDomainName: string | null = null;
 
-    // 1. Prioritize IP-based country code if available and valid
     if (userGeoCountryCode && countryToAmazonKey[userGeoCountryCode.toLowerCase()]) {
         const preferredKey = countryToAmazonKey[userGeoCountryCode.toLowerCase()];
         if (links[preferredKey] && links[preferredKey].trim() !== '') {
@@ -45,7 +42,6 @@ const getGeoAffiliateLink = (book: RecommendedBook, userGeoCountryCode: string |
         }
     }
 
-    // 2. Fallback to timezone-based inference if IP-based didn't yield a valid link
     if (!finalKey) {
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         let preferredKeyFromTimezone: keyof RecommendedBook['affiliateLinks'] = 'com';
@@ -63,7 +59,6 @@ const getGeoAffiliateLink = (book: RecommendedBook, userGeoCountryCode: string |
         }
     }
 
-    // 3. Final fallback: Use a default priority order if no specific match yet
     if (!finalKey) {
         const fallbackPriority: (keyof RecommendedBook['affiliateLinks'])[] = ['com', 'in', 'ae'];
         for (const key of fallbackPriority) {
@@ -95,7 +90,6 @@ const stripHtml = (html: string): string => {
         tempDiv.innerHTML = html;
         return tempDiv.textContent || tempDiv.innerText || '';
     } catch (e) {
-        console.error("Could not parse HTML string for stripping", e);
         return html;
     }
 };
@@ -107,13 +101,13 @@ const decodeHtmlEntities = (html: string): string => {
         textarea.innerHTML = html;
         return textarea.textContent || textarea.innerText || '';
     } catch (e) {
-        console.error("Could not decode HTML entities", e);
         return html;
     }
 };
 
 const ExamProgram: FC = () => {
-    const { programId } = useParams<{ programId: string }>();
+    // FIX: Removed generic type from useParams to resolve "Untyped function calls may not accept type arguments" error.
+    const { programId } = useParams();
     const navigate = useNavigate();
     const { activeOrg, suggestedBooks, isInitializing, examPrices, subscriptionsEnabled, bundlesEnabled, userGeoCountryCode } = useAppContext();
     const { user, paidExamIds, isSubscribed, isEffectivelyAdmin } = useAuth();
@@ -148,21 +142,6 @@ const ExamProgram: FC = () => {
         return suggestedBooks.filter(book => programData.certExam.recommendedBookIds.includes(book.id));
     }, [programData, suggestedBooks]);
 
-    const { monthlyPrice, monthlyRegularPrice, yearlyPrice, yearlyRegularPrice, monthlySubUrl, yearlySubUrl } = useMemo(() => {
-        const monthlyData = examPrices?.['sub-monthly'];
-        const yearlyData = examPrices?.['sub-yearly'];
-        const website = activeOrg ? `https://${activeOrg.website}` : '';
-
-        return {
-            monthlyPrice: monthlyData?.price ?? 19.99,
-            monthlyRegularPrice: monthlyData?.regularPrice,
-            yearlyPrice: yearlyData?.price ?? 149.99,
-            yearlyRegularPrice: yearlyData?.regularPrice,
-            monthlySubUrl: monthlyData?.productId ? `${website}/cart/?add-to-cart=${monthlyData.productId}` : `${website}/product/monthly-subscription/`,
-            yearlySubUrl: yearlyData?.productId ? `${website}/cart/?add-to-cart=${yearlyData.productId}` : `${website}/product/yearly-subscription/`,
-        };
-    }, [examPrices, activeOrg]);
-    
     const navigationLinks = useMemo(() => {
         if (!activeOrg || !Array.isArray(activeOrg.examProductCategories) || !programId) {
             return { prev: null, next: null };
@@ -268,4 +247,64 @@ const ExamProgram: FC = () => {
                 <div className="prose max-w-none text-slate-600" dangerouslySetInnerHTML={{ __html: fullDescription }} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {practiceExam && (
+                    <ExamCard 
+                        exam={practiceExam} 
+                        programId={category.id} 
+                        isPractice={true} 
+                        isPurchased={false} 
+                        activeOrg={activeOrg} 
+                        examPrices={examPrices} 
+                        hideDetailsLink={true}
+                    />
+                )}
+                {certExam && (
+                    <ExamCard 
+                        exam={certExam} 
+                        programId={category.id} 
+                        isPractice={false} 
+                        isPurchased={paidExamIds.includes(certExam.productSku)} 
+                        activeOrg={activeOrg} 
+                        examPrices={examPrices} 
+                        hideDetailsLink={true}
+                        attemptsMade={certAttempts}
+                    />
+                )}
+                {foundBundle && (
+                    <ExamBundleCard 
+                        type={foundBundle.type} 
+                        bundleDataRaw={foundBundle.product} 
+                        activeOrg={activeOrg} 
+                        examPrices={examPrices} 
+                    />
+                )}
+            </div>
+
+            {recommendedBooksForProgram.length > 0 && (
+                <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><BookOpen className="mr-3 text-cyan-500" /> Recommended Study Material</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                        {recommendedBooksForProgram.map(book => {
+                            const linkData = getGeoAffiliateLink(book as RecommendedBook, userGeoCountryCode);
+                            if (!linkData) return null;
+                            return (
+                                <div key={book.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 w-full flex-shrink-0 flex flex-col transform hover:-translate-y-1 transition-transform duration-200">
+                                    <BookCover book={book} className="w-full h-40"/>
+                                    <div className="p-4 flex flex-col flex-grow">
+                                        <h4 className="font-bold text-slate-800 text-sm mb-2 leading-tight flex-grow">{decodeHtmlEntities(book.title)}</h4>
+                                        <a href={linkData.url} target="_blank" rel="noopener noreferrer" className="mt-auto w-full flex items-center justify-center text-xs text-white bg-yellow-500 hover:bg-yellow-600 font-semibold rounded-md px-2 py-1.5 transition-colors">
+                                            Buy on {linkData.domainName}
+                                        </a>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default ExamProgram;

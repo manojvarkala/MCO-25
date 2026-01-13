@@ -1,12 +1,13 @@
 import React, { FC, useEffect, useMemo } from 'react';
-// FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
 import * as ReactRouterDOM from 'react-router-dom';
 const { useParams } = ReactRouterDOM as any;
 import Spinner from './Spinner.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 
 const Checkout: FC = () => {
-    const { productSlug } = useParams<{ productSlug: string }>();
+    // FIX: Removed generic type from useParams to resolve "Untyped function calls may not accept type arguments" error.
+    const { productSlug } = useParams();
     const { activeOrg } = useAppContext();
 
     const mainSiteBaseUrl = useMemo(() => {
