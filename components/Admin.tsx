@@ -69,6 +69,7 @@ const Admin: FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSavingSettings, setIsSavingSettings] = useState(false);
 
+    // Initial state setup for visual consistency
     const [localSettings, setLocalSettings] = useState({
         purchaseNotifierEnabled: activeOrg?.purchaseNotifierEnabled ?? true,
         bundlesEnabled: activeOrg?.bundlesEnabled ?? true,
@@ -76,6 +77,7 @@ const Admin: FC = () => {
         activeThemeId: activeTheme
     });
 
+    // Refresh local settings when the global context finishes re-syncing
     useEffect(() => {
         if (activeOrg) {
             setLocalSettings({
@@ -110,17 +112,18 @@ const Admin: FC = () => {
         if (!token) return;
         setIsSavingSettings(true);
         
+        // Optimistic UI state
         const nextSettings = { ...localSettings, ...updates };
         setLocalSettings(nextSettings);
 
-        const tid = toast.loading("Persisting Changes...");
+        const tid = toast.loading("Syncing with WordPress...");
         try {
             await googleSheetsService.adminUpdateGlobalSettings(token, nextSettings);
-            // CRITICAL: Force refresh context to clear local storage cache
             await refreshConfig();
             toast.success("Platform Updated Live", { id: tid });
         } catch (e: any) {
             toast.error(e.message || "Save Failed", { id: tid });
+            // Revert state on failure
             if (activeOrg) {
                 setLocalSettings({
                     purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
@@ -198,7 +201,7 @@ const Admin: FC = () => {
                                 {[
                                     { id: 'purchaseNotifierEnabled', label: 'Purchase Notifier', desc: 'Social proof popups for visitors' },
                                     { id: 'subscriptionsEnabled', label: 'Subscription Core', desc: 'Enables monthly/yearly recurring access' },
-                                    { id: 'bundlesEnabled', label: 'Package Bundles', desc: 'Allows "Exam + Subscription" checkout deals' }
+                                    { id: 'bundlesEnabled', label: 'Product Bundles', desc: 'Allows "Exam + Subscription" checkout deals' }
                                 ].map(f => (
                                     <div key={f.id} className="flex items-center justify-between p-6 bg-slate-900 hover:bg-slate-800/50 transition-colors">
                                         <div><p className="font-bold text-white text-lg">{f.label}</p><p className="text-sm text-slate-300 italic mt-1">{f.desc}</p></div>
