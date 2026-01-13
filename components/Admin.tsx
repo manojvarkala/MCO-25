@@ -67,7 +67,6 @@ const Admin: FC = () => {
         activeThemeId: activeTheme
     });
 
-    // Ensure UI toggles stay in sync with the actual Org config when refreshed
     useEffect(() => {
         if (activeOrg) {
             setLocalSettings({
@@ -101,15 +100,21 @@ const Admin: FC = () => {
     const handleSyncSettings = async (updates: Partial<typeof localSettings>) => {
         if (!token) return;
         setIsSavingSettings(true);
-        const tid = toast.loading("Saving changes...");
+        const tid = toast.loading("Updating System Settings...");
         try {
             const newSettings = { ...localSettings, ...updates };
+            // 1. Save to Database
             await googleSheetsService.adminUpdateGlobalSettings(token, newSettings);
+            // 2. Update local visual state immediately
             setLocalSettings(newSettings);
+            // 3. Force the AppContext to fetch the fresh JSON
             await refreshConfig();
-            toast.success("Settings Saved Successfully", { id: tid });
-        } catch (e: any) { toast.error(e.message, { id: tid }); }
-        finally { setIsSavingSettings(false); }
+            toast.success("Changes Applied Successfully", { id: tid });
+        } catch (e: any) { 
+            toast.error(e.message || "Save Failed", { id: tid }); 
+        } finally { 
+            setIsSavingSettings(false); 
+        }
     };
 
     if (isLoading && !health) return <div className="flex flex-col items-center justify-center py-20 text-slate-200"><Spinner size="lg"/><p className="mt-4 font-mono uppercase tracking-widest text-xs">Pinging Infrastructure...</p></div>;
@@ -178,6 +183,32 @@ const Admin: FC = () => {
                                         </button>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                        <div className="space-y-6">
+                            <h2 className="text-3xl font-black flex items-center gap-3 text-white"><Palette className="text-cyan-500" /> Site Theme</h2>
+                            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 shadow-xl">
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                    {(availableThemes || []).map(theme => (
+                                        <button
+                                            key={theme.id}
+                                            onClick={() => handleSyncSettings({ activeThemeId: theme.id })}
+                                            className={`relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
+                                                localSettings.activeThemeId === theme.id 
+                                                    ? 'bg-cyan-500/10 border-cyan-500 ring-4 ring-cyan-500/20' 
+                                                    : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                                            }`}
+                                        >
+                                            {localSettings.activeThemeId === theme.id && <Check className="absolute top-2 right-2 text-cyan-400" size={16}/>}
+                                            <div className="w-full h-8 flex rounded overflow-hidden">
+                                                <div className="flex-1 bg-cyan-500"></div>
+                                                <div className="flex-1 bg-pink-500"></div>
+                                                <div className="flex-1 bg-yellow-400"></div>
+                                            </div>
+                                            <span className={`font-bold text-xs uppercase ${localSettings.activeThemeId === theme.id ? 'text-cyan-400' : 'text-slate-400'}`}>{theme.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
