@@ -166,7 +166,7 @@ const ContentEngine: FC = () => {
                 <Sparkles className="text-cyan-500" />
                 AI Content Engine
             </h1>
-            <p className="text-slate-300 text-lg">
+            <p className="text-slate-100 text-lg font-medium">
                 Automatically generate and schedule SEO-friendly blog posts from your existing exam programs using the Gemini API.
             </p>
 
@@ -174,28 +174,28 @@ const ContentEngine: FC = () => {
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
                     {/* Column 1: Scheduling */}
                     <div className="space-y-5">
-                        <h3 className="font-black text-white text-xs uppercase tracking-widest flex items-center gap-2 mb-6 border-b border-slate-800 pb-3">
-                            <Calendar size={14} className="text-cyan-500"/> Scheduling Configuration
+                        <h3 className="font-black text-white text-sm uppercase tracking-widest flex items-center gap-2 mb-6 border-b border-slate-700 pb-3">
+                            <Calendar size={16} className="text-cyan-400"/> Scheduling Configuration
                         </h3>
                         <div>
-                            <label htmlFor="num_posts" className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1.5">Posts to Create</label>
-                            <input type="number" id="num_posts" value={numPosts} onChange={e => setNumPosts(e.target.value)} min="1" max={eligiblePrograms.length} className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-white focus:border-cyan-500 transition-colors" />
+                            <label htmlFor="num_posts" className="text-[11px] font-black uppercase text-slate-100 tracking-widest block mb-2">Posts to Create</label>
+                            <input type="number" id="num_posts" value={numPosts} onChange={e => setNumPosts(e.target.value)} min="1" max={eligiblePrograms.length} className="w-full bg-slate-950 border border-slate-600 rounded-xl py-3 px-4 text-white focus:border-cyan-500 transition-colors font-bold" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label htmlFor="start_date" className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1.5">Launch Date</label>
-                                <input type="date" id="start_date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-white focus:border-cyan-500 transition-colors" />
+                                <label htmlFor="start_date" className="text-[11px] font-black uppercase text-slate-100 tracking-widest block mb-2">Launch Date</label>
+                                <input type="date" id="start_date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-slate-950 border border-slate-600 rounded-xl py-3 px-4 text-white focus:border-cyan-500 transition-colors font-bold" />
                             </div>
                             <div>
-                                <label htmlFor="start_time" className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1.5">Start Time</label>
-                                <input type="time" id="start_time" value={startTime} onChange={e => setStartTime(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-white focus:border-cyan-500 transition-colors" />
+                                <label htmlFor="start_time" className="text-[11px] font-black uppercase text-slate-100 tracking-widest block mb-2">Start Time</label>
+                                <input type="time" id="start_time" value={startTime} onChange={e => setStartTime(e.target.value)} className="w-full bg-slate-950 border border-slate-600 rounded-xl py-3 px-4 text-white focus:border-cyan-500 transition-colors font-bold" />
                             </div>
                         </div>
                         <div>
-                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1.5">Drip Frequency</label>
+                            <label className="text-[11px] font-black uppercase text-slate-100 tracking-widest block mb-2">Drip Frequency</label>
                             <div className="flex gap-2">
-                                <input type="number" id="interval" value={interval} onChange={e => setInterval(e.target.value)} min="1" className="w-1/2 bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-white" />
-                                <select id="interval_unit" value={intervalUnit} onChange={e => setIntervalUnit(e.target.value as any)} className="w-1/2 bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-white font-bold">
+                                <input type="number" id="interval" value={interval} onChange={e => setInterval(e.target.value)} min="1" className="w-1/2 bg-slate-950 border border-slate-600 rounded-xl py-3 px-4 text-white font-bold" />
+                                <select id="interval_unit" value={intervalUnit} onChange={e => setIntervalUnit(e.target.value as any)} className="w-1/2 bg-slate-950 border border-slate-600 rounded-xl py-3 px-4 text-white font-black">
                                     <option value="hours">Hours</option>
                                     <option value="days">Days</option>
                                     <option value="weeks">Weeks</option>
@@ -206,29 +206,29 @@ const ContentEngine: FC = () => {
 
                     {/* Column 2: Content & SEO */}
                     <div className="space-y-5">
-                        <h3 className="font-black text-white text-xs uppercase tracking-widest flex items-center gap-2 mb-6 border-b border-slate-800 pb-3">
-                            <Key size={14} className="text-cyan-500"/> Content & SEO Hooks
+                        <h3 className="font-black text-white text-sm uppercase tracking-widest flex items-center gap-2 mb-6 border-b border-slate-700 pb-3">
+                            <Key size={16} className="text-cyan-400"/> Content & SEO Hooks
                         </h3>
                         <div>
-                            <label htmlFor="keywords" className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1.5 flex items-center gap-1">Keywords</label>
-                            <input type="text" id="keywords" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="e.g. medical coding, cpc exam" className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-white focus:border-cyan-500 placeholder:text-slate-700" />
-                            <p className="text-[10px] text-slate-500 font-bold mt-1.5 uppercase italic">Comma-separated for AI indexing.</p>
+                            <label htmlFor="keywords" className="text-[11px] font-black uppercase text-slate-100 tracking-widest block mb-2 flex items-center gap-1">Keywords</label>
+                            <input type="text" id="keywords" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="e.g. medical coding, cpc exam" className="w-full bg-slate-950 border border-slate-600 rounded-xl py-3 px-4 text-white focus:border-cyan-500 placeholder:text-slate-500 font-bold" />
+                            <p className="text-[10px] text-slate-400 font-black mt-2 uppercase italic tracking-tighter">Comma-separated for AI indexing.</p>
                         </div>
                         <div>
-                            <label htmlFor="hashtags" className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1.5 flex items-center gap-1">Hashtags</label>
-                            <input type="text" id="hashtags" value={hashtags} onChange={e => setHashtags(e.target.value)} placeholder="CPCPrep, CertifiedCoder" className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-white focus:border-cyan-500 placeholder:text-slate-700" />
+                            <label htmlFor="hashtags" className="text-[11px] font-black uppercase text-slate-100 tracking-widest block mb-2 flex items-center gap-1">Hashtags</label>
+                            <input type="text" id="hashtags" value={hashtags} onChange={e => setHashtags(e.target.value)} placeholder="CPCPrep, CertifiedCoder" className="w-full bg-slate-950 border border-slate-600 rounded-xl py-3 px-4 text-white focus:border-cyan-500 placeholder:text-slate-500 font-bold" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label htmlFor="author" className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1.5">WordPress Author</label>
-                                <select id="author" value={authorId} onChange={e => setAuthorId(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-white font-bold">
+                                <label htmlFor="author" className="text-[11px] font-black uppercase text-slate-100 tracking-widest block mb-2">WordPress Author</label>
+                                <select id="author" value={authorId} onChange={e => setAuthorId(e.target.value)} className="w-full bg-slate-950 border border-slate-600 rounded-xl py-3 px-4 text-white font-black">
                                     <option value="">Default Admin</option>
                                     {postData?.authors.map(author => <option key={author.ID} value={author.ID}>{author.display_name}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label htmlFor="category" className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1.5">WordPress Category</label>
-                                <select id="category" value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-white font-bold">
+                                <label htmlFor="category" className="text-[11px] font-black uppercase text-slate-100 tracking-widest block mb-2">WordPress Category</label>
+                                <select id="category" value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-full bg-slate-950 border border-slate-600 rounded-xl py-3 px-4 text-white font-black">
                                     <option value="">Uncategorized</option>
                                     {postData?.categories.map((category: WordpressCategory) => (
                                         <option key={category.term_id} value={category.term_id}>
@@ -240,7 +240,7 @@ const ContentEngine: FC = () => {
                         </div>
                     </div>
                 </div>
-                <div className="mt-10 pt-8 border-t border-slate-800 text-right">
+                <div className="mt-10 pt-8 border-t border-slate-700 text-right">
                     <button onClick={handleGenerate} disabled={isGenerating} className="inline-flex items-center justify-center gap-3 px-10 py-4 border border-transparent text-sm font-black rounded-xl shadow-lg text-white bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-600 transition-all uppercase tracking-widest">
                         {isGenerating ? <Spinner size="sm" /> : <Send size={18} />}
                         {isGenerating ? 'AI Dispatching...' : 'Initiate Post Generation'}
@@ -249,7 +249,7 @@ const ContentEngine: FC = () => {
             </div>
 
             {(isGenerating || generatedPosts.length > 0) && (
-                <div className="bg-slate-950 p-8 rounded-2xl shadow-2xl border border-slate-800">
+                <div className="bg-slate-950 p-8 rounded-2xl shadow-2xl border border-slate-700">
                     <h2 className="text-xl font-black text-white mb-6 uppercase tracking-tighter">System Output Logs</h2>
                     {isGenerating && (
                         <div className="flex items-center gap-3 text-lg font-bold text-cyan-400 animate-pulse mb-6">
@@ -260,15 +260,15 @@ const ContentEngine: FC = () => {
                     {generatedPosts.length > 0 && (
                         <ul className="space-y-4">
                             {generatedPosts.map((post, index) => (
-                                <li key={index} className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-slate-800 hover:border-cyan-900 transition-colors">
+                                <li key={index} className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-slate-700 hover:border-cyan-600 transition-colors">
                                     <div className="flex items-center gap-4">
                                         <CheckCircle size={24} className="text-emerald-500" />
                                         <div>
-                                            <p className="font-black text-white">{post.title}</p>
-                                            <p className="text-[10px] uppercase font-bold text-slate-500 mt-1">Source: {post.programName}</p>
+                                            <p className="font-black text-white text-lg">{post.title}</p>
+                                            <p className="text-[11px] uppercase font-black text-slate-400 mt-1">Source Exam: {post.programName}</p>
                                         </div>
                                     </div>
-                                    <a href={post.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-black text-cyan-500 bg-cyan-950/30 px-4 py-2 rounded-lg hover:bg-cyan-500 hover:text-white transition-all">
+                                    <a href={post.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-black text-cyan-400 bg-cyan-950/40 px-4 py-2 rounded-lg border border-cyan-800 hover:bg-cyan-500 hover:text-white transition-all">
                                         EDIT IN WP <ExternalLink size={12} />
                                     </a>
                                 </li>

@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 25.0.0 (Beta Toggle Persistence & Fresh JWT Generation)
+ * VERSION: 27.0.0 (Hardened Beta Toggle & Theme Mapping)
  * =============================================================================
  */
 
@@ -84,12 +84,28 @@ function mco_handle_questions_from_sheet($request) {
 
 function mco_handle_admin_update_settings($request) {
     $p = $request->get_json_params();
-    if (isset($p['activeThemeId'])) update_option('mco_active_theme_id', sanitize_text_field($p['activeThemeId']));
-    $toggles = ['purchaseNotifierEnabled' => 'mco_purchase_notifier_enabled', 'subscriptionsEnabled' => 'mco_subscriptions_enabled', 'bundlesEnabled' => 'mco_bundles_enabled'];
-    foreach ($toggles as $json_key => $wp_key) if (isset($p[$json_key])) update_option($wp_key, $p[$json_key] ? '1' : '0');
+    
+    // THEME UPDATE: Set organization-wide default
+    if (isset($p['activeThemeId'])) {
+        update_option('mco_active_theme_id', sanitize_text_field($p['activeThemeId']));
+    }
+    
+    $toggles = [
+        'purchaseNotifierEnabled' => 'mco_purchase_notifier_enabled', 
+        'subscriptionsEnabled' => 'mco_subscriptions_enabled', 
+        'bundlesEnabled' => 'mco_bundles_enabled'
+    ];
+    
+    foreach ($toggles as $json_key => $wp_key) {
+        if (isset($p[$json_key])) {
+            update_option($wp_key, $p[$json_key] ? '1' : '0');
+        }
+    }
+    
     delete_transient('mco_app_config_data');
     delete_transient('mco_app_config_data_full');
     update_option('mco_config_version', (string)current_time('timestamp'));
+    
     return new WP_REST_Response(['success' => true], 200);
 }
 
@@ -186,11 +202,85 @@ function mco_handle_admin_toggle_beta_status($request) {
     
     update_user_meta($user_id, '_mco_is_beta_tester', $status);
     
-    // Generate fresh JWT with the new beta flag
-    if (!function_exists('mco_generate_exam_jwt')) return new WP_Error('500', 'Security Engine Offline.');
+    // Explicit check for JWT generator availability
+    if (!function_exists('mco_generate_exam_jwt')) {
+        error_log("MCO ERROR: mco_generate_exam_jwt function not found during beta toggle.");
+        return new WP_Error('500', 'Security engine offline. Please re-install integration plugin.');
+    }
+    
     $token = mco_generate_exam_jwt($user_id);
     
+    if (is_null($token)) {
+        error_log("MCO ERROR: mco_generate_exam_jwt returned null. Likely MCO_JWT_SECRET missing in wp-config.php.");
+        return new WP_Error('500', 'Token generation failed. Ensure MCO_JWT_SECRET is defined in wp-config.php.');
+    }
+    
     return new WP_REST_Response(['success' => true, 'token' => $token], 200);
+}
+
+// --- CONTENT ENGINE LOGIC ---
+
+/**
+ * FIXED: Fetches actual authors and categories from WordPress.
+ */
+function mco_handle_admin_get_post_creation_data() {
+    $authors = get_users([
+        'role__in' => ['administrator', 'editor', 'author'],
+        'fields' => ['ID', 'display_name']
+    ]);
+
+    $categories = get_categories([
+        'hide_empty' => false,
+    ]);
+
+    $formatted_categories = array_map(function($cat) {
+        return [
+            'term_id' => $cat->term_id,
+            'name' => $cat->name,
+            'slug' => $cat->slug
+        ];
+    }, $categories);
+
+    return new WP_REST_Response([
+        'authors' => $authors,
+        'categories' => $formatted_categories
+    ], 200);
+}
+
+/**
+ * FIXED: Actually creates the blog post in WordPress.
+ */
+function mco_handle_admin_create_post($request) {
+    $p = $request->get_json_params();
+    
+    $post_data = [
+        'post_title'    => sanitize_text_field($p['post_title'] ?? 'Untitled AI Post'),
+        'post_content'  => $p['post_content'] ?? '', // Content is pre-formatted with blocks
+        'post_status'   => sanitize_text_field($p['post_status'] ?? 'future'),
+        'post_author'   => (int)($p['post_author'] ?? get_current_user_id()),
+        'post_date'     => sanitize_text_field($p['post_date'] ?? current_time('mysql')),
+        'post_category' => isset($p['post_category']) ? [(int)$p['post_category']] : []
+    ];
+
+    $post_id = wp_insert_post($post_data);
+
+    if (is_wp_error($post_id)) {
+        return $post_id;
+    }
+
+    // Tagging or meta for keywords/hashtags if needed
+    if (!empty($p['keywords'])) {
+        wp_set_post_tags($post_id, $p['keywords'], true);
+    }
+
+    // Trigger social poster hook if companion plugin is active
+    do_action('mco_ai_post_created', $post_id);
+
+    return new WP_REST_Response([
+        'success' => true,
+        'post_id' => $post_id,
+        'post_url' => get_permalink($post_id)
+    ], 200);
 }
 
 function mco_handle_admin_get_status() {
@@ -216,8 +306,6 @@ function mco_handle_admin_resend_beta_email() { return new WP_REST_Response(['su
 function mco_handle_admin_test_sheet_url() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_admin_create_exam_program() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_admin_delete_post($request) { $p = $request->get_json_params(); $post_id = (int)str_replace('prod-', '', ($p['postId'] ?? '')); if (!$post_id) return new WP_Error('400', 'ID missing.'); wp_trash_post($post_id); delete_transient('mco_app_config_data'); delete_transient('mco_app_config_data_full'); return new WP_REST_Response(['success' => true], 200); }
-function mco_handle_admin_get_post_creation_data() { return new WP_REST_Response(['authors'=>[],'categories'=>[]], 200); }
-function mco_handle_admin_create_post() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_register_tester() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_resend_onboarding_email() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_redeem_tester_token() { return new WP_REST_Response(['token'=>''], 200); }

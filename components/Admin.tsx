@@ -74,7 +74,7 @@ const Admin: FC = () => {
         purchaseNotifierEnabled: activeOrg?.purchaseNotifierEnabled ?? true,
         bundlesEnabled: activeOrg?.bundlesEnabled ?? true,
         subscriptionsEnabled: activeOrg?.subscriptionsEnabled ?? true,
-        activeThemeId: activeTheme
+        activeThemeId: activeOrg?.activeThemeId ?? 'default'
     });
 
     // Refresh local settings when the global context finishes re-syncing
@@ -84,10 +84,10 @@ const Admin: FC = () => {
                 purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
                 bundlesEnabled: activeOrg.bundlesEnabled ?? true,
                 subscriptionsEnabled: activeOrg.subscriptionsEnabled ?? true,
-                activeThemeId: activeTheme
+                activeThemeId: activeOrg.activeThemeId ?? 'default'
             });
         }
-    }, [activeOrg, activeTheme]);
+    }, [activeOrg]);
 
     const loadData = async () => {
         if (!token) return;
@@ -116,7 +116,7 @@ const Admin: FC = () => {
         const nextSettings = { ...localSettings, ...updates };
         setLocalSettings(nextSettings);
 
-        const tid = toast.loading("Syncing with WordPress...");
+        const tid = toast.loading("Syncing platform design...");
         try {
             await googleSheetsService.adminUpdateGlobalSettings(token, nextSettings);
             await refreshConfig();
@@ -129,7 +129,7 @@ const Admin: FC = () => {
                     purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
                     bundlesEnabled: activeOrg.bundlesEnabled ?? true,
                     subscriptionsEnabled: activeOrg.subscriptionsEnabled ?? true,
-                    activeThemeId: activeTheme
+                    activeThemeId: activeOrg.activeThemeId ?? 'default'
                 });
             }
         } finally {
