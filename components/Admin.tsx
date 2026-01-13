@@ -55,7 +55,6 @@ const Admin: FC = () => {
     const { token } = useAuth();
     const { activeOrg, availableThemes, activeTheme, refreshConfig } = useAppContext();
     
-    // PERSISTENCE FIX: Save active tab to session storage so saves don't reset view to Diagnostics
     const [activeTab, setActiveTabState] = useState<AdminTab>(() => {
         return (sessionStorage.getItem('mco_admin_active_tab') as AdminTab) || 'diagnostics';
     });
@@ -110,18 +109,26 @@ const Admin: FC = () => {
     const handleSyncSettings = async (updates: Partial<typeof localSettings>) => {
         if (!token) return;
         setIsSavingSettings(true);
+        
+        const nextSettings = { ...localSettings, ...updates };
+        setLocalSettings(nextSettings);
+
         const tid = toast.loading("Persisting Changes...");
         try {
-            const newSettings = { ...localSettings, ...updates };
-            // 1. Send to Backend
-            await googleSheetsService.adminUpdateGlobalSettings(token, newSettings);
-            // 2. Refresh local visual state
-            setLocalSettings(newSettings);
-            // 3. Force Global context to re-fetch JSON
+            await googleSheetsService.adminUpdateGlobalSettings(token, nextSettings);
+            // CRITICAL: Force refresh context to clear local storage cache
             await refreshConfig();
-            toast.success("Settings Saved & Cache Purged", { id: tid });
+            toast.success("Platform Updated Live", { id: tid });
         } catch (e: any) {
             toast.error(e.message || "Save Failed", { id: tid });
+            if (activeOrg) {
+                setLocalSettings({
+                    purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
+                    bundlesEnabled: activeOrg.bundlesEnabled ?? true,
+                    subscriptionsEnabled: activeOrg.subscriptionsEnabled ?? true,
+                    activeThemeId: activeTheme
+                });
+            }
         } finally {
             setIsSavingSettings(false);
         }
@@ -191,7 +198,7 @@ const Admin: FC = () => {
                                 {[
                                     { id: 'purchaseNotifierEnabled', label: 'Purchase Notifier', desc: 'Social proof popups for visitors' },
                                     { id: 'subscriptionsEnabled', label: 'Subscription Core', desc: 'Enables monthly/yearly recurring access' },
-                                    { id: 'bundlesEnabled', label: 'Product Bundles', desc: 'Allows "Exam + Subscription" checkout deals' }
+                                    { id: 'bundlesEnabled', label: 'Package Bundles', desc: 'Allows "Exam + Subscription" checkout deals' }
                                 ].map(f => (
                                     <div key={f.id} className="flex items-center justify-between p-6 bg-slate-900 hover:bg-slate-800/50 transition-colors">
                                         <div><p className="font-bold text-white text-lg">{f.label}</p><p className="text-sm text-slate-300 italic mt-1">{f.desc}</p></div>
@@ -227,7 +234,7 @@ const Admin: FC = () => {
                                                 <div className="flex-1 bg-pink-500"></div>
                                                 <div className="flex-1 bg-yellow-400"></div>
                                             </div>
-                                            <span className={`font-black text-xs uppercase tracking-tighter ${localSettings.activeThemeId === theme.id ? 'text-cyan-400' : 'text-slate-400'}`}>{theme.name}</span>
+                                            <span className={`font-black text-[10px] uppercase tracking-tighter ${localSettings.activeThemeId === theme.id ? 'text-cyan-400' : 'text-slate-400'}`}>{theme.name}</span>
                                         </button>
                                     ))}
                                 </div>

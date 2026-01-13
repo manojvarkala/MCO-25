@@ -1,14 +1,21 @@
-import React, { FC, useState, useMemo, useCallback, ReactNode, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { FC, useState, useMemo, ReactNode } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import type { ProductVariation } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Edit, Save, X, ShoppingCart, PlusCircle, Box, Repeat, Package } from 'lucide-react';
+import { Edit, Save, X, ShoppingCart, PlusCircle, Box, Repeat, Package, DollarSign, Tag } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 type TabType = 'all' | 'simple' | 'subscription' | 'bundle';
+
+interface ProductEntry {
+    id: string;
+    sku: string;
+    name: string;
+    type: string;
+    price: string;
+    regularPrice: string;
+}
 
 const TabButton: FC<{ active: boolean; onClick: () => void; children: ReactNode }> = ({ active, onClick, children }) => (
     <button
@@ -21,11 +28,86 @@ const TabButton: FC<{ active: boolean; onClick: () => void; children: ReactNode 
     </button>
 );
 
+const ProductEditorModal: FC<{ product: ProductEntry; onClose: () => void; onSave: (data: any) => Promise<void>; isSaving: boolean }> = ({ product, onClose, onSave, isSaving }) => {
+    const [formData, setFormData] = useState({
+        name: product.name,
+        price: product.price,
+        regularPrice: product.regularPrice,
+        sku: product.sku
+    });
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
+                    <h2 className="text-xl font-black text-white flex items-center gap-2"><Edit size={20} className="text-cyan-500"/> Edit Product</h2>
+                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors"><X size={24}/></button>
+                </div>
+                <div className="p-8 space-y-6">
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1 block">Display Name</label>
+                        <div className="relative">
+                            <Tag className="absolute left-3 top-3.5 text-slate-600" size={18}/>
+                            <input 
+                                type="text" 
+                                value={formData.name} 
+                                onChange={e => setFormData({...formData, name: e.target.value})}
+                                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
+                        <div>
+                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1 block">Regular Price</label>
+                            <div className="relative">
+                                <DollarSign className="absolute left-3 top-3.5 text-slate-600" size={18}/>
+                                <input 
+                                    type="number" 
+                                    value={formData.regularPrice} 
+                                    onChange={e => setFormData({...formData, regularPrice: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1 block">Sale Price</label>
+                            <div className="relative">
+                                <DollarSign className="absolute left-3 top-3.5 text-slate-600" size={18}/>
+                                <input 
+                                    type="number" 
+                                    value={formData.price} 
+                                    onChange={e => setFormData({...formData, price: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                        <p className="text-[10px] font-black text-slate-500 uppercase">Product SKU</p>
+                        <p className="text-sm font-mono text-cyan-400 mt-1">{product.sku}</p>
+                    </div>
+                </div>
+                <div className="p-6 bg-slate-950/50 border-t border-slate-800 flex justify-end gap-3">
+                    <button onClick={onClose} disabled={isSaving} className="px-6 py-2.5 font-bold text-slate-400 hover:text-white transition-colors">Discard</button>
+                    <button 
+                        onClick={() => onSave(formData)} 
+                        disabled={isSaving}
+                        className="px-8 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-black text-sm transition-all shadow-lg shadow-cyan-900/20 flex items-center gap-2"
+                    >
+                        {isSaving ? <Spinner size="sm"/> : <Save size={18}/>} UPDATE PRODUCT
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const ProductCustomizer: FC = () => {
     const { examPrices, refreshConfig } = useAppContext();
     const { token } = useAuth();
     const [activeTab, setActiveTab] = useState<TabType>('all');
     const [isSaving, setIsSaving] = useState(false);
+    const [editingProduct, setEditingProduct] = useState<ProductEntry | null>(null);
 
     const products = useMemo(() => {
         if (!examPrices) return [];
@@ -44,17 +126,28 @@ const ProductCustomizer: FC = () => {
         return products.filter(p => p.type === activeTab);
     }, [activeTab, products]);
 
+    const handleSaveProduct = async (formData: any) => {
+        if (!token) return;
+        setIsSaving(true);
+        const tid = toast.loading("Updating WooCommerce database...");
+        try {
+            await googleSheetsService.adminUpsertProduct(token, formData);
+            await refreshConfig();
+            toast.success("Product Updated Successfully", { id: tid });
+            setEditingProduct(null);
+        } catch (e: any) {
+            toast.error(e.message || "Failed to save product", { id: tid });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
         <div className="space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                 <h1 className="text-4xl font-black text-slate-100 font-display flex items-center gap-3">
                     <ShoppingCart className="text-cyan-500" /> Store Inventory
                 </h1>
-                <div className="flex flex-wrap gap-2">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-black text-xs hover:bg-emerald-500 transition shadow-lg uppercase tracking-wider"><PlusCircle size={16}/> NEW SIMPLE</button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-black text-xs hover:bg-blue-500 transition shadow-lg uppercase tracking-wider"><PlusCircle size={16}/> NEW SUB</button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl font-black text-xs hover:bg-purple-500 transition shadow-lg uppercase tracking-wider"><PlusCircle size={16}/> NEW BUNDLE</button>
-                </div>
             </div>
 
             <div className="flex flex-wrap gap-3 p-1.5 bg-slate-950 rounded-xl border border-slate-800 self-start">
@@ -101,7 +194,10 @@ const ProductCustomizer: FC = () => {
                                         </div>
                                     </td>
                                     <td className="p-5 text-right">
-                                        <button className="p-2.5 text-slate-500 hover:text-white hover:bg-slate-700 rounded-xl transition-all border border-transparent hover:border-slate-600 shadow-sm">
+                                        <button 
+                                            onClick={() => setEditingProduct(p)}
+                                            className="p-2.5 text-slate-500 hover:text-white hover:bg-slate-700 rounded-xl transition-all border border-transparent hover:border-slate-600 shadow-sm"
+                                        >
                                             <Edit size={16}/>
                                         </button>
                                     </td>
@@ -110,12 +206,16 @@ const ProductCustomizer: FC = () => {
                         </tbody>
                     </table>
                 </div>
-                {filtered.length === 0 && (
-                    <div className="p-20 text-center text-slate-600 italic font-mono uppercase tracking-widest text-xs">
-                        Search criteria yielded zero results.
-                    </div>
-                )}
             </div>
+
+            {editingProduct && (
+                <ProductEditorModal 
+                    product={editingProduct} 
+                    onClose={() => setEditingProduct(null)} 
+                    onSave={handleSaveProduct} 
+                    isSaving={isSaving}
+                />
+            )}
         </div>
     );
 };
