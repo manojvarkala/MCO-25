@@ -63,7 +63,7 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                     href={primary?.url || '#'} 
                                     target="_blank" 
                                     rel="noopener noreferrer" 
-                                    className="mt-1 inline-flex items-center gap-1 text-[10px] bg-[rgb(var(--color-accent-rgb))] text-amber-900 font-black px-2 py-1 rounded uppercase tracking-tighter self-start hover:bg-yellow-400 transition-colors"
+                                    className="mt-1 inline-flex items-center gap-1 text-[10px] bg-yellow-400 text-amber-900 font-black px-2 py-1 rounded uppercase tracking-tighter self-start hover:bg-yellow-500 transition-colors"
                                 >
                                     <ShoppingCart size={10} /> {primary?.domainName || 'Amazon'}
                                 </a>
@@ -88,16 +88,18 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                 };
 
                 return (
-                    <div key={book.id} className="mco-book-card group flex flex-col h-full">
+                    <div key={book.id} className="mco-book-card group flex flex-col h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
                         <div className="mco-book-cover relative h-64 overflow-hidden bg-slate-100">
                             <BookCover book={book} className="w-full h-full" />
                             <a 
                                 href={primary?.url || '#'} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                             >
-                                <ExternalLink size={32} className="text-white" />
+                                <div className="p-4 bg-white/20 rounded-full border border-white/30 text-white">
+                                    <ExternalLink size={32} />
+                                </div>
                             </a>
                         </div>
                         <div className="p-6 flex flex-col flex-grow">
@@ -105,11 +107,11 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                 href={primary?.url || '#'} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="font-extrabold text-lg text-[rgb(var(--color-text-strong-rgb))] line-clamp-2 hover:text-[rgb(var(--color-primary-rgb))] transition-colors"
+                                className="font-extrabold text-lg text-slate-900 dark:text-white line-clamp-2 hover:text-cyan-600 transition-colors"
                             >
                                 {book.title}
                             </a>
-                            <p className="text-sm text-[rgb(var(--color-text-muted-rgb))] line-clamp-3 mt-3 leading-relaxed flex-grow">{book.description}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3 mt-3 leading-relaxed flex-grow">{book.description}</p>
                             
                             <div className="mt-6 flex flex-col gap-2">
                                 {sortedStores.map(key => {
@@ -124,7 +126,7 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                             rel="noopener noreferrer" 
                                             className={`mco-book-btn ${isPrimary ? 'mco-book-btn--primary' : 'mco-book-btn--secondary'}`}
                                         >
-                                            <ShoppingCart size={18}/> Buy on {storeData[key].name}
+                                            <ShoppingCart size={18}/> {isPrimary ? 'Recommended on ' : 'Buy on '} {storeData[key].name}
                                         </a>
                                     );
                                 })}

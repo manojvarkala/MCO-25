@@ -132,15 +132,16 @@ body {
 }
 
 /* --- BUTTONS --- */
-.mco-card__button { 
+.mco-card__button, .mco-book-btn { 
     display: flex !important; align-items: center; justify-content: center; gap: 8px;
     width: 100%; padding: 12px; border-radius: 10px; font-weight: 800;
     text-decoration: none !important; font-size: 0.9rem; transition: all 0.2s; border: none; cursor: pointer;
 }
 .mco-card__button--white { background: #fff !important; color: #1e293b !important; }
 .mco-card__button--white:hover { background: #f1f5f9 !important; }
-.mco-card__button--amber { background: #fbbf24 !important; color: #78350f !important; }
-.mco-card__button--amber:hover { background: #f59e0b !important; }
+.mco-card__button--amber, .mco-book-btn--primary { background: #fbbf24 !important; color: #78350f !important; }
+.mco-card__button--amber:hover, .mco-book-btn--primary:hover { background: #f59e0b !important; }
+.mco-book-btn--secondary { background: #e2e8f0 !important; color: #475569 !important; border: 1px solid #cbd5e1 !important; }
 
 /* ADMIN PANEL OVERRIDES */
 .mco-admin-badge {
