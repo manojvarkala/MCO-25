@@ -7,13 +7,10 @@ declare const __DEV__: boolean;
 let syncPromise: Promise<TestResult[]> | null = null;
 
 const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string | null, data: Record<string, any> = {}, isFormData: boolean = false) => {
-    // FIX: More robust normalization to prevent double-slashes and trailing slash issues that break CORS preflight.
-    const rawBaseUrl = getApiBaseUrl() || "";
-    const cleanBaseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+    // FIX: Simplified normalization to ensure no double slashes, which breaks strict CORS preflights
+    const API_BASE_URL = (getApiBaseUrl() || "").replace(/\/$/, "");
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    
-    // Construct full URL ensuring no double slashes in path
-    const fullUrl = `${cleanBaseUrl}/wp-json/mco-app/v1${cleanEndpoint}`;
+    const fullUrl = `${API_BASE_URL}/wp-json/mco-app/v1${cleanEndpoint}`;
 
     const headers: HeadersInit = {};
     if (token) {
@@ -27,8 +24,8 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         method,
         headers,
         mode: 'cors',
-        // 'include' is only safe if the server specifically allows it AND returns a non-wildcard origin.
-        // Our plugin handles this, but for config (no token) we use same-origin.
+        // 'include' is only safe for cross-domain if the server explicitly allows credentials.
+        // For standard Bearer tokens, 'same-origin' is safer for initial config handshakes.
         credentials: token ? 'include' : 'same-origin'
     };
     
@@ -66,9 +63,9 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     } catch (error: any) {
         console.warn(`API FETCH FAILURE [${method} ${endpoint}]:`, error);
         
-        // Improve error messaging to be specific but helpful
+        // Specific helpful error for Handshake issues
         if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-             throw new Error("Handshake Error: The browser blocked the request. Ensure your WordPress API URL is correct and CORS is allowed for this domain.");
+             throw new Error("Connection Blocked: Your browser could not establish a secure handshake with the server. Please check your CORS settings in WordPress.");
         }
         throw error;
     }

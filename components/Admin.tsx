@@ -86,7 +86,7 @@ const HealthCard: FC<{ title: string; status?: { success: boolean; message: stri
 
 const Admin: FC = () => {
     const { token } = useAuth();
-    const { activeOrg, availableThemes, activeTheme, refreshConfig, setActiveTheme } = useAppContext();
+    const { activeOrg, availableThemes, refreshConfig, setActiveTheme } = useAppContext();
     
     const [activeTab, setActiveTabState] = useState<AdminTab>(() => {
         return (sessionStorage.getItem('mco_admin_active_tab') as AdminTab) || 'diagnostics';
@@ -102,7 +102,7 @@ const Admin: FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSavingSettings, setIsSavingSettings] = useState(false);
 
-    // Track local settings separate from the global activeTheme to ensure UI accuracy
+    // Track local settings separate from global state for immediate feedback
     const [localSettings, setLocalSettings] = useState({
         purchaseNotifierEnabled: true,
         bundlesEnabled: true,
@@ -144,23 +144,22 @@ const Admin: FC = () => {
         if (!token) return;
         setIsSavingSettings(true);
         
-        // Optimistically update local state for UI responsiveness
         const nextSettings = { ...localSettings, ...updates };
         setLocalSettings(nextSettings);
 
-        // Immediate preview: apply the theme to the Admin's view
+        // Preview choice immediately for the admin
         if (updates.activeThemeId) {
             setActiveTheme(updates.activeThemeId);
         }
 
-        const tid = toast.loading("Updating Platform Branding...");
+        const tid = toast.loading("Syncing Branding Defaults...");
         try {
             await googleSheetsService.adminUpdateGlobalSettings(token, nextSettings);
             await refreshConfig();
-            toast.success("Global Branding Updated", { id: tid });
+            toast.success("Organization Branding Updated", { id: tid });
         } catch (e: any) {
-            toast.error(e.message || "Failed to sync branding.", { id: tid });
-            // Revert state on failure
+            toast.error(e.message || "Update Failed", { id: tid });
+            // Revert on failure
             if (activeOrg) {
                 setLocalSettings({
                     purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
@@ -192,7 +191,7 @@ const Admin: FC = () => {
             <aside className="lg:w-64 flex flex-col gap-2">
                 <NavItem id="diagnostics" label="Health Audit" icon={<Activity size={18}/>} active={activeTab === 'diagnostics'} onClick={setActiveTab} />
                 <NavItem id="appearance" label="Portal Branding" icon={<Palette size={18}/>} active={activeTab === 'appearance'} onClick={setActiveTab} />
-                <NavItem id="bulk" label="Backend Infrastructure" icon={<DatabaseZap size={18}/>} active={activeTab === 'bulk'} onClick={setActiveTab} />
+                <NavItem id="bulk" label="Infrastructure" icon={<DatabaseZap size={18}/>} active={activeTab === 'bulk'} onClick={setActiveTab} />
             </aside>
 
             <main className="flex-1 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -255,9 +254,9 @@ const Admin: FC = () => {
                         </div>
 
                         <div className="space-y-6">
-                            <h2 className="text-3xl font-black flex items-center gap-3 text-white"><Palette className="text-cyan-500" /> Default Platform Theme</h2>
+                            <h2 className="text-3xl font-black flex items-center gap-3 text-white"><Palette className="text-cyan-500" /> Global Application Theme</h2>
                             <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 shadow-xl">
-                                <p className="text-slate-400 text-sm mb-6">Select the global theme for this organization. New visitors will see this by default. Individual users can override this in their profile.</p>
+                                <p className="text-slate-400 text-sm mb-6">Select the default branding for this organization. Users can still individualize their experience in their profile.</p>
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                                     {(availableThemes || []).map(theme => (
                                         <button
