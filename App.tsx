@@ -41,6 +41,7 @@ import DevelopmentHistory from './components/DevelopmentHistory.tsx';
 import SalesAnalytics from './components/SalesAnalytics.tsx';
 import ExamAnalytics from './components/ExamAnalytics.tsx';
 import BetaTesterAnalytics from './components/BetaTesterAnalytics.tsx';
+import AdminUserResults from './components/AdminUserResults.tsx';
 import ContentEngine from './components/ContentEngine.tsx';
 import Handbook from './components/handbook/Handbook.tsx';
 import VerifyCertificate from './components/VerifyCertificate.tsx';
@@ -56,7 +57,6 @@ import { getApiBaseUrl } from './services/apiConfig.ts';
 
 const ProtectedRoute: FC<{ children: ReactNode; adminOnly?: boolean }> = ({ children, adminOnly = false }) => {
     const { user, isEffectivelyAdmin } = useAuth();
-    // FIX: Removed ReactRouter prefix.
     const location = useLocation();
     if (!user) return <Navigate to="/" state={{ from: location }} replace />;
     if (adminOnly && !isEffectivelyAdmin) return <Navigate to="/dashboard" state={{ from: location }} replace />;
@@ -66,7 +66,6 @@ const ProtectedRoute: FC<{ children: ReactNode; adminOnly?: boolean }> = ({ chil
 const AppContent: FC = () => {
     const { user, isMasquerading, isEffectivelyAdmin } = useAuth();
     const { activeOrg, activeTheme, isInitializing } = useAppContext();
-    // FIX: Removed ReactRouter prefix.
     const location = useLocation();
     const [isDebugSidebarOpen, setIsDebugSidebarOpen] = useState(false);
 
@@ -93,7 +92,6 @@ const AppContent: FC = () => {
         return () => { document.body.classList.remove('google-revocation-no-ad'); };
     }, [isTestPage]);
 
-    // 1. GLOBAL INITIALIZATION SCREEN
     if (isInitializing) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white p-6 text-center">
@@ -103,12 +101,8 @@ const AppContent: FC = () => {
         );
     }
 
-    // 2. SSO AUTHENTICATION SPECIAL VIEW
-    if (isAuthPath) {
-        return <Login />;
-    }
+    if (isAuthPath) return <Login />;
 
-    // 3. CONNECTION FAILURE VIEW
     if (!activeOrg) {
         const targetUrl = getApiBaseUrl();
         return (
@@ -116,21 +110,19 @@ const AppContent: FC = () => {
                 <div className="max-w-md w-full bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700">
                     <WifiOff size={48} className="mx-auto text-red-400 mb-4" />
                     <h2 className="text-2xl font-bold mb-2">Connection Issue</h2>
-                    <p className="text-slate-400 mb-4 text-sm">We're having trouble connecting to the examination server. This often indicates a misconfiguration with your WordPress backend API.</p>
+                    <p className="text-slate-400 mb-4 text-sm">We're having trouble connecting to the examination server.</p>
                     <div className="bg-slate-900/50 p-3 rounded-lg mb-6 text-left border border-slate-700">
                         <p className="text-[10px] uppercase font-bold text-slate-500 mb-1 flex items-center gap-1"><Server size={10} /> Attempting to connect to:</p>
                         <code className="text-xs text-cyan-400 break-all">{targetUrl}</code>
                     </div>
                     <div className="space-y-3">
                         <button onClick={() => window.location.reload()} className="w-full flex items-center justify-center gap-2 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg transition"><RefreshCw size={18} /> Retry Connection</button>
-                        <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="w-full py-2 text-slate-500 hover:text-slate-300 text-sm underline transition">Clear Cache & Reset</button>
                     </div>
                 </div>
             </div>
         );
     }
 
-    // 4. MAIN APPLICATION VIEW
     const mainClasses = isTestPage ? "py-8" : "container mx-auto px-4 py-8";
 
     return (
@@ -147,7 +139,6 @@ const AppContent: FC = () => {
             )}
             <div className="flex-grow w-full relative">
                 <main className={mainClasses}>
-                    {/* FIX: Removed ReactRouter prefix. */}
                     <Routes>
                         <Route path="/" element={<LandingPage />} />
                         <Route path="/auth" element={<Login />} />
@@ -163,6 +154,7 @@ const AppContent: FC = () => {
                                 <Route path="/" element={<Admin />} />
                                 <Route path="/analytics" element={<SalesAnalytics />} />
                                 <Route path="/exam-analytics" element={<ExamAnalytics />} />
+                                <Route path="/user-results" element={<AdminUserResults />} />
                                 <Route path="/beta-analytics" element={<BetaTesterAnalytics />} />
                                 <Route path="/programs" element={<ExamProgramCustomizer />} />
                                 <Route path="/products" element={<ProductCustomizer />} />
@@ -202,7 +194,6 @@ const AppContent: FC = () => {
 
 const App: FC = () => {
   return (
-    // FIX: Removed ReactRouter prefix.
     <BrowserRouter>
       <AuthProvider>
         <AppProvider>

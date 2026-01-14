@@ -2,7 +2,7 @@ import React, { FC, ReactNode } from 'react';
 // FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
 import * as ReactRouterDOM from 'react-router-dom';
 const { NavLink } = ReactRouterDOM as any;
-import { LayoutDashboard, Settings, ShoppingCart, Code, ArrowLeft, History, BarChart3, Sparkles, BookOpen, TrendingUp, Users } from 'lucide-react';
+import { LayoutDashboard, Settings, ShoppingCart, Code, ArrowLeft, History, BarChart3, Sparkles, BookOpen, TrendingUp, Users, FileCheck } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -28,7 +28,11 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
                     </NavLink>
                     <NavLink to="/admin/exam-analytics" className={getLinkClass}>
                         <TrendingUp size={18} />
-                        <span>Exam Analytics</span>
+                        <span>Usage Analytics</span>
+                    </NavLink>
+                    <NavLink to="/admin/user-results" className={getLinkClass}>
+                        <FileCheck size={18} />
+                        <span>User Results</span>
                     </NavLink>
                     <NavLink to="/admin/beta-analytics" className={getLinkClass}>
                         <Users size={18} />

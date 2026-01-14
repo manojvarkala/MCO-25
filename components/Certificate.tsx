@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { CertificateData } from '../types.ts';
 import LogoSpinner from './LogoSpinner.tsx';
-import { Download, ArrowLeft } from 'lucide-react';
+import { Download, ArrowLeft, Shield } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -30,7 +30,7 @@ const Certificate: FC = () => {
     const { testId = 'sample' } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const { user, token, isBetaTester } = useAuth();
+    const { user, token, isBetaTester, isEffectivelyAdmin } = useAuth();
     const { activeOrg } = useAppContext();
     const [certData, setCertData] = useState<CertificateData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -47,12 +47,18 @@ const Certificate: FC = () => {
         if (testId === 'sample') {
             if (!user || !activeOrg) return;
             const templateIdFromUrl = searchParams.get('template_id');
-            const templateToUse = templateIdFromUrl
-                ? activeOrg.certificateTemplates.find(t => t.id === templateIdFromUrl)
-                : activeOrg.certificateTemplates.find(t => t.id === 'cert-practice');
+            
+            // ROBUST TEMPLATE FINDING
+            let templateToUse = null;
+            if (templateIdFromUrl) {
+                templateToUse = activeOrg.certificateTemplates.find(t => t.id === templateIdFromUrl);
+            }
+            if (!templateToUse) {
+                templateToUse = activeOrg.certificateTemplates.find(t => t.id === 'cert-practice') || activeOrg.certificateTemplates[0];
+            }
 
             if (!templateToUse) {
-                toast.error("Template not found.");
+                toast.error("No certificate templates found in organization configuration.");
                 navigate('/dashboard');
                 return;
             }
@@ -90,11 +96,11 @@ const Certificate: FC = () => {
                         totalQuestions: exam?.numberOfQuestions || 0
                     });
                 } else {
-                    toast.error("Certificate not found.");
+                    toast.error("Certificate record could not be found.");
                     navigate('/dashboard');
                 }
             } catch (error: any) {
-                toast.error(error.message || "Failed to load.");
+                toast.error(error.message || "Failed to load certificate data.");
                 navigate('/dashboard');
             } finally {
                 setIsLoading(false);
@@ -135,8 +141,13 @@ const Certificate: FC = () => {
 
     return (
         <div className="max-w-5xl mx-auto bg-slate-100 p-6 rounded-2xl">
+            {isEffectivelyAdmin && testId !== 'sample' && (
+                <div className="mb-4 bg-amber-100 border border-amber-200 p-3 rounded-lg text-amber-800 text-xs font-bold flex items-center gap-2">
+                    <Shield size={16}/> AUDIT MODE: You are viewing a candidate's issued certificate.
+                </div>
+            )}
             <div className="flex justify-between items-center mb-6">
-                <button onClick={() => navigate(-1)} className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg font-bold shadow-sm hover:bg-slate-50 transition"><ArrowLeft size={16}/> Back</button>
+                <button onClick={() => navigate(-1)} className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg font-bold shadow-sm hover:bg-slate-50 transition text-slate-700"><ArrowLeft size={16}/> Back</button>
                 <button onClick={handleDownload} disabled={isDownloading} className="flex items-center gap-2 px-6 py-2 bg-cyan-600 text-white font-bold rounded-lg shadow-md hover:bg-cyan-700 transition disabled:opacity-50"><Download size={16}/> {isDownloading ? 'Processing...' : 'Download Official PDF'}</button>
             </div>
             <div ref={certificatePrintRef} className="cert-base">
@@ -168,9 +179,9 @@ const Certificate: FC = () => {
                                 <h2 className="cert-candidate-name">{certData.candidateName}</h2>
                                 <p className="text-xl max-w-2xl mx-auto" dangerouslySetInnerHTML={{ __html: processedBody }} />
                                 <div className="mt-auto pt-10 flex justify-between items-end">
-                                    <div className="w-1/3 text-center font-bold">{certData.date}<div className="h-px bg-slate-200 my-2"></div><p className="text-xs uppercase">Date</p></div>
+                                    <div className="w-1/3 text-center font-bold text-slate-800">{certData.date}<div className="h-px bg-slate-200 my-2"></div><p className="text-xs uppercase text-slate-400">Date</p></div>
                                     <div className="w-1/3 flex justify-center"><Seal className="w-24 h-24" /></div>
-                                    <div className="w-1/3 text-center font-bold">{certData.certificateNumber}<div className="h-px bg-slate-200 my-2"></div><p className="text-xs uppercase">ID</p></div>
+                                    <div className="w-1/3 text-center font-bold text-slate-800">{certData.certificateNumber}<div className="h-px bg-slate-200 my-2"></div><p className="text-xs uppercase text-slate-400">ID</p></div>
                                 </div>
                             </div>
                         </div>
