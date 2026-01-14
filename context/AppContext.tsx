@@ -169,7 +169,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
           setPurchaseNotifierMinGap(newActiveOrg.purchaseNotifierMinGap ?? 8);
           setPurchaseNotifierMaxGap(newActiveOrg.purchaseNotifierMaxGap ?? 23);
           
-          // Initial Theme Selection: 1. Local Storage, 2. Org Default, 3. Hardcoded Fallback
+          // Initial Theme Selection: 1. Local Storage (User override), 2. Org Default (Admin setting)
           const storedTheme = localStorage.getItem('mco_active_theme');
           const orgTheme = newActiveOrg.activeThemeId;
           const finalTheme = storedTheme || orgTheme || 'default';
@@ -229,7 +229,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         const apiUrl = tenantConfig.apiBaseUrl ? `${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config` : '/wp-json/mco-app/v1/config';
         try {
-            const response = await fetch(apiUrl, { mode: 'cors' });
+            const response = await fetch(apiUrl, { mode: 'cors', credentials: 'same-origin' });
             if (response.ok) {
                 const liveConfig = await response.json();
                 const processed = processConfigData(liveConfig);
@@ -282,8 +282,12 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     if (org) {
         setActiveOrg(org);
         localStorage.setItem('activeOrgId', org.id);
+        // Sync theme with the new org's default
+        if (org.activeThemeId) {
+            setActiveTheme(org.activeThemeId);
+        }
     }
-  }, [organizations]);
+  }, [organizations, setActiveTheme]);
 
   const updateActiveOrg = useCallback((updatedOrg: Organization) => {
     const updatedOrganizations = organizations.map(org => org.id === updatedOrg.id ? updatedOrg : org);

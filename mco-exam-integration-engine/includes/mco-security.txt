@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: High-Priority Nuclear Security & Global CORS Handshake
- * VERSION: 15.0.0 (Nuclear Early Exit)
+ * VERSION: 15.1.0 (Token Generator Restored)
  * =============================================================================
  */
 
@@ -59,7 +59,64 @@ add_action('init', 'mco_nuclear_cors_handshake', -9999);
 add_action('rest_api_init', 'mco_nuclear_cors_handshake', -9999);
 
 /**
- * 2. IDENTITY RECOVERY ENGINE
+ * 2. JWT GENERATOR
+ * RESTORED: Required by SSO login flow and admin beta toggle.
+ */
+function mco_generate_exam_jwt($user_id) {
+    if (!defined('MCO_JWT_SECRET') || empty(MCO_JWT_SECRET)) return null;
+
+    $user = get_userdata($user_id);
+    if (!$user) return null;
+
+    $paid_exams = get_user_meta($user_id, 'mco_paid_exams', true) ?: [];
+    
+    $is_subscribed = false;
+    $subscription_info = null;
+    if (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription')) {
+        $is_subscribed = wcs_user_has_subscription($user_id, '', 'active');
+        // If active, try to find the next payment date
+        if ($is_subscribed) {
+            $subs = wcs_get_users_subscriptions($user_id);
+            foreach ($subs as $sub) {
+                if ($sub->has_status('active')) {
+                    $next_payment = $sub->get_date('next_payment');
+                    if ($next_payment) {
+                        $subscription_info = [
+                            'status' => 'active',
+                            'nextPaymentDate' => date('M d, Y', strtotime($next_payment))
+                        ];
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    $payload = [
+        'iss' => get_site_url(),
+        'iat' => time(),
+        'exp' => time() + (60 * 60 * 24), // 24 hours
+        'user' => [
+            'id' => (string)$user->ID,
+            'name' => (string)$user->display_name,
+            'email' => (string)$user->user_email,
+            'isAdmin' => in_array('administrator', (array)$user->roles)
+        ],
+        'paidExamIds' => (array)$paid_exams,
+        'isSubscribed' => (bool)$is_subscribed,
+        'subscriptionInfo' => $subscription_info,
+        'isBetaTester' => get_user_meta($user_id, '_mco_is_beta_tester', true) === '1'
+    ];
+
+    $header = mco_base64url_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
+    $body = mco_base64url_encode(json_encode($payload));
+    $signature = mco_base64url_encode(hash_hmac('sha256', "$header.$body", MCO_JWT_SECRET, true));
+
+    return "$header.$body.$signature";
+}
+
+/**
+ * 3. IDENTITY RECOVERY ENGINE
  * Fixes issues where Apache/LiteSpeed strips the Authorization header.
  */
 function mco_api_validate_jwt($request) {
@@ -92,7 +149,7 @@ function mco_api_validate_jwt($request) {
 }
 
 /**
- * 3. JWT VERIFICATION
+ * 4. JWT VERIFICATION
  */
 function mco_verify_exam_jwt($token) {
     if (!defined('MCO_JWT_SECRET') || empty(MCO_JWT_SECRET)) {
@@ -120,7 +177,7 @@ function mco_verify_exam_jwt($token) {
 }
 
 /**
- * 4. ADMIN VALIDATION
+ * 5. ADMIN VALIDATION
  */
 function mco_api_validate_admin_jwt($request) {
     $valid = mco_api_validate_jwt($request);
@@ -134,7 +191,7 @@ function mco_api_validate_admin_jwt($request) {
 }
 
 /**
- * 5. UTILITIES
+ * 6. UTILITIES
  */
 if (!function_exists('mco_base64url_encode')) {
     function mco_base64url_encode($data) { return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($data)); }

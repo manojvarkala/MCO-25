@@ -155,3 +155,12 @@ body {
     background-color: rgb(var(--color-primary-rgb)) !important;
     color: #ffffff !important;
 }
+
+/* ADMIN PANEL OVERRIDES */
+.mco-admin-badge {
+    @apply text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter;
+}
+
+.mco-admin-badge--success { @apply bg-emerald-500/10 text-emerald-400 border border-emerald-500/20; }
+.mco-admin-badge--error { @apply bg-rose-500/10 text-rose-400 border border-rose-500/20; }
+.mco-admin-badge--pending { @apply bg-slate-800 text-slate-400 border border-slate-700 animate-pulse; }
