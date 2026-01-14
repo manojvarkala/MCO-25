@@ -7,8 +7,10 @@ declare const __DEV__: boolean;
 let syncPromise: Promise<TestResult[]> | null = null;
 
 const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string | null, data: Record<string, any> = {}, isFormData: boolean = false) => {
+    // FIX: Normalize the URL to prevent double-slashes which can break some CORS implementations
     const API_BASE_URL = getApiBaseUrl().replace(/\/$/, "");
-    const fullUrl = `${API_BASE_URL}/wp-json/mco-app/v1${endpoint}`;
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const fullUrl = `${API_BASE_URL}/wp-json/mco-app/v1${normalizedEndpoint}`;
 
     const headers: HeadersInit = {};
     if (token) {
@@ -22,7 +24,7 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         method,
         headers,
         mode: 'cors',
-        credentials: token ? 'include' : 'same-origin' // Ensure cookies/auth are sent correctly
+        credentials: token ? 'include' : 'same-origin'
     };
     
     if (method === 'POST') {
@@ -32,7 +34,6 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     try {
         const response = await fetch(fullUrl, config);
         
-        // Handle pre-parse level errors
         if (response.status === 403 || response.status === 401) {
             const text = await response.text();
             if (text.includes('jwt_auth_expired_token') || text.includes('expired')) {
@@ -60,9 +61,8 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     } catch (error: any) {
         console.warn(`API FETCH FAILURE [${method} ${endpoint}]:`, error);
         
-        // Differentiate between CORS/Network blocks and logic errors
         if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-             throw new Error("Connection Blocked: Your browser could not establish a secure handshake with the server. Please check your CORS settings in WordPress.");
+             throw new Error("Connection Blocked: Your server rejected the secure handshake. Check CORS and .htaccess settings.");
         }
         throw error;
     }

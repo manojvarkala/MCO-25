@@ -1,8 +1,8 @@
 <?php
 /**
  * =============================================================================
- * MODULE: Nuclear Security & Global CORS Handshake
- * VERSION: 12.0.0 (Absolute Interception)
+ * MODULE: High-Priority Nuclear Security & Global CORS Handshake
+ * VERSION: 14.0.0 (Highest Priority Interception)
  * =============================================================================
  */
 
@@ -10,22 +10,24 @@ if (!defined('ABSPATH')) exit;
 
 /**
  * 1. THE NUCLEAR HANDSHAKE
- * Intercepts the request BEFORE any WordPress hooks if possible.
+ * We hook at priority -999 to ensure we run before almost any other plugin.
  */
 function mco_nuclear_cors_handshake() {
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
     if (empty($origin)) return;
 
-    // Determine if Origin is allowed (White-label check)
     $is_allowed = false;
     $hostname = parse_url($origin, PHP_URL_HOST);
     
+    // Development local bypass
     if ($hostname === 'localhost' || $hostname === '127.0.0.1' || strpos($hostname, '.local') !== false) {
         $is_allowed = true;
     } else {
         $allowed_raw = get_option('mco_exam_app_url', '');
         $allowed_origins = array_filter(array_map('trim', explode("\n", str_replace("\r", "", $allowed_raw))));
+        
         foreach ($allowed_origins as $allowed) {
+            // Normalize for comparison (remove trailing slashes)
             if (rtrim(strtolower($allowed), '/') === rtrim(strtolower($origin), '/')) {
                 $is_allowed = true;
                 break;
@@ -36,15 +38,15 @@ function mco_nuclear_cors_handshake() {
     if ($is_allowed) {
         // Essential headers for credentialed REST requests
         header("Access-Control-Allow-Origin: $origin");
-        header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+        header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE, PATCH");
         header("Access-Control-Allow-Credentials: true");
         header("Access-Control-Allow-Headers: Authorization, Content-Type, X-Requested-With, X-WP-Nonce, X-HTTP-Method-Override, Accept, Origin");
         header("Access-Control-Expose-Headers: Content-Length, X-JSON");
+        header("Access-Control-Max-Age: 86400"); // Cache preflight for 24 hours
         header("Vary: Origin");
 
-        // PREFLIGHT NUCLEAR OPTION:
-        // If this is an OPTIONS request, send the status and DIE immediately.
-        // This prevents LiteSpeed/Apache from running auth checks that block the handshake.
+        // PREFLIGHT EMERGENCY EXIT:
+        // Force an immediate 200 OK for OPTIONS requests so server security doesn't block them.
         if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
             status_header(200);
             exit;
@@ -52,25 +54,23 @@ function mco_nuclear_cors_handshake() {
     }
 }
 
-// Hook at the earliest possible priority (0) on 'init' and 'rest_api_init'
-add_action('init', 'mco_nuclear_cors_handshake', 0);
-add_action('rest_api_init', 'mco_nuclear_cors_handshake', 0);
+// Hook as early as possible
+add_action('init', 'mco_nuclear_cors_handshake', -999);
+add_action('rest_api_init', 'mco_nuclear_cors_handshake', -999);
 
 /**
  * 2. IDENTITY RECOVERY ENGINE
- * Recovers Authorization headers even if the server environment strips them.
+ * Fixes issues where Apache/LiteSpeed strips the Authorization header.
  */
 function mco_api_validate_jwt($request) {
     $auth = $request->get_header('authorization');
    
-    // Check various server variables where the header might be hidden
     if (empty($auth)) {
         $check_keys = [
             'HTTP_AUTHORIZATION', 
             'REDIRECT_HTTP_AUTHORIZATION', 
             'X_AUTHORIZATION', 
-            'X-Authorization',
-            'REDIRECT_HTTP_X_AUTHORIZATION'
+            'X-Authorization'
         ];
         foreach ($check_keys as $key) {
             if (!empty($_SERVER[$key])) {
@@ -81,7 +81,7 @@ function mco_api_validate_jwt($request) {
     }
 
     if (empty($auth) || !preg_match('/Bearer\s+(.*)$/i', $auth, $matches)) {
-        return new WP_Error('jwt_auth_missing_token', 'Authorization header is missing. Check your .htaccess configuration.', ['status' => 401]);
+        return new WP_Error('jwt_auth_missing_token', 'Authorization header missing. Server may be stripping it.', ['status' => 401]);
     }
 
     $payload = mco_verify_exam_jwt($matches[1]);
@@ -92,28 +92,29 @@ function mco_api_validate_jwt($request) {
 }
 
 /**
- * 3. JWT VERIFICATION (Internal)
+ * 3. JWT VERIFICATION
  */
 function mco_verify_exam_jwt($token) {
     if (!defined('MCO_JWT_SECRET') || empty(MCO_JWT_SECRET)) {
-        return new WP_Error('config_err', 'Security Key (MCO_JWT_SECRET) not defined in wp-config.php.', ['status' => 500]);
+        return new WP_Error('config_err', 'MCO_JWT_SECRET not defined.', ['status' => 500]);
     }
     
     $parts = explode('.', $token);
-    if (count($parts) !== 3) return new WP_Error('jwt_invalid', 'Malformed security token.', ['status' => 401]);
+    if (count($parts) !== 3) return new WP_Error('jwt_invalid', 'Malformed token.', ['status' => 401]);
 
     list($header, $payload, $signature) = $parts;
     $expected_sig = mco_base64url_encode(hash_hmac('sha256', "$header.$payload", MCO_JWT_SECRET, true));
     
     if (!hash_equals($signature, $expected_sig)) {
-        return new WP_Error('jwt_tampered', 'Token verification failed. Signature mismatch.', ['status' => 403]);
+        return new WP_Error('jwt_tampered', 'Signature mismatch.', ['status' => 403]);
     }
 
     $decoded = json_decode(mco_base64url_decode($payload), true);
-    if (!$decoded) return new WP_Error('jwt_payload_err', 'Invalid token payload.', ['status' => 401]);
+    if (!$decoded) return new WP_Error('jwt_payload_err', 'Invalid payload.', ['status' => 401]);
     
+    // 5-minute clock skew allowance
     if (isset($decoded['exp']) && ($decoded['exp'] + 300) < time()) {
-        return new WP_Error('jwt_auth_expired_token', 'Your session has expired.', ['status' => 403]);
+        return new WP_Error('jwt_auth_expired_token', 'Token expired.', ['status' => 403]);
     }
 
     return $decoded;
@@ -128,13 +129,13 @@ function mco_api_validate_admin_jwt($request) {
     
     $payload = $request->get_param('jwt_payload');
     if (empty($payload['user']['isAdmin'])) {
-        return new WP_Error('rest_forbidden', 'Administrative access required.', ['status' => 403]);
+        return new WP_Error('rest_forbidden', 'Admin access required.', ['status' => 403]);
     }
     return true;
 }
 
 /**
- * 5. JWT UTILITIES
+ * 5. UTILITIES
  */
 if (!function_exists('mco_base64url_encode')) {
     function mco_base64url_encode($data) { return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($data)); }
@@ -144,43 +145,5 @@ if (!function_exists('mco_base64url_decode')) {
         $remainder = strlen($data) % 4;
         if ($remainder) $data .= str_repeat('=', 4 - $remainder);
         return base64_decode(str_replace(['-', '_'], ['+', '/'], $data));
-    }
-}
-
-/**
- * 6. JWT GENERATOR (Used by SSO)
- */
-if (!function_exists('mco_generate_exam_jwt')) {
-    function mco_generate_exam_jwt($user_id) {
-        if (!defined('MCO_JWT_SECRET')) return null;
-        $user = get_userdata($user_id);
-        if (!$user) return null;
-
-        $paid_exams = get_user_meta($user_id, 'mco_paid_exams', true) ?: [];
-        $is_subscribed = false;
-        if (class_exists('WC_Subscriptions')) {
-            $is_subscribed = wcs_user_has_subscription($user_id, '', 'active');
-        }
-
-        $payload = [
-            'iss' => get_bloginfo('url'),
-            'iat' => time(),
-            'exp' => time() + (14 * DAY_IN_SECONDS),
-            'user' => [
-                'id' => (string)$user_id,
-                'name' => $user->display_name,
-                'email' => $user->user_email,
-                'isAdmin' => in_array('administrator', (array)$user->roles)
-            ],
-            'paidExamIds' => array_values((array)$paid_exams),
-            'isSubscribed' => (bool)$is_subscribed,
-            'isBetaTester' => get_user_meta($user_id, '_mco_is_beta_tester', true) === '1'
-        ];
-
-        $header = mco_base64url_encode(json_encode(['typ' => 'JWT', 'alg' => 'HS256']));
-        $body = mco_base64url_encode(json_encode($payload));
-        $sig = mco_base64url_encode(hash_hmac('sha256', "$header.$body", MCO_JWT_SECRET, true));
-
-        return "$header.$body.$sig";
     }
 }

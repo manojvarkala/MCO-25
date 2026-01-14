@@ -46,7 +46,7 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                 {books.map(book => {
                     const primary = getGeoAffiliateLink(book, userGeoCountryCode);
                     return (
-                        <div key={book.id} className="mco-book-card-sidebar bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] p-3 rounded-xl flex gap-4 hover:shadow-md transition-shadow">
+                        <div key={book.id} className="bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] p-3 rounded-xl flex gap-4 hover:shadow-md transition-shadow">
                             <div className="w-16 h-20 flex-shrink-0"><BookCover book={book} className="w-full h-full rounded shadow-sm" /></div>
                             <div className="flex flex-col justify-center overflow-hidden">
                                 <a 
@@ -57,8 +57,8 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                 >
                                     {book.title}
                                 </a>
-                                <a href={primary?.url || '#'} target="_blank" rel="noopener noreferrer" className="mt-1 text-[10px] bg-[rgb(var(--color-accent-rgb))] text-amber-900 font-black px-2 py-1 rounded uppercase tracking-tighter self-start">
-                                    Buy on {primary?.domainName || 'Amazon'}
+                                <a href={primary?.url || '#'} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[10px] bg-[rgb(var(--color-accent-rgb))] text-amber-900 font-black px-2 py-1 rounded uppercase tracking-tighter self-start">
+                                    <ShoppingCart size={10} /> {primary?.domainName || 'Amazon'}
                                 </a>
                             </div>
                         </div>
@@ -81,39 +81,38 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                 };
 
                 return (
-                    <div key={book.id} className="mco-book-card group">
-                        <div className="mco-book-cover">
+                    <div key={book.id} className="mco-book-card group flex flex-col h-full bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
+                        <div className="mco-book-cover relative h-64 overflow-hidden">
                             <BookCover book={book} className="w-full h-full" />
                             <a 
                                 href={primary?.url || '#'} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                             >
                                 <ExternalLink size={32} className="text-white" />
                             </a>
                         </div>
-                        <div className="mco-book-card__body">
+                        <div className="p-6 flex flex-col flex-grow">
                             <a 
                                 href={primary?.url || '#'} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="mco-book-card__title line-clamp-2 hover:text-[rgb(var(--color-primary-rgb))] transition-colors"
+                                className="font-extrabold text-lg text-[rgb(var(--color-text-strong-rgb))] line-clamp-2 hover:text-[rgb(var(--color-primary-rgb))] transition-colors"
                             >
                                 {book.title}
                             </a>
-                            <p className="mco-book-card__desc line-clamp-4 mt-2">{book.description}</p>
-                        </div>
-                        <div className="mco-book-card__footer">
-                            <div className="flex flex-col gap-2">
+                            <p className="text-sm text-[rgb(var(--color-text-muted-rgb))] line-clamp-3 mt-3 leading-relaxed flex-grow">{book.description}</p>
+                            
+                            <div className="mt-6 flex flex-col gap-2">
                                 {sortedStores.map(key => {
                                     const url = book.affiliateLinks?.[key];
                                     if (!url) return null;
                                     const isPrimary = key === primary?.key;
                                     return (
                                         <a key={key} href={url} target="_blank" rel="noopener noreferrer" 
-                                           className={`mco-book-btn ${isPrimary ? 'mco-book-btn--primary' : 'mco-book-btn--secondary'} text-sm`}>
-                                            <ShoppingCart size={16}/> Buy on {storeData[key].name}
+                                           className={`mco-book-btn ${isPrimary ? 'mco-book-btn--primary' : 'mco-book-btn--secondary'} text-sm py-3 flex items-center justify-center gap-2 rounded-xl font-black transition-all active:scale-95`}>
+                                            <ShoppingCart size={18}/> Buy on {storeData[key].name}
                                         </a>
                                     );
                                 })}

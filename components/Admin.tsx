@@ -103,10 +103,10 @@ const Admin: FC = () => {
     const [isSavingSettings, setIsSavingSettings] = useState(false);
 
     const [localSettings, setLocalSettings] = useState({
-        purchaseNotifierEnabled: activeOrg?.purchaseNotifierEnabled ?? true,
-        bundlesEnabled: activeOrg?.bundlesEnabled ?? true,
-        subscriptionsEnabled: activeOrg?.subscriptionsEnabled ?? true,
-        activeThemeId: activeOrg?.activeThemeId ?? 'default'
+        purchaseNotifierEnabled: true,
+        bundlesEnabled: true,
+        subscriptionsEnabled: true,
+        activeThemeId: 'default'
     });
 
     useEffect(() => {
@@ -143,10 +143,11 @@ const Admin: FC = () => {
         if (!token) return;
         setIsSavingSettings(true);
         
+        // Optimistically update local settings state
         const nextSettings = { ...localSettings, ...updates };
         setLocalSettings(nextSettings);
 
-        // Preview change immediately
+        // If updating the theme, also apply it to the current user's session for preview
         if (updates.activeThemeId) {
             setActiveTheme(updates.activeThemeId);
         }
@@ -157,7 +158,8 @@ const Admin: FC = () => {
             await refreshConfig();
             toast.success("Organization Brand Updated", { id: tid });
         } catch (e: any) {
-            toast.error(e.message || "Sync Failed", { id: tid });
+            toast.error(e.message || "Update Failed", { id: tid });
+            // Revert state on failure
             if (activeOrg) {
                 setLocalSettings({
                     purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
@@ -259,6 +261,7 @@ const Admin: FC = () => {
                                     {(availableThemes || []).map(theme => (
                                         <button
                                             key={theme.id}
+                                            type="button"
                                             onClick={() => handleSyncSettings({ activeThemeId: theme.id })}
                                             className={`relative p-5 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${
                                                 localSettings.activeThemeId === theme.id 
