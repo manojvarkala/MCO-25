@@ -171,13 +171,18 @@ const Dashboard: FC = () => {
                     let dashboardBundle = null;
                     if (bundlesEnabled && category.certExam?.productSku && examPrices) {
                         const certSku = category.certExam.productSku;
-                        const subBundleSku = `${certSku}-1mo-addon`;
-                        const practiceBundleSku = `${certSku}-1`;
+                        // DYNAMIC BUNDLE DETECTION: Look for any bundle containing this SKU
+                        const bundleEntry = Object.entries(examPrices).find(([sku, p]: [string, any]) => 
+                            p.isBundle && Array.isArray(p.bundledSkus) && p.bundledSkus.includes(certSku)
+                        );
 
-                        if (examPrices[subBundleSku] && examPrices[subBundleSku].isBundle) {
-                            dashboardBundle = { product: { ...examPrices[subBundleSku], sku: subBundleSku }, type: 'subscription' as const };
-                        } else if (examPrices[practiceBundleSku] && examPrices[practiceBundleSku].isBundle) {
-                            dashboardBundle = { product: { ...examPrices[practiceBundleSku], sku: practiceBundleSku }, type: 'practice' as const };
+                        if (bundleEntry) {
+                            const [sku, p] = bundleEntry;
+                            const isSubAddon = sku.includes('addon') || p.type === 'subscription';
+                            dashboardBundle = { 
+                                product: { ...p, sku }, 
+                                type: isSubAddon ? 'subscription' as const : 'practice' as const 
+                            };
                         }
                     }
 

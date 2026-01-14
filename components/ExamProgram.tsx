@@ -164,14 +164,19 @@ const ExamProgram: FC = () => {
     const foundBundle = useMemo(() => {
         if (!bundlesEnabled || !programData?.certExam?.productSku || !examPrices) return null;
         const certSku = programData.certExam.productSku;
-        const subBundleSku = `${certSku}-1mo-addon`;
-        const practiceBundleSku = `${certSku}-1`;
+        
+        // DYNAMIC BUNDLE DETECTION: Look for any product that is a bundle and contains this SKU
+        const bundleEntry = Object.entries(examPrices).find(([sku, p]: [string, any]) => 
+            p.isBundle && Array.isArray(p.bundledSkus) && p.bundledSkus.includes(certSku)
+        );
 
-        if (examPrices[subBundleSku] && examPrices[subBundleSku].isBundle) {
-             return { product: { ...examPrices[subBundleSku], sku: subBundleSku }, type: 'subscription' as const };
-        }
-        if (examPrices[practiceBundleSku] && examPrices[practiceBundleSku].isBundle) {
-             return { product: { ...examPrices[practiceBundleSku], sku: practiceBundleSku }, type: 'practice' as const };
+        if (bundleEntry) {
+            const [sku, p] = bundleEntry;
+            const isSubAddon = sku.includes('addon') || p.type === 'subscription';
+            return { 
+                product: { ...p, sku }, 
+                type: isSubAddon ? 'subscription' as const : 'practice' as const 
+            };
         }
         return null;
     }, [programData, examPrices, bundlesEnabled]);

@@ -4,8 +4,11 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, ExamProductCategory } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, AlertTriangle } from 'lucide-react';
+import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, AlertTriangle, ExternalLink } from 'lucide-react';
 import Spinner from './Spinner.tsx';
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
+import * as ReactRouterDOM from 'react-router-dom';
+const { Link } = ReactRouterDOM as any;
 
 interface EditableProgramData {
     category?: Partial<ExamProductCategory>;
@@ -21,6 +24,7 @@ const ExamEditor: FC<{
     isSaving: boolean;
     unlinkedProducts: any[];
 }> = ({ program, onSave, onDelete, onCancel, isSaving, unlinkedProducts }) => {
+    const { activeOrg } = useAppContext();
     const [data, setData] = useState<EditableProgramData>({
         category: { ...program.category },
         practiceExam: program.practiceExam ? { ...program.practiceExam } : { id: program.category.practiceExamId, isPractice: true } as any,
@@ -59,7 +63,18 @@ const ExamEditor: FC<{
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg">
-                    <h4 className="font-black text-white flex items-center gap-2 border-b border-slate-700 pb-3 uppercase"><Award size={18} className="text-blue-400" /> Certification Config</h4>
+                    <div className="flex justify-between items-center border-b border-slate-700 pb-3">
+                        <h4 className="font-black text-white flex items-center gap-2 uppercase"><Award size={18} className="text-blue-400" /> Certification Config</h4>
+                        {data.certExam?.certificateEnabled && (
+                            <Link 
+                                to={`/certificate/sample?template_id=${data.certExam?.certificateTemplateId || 'cert-completion'}&theme_id=${activeOrg?.certificateThemeId}`} 
+                                target="_blank"
+                                className="text-[10px] font-black text-cyan-400 hover:text-cyan-300 uppercase flex items-center gap-1 underline"
+                            >
+                                Preview <ExternalLink size={10}/>
+                            </Link>
+                        )}
+                    </div>
                     <div>
                         <Label>WooCommerce SKU Binding</Label>
                         <select 
@@ -76,10 +91,25 @@ const ExamEditor: FC<{
                         <div><Label>Mins</Label><input type="number" value={data.certExam?.durationMinutes || ''} onChange={e => handleExamChange('certExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
                         <div><Label>Pass %</Label><input type="number" value={data.certExam?.passScore || ''} onChange={e => handleExamChange('certExam', 'passScore', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
                     </div>
+                    <label className="flex items-center gap-2 text-xs font-bold text-white pt-2 cursor-pointer">
+                        <input type="checkbox" checked={data.certExam?.certificateEnabled || false} onChange={e => handleExamChange('certExam', 'certificateEnabled', e.target.checked)} className="rounded bg-slate-950 border-slate-600 text-cyan-500" />
+                        Enable Certification Certificate
+                    </label>
                 </div>
 
                 <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg">
-                    <h4 className="font-black text-white flex items-center gap-2 border-b border-slate-700 pb-3 uppercase"><FileText size={18} className="text-emerald-400" /> Practice Rules</h4>
+                    <div className="flex justify-between items-center border-b border-slate-700 pb-3">
+                        <h4 className="font-black text-white flex items-center gap-2 uppercase"><FileText size={18} className="text-emerald-400" /> Practice Rules</h4>
+                         {data.practiceExam?.certificateEnabled && (
+                            <Link 
+                                to={`/certificate/sample?template_id=cert-practice&theme_id=${activeOrg?.certificateThemeId}`} 
+                                target="_blank"
+                                className="text-[10px] font-black text-emerald-400 hover:text-emerald-300 uppercase flex items-center gap-1 underline"
+                            >
+                                Preview <ExternalLink size={10}/>
+                            </Link>
+                        )}
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div><Label>Question Count</Label><input type="number" value={data.practiceExam?.numberOfQuestions || ''} onChange={e => handleExamChange('practiceExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
                         <div><Label>Duration (Mins)</Label><input type="number" value={data.practiceExam?.durationMinutes || ''} onChange={e => handleExamChange('practiceExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
