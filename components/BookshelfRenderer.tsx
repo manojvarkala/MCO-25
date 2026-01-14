@@ -46,7 +46,7 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                 {books.map(book => {
                     const primary = getGeoAffiliateLink(book, userGeoCountryCode);
                     return (
-                        <div key={book.id} className="bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] p-3 rounded-xl flex gap-4 hover:shadow-md transition-shadow">
+                        <div key={book.id} className="bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] p-3 rounded-xl flex gap-4 hover:shadow-md transition-shadow group">
                             <div className="w-16 h-20 flex-shrink-0"><BookCover book={book} className="w-full h-full rounded shadow-sm" /></div>
                             <div className="flex flex-col justify-center overflow-hidden">
                                 <a 
@@ -57,7 +57,7 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                 >
                                     {book.title}
                                 </a>
-                                <a href={primary?.url || '#'} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[10px] bg-[rgb(var(--color-accent-rgb))] text-amber-900 font-black px-2 py-1 rounded uppercase tracking-tighter self-start">
+                                <a href={primary?.url || '#'} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[10px] bg-[rgb(var(--color-accent-rgb))] text-amber-900 font-black px-2 py-1 rounded uppercase tracking-tighter self-start hover:bg-yellow-400 transition-colors">
                                     <ShoppingCart size={10} /> {primary?.domainName || 'Amazon'}
                                 </a>
                             </div>

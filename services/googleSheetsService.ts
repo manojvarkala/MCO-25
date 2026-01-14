@@ -7,10 +7,13 @@ declare const __DEV__: boolean;
 let syncPromise: Promise<TestResult[]> | null = null;
 
 const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string | null, data: Record<string, any> = {}, isFormData: boolean = false) => {
-    // FIX: Normalize the URL to prevent double-slashes which can break some CORS implementations
-    const API_BASE_URL = getApiBaseUrl().replace(/\/$/, "");
-    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const fullUrl = `${API_BASE_URL}/wp-json/mco-app/v1${normalizedEndpoint}`;
+    // FIX: More robust normalization to prevent double-slashes and trailing slash issues that break CORS preflight.
+    const rawBaseUrl = getApiBaseUrl() || "";
+    const cleanBaseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    
+    // Construct full URL ensuring no double slashes in path
+    const fullUrl = `${cleanBaseUrl}/wp-json/mco-app/v1${cleanEndpoint}`;
 
     const headers: HeadersInit = {};
     if (token) {
@@ -24,6 +27,8 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         method,
         headers,
         mode: 'cors',
+        // 'include' is only safe if the server specifically allows it AND returns a non-wildcard origin.
+        // Our plugin handles this, but for config (no token) we use same-origin.
         credentials: token ? 'include' : 'same-origin'
     };
     
@@ -61,8 +66,9 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
     } catch (error: any) {
         console.warn(`API FETCH FAILURE [${method} ${endpoint}]:`, error);
         
-        if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-             throw new Error("Connection Blocked: Your server rejected the secure handshake. Check CORS and .htaccess settings.");
+        // Improve error messaging to be specific but helpful
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+             throw new Error("Handshake Error: The browser blocked the request. Ensure your WordPress API URL is correct and CORS is allowed for this domain.");
         }
         throw error;
     }
