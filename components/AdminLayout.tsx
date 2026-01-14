@@ -1,5 +1,7 @@
 import React, { FC, ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
+import * as ReactRouterDOM from 'react-router-dom';
+const { NavLink } = ReactRouterDOM as any;
 import { LayoutDashboard, Settings, ShoppingCart, Code, ArrowLeft, History, BarChart3, Sparkles, BookOpen, TrendingUp, Users } from 'lucide-react';
 
 interface AdminLayoutProps {

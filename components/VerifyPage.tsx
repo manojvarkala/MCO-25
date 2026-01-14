@@ -1,5 +1,7 @@
 import React, { FC, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
+import * as ReactRouterDOM from 'react-router-dom';
+const { useNavigate } = ReactRouterDOM as any;
 import { ShieldCheck, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 

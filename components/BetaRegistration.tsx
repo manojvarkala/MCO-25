@@ -1,5 +1,7 @@
 import React, { FC, useState } from 'react';
-import { Link } from 'react-router-dom';
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
+import * as ReactRouterDOM from 'react-router-dom';
+const { Link } = ReactRouterDOM as any;
 import toast from 'react-hot-toast';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import LogoSpinner from './LogoSpinner.tsx';

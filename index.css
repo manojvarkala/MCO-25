@@ -133,15 +133,49 @@ body {
 
 /* --- BUTTONS --- */
 .mco-card__button, .mco-book-btn { 
-    display: flex !important; align-items: center; justify-content: center; gap: 8px;
-    width: 100%; padding: 12px; border-radius: 10px; font-weight: 800;
-    text-decoration: none !important; font-size: 0.9rem; transition: all 0.2s; border: none; cursor: pointer;
+    display: flex !important; 
+    align-items: center !important; 
+    justify-content: center !important; 
+    gap: 8px !important;
+    width: 100% !important; 
+    padding: 12px !important; 
+    border-radius: 10px !important; 
+    font-weight: 800 !important;
+    text-decoration: none !important; 
+    font-size: 0.9rem !important; 
+    transition: all 0.2s !important; 
+    border: none !important; 
+    cursor: pointer !important;
 }
-.mco-card__button--white { background: #fff !important; color: #1e293b !important; }
-.mco-card__button--white:hover { background: #f1f5f9 !important; }
-.mco-card__button--amber, .mco-book-btn--primary { background: #fbbf24 !important; color: #78350f !important; }
-.mco-card__button--amber:hover, .mco-book-btn--primary:hover { background: #f59e0b !important; }
-.mco-book-btn--secondary { background: #e2e8f0 !important; color: #475569 !important; border: 1px solid #cbd5e1 !important; }
+
+/* Ensure white buttons stay white regardless of theme */
+.mco-card__button--white { 
+    background-color: #ffffff !important; 
+    color: #1e293b !important; 
+}
+.mco-card__button--white:hover { 
+    background-color: #f1f5f9 !important; 
+}
+
+/* Ensure Amber buttons stay Amber regardless of theme */
+.mco-card__button--amber, .mco-book-btn--primary { 
+    background-color: #fbbf24 !important; 
+    color: #78350f !important; 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
+}
+.mco-card__button--amber:hover, .mco-book-btn--primary:hover { 
+    background-color: #f59e0b !important; 
+}
+
+.mco-book-btn--secondary { 
+    background-color: #e2e8f0 !important; 
+    color: #475569 !important; 
+    border: 1px solid #cbd5e1 !important; 
+}
+.mco-book-btn--secondary:hover { 
+    background-color: #cbd5e1 !important; 
+    color: #1e293b !important; 
+}
 
 /* ADMIN PANEL OVERRIDES */
 .mco-admin-badge {

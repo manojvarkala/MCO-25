@@ -1,12 +1,15 @@
 import React, { FC, useRef, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
+import * as ReactRouterDOM from 'react-router-dom';
+const { useNavigate, useParams } = ReactRouterDOM as any;
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import LogoSpinner from './LogoSpinner.tsx';
 import toast from 'react-hot-toast';
 
 const VolunteerOnboarding: FC = () => {
-    const { token } = useParams<{ token: string }>();
+    // FIX: Removed generic type from useParams to resolve "Untyped function calls may not accept type arguments" error.
+    const { token } = useParams();
     const navigate = useNavigate();
     const { loginWithToken, user } = useAuth();
     const hasProcessed = useRef(false);

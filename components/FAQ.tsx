@@ -2,7 +2,9 @@ import React, { FC } from 'react';
 import { HelpCircle, ChevronDown, UserCheck } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
-import { Link } from 'react-router-dom';
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
+import * as ReactRouterDOM from 'react-router-dom';
+const { Link } = ReactRouterDOM as any;
 
 const FAQItem: FC<{ question: string; children: React.ReactNode }> = ({ question, children }) => (
     <details className="group border-b border-slate-200 py-4" open>

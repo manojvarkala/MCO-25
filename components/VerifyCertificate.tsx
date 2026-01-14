@@ -1,5 +1,7 @@
 import React, { FC, useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
+import * as ReactRouterDOM from 'react-router-dom';
+const { useParams } = ReactRouterDOM as any;
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { VerificationData } from '../types.ts';
 import LogoSpinner from './LogoSpinner.tsx';
@@ -7,7 +9,8 @@ import { CheckCircle, XCircle, Award } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 
 const VerifyCertificate: FC = () => {
-    const { certId } = useParams<{ certId: string }>();
+    // FIX: Removed generic type from useParams to resolve "Untyped function calls may not accept type arguments" error.
+    const { certId } = useParams();
     const { activeOrg } = useAppContext();
     const [verificationData, setVerificationData] = useState<VerificationData | null>(null);
     const [isLoading, setIsLoading] = useState(true);

@@ -7,11 +7,12 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, ProductVariation } from '../types.ts';
-import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit, CreditCard, Gift, X, LogOut, ExternalLink } from 'lucide-react';
+import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit, CreditCard, Gift, X, LogOut, ExternalLink, Zap } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';
 import FeaturedBundleCard from './FeaturedBundleCard.tsx';
+import SubscriptionOfferCard from './SubscriptionOfferCard.tsx';
 
 const stripHtml = (html: string): string => {
     if (!html || typeof html !== 'string') return html || '';
@@ -24,7 +25,7 @@ const stripHtml = (html: string): string => {
 
 const Dashboard: FC = () => {
     const { user, token, paidExamIds, isSubscribed, subscriptionInfo, isBetaTester } = useAuth();
-    const { activeOrg, isInitializing, refreshConfig, examPrices, bundlesEnabled, feedbackRequiredForExam } = useAppContext();
+    const { activeOrg, isInitializing, refreshConfig, examPrices, bundlesEnabled, subscriptionsEnabled, feedbackRequiredForExam } = useAppContext();
     const [results, setResults] = useState<TestResult[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -118,8 +119,8 @@ const Dashboard: FC = () => {
                 )}
             </div>
 
-            {/* Subscription Status Card */}
-            {user && (isSubscribed || isBetaTester) && (
+            {/* Subscription Status or Upgrade Grid */}
+            {user && (isSubscribed || isBetaTester) ? (
                 <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-cyan-500/30 p-6 rounded-2xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="flex items-center gap-5">
                         <div className="p-4 bg-cyan-500/10 rounded-2xl border border-cyan-500/20">
@@ -140,6 +141,28 @@ const Dashboard: FC = () => {
                         Manage Billing <ExternalLink size={14}/>
                     </a>
                 </div>
+            ) : subscriptionsEnabled && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <SubscriptionOfferCard 
+                        planName="Monthly Access"
+                        price={examPrices?.['sub-monthly']?.price || 19.99}
+                        regularPrice={examPrices?.['sub-monthly']?.regularPrice}
+                        priceUnit="month"
+                        url={`${mainSiteBaseUrl}/product/monthly-subscription/`}
+                        features={['ALL Practice Exams', 'AI Study Guides', 'Priority Support']}
+                        gradientClass="mco-gradient--sub-monthly"
+                    />
+                    <SubscriptionOfferCard 
+                        planName="Yearly Access"
+                        price={examPrices?.['sub-yearly']?.price || 149.99}
+                        regularPrice={examPrices?.['sub-yearly']?.regularPrice}
+                        priceUnit="year"
+                        isBestValue={true}
+                        url={`${mainSiteBaseUrl}/product/yearly-subscription/`}
+                        features={['ALL Monthly Features', 'Free Certification Retakes', '35% Massive Savings']}
+                        gradientClass="mco-gradient--sub-yearly"
+                    />
+                </div>
             )}
 
             {/* Exam Categories */}
@@ -148,9 +171,13 @@ const Dashboard: FC = () => {
                     let dashboardBundle = null;
                     if (bundlesEnabled && category.certExam?.productSku && examPrices) {
                         const certSku = category.certExam.productSku;
-                        const addonSku = `${certSku}-1mo-addon`;
-                        if (examPrices[addonSku]) {
-                            dashboardBundle = { product: { ...examPrices[addonSku], sku: addonSku }, type: 'subscription' as const };
+                        const subBundleSku = `${certSku}-1mo-addon`;
+                        const practiceBundleSku = `${certSku}-1`;
+
+                        if (examPrices[subBundleSku] && examPrices[subBundleSku].isBundle) {
+                            dashboardBundle = { product: { ...examPrices[subBundleSku], sku: subBundleSku }, type: 'subscription' as const };
+                        } else if (examPrices[practiceBundleSku] && examPrices[practiceBundleSku].isBundle) {
+                            dashboardBundle = { product: { ...examPrices[practiceBundleSku], sku: practiceBundleSku }, type: 'practice' as const };
                         }
                     }
 
@@ -181,7 +208,10 @@ const Dashboard: FC = () => {
 
             {bundlesEnabled && featuredBundles.length > 0 && (
                 <div className="pt-10 border-t border-slate-800">
-                    <h2 className="text-3xl font-black text-[rgb(var(--color-text-strong-rgb))] mb-6 font-display">Specialized Exam Bundles</h2>
+                    <h2 className="text-3xl font-black text-[rgb(var(--color-text-strong-rgb))] mb-6 font-display flex items-center gap-2">
+                        <Zap className="text-amber-500 fill-amber-500" />
+                        Specialized Exam Bundles
+                    </h2>
                     <div className="mco-grid-container">
                         {featuredBundles.map(bundle => <FeaturedBundleCard key={bundle.sku} bundle={bundle} activeOrg={activeOrg} />)}
                     </div>
