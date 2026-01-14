@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 28.0.0 (Full Functional Restoration)
+ * VERSION: 28.2.0 (Redeclaration Fix)
  * =============================================================================
  */
 
@@ -205,8 +205,8 @@ function mco_handle_admin_get_beta_testers() {
             'name' => $user->display_name,
             'email' => $user->user_email,
             'registrationDate' => $user->user_registered,
-            'tokenRedeemed' => true, // Legacy compatibility
-            'expiryTimestamp' => time() + (86400 * 30) // Logic for 30 days
+            'tokenRedeemed' => true,
+            'expiryTimestamp' => time() + (86400 * 30)
         ];
     }
     return new WP_REST_Response($testers, 200);

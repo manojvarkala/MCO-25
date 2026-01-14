@@ -1,4 +1,3 @@
-
 import React, { FC, useState, useEffect, ReactNode } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { ExamStat, Theme } from '../types.ts';
@@ -10,7 +9,6 @@ import {
     CheckCircle, XCircle, RefreshCw, BarChart3, 
     Settings2, DatabaseZap, DownloadCloud, ToggleLeft, 
     ToggleRight, Activity, Palette, Check, ExternalLink, Layout,
-    // FIX: Added missing FileSpreadsheet import from lucide-react.
     FileSpreadsheet
 } from 'lucide-react';
 
@@ -152,7 +150,7 @@ const Admin: FC = () => {
         const nextSettings = { ...localSettings, ...updates };
         setLocalSettings(nextSettings);
 
-        // Preview choice immediately for the admin's current view
+        // Preview choice immediately for the admin's current view if it's a theme change
         if (updates.activeThemeId) {
             setActiveTheme(updates.activeThemeId);
         }
@@ -165,7 +163,7 @@ const Admin: FC = () => {
             toast.success("Settings saved successfully", { id: tid });
         } catch (e: any) {
             toast.error(e.message || "Save failed", { id: tid });
-            // Revert on failure
+            // Revert local UI state on failure
             if (activeOrg) {
                 setLocalSettings({
                     purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
@@ -275,7 +273,7 @@ const Admin: FC = () => {
                             </h2>
                             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl">
                                 <p className="text-slate-500 text-sm font-medium mb-8 leading-relaxed max-w-2xl">
-                                    Set the default visual profile for your organization. This determines the baseline colors for the portal, certificates, and marketing elements.
+                                    Set the global default visual profile for your organization. This determines the baseline colors for the portal, certificates, and marketing elements.
                                 </p>
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                                     {(availableThemes || []).map(theme => (
