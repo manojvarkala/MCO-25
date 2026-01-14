@@ -102,12 +102,11 @@ const Admin: FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSavingSettings, setIsSavingSettings] = useState(false);
 
-    // Track the local organization settings separately from the active session theme
     const [localSettings, setLocalSettings] = useState({
-        purchaseNotifierEnabled: true,
-        bundlesEnabled: true,
-        subscriptionsEnabled: true,
-        activeThemeId: 'default'
+        purchaseNotifierEnabled: activeOrg?.purchaseNotifierEnabled ?? true,
+        bundlesEnabled: activeOrg?.bundlesEnabled ?? true,
+        subscriptionsEnabled: activeOrg?.subscriptionsEnabled ?? true,
+        activeThemeId: activeOrg?.activeThemeId ?? 'default'
     });
 
     useEffect(() => {
@@ -144,23 +143,21 @@ const Admin: FC = () => {
         if (!token) return;
         setIsSavingSettings(true);
         
-        // Optimistically update local settings state
         const nextSettings = { ...localSettings, ...updates };
         setLocalSettings(nextSettings);
 
-        // If updating the theme, also apply it to the current user's session for preview
+        // Preview change immediately
         if (updates.activeThemeId) {
             setActiveTheme(updates.activeThemeId);
         }
 
-        const tid = toast.loading("Updating Global Configuration...");
+        const tid = toast.loading("Updating Global Brand Configuration...");
         try {
             await googleSheetsService.adminUpdateGlobalSettings(token, nextSettings);
             await refreshConfig();
-            toast.success("Organization Settings Updated", { id: tid });
+            toast.success("Organization Brand Updated", { id: tid });
         } catch (e: any) {
-            toast.error(e.message || "Update Failed", { id: tid });
-            // Revert state on failure
+            toast.error(e.message || "Sync Failed", { id: tid });
             if (activeOrg) {
                 setLocalSettings({
                     purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
@@ -191,7 +188,7 @@ const Admin: FC = () => {
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 pb-20">
             <aside className="lg:w-64 flex flex-col gap-2">
                 <NavItem id="diagnostics" label="Health Audit" icon={<Activity size={18}/>} active={activeTab === 'diagnostics'} onClick={setActiveTab} />
-                <NavItem id="appearance" label="Branding & Design" icon={<Palette size={18}/>} active={activeTab === 'appearance'} onClick={setActiveTab} />
+                <NavItem id="appearance" label="Platform Design" icon={<Palette size={18}/>} active={activeTab === 'appearance'} onClick={setActiveTab} />
                 <NavItem id="bulk" label="Infrastructure" icon={<DatabaseZap size={18}/>} active={activeTab === 'bulk'} onClick={setActiveTab} />
             </aside>
 
@@ -255,9 +252,9 @@ const Admin: FC = () => {
                         </div>
 
                         <div className="space-y-6">
-                            <h2 className="text-3xl font-black flex items-center gap-3 text-white"><Palette className="text-cyan-500" /> Platform Theme</h2>
+                            <h2 className="text-3xl font-black flex items-center gap-3 text-white"><Palette className="text-cyan-500" /> Branding Theme</h2>
                             <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 shadow-xl">
-                                <p className="text-slate-400 text-sm mb-6">Select the default theme for all users visiting this organization. Users can override this choice individually in their profile.</p>
+                                <p className="text-slate-400 text-sm mb-6">Select the global theme for all users visiting this tenant. Individual users can still override this in their profile.</p>
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                                     {(availableThemes || []).map(theme => (
                                         <button

@@ -1,7 +1,7 @@
 import React, { FC } from 'react';
 import BookCover from './BookCover.tsx'; 
 import type { RecommendedBook } from '../types.ts';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, ExternalLink } from 'lucide-react';
 import { useAppContext } from '../context/AppContext.tsx';
 
 interface BookshelfRendererProps {
@@ -46,11 +46,18 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                 {books.map(book => {
                     const primary = getGeoAffiliateLink(book, userGeoCountryCode);
                     return (
-                        <div key={book.id} className="mco-book-card-sidebar">
-                            <div className="mco-book-card-sidebar__cover"><BookCover book={book} className="w-full h-full" /></div>
-                            <div className="mco-book-card-sidebar__content">
-                                <h4 className="mco-book-card-sidebar__title line-clamp-2">{book.title}</h4>
-                                <a href={primary?.url || '#'} target="_blank" rel="noopener noreferrer" className="mco-book-card-sidebar__button">
+                        <div key={book.id} className="mco-book-card-sidebar bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] p-3 rounded-xl flex gap-4 hover:shadow-md transition-shadow">
+                            <div className="w-16 h-20 flex-shrink-0"><BookCover book={book} className="w-full h-full rounded shadow-sm" /></div>
+                            <div className="flex flex-col justify-center overflow-hidden">
+                                <a 
+                                    href={primary?.url || '#'} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="font-bold text-sm text-[rgb(var(--color-text-strong-rgb))] line-clamp-2 hover:text-[rgb(var(--color-primary-rgb))] transition-colors"
+                                >
+                                    {book.title}
+                                </a>
+                                <a href={primary?.url || '#'} target="_blank" rel="noopener noreferrer" className="mt-1 text-[10px] bg-[rgb(var(--color-accent-rgb))] text-amber-900 font-black px-2 py-1 rounded uppercase tracking-tighter self-start">
                                     Buy on {primary?.domainName || 'Amazon'}
                                 </a>
                             </div>
@@ -74,21 +81,38 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                 };
 
                 return (
-                    <div key={book.id} className="mco-book-card">
-                        <div className="mco-book-cover"><BookCover book={book} className="w-full h-full" /></div>
+                    <div key={book.id} className="mco-book-card group">
+                        <div className="mco-book-cover">
+                            <BookCover book={book} className="w-full h-full" />
+                            <a 
+                                href={primary?.url || '#'} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                                <ExternalLink size={32} className="text-white" />
+                            </a>
+                        </div>
                         <div className="mco-book-card__body">
-                            <h4 className="mco-book-card__title line-clamp-2">{book.title}</h4>
-                            <p className="mco-book-card__desc line-clamp-4">{book.description}</p>
+                            <a 
+                                href={primary?.url || '#'} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="mco-book-card__title line-clamp-2 hover:text-[rgb(var(--color-primary-rgb))] transition-colors"
+                            >
+                                {book.title}
+                            </a>
+                            <p className="mco-book-card__desc line-clamp-4 mt-2">{book.description}</p>
                         </div>
                         <div className="mco-book-card__footer">
-                            <div className="mco-store-buttons">
+                            <div className="flex flex-col gap-2">
                                 {sortedStores.map(key => {
                                     const url = book.affiliateLinks?.[key];
                                     if (!url) return null;
                                     const isPrimary = key === primary?.key;
                                     return (
                                         <a key={key} href={url} target="_blank" rel="noopener noreferrer" 
-                                           className={`mco-book-btn ${isPrimary ? 'mco-book-btn--primary' : 'mco-book-btn--secondary'}`}>
+                                           className={`mco-book-btn ${isPrimary ? 'mco-book-btn--primary' : 'mco-book-btn--secondary'} text-sm`}>
                                             <ShoppingCart size={16}/> Buy on {storeData[key].name}
                                         </a>
                                     );
