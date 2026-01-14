@@ -7,10 +7,11 @@ declare const __DEV__: boolean;
 let syncPromise: Promise<TestResult[]> | null = null;
 
 const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string | null, data: Record<string, any> = {}, isFormData: boolean = false) => {
-    // FIX: Simplified normalization to ensure no double slashes, which breaks strict CORS preflights
     const API_BASE_URL = (getApiBaseUrl() || "").replace(/\/$/, "");
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const fullUrl = `${API_BASE_URL}/wp-json/mco-app/v1${cleanEndpoint}`;
+    const fullUrl = API_BASE_URL.startsWith('http') 
+        ? `${API_BASE_URL}/wp-json/mco-app/v1${cleanEndpoint}`
+        : `/wp-json/mco-app/v1${cleanEndpoint}`;
 
     const headers: HeadersInit = {};
     if (token) {
@@ -24,9 +25,9 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         method,
         headers,
         mode: 'cors',
-        // 'include' is only safe for cross-domain if the server explicitly allows credentials.
-        // For standard Bearer tokens, 'same-origin' is safer for initial config handshakes.
-        credentials: token ? 'include' : 'same-origin'
+        // FIX: Using 'same-origin' instead of 'include' for JWT Bearer tokens. 
+        // This makes CORS handshakes much more robust and less likely to be blocked by server security.
+        credentials: 'same-origin' 
     };
     
     if (method === 'POST') {

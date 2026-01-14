@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: High-Priority Nuclear Security & Global CORS Handshake
- * VERSION: 14.0.0 (Highest Priority Interception)
+ * VERSION: 15.0.0 (Nuclear Early Exit)
  * =============================================================================
  */
 
@@ -10,16 +10,17 @@ if (!defined('ABSPATH')) exit;
 
 /**
  * 1. THE NUCLEAR HANDSHAKE
- * We hook at priority -999 to ensure we run before almost any other plugin.
+ * We hook at priority -9999 to ensure we run before any other logic.
  */
 function mco_nuclear_cors_handshake() {
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
     if (empty($origin)) return;
 
     $is_allowed = false;
-    $hostname = parse_url($origin, PHP_URL_HOST);
+    $origin_low = strtolower(rtrim($origin, '/'));
     
     // Development local bypass
+    $hostname = parse_url($origin, PHP_URL_HOST);
     if ($hostname === 'localhost' || $hostname === '127.0.0.1' || strpos($hostname, '.local') !== false) {
         $is_allowed = true;
     } else {
@@ -27,8 +28,7 @@ function mco_nuclear_cors_handshake() {
         $allowed_origins = array_filter(array_map('trim', explode("\n", str_replace("\r", "", $allowed_raw))));
         
         foreach ($allowed_origins as $allowed) {
-            // Normalize for comparison (remove trailing slashes)
-            if (rtrim(strtolower($allowed), '/') === rtrim(strtolower($origin), '/')) {
+            if (rtrim(strtolower($allowed), '/') === $origin_low) {
                 $is_allowed = true;
                 break;
             }
@@ -54,9 +54,9 @@ function mco_nuclear_cors_handshake() {
     }
 }
 
-// Hook as early as possible
-add_action('init', 'mco_nuclear_cors_handshake', -999);
-add_action('rest_api_init', 'mco_nuclear_cors_handshake', -999);
+// Hook as early as possible to intercept Preflight
+add_action('init', 'mco_nuclear_cors_handshake', -9999);
+add_action('rest_api_init', 'mco_nuclear_cors_handshake', -9999);
 
 /**
  * 2. IDENTITY RECOVERY ENGINE
@@ -112,7 +112,6 @@ function mco_verify_exam_jwt($token) {
     $decoded = json_decode(mco_base64url_decode($payload), true);
     if (!$decoded) return new WP_Error('jwt_payload_err', 'Invalid payload.', ['status' => 401]);
     
-    // 5-minute clock skew allowance
     if (isset($decoded['exp']) && ($decoded['exp'] + 300) < time()) {
         return new WP_Error('jwt_auth_expired_token', 'Token expired.', ['status' => 403]);
     }
