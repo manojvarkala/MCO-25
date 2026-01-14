@@ -150,7 +150,7 @@ const Admin: FC = () => {
         const nextSettings = { ...localSettings, ...updates };
         setLocalSettings(nextSettings);
 
-        // Preview choice immediately for the admin's current view if it's a theme change
+        // Preview choice immediately for the admin's current view
         if (updates.activeThemeId) {
             setActiveTheme(updates.activeThemeId);
         }
@@ -271,37 +271,37 @@ const Admin: FC = () => {
                             <h2 className="text-3xl font-black flex items-center gap-3 text-white">
                                 <Palette className="text-cyan-500" size={32} /> Organizational Theme
                             </h2>
-                            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl">
+                            <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
                                 <p className="text-slate-500 text-sm font-medium mb-8 leading-relaxed max-w-2xl">
-                                    Set the global default visual profile for your organization. This determines the baseline colors for the portal, certificates, and marketing elements.
+                                    Set the <strong>global default theme</strong> for all users. This selection will be the baseline visual profile for the dashboard, certificates, and marketing elements.
                                 </p>
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                                     {(availableThemes || []).map(theme => (
                                         <button
                                             key={theme.id}
                                             type="button"
                                             onClick={() => handleSyncSettings({ activeThemeId: theme.id })}
-                                            className={`relative p-5 rounded-2xl border-2 transition-all flex flex-col items-center gap-4 group ${
+                                            className={`relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${
                                                 localSettings.activeThemeId === theme.id 
-                                                    ? 'bg-cyan-500/10 border-cyan-500 ring-4 ring-cyan-500/10 shadow-lg' 
-                                                    : 'bg-slate-950 border-slate-800 hover:border-slate-600'
+                                                    ? 'border-cyan-500 bg-cyan-50 ring-2 ring-cyan-500/20 shadow-md' 
+                                                    : 'border-slate-200 hover:border-cyan-400 bg-slate-50'
                                             }`}
                                         >
                                             {localSettings.activeThemeId === theme.id && (
-                                                <div className="absolute -top-3 -right-3 bg-cyan-500 text-white rounded-full p-1.5 shadow-xl border-4 border-slate-950">
-                                                    <Check size={14} strokeWidth={4}/>
+                                                <div className="absolute -top-2 -right-2 bg-cyan-500 text-white rounded-full p-1 shadow-md border-2 border-white">
+                                                    <Check size={12} strokeWidth={4}/>
                                                 </div>
                                             )}
                                             
-                                            <div className="flex justify-center space-x-1.5 w-full h-10 pointer-events-none">
-                                                <div className="w-1/4 rounded-lg shadow-sm border border-black/10" style={{ backgroundColor: themeColors[theme.id]?.primary || '#ccc' }}></div>
-                                                <div className="w-1/4 rounded-lg shadow-sm border border-black/10" style={{ backgroundColor: themeColors[theme.id]?.secondary || '#ccc' }}></div>
-                                                <div className="w-1/4 rounded-lg shadow-sm border border-black/10" style={{ backgroundColor: themeColors[theme.id]?.accent || '#ccc' }}></div>
-                                                <div className="w-1/4 rounded-lg shadow-sm border border-black/10" style={{ backgroundColor: themeColors[theme.id]?.background || '#ccc' }}></div>
+                                            <div className="flex justify-center space-x-1 w-full h-8 pointer-events-none">
+                                                <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.primary || '#ccc' }}></div>
+                                                <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.secondary || '#ccc' }}></div>
+                                                <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.accent || '#ccc' }}></div>
+                                                <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.background || '#ccc' }}></div>
                                             </div>
 
-                                            <span className={`font-black text-xs uppercase tracking-tight transition-colors ${
-                                                localSettings.activeThemeId === theme.id ? 'text-cyan-400' : 'text-slate-500 group-hover:text-slate-300'
+                                            <span className={`font-bold text-xs uppercase tracking-tight ${
+                                                localSettings.activeThemeId === theme.id ? 'text-cyan-700' : 'text-slate-600'
                                             }`}>
                                                 {theme.name}
                                             </span>
@@ -331,7 +331,6 @@ const Admin: FC = () => {
                                         <FileSpreadsheet size={18} className="text-emerald-500"/> Force Sync All Data Sheets
                                     </button>
                                 </div>
-                                <p className="mt-6 text-[10px] text-slate-600 uppercase font-black tracking-widest text-center">Execute after significant backend database modifications.</p>
                             </div>
                             
                             <div className="bg-slate-900 p-8 rounded-2xl border border-slate-800 shadow-xl flex flex-col">

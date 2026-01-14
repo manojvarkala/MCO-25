@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 28.2.0 (Redeclaration Fix)
+ * VERSION: 28.3.0 (Redeclaration Fix & Persistence Hardening)
  * =============================================================================
  */
 
@@ -85,10 +85,12 @@ function mco_handle_questions_from_sheet($request) {
 function mco_handle_admin_update_settings($request) {
     $p = $request->get_json_params();
     
+    // Explicit Theme Save
     if (isset($p['activeThemeId'])) {
         update_option('mco_active_theme_id', sanitize_text_field($p['activeThemeId']));
     }
     
+    // Explicit Toggle Mapping
     $toggles = [
         'purchaseNotifierEnabled' => 'mco_purchase_notifier_enabled', 
         'subscriptionsEnabled' => 'mco_subscriptions_enabled', 
@@ -101,6 +103,7 @@ function mco_handle_admin_update_settings($request) {
         }
     }
     
+    // Clear ALL config transients
     delete_transient('mco_app_config_data');
     delete_transient('mco_app_config_data_full');
     update_option('mco_config_version', (string)current_time('timestamp'));
