@@ -83,6 +83,28 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* --- DASHBOARD GRADIENT CARDS --- */
+.mco-gradient--practice-1 { 
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important; 
+    border: none !important;
+}
+.mco-gradient--cert-1 { 
+    background: linear-gradient(135deg, #059669 0%, #064e3b 100%) !important; 
+    border: none !important;
+}
+.mco-gradient--bundle-sub { 
+    background: linear-gradient(135deg, #0d9488 0%, #134e4a 100%) !important; 
+    border: none !important;
+}
+.mco-gradient--sub-monthly { 
+    background: linear-gradient(135deg, #0891b2 0%, #155e75 100%) !important; 
+    border: none !important;
+}
+.mco-gradient--sub-yearly { 
+    background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%) !important; 
+    border: none !important;
+}
+
 /* Bookstore & Program Grid Restoration */
 .mco-book-grid, 
 .mco-grid-container { 
@@ -109,58 +131,21 @@ body {
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
 }
 
-/* Book Specific Card Styling */
-.mco-book-cover { 
-    height: 280px; 
-    background: rgba(var(--color-muted-rgb), 0.5); 
-    border-bottom: 1px solid rgb(var(--color-border-rgb)); 
-    position: relative; 
-    overflow: hidden;
+/* --- BUTTONS --- */
+.mco-card__button { 
+    display: flex !important; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 12px; border-radius: 10px; font-weight: 800;
+    text-decoration: none !important; font-size: 0.9rem; transition: all 0.2s; border: none; cursor: pointer;
 }
-
-.mco-book-cover img { 
-    width: 100%; 
-    height: 100%; 
-    object-fit: cover; 
-}
-
-/* Common Button Styling for Bookstore */
-.mco-book-btn {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 8px !important;
-    width: 100% !important;
-    padding: 0.75rem !important;
-    border-radius: 0.6rem !important;
-    font-weight: 700 !important;
-    text-decoration: none !important;
-    transition: all 0.2s ease !important;
-    border: none !important;
-    cursor: pointer !important;
-}
-
-.mco-book-btn--primary {
-    background-color: rgb(var(--color-accent-rgb)) !important;
-    color: #78350f !important;
-}
-
-.mco-book-btn--secondary {
-    background-color: rgb(var(--color-muted-rgb)) !important;
-    color: rgb(var(--color-text-default-rgb)) !important;
-    border: 1px solid rgb(var(--color-border-rgb)) !important;
-}
-
-.mco-book-btn--cyan {
-    background-color: rgb(var(--color-primary-rgb)) !important;
-    color: #ffffff !important;
-}
+.mco-card__button--white { background: #fff !important; color: #1e293b !important; }
+.mco-card__button--white:hover { background: #f1f5f9 !important; }
+.mco-card__button--amber { background: #fbbf24 !important; color: #78350f !important; }
+.mco-card__button--amber:hover { background: #f59e0b !important; }
 
 /* ADMIN PANEL OVERRIDES */
 .mco-admin-badge {
     @apply text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter;
 }
-
 .mco-admin-badge--success { @apply bg-emerald-500/10 text-emerald-400 border border-emerald-500/20; }
 .mco-admin-badge--error { @apply bg-rose-500/10 text-rose-400 border border-rose-500/20; }
 .mco-admin-badge--pending { @apply bg-slate-800 text-slate-400 border border-slate-700 animate-pulse; }

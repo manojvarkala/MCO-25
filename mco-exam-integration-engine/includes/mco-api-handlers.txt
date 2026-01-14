@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 28.3.0 (Redeclaration Fix & Persistence Hardening)
+ * VERSION: 28.3.1 (Nucler Cache Purge Verified)
  * =============================================================================
  */
 
@@ -103,7 +103,7 @@ function mco_handle_admin_update_settings($request) {
         }
     }
     
-    // Clear ALL config transients
+    // Clear ALL config transients - NUCLEAR PURGE
     delete_transient('mco_app_config_data');
     delete_transient('mco_app_config_data_full');
     update_option('mco_config_version', (string)current_time('timestamp'));

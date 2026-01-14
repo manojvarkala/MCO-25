@@ -151,7 +151,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     localStorage.removeItem('feedbackRequiredForExam');
   };
 
-  const applyConfigToState = useCallback((config: any, processedData: any) => {
+  const applyConfigToState = useCallback((config: any, processedData: any, isExplicitSync = false) => {
     if (processedData && processedData.processedOrgs && processedData.processedOrgs.length > 0) {
       setOrganizations(processedData.processedOrgs);
       setExamPrices(config.examPrices || null);
@@ -169,10 +169,13 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
           setPurchaseNotifierMinGap(newActiveOrg.purchaseNotifierMinGap ?? 8);
           setPurchaseNotifierMaxGap(newActiveOrg.purchaseNotifierMaxGap ?? 23);
           
-          // Initial Theme Selection: 1. Local Storage (User override), 2. Org Default (Admin setting)
+          // Theme Determination Logic:
+          // 1. If we just did an "Explicit Sync" (Admin saved settings), Force use Org Default.
+          // 2. Otherwise, use user preference (LocalStorage), then fallback to Org Default.
           const storedTheme = localStorage.getItem('mco_active_theme');
           const orgTheme = newActiveOrg.activeThemeId;
-          const finalTheme = storedTheme || orgTheme || 'default';
+          
+          const finalTheme = (isExplicitSync || !storedTheme) ? (orgTheme || 'default') : storedTheme;
           
           setActiveTheme(finalTheme);
       }
@@ -229,12 +232,13 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         const apiUrl = tenantConfig.apiBaseUrl ? `${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config` : '/wp-json/mco-app/v1/config';
         try {
-            const response = await fetch(apiUrl, { mode: 'cors', credentials: 'same-origin' });
+            const response = await fetch(`${apiUrl}?nocache=${forceRefresh ? Date.now() : ''}`, { mode: 'cors', credentials: 'same-origin' });
             if (response.ok) {
                 const liveConfig = await response.json();
                 const processed = processConfigData(liveConfig);
                 if (processed) {
-                    applyConfigToState(liveConfig, processed);
+                    // isExplicitSync=true when forceRefresh=true
+                    applyConfigToState(liveConfig, processed, forceRefresh);
                     localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
                     configFound = true;
                 }
