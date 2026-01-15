@@ -21,19 +21,22 @@ interface SocialPluginSources {
 }
 
 /**
- * Logic to assemble and trigger download of the Core MCO Engine
- * Renames .txt source files to .php for the final WordPress ZIP
+ * Logic to assemble and trigger download of the Core MCO Engine.
+ * FILES ARE NOW ADDED DIRECTLY TO THE ROOT OF THE ZIP (Flat Structure)
+ * to ensure WordPress identifies the plugin header correctly.
  */
 export const downloadCorePluginZip = async (sources: CorePluginSources) => {
     const zip = new JSZip();
-    const root = zip.folder('mco-exam-integration-engine');
-    if (!root) throw new Error("FileSystem Failure during ZIP creation.");
 
-    // Assets
-    root.folder('assets')?.file('mco-styles.css', sources.styles);
+    // 1. Main Plugin Entry (MUST be at root)
+    zip.file('mco-exam-integration-engine.php', sources.main);
+
+    // 2. Assets Subdirectory
+    const assets = zip.folder('assets');
+    assets?.file('mco-styles.css', sources.styles);
     
-    // Includes (Modular Logic)
-    const includes = root.folder('includes');
+    // 3. Includes Subdirectory (Modular Logic)
+    const includes = zip.folder('includes');
     includes?.file('mco-security.php', sources.security);
     includes?.file('mco-cpts.php', sources.cpts);
     includes?.file('mco-admin.php', sources.admin);
@@ -43,11 +46,8 @@ export const downloadCorePluginZip = async (sources: CorePluginSources) => {
     includes?.file('mco-shortcodes.php', sources.shortcodes);
     includes?.file('mco-woocommerce.php', sources.woocommerce);
 
-    // Main Plugin Entry
-    root.file('mco-exam-integration-engine.php', sources.main);
-
-    // Public Templates
-    const publicDir = root.folder('public');
+    // 4. Public Templates Subdirectory
+    const publicDir = zip.folder('public');
     Object.entries(sources.templates).forEach(([name, content]) => {
         publicDir?.file(name, content);
     });
@@ -57,15 +57,17 @@ export const downloadCorePluginZip = async (sources: CorePluginSources) => {
 };
 
 /**
- * Logic to assemble and trigger download of the Social Poster Companion
+ * Logic to assemble and trigger download of the Social Poster Companion.
+ * Uses the same flat structure for maximum compatibility.
  */
 export const downloadSocialPluginZip = async (sources: SocialPluginSources) => {
     const zip = new JSZip();
-    const root = zip.folder('mco-social-poster');
-    if (!root) throw new Error("FileSystem Failure during ZIP creation.");
 
-    root.file('mco-social-poster.php', sources.main);
-    const includes = root.folder('includes');
+    // Main Entry
+    zip.file('mco-social-poster.php', sources.main);
+
+    // Subdirectory logic
+    const includes = zip.folder('includes');
     includes?.file('admin-page.php', sources.admin);
     includes?.file('post-handler.php', sources.handler);
 

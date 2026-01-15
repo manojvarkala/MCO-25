@@ -22,7 +22,7 @@ const Integration: FC = () => {
 
     const handleCoreDownload = async () => {
         setIsCoreDownloading(true);
-        const tid = toast.loading('Assembling Modular API Engine...');
+        const tid = toast.loading('Assembling Optimized API Engine...');
         try {
             // Fetch all source files dynamically from the public folder
             const [
@@ -52,7 +52,7 @@ const Integration: FC = () => {
                     'template-questions.csv': tQuestions
                 }
             });
-            toast.success('Integration Plugin ZIP Assembled!', { id: tid });
+            toast.success('Plugin Assembled & Ready!', { id: tid });
         } catch (e: any) {
             toast.error(e.message || 'Assembly failed', { id: tid });
         } finally {
@@ -71,7 +71,7 @@ const Integration: FC = () => {
             ]);
 
             await downloadSocialPluginZip({ main, admin, handler });
-            toast.success('Social Poster ZIP Assembled!', { id: tid });
+            toast.success('Social Poster Ready!', { id: tid });
         } catch (e: any) {
             toast.error(e.message || 'Assembly failed', { id: tid });
         } finally {
@@ -90,15 +90,15 @@ const Integration: FC = () => {
                         <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl"><Code size={32} /></div>
                         <div>
                             <h2 className="text-2xl font-bold">Modular API Engine</h2>
-                            <p className="text-sm text-slate-500">v5.2.4 • WooCommerce Optimized</p>
+                            <p className="text-sm text-slate-500">v5.2.4 • Flat Archive Optimized</p>
                         </div>
                     </div>
                     <div className="flex-grow space-y-4 mb-8">
-                        <p className="text-sm text-slate-600">The core backend component. Handles SSO, JWT validation, and high-priority CORS handshaking to eliminate connection blocking. Now includes auto-completion for virtual orders.</p>
+                        <p className="text-sm text-slate-600">The core backend component. Handles SSO, JWT validation, and high-priority CORS handshaking to eliminate connection blocking. Now uses a flat ZIP structure for improved WordPress installer compatibility.</p>
                         <ul className="space-y-2 text-xs text-slate-500">
+                            <li className="flex items-center gap-2"><Zap size={14} className="text-blue-500" /> Installer-Friendly Root Headers</li>
                             <li className="flex items-center gap-2"><Zap size={14} className="text-blue-500" /> Virtual Order Auto-Complete</li>
                             <li className="flex items-center gap-2"><Zap size={14} className="text-blue-500" /> Early-Exit CORS Handshake</li>
-                            <li className="flex items-center gap-2"><Zap size={14} className="text-blue-500" /> Distributed REST API Architecture</li>
                         </ul>
                     </div>
                     <button 
@@ -121,7 +121,7 @@ const Integration: FC = () => {
                         </div>
                     </div>
                     <div className="flex-grow space-y-4 mb-8">
-                        <p className="text-sm text-slate-600">Companion plugin that automatically shares your AI-generated blog posts to Facebook and LinkedIn feeds.</p>
+                        <p className="text-sm text-slate-600">Companion plugin that automatically shares your AI-generated blog posts to Facebook and LinkedIn feeds. Now also updated with the optimized ZIP structure.</p>
                         <ul className="space-y-2 text-xs text-slate-500">
                             <li className="flex items-center gap-2"><Zap size={14} className="text-purple-500" /> Automated Social Dispatch</li>
                             <li className="flex items-center gap-2"><Zap size={14} className="text-purple-500" /> Facebook Graph API Integration</li>
