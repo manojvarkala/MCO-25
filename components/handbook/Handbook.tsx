@@ -25,52 +25,61 @@ const Handbook: FC = () => {
         if (!snapshotRef.current) return;
 
         setIsGeneratingPdf(true);
-        const toastId = toast.loading('Initiating Master PDF Sequence...');
+        const toastId = toast.loading('Assembling Handbook Assets...');
 
         try {
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pdfWidth = 210; // A4 Width in mm
-            const pdfHeight = 297; // A4 Height in mm
+            const pdfWidth = 210; 
+            const pdfHeight = 297; 
             
-            // Loop through ALL chapters and capture snapshots
             for (let i = 0; i < chapters.length; i++) {
                 const ch = chapters[i];
-                toast.loading(`Capturing Chapter ${i + 1}: ${ch.title.split(':').pop()?.trim()}`, { id: toastId });
+                toast.loading(`Capturing: ${ch.title}`, { id: toastId });
 
-                // Render chapter to the hidden snapshot div
+                // Dynamic Header Logic: Skip for cover, show title for others
+                const showHeader = i > 0;
+                const sectionTitle = i < 3 ? 'Preliminary' : `Section ${i - 2}`;
+
                 snapshotRef.current.innerHTML = `
-                    <div style="padding: 40px; background: white; color: black; font-family: sans-serif; width: 800px;">
-                        <div style="font-size: 10px; color: #0891b2; font-weight: bold; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 30px;">
-                            ANNAPOORNA ENGINE • ADMINISTRATOR HANDBOOK • CHAPTER ${i + 1}
+                    <div style="padding: 50px; background: white; color: #0f172a; font-family: 'Inter', sans-serif; width: 800px; min-height: 1130px; display: flex; flex-direction: column;">
+                        ${showHeader ? `
+                        <div style="font-size: 11px; color: #0891b2; font-weight: 900; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 35px; display: flex; justify-content: space-between; text-transform: uppercase; letter-spacing: 1px;">
+                            <span>Annapoorna Engine Handbook</span>
+                            <span>${sectionTitle} • ${ch.title.split(':').pop()?.trim()}</span>
                         </div>
-                        ${ch.content}
+                        ` : ''}
+                        <div class="mco-handbook-prose" style="flex: 1;">
+                            ${ch.content}
+                        </div>
+                        <div style="margin-top: 50px; border-top: 1px solid #f1f5f9; padding-top: 15px; font-size: 10px; color: #94a3b8; text-align: center;">
+                            © ${new Date().getFullYear()} Annapoorna Infotech • Page ${i + 1}
+                        </div>
                     </div>
                 `;
 
-                // Give the browser a micro-moment to layout
-                await new Promise(r => setTimeout(r, 100));
+                await new Promise(r => setTimeout(r, 150));
 
                 const canvas = await html2canvas(snapshotRef.current, {
-                    scale: 2, // High resolution
+                    scale: 2,
                     useCORS: true,
-                    backgroundColor: '#ffffff'
+                    backgroundColor: '#ffffff',
+                    logging: false
                 });
 
-                const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                const imgData = canvas.toDataURL('image/jpeg', 0.92);
                 
-                // Add page
                 if (i > 0) pdf.addPage();
                 pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
             }
 
-            pdf.save('Annapoorna_Engine_Master_Handbook.pdf');
+            pdf.save('Annapoorna_Administrator_Handbook_v2.pdf');
             toast.success('Handbook Exported Successfully!', { id: toastId });
         } catch (error) {
             console.error("PDF generation failed:", error);
-            toast.error('Export failed. Check console for details.', { id: toastId });
+            toast.error('Export failed. Please try again.', { id: toastId });
         } finally {
             setIsGeneratingPdf(false);
-            if (snapshotRef.current) snapshotRef.current.innerHTML = ''; // Cleanup
+            if (snapshotRef.current) snapshotRef.current.innerHTML = '';
         }
     };
 
@@ -83,45 +92,44 @@ const Handbook: FC = () => {
     ];
 
     return (
-        <div className="flex flex-col lg:flex-row min-h-[85vh] bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-300">
-            {/* HIDDEN SNAPSHOT CONTAINER - Needs to be partially visible for html2canvas sometimes, but moved far off screen */}
+        <div className="flex flex-col lg:flex-row min-h-[85vh] bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200">
             <div 
                 ref={snapshotRef} 
-                className="fixed -top-[10000px] left-0 bg-white" 
+                className="fixed -top-[20000px] left-0 bg-white" 
                 style={{ width: '800px' }}
             ></div>
 
-            {/* SIDEBAR NAVIGATION */}
-            <aside className={`bg-slate-100 border-r border-slate-300 transition-all duration-300 flex-shrink-0 ${isSidebarOpen ? 'w-full lg:w-80' : 'w-0 lg:w-0 overflow-hidden'}`}>
+            {/* SIDEBAR - Dark Professional Theme */}
+            <aside className={`bg-slate-900 border-r border-slate-800 transition-all duration-300 flex-shrink-0 ${isSidebarOpen ? 'w-full lg:w-80' : 'w-0 lg:w-0 overflow-hidden'}`}>
                 <div className="p-6 h-full flex flex-col">
                     <div className="flex items-center justify-between mb-8">
                         <div className="flex items-center gap-3">
-                            <div className="p-2.5 bg-slate-900 rounded-xl text-white shadow-xl">
+                            <div className="p-2.5 bg-cyan-600 rounded-xl text-white shadow-lg shadow-cyan-500/20">
                                 <BookOpen size={20}/>
                             </div>
-                            <span className="font-black text-slate-900 uppercase tracking-tighter text-lg">Documentation</span>
+                            <span className="font-black text-white uppercase tracking-tighter text-lg">Docs Center</span>
                         </div>
-                        <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-slate-900"><X /></button>
+                        <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-slate-400"><X /></button>
                     </div>
 
                     <div className="relative mb-6">
                         <Search className="absolute left-3 top-3 text-slate-500" size={16} />
                         <input 
                             type="text" 
-                            placeholder="Search chapters..."
+                            placeholder="Search..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="w-full bg-white border-2 border-slate-300 rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-slate-800 focus:border-cyan-600 focus:ring-0 transition-all"
+                            className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-slate-200 focus:border-cyan-500 focus:ring-0 transition-all"
                         />
                     </div>
 
                     <nav className="flex-grow overflow-y-auto space-y-8 pr-2 custom-scrollbar">
                         {navItems.map((group, gIdx) => (
                             <div key={gIdx}>
-                                <h5 className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 px-2 border-b border-slate-200 pb-2">
+                                <h5 className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 px-2">
                                     {group.icon} {group.label}
                                 </h5>
-                                <ul className="space-y-1.5">
+                                <ul className="space-y-1">
                                     {chapters.map((ch, idx) => {
                                         if (idx < group.range[0] || idx > group.range[1]) return null;
                                         const isActive = activeChapterIndex === idx;
@@ -129,10 +137,10 @@ const Handbook: FC = () => {
                                             <li key={idx}>
                                                 <button
                                                     onClick={() => setActiveChapterIndex(idx)}
-                                                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-black transition-all border-2 ${
+                                                    className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-black transition-all border-l-4 ${
                                                         isActive 
-                                                            ? 'bg-white text-cyan-700 border-cyan-500 shadow-md translate-x-1' 
-                                                            : 'text-slate-600 border-transparent hover:bg-slate-200 hover:text-slate-900'
+                                                            ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500 shadow-sm' 
+                                                            : 'text-slate-400 border-transparent hover:bg-slate-800 hover:text-white'
                                                     }`}
                                                 >
                                                     {ch.title.split(':').pop()?.trim()}
@@ -147,19 +155,18 @@ const Handbook: FC = () => {
                 </div>
             </aside>
 
-            {/* MAIN CONTENT AREA */}
-            <main className="flex-1 flex flex-col bg-white overflow-hidden">
-                {/* TOOLBAR */}
-                <header className="px-8 py-5 border-b border-slate-200 flex justify-between items-center bg-slate-50/80 backdrop-blur-md sticky top-0 z-10">
+            {/* MAIN CONTENT */}
+            <main className="flex-1 flex flex-col bg-slate-50 overflow-hidden">
+                <header className="px-8 py-5 border-b border-slate-200 flex justify-between items-center bg-white/90 backdrop-blur-md sticky top-0 z-10">
                     <div className="flex items-center gap-4">
                         <button 
                             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className="p-2.5 text-slate-900 hover:bg-white rounded-xl border-2 border-slate-200 transition shadow-sm"
+                            className="p-2.5 text-slate-900 hover:bg-slate-100 rounded-xl border border-slate-200 transition"
                         >
                             <Menu size={20}/>
                         </button>
                         <div className="hidden md:block">
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Section {activeChapterIndex - 2}</p>
+                            <p className="text-[10px] font-black text-cyan-600 uppercase tracking-widest">Handbook Section {activeChapterIndex - 2}</p>
                             <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight truncate max-w-xs">{chapters[activeChapterIndex].title}</h2>
                         </div>
                     </div>
@@ -174,25 +181,24 @@ const Handbook: FC = () => {
                     </button>
                 </header>
 
-                {/* CONTENT BROWSER */}
                 <div ref={contentRef} className="flex-1 overflow-y-auto p-10 lg:p-20 custom-scrollbar scroll-smooth">
-                    <article className="max-w-4xl mx-auto mco-handbook-prose animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <article className="max-w-4xl mx-auto mco-handbook-prose p-12 bg-white rounded-3xl shadow-xl border border-slate-200 animate-in fade-in slide-in-from-bottom-2 duration-700">
                         <div dangerouslySetInnerHTML={{ __html: chapters[activeChapterIndex].content }} />
                         
-                        <div className="mt-24 pt-12 border-t-2 border-slate-100 flex justify-between items-center pb-12">
+                        <div className="mt-24 pt-12 border-t border-slate-100 flex justify-between items-center">
                             <button 
                                 onClick={() => setActiveChapterIndex(prev => prev - 1)}
                                 disabled={activeChapterIndex <= 3}
-                                className="flex items-center gap-2 text-slate-400 hover:text-cyan-600 font-black text-xs uppercase tracking-widest disabled:opacity-0 transition group"
+                                className="flex items-center gap-2 text-slate-400 hover:text-cyan-600 font-black text-[10px] uppercase tracking-widest disabled:opacity-0 transition group"
                             >
-                                <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform"/> Previous Chapter
+                                <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform"/> Previous
                             </button>
                             <button 
                                 onClick={() => setActiveChapterIndex(prev => prev + 1)}
                                 disabled={activeChapterIndex >= chapters.length - 1}
-                                className="flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-black text-xs uppercase tracking-widest disabled:opacity-0 transition group"
+                                className="flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-black text-[10px] uppercase tracking-widest disabled:opacity-0 transition group"
                             >
-                                Next Chapter <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform"/>
+                                Next <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform"/>
                             </button>
                         </div>
                     </article>
