@@ -10,6 +10,7 @@ interface CorePluginSources {
     security: string;
     routes: string;
     handlers: string;
+    woocommerce: string;
     templates: { [key: string]: string };
 }
 
@@ -40,6 +41,7 @@ export const downloadCorePluginZip = async (sources: CorePluginSources) => {
     includes?.file('mco-api-routes.php', sources.routes);
     includes?.file('mco-api-handlers.php', sources.handlers);
     includes?.file('mco-shortcodes.php', sources.shortcodes);
+    includes?.file('mco-woocommerce.php', sources.woocommerce);
 
     // Main Plugin Entry
     root.file('mco-exam-integration-engine.php', sources.main);
@@ -51,7 +53,7 @@ export const downloadCorePluginZip = async (sources: CorePluginSources) => {
     });
 
     const blob = await zip.generateAsync({ type: 'blob' });
-    triggerDownload(blob, 'mco-exam-integration-engine-v5.2.3.zip');
+    triggerDownload(blob, 'mco-exam-integration-engine-v5.2.4.zip');
 };
 
 /**

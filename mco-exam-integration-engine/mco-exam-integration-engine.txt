@@ -35,7 +35,12 @@ require_once MCO_PLUGIN_PATH . 'includes/mco-api-handlers.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-api-routes.php';
 
 /**
- * 4. WORDPRESS UI INTEGRATION
+ * 4. COMMERCE INTEGRATION
+ */
+require_once MCO_PLUGIN_PATH . 'includes/mco-woocommerce.php';
+
+/**
+ * 5. WORDPRESS UI INTEGRATION
  */
 require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; 
 require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php'; 
@@ -53,7 +58,7 @@ add_filter('option_users_can_register', function($value) {
 });
 
 /**
- * 5. GLOBAL CACHE INVALIDATION HOOK
+ * 6. GLOBAL CACHE INVALIDATION HOOK
  * Automatically clears transients when content changes in standard WP admin.
  */
 add_action('transition_post_status', function($new_status, $old_status, $post) {

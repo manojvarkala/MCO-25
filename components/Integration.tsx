@@ -26,7 +26,7 @@ const Integration: FC = () => {
         try {
             // Fetch all source files dynamically from the public folder
             const [
-                main, styles, security, cpts, admin, data, routes, handlers, shortcodes,
+                main, styles, security, cpts, admin, data, routes, handlers, shortcodes, woocommerce,
                 tExams, tBooks, tQuestions
             ] = await Promise.all([
                 loadSource('/mco-exam-integration-engine/mco-exam-integration-engine.txt'),
@@ -38,13 +38,14 @@ const Integration: FC = () => {
                 loadSource('/mco-exam-integration-engine/includes/mco-api-routes.txt'),
                 loadSource('/mco-exam-integration-engine/includes/mco-api-handlers.txt'),
                 loadSource('/mco-exam-integration-engine/includes/mco-shortcodes.txt'),
+                loadSource('/mco-exam-integration-engine/includes/mco-woocommerce.txt'),
                 loadSource('/template-exam-programs.csv'),
                 loadSource('/template-recommended-books.csv'),
                 loadSource('/template-questions.csv')
             ]);
 
             await downloadCorePluginZip({
-                main, styles, security, cpts, admin, data, routes, handlers, shortcodes,
+                main, styles, security, cpts, admin, data, routes, handlers, shortcodes, woocommerce,
                 templates: {
                     'template-exam-programs.csv': tExams,
                     'template-recommended-books.csv': tBooks,
@@ -89,15 +90,15 @@ const Integration: FC = () => {
                         <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl"><Code size={32} /></div>
                         <div>
                             <h2 className="text-2xl font-bold">Modular API Engine</h2>
-                            <p className="text-sm text-slate-500">v11.0.0 • Absolute CORS Handshake</p>
+                            <p className="text-sm text-slate-500">v5.2.4 • WooCommerce Optimized</p>
                         </div>
                     </div>
                     <div className="flex-grow space-y-4 mb-8">
-                        <p className="text-sm text-slate-600">The core backend component. Handles SSO, JWT validation, and high-priority CORS handshaking to eliminate connection blocking.</p>
+                        <p className="text-sm text-slate-600">The core backend component. Handles SSO, JWT validation, and high-priority CORS handshaking to eliminate connection blocking. Now includes auto-completion for virtual orders.</p>
                         <ul className="space-y-2 text-xs text-slate-500">
+                            <li className="flex items-center gap-2"><Zap size={14} className="text-blue-500" /> Virtual Order Auto-Complete</li>
                             <li className="flex items-center gap-2"><Zap size={14} className="text-blue-500" /> Early-Exit CORS Handshake</li>
                             <li className="flex items-center gap-2"><Zap size={14} className="text-blue-500" /> Distributed REST API Architecture</li>
-                            <li className="flex items-center gap-2"><Zap size={14} className="text-blue-500" /> Transient Config Caching</li>
                         </ul>
                     </div>
                     <button 
