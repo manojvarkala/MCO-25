@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 28.5.0 (Checkout Engine & Addon Logic)
+ * VERSION: 28.7.0 (Global Admin Audit & High Precision Logic)
  * =============================================================================
  */
 
@@ -188,7 +188,7 @@ function mco_handle_admin_create_post($request) {
 }
 
 /**
- * FETCH REAL CERTIFICATE DATA
+ * FETCH REAL CERTIFICATE DATA (Global Admin Search Enabled)
  */
 function mco_handle_get_certificate_data($request) {
     $test_id = $request['id'];
@@ -198,7 +198,7 @@ function mco_handle_get_certificate_data($request) {
 
     global $wpdb;
     
-    // Admins can view any user result. Users only their own.
+    // Admins can search for any record globally
     if ($is_admin) {
         $results_rows = $wpdb->get_results("SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'");
     } else {
@@ -239,7 +239,42 @@ function mco_handle_get_user_results($request) { $uid = (int)$request->get_param
 function mco_handle_submit_result($request) { $uid = (int)$request->get_param('jwt_payload')['user']['id']; $data = $request->get_json_params(); $h = maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true)) ?: []; $data['server_timestamp'] = time(); $h[] = $data; update_user_meta($uid, 'mco_exam_results', $h); return new WP_REST_Response(['success' => true], 200); }
 function mco_handle_admin_clear_config_cache() { delete_transient('mco_app_config_data'); delete_transient('mco_app_config_data_full'); update_option('mco_config_version', time()); return new WP_REST_Response(['success' => true], 200); }
 function mco_handle_admin_clear_question_caches() { global $wpdb; $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '\_transient\_mco\_sheet\_%'"); return new WP_REST_Response(['success' => true], 200); }
-function mco_handle_get_debug_details($request) { $payload = $request->get_param('jwt_payload'); $uid = (int)$payload['user']['id']; return new WP_REST_Response(['user' => $payload['user'], 'purchases' => get_user_meta($uid, 'mco_paid_exams', true) ?: [], 'results' => maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true)) ?: [], 'sheetTest' => ['success' => true, 'message' => 'API Online.']], 200); }
+
+/**
+ * GLOBAL AUDIT GETTER (Fixed to aggregate all user results for admins)
+ */
+function mco_handle_get_debug_details($request) { 
+    $payload = $request->get_param('jwt_payload'); 
+    $uid = (int)$payload['user']['id']; 
+    $is_admin = !empty($payload['user']['isAdmin']);
+
+    $results = [];
+    if ($is_admin) {
+        global $wpdb;
+        $rows = $wpdb->get_results("SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'");
+        foreach ($rows as $row) {
+            $user_results = maybe_unserialize($row->meta_value);
+            if (is_array($user_results)) {
+                $user = get_userdata($row->user_id);
+                foreach($user_results as $ur) {
+                    $ur['userId'] = (string)$row->user_id;
+                    $ur['candidateName'] = $user ? $user->display_name : 'User #'.$row->user_id;
+                    $results[] = $ur;
+                }
+            }
+        }
+    } else {
+        $results = maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true)) ?: [];
+    }
+
+    return new WP_REST_Response([
+        'user' => $payload['user'], 
+        'purchases' => get_user_meta($uid, 'mco_paid_exams', true) ?: [], 
+        'results' => array_values($results), 
+        'sheetTest' => ['success' => true, 'message' => 'Audit stream synchronized.']
+    ], 200); 
+}
+
 function mco_handle_admin_resend_beta_email() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_admin_test_sheet_url() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_admin_create_exam_program() { return new WP_REST_Response(['success'=>true], 200); }

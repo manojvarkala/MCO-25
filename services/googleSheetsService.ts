@@ -25,8 +25,6 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         method,
         headers,
         mode: 'cors',
-        // FIX: Using 'same-origin' instead of 'include' for JWT Bearer tokens. 
-        // This makes CORS handshakes much more robust and less likely to be blocked by server security.
         credentials: 'same-origin' 
     };
     
@@ -63,8 +61,6 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         return responseText ? JSON.parse(responseText) : {};
     } catch (error: any) {
         console.warn(`API FETCH FAILURE [${method} ${endpoint}]:`, error);
-        
-        // Specific helpful error for Handshake issues
         if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
              throw new Error("Connection Blocked: Your browser could not establish a secure handshake with the server. Please check your CORS settings in WordPress.");
         }
@@ -73,7 +69,6 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
 };
 
 export const googleSheetsService = {
-    // PUBLIC ENDPOINTS
     registerBetaTester: async (registrationData: any): Promise<{ success: boolean; message: string; onboarding_token?: string; user_email?: string; }> => {
         return await apiFetch('/register-tester', 'POST', null, registrationData);
     },
@@ -154,14 +149,19 @@ export const googleSheetsService = {
             const q = questions.find(q => q.id === ua.questionId);
             return q && q.correctAnswer === ua.answer + 1;
         }).length;
+        
+        // REFINED CALCULATION: Prevent NaN and ensure precise float results
+        const totalCount = questions.length;
+        const scoreVal = totalCount > 0 ? (correctCount / totalCount) * 100 : 0;
+
         const result: TestResult = {
             testId: `test_${user.id}_${examId}_${Date.now()}`,
             userId: user.id,
             examId,
             answers: userAnswers,
-            score: questions.length > 0 ? (correctCount / questions.length) * 100 : 0,
+            score: parseFloat(scoreVal.toFixed(2)),
             correctCount,
-            totalQuestions: questions.length,
+            totalQuestions: totalCount,
             timestamp: Date.now(),
             review: questions.map(q => ({
                 questionId: q.id,

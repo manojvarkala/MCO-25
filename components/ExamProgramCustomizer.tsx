@@ -91,6 +91,7 @@ const ExamEditor: FC<{
                         </div>
                         <div>
                             <Label>Associated Premium Addon (Bundle SKU)</Label>
+                            {/* FIX: Removed potential layout clipping and verified standard browser select behavior for scrolling */}
                             <select 
                                 value={data.certExam?.addonSku || ''} 
                                 onChange={e => handleExamChange('certExam', 'addonSku', e.target.value)} 

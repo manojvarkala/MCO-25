@@ -7,11 +7,10 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { CertificateData } from '../types.ts';
 import LogoSpinner from './LogoSpinner.tsx';
-import { Download, ArrowLeft, Shield, Award } from 'lucide-react';
+import { Download, ArrowLeft, Shield, Globe } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppContext } from '../context/AppContext.tsx';
-import Seal from '../assets/Seal.tsx';
 import { localLogos } from '../assets/localLogos.ts';
 
 const decodeHtmlEntities = (text: string | undefined): string => {
@@ -145,7 +144,7 @@ const Certificate: FC = () => {
         <div className="max-w-6xl mx-auto py-10 px-4">
             {isEffectivelyAdmin && testId !== 'sample' && (
                 <div className="mb-6 bg-slate-900 border border-slate-700 p-4 rounded-xl text-cyan-400 text-sm font-black flex items-center gap-3 shadow-xl">
-                    <Shield size={20}/> AUDIT CONTEXT: VIEWING ISSUED CREDENTIAL FOR UID {certData.candidateName.toUpperCase()}
+                    <Shield size={20}/> AUDIT CONTEXT: VIEWING ISSUED CREDENTIAL FOR {certData.candidateName.toUpperCase()}
                 </div>
             )}
             
@@ -167,8 +166,13 @@ const Certificate: FC = () => {
                                 
                                 <div className="cert-content-wrapper">
                                     <header className="cert-header">
-                                        {orgLogoSrc && <img src={orgLogoSrc} crossOrigin={orgLogoCrossOrigin} alt="Logo" className="cert-logo" />}
-                                        <h3 className="cert-org-name">{organization.name}</h3>
+                                        <div className="cert-header-content">
+                                            {orgLogoSrc && <img src={orgLogoSrc} crossOrigin={orgLogoCrossOrigin} alt="Logo" className="cert-logo" />}
+                                            <div className="cert-header-text">
+                                                <h3 className="cert-org-name">{organization.name}</h3>
+                                                <p className="cert-org-web"><Globe size={12} className="inline mr-1 opacity-70"/> www.{organization.website}</p>
+                                            </div>
+                                        </div>
                                         <div className="cert-header-rule"></div>
                                     </header>
 
@@ -188,11 +192,14 @@ const Certificate: FC = () => {
                                             <p className="cert-sig-title">{template.signature1Title}</p>
                                         </div>
 
-                                        <div className="cert-seal-block">
-                                            <Seal className="cert-seal" />
-                                            <div className="cert-meta">
-                                                <p>ID: {certData.certificateNumber}</p>
-                                                <p>DATE: {certData.date}</p>
+                                        <div className="cert-meta-center">
+                                            <div className="cert-meta-item">
+                                                <span className="cert-meta-label">Verification ID:</span>
+                                                <span className="cert-meta-value">{certData.certificateNumber}</span>
+                                            </div>
+                                            <div className="cert-meta-item">
+                                                <span className="cert-meta-label">Issued On:</span>
+                                                <span className="cert-meta-value">{certData.date}</span>
                                             </div>
                                         </div>
 
@@ -218,19 +225,22 @@ const Certificate: FC = () => {
                     background: #fff;
                     margin: 0 auto;
                     box-shadow: 0 50px 100px -20px rgba(0,0,0,0.25);
+                    box-sizing: border-box;
+                    overflow: hidden;
                 }
                 .cert-frame {
                     width: 100%;
                     height: 100%;
-                    padding: 12mm;
+                    padding: 15mm;
                     box-sizing: border-box;
                     background: #fff;
                     position: relative;
+                    overflow: hidden;
                 }
                 .cert-border-outer {
                     width: 100%;
                     height: 100%;
-                    border: 8px double #1e293b;
+                    border: 10px double #1e293b;
                     padding: 4mm;
                     box-sizing: border-box;
                     position: relative;
@@ -238,121 +248,158 @@ const Certificate: FC = () => {
                 .cert-border-inner {
                     width: 100%;
                     height: 100%;
-                    border: 2px solid #cbd5e1;
-                    padding: 10mm;
+                    border: 1px solid #cbd5e1;
+                    padding: 8mm;
                     box-sizing: border-box;
                     display: flex;
                     flex-direction: column;
-                    background: linear-gradient(to bottom right, #ffffff, #f8fafc);
+                    background: linear-gradient(to bottom right, #ffffff, #fafafa);
                 }
                 .cert-content-wrapper {
                     display: flex;
                     flex-direction: column;
                     height: 100%;
                     text-align: center;
+                    position: relative;
+                }
+                .cert-header {
+                    margin-bottom: 5mm;
+                }
+                .cert-header-content {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 15px;
+                    margin-bottom: 5mm;
                 }
                 .cert-logo {
-                    max-height: 25mm;
-                    max-width: 60mm;
-                    margin: 0 auto 5mm;
-                    object-contain: center;
+                    max-height: 20mm;
+                    max-width: 50mm;
+                    object-fit: contain;
+                }
+                .cert-header-text {
+                    text-align: left;
                 }
                 .cert-org-name {
                     font-family: 'Inter', sans-serif;
                     text-transform: uppercase;
-                    letter-spacing: 3px;
-                    font-weight: 800;
-                    color: #475569;
-                    font-size: 14pt;
-                    margin-bottom: 5mm;
+                    letter-spacing: 2px;
+                    font-weight: 900;
+                    color: #0f172a;
+                    font-size: 16pt;
+                    margin: 0;
+                    line-height: 1;
+                }
+                .cert-org-web {
+                    font-size: 9pt;
+                    color: #64748b;
+                    font-weight: 700;
+                    margin-top: 2px;
+                    text-transform: lowercase;
                 }
                 .cert-header-rule {
-                    width: 40mm;
+                    width: 60%;
                     height: 1pt;
-                    background: #cbd5e1;
+                    background: linear-gradient(to right, transparent, #cbd5e1, transparent);
                     margin: 0 auto;
                 }
                 .cert-main {
                     flex-grow: 1;
-                    padding-top: 10mm;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    padding: 5mm 0;
                 }
                 .cert-title {
                     font-family: 'Source Serif 4', serif;
-                    font-size: 42pt;
+                    font-size: 38pt;
                     font-weight: 900;
                     color: #0f172a;
-                    margin-bottom: 8mm;
+                    margin-bottom: 5mm;
                 }
                 .cert-statement {
                     font-family: 'Source Serif 4', serif;
                     font-style: italic;
-                    font-size: 18pt;
+                    font-size: 16pt;
                     color: #64748b;
-                    margin-bottom: 5mm;
+                    margin-bottom: 4mm;
                 }
                 .cert-candidate {
                     font-family: 'Dancing Script', cursive;
-                    font-size: 52pt;
+                    font-size: 48pt;
                     color: #1e293b;
-                    margin-bottom: 8mm;
+                    margin-bottom: 6mm;
                     padding-bottom: 2mm;
                     border-bottom: 1pt solid #e2e8f0;
                     display: inline-block;
-                    min-width: 120mm;
+                    min-width: 140mm;
                 }
                 .cert-body {
                     font-family: 'Source Serif 4', serif;
-                    font-size: 16pt;
-                    line-height: 1.6;
+                    font-size: 14pt;
+                    line-height: 1.5;
                     color: #334155;
-                    max-width: 200mm;
+                    max-width: 220mm;
                     margin: 0 auto;
+                    overflow: hidden;
                 }
                 .cert-footer {
                     display: flex;
                     justify-content: space-between;
                     align-items: flex-end;
-                    padding-bottom: 5mm;
+                    padding-top: 5mm;
+                    margin-bottom: 2mm;
                 }
                 .cert-sig-block {
-                    width: 70mm;
+                    width: 75mm;
                 }
                 .cert-sig-line {
-                    border-bottom: 1.5pt solid #1e293b;
+                    border-bottom: 1pt solid #1e293b;
                     margin-bottom: 3mm;
                     height: 15mm;
                     position: relative;
                 }
                 .cert-signature-img {
                     position: absolute;
-                    bottom: 0;
+                    bottom: 2px;
                     left: 50%;
                     transform: translateX(-50%);
-                    max-height: 20mm;
-                    max-width: 60mm;
+                    max-height: 18mm;
+                    max-width: 55mm;
                 }
                 .cert-sig-name {
                     font-weight: 800;
-                    font-size: 11pt;
+                    font-size: 10pt;
                     color: #1e293b;
                     text-transform: uppercase;
                 }
                 .cert-sig-title {
-                    font-size: 9pt;
+                    font-size: 8pt;
                     color: #64748b;
                     text-transform: uppercase;
                     letter-spacing: 1px;
                 }
-                .cert-seal {
-                    width: 32mm;
-                    height: 32mm;
-                    margin-bottom: 5mm;
+                .cert-meta-center {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    padding-bottom: 2mm;
                 }
-                .cert-meta {
+                .cert-meta-item {
+                    display: flex;
+                    gap: 6px;
+                    justify-content: center;
                     font-family: monospace;
                     font-size: 8pt;
-                    color: #94a3b8;
                     text-transform: uppercase;
+                }
+                .cert-meta-label {
+                    color: #94a3b8;
+                    font-weight: bold;
+                }
+                .cert-meta-value {
+                    color: #475569;
+                    font-weight: bold;
                 }
                 .cert-watermark {
                     position: absolute;
@@ -361,7 +408,7 @@ const Certificate: FC = () => {
                     transform: translate(-50%, -50%) rotate(-45deg);
                     font-size: 80pt;
                     font-weight: 900;
-                    color: rgba(0,0,0,0.03);
+                    color: rgba(0,0,0,0.02);
                     white-space: nowrap;
                     pointer-events: none;
                     z-index: 100;
