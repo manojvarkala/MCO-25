@@ -45,7 +45,7 @@ const ExamEditor: FC<{
     const Label = ({ children }: { children: ReactNode }) => <label className="text-[10px] font-black uppercase tracking-widest text-white mb-1 block opacity-80">{children}</label>;
 
     return (
-        <div className="bg-slate-900 p-6 rounded-b-xl space-y-6 shadow-inner border-t border-slate-700">
+        <div className="bg-slate-900 p-6 rounded-b-xl space-y-6 shadow-inner border-t border-slate-700 max-h-[80vh] overflow-y-auto mco-custom-scrollbar">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <Label>Brand Identity / Name</Label>
@@ -63,7 +63,7 @@ const ExamEditor: FC<{
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg">
+                <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg relative">
                     <div className="flex justify-between items-center border-b border-slate-700 pb-3">
                         <h4 className="font-black text-white flex items-center gap-2 uppercase"><Award size={18} className="text-blue-400" /> Certification Config</h4>
                         {data.certExam?.certificateEnabled && (
@@ -83,7 +83,7 @@ const ExamEditor: FC<{
                             <select 
                                 value={data.certExam?.productSku || ''} 
                                 onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} 
-                                className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-white text-sm"
+                                className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-white text-sm cursor-pointer hover:border-cyan-500 transition-colors"
                             >
                                 <option value="">-- No Linked Product --</option>
                                 {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
@@ -91,11 +91,10 @@ const ExamEditor: FC<{
                         </div>
                         <div>
                             <Label>Associated Premium Addon (Bundle SKU)</Label>
-                            {/* FIX: Removed potential layout clipping and verified standard browser select behavior for scrolling */}
                             <select 
                                 value={data.certExam?.addonSku || ''} 
                                 onChange={e => handleExamChange('certExam', 'addonSku', e.target.value)} 
-                                className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-amber-400 font-bold text-sm"
+                                className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-amber-400 font-bold text-sm cursor-pointer hover:border-amber-500 transition-colors"
                             >
                                 <option value="">-- Autodetect or No Addon --</option>
                                 {bundleProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
@@ -115,7 +114,7 @@ const ExamEditor: FC<{
                     </label>
                 </div>
 
-                <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg">
+                <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg relative">
                     <div className="flex justify-between items-center border-b border-slate-700 pb-3">
                         <h4 className="font-black text-white flex items-center gap-2 uppercase"><FileText size={18} className="text-emerald-400" /> Practice Rules</h4>
                          {data.practiceExam?.certificateEnabled && (
@@ -304,8 +303,8 @@ const ExamProgramCustomizer: FC = () => {
                 )}
             </div>
 
-            <div className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
-                <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center justify-between">
+            <div className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-700">
+                <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center justify-between rounded-t-2xl">
                     <button onClick={handleSelectAll} className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition">
                         {selectedIds.length === programs.length ? <CheckSquare size={16} className="text-cyan-500"/> : <Square size={16}/>}
                         {selectedIds.length === programs.length ? 'Deselect All' : 'Select All Programs'}
@@ -315,7 +314,7 @@ const ExamProgramCustomizer: FC = () => {
 
                 <div className="divide-y divide-slate-800">
                     {programs.map(p => (
-                        <div key={p.category.id} className="bg-slate-900 group">
+                        <div key={p.category.id} className="bg-slate-900 group first:rounded-none last:rounded-b-2xl">
                             <div className={`flex items-center p-6 transition-colors ${expandedId === p.category.id ? 'bg-slate-800' : 'hover:bg-slate-800/40'}`}>
                                 <button onClick={() => handleToggleSelect(p.category.id)} className="mr-6 text-slate-700 hover:text-cyan-500 transition-colors">
                                     {selectedIds.includes(p.category.id) ? <CheckSquare size={22} className="text-cyan-500"/> : <Square size={22}/>}
@@ -346,6 +345,22 @@ const ExamProgramCustomizer: FC = () => {
                     ))}
                 </div>
             </div>
+            
+            <style>{`
+                .mco-custom-scrollbar::-webkit-scrollbar {
+                    width: 8px;
+                }
+                .mco-custom-scrollbar::-webkit-scrollbar-track {
+                    background: #020617;
+                }
+                .mco-custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #1e293b;
+                    border-radius: 10px;
+                }
+                .mco-custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #334155;
+                }
+            `}</style>
         </div>
     );
 };
