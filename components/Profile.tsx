@@ -1,4 +1,4 @@
-import React, { FC, useState, useEffect } from 'react';
+import React, { FC, useState, useEffect, useMemo } from 'react';
 // FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
 import * as ReactRouterDOM from 'react-router-dom';
 const { useNavigate } = ReactRouterDOM as any;
@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam } from '../types.ts';
-import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight, Gift, Star, Paintbrush, Check, Shield } from 'lucide-react';
+import { User, Edit, Save, X, History, Award, CheckCircle, XCircle, ChevronRight, Gift, Star, Paintbrush, Check, Shield, AlertCircle } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 const themeColors: { [key: string]: { [key: string]: string } } = {
@@ -130,8 +130,22 @@ const Profile: FC = () => {
         }
     };
 
+    /**
+     * Enhanced Exam Lookup
+     * Handles cases where exams were deleted/reinstated by checking SKUs if IDs fail.
+     */
     const getExamDetails = (examId: string): Exam | undefined => {
-        return activeOrg?.exams.find(e => e.id === examId);
+        if (!activeOrg?.exams) return undefined;
+        
+        // 1. Direct match by ID (Fastest)
+        let found = activeOrg.exams.find(e => e.id === examId);
+        if (found) return found;
+
+        // 2. Loose match by SKU (Handles reinstated Certifications)
+        found = activeOrg.exams.find(e => e.productSku === examId);
+        if (found) return found;
+
+        return undefined;
     };
 
     return (
@@ -267,16 +281,27 @@ const Profile: FC = () => {
                     <div className="space-y-4">
                         {results.map(result => {
                             const exam = getExamDetails(result.examId);
-                            if (!exam) return null;
-                            const isPass = result.score >= exam.passScore;
+                            
+                            // If the exam is not in current active catalog, we show it as a Legacy record
+                            const isLegacy = !exam;
+                            const examName = exam ? exam.name : (result.examId.includes('prac-') ? 'Practice Session' : result.examId);
+                            const passScore = exam ? exam.passScore : 70;
+                            const isPass = result.score >= passScore;
                             const scoreColor = isPass ? 'text-green-600' : 'text-red-500';
-                            const canGetCertificate = isPass && exam.certificateEnabled;
+                            const canGetCertificate = isPass && exam?.certificateEnabled;
 
                             return (
-                                <div key={result.testId} className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <div key={result.testId} className={`p-4 rounded-lg border ${isLegacy ? 'bg-slate-100/50 border-slate-300 border-dashed' : 'bg-slate-50 border-slate-200'}`}>
                                     <div className="flex flex-wrap justify-between items-center gap-2">
                                         <div className="flex-grow">
-                                            <h3 className="font-bold text-lg text-slate-800">{exam.name}</h3>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-bold text-lg text-slate-800">{examName}</h3>
+                                                {isLegacy && (
+                                                    <span className="flex items-center gap-1 bg-slate-200 text-slate-600 text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-tighter" title="This exam was modified or removed from the catalog. Your result remains recorded.">
+                                                        <AlertCircle size={10}/> Reinstated/Legacy
+                                                    </span>
+                                                )}
+                                            </div>
                                             <p className="text-sm text-slate-500">{new Date(result.timestamp).toLocaleString()}</p>
                                         </div>
                                         <div className="flex items-center gap-4">
@@ -296,13 +321,13 @@ const Profile: FC = () => {
                                         <div className="text-sm text-slate-600">
                                             <span>Correct: <strong>{result.correctCount}/{result.totalQuestions}</strong></span>
                                             <span className="mx-2 text-slate-300">|</span>
-                                            <span>Passing Score: <strong>{exam.passScore}%</strong></span>
+                                            <span>Passing Score: <strong>{passScore}%</strong></span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <button onClick={() => navigate(`/results/${result.testId}`)} className="text-sm font-semibold text-cyan-600 hover:text-cyan-800 flex items-center gap-1">
                                                 View Details <ChevronRight size={16} />
                                             </button>
-                                            {(canGetCertificate || isEffectivelyAdmin) && (
+                                            {(canGetCertificate || (isEffectivelyAdmin && !isLegacy)) && (
                                                 <button 
                                                     onClick={() => navigate(`/certificate/${result.testId}`)} 
                                                     className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
