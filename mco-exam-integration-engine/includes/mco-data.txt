@@ -86,7 +86,7 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
 
         if (!class_exists('WooCommerce')) return ['exams'=>[], 'examProductCategories'=>[], 'examPrices'=>[], 'suggestedBooks'=>[]];
 
-        $program_posts = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => 'publish']);
+        $program_posts = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => ['publish', 'draft', 'private']]);
         foreach ($program_posts as $p) {
             $sku = (string)get_post_meta($p->ID, '_mco_certification_exam_sku', true);
             $question_source_url = (string)get_post_meta($p->ID, '_mco_question_source_url', true);
@@ -184,10 +184,14 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
 
 if (!function_exists('mco_get_app_config_data')) {
     function mco_get_app_config_data() {
-        $cached = get_transient('mco_app_config_data_full');
+        $version = (string)get_option('mco_config_version', '0');
+        $cache_key = 'mco_app_config_full_' . md5($version); // Version-specific cache key
+        
+        $cached = get_transient($cache_key);
         if ($cached !== false) return $cached;
+        
         $data = mco_get_full_snapshot_data(false);
-        set_transient('mco_app_config_data_full', $data, HOUR_IN_SECONDS);
+        set_transient($cache_key, $data, DAY_IN_SECONDS);
         return $data;
     }
 }

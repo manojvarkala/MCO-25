@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 28.9.0 (Cache Purge Parity)
+ * VERSION: 28.9.5 (Safe Patching Engine)
  * =============================================================================
  */
 
@@ -325,28 +325,60 @@ function mco_handle_submit_feedback() { return new WP_REST_Response(['success'=>
 function mco_handle_submit_review() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_log_engagement() { return new WP_REST_Response(['success'=>true], 200); }
 
+/**
+ * SAFE PATCHING UPDATE HANDLER
+ * Only updates meta fields that are explicitly provided in the payload.
+ */
 function mco_handle_admin_update_exam_program($request) { 
     $p = $request->get_json_params(); 
     $post_id = (int)str_replace('prod-', '', $p['programId'] ?? ''); 
     if (!$post_id) return new WP_Error('404', 'Invalid ID'); 
+    
     $u = $p['updateData'] ?? []; 
+    
     if (isset($u['category'])) { 
-        wp_update_post(['ID' => $post_id, 'post_title' => sanitize_text_field($u['category']['name']), 'post_content' => wp_kses_post($u['category']['description'])]); 
-        if (isset($u['category']['questionSourceUrl'])) update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($u['category']['questionSourceUrl'])); 
+        $post_update = ['ID' => $post_id];
+        if (isset($u['category']['name'])) $post_update['post_title'] = sanitize_text_field($u['category']['name']);
+        if (isset($u['category']['description'])) $post_update['post_content'] = wp_kses_post($u['category']['description']);
+        
+        if (count($post_update) > 1) wp_update_post($post_update); 
+        
+        if (isset($u['category']['questionSourceUrl'])) {
+            update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($u['category']['questionSourceUrl']));
+        }
     } 
+
     if (isset($u['practiceExam'])) { 
-        update_post_meta($post_id, '_mco_practice_questions', (int)$u['practiceExam']['numberOfQuestions']); 
-        update_post_meta($post_id, '_mco_practice_duration', (int)$u['practiceExam']['durationMinutes']); 
+        if (isset($u['practiceExam']['numberOfQuestions'])) {
+            update_post_meta($post_id, '_mco_practice_questions', (int)$u['practiceExam']['numberOfQuestions']);
+        }
+        if (isset($u['practiceExam']['durationMinutes'])) {
+            update_post_meta($post_id, '_mco_practice_duration', (int)$u['practiceExam']['durationMinutes']);
+        }
     } 
+
     if (isset($u['certExam'])) { 
-        update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($u['certExam']['productSku'])); 
-        update_post_meta($post_id, '_mco_cert_questions', (int)$u['certExam']['numberOfQuestions']); 
-        update_post_meta($post_id, '_mco_cert_duration', (int)$u['certExam']['durationMinutes']); 
-        update_post_meta($post_id, '_mco_pass_score', (int)$u['certExam']['passScore']); 
-        if (isset($u['certExam']['addonSku'])) update_post_meta($post_id, '_mco_addon_sku', sanitize_text_field($u['certExam']['addonSku']));
+        if (isset($u['certExam']['productSku'])) {
+            update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($u['certExam']['productSku']));
+        }
+        if (isset($u['certExam']['numberOfQuestions'])) {
+            update_post_meta($post_id, '_mco_cert_questions', (int)$u['certExam']['numberOfQuestions']);
+        }
+        if (isset($u['certExam']['durationMinutes'])) {
+            update_post_meta($post_id, '_mco_cert_duration', (int)$u['certExam']['durationMinutes']);
+        }
+        if (isset($u['certExam']['passScore'])) {
+            update_post_meta($post_id, '_mco_pass_score', (int)$u['certExam']['passScore']);
+        }
+        if (isset($u['certExam']['addonSku'])) {
+            update_post_meta($post_id, '_mco_addon_sku', sanitize_text_field($u['certExam']['addonSku']));
+        }
     } 
+
     delete_transient('mco_app_config_data');
     delete_transient('mco_app_config_data_full'); 
+    update_option('mco_config_version', time());
+    
     return new WP_REST_Response(['success' => true], 200); 
 }
 

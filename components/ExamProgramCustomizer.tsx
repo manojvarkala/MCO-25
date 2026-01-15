@@ -45,7 +45,7 @@ const ExamEditor: FC<{
     const Label = ({ children }: { children: ReactNode }) => <label className="text-[10px] font-black uppercase tracking-widest text-white mb-1 block opacity-80">{children}</label>;
 
     return (
-        <div className="bg-slate-900 p-6 rounded-b-xl space-y-6 shadow-inner border-t border-slate-700 pb-32">
+        <div className="bg-slate-900 p-6 rounded-b-xl space-y-6 shadow-inner border-t border-slate-700 pb-40">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <Label>Brand Identity / Name</Label>
@@ -62,8 +62,8 @@ const ExamEditor: FC<{
                 <textarea value={data.category?.description || ''} onChange={e => handleCategoryChange('description', e.target.value)} className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-white leading-relaxed" rows={3} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg relative z-20">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-30">
+                <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg">
                     <div className="flex justify-between items-center border-b border-slate-700 pb-3">
                         <h4 className="font-black text-white flex items-center gap-2 uppercase"><Award size={18} className="text-blue-400" /> Certification Config</h4>
                         {data.certExam?.certificateEnabled && (
