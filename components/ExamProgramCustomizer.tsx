@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, ExamProductCategory } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, AlertTriangle, ExternalLink, CheckSquare, Square, Zap, Layers, Clock, HelpCircle } from 'lucide-react';
+import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, AlertTriangle, ExternalLink, CheckSquare, Square, Zap, Layers, Clock, HelpCircle, ToggleRight, ToggleLeft } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 // FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -34,18 +34,51 @@ const ExamEditor: FC<{
     
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
+    // Derived state for the addon checkbox
+    const hasAddon = useMemo(() => {
+        const sku = data.certExam?.productSku || '';
+        const currentAddon = data.certExam?.addonSku || '';
+        return currentAddon === `${sku}-1mo-addon` && currentAddon !== '';
+    }, [data.certExam?.productSku, data.certExam?.addonSku]);
+
     const handleCategoryChange = (field: keyof ExamProductCategory, value: string) => {
         setData(prev => ({ ...prev, category: { ...prev.category, [field]: value } }));
     };
 
     const handleExamChange = (examType: 'practiceExam' | 'certExam', field: string, value: any) => {
-        setData(prev => ({ ...prev, [examType]: { ...prev[examType], [field]: value } }));
+        setData(prev => {
+            const next = { ...prev, [examType]: { ...prev[examType], [field]: value } };
+            
+            // If primary SKU changes and addon was enabled, update addon SKU suffix
+            if (examType === 'certExam' && field === 'productSku' && hasAddon) {
+                next.certExam = { 
+                    ...next.certExam, 
+                    addonSku: value ? `${value}-1mo-addon` : '' 
+                };
+            }
+            return next;
+        });
+    };
+
+    const toggleAddon = (enabled: boolean) => {
+        const baseSku = data.certExam?.productSku || '';
+        if (!baseSku && enabled) {
+            toast.error("Set a Certification SKU first to enable the addon.");
+            return;
+        }
+        setData(prev => ({
+            ...prev,
+            certExam: {
+                ...prev.certExam,
+                addonSku: enabled ? `${baseSku}-1mo-addon` : ''
+            }
+        }));
     };
 
     const Label = ({ children }: { children: ReactNode }) => <label className="text-[10px] font-black uppercase tracking-widest text-white mb-1 block opacity-80">{children}</label>;
 
     return (
-        <div className="bg-slate-900 p-6 rounded-b-xl space-y-6 shadow-inner border-t border-slate-700 pb-40">
+        <div className="bg-slate-900 p-6 rounded-b-xl space-y-6 shadow-inner border-t border-slate-700 pb-40 relative z-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <Label>Brand Identity / Name</Label>
@@ -62,8 +95,8 @@ const ExamEditor: FC<{
                 <textarea value={data.category?.description || ''} onChange={e => handleCategoryChange('description', e.target.value)} className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-white leading-relaxed" rows={3} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-30">
-                <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg relative z-20">
                     <div className="flex justify-between items-center border-b border-slate-700 pb-3">
                         <h4 className="font-black text-white flex items-center gap-2 uppercase"><Award size={18} className="text-blue-400" /> Certification Config</h4>
                         {data.certExam?.certificateEnabled && (
@@ -89,17 +122,22 @@ const ExamEditor: FC<{
                                 {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
                             </select>
                         </div>
-                        <div>
-                            <Label>Associated Premium Addon (Bundle SKU)</Label>
-                            <select 
-                                value={data.certExam?.addonSku || ''} 
-                                onChange={e => handleExamChange('certExam', 'addonSku', e.target.value)} 
-                                className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-amber-400 font-bold text-sm cursor-pointer hover:border-amber-500 transition-colors"
-                            >
-                                <option value="">-- Autodetect or No Addon --</option>
-                                {bundleProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
-                            </select>
-                            <p className="text-[9px] text-slate-500 mt-1 uppercase font-bold">The bundle offer that appears with this program.</p>
+                        <div className="p-4 bg-slate-950/50 rounded-xl border border-slate-700/50">
+                            <label className="flex items-center justify-between cursor-pointer group">
+                                <div className="space-y-0.5">
+                                    <div className="flex items-center gap-2">
+                                        <Zap size={14} className={hasAddon ? "text-amber-400 fill-amber-400" : "text-slate-500"} />
+                                        <span className="text-xs font-black text-white uppercase tracking-tighter">Premium Addon Offer</span>
+                                    </div>
+                                    <p className="text-[9px] text-slate-500 font-bold uppercase">Auto-constructs: {data.certExam?.productSku || 'SKU'}-1mo-addon</p>
+                                </div>
+                                <input 
+                                    type="checkbox" 
+                                    checked={hasAddon} 
+                                    onChange={e => toggleAddon(e.target.checked)}
+                                    className="w-5 h-5 rounded border-slate-600 bg-slate-800 text-amber-500 focus:ring-amber-500/20"
+                                />
+                            </label>
                         </div>
                     </div>
 
@@ -193,7 +231,9 @@ const ExamProgramCustomizer: FC = () => {
         practiceQuestions: '',
         practiceDuration: '',
         certQuestions: '',
-        certDuration: ''
+        certDuration: '',
+        enableAddon: false,
+        useAddonBulk: false // Flag to determine if we should apply addon change
     });
 
     const programs = useMemo(() => {
@@ -258,6 +298,9 @@ const ExamProgramCustomizer: FC = () => {
         const tid = toast.loading(`Updating ${selectedIds.length} programs...`);
         try {
             for (const id of selectedIds) {
+                const program = programs.find(p => p.category.id === id);
+                if (!program) continue;
+
                 const update: any = { 
                     certExam: {},
                     practiceExam: {}
@@ -272,12 +315,20 @@ const ExamProgramCustomizer: FC = () => {
                 
                 if (bulkData.questionSourceUrl) update.category = { questionSourceUrl: bulkData.questionSourceUrl };
                 
+                // Addon bulk construction
+                if (bulkData.useAddonBulk) {
+                    const sku = program.certExam?.productSku || '';
+                    if (sku) {
+                        update.certExam.addonSku = bulkData.enableAddon ? `${sku}-1mo-addon` : '';
+                    }
+                }
+                
                 await googleSheetsService.adminUpdateExamProgram(token, id, update);
             }
             await refreshConfig();
             toast.success("Bulk Update Complete", { id: tid });
             setSelectedIds([]);
-            setBulkData({ passScore: '', questionSourceUrl: '', practiceQuestions: '', practiceDuration: '', certQuestions: '', certDuration: '' });
+            setBulkData({ passScore: '', questionSourceUrl: '', practiceQuestions: '', practiceDuration: '', certQuestions: '', certDuration: '', enableAddon: false, useAddonBulk: false });
         } catch (e: any) {
             toast.error(e.message, { id: tid });
         } finally {
@@ -307,7 +358,7 @@ const ExamProgramCustomizer: FC = () => {
                 <h1 className="text-4xl font-black text-white font-display flex items-center gap-3"><Settings className="text-cyan-500" /> Program Master</h1>
                 {selectedIds.length > 0 && (
                     <div className="flex flex-col gap-4 bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl animate-in slide-in-from-top-4 duration-300 w-full lg:w-auto">
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
                             <div className="space-y-1">
                                 <label className="text-[9px] font-black uppercase text-slate-500">Pass Score %</label>
                                 <input 
@@ -367,6 +418,26 @@ const ExamProgramCustomizer: FC = () => {
                                     onChange={e => setBulkData({...bulkData, questionSourceUrl: e.target.value})}
                                     className="w-full bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
                                 />
+                            </div>
+                            <div className="space-y-1 flex flex-col justify-end">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={bulkData.useAddonBulk} 
+                                        onChange={e => setBulkData({...bulkData, useAddonBulk: e.target.checked})}
+                                        className="rounded border-slate-600 bg-slate-950 text-cyan-500"
+                                    />
+                                    <span className="text-[9px] font-black uppercase text-slate-500">Apply Addon?</span>
+                                </label>
+                                {bulkData.useAddonBulk && (
+                                    <button 
+                                        onClick={() => setBulkData({...bulkData, enableAddon: !bulkData.enableAddon})}
+                                        className={`mt-1 flex items-center gap-1 text-[8px] font-black px-2 py-1 rounded border ${bulkData.enableAddon ? 'bg-amber-600 border-amber-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}
+                                    >
+                                        {bulkData.enableAddon ? <ToggleRight size={14}/> : <ToggleLeft size={14}/>}
+                                        {bulkData.enableAddon ? 'ENABLE ADDON' : 'DISABLE ADDON'}
+                                    </button>
+                                )}
                             </div>
                         </div>
                         <button 
