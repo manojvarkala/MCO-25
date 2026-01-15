@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, ProductVariation } from '../types.ts';
-import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit, CreditCard, Gift, X, LogOut, ExternalLink, Zap } from 'lucide-react';
+import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit, CreditCard, Gift, X, LogOut, ExternalLink, Zap, ShoppingBag } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';
@@ -73,16 +73,22 @@ const Dashboard: FC = () => {
         if (!bundlesEnabled || !examPrices) return [];
         return Object.entries(examPrices)
             .map(([sku, p]: [string, any]) => ({ ...p, sku }))
-            .filter((p: any) => p.isBundle && Array.isArray(p.bundledSkus) && p.bundledSkus.length > 1)
+            .filter((p: any) => {
+                const isExplicitBundle = p.isBundle === true || p.isBundle === 'yes';
+                const hasMultipleItems = Array.isArray(p.bundledSkus) && p.bundledSkus.length > 1;
+                const isSubscriptionAddon = p.sku.includes('-1mo-addon');
+                // Ensure we don't show individual subscriptions in the bundles section
+                return (isExplicitBundle || hasMultipleItems || isSubscriptionAddon) && !p.sku.startsWith('sub-');
+            })
             .map((p: any): ProductVariation => ({
                 id: p.productId?.toString() || p.sku,
                 sku: p.sku,
                 name: stripHtml(p.name),
-                type: 'bundle',
+                type: (p.sku.includes('addon') || p.type === 'subscription') ? 'subscription' : 'bundle',
                 salePrice: p.price?.toString() || '0',
                 regularPrice: p.regularPrice?.toString() || '0',
                 isBundle: true,
-                bundledSkus: p.bundledSkus,
+                bundledSkus: p.bundledSkus || [],
             }))
             .sort((a,b) => (a.name || '').localeCompare(b.name || ''));
     }, [examPrices, bundlesEnabled]);
@@ -142,7 +148,7 @@ const Dashboard: FC = () => {
                     </a>
                 </div>
             ) : subscriptionsEnabled && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="mco-subscription-grid">
                     <SubscriptionOfferCard 
                         planName="Monthly Access"
                         price={examPrices?.['sub-monthly']?.price || 19.99}
@@ -165,14 +171,32 @@ const Dashboard: FC = () => {
                 </div>
             )}
 
+            {/* Special Bundles Section */}
+            {bundlesEnabled && featuredBundles.length > 0 && (
+                <div className="space-y-6">
+                    <div className="flex items-center gap-3 px-2">
+                        <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
+                            <ShoppingBag size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-100 uppercase tracking-tight">Exclusive Value Bundles</h2>
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Premium Examination Packages</p>
+                        </div>
+                    </div>
+                    <div className="mco-grid-container">
+                        {featuredBundles.map(bundle => (
+                            <FeaturedBundleCard key={bundle.sku} bundle={bundle} activeOrg={activeOrg} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Exam Categories */}
             <div className="space-y-10">
                 {examCategories.map((category) => {
                     let dashboardBundle = null;
                     if (bundlesEnabled && category.certExam?.productSku && examPrices) {
                         const certSku = category.certExam.productSku;
-                        // PRECISE ADDON TARGETING: Look for exactly {certSku}-1mo-addon
-                        // Check explicit saved addonSku first, fallback to pattern
                         const addonSku = category.certExam.addonSku || `${certSku}-1mo-addon`;
                         const p = examPrices[addonSku];
                         
@@ -208,8 +232,6 @@ const Dashboard: FC = () => {
                     );
                 })}
             </div>
-
-            {/* Featured Bundles logic... */}
         </div>
     );
 };

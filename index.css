@@ -107,9 +107,11 @@ body {
 
 /* Bookstore & Program Grid Restoration */
 .mco-book-grid, 
-.mco-grid-container { 
+.mco-grid-container,
+.mco-subscription-grid,
+.mco-bundle-grid { 
     display: grid !important; 
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important; 
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important; 
     gap: 1.5rem !important; 
     width: 100% !important;
 }
