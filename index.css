@@ -15,70 +15,93 @@
     --color-text-muted-rgb: 148, 163, 184;
 }
 
-/* ... (Theme Overrides kept as is) ... */
+/* DASHBOARD GRID SYSTEM - FIXED */
+.mco-grid-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    .mco-grid-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .mco-grid-container {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.mco-subscription-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+    .mco-subscription-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* HANDBOOK PROSE STYLING - CONTRAST FIX */
+.mco-handbook-prose h2 {
+    @apply text-4xl font-black text-slate-950 mb-8 font-display border-b border-slate-200 pb-4;
+}
+
+.mco-handbook-prose h3 {
+    @apply text-2xl font-bold text-slate-900 mt-12 mb-6 flex items-center gap-3;
+}
+
+.mco-handbook-prose h4 {
+    @apply text-lg font-black text-cyan-800 mt-8 mb-4 uppercase tracking-tight;
+}
+
+.mco-handbook-prose p {
+    @apply text-slate-800 text-lg leading-relaxed mb-6 font-medium;
+}
+
+.mco-handbook-prose ul {
+    @apply space-y-4 mb-8 ml-4;
+}
+
+.mco-handbook-prose li {
+    @apply text-slate-800 text-lg flex items-start gap-3 font-medium;
+}
+
+.mco-handbook-prose li::before {
+    content: "•";
+    @apply text-cyan-600 font-black flex-shrink-0;
+}
+
+.mco-handbook-prose strong {
+    @apply text-slate-950 font-black;
+}
+
+.mco-handbook-prose code {
+    @apply bg-slate-100 text-cyan-800 px-2 py-0.5 rounded font-mono text-[0.85em] border border-slate-300 font-bold;
+}
+
+.mco-handbook-prose pre {
+    @apply bg-slate-950 text-cyan-300 p-6 rounded-2xl font-mono text-sm overflow-x-auto my-8 shadow-2xl border border-slate-800;
+}
+
+/* ADMIN COMPONENT TWEAKS */
+.mco-admin-badge {
+    @apply px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm;
+}
+.mco-admin-badge--success { @apply bg-emerald-500/20 text-emerald-400 border border-emerald-500/40; }
+.mco-admin-badge--error { @apply bg-rose-500/20 text-rose-400 border border-rose-500/40; }
+.mco-admin-badge--pending { @apply bg-cyan-500/20 text-cyan-400 border border-cyan-500/40; }
 
 body { 
     background-color: rgb(var(--color-background-rgb)); 
     color: rgb(var(--color-text-default-rgb)); 
     margin: 0;
     -webkit-font-smoothing: antialiased;
-    transition: background-color 0.3s ease, color 0.3s ease;
 }
-
-/* HANDBOOK PROSE STYLING */
-.mco-handbook-prose h2 {
-    @apply text-4xl font-black text-slate-900 mb-8 font-display border-b border-slate-100 pb-4;
-}
-
-.mco-handbook-prose h3 {
-    @apply text-2xl font-bold text-slate-800 mt-12 mb-6 flex items-center gap-3;
-}
-
-.mco-handbook-prose h4 {
-    @apply text-lg font-black text-cyan-700 mt-8 mb-4 uppercase tracking-tight;
-}
-
-.mco-handbook-prose p {
-    @apply text-slate-600 text-lg leading-relaxed mb-6;
-}
-
-.mco-handbook-prose ul {
-    @apply space-y-3 mb-8 ml-4;
-}
-
-.mco-handbook-prose li {
-    @apply text-slate-600 text-lg flex items-start gap-3;
-}
-
-.mco-handbook-prose li::before {
-    content: "•";
-    @apply text-cyan-500 font-black;
-}
-
-.mco-handbook-prose strong {
-    @apply text-slate-900 font-extrabold;
-}
-
-.mco-handbook-prose code {
-    @apply bg-slate-100 text-cyan-700 px-1.5 py-0.5 rounded font-mono text-[0.9em] border border-slate-200;
-}
-
-.mco-handbook-prose pre {
-    @apply bg-slate-900 text-cyan-400 p-6 rounded-2xl font-mono text-sm overflow-x-auto my-8 shadow-inner border border-slate-800;
-}
-
-/* Custom Scrollbar for Documentation */
-.custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 rounded-full;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-400;
-}
-
-/* ... (Existing Card/Button/Gradient styles kept as is) ... */

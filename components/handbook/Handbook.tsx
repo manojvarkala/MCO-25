@@ -1,9 +1,10 @@
 import React, { FC, useState, useRef, useEffect, useMemo } from 'react';
 import { chapters } from './chapters.ts';
-import { BookOpen, Download, ChevronLeft, ChevronRight, Search, List, Menu, X, FileText, Settings, Database, Sparkles, ShieldCheck } from 'lucide-react';
+import { BookOpen, Download, ChevronLeft, ChevronRight, Search, Menu, X, FileText, Settings, Database, Sparkles, ShieldCheck } from 'lucide-react';
 import Spinner from '../Spinner.tsx';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const Handbook: FC = () => {
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -12,63 +13,64 @@ const Handbook: FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     
     const contentRef = useRef<HTMLDivElement>(null);
-    const pdfHiddenRef = useRef<HTMLDivElement>(null);
+    const snapshotRef = useRef<HTMLDivElement>(null);
 
-    // Scroll to top on chapter change
     useEffect(() => {
         if (contentRef.current) {
             contentRef.current.scrollTop = 0;
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }, [activeChapterIndex]);
 
-    const filteredChapters = useMemo(() => {
-        if (!searchQuery) return chapters.slice(3); // Skip cover, title, toc
-        return chapters.slice(3).filter(ch => 
-            ch.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            ch.content.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    }, [searchQuery]);
-
     const generatePdf = async () => {
-        if (!pdfHiddenRef.current) return;
+        if (!snapshotRef.current) return;
 
         setIsGeneratingPdf(true);
-        const toastId = toast.loading('Compiling Master Handbook PDF...');
+        const toastId = toast.loading('Initiating Master PDF Sequence...');
 
         try {
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfWidth = 210; // A4 Width in mm
+            const pdfHeight = 297; // A4 Height in mm
             
-            // Assemble ALL content into a hidden container with page breaks
-            const fullHtml = chapters.map((ch, idx) => `
-                <div style="padding: 50pt; page-break-after: always; font-family: sans-serif;">
-                    <div style="color: #0891b2; font-size: 10pt; font-weight: bold; margin-bottom: 20pt; text-transform: uppercase;">
-                        Annapoorna Infotech • Handbook Section ${idx + 1}
+            // Loop through ALL chapters and capture snapshots
+            for (let i = 0; i < chapters.length; i++) {
+                const ch = chapters[i];
+                toast.loading(`Capturing Chapter ${i + 1}: ${ch.title.split(':').pop()?.trim()}`, { id: toastId });
+
+                // Render chapter to the hidden snapshot div
+                snapshotRef.current.innerHTML = `
+                    <div style="padding: 40px; background: white; color: black; font-family: sans-serif; width: 800px;">
+                        <div style="font-size: 10px; color: #0891b2; font-weight: bold; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 30px;">
+                            ANNAPOORNA ENGINE • ADMINISTRATOR HANDBOOK • CHAPTER ${i + 1}
+                        </div>
+                        ${ch.content}
                     </div>
-                    ${ch.content}
-                </div>
-            `).join('');
+                `;
 
-            pdfHiddenRef.current.innerHTML = fullHtml;
+                // Give the browser a micro-moment to layout
+                await new Promise(r => setTimeout(r, 100));
 
-            await pdf.html(pdfHiddenRef.current, {
-                callback: (doc) => {
-                    doc.save('Annapoorna_Engine_Administrator_Handbook.pdf');
-                    toast.success('Handbook Generated!', { id: toastId });
-                    setIsGeneratingPdf(false);
-                },
-                x: 0,
-                y: 0,
-                width: pageWidth,
-                windowWidth: 800, // Fixed width for consistent scaling
-                autoPaging: 'text'
-            });
+                const canvas = await html2canvas(snapshotRef.current, {
+                    scale: 2, // High resolution
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
+                });
 
+                const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                
+                // Add page
+                if (i > 0) pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            }
+
+            pdf.save('Annapoorna_Engine_Master_Handbook.pdf');
+            toast.success('Handbook Exported Successfully!', { id: toastId });
         } catch (error) {
             console.error("PDF generation failed:", error);
-            toast.error('Failed to compile PDF. Check console.', { id: toastId });
+            toast.error('Export failed. Check console for details.', { id: toastId });
+        } finally {
             setIsGeneratingPdf(false);
+            if (snapshotRef.current) snapshotRef.current.innerHTML = ''; // Cleanup
         }
     };
 
@@ -81,41 +83,45 @@ const Handbook: FC = () => {
     ];
 
     return (
-        <div className="flex flex-col lg:flex-row min-h-[85vh] bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200">
-            {/* HIDDEN PRINT CONTAINER */}
-            <div ref={pdfHiddenRef} className="fixed -left-[9999px] top-0 w-[800px] bg-white text-slate-900 pointer-events-none"></div>
+        <div className="flex flex-col lg:flex-row min-h-[85vh] bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-300">
+            {/* HIDDEN SNAPSHOT CONTAINER - Needs to be partially visible for html2canvas sometimes, but moved far off screen */}
+            <div 
+                ref={snapshotRef} 
+                className="fixed -top-[10000px] left-0 bg-white" 
+                style={{ width: '800px' }}
+            ></div>
 
             {/* SIDEBAR NAVIGATION */}
-            <aside className={`bg-slate-50 border-r border-slate-200 transition-all duration-300 flex-shrink-0 ${isSidebarOpen ? 'w-full lg:w-80' : 'w-0 lg:w-0 overflow-hidden'}`}>
+            <aside className={`bg-slate-100 border-r border-slate-300 transition-all duration-300 flex-shrink-0 ${isSidebarOpen ? 'w-full lg:w-80' : 'w-0 lg:w-0 overflow-hidden'}`}>
                 <div className="p-6 h-full flex flex-col">
                     <div className="flex items-center justify-between mb-8">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-cyan-600 rounded-xl text-white shadow-lg shadow-cyan-900/20">
+                            <div className="p-2.5 bg-slate-900 rounded-xl text-white shadow-xl">
                                 <BookOpen size={20}/>
                             </div>
-                            <span className="font-black text-slate-900 uppercase tracking-tighter">Documentation</span>
+                            <span className="font-black text-slate-900 uppercase tracking-tighter text-lg">Documentation</span>
                         </div>
-                        <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-slate-500"><X /></button>
+                        <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-slate-900"><X /></button>
                     </div>
 
                     <div className="relative mb-6">
-                        <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                        <Search className="absolute left-3 top-3 text-slate-500" size={16} />
                         <input 
                             type="text" 
                             placeholder="Search chapters..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-sm focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 transition-all"
+                            className="w-full bg-white border-2 border-slate-300 rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-slate-800 focus:border-cyan-600 focus:ring-0 transition-all"
                         />
                     </div>
 
                     <nav className="flex-grow overflow-y-auto space-y-8 pr-2 custom-scrollbar">
                         {navItems.map((group, gIdx) => (
                             <div key={gIdx}>
-                                <h5 className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-2">
+                                <h5 className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 px-2 border-b border-slate-200 pb-2">
                                     {group.icon} {group.label}
                                 </h5>
-                                <ul className="space-y-1">
+                                <ul className="space-y-1.5">
                                     {chapters.map((ch, idx) => {
                                         if (idx < group.range[0] || idx > group.range[1]) return null;
                                         const isActive = activeChapterIndex === idx;
@@ -123,10 +129,10 @@ const Handbook: FC = () => {
                                             <li key={idx}>
                                                 <button
                                                     onClick={() => setActiveChapterIndex(idx)}
-                                                    className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                                                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-black transition-all border-2 ${
                                                         isActive 
-                                                            ? 'bg-cyan-50 text-cyan-700 shadow-sm border border-cyan-100' 
-                                                            : 'text-slate-500 hover:bg-slate-200 hover:text-slate-900'
+                                                            ? 'bg-white text-cyan-700 border-cyan-500 shadow-md translate-x-1' 
+                                                            : 'text-slate-600 border-transparent hover:bg-slate-200 hover:text-slate-900'
                                                     }`}
                                                 >
                                                     {ch.title.split(':').pop()?.trim()}
@@ -144,51 +150,49 @@ const Handbook: FC = () => {
             {/* MAIN CONTENT AREA */}
             <main className="flex-1 flex flex-col bg-white overflow-hidden">
                 {/* TOOLBAR */}
-                <header className="px-8 py-4 border-b border-slate-100 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-10">
+                <header className="px-8 py-5 border-b border-slate-200 flex justify-between items-center bg-slate-50/80 backdrop-blur-md sticky top-0 z-10">
                     <div className="flex items-center gap-4">
                         <button 
                             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition"
+                            className="p-2.5 text-slate-900 hover:bg-white rounded-xl border-2 border-slate-200 transition shadow-sm"
                         >
                             <Menu size={20}/>
                         </button>
                         <div className="hidden md:block">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Section {activeChapterIndex - 2} of {chapters.length - 3}</p>
-                            <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight truncate max-w-xs">{chapters[activeChapterIndex].title}</h2>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Section {activeChapterIndex - 2}</p>
+                            <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight truncate max-w-xs">{chapters[activeChapterIndex].title}</h2>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={generatePdf}
-                            disabled={isGeneratingPdf}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition shadow-lg shadow-slate-900/20 disabled:opacity-50"
-                        >
-                            {isGeneratingPdf ? <Spinner size="sm" /> : <Download size={14} />}
-                            {isGeneratingPdf ? 'Compiling...' : 'Export PDF'}
-                        </button>
-                    </div>
+                    <button
+                        onClick={generatePdf}
+                        disabled={isGeneratingPdf}
+                        className="flex items-center gap-2 px-6 py-3 bg-slate-950 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition shadow-xl disabled:opacity-50"
+                    >
+                        {isGeneratingPdf ? <Spinner size="sm" /> : <Download size={14} />}
+                        {isGeneratingPdf ? 'Processing...' : 'Export Master PDF'}
+                    </button>
                 </header>
 
                 {/* CONTENT BROWSER */}
-                <div ref={contentRef} className="flex-1 overflow-y-auto p-8 lg:p-16 custom-scrollbar scroll-smooth">
-                    <article className="max-w-4xl mx-auto mco-handbook-prose">
+                <div ref={contentRef} className="flex-1 overflow-y-auto p-10 lg:p-20 custom-scrollbar scroll-smooth">
+                    <article className="max-w-4xl mx-auto mco-handbook-prose animate-in fade-in slide-in-from-bottom-2 duration-500">
                         <div dangerouslySetInnerHTML={{ __html: chapters[activeChapterIndex].content }} />
                         
-                        <div className="mt-20 pt-10 border-t border-slate-100 flex justify-between items-center">
+                        <div className="mt-24 pt-12 border-t-2 border-slate-100 flex justify-between items-center pb-12">
                             <button 
                                 onClick={() => setActiveChapterIndex(prev => prev - 1)}
                                 disabled={activeChapterIndex <= 3}
-                                className="flex items-center gap-2 text-slate-400 hover:text-cyan-600 font-black text-xs uppercase tracking-widest disabled:opacity-0 transition"
+                                className="flex items-center gap-2 text-slate-400 hover:text-cyan-600 font-black text-xs uppercase tracking-widest disabled:opacity-0 transition group"
                             >
-                                <ChevronLeft size={16}/> Previous Chapter
+                                <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform"/> Previous Chapter
                             </button>
                             <button 
                                 onClick={() => setActiveChapterIndex(prev => prev + 1)}
                                 disabled={activeChapterIndex >= chapters.length - 1}
-                                className="flex items-center gap-2 text-cyan-600 hover:text-cyan-500 font-black text-xs uppercase tracking-widest disabled:opacity-0 transition"
+                                className="flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-black text-xs uppercase tracking-widest disabled:opacity-0 transition group"
                             >
-                                Next Chapter <ChevronRight size={16}/>
+                                Next Chapter <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform"/>
                             </button>
                         </div>
                     </article>
