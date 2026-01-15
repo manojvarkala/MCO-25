@@ -1,7 +1,15 @@
 export const ch3_golden_workflow = `
     <h2 class="text-3xl font-bold font-display" id="ch3">Chapter 3: The Golden Workflow: Performance & Content</h2>
 
-    <h3 class="text-xl font-bold mt-6">3.1 User Authentication & SSO Journey</h3>
+    <h3 class="text-xl font-bold mt-6">3.1 Hybrid Access Verification</h3>
+    <p>A core architectural update has been implemented to handle user permissions more robustly. The system now performs a <strong>Dual-Check</strong> during the JWT generation process:</p>
+    <ul>
+        <li><strong>Standard Subscriptions:</strong> Checks for active records in the WooCommerce Subscriptions database.</li>
+        <li><strong>Custom Premium Addons:</strong> Checks for a custom user meta field <code>_mco_premium_expiry</code>. This allows the platform to grant premium access for 30-day periods based on specific product purchases without requiring a recurring subscription engine.</li>
+    </ul>
+    <p>The React app receives a unified <code>isSubscribed: true</code> flag if <em>either</em> check passes, ensuring a seamless experience for the end-user.</p>
+
+    <h3 class="text-xl font-bold mt-6">3.2 User Authentication & SSO Journey</h3>
     <p>The platform uses a secure Single Sign-On (SSO) model with WordPress as the central authentication authority. This ensures a seamless user experience and leverages WordPress's robust user management capabilities.</p>
     <ol>
         <li>A user clicks "Login" in the React app. They are redirected to a special <code>/exam-login/</code> page on the main WordPress site.</li>
@@ -11,14 +19,6 @@ export const ch3_golden_workflow = `
         <li>The React app's <code>AuthContext</code> validates the JWT's signature against the server's secret, decodes the user's details and permissions from the payload, saves the token to local storage, and establishes the user's session within the app.</li>
     </ol>
 
-    <h3 class="text-xl font-bold mt-6">3.2 The JWT Payload</h3>
-    <p>The JWT is the core of the user's session. It's a self-contained, digitally signed package of information that tells the app everything it needs to know about the user's identity and entitlements without needing to query the database on every action. A typical payload includes:</p>
-    <ul>
-        <li><strong>User Info:</strong> User ID, Display Name, Email, and an <code>isAdmin</code> flag.</li>
-        <li><strong>Entitlements:</strong> An array of WooCommerce product SKUs the user has purchased (<code>paidExamIds</code>) and a boolean flag (<code>isSubscribed</code>) for active subscriptions.</li>
-        <li><strong>Security Info:</strong> Standard JWT claims like expiration time (<code>exp</code>) and issuer (<code>iss</code>).</li>
-    </ul>
-
     <h3 class="text-xl font-bold mt-6">3.3 Initial App Load & Caching</h3>
     <p>The app uses a "Cache-First, Then Validate" strategy for lightning-fast load times.</p>
     <ol>
@@ -26,7 +26,6 @@ export const ch3_golden_workflow = `
         <li><strong>Background Fetch:</strong> Simultaneously, the app makes an API call to the public <code>/config</code> endpoint on the WordPress backend.</li>
         <li><strong>Version Check & Update:</strong> The app compares the version timestamp of the cached data with the live data from the API. If the live version is newer, the app seamlessly updates its state, saves the new configuration to <code>localStorage</code>, and displays a subtle toast notification to the user that "Content and features have been updated."</li>
     </ol>
-    <p>This ensures users always have an instant-loading experience while still receiving the latest content as soon as it's available.</p>
 
     <h3 class="text-xl font-bold mt-6">3.4 Exam Lifecycle: Start to Sync</h3>
     <p>The exam process is designed to be resilient and secure.</p>

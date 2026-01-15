@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: High-Priority Nuclear Security & Global CORS Handshake
- * VERSION: 15.1.0 (Token Generator Restored)
+ * VERSION: 15.2.0 (Custom Expiry Logic Integrated)
  * =============================================================================
  */
 
@@ -72,9 +72,10 @@ function mco_generate_exam_jwt($user_id) {
     
     $is_subscribed = false;
     $subscription_info = null;
+    
+    // Check 1: Official WC Subscriptions
     if (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription')) {
         $is_subscribed = wcs_user_has_subscription($user_id, '', 'active');
-        // If active, try to find the next payment date
         if ($is_subscribed) {
             $subs = wcs_get_users_subscriptions($user_id);
             foreach ($subs as $sub) {
@@ -89,6 +90,19 @@ function mco_generate_exam_jwt($user_id) {
                     break;
                 }
             }
+        }
+    }
+
+    // Check 2: Custom Addon Expiry (The replacement for WC Subscriptions)
+    $custom_expiry = (int)get_user_meta($user_id, '_mco_premium_expiry', true);
+    if ($custom_expiry && $custom_expiry > time()) {
+        $is_subscribed = true; // App treats them as a subscriber
+        // If not already set by WC Subscriptions, set info from custom expiry
+        if (!$subscription_info) {
+            $subscription_info = [
+                'status' => 'active',
+                'nextPaymentDate' => date('M d, Y', $custom_expiry) . " (Premium Access)"
+            ];
         }
     }
 

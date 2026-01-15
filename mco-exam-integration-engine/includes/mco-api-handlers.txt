@@ -2,14 +2,54 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 28.9.6 (Extended Patching Engine)
+ * VERSION: 28.9.7 (Custom Access Logic Added)
  * =============================================================================
  */
 
 if (!defined('ABSPATH')) exit;
 
 /**
- * 1. AGGRESSIVE NETWORK FETCHER
+ * 1. CUSTOM ACCESS ENGINE (Replacement for WC Subscriptions)
+ * This hooks into WooCommerce to grant 30 days of access based on SKU patterns.
+ */
+add_action('woocommerce_order_status_completed', 'mco_handle_custom_addon_access', 10, 1);
+function mco_handle_custom_addon_access($order_id) {
+    $order = wc_get_order($order_id);
+    if (!$order) return;
+
+    $user_id = $order->get_user_id();
+    if (!$user_id) return;
+
+    $has_addon = false;
+    foreach ($order->get_items() as $item) {
+        $product = $item->get_product();
+        if (!$product) continue;
+        
+        $sku = $product->get_sku();
+        // Check for our specific addon pattern
+        if (strpos($sku, '-1mo-addon') !== false || strpos($sku, 'addon-premium') !== false) {
+            $has_addon = true;
+            break;
+        }
+    }
+
+    if ($has_addon) {
+        $current_expiry = (int)get_user_meta($user_id, '_mco_premium_expiry', true);
+        $now = time();
+        
+        // If they already have active time, add to it. Otherwise, start from now.
+        $base_time = ($current_expiry > $now) ? $current_expiry : $now;
+        $new_expiry = $base_time + (30 * DAY_IN_SECONDS);
+        
+        update_user_meta($user_id, '_mco_premium_expiry', $new_expiry);
+        
+        // Log for audit
+        $order->add_order_note("MCO Engine: Granted 30 days of Premium Access. New Expiry: " . date('Y-m-d H:i', $new_expiry));
+    }
+}
+
+/**
+ * 2. AGGRESSIVE NETWORK FETCHER
  */
 if (!function_exists('mco_fetch_remote_csv_content')) {
     function mco_fetch_remote_csv_content($url) {
@@ -103,7 +143,7 @@ function mco_handle_admin_upsert_product($request) {
     if ($pid) { $product = wc_get_product($pid); } 
     else { 
         if ($type === 'subscription' && class_exists('WC_Product_Subscription')) $product = new WC_Product_Subscription();
-        else $product = new WP_Product_Simple(); // Fixed class name
+        else $product = new WC_Product_Simple(); 
         $product->set_sku($sku);
     }
     if (isset($p['name'])) $product->set_name(sanitize_text_field($p['name']));

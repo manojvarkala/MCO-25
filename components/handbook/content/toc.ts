@@ -36,10 +36,12 @@ export const tocContent = `
             </ol>
         </div>
         <div>
-            <h3 class="text-lg font-semibold">Part V: Onboarding & Development</h3>
+            <h3 class="text-lg font-semibold">Part V: Special Architecture & Design</h3>
             <ol class="list-decimal list-inside space-y-1 pl-4 mt-1" start="14">
                 <li><a href="#ch14" data-chapter-index="16">The Complete Onboarding Workflow</a></li>
                 <li><a href="#ch15" data-chapter-index="17">Plugin Integration & Shortcodes</a></li>
+                <li><a href="#ch16" data-chapter-index="18">Monetization & Custom Access Logic</a></li>
+                <li><a href="#ch17" data-chapter-index="19">Visual Identity & Unified Grid Systems</a></li>
             </ol>
         </div>
     </div>
