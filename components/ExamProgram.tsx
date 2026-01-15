@@ -127,9 +127,12 @@ const ExamProgram: FC = () => {
     const foundBundle = useMemo(() => {
         if (!bundlesEnabled || !programData?.certExam?.productSku || !examPrices) return null;
         const certSku = programData.certExam.productSku;
+        
+        // SCAN ALL PRODUCTS for a bundle containing this SKU
         const bundleEntry = Object.entries(examPrices).find(([sku, p]: [string, any]) => 
-            p.isBundle && Array.isArray(p.bundledSkus) && p.bundledSkus.includes(certSku)
+            p.isBundle === true && Array.isArray(p.bundledSkus) && p.bundledSkus.includes(certSku)
         );
+
         if (bundleEntry) {
             const [sku, p] = bundleEntry;
             const isSubAddon = sku.includes('addon') || p.type === 'subscription';
@@ -200,15 +203,15 @@ const ExamProgram: FC = () => {
                 ) : (subscriptionsEnabled && !isSubscribed && !isBetaTester) && (
                     <div className="flex flex-col gap-4">
                         <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                            <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2 flex items-center gap-1"><Zap size={10}/> Premium Addon Suggestion</p>
-                            <p className="text-xs text-amber-900 leading-relaxed">Upgrade to <strong>Full Access</strong> to unlock all practice material and AI study guides for this program.</p>
+                            <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2 flex items-center gap-1"><Zap size={10}/> Premium Addon Available</p>
+                            <p className="text-xs text-amber-900 leading-relaxed">Unlock <strong>Full Access</strong> to this program's AI study guides and practice resources.</p>
                         </div>
                         <SubscriptionOfferCard 
                             planName="Monthly Access"
                             price={examPrices?.['sub-monthly']?.price || 19.99}
                             priceUnit="mo"
                             url={`${mainSiteBaseUrl}/product/monthly-subscription/`}
-                            features={['All Practice Material', 'AI Study Guides']}
+                            features={['Practice Material', 'AI Study Guides']}
                             gradientClass="mco-gradient--sub-monthly"
                         />
                     </div>
