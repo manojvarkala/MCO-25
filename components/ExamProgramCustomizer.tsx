@@ -38,6 +38,7 @@ const ExamEditor: FC<{
     const hasAddon = useMemo(() => {
         const sku = data.certExam?.productSku || '';
         const currentAddon = data.certExam?.addonSku || '';
+        // It's considered checked if it matches the standard pattern
         return currentAddon === `${sku}-1mo-addon` && currentAddon !== '';
     }, [data.certExam?.productSku, data.certExam?.addonSku]);
 

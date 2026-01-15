@@ -111,22 +111,13 @@ const ExamProgram: FC = () => {
         const certSku = programData.certExam.productSku;
         
         // PRECISE ADDON TARGETING
-        const addonSku = `${certSku}-1mo-addon`;
+        // Favor stored meta if present, otherwise pattern
+        const addonSku = programData.certExam.addonSku || `${certSku}-1mo-addon`;
         const p = examPrices[addonSku];
         if (p) {
             return { product: { ...p, sku: addonSku }, type: 'subscription' as const };
         }
 
-        // Fallback: Scan for any bundle including the SKU
-        const bundleEntry = Object.entries(examPrices).find(([sku, prod]: [string, any]) => 
-            prod.isBundle === true && Array.isArray(prod.bundledSkus) && prod.bundledSkus.includes(certSku)
-        );
-
-        if (bundleEntry) {
-            const [sku, prod] = bundleEntry;
-            const isSubAddon = sku.includes('addon') || prod.type === 'subscription';
-            return { product: { ...prod, sku }, type: isSubAddon ? 'subscription' as const : 'practice' as const };
-        }
         return null;
     }, [programData, examPrices, bundlesEnabled]);
 

@@ -89,6 +89,7 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
         $program_posts = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => ['publish', 'draft', 'private']]);
         foreach ($program_posts as $p) {
             $sku = (string)get_post_meta($p->ID, '_mco_certification_exam_sku', true);
+            $addon_sku = (string)get_post_meta($p->ID, '_mco_addon_sku', true);
             $question_source_url = (string)get_post_meta($p->ID, '_mco_question_source_url', true);
             $practice_exam_id = 'prac-'.$p->ID;
 
@@ -102,6 +103,7 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
                 'isPractice' => true, 
                 'productSku' => '',
                 'questionSourceUrl' => esc_url_raw($question_source_url),
+                'certificateEnabled' => get_post_meta($p->ID, '_mco_practice_certificate_enabled', true) === '1',
                 'recommendedBookIds' => []
             ];
 
@@ -118,6 +120,7 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
                         'passScore' => (int)get_post_meta($p->ID, '_mco_pass_score', true) ?: 70, 
                         'isPractice' => false, 
                         'productSku' => $sku,
+                        'addonSku' => $addon_sku,
                         'price' => (float)$product->get_price(), 
                         'regularPrice' => (float)$product->get_regular_price(),
                         'certificateEnabled' => get_post_meta($p->ID, '_mco_certificate_enabled', true) === '1',

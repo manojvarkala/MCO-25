@@ -172,7 +172,8 @@ const Dashboard: FC = () => {
                     if (bundlesEnabled && category.certExam?.productSku && examPrices) {
                         const certSku = category.certExam.productSku;
                         // PRECISE ADDON TARGETING: Look for exactly {certSku}-1mo-addon
-                        const addonSku = `${certSku}-1mo-addon`;
+                        // Check explicit saved addonSku first, fallback to pattern
+                        const addonSku = category.certExam.addonSku || `${certSku}-1mo-addon`;
                         const p = examPrices[addonSku];
                         
                         if (p) {
@@ -180,18 +181,6 @@ const Dashboard: FC = () => {
                                 product: { ...p, sku: addonSku }, 
                                 type: 'subscription' as const 
                             };
-                        } else {
-                            // Fallback to searching any bundle that includes this SKU if explicit addon doesn't exist
-                            const bundleEntry = Object.entries(examPrices).find(([sku, prod]: [string, any]) => 
-                                prod.isBundle && Array.isArray(prod.bundledSkus) && prod.bundledSkus.includes(certSku)
-                            );
-                            if (bundleEntry) {
-                                const [sku, prod] = bundleEntry;
-                                dashboardBundle = { 
-                                    product: { ...prod, sku }, 
-                                    type: (sku.includes('addon') || prod.type === 'subscription') ? 'subscription' as const : 'practice' as const 
-                                };
-                            }
                         }
                     }
 
