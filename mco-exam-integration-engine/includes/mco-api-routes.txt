@@ -49,6 +49,12 @@ add_action('rest_api_init', function() {
     // --- PROTECTED USER ENDPOINTS ---
     $user_auth = ['permission_callback' => 'mco_api_validate_jwt'];
 
+    // Real-time Entitlement Sync
+    register_rest_route($namespace, '/sync-auth', array_merge($user_auth, [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_sync_auth'
+    ]));
+
     register_rest_route($namespace, '/user-results', array_merge($user_auth, [
         'methods' => 'GET',
         'callback' => 'mco_handle_get_user_results'

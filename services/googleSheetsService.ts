@@ -86,6 +86,9 @@ export const googleSheetsService = {
     },
 
     // USER ENDPOINTS
+    syncEntitlements: async (token: string): Promise<{ paidExamIds: string[]; isSubscribed: boolean; subscriptionInfo: any; isBetaTester: boolean; }> => {
+        return await apiFetch('/sync-auth', 'GET', token);
+    },
     createCheckoutSession: async (token: string, sku: string): Promise<{ checkoutUrl: string }> => {
         return await apiFetch('/create-checkout-session', 'POST', token, { sku });
     },
@@ -150,7 +153,6 @@ export const googleSheetsService = {
             return q && q.correctAnswer === ua.answer + 1;
         }).length;
         
-        // REFINED CALCULATION: Prevent NaN and ensure precise float results
         const totalCount = questions.length;
         const scoreVal = totalCount > 0 ? (correctCount / totalCount) * 100 : 0;
 

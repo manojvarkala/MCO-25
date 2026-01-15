@@ -24,7 +24,7 @@ const stripHtml = (html: string): string => {
 };
 
 const Dashboard: FC = () => {
-    const { user, token, paidExamIds, isSubscribed, subscriptionInfo, isBetaTester } = useAuth();
+    const { user, token, paidExamIds, isSubscribed, subscriptionInfo, isBetaTester, refreshEntitlements } = useAuth();
     const { activeOrg, isInitializing, refreshConfig, examPrices, bundlesEnabled, subscriptionsEnabled, feedbackRequiredForExam } = useAppContext();
     const [results, setResults] = useState<TestResult[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -34,9 +34,13 @@ const Dashboard: FC = () => {
     const handleSync = useCallback(async () => {
         if (!user || !token) return;
         setIsSyncing(true);
-        const toastId = toast.loading("Syncing latest exams and results...");
+        const toastId = toast.loading("Synchronizing access and results...");
         try {
+            // 1. Refresh global app config
             await refreshConfig();
+            // 2. Refresh user entitlements (Paid Exams & Subscriptions)
+            await refreshEntitlements();
+            // 3. Sync exam history
             const updatedResults = await googleSheetsService.syncResults(user, token);
             updatedResults.sort((a, b) => b.timestamp - a.timestamp);
             setResults(updatedResults);
@@ -46,7 +50,7 @@ const Dashboard: FC = () => {
         } finally {
             setIsSyncing(false);
         }
-    }, [user, token, refreshConfig]);
+    }, [user, token, refreshConfig, refreshEntitlements]);
 
     useEffect(() => {
         if (user) {
@@ -77,7 +81,6 @@ const Dashboard: FC = () => {
                 const isExplicitBundle = p.isBundle === true || p.isBundle === 'yes';
                 const hasMultipleItems = Array.isArray(p.bundledSkus) && p.bundledSkus.length > 1;
                 const isSubscriptionAddon = p.sku.includes('-1mo-addon');
-                // Ensure we don't show individual subscriptions in the bundles section
                 return (isExplicitBundle || hasMultipleItems || isSubscriptionAddon) && !p.sku.startsWith('sub-');
             })
             .map((p: any): ProductVariation => ({
@@ -175,7 +178,7 @@ const Dashboard: FC = () => {
             {bundlesEnabled && featuredBundles.length > 0 && (
                 <div className="space-y-6">
                     <div className="flex items-center gap-3 px-2">
-                        <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
+                        <div className="p-2 bg-amber-50/10 rounded-lg text-amber-500">
                             <ShoppingBag size={24} />
                         </div>
                         <div>

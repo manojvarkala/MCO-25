@@ -22,6 +22,7 @@ interface AuthContextType extends AuthState {
   masqueradeAs: MasqueradeMode;
   loginWithToken: (token: string, isSyncOnly?: boolean) => Promise<void>;
   logout: () => void;
+  refreshEntitlements: () => Promise<void>;
   updateUserName: (name: string) => void;
   startMasquerade: (as: 'user' | 'visitor') => void;
   stopMasquerade: () => void;
@@ -58,7 +59,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       try {
         const storedIds = localStorage.getItem('paidExamIds');
         const parsed = storedIds ? JSON.parse(storedIds) : [];
-        return Array.isArray(parsed) ? parsed : (parsed ? Object.values(parsed) : []);
+        // FIX: Added type assertion to ensure string[] return type for consistency with state.
+        return (Array.isArray(parsed) ? parsed : (parsed ? Object.values(parsed) : [])) as string[];
       } catch (error) {
           console.error("Failed to parse paidExamIds from localStorage", error);
           return [];
@@ -69,7 +71,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const storedSubscribed = localStorage.getItem('isSubscribed');
         return storedSubscribed ? JSON.parse(storedSubscribed) : false;
     } catch (error) {
-        console.error("Failed to parse isSubscribed from localStorage", error);
         return false;
     }
   });
@@ -78,7 +79,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const storedInfo = localStorage.getItem('subscriptionInfo');
         return storedInfo ? JSON.parse(storedInfo) : null;
     } catch (error) {
-        console.error("Failed to parse subscriptionInfo from localStorage", error);
         return null;
     }
   });
@@ -87,7 +87,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const stored = localStorage.getItem('isBetaTester');
         return stored ? JSON.parse(stored) : false;
     } catch (error) {
-        console.error("Failed to parse isBetaTester from localStorage", error);
         return false;
     }
   });
@@ -116,23 +115,35 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     localStorage.removeItem('isSubscribed');
     localStorage.removeItem('subscriptionInfo');
     localStorage.removeItem('isBetaTester');
-    // FIX: Do NOT remove 'activeOrg' or 'activeOrgId'. The tenant binding should persist.
-    // localStorage.removeItem('activeOrg'); 
-    
-    // Note: We deliberately do NOT clear 'mco_dynamic_api_url' here. 
-    // This allows the user to re-login to the same tenant backend without issues.
-    // To clear the binding, they must use the Debug Sidebar reset or clear browser data.
     
     Object.keys(localStorage).forEach(key => {
         if (key.startsWith('exam_timer_') || key.startsWith('exam_results_')) {
             localStorage.removeItem(key);
         }
-        // Force config refresh on next load
         if (key.startsWith('appConfigCache')) {
              localStorage.removeItem(key);
         }
     });
   }, []);
+
+  const refreshEntitlements = useCallback(async () => {
+    if (!token) return;
+    try {
+        const data = await googleSheetsService.syncEntitlements(token);
+        setPaidExamIds(data.paidExamIds || []);
+        setIsSubscribed(!!data.isSubscribed);
+        setSubscriptionInfo(data.subscriptionInfo);
+        setIsBetaTester(!!data.isBetaTester);
+        
+        localStorage.setItem('paidExamIds', JSON.stringify(data.paidExamIds));
+        localStorage.setItem('isSubscribed', JSON.stringify(data.isSubscribed));
+        localStorage.setItem('subscriptionInfo', JSON.stringify(data.subscriptionInfo));
+        localStorage.setItem('isBetaTester', JSON.stringify(data.isBetaTester));
+    } catch (e) {
+        console.error("Failed to refresh entitlements", e);
+        throw e;
+    }
+  }, [token]);
 
   const loginWithToken = useCallback(async (jwtToken: string, isSyncOnly: boolean = false) => {
     try {
@@ -149,53 +160,22 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
 
         if (payload.user) {
-            
-            // SERVER VALIDATION CHECK:
-            // Sync with backend. If this fails with an AUTH error, we abort the login.
             if (!isSyncOnly) {
                 try {
                     await googleSheetsService.syncResults(payload.user, jwtToken);
                 } catch (serverError: any) {
                     const code = serverError.code;
                     const msg = serverError.message?.toLowerCase() || '';
-
-                    // 1. Session Expired (Strict Code Check)
-                    if (code === 'jwt_auth_expired_token') {
-                        console.warn("Login Aborted: Token expired.");
-                        throw new Error("Session Expired"); 
-                    }
-
-                    // 2. Authorization Header Missing (Server Config Issue)
-                    if (code === 'jwt_auth_missing_token' || msg.includes('authorization header')) {
-                        console.error("Login Aborted: Auth header missing.");
-                        throw new Error("Server Config Error: The 'Authorization' header is being stripped by your server. Please check your .htaccess file.");
-                    }
-
-                    // 3. Invalid Token / Signature Mismatch (Critical Error)
-                    if (code === 'jwt_tampered' || msg.includes('identity verification failed') || msg.includes('signature mismatch')) {
-                        console.error("Login Aborted: Token signature invalid.");
-                        throw new Error("Security Key Mismatch: The token generated by WordPress does not match the MCO_JWT_SECRET in wp-config.php.");
-                    }
-                    
-                    // 4. Other non-critical errors (Network, etc)
-                    console.warn("Non-critical sync error during login:", serverError);
-                    // For other errors during sync, we still proceed with login, but notify.
+                    if (code === 'jwt_auth_expired_token') throw new Error("Session Expired"); 
+                    if (code === 'jwt_auth_missing_token' || msg.includes('authorization header')) throw new Error("Server Config Error");
+                    if (code === 'jwt_tampered' || msg.includes('signature mismatch')) throw new Error("Security Key Mismatch");
                 }
             }
 
-            // If we get here, valid or non-critical error
             setUser(payload.user);
-            
-            let paidIds: string[] = [];
-            if (payload.paidExamIds) {
-                if (Array.isArray(payload.paidExamIds)) {
-                    paidIds = payload.paidExamIds;
-                } else if (typeof payload.paidExamIds === 'object') {
-                    paidIds = Object.values(payload.paidExamIds);
-                }
-            }
+            // FIX: Added type assertion to string[] for paidIds to resolve 'unknown[]' not assignable to 'string[]' error.
+            let paidIds = (Array.isArray(payload.paidExamIds) ? payload.paidExamIds : (payload.paidExamIds ? Object.values(payload.paidExamIds) : [])) as string[];
             setPaidExamIds(paidIds);
-            
             setToken(jwtToken);
             setMasqueradeAs('none');
             setOriginalAuthState(null);
@@ -203,77 +183,42 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             localStorage.setItem('examUser', JSON.stringify(payload.user));
             localStorage.setItem('paidExamIds', JSON.stringify(paidIds));
             localStorage.setItem('authToken', jwtToken);
+            setIsBetaTester(!!payload.isBetaTester);
+            if (payload.isBetaTester) localStorage.setItem('isBetaTester', 'true');
+            else localStorage.removeItem('isBetaTester');
 
-            if (payload.isBetaTester) {
-                setIsBetaTester(true);
-                localStorage.setItem('isBetaTester', 'true');
-            } else {
-                setIsBetaTester(false);
-                localStorage.removeItem('isBetaTester');
-            }
+            setIsSubscribed(!!payload.isSubscribed);
+            if (payload.isSubscribed) localStorage.setItem('isSubscribed', 'true');
+            else localStorage.removeItem('isSubscribed');
 
-            if (payload.isSubscribed) {
-                setIsSubscribed(payload.isSubscribed);
-                localStorage.setItem('isSubscribed', JSON.stringify(payload.isSubscribed));
-            } else {
-                setIsSubscribed(false);
-                localStorage.removeItem('isSubscribed');
-            }
-
-            if (payload.subscriptionInfo) {
-                setSubscriptionInfo(payload.subscriptionInfo);
-                localStorage.setItem('subscriptionInfo', JSON.stringify(payload.subscriptionInfo));
-            } else {
-                setSubscriptionInfo(null);
-                localStorage.removeItem('subscriptionInfo');
-            }
+            setSubscriptionInfo(payload.subscriptionInfo || null);
+            if (payload.subscriptionInfo) localStorage.setItem('subscriptionInfo', JSON.stringify(payload.subscriptionInfo));
+            else localStorage.removeItem('subscriptionInfo');
             
-            if (isSyncOnly) {
-                 toast.success('Exams synchronized successfully!');
-            }
-
+            if (isSyncOnly) toast.success('Exams synchronized successfully!');
         } else {
             throw new Error("Invalid token payload structure.");
         }
     } catch(e) {
-        console.error("Login processing error:", e);
-        if (!isSyncOnly) {
-            logout();
-        }
+        if (!isSyncOnly) logout();
         throw e;
     }
   }, [logout]);
   
     const startMasquerade = (as: 'user' | 'visitor') => {
         if (masqueradeAs !== 'none' || !user?.isAdmin) return;
-    
         setOriginalAuthState({ user, token, paidExamIds, isSubscribed, subscriptionInfo, isBetaTester });
         setMasqueradeAs(as);
-
-        if (as === 'user') {
-            toast('Masquerade mode enabled. Viewing as a logged-in user.', { icon: '🎭' });
-        } else { // visitor
-            setUser(null);
-            setToken(null);
-            setPaidExamIds([]);
-            setIsSubscribed(false);
-            setSubscriptionInfo(null);
-            setIsBetaTester(false);
-            toast('Masquerade mode enabled. Viewing as a visitor.', { icon: '👻' });
-        }
+        if (as === 'user') toast('Masquerade mode enabled.', { icon: '🎭' });
+        else toast('Masquerade mode enabled.', { icon: '👻' });
     };
 
     const stopMasquerade = () => {
         if (masqueradeAs === 'none' || !originalAuthState) return;
-
-        setUser(originalAuthState.user);
-        setToken(originalAuthState.token);
-        setPaidExamIds(originalAuthState.paidExamIds);
-        setIsSubscribed(originalAuthState.isSubscribed);
-        setSubscriptionInfo(originalAuthState.subscriptionInfo);
-        setIsBetaTester(originalAuthState.isBetaTester);
-        setOriginalAuthState(null);
-        setMasqueradeAs('none');
+        setUser(originalAuthState.user); setToken(originalAuthState.token);
+        setPaidExamIds(originalAuthState.paidExamIds); setIsSubscribed(originalAuthState.isSubscribed);
+        setSubscriptionInfo(originalAuthState.subscriptionInfo); setIsBetaTester(originalAuthState.isBetaTester);
+        setOriginalAuthState(null); setMasqueradeAs('none');
         toast.success('Returned to Admin view.');
     };
 
@@ -285,28 +230,11 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   }, [user]);
 
-  const isMasquerading = masqueradeAs !== 'none';
-
   const value = useMemo(() => ({
-    user,
-    token,
-    paidExamIds,
-    isSubscribed,
-    subscriptionInfo,
-    isEffectivelyAdmin,
-    isMasquerading,
-    masqueradeAs,
-    isBetaTester,
-    loginWithToken,
-    logout,
-    updateUserName,
-    startMasquerade,
-    stopMasquerade,
-  }), [
-    user, token, paidExamIds, isSubscribed, subscriptionInfo,
-    isEffectivelyAdmin, isMasquerading, masqueradeAs, isBetaTester, loginWithToken,
-    logout, updateUserName, startMasquerade, stopMasquerade
-  ]);
+    user, token, paidExamIds, isSubscribed, subscriptionInfo, isEffectivelyAdmin,
+    isMasquerading: masqueradeAs !== 'none', masqueradeAs, isBetaTester,
+    loginWithToken, logout, refreshEntitlements, updateUserName, startMasquerade, stopMasquerade,
+  }), [user, token, paidExamIds, isSubscribed, subscriptionInfo, isEffectivelyAdmin, masqueradeAs, isBetaTester, loginWithToken, logout, refreshEntitlements, updateUserName, startMasquerade, stopMasquerade]);
 
   return (
     <AuthContext.Provider value={value}>
@@ -317,8 +245,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };

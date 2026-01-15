@@ -15,7 +15,67 @@
     --color-text-muted-rgb: 148, 163, 184;
 }
 
-/* DASHBOARD GRID SYSTEM - FIXED */
+/* --- THEME: PROFESSIONAL (Green/Emerald) --- */
+[data-theme="professional"] {
+    --color-primary-rgb: 16, 185, 129;
+    --color-primary-hover-rgb: 5, 150, 105;
+    --color-secondary-rgb: 59, 130, 246;
+    --color-accent-rgb: 245, 158, 11;
+    --color-background-rgb: 241, 245, 249;
+    --color-card-rgb: 255, 255, 255;
+    --color-muted-rgb: 226, 232, 240;
+    --color-border-rgb: 203, 213, 225;
+    --color-text-strong-rgb: 15, 23, 42;
+    --color-text-default-rgb: 51, 65, 85;
+    --color-text-muted-rgb: 100, 116, 139;
+}
+
+/* --- THEME: SERENE (Sky/Emerald) --- */
+[data-theme="serene"] {
+    --color-primary-rgb: 14, 165, 233;
+    --color-primary-hover-rgb: 2, 132, 199;
+    --color-secondary-rgb: 16, 185, 129;
+    --color-accent-rgb: 249, 115, 22;
+    --color-background-rgb: 240, 253, 250;
+    --color-card-rgb: 255, 255, 255;
+    --color-muted-rgb: 204, 251, 241;
+    --color-border-rgb: 153, 246, 228;
+    --color-text-strong-rgb: 19, 78, 74;
+    --color-text-default-rgb: 20, 83, 45;
+    --color-text-muted-rgb: 21, 128, 61;
+}
+
+/* --- THEME: ACADEMIC (Maroon/Gold) --- */
+[data-theme="academic"] {
+    --color-primary-rgb: 153, 27, 27;
+    --color-primary-hover-rgb: 127, 29, 29;
+    --color-secondary-rgb: 180, 83, 9;
+    --color-accent-rgb: 146, 64, 14;
+    --color-background-rgb: 254, 252, 251;
+    --color-card-rgb: 255, 255, 255;
+    --color-muted-rgb: 248, 250, 252;
+    --color-border-rgb: 226, 232, 240;
+    --color-text-strong-rgb: 69, 10, 10;
+    --color-text-default-rgb: 127, 29, 29;
+    --color-text-muted-rgb: 120, 113, 108;
+}
+
+/* --- THEME: NOIR (Slate/Violet) --- */
+[data-theme="noir"] {
+    --color-primary-rgb: 248, 250, 252;
+    --color-primary-hover-rgb: 241, 245, 249;
+    --color-secondary-rgb: 139, 92, 246;
+    --color-accent-rgb: 234, 179, 8;
+    --color-background-rgb: 15, 23, 42;
+    --color-card-rgb: 2, 6, 23;
+    --color-muted-rgb: 30, 41, 59;
+    --color-border-rgb: 51, 65, 85;
+    --color-text-strong-rgb: 255, 255, 255;
+    --color-text-default-rgb: 203, 213, 225;
+    --color-text-muted-rgb: 100, 116, 139;
+}
+
+/* DASHBOARD GRID SYSTEM */
 .mco-grid-container {
     display: grid;
     grid-template-columns: 1fr;
@@ -24,15 +84,11 @@
 }
 
 @media (min-width: 768px) {
-    .mco-grid-container {
-        grid-template-columns: repeat(2, 1fr);
-    }
+    .mco-grid-container { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (min-width: 1024px) {
-    .mco-grid-container {
-        grid-template-columns: repeat(3, 1fr);
-    }
+    .mco-grid-container { grid-template-columns: repeat(3, 1fr); }
 }
 
 .mco-subscription-grid {
@@ -44,12 +100,10 @@
 }
 
 @media (min-width: 768px) {
-    .mco-subscription-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
+    .mco-subscription-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* HANDBOOK PROSE STYLING - HIGH CONTRAST */
+/* HANDBOOK PROSE STYLING */
 .mco-handbook-prose h2 {
     @apply text-4xl font-black text-slate-900 mb-8 font-display border-b border-slate-100 pb-6;
     letter-spacing: -0.02em;
@@ -80,9 +134,7 @@
     @apply text-cyan-600 font-black text-2xl leading-none flex-shrink-0;
 }
 
-.mco-handbook-prose strong {
-    @apply text-slate-950 font-black;
-}
+.mco-handbook-prose strong { @apply text-slate-950 font-black; }
 
 .mco-handbook-prose code {
     @apply bg-slate-50 text-cyan-800 px-2 py-0.5 rounded font-mono text-[0.85em] border border-slate-200 font-bold;
