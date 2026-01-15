@@ -45,27 +45,39 @@ require_once MCO_PLUGIN_PATH . 'includes/mco-woocommerce.php';
 require_once MCO_PLUGIN_PATH . 'includes/mco-admin.php'; 
 require_once MCO_PLUGIN_PATH . 'includes/mco-shortcodes.php'; 
 
-// --- ACTIVATION ---
-register_activation_hook(__FILE__, function() {
+// --- ACTIVATION LOGIC ---
+function mco_engine_activate() {
     flush_rewrite_rules();
     if (!get_option('mco_config_version')) {
         update_option('mco_config_version', time());
     }
-});
+}
+register_activation_hook(__FILE__, 'mco_engine_activate');
 
-add_filter('option_users_can_register', function($value) {
-    return (bool)get_option('mco_force_enable_registration', false) ? 1 : $value;
-});
+// --- REGISTRATION OVERRIDE ---
+function mco_force_enable_user_registration($value) {
+    // If the plugin setting is active, force the core 'users_can_register' option to true
+    $force_enabled = get_option('mco_force_enable_registration', false);
+    return (bool)$force_enabled ? 1 : $value;
+}
+add_filter('option_users_can_register', 'mco_force_enable_user_registration');
 
 /**
- * 6. GLOBAL CACHE INVALIDATION HOOK
+ * 6. GLOBAL CACHE INVALIDATION
  * Automatically clears transients when content changes in standard WP admin.
  */
-add_action('transition_post_status', function($new_status, $old_status, $post) {
-    $watched_types = ['mco_exam_program', 'mco_recommended_book', 'product'];
+function mco_invalidate_app_cache_on_save($new_status, $old_status, $post) {
+    if (!$post || !isset($post->post_type)) {
+        return;
+    }
+
+    $watched_types = array('mco_exam_program', 'mco_recommended_book', 'product');
+    
     if (in_array($post->post_type, $watched_types)) {
         delete_transient('mco_app_config_data');
         delete_transient('mco_app_config_data_full');
+        // Update version to force frontend cache refresh
         update_option('mco_config_version', time());
     }
-}, 10, 3);
+}
+add_action('transition_post_status', 'mco_invalidate_app_cache_on_save', 10, 3);

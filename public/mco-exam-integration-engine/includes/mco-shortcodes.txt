@@ -66,7 +66,7 @@ if (!function_exists('mco_load_shortcode_css')) {
 
                 /* THE GRID */
         .mco-book-grid, 
-        .mco-subscription-grid,
+		.mco-subscription-grid,
         .mco-bundle-grid,
         .mco-program-group__cards {
             display: grid !important;
@@ -800,11 +800,6 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
                 if ($subscriptions_enabled && !$is_subscribed) {
                     $monthly_sub_data = $all_prices['sub-monthly'] ?? null; 
                     $yearly_sub_data = $all_prices['sub-yearly'] ?? null;
-<div class="mco-section-heading">
-    <?php echo mco_get_svg_icon('cert'); ?>
-    <h2>Membership Plans</h2>
-</div>
-<div class="mco-subscription-grid"> <!-- This ensures grid form -->
                     if (($monthly_sub_data && isset($monthly_sub_data['productId'])) || ($yearly_sub_data && isset($yearly_sub_data['productId']))) { ?>
                         <div class="mco-subscription-grid">
                             <?php if ($monthly_sub_data && isset($monthly_sub_data['productId'])) {
@@ -834,9 +829,9 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
                             <?php } ?>
                         </div>
                     <?php }
-                    </div>
                 }
-// --- BUNDLES SECTION ---
+		
+		// --- BUNDLES SECTION ---
 $bundles_enabled = $active_org_config['bundlesEnabled'] ?? true;
 if ($bundles_enabled) {
     // Filter for products explicitly marked as bundles or with multiple items
@@ -869,7 +864,8 @@ if ($bundles_enabled) {
             <?php } ?>
         </div>
     <?php }
-}                
+}
+                
                 // B. PROGRAM GROUPS ?>
                 <div class="mco-program-list">
                     <?php 
@@ -995,44 +991,7 @@ if ($bundles_enabled) {
         <?php return ob_get_clean(); // End main output buffer
     }
 }
-/ --- B. BUNDLES SECTION (Insert this block) ---
-$bundles_enabled = $active_org_config['bundlesEnabled'] ?? true;
-if ($bundles_enabled) {
-    // Filters for products explicitly marked as bundles with 2 or more items
-    $standalone_bundles = array_filter($all_prices, function($p) {
-        return (isset($p['isBundle']) && ($p['isBundle'] === true || $p['isBundle'] === 'yes')) 
-               && (!empty($p['bundledSkus']) && count($p['bundledSkus']) > 1);
-    });
 
-    if (!empty($standalone_bundles)) { ?>
-        <div class="mco-section-heading">
-            <?php echo mco_get_svg_icon('bundle'); ?>
-            <h2>Exclusive Value Bundles</h2>
-        </div>
-        <div class="mco-bundle-grid">
-            <?php foreach ($standalone_bundles as $sku => $bundle) {
-                $bundle_url = isset($bundle['productId']) ? get_site_url() . '/cart/?add-to-cart=' . $bundle['productId'] : '#';
-                $is_sub_addon = strpos($sku, 'addon') !== false || ($bundle['type'] ?? '') === 'subscription';
-                ?>
-                <div class="mco-card <?php echo $is_sub_addon ? 'mco-gradient--bundle-sub' : 'mco-gradient--bundle-practice'; ?>">
-                    <div class="mco-card__header"><span><?php echo mco_get_svg_icon('bundle'); ?></span> Package Deal</div>
-                    <div class="mco-card__body">
-                        <h3 class="mco-card__subtitle" style="color:#fff;"><?php echo esc_html($bundle['name']); ?></h3>
-                        <p style="color:rgba(255,255,255,0.8); font-size:0.85rem; margin-bottom:15px;">
-                            Comprehensive certification pathway including all required study tools.
-                        </p>
-                        <p style="font-size:2.5rem; font-weight:900; margin:10px 0; color:#fff; text-align:center;">
-                            $<?php echo number_format_i18n($bundle['price'], 2); ?>
-                        </p>
-                    </div>
-                    <div class="mco-card__footer">
-                        <a href="<?php echo esc_url($bundle_url); ?>" class="mco-card__button mco-card__button--white">Get Package Deal</a>
-                    </div>
-                </div>
-            <?php } ?>
-        </div>
-    <?php }
-}
 // --- 8. PROGRAM GRID SHORTCODE (Category Page Style) ---
 if (!function_exists('mco_program_grid_shortcode')) {
     function mco_program_grid_shortcode() {
