@@ -1,0 +1,288 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+if (!function_exists('mco_register_custom_post_types')) {
+    function mco_register_custom_post_types() {
+        register_post_type('mco_exam_program', array(
+            'labels' => array('name' => 'Exam Programs', 'singular_name' => 'Exam Program'),
+            'public' => true, 
+            'has_archive' => true, 
+            'show_in_menu' => false, // Handled manually in mco-admin.php
+            'menu_icon' => 'dashicons-welcome-learn-more',
+            'show_in_rest' => true,
+            'supports' => array('title', 'editor', 'thumbnail'), 
+            'rewrite' => array('slug' => 'exam-programs'),
+        ));
+
+        register_post_type('mco_recommended_book', array( 
+            'labels' => array('name' => 'Recommended Books', 'singular_name' => 'Book'), 
+            'public' => true, 
+            'has_archive' => false, 
+            'show_in_menu' => false, // Handled manually
+            'show_in_rest' => true,
+            'supports' => array('title', 'editor', 'thumbnail') 
+        ));
+    }
+}
+add_action('init', 'mco_register_custom_post_types');
+
+
+// --- META BOXES ---
+if (!function_exists('mco_add_custom_meta_boxes')) {
+    add_action('add_meta_boxes', 'mco_add_custom_meta_boxes');
+    function mco_add_custom_meta_boxes($post_type) {
+        if ($post_type === 'mco_exam_program') {
+            add_meta_box(
+                'mco_exam_program_settings',
+                'Exam Program Settings',
+                'mco_exam_program_meta_box_callback',
+                'mco_exam_program',
+                'normal',
+                'high'
+            );
+        }
+        if ($post_type === 'mco_recommended_book') {
+            add_meta_box(
+                'mco_book_settings',
+                'Book Details',
+                'mco_book_meta_box_callback',
+                'mco_recommended_book',
+                'normal',
+                'high'
+            );
+        }
+    }
+}
+
+if (!function_exists('mco_save_custom_meta_data')) {
+    add_action('save_post', 'mco_save_custom_meta_data');
+    function mco_save_custom_meta_data($post_id) {
+        // Exam Programs
+        if (isset($_POST['mco_exam_meta_box_nonce']) && wp_verify_nonce((string)$_POST['mco_exam_meta_box_nonce'], 'mco_save_exam_meta_box_data')) { // Cast nonce to string
+            if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+            if (!current_user_can('edit_post', $post_id)) return;
+            
+            $fields = [
+                '_mco_practice_exam_title_override' => 'sanitize_text_field',
+                '_mco_cert_exam_title_override' => 'sanitize_text_field',
+                '_mco_question_source_url' => 'esc_url_raw',
+                '_mco_certification_exam_sku' => 'sanitize_text_field',
+                '_mco_certificate_template_id' => 'sanitize_text_field',
+                '_mco_is_proctored' => 'sanitize_text_field',
+                '_mco_certificate_enabled' => 'sanitize_text_field',
+                '_mco_practice_certificate_enabled' => 'sanitize_text_field',
+                '_mco_practice_questions' => 'sanitize_text_field',
+                '_mco_practice_duration' => 'sanitize_text_field',
+                '_mco_cert_questions' => 'sanitize_text_field',
+                '_mco_cert_duration' => 'sanitize_text_field',
+                '_mco_pass_score' => 'sanitize_text_field',
+            ];
+            
+            foreach ($fields as $key => $sanitize_func) {
+                $post_key = str_replace('_mco_', 'mco_', $key);
+                if (isset($_POST[$post_key])) {
+                    update_post_meta($post_id, $key, call_user_func($sanitize_func, (string)$_POST[$post_key])); // Cast to string
+                } else {
+                    // For checkboxes, if not set, update to '0'
+                    if (in_array($key, ['_mco_is_proctored', '_mco_certificate_enabled', '_mco_practice_certificate_enabled'])) {
+                        update_post_meta($post_id, $key, '0');
+                    }
+                }
+            }
+            
+            if (isset($_POST['mco_recommended_book_ids']) && is_array($_POST['mco_recommended_book_ids'])) {
+                $sanitized_ids = array_map('intval', (array)$_POST['mco_recommended_book_ids']); // Cast to array
+                update_post_meta($post_id, '_mco_recommended_book_ids', $sanitized_ids);
+            } else {
+                delete_post_meta($post_id, '_mco_recommended_book_ids');
+            }
+
+            if (isset($_POST['mco_sections']) && is_array($_POST['mco_sections'])) {
+                $sanitized_sections = [];
+                foreach ((array)$_POST['mco_sections'] as $section) { // Cast to array
+                    if (!empty($section['name']) && !empty($section['start']) && !empty($section['end'])) {
+                        $sanitized_sections[] = [
+                            'id' => sanitize_title((string)($section['name'] ?? '')), // Cast to string
+                            'name' => sanitize_text_field((string)($section['name'] ?? '')), // Cast to string
+                            'startQuestion' => (int)($section['start'] ?? 0), // Cast to int
+                            'endQuestion' => (int)($section['end'] ?? 0) // Cast to int
+                        ];
+                    }
+                }
+                update_post_meta($post_id, '_mco_exam_sections', $sanitized_sections);
+            } else {
+                delete_post_meta($post_id, '_mco_exam_sections');
+            }
+        }
+        
+        // Recommended Books
+        if (isset($_POST['mco_book_nonce']) && wp_verify_nonce((string)$_POST['mco_book_nonce'], 'mco_save_book_meta_box_data')) { // Cast nonce to string
+            if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+            if (!current_user_can('edit_post', $post_id)) return;
+
+            $book_fields = [
+                '_mco_book_id' => 'sanitize_text_field',
+                '_mco_thumbnail_url' => 'esc_url_raw',
+                '_mco_link_com' => 'esc_url_raw',
+                '_mco_link_in' => 'esc_url_raw',
+                '_mco_link_ae' => 'esc_url_raw',
+            ];
+
+            foreach ($book_fields as $key => $sanitize_func) {
+                $post_key = str_replace('_mco_', 'mco_', $key);
+                if (isset($_POST[$post_key])) {
+                    update_post_meta($post_id, $key, call_user_func($sanitize_func, (string)$_POST[$post_key])); // Cast to string
+                }
+            }
+        }
+    }
+}
+
+// --- EXAM PROGRAM CALLBACK ---
+if (!function_exists('mco_exam_program_meta_box_callback')) {
+    function mco_exam_program_meta_box_callback($post) {
+        wp_nonce_field('mco_save_exam_meta_box_data', 'mco_exam_meta_box_nonce');
+        
+        $practice_override = (string)get_post_meta($post->ID, '_mco_practice_exam_title_override', true); // Cast to string
+        $cert_override = (string)get_post_meta($post->ID, '_mco_cert_exam_title_override', true); // Cast to string
+        $source_url = (string)get_post_meta($post->ID, '_mco_question_source_url', true); // Cast to string
+        $sku = (string)get_post_meta($post->ID, '_mco_certification_exam_sku', true); // Cast to string
+        $is_proctored = (string)get_post_meta($post->ID, '_mco_is_proctored', true); // Cast to string
+        $cert_enabled = (string)get_post_meta($post->ID, '_mco_certificate_enabled', true); // Cast to string
+        $practice_cert_enabled = (string)get_post_meta($post->ID, '_mco_practice_certificate_enabled', true); // Cast to string
+        $recommended_books = (array)get_post_meta($post->ID, '_mco_recommended_book_ids', true) ?: array(); // Cast to array
+        $sections = (array)get_post_meta($post->ID, '_mco_exam_sections', true) ?: array(); // Cast to array
+        $template_id = (string)get_post_meta($post->ID, '_mco_certificate_template_id', true); // Cast to string
+        
+        $practice_questions = (string)get_post_meta($post->ID, '_mco_practice_questions', true); // Cast to string
+        $practice_duration = (string)get_post_meta($post->ID, '_mco_practice_duration', true); // Cast to string
+        $cert_questions = (string)get_post_meta($post->ID, '_mco_cert_questions', true); // Cast to string
+        $cert_duration = (string)get_post_meta($post->ID, '_mco_cert_duration', true); // Cast to string
+        $pass_score = (string)get_post_meta($post->ID, '_mco_pass_score', true); // Cast to string
+
+        // Ensure mco_get_default_certificate_templates is available from mco-data.php
+        if (!function_exists('mco_get_default_certificate_templates')) {
+            error_log('mco_get_default_certificate_templates function not found. Ensure mco-data.php is loaded correctly.');
+            $all_templates = []; // Fallback to empty if function is missing
+        } else {
+            $all_templates = (array)get_option('mco_certificate_templates', mco_get_default_certificate_templates()); // Cast to array
+        }
+        $all_books = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
+
+        ?>
+        <table class="form-table">
+            <tr><th colspan="2"><h4>General Settings</h4></th></tr>
+             <tr>
+                <th><label for="mco_question_source_url">Question Source URL</label></th>
+                <td><input type="url" id="mco_question_source_url" name="mco_question_source_url" value="<?php echo esc_url($source_url); ?>" class="large-text" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"></td>
+            </tr>
+             <tr><th colspan="2"><hr><h4>Exam Parameters</h4><p class="description">These settings apply to both the practice and certification exams generated from this program.</p></th></tr>
+            <tr>
+                <th><label for="mco_practice_questions">Practice Exam Questions</label></th>
+                <td><input type="number" id="mco_practice_questions" name="mco_practice_questions" value="<?php echo esc_attr($practice_questions); ?>" class="small-text"></td>
+            </tr>
+            <tr>
+                <th><label for="mco_practice_duration">Practice Exam Duration (Mins)</label></th>
+                <td><input type="number" id="mco_practice_duration" name="mco_practice_duration" value="<?php echo esc_attr($practice_duration); ?>" class="small-text"></td>
+            </tr>
+            <tr>
+                <th><label for="mco_cert_questions">Certification Exam Questions</label></th>
+                <td><input type="number" id="mco_cert_questions" name="mco_cert_questions" value="<?php echo esc_attr($cert_questions); ?>" class="small-text"></td>
+            </tr>
+            <tr>
+                <th><label for="mco_cert_duration">Certification Exam Duration (Mins)</label></th>
+                <td><input type="number" id="mco_cert_duration" name="mco_cert_duration" value="<?php echo esc_attr($cert_duration); ?>" class="small-text"></td>
+            </tr>
+            <tr>
+                <th><label for="mco_pass_score">Passing Score (%)</label></th>
+                <td><input type="number" id="mco_pass_score" name="mco_pass_score" value="<?php echo esc_attr($pass_score); ?>" class="small-text"></td>
+            </tr>
+            <tr><th colspan="2"><hr><h4>Practice Exam Settings</h4></th></tr>
+            <tr>
+                <th><label for="mco_practice_exam_title_override">Practice Exam Name Override</label></th>
+                <td><input type="text" id="mco_practice_exam_title_override" name="mco_practice_exam_title_override" value="<?php echo esc_attr($practice_override); ?>" class="large-text"></td>
+            </tr>
+            <tr><th><label for="mco_practice_certificate_enabled">Enable Certificate on Pass</label></th>
+                <td><input type="checkbox" id="mco_practice_certificate_enabled" name="mco_practice_certificate_enabled" value="1" <?php checked($practice_cert_enabled, '1'); ?>></td>
+            </tr>
+            <tr><th colspan="2"><hr><h4>Certification Exam Settings</h4></th></tr>
+            <tr>
+                <th><label for="mco_cert_exam_title_override">Certification Exam Name Override</label></th>
+                <td><input type="text" id="mco_cert_exam_title_override" name="mco_cert_exam_title_override" value="<?php echo esc_attr($cert_override); ?>" class="large-text"></td>
+            </tr>
+            <tr>
+                <th><label for="mco_certification_exam_sku">WooCommerce Product SKU</label></th>
+                <td><input type="text" id="mco_certification_exam_sku" name="mco_certification_exam_sku" value="<?php echo esc_attr($sku); ?>" class="regular-text"></td>
+            </tr>
+            <tr>
+                <th><label for="mco_certificate_template_id">Certificate Template</label></th>
+                <td>
+                    <select id="mco_certificate_template_id" name="mco_certificate_template_id">
+                        <option value="">-- Use Default Template --</option>
+                        <?php foreach ($all_templates as $id => $template): ?>
+                            <option value="<?php echo esc_attr($id); ?>" <?php selected($template_id, $id); ?>>
+                                <?php echo esc_html((string)($template['name'] ?? '')); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th><label for="mco_is_proctored">Enable Proctoring</label></th>
+                <td><input type="checkbox" id="mco_is_proctored" name="mco_is_proctored" value="1" <?php checked($is_proctored, '1'); ?>></td>
+            </tr>
+             <tr>
+                <th><label for="mco_certificate_enabled">Enable Certificate on Pass</label></th>
+                <td><input type="checkbox" id="mco_certificate_enabled" name="mco_certificate_enabled" value="1" <?php checked($cert_enabled, '1'); ?>></td>
+            </tr>
+             <tr>
+                <th><label for="mco_recommended_book_ids">Recommended Books</label></th>
+                <td>
+                    <select id="mco_recommended_book_ids" name="mco_recommended_book_ids[]" multiple="multiple" style="width:100%; height: 150px;">
+                        <?php foreach ($all_books as $book): ?>
+                            <option value="<?php echo esc_attr($book->ID); ?>" <?php selected(in_array($book->ID, $recommended_books)); ?>>
+                                <?php echo esc_html($book->post_title); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th><label>Exam Sections</label></th>
+                <td>
+                    <div id="mco-sections-container">
+                        <?php if (!empty($sections)): foreach ($sections as $index => $section): ?>
+                        <div class="mco-section-item">
+                            <input type="text" name="mco_sections[<?php echo (int)$index; ?>][name]" placeholder="Section Name" value="<?php echo esc_attr((string)($section['name'] ?? '')); ?>">
+                            <input type="number" name="mco_sections[<?php echo (int)$index; ?>][start]" placeholder="Start Q" value="<?php echo esc_attr((string)($section['startQuestion'] ?? '')); ?>" min="1">
+                            <input type="number" name="mco_sections[<?php echo (int)$index; ?>][end]" placeholder="End Q" value="<?php echo esc_attr((string)($section['endQuestion'] ?? '')); ?>" min="1">
+                            <button type="button" class="button mco-remove-section">Remove</button>
+                        </div>
+                        <?php endforeach; endif; ?>
+                    </div>
+                    <button type="button" id="mco-add-section" class="button">Add Section</button>
+                </td>
+            </tr>
+        </table>
+        <script>
+            jQuery(document).ready(function($) {
+                var sectionIndex = <?php echo (int)count($sections); ?>; // Cast to int
+                $('#mco-add-section').on('click', function() {
+                    var newSection = '<div class="mco-section-item">' +
+                        '<input type="text" name="mco_sections[' + sectionIndex + '][name]" placeholder="Section Name">' +
+                        ' <input type="number" name="mco_sections[' + sectionIndex + '][start]" placeholder="Start Q" min="1">' +
+                        ' <input type="number" name="mco_sections[' + sectionIndex + '][end]" placeholder="End Q" min="1">' +
+                        ' <button type="button" class="button mco-remove-section">Remove</button>' +
+                        '</div>';
+                    $('#mco-sections-container').append(newSection);
+                    sectionIndex++;
+                });
+                $('#mco-sections-container').on('click', '.mco-remove-section', function() {
+                    $(this).closest('.mco-section-item').remove();
+                });
+            });
+        </script>
+        <style>.mco-section-item { margin-bottom: 5px; } .mco-section-item input { margin-right: 5px; }</style>
+        <?php
+    }
+}

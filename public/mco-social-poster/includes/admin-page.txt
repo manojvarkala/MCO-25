@@ -1,0 +1,50 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+function mco_social_render_admin_page() {
+    ?>
+    <div class="wrap">
+        <h1>MCO-Social Poster Settings</h1>
+        <p>Connect your social media accounts to automatically share new AI-generated blog posts.</p>
+        
+        <form method="post" action="options.php">
+            <?php
+            settings_fields('mco_social_options_group');
+            do_settings_sections('mco-social-poster');
+            submit_button('Save Social Credentials');
+            ?>
+        </form>
+    </div>
+    <?php
+}
+
+function mco_social_register_settings() {
+    register_setting('mco_social_options_group', 'mco_social_settings', 'mco_social_sanitize_settings');
+
+    // --- Facebook Section ---
+    add_settings_section('mco_social_facebook_section', 'Facebook Settings', null, 'mco-social-poster');
+    add_settings_field('facebook_enabled', 'Enable Facebook Posting', 'mco_social_facebook_enabled_callback', 'mco-social-poster', 'mco_social_facebook_section');
+    add_settings_field('facebook_page_id', 'Facebook Page ID', 'mco_social_facebook_page_id_callback', 'mco-social-poster', 'mco_social_facebook_section');
+    add_settings_field('facebook_access_token', 'Access Token', 'mco_social_facebook_access_token_callback', 'mco-social-poster', 'mco_social_facebook_section');
+
+    // --- LinkedIn Section ---
+    add_settings_section('mco_social_linkedin_section', 'LinkedIn Settings', null, 'mco-social-poster');
+    add_settings_field('linkedin_enabled', 'Enable LinkedIn Posting', 'mco_social_linkedin_enabled_callback', 'mco-social-poster', 'mco_social_linkedin_section');
+    add_settings_field('linkedin_page_id', 'LinkedIn Page ID', 'mco_social_linkedin_page_id_callback', 'mco-social-poster', 'mco_social_linkedin_section');
+    add_settings_field('linkedin_access_token', 'Access Token', 'mco_social_linkedin_access_token_callback', 'mco-social-poster', 'mco_social_linkedin_section');
+}
+add_action('admin_init', 'mco_social_register_settings');
+
+function mco_social_sanitize_settings($input) {
+    $new = [];
+    $new['facebook_enabled'] = isset($input['facebook_enabled']) ? 1 : 0;
+    $new['facebook_page_id'] = sanitize_text_field($input['facebook_page_id'] ?? '');
+    $new['facebook_access_token'] = sanitize_text_field($input['facebook_access_token'] ?? '');
+    $new['linkedin_enabled'] = isset($input['linkedin_enabled']) ? 1 : 0;
+    $new['linkedin_page_id'] = sanitize_text_field($input['linkedin_page_id'] ?? '');
+    $new['linkedin_access_token'] = sanitize_text_field($input['linkedin_access_token'] ?? '');
+    return $new;
+}
+
+function mco_social_facebook_enabled_callback() {
+    $o

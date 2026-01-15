@@ -1,0 +1,219 @@
+<?php
+/**
+ * =============================================================================
+ * MODULE: High-Priority Nuclear Security & Global CORS Handshake
+ * VERSION: 15.2.0 (Custom Expiry Logic Integrated)
+ * =============================================================================
+ */
+
+if (!defined('ABSPATH')) exit;
+
+/**
+ * 1. THE NUCLEAR HANDSHAKE
+ * We hook at priority -9999 to ensure we run before any other logic.
+ */
+function mco_nuclear_cors_handshake() {
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    if (empty($origin)) return;
+
+    $is_allowed = false;
+    $origin_low = strtolower(rtrim($origin, '/'));
+    
+    // Development local bypass
+    $hostname = parse_url($origin, PHP_URL_HOST);
+    if ($hostname === 'localhost' || $hostname === '127.0.0.1' || strpos($hostname, '.local') !== false) {
+        $is_allowed = true;
+    } else {
+        $allowed_raw = get_option('mco_exam_app_url', '');
+        $allowed_origins = array_filter(array_map('trim', explode("\n", str_replace("\r", "", $allowed_raw))));
+        
+        foreach ($allowed_origins as $allowed) {
+            if (rtrim(strtolower($allowed), '/') === $origin_low) {
+                $is_allowed = true;
+                break;
+            }
+        }
+    }
+
+    if ($is_allowed) {
+        // Essential headers for credentialed REST requests
+        header("Access-Control-Allow-Origin: $origin");
+        header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE, PATCH");
+        header("Access-Control-Allow-Credentials: true");
+        header("Access-Control-Allow-Headers: Authorization, Content-Type, X-Requested-With, X-WP-Nonce, X-HTTP-Method-Override, Accept, Origin");
+        header("Access-Control-Expose-Headers: Content-Length, X-JSON");
+        header("Access-Control-Max-Age: 86400"); // Cache preflight for 24 hours
+        header("Vary: Origin");
+
+        // PREFLIGHT EMERGENCY EXIT:
+        // Force an immediate 200 OK for OPTIONS requests so server security doesn't block them.
+        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+            status_header(200);
+            exit;
+        }
+    }
+}
+
+// Hook as early as possible to intercept Preflight
+add_action('init', 'mco_nuclear_cors_handshake', -9999);
+add_action('rest_api_init', 'mco_nuclear_cors_handshake', -9999);
+
+/**
+ * 2. JWT GENERATOR
+ * RESTORED: Required by SSO login flow and admin beta toggle.
+ */
+function mco_generate_exam_jwt($user_id) {
+    if (!defined('MCO_JWT_SECRET') || empty(MCO_JWT_SECRET)) return null;
+
+    $user = get_userdata($user_id);
+    if (!$user) return null;
+
+    $paid_exams = get_user_meta($user_id, 'mco_paid_exams', true) ?: [];
+    
+    $is_subscribed = false;
+    $subscription_info = null;
+    
+    // Check 1: Official WC Subscriptions
+    if (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription')) {
+        $is_subscribed = wcs_user_has_subscription($user_id, '', 'active');
+        if ($is_subscribed) {
+            $subs = wcs_get_users_subscriptions($user_id);
+            foreach ($subs as $sub) {
+                if ($sub->has_status('active')) {
+                    $next_payment = $sub->get_date('next_payment');
+                    if ($next_payment) {
+                        $subscription_info = [
+                            'status' => 'active',
+                            'nextPaymentDate' => date('M d, Y', strtotime($next_payment))
+                        ];
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // Check 2: Custom Addon Expiry (The replacement for WC Subscriptions)
+    $custom_expiry = (int)get_user_meta($user_id, '_mco_premium_expiry', true);
+    if ($custom_expiry && $custom_expiry > time()) {
+        $is_subscribed = true; // App treats them as a subscriber
+        // If not already set by WC Subscriptions, set info from custom expiry
+        if (!$subscription_info) {
+            $subscription_info = [
+                'status' => 'active',
+                'nextPaymentDate' => date('M d, Y', $custom_expiry) . " (Premium Access)"
+            ];
+        }
+    }
+
+    $payload = [
+        'iss' => get_site_url(),
+        'iat' => time(),
+        'exp' => time() + (60 * 60 * 24), // 24 hours
+        'user' => [
+            'id' => (string)$user->ID,
+            'name' => (string)$user->display_name,
+            'email' => (string)$user->user_email,
+            'isAdmin' => in_array('administrator', (array)$user->roles)
+        ],
+        'paidExamIds' => (array)$paid_exams,
+        'isSubscribed' => (bool)$is_subscribed,
+        'subscriptionInfo' => $subscription_info,
+        'isBetaTester' => get_user_meta($user_id, '_mco_is_beta_tester', true) === '1'
+    ];
+
+    $header = mco_base64url_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
+    $body = mco_base64url_encode(json_encode($payload));
+    $signature = mco_base64url_encode(hash_hmac('sha256', "$header.$body", MCO_JWT_SECRET, true));
+
+    return "$header.$body.$signature";
+}
+
+/**
+ * 3. IDENTITY RECOVERY ENGINE
+ * Fixes issues where Apache/LiteSpeed strips the Authorization header.
+ */
+function mco_api_validate_jwt($request) {
+    $auth = $request->get_header('authorization');
+   
+    if (empty($auth)) {
+        $check_keys = [
+            'HTTP_AUTHORIZATION', 
+            'REDIRECT_HTTP_AUTHORIZATION', 
+            'X_AUTHORIZATION', 
+            'X-Authorization'
+        ];
+        foreach ($check_keys as $key) {
+            if (!empty($_SERVER[$key])) {
+                $auth = $_SERVER[$key];
+                break;
+            }
+        }
+    }
+
+    if (empty($auth) || !preg_match('/Bearer\s+(.*)$/i', $auth, $matches)) {
+        return new WP_Error('jwt_auth_missing_token', 'Authorization header missing. Server may be stripping it.', ['status' => 401]);
+    }
+
+    $payload = mco_verify_exam_jwt($matches[1]);
+    if (is_wp_error($payload)) return $payload;
+
+    $request->set_param('jwt_payload', $payload);
+    return true;
+}
+
+/**
+ * 4. JWT VERIFICATION
+ */
+function mco_verify_exam_jwt($token) {
+    if (!defined('MCO_JWT_SECRET') || empty(MCO_JWT_SECRET)) {
+        return new WP_Error('config_err', 'MCO_JWT_SECRET not defined.', ['status' => 500]);
+    }
+    
+    $parts = explode('.', $token);
+    if (count($parts) !== 3) return new WP_Error('jwt_invalid', 'Malformed token.', ['status' => 401]);
+
+    list($header, $payload, $signature) = $parts;
+    $expected_sig = mco_base64url_encode(hash_hmac('sha256', "$header.$payload", MCO_JWT_SECRET, true));
+    
+    if (!hash_equals($signature, $expected_sig)) {
+        return new WP_Error('jwt_tampered', 'Signature mismatch.', ['status' => 403]);
+    }
+
+    $decoded = json_decode(mco_base64url_decode($payload), true);
+    if (!$decoded) return new WP_Error('jwt_payload_err', 'Invalid payload.', ['status' => 401]);
+    
+    if (isset($decoded['exp']) && ($decoded['exp'] + 300) < time()) {
+        return new WP_Error('jwt_auth_expired_token', 'Token expired.', ['status' => 403]);
+    }
+
+    return $decoded;
+}
+
+/**
+ * 5. ADMIN VALIDATION
+ */
+function mco_api_validate_admin_jwt($request) {
+    $valid = mco_api_validate_jwt($request);
+    if (is_wp_error($valid)) return $valid;
+    
+    $payload = $request->get_param('jwt_payload');
+    if (empty($payload['user']['isAdmin'])) {
+        return new WP_Error('rest_forbidden', 'Admin access required.', ['status' => 403]);
+    }
+    return true;
+}
+
+/**
+ * 6. UTILITIES
+ */
+if (!function_exists('mco_base64url_encode')) {
+    function mco_base64url_encode($data) { return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($data)); }
+}
+if (!function_exists('mco_base64url_decode')) {
+    function mco_base64url_decode($data) {
+        $remainder = strlen($data) % 4;
+        if ($remainder) $data .= str_repeat('=', 4 - $remainder);
+        return base64_decode(str_replace(['-', '_'], ['+', '/'], $data));
+    }
+}

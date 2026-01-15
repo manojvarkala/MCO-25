@@ -1,0 +1,74 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+/**
+ * Automatically completes WooCommerce orders for virtual products after payment.
+ * This ensures users get immediate access to digital products like exams.
+ */
+add_action( 'woocommerce_payment_complete', 'custom_auto_complete_virtual_order_after_payment' );
+
+function custom_auto_complete_virtual_order_after_payment( $order_id ) {
+    if ( ! $order_id ) {
+        return;
+    }
+
+    $order = wc_get_order( $order_id );
+
+    // If the order isn't valid or has a status that shouldn't be auto-completed, exit.
+    if ( ! $order || $order->has_status( array( 'completed', 'failed', 'cancelled', 'refunded' ) ) ) {
+        return;
+    }
+
+    $is_virtual_order = true;
+    
+    // Check if every item in the order is a virtual product.
+    if ( count( $order->get_items() ) > 0 ) {
+        foreach ( $order->get_items() as $item ) {
+            $product = $item->get_product();
+            // If we find any product that is NOT virtual, we stop.
+            if ( ! $product || !$product->is_virtual() ) {
+                $is_virtual_order = false;
+                break;
+            }
+        }
+    } else {
+        // No items in the order.
+        $is_virtual_order = false;
+    }
+    
+    // If all products in the order are indeed virtual, update the status to 'completed'.
+    if ( $is_virtual_order ) {
+        $order->update_status( 'completed', 'Order automatically completed as it only contains virtual items.' );
+    }
+}
+
+/**
+ * Sync purchased SKUs to user meta when order is completed.
+ * This ensures the JWT generator and sync-auth endpoint can find them immediately.
+ */
+add_action('woocommerce_order_status_completed', 'mco_sync_user_entitlements_on_purchase', 20, 1);
+function mco_sync_user_entitlements_on_purchase($order_id) {
+    $order = wc_get_order($order_id);
+    if (!$order) return;
+
+    $user_id = $order->get_user_id();
+    if (!$user_id) return;
+
+    $existing_paid = get_user_meta($user_id, 'mco_paid_exams', true) ?: [];
+    if (!is_array($existing_paid)) $existing_paid = [];
+
+    $new_skus = [];
+    foreach ($order->get_items() as $item) {
+        $product = $item->get_product();
+        if (!$product) continue;
+        $sku = $product->get_sku();
+        if ($sku && !in_array($sku, $existing_paid)) {
+            $new_skus[] = $sku;
+        }
+    }
+
+    if (!empty($new_skus)) {
+        $updated_paid = array_unique(array_merge($existing_paid, $new_skus));
+        update_user_meta($user_id, 'mco_paid_exams', $updated_paid);
+    }
+}

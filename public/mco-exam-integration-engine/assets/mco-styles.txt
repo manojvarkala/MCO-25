@@ -1,0 +1,107 @@
+/* 
+   MCO INDUSTRIAL ADMIN STYLES 
+   Engineered for modern WP dashboards.
+*/
+
+.mco-admin-wrap {
+    background: #f0f0f1;
+    padding: 20px;
+    border-radius: 8px;
+    margin-right: 20px;
+}
+
+.mco-admin-wrap h1 {
+    font-weight: 900;
+    font-size: 2.5em;
+    letter-spacing: -1px;
+    color: #1d2327;
+    margin-bottom: 20px;
+}
+
+.mco-admin-wrap .nav-tab-wrapper {
+    border-bottom: 2px solid #c3c4c7;
+    margin-bottom: 30px;
+}
+
+.mco-admin-wrap .nav-tab {
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+/* Accordion High Contrast */
+.mco-accordion-item {
+    border: 2px solid #dcdcde;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+
+.mco-accordion-title {
+    padding: 20px;
+    background: #ffffff;
+    font-weight: 800;
+    font-size: 16px;
+    color: #1d2327;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.mco-accordion-title:hover {
+    background: #f6f7f7;
+}
+
+.mco-accordion-content {
+    background: #fafafa;
+    border-top: 1px solid #eeeeee;
+}
+
+/* Theme Cards */
+.mco-theme-card {
+    border: 2px solid #dcdcde;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    background: #fff;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mco-theme-card:hover {
+    border-color: #2271b1;
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+}
+
+.mco-theme-card--selected {
+    border-color: #2271b1;
+    background: #f0f6fb;
+    box-shadow: 0 0 0 1px #2271b1;
+}
+
+.mco-theme-swatches {
+    height: 40px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    margin-bottom: 15px;
+    border: 1px solid #dcdcde;
+}
+
+.mco-theme-name {
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+/* Health Audit Card Tweak */
+.mco-health-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.mco-health-status--success { color: #008a20; font-weight: 800; }
+.mco-health-status--error { color: #d63638; font-weight: 800; }
