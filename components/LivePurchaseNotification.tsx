@@ -1,170 +1,190 @@
-import React, { FC, useState, useEffect, useMemo } from 'react';
-import { ShoppingCart } from 'lucide-react';
-import { useAppContext } from '../context/AppContext.tsx';
-import { useAuth } from '../context/AuthContext.tsx';
+<?php
+if (!defined('ABSPATH')) exit;
 
-/* -------------------------------------------------------------------------- */
-/* Region-aware social identity generator                                      */
-/* -------------------------------------------------------------------------- */
+/**
+ * MCO MASTER ROUTE REGISTRY
+ * Maps every frontend service call to an industrial handler.
+ */
 
-type RegionProfile = {
-    countryCode: string;
-    names: string[];
-    locations: string[];
-};
+add_action('rest_api_init', function() {
+    $namespace = 'mco-app/v1';
 
-const REGION_PROFILES: RegionProfile[] = [
-    {
-        countryCode: 'IN',
-        names: ['Amit', 'Rahul', 'Vikram', 'Arjun', 'Priya', 'Ananya', 'Neha'],
-        locations: ['Mumbai, IN', 'Delhi, IN', 'Bangalore, IN', 'Chennai, IN']
-    },
-    {
-        countryCode: 'AE',
-        names: ['Ahmed', 'Mohammed', 'Omar', 'Aisha', 'Fatima', 'Noor'],
-        locations: ['Dubai, AE', 'Abu Dhabi, AE', 'Sharjah, AE']
-    },
-    {
-        countryCode: 'US',
-        names: ['John', 'Michael', 'Daniel', 'Sarah', 'Emily', 'Jessica'],
-        locations: ['New York, NY', 'Los Angeles, CA', 'Chicago, IL']
-    },
-    {
-        countryCode: 'UK',
-        names: ['James', 'Oliver', 'Charlotte', 'Amelia', 'Henry'],
-        locations: ['London, UK', 'Manchester, UK']
-    }
-];
+    // --- PUBLIC ENDPOINTS ---
+    register_rest_route($namespace, '/config', [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_get_config',
+        'permission_callback' => '__return_true'
+    ]);
 
-const getRandomSocialIdentity = (preferredCountry?: string) => {
-    const pool = preferredCountry
-        ? REGION_PROFILES.filter(r => r.countryCode === preferredCountry)
-        : REGION_PROFILES;
+    register_rest_route($namespace, '/hit', [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_record_hit',
+        'permission_callback' => '__return_true'
+    ]);
 
-    const region =
-        pool.length > 0
-            ? pool[Math.floor(Math.random() * pool.length)]
-            : REGION_PROFILES[Math.floor(Math.random() * REGION_PROFILES.length)];
+    register_rest_route($namespace, '/register-tester', [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_register_tester',
+        'permission_callback' => '__return_true'
+    ]);
 
-    return {
-        name: region.names[Math.floor(Math.random() * region.names.length)],
-        location: region.locations[Math.floor(Math.random() * region.locations.length)]
-    };
-};
+    register_rest_route($namespace, '/resend-onboarding-email', [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_resend_onboarding_email',
+        'permission_callback' => '__return_true'
+    ]);
 
-/* -------------------------------------------------------------------------- */
-/* Component                                                                   */
-/* -------------------------------------------------------------------------- */
+    register_rest_route($namespace, '/redeem-tester-token', [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_redeem_tester_token',
+        'permission_callback' => '__return_true'
+    ]);
 
-const LivePurchaseNotification: FC = () => {
-    const { isEffectivelyAdmin } = useAuth();
-    const { activeOrg } = useAppContext();
+    register_rest_route($namespace, '/verify-certificate/(?P<id>[a-zA-Z0-9\-_]+)', [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_verify_certificate',
+        'permission_callback' => '__return_true'
+    ]);
 
-    const [isVisible, setIsVisible] = useState(false);
-    const [notification, setNotification] = useState({
-        name: '',
-        location: '',
-        exam: '',
-        time: ''
-    });
+    // --- PROTECTED USER ENDPOINTS ---
+    $user_auth = ['permission_callback' => 'mco_api_validate_jwt'];
 
-    const [adminPrefersHidden] = useState(() => {
-        try {
-            return localStorage.getItem('mco_show_notifications') === 'false';
-        } catch {
-            return false;
-        }
-    });
+    // Real-time Entitlement Sync
+    register_rest_route($namespace, '/sync-auth', array_merge($user_auth, [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_sync_auth'
+    ]));
 
-    const certificationExams = useMemo(() => {
-        if (!activeOrg?.exams) return [];
-        const exams = activeOrg.exams
-            .filter(e => e && !e.isPractice && e.price > 0)
-            .map(e => e.name);
+    register_rest_route($namespace, '/user-results', array_merge($user_auth, [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_get_user_results'
+    ]));
 
-        return exams.length ? exams : ['Professional Certification Exam'];
-    }, [activeOrg]);
+    register_rest_route($namespace, '/submit-result', array_merge($user_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_submit_result'
+    ]));
 
-    useEffect(() => {
-        if (!activeOrg?.purchaseNotifierEnabled) return;
-        if (isEffectivelyAdmin && adminPrefersHidden) return;
-        if (certificationExams.length === 0) return;
+    register_rest_route($namespace, '/questions-from-sheet', array_merge($user_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_questions_from_sheet'
+    ]));
 
-        let cycleTimeoutId: number;
-        let hideTimeoutId: number;
+    register_rest_route($namespace, '/create-checkout-session', array_merge($user_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_create_checkout_session'
+    ]));
 
-        const minGap = (activeOrg.purchaseNotifierMinGap || 8) * 1000;
-        const maxGap = (activeOrg.purchaseNotifierMaxGap || 23) * 1000;
-        const visibilityDuration = 5000;
+    register_rest_route($namespace, '/certificate-data/(?P<id>[a-zA-Z0-9\-_]+)', array_merge($user_auth, [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_get_certificate_data'
+    ]));
 
-        const triggerNotification = () => {
-            const { name, location } = getRandomSocialIdentity(activeOrg.countryCode);
+    register_rest_route($namespace, '/update-name', array_merge($user_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_update_name'
+    ]));
 
-            const exam =
-                certificationExams[Math.floor(Math.random() * certificationExams.length)];
-            const time = `${Math.floor(Math.random() * 10) + 1} minutes ago`;
+    register_rest_route($namespace, '/submit-feedback', array_merge($user_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_submit_feedback'
+    ]));
 
-            setNotification({ name, location, exam, time });
-            setIsVisible(true);
+    register_rest_route($namespace, '/submit-review', array_merge($user_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_submit_review'
+    ]));
 
-            hideTimeoutId = window.setTimeout(() => {
-                setIsVisible(false);
+    register_rest_route($namespace, '/log-engagement', array_merge($user_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_log_engagement'
+    ]));
 
-                const nextDelay =
-                    Math.floor(Math.random() * (maxGap - minGap)) + minGap;
-                cycleTimeoutId = window.setTimeout(triggerNotification, nextDelay);
-            }, visibilityDuration);
-        };
+    // --- PROTECTED ADMIN ENDPOINTS ---
+    $admin_auth = ['permission_callback' => 'mco_api_validate_admin_jwt'];
 
-        cycleTimeoutId = window.setTimeout(
-            triggerNotification,
-            (activeOrg.purchaseNotifierDelay || 7) * 1000
-        );
+    register_rest_route($namespace, '/debug-details', array_merge($admin_auth, [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_get_debug_details'
+    ]));
 
-        return () => {
-            window.clearTimeout(cycleTimeoutId);
-            window.clearTimeout(hideTimeoutId);
-        };
-    }, [activeOrg, certificationExams, isEffectivelyAdmin, adminPrefersHidden]);
+    register_rest_route($namespace, '/exam-stats', array_merge($admin_auth, [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_get_exam_stats'
+    ]));
 
-    if (!activeOrg?.purchaseNotifierEnabled) return null;
-    if (isEffectivelyAdmin && adminPrefersHidden) return null;
+    register_rest_route($namespace, '/admin/beta-testers', array_merge($admin_auth, [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_admin_get_beta_testers'
+    ]));
 
-    return (
-        <div
-            className={`fixed bottom-6 left-6 z-[60] bg-white p-4 rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm transition-all duration-700 ease-in-out transform ${
-                isVisible
-                    ? 'translate-x-0 opacity-100'
-                    : '-translate-x-[120%] opacity-0'
-            }`}
-        >
-            <div className="flex items-start">
-                <div className="bg-emerald-100 p-3 rounded-xl mr-4 shadow-inner">
-                    <ShoppingCart className="h-6 w-6 text-emerald-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <p className="font-black text-slate-900 text-sm truncate">
-                        {notification.name}
-                        <span className="font-normal text-slate-500 text-xs uppercase ml-1">
-                            from {notification.location}
-                        </span>
-                    </p>
-                    <p className="text-sm text-slate-600 mt-0.5">
-                        Just purchased{' '}
-                        <span className="font-bold text-cyan-600">
-                            “{notification.exam}”
-                        </span>
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-2">
-                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                            {notification.time}
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
+    register_rest_route($namespace, '/admin/resend-beta-email', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_resend_beta_email'
+    ]));
 
-export default LivePurchaseNotification;
+    register_rest_route($namespace, '/admin/system-status', array_merge($admin_auth, [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_admin_get_status'
+    ]));
+
+    register_rest_route($namespace, '/admin/test-sheet-url', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_test_sheet_url'
+    ]));
+
+    register_rest_route($namespace, '/admin/clear-config-cache', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_clear_config_cache'
+    ]));
+
+    register_rest_route($namespace, '/admin/clear-question-caches', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_clear_question_caches'
+    ]));
+
+    register_rest_route($namespace, '/admin/clear-all-results', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_clear_all_results'
+    ]));
+
+    register_rest_route($namespace, '/admin/update-exam-program', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_update_exam_program'
+    ]));
+
+    register_rest_route($namespace, '/admin/create-exam-program', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_create_exam_program'
+    ]));
+
+    register_rest_route($namespace, '/admin/upsert-product', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_upsert_product'
+    ]));
+
+    register_rest_route($namespace, '/admin/delete-post', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_delete_post'
+    ]));
+
+    register_rest_route($namespace, '/admin/toggle-beta-status', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_toggle_beta_status'
+    ]));
+
+    register_rest_route($namespace, '/admin/post-creation-data', array_merge($admin_auth, [
+        'methods' => 'GET',
+        'callback' => 'mco_handle_admin_get_post_creation_data'
+    ]));
+
+    register_rest_route($namespace, '/admin/create-post-from-app', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_create_post'
+    ]));
+
+    register_rest_route($namespace, '/admin/update-global-settings', array_merge($admin_auth, [
+        'methods' => 'POST',
+        'callback' => 'mco_handle_admin_update_settings'
+    ]));
+});
