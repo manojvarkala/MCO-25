@@ -1,5 +1,5 @@
 import React, { FC, useState, useMemo } from 'react';
-import { Check, Star, ShoppingCart } from 'lucide-react';
+import { Check, Star, ShoppingCart, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -11,7 +11,7 @@ interface SubscriptionOfferCardProps {
     price: number;
     regularPrice?: number;
     priceUnit: string;
-    url: string; // This will now be used as a fallback.
+    url: string;
     features: string[];
     isBestValue?: boolean;
     gradientClass: string;
@@ -39,16 +39,13 @@ const SubscriptionOfferCard: FC<SubscriptionOfferCardProps> = ({
 
     const handleSubscribe = async () => {
         if (!sku) {
-            toast.error("Could not determine subscription type.");
-            // Fallback to old method if SKU is not found
             window.location.href = url;
             return;
         }
 
         if (!user || !token || !activeOrg) {
             toast.error("Please log in to subscribe.");
-            const loginUrl = activeOrg ? `https://www.${activeOrg.website}/exam-login/` : '#';
-            window.location.href = loginUrl;
+            window.location.href = `https://www.${activeOrg?.website || 'annapoornainfo.com'}/exam-login/`;
             return;
         }
 
@@ -65,38 +62,51 @@ const SubscriptionOfferCard: FC<SubscriptionOfferCardProps> = ({
     const buttonText = isRedirecting ? 'Preparing...' : 'Subscribe Now';
 
     return (
-        <div className={`rounded-xl shadow-lg p-6 flex flex-col text-white relative ${gradientClass}`}>
+        <div className={`relative flex flex-col p-8 rounded-3xl shadow-2xl text-white transition-transform hover:scale-[1.02] border border-white/10 ${gradientClass}`}>
             {isBestValue && (
-                <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-xs font-bold uppercase px-3 py-1 rounded-full">
-                    <Star size={12} className="inline -mt-1 mr-1" /> Best Value
+                <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-[10px] font-black uppercase px-4 py-1.5 rounded-full shadow-lg border-2 border-white/20 flex items-center gap-1.5 whitespace-nowrap">
+                    <Star size={12} className="fill-current" /> Best Value Path
                 </div>
             )}
-            <h3 className="text-xl font-bold text-center">{planName}</h3>
-            <div className="my-4 text-center">
-                {regularPrice && regularPrice > price ? (
-                    <div className="flex items-baseline justify-center gap-2">
-                        <span className="text-2xl line-through text-white/70">${regularPrice.toFixed(2)}</span>
-                        <span className="text-4xl font-extrabold text-white">${price.toFixed(2)}</span>
-                    </div>
-                ) : (
-                    <span className="text-4xl font-extrabold text-white">${price.toFixed(2)}</span>
-                )}
-                <span className="text-base font-medium text-white/80">/{priceUnit}</span>
+            
+            <div className="flex justify-between items-start mb-6">
+                <div>
+                    <h3 className="text-2xl font-black">{planName}</h3>
+                    <p className="text-white/60 text-xs font-bold uppercase tracking-widest mt-1">Premium Pass</p>
+                </div>
+                <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
+                    <Zap size={24} className="text-yellow-300 fill-current" />
+                </div>
             </div>
-            <ul className="space-y-2 text-sm text-white/90 mb-6">
+
+            <div className="mb-8">
+                <div className="flex items-baseline gap-2">
+                    <span className="text-5xl font-black tracking-tighter">${price.toFixed(2)}</span>
+                    <span className="text-white/60 font-bold text-lg">/{priceUnit}</span>
+                </div>
+                {regularPrice && regularPrice > price && (
+                    <p className="text-white/40 text-sm font-bold line-through mt-1">Regular Price: ${regularPrice.toFixed(2)}</p>
+                )}
+            </div>
+
+            <ul className="space-y-4 mb-10 flex-grow">
                 {features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                        <Check size={16} className="text-green-300 flex-shrink-0 mt-0.5" />
-                        <span>{feature}</span>
+                    <li key={index} className="flex items-start gap-3">
+                        <div className="mt-0.5 bg-white/20 p-1 rounded-full">
+                            <Check size={12} className="text-white" strokeWidth={4} />
+                        </div>
+                        <span className="text-sm font-semibold text-white/90">{feature}</span>
                     </li>
                 ))}
             </ul>
+
             <button
                 onClick={handleSubscribe}
                 disabled={isRedirecting}
-                className="mt-auto w-full flex items-center justify-center gap-2 bg-white text-slate-800 font-bold py-3 text-center rounded-lg hover:bg-slate-200 transition disabled:opacity-75"
+                className="w-full flex items-center justify-center gap-2 bg-white py-4 rounded-2xl text-slate-900 font-black text-sm uppercase tracking-widest shadow-xl shadow-black/10 hover:bg-slate-100 transition active:scale-95 disabled:opacity-50"
             >
-                {isRedirecting ? <Spinner /> : <ShoppingCart size={18} />} {buttonText}
+                {isRedirecting ? <Spinner size="sm" /> : <ShoppingCart size={18} />} 
+                {buttonText}
             </button>
         </div>
     );

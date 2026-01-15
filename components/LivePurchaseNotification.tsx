@@ -1,190 +1,274 @@
-<?php
-if (!defined('ABSPATH')) exit;
+import React, { FC, useState, useEffect, useMemo } from 'react';
+import { ShoppingCart, Clock } from 'lucide-react';
+import { useAppContext } from '../context/AppContext.tsx';
 
-/**
- * MCO MASTER ROUTE REGISTRY
- * Maps every frontend service call to an industrial handler.
- */
+type RegionProfile = {
+    countryCode: string;
+    names: string[];
+    locations: string[];
+};
 
-add_action('rest_api_init', function() {
-    $namespace = 'mco-app/v1';
+const REGION_PROFILES: RegionProfile[] = [
 
-    // --- PUBLIC ENDPOINTS ---
-    register_rest_route($namespace, '/config', [
-        'methods' => 'GET',
-        'callback' => 'mco_handle_get_config',
-        'permission_callback' => '__return_true'
-    ]);
+    /* ------------------------------------------------------------------ */
+    /* India                                                              */
+    /* ------------------------------------------------------------------ */
+    {
+        countryCode: 'IN',
+        names: [
+            'Amit', 'Rahul', 'Vikram', 'Arjun', 'Sandeep',
+            'Priya', 'Ananya', 'Neha', 'Pooja', 'Sneha'
+        ],
+        locations: [
+            'Mumbai, IN', 'Delhi, IN', 'Bangalore, IN',
+            'Chennai, IN', 'Hyderabad, IN', 'Kolkata, IN'
+        ]
+    },
 
-    register_rest_route($namespace, '/hit', [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_record_hit',
-        'permission_callback' => '__return_true'
-    ]);
+    /* ------------------------------------------------------------------ */
+    /* United Arab Emirates / Gulf                                         */
+    /* ------------------------------------------------------------------ */
+    {
+        countryCode: 'AE',
+        names: [
+            'Ahmed', 'Mohammed', 'Omar', 'Yousef', 'Hassan',
+            'Aisha', 'Fatima', 'Mariam', 'Noor'
+        ],
+        locations: [
+            'Dubai, AE', 'Abu Dhabi, AE', 'Sharjah, AE',
+            'Ajman, AE', 'Al Ain, AE'
+        ]
+    },
 
-    register_rest_route($namespace, '/register-tester', [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_register_tester',
-        'permission_callback' => '__return_true'
-    ]);
+    /* ------------------------------------------------------------------ */
+    /* Saudi Arabia                                                        */
+    /* ------------------------------------------------------------------ */
+    {
+        countryCode: 'SA',
+        names: [
+            'Abdullah', 'Faisal', 'Khalid', 'Nasser',
+            'Sara', 'Reem', 'Lina', 'Huda'
+        ],
+        locations: [
+            'Riyadh, SA', 'Jeddah, SA', 'Dammam, SA'
+        ]
+    },
 
-    register_rest_route($namespace, '/resend-onboarding-email', [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_resend_onboarding_email',
-        'permission_callback' => '__return_true'
-    ]);
+    /* ------------------------------------------------------------------ */
+    /* United States                                                       */
+    /* ------------------------------------------------------------------ */
+    {
+        countryCode: 'US',
+        names: [
+            'John', 'Michael', 'Daniel', 'Christopher',
+            'Emily', 'Sarah', 'Jessica', 'Olivia', 'Emma'
+        ],
+        locations: [
+            'New York, NY', 'Los Angeles, CA', 'Chicago, IL',
+            'San Francisco, CA', 'Austin, TX', 'Seattle, WA'
+        ]
+    },
 
-    register_rest_route($namespace, '/redeem-tester-token', [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_redeem_tester_token',
-        'permission_callback' => '__return_true'
-    ]);
+    /* ------------------------------------------------------------------ */
+    /* United Kingdom                                                      */
+    /* ------------------------------------------------------------------ */
+    {
+        countryCode: 'UK',
+        names: [
+            'James', 'Oliver', 'William', 'Henry',
+            'Charlotte', 'Amelia', 'Isla', 'Sophia'
+        ],
+        locations: [
+            'London, UK', 'Manchester, UK',
+            'Birmingham, UK', 'Leeds, UK'
+        ]
+    },
 
-    register_rest_route($namespace, '/verify-certificate/(?P<id>[a-zA-Z0-9\-_]+)', [
-        'methods' => 'GET',
-        'callback' => 'mco_handle_verify_certificate',
-        'permission_callback' => '__return_true'
-    ]);
+    /* ------------------------------------------------------------------ */
+    /* Western Europe (France, Germany, Netherlands)                       */
+    /* ------------------------------------------------------------------ */
+    {
+        countryCode: 'EU-W',
+        names: [
+            'Pierre', 'Julien', 'Lucas', 'Matthias',
+            'Marie', 'Sophie', 'Anna', 'Laura'
+        ],
+        locations: [
+            'Paris, FR', 'Berlin, DE', 'Munich, DE',
+            'Amsterdam, NL', 'Brussels, BE'
+        ]
+    },
 
-    // --- PROTECTED USER ENDPOINTS ---
-    $user_auth = ['permission_callback' => 'mco_api_validate_jwt'];
+    /* ------------------------------------------------------------------ */
+    /* Southern Europe (Italy, Spain, Portugal)                            */
+    /* ------------------------------------------------------------------ */
+    {
+        countryCode: 'EU-S',
+        names: [
+            'Luca', 'Marco', 'Alessandro', 'Carlos',
+            'Sofia', 'Elena', 'Giulia', 'Maria'
+        ],
+        locations: [
+            'Rome, IT', 'Milan, IT', 'Barcelona, ES',
+            'Madrid, ES', 'Lisbon, PT'
+        ]
+    },
 
-    // Real-time Entitlement Sync
-    register_rest_route($namespace, '/sync-auth', array_merge($user_auth, [
-        'methods' => 'GET',
-        'callback' => 'mco_handle_sync_auth'
-    ]));
+    /* ------------------------------------------------------------------ */
+    /* Southeast Asia                                                      */
+    /* ------------------------------------------------------------------ */
+    {
+        countryCode: 'SEA',
+        names: [
+            'Arif', 'Rizky', 'Aditya', 'Budi',
+            'Siti', 'Putri', 'Ayu', 'Nur'
+        ],
+        locations: [
+            'Jakarta, ID', 'Kuala Lumpur, MY',
+            'Singapore, SG', 'Manila, PH'
+        ]
+    },
 
-    register_rest_route($namespace, '/user-results', array_merge($user_auth, [
-        'methods' => 'GET',
-        'callback' => 'mco_handle_get_user_results'
-    ]));
+    /* ------------------------------------------------------------------ */
+    /* East Asia                                                           */
+    /* ------------------------------------------------------------------ */
+    {
+        countryCode: 'EA',
+        names: [
+            'Wei', 'Liang', 'Chen', 'Zhang',
+            'Mei', 'Xia', 'Lin', 'Hui'
+        ],
+        locations: [
+            'Shanghai, CN', 'Beijing, CN',
+            'Hong Kong, HK', 'Taipei, TW'
+        ]
+    },
 
-    register_rest_route($namespace, '/submit-result', array_merge($user_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_submit_result'
-    ]));
+    /* ------------------------------------------------------------------ */
+    /* Africa                                                              */
+    /* ------------------------------------------------------------------ */
+    {
+        countryCode: 'AF',
+        names: [
+            'Kwame', 'Kofi', 'Samuel', 'Daniel',
+            'Amina', 'Zainab', 'Fatou', 'Grace'
+        ],
+        locations: [
+            'Lagos, NG', 'Accra, GH',
+            'Nairobi, KE', 'Johannesburg, ZA'
+        ]
+    },
 
-    register_rest_route($namespace, '/questions-from-sheet', array_merge($user_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_questions_from_sheet'
-    ]));
+    /* ------------------------------------------------------------------ */
+    /* Australia & New Zealand                                             */
+    /* ------------------------------------------------------------------ */
+    {
+        countryCode: 'AU',
+        names: [
+            'Liam', 'Jack', 'Noah', 'Ethan',
+            'Olivia', 'Chloe', 'Isabella', 'Mia'
+        ],
+        locations: [
+            'Sydney, AU', 'Melbourne, AU',
+            'Brisbane, AU', 'Auckland, NZ'
+        ]
+    },
 
-    register_rest_route($namespace, '/create-checkout-session', array_merge($user_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_create_checkout_session'
-    ]));
+    /* ------------------------------------------------------------------ */
+    /* Canada                                                              */
+    /* ------------------------------------------------------------------ */
+    {
+        countryCode: 'CA',
+        names: [
+            'Matthew', 'Ryan', 'Daniel', 'Lucas',
+            'Emily', 'Hannah', 'Lauren', 'Ava'
+        ],
+        locations: [
+            'Toronto, CA', 'Vancouver, CA',
+            'Montreal, CA', 'Calgary, CA'
+        ]
+    }
+];
 
-    register_rest_route($namespace, '/certificate-data/(?P<id>[a-zA-Z0-9\-_]+)', array_merge($user_auth, [
-        'methods' => 'GET',
-        'callback' => 'mco_handle_get_certificate_data'
-    ]));
+const LivePurchaseNotification: FC = () => {
+    const { activeOrg, purchaseNotifierEnabled, purchaseNotifierDelay, purchaseNotifierMinGap, purchaseNotifierMaxGap } = useAppContext();
+    const [isVisible, setIsVisible] = useState(false);
+    const [currentData, setCurrentData] = useState({
+        name: '',
+        location: '',
+        exam: '',
+        time: ''
+    });
 
-    register_rest_route($namespace, '/update-name', array_merge($user_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_update_name'
-    ]));
+    const examPool = useMemo(() => {
+        return activeOrg?.exams.filter(e => !e.isPractice).map(e => e.name) || ['Certification Exam'];
+    }, [activeOrg]);
 
-    register_rest_route($namespace, '/submit-feedback', array_merge($user_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_submit_feedback'
-    ]));
+    useEffect(() => {
+        if (!purchaseNotifierEnabled) return;
 
-    register_rest_route($namespace, '/submit-review', array_merge($user_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_submit_review'
-    ]));
+        let timeout: number;
 
-    register_rest_route($namespace, '/log-engagement', array_merge($user_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_log_engagement'
-    ]));
+        const showNotification = () => {
+            // 1. Pick a random cultural region
+            const region = regionProfiles[Math.floor(Math.random() * regionProfiles.length)];
+            
+            // 2. Pick paired data from that region
+            const randomName = region.names[Math.floor(Math.random() * region.names.length)];
+            const randomLocation = region.locations[Math.floor(Math.random() * region.locations.length)];
+            
+            // 3. Pick random exam and timestamp
+            const randomExam = examPool[Math.floor(Math.random() * examPool.length)];
+            const randomMinutes = Math.floor(Math.random() * 12) + 1;
 
-    // --- PROTECTED ADMIN ENDPOINTS ---
-    $admin_auth = ['permission_callback' => 'mco_api_validate_admin_jwt'];
+            setCurrentData({
+                name: randomName,
+                location: randomLocation,
+                exam: randomExam,
+                time: `${randomMinutes} minutes ago`
+            });
 
-    register_rest_route($namespace, '/debug-details', array_merge($admin_auth, [
-        'methods' => 'GET',
-        'callback' => 'mco_handle_get_debug_details'
-    ]));
+            setIsVisible(true);
 
-    register_rest_route($namespace, '/exam-stats', array_merge($admin_auth, [
-        'methods' => 'GET',
-        'callback' => 'mco_handle_get_exam_stats'
-    ]));
+            // Hide after 6 seconds
+            setTimeout(() => setIsVisible(false), 6000);
 
-    register_rest_route($namespace, '/admin/beta-testers', array_merge($admin_auth, [
-        'methods' => 'GET',
-        'callback' => 'mco_handle_admin_get_beta_testers'
-    ]));
+            // Schedule next notification based on organization gaps
+            const min = (purchaseNotifierMinGap || 8) * 1000;
+            const max = (purchaseNotifierMaxGap || 23) * 1000;
+            const nextDelay = Math.floor(Math.random() * (max - min + 1)) + min;
+            timeout = window.setTimeout(showNotification, nextDelay);
+        };
 
-    register_rest_route($namespace, '/admin/resend-beta-email', array_merge($admin_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_admin_resend_beta_email'
-    ]));
+        // Initial launch delay
+        timeout = window.setTimeout(showNotification, (purchaseNotifierDelay || 7) * 1000);
 
-    register_rest_route($namespace, '/admin/system-status', array_merge($admin_auth, [
-        'methods' => 'GET',
-        'callback' => 'mco_handle_admin_get_status'
-    ]));
+        return () => window.clearTimeout(timeout);
+    }, [purchaseNotifierEnabled, examPool, purchaseNotifierDelay, purchaseNotifierMinGap, purchaseNotifierMaxGap]);
 
-    register_rest_route($namespace, '/admin/test-sheet-url', array_merge($admin_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_admin_test_sheet_url'
-    ]));
+    if (!purchaseNotifierEnabled || !isVisible) return null;
 
-    register_rest_route($namespace, '/admin/clear-config-cache', array_merge($admin_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_admin_clear_config_cache'
-    ]));
+    return (
+        <div className="fixed bottom-6 left-6 z-[60] animate-in slide-in-from-bottom-10 fade-in duration-500">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 flex items-center gap-4 max-w-sm">
+                <div className="bg-emerald-100 p-3 rounded-full text-emerald-600 flex-shrink-0">
+                    <ShoppingCart size={24} />
+                </div>
+                <div className="overflow-hidden">
+                    <p className="text-sm font-black text-slate-900 truncate">
+                        {currentData.name} from {currentData.location}
+                    </p>
+                    <p className="text-xs text-slate-600 mt-0.5 line-clamp-1">
+                        Just purchased the <span className="font-bold text-cyan-600">"{currentData.exam}"</span>
+                    </p>
+                    <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                        <Clock size={10} />
+                        <span>{currentData.time}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
-    register_rest_route($namespace, '/admin/clear-question-caches', array_merge($admin_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_admin_clear_question_caches'
-    ]));
-
-    register_rest_route($namespace, '/admin/clear-all-results', array_merge($admin_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_admin_clear_all_results'
-    ]));
-
-    register_rest_route($namespace, '/admin/update-exam-program', array_merge($admin_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_admin_update_exam_program'
-    ]));
-
-    register_rest_route($namespace, '/admin/create-exam-program', array_merge($admin_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_admin_create_exam_program'
-    ]));
-
-    register_rest_route($namespace, '/admin/upsert-product', array_merge($admin_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_admin_upsert_product'
-    ]));
-
-    register_rest_route($namespace, '/admin/delete-post', array_merge($admin_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_admin_delete_post'
-    ]));
-
-    register_rest_route($namespace, '/admin/toggle-beta-status', array_merge($admin_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_admin_toggle_beta_status'
-    ]));
-
-    register_rest_route($namespace, '/admin/post-creation-data', array_merge($admin_auth, [
-        'methods' => 'GET',
-        'callback' => 'mco_handle_admin_get_post_creation_data'
-    ]));
-
-    register_rest_route($namespace, '/admin/create-post-from-app', array_merge($admin_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_admin_create_post'
-    ]));
-
-    register_rest_route($namespace, '/admin/update-global-settings', array_merge($admin_auth, [
-        'methods' => 'POST',
-        'callback' => 'mco_handle_admin_update_settings'
-    ]));
-});
+export default LivePurchaseNotification;

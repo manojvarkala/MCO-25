@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useContext, createContext, FC, ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import type { User, TokenPayload, SubscriptionInfo } from '../types.ts';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
-import { LogOut } from 'lucide-react';
 
 type MasqueradeMode = 'none' | 'user' | 'visitor';
 
@@ -37,9 +35,15 @@ const decodeHtmlEntities = (text: string | undefined): string => {
         textarea.innerHTML = text;
         return textarea.value;
     } catch (e) {
-        console.error("Could not decode HTML entities", e);
         return text;
     }
+};
+
+const normalizePaidIds = (raw: any): string[] => {
+    if (!raw) return [];
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    const items = Array.isArray(parsed) ? parsed : Object.values(parsed);
+    return items.filter(i => typeof i === 'string' || typeof i === 'number').map(i => i.toString());
 };
 
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
@@ -48,7 +52,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const storedUser = localStorage.getItem('examUser');
         return storedUser ? JSON.parse(storedUser) : null;
     } catch (error) {
-        console.error("Failed to parse user from localStorage", error);
         return null;
     }
   });
@@ -58,11 +61,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [paidExamIds, setPaidExamIds] = useState<string[]>(() => {
       try {
         const storedIds = localStorage.getItem('paidExamIds');
-        const parsed = storedIds ? JSON.parse(storedIds) : [];
-        // FIX: Added type assertion to ensure string[] return type for consistency with state.
-        return (Array.isArray(parsed) ? parsed : (parsed ? Object.values(parsed) : [])) as string[];
+        return normalizePaidIds(storedIds);
       } catch (error) {
-          console.error("Failed to parse paidExamIds from localStorage", error);
           return [];
       }
   });
@@ -117,11 +117,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     localStorage.removeItem('isBetaTester');
     
     Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('exam_timer_') || key.startsWith('exam_results_')) {
+        if (key.startsWith('exam_timer_') || key.startsWith('exam_results_') || key.startsWith('appConfigCache')) {
             localStorage.removeItem(key);
-        }
-        if (key.startsWith('appConfigCache')) {
-             localStorage.removeItem(key);
         }
     });
   }, []);
@@ -130,15 +127,17 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     if (!token) return;
     try {
         const data = await googleSheetsService.syncEntitlements(token);
-        setPaidExamIds(data.paidExamIds || []);
+        const normalizedIds = normalizePaidIds(data.paidExamIds);
+        
+        setPaidExamIds(normalizedIds);
         setIsSubscribed(!!data.isSubscribed);
         setSubscriptionInfo(data.subscriptionInfo);
         setIsBetaTester(!!data.isBetaTester);
         
-        localStorage.setItem('paidExamIds', JSON.stringify(data.paidExamIds));
-        localStorage.setItem('isSubscribed', JSON.stringify(data.isSubscribed));
+        localStorage.setItem('paidExamIds', JSON.stringify(normalizedIds));
+        localStorage.setItem('isSubscribed', JSON.stringify(!!data.isSubscribed));
         localStorage.setItem('subscriptionInfo', JSON.stringify(data.subscriptionInfo));
-        localStorage.setItem('isBetaTester', JSON.stringify(data.isBetaTester));
+        localStorage.setItem('isBetaTester', JSON.stringify(!!data.isBetaTester));
     } catch (e) {
         console.error("Failed to refresh entitlements", e);
         throw e;
@@ -161,35 +160,25 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         if (payload.user) {
             if (!isSyncOnly) {
-                try {
-                    await googleSheetsService.syncResults(payload.user, jwtToken);
-                } catch (serverError: any) {
-                    const code = serverError.code;
-                    const msg = serverError.message?.toLowerCase() || '';
-                    if (code === 'jwt_auth_expired_token') throw new Error("Session Expired"); 
-                    if (code === 'jwt_auth_missing_token' || msg.includes('authorization header')) throw new Error("Server Config Error");
-                    if (code === 'jwt_tampered' || msg.includes('signature mismatch')) throw new Error("Security Key Mismatch");
-                }
+                await googleSheetsService.syncResults(payload.user, jwtToken).catch(console.warn);
             }
 
+            const normalizedIds = normalizePaidIds(payload.paidExamIds);
+
             setUser(payload.user);
-            // FIX: Added type assertion to string[] for paidIds to resolve 'unknown[]' not assignable to 'string[]' error.
-            let paidIds = (Array.isArray(payload.paidExamIds) ? payload.paidExamIds : (payload.paidExamIds ? Object.values(payload.paidExamIds) : [])) as string[];
-            setPaidExamIds(paidIds);
+            setPaidExamIds(normalizedIds);
             setToken(jwtToken);
             setMasqueradeAs('none');
             setOriginalAuthState(null);
             
             localStorage.setItem('examUser', JSON.stringify(payload.user));
-            localStorage.setItem('paidExamIds', JSON.stringify(paidIds));
+            localStorage.setItem('paidExamIds', JSON.stringify(normalizedIds));
             localStorage.setItem('authToken', jwtToken);
             setIsBetaTester(!!payload.isBetaTester);
-            if (payload.isBetaTester) localStorage.setItem('isBetaTester', 'true');
-            else localStorage.removeItem('isBetaTester');
+            localStorage.setItem('isBetaTester', payload.isBetaTester ? 'true' : 'false');
 
             setIsSubscribed(!!payload.isSubscribed);
-            if (payload.isSubscribed) localStorage.setItem('isSubscribed', 'true');
-            else localStorage.removeItem('isSubscribed');
+            localStorage.setItem('isSubscribed', payload.isSubscribed ? 'true' : 'false');
 
             setSubscriptionInfo(payload.subscriptionInfo || null);
             if (payload.subscriptionInfo) localStorage.setItem('subscriptionInfo', JSON.stringify(payload.subscriptionInfo));
@@ -209,8 +198,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (masqueradeAs !== 'none' || !user?.isAdmin) return;
         setOriginalAuthState({ user, token, paidExamIds, isSubscribed, subscriptionInfo, isBetaTester });
         setMasqueradeAs(as);
-        if (as === 'user') toast('Masquerade mode enabled.', { icon: '🎭' });
-        else toast('Masquerade mode enabled.', { icon: '👻' });
     };
 
     const stopMasquerade = () => {
@@ -219,7 +206,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setPaidExamIds(originalAuthState.paidExamIds); setIsSubscribed(originalAuthState.isSubscribed);
         setSubscriptionInfo(originalAuthState.subscriptionInfo); setIsBetaTester(originalAuthState.isBetaTester);
         setOriginalAuthState(null); setMasqueradeAs('none');
-        toast.success('Returned to Admin view.');
     };
 
   const updateUserName = useCallback((name: string) => {
