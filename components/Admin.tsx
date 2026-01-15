@@ -62,7 +62,7 @@ const NavItem: FC<{ id: AdminTab; label: string; icon: ReactNode; active: boolea
         className={`flex items-center gap-3 px-5 py-4 rounded-xl transition-all font-bold text-sm w-full text-left border ${
             active 
                 ? 'bg-cyan-600 border-cyan-500 text-white shadow-lg shadow-cyan-900/20' 
-                : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                : 'bg-[rgb(var(--color-card-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-muted-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))]'
         }`}
     >
         {icon} {label}
@@ -70,7 +70,7 @@ const NavItem: FC<{ id: AdminTab; label: string; icon: ReactNode; active: boolea
 );
 
 const HealthCard: FC<{ title: string; status?: { success: boolean; message: string } }> = ({ title, status }) => (
-    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between shadow-sm hover:border-slate-700 transition-colors">
+    <div className="bg-[rgb(var(--color-card-rgb))] p-4 rounded-xl border border-[rgb(var(--color-border-rgb))] flex items-center justify-between shadow-sm hover:border-cyan-500 transition-colors">
         <div className="flex items-center gap-3 overflow-hidden">
             {!status ? (
                 <RefreshCw size={18} className="text-cyan-500 animate-spin flex-shrink-0" />
@@ -79,7 +79,7 @@ const HealthCard: FC<{ title: string; status?: { success: boolean; message: stri
             ) : (
                 <XCircle className="text-rose-500 flex-shrink-0" size={18} />
             )}
-            <span className="font-bold text-slate-200 text-sm truncate">{title}</span>
+            <span className="font-bold text-[rgb(var(--color-text-strong-rgb))] text-sm truncate">{title}</span>
         </div>
         <span className={`mco-admin-badge ${!status ? 'mco-admin-badge--pending' : status.success ? 'mco-admin-badge--success' : 'mco-admin-badge--error'}`}>
             {!status ? 'POLLING...' : status.message.toUpperCase()}
@@ -203,7 +203,7 @@ const Admin: FC = () => {
                 {activeTab === 'diagnostics' && (
                     <div className="space-y-8">
                         <div>
-                            <h2 className="text-3xl font-black mb-6 flex items-center gap-3 text-white">
+                            <h2 className="text-3xl font-black mb-6 flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))]">
                                 <Layout className="text-cyan-500" size={32} /> Platform Health
                             </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -216,21 +216,21 @@ const Admin: FC = () => {
                             </div>
                         </div>
 
-                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl">
-                            <h3 className="text-xl font-bold mb-8 flex items-center gap-3 text-white border-b border-slate-800 pb-4">
+                        <div className="bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-2xl p-8 shadow-xl">
+                            <h3 className="text-xl font-bold mb-8 flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))] border-b border-[rgb(var(--color-border-rgb))] pb-4">
                                 <BarChart3 size={24} className="text-cyan-500" /> Platform Metrics
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
                                 <div className="space-y-1">
-                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Total Sales Units</p>
-                                    <p className="text-4xl font-black text-white">{stats?.reduce((acc, s) => acc + (s.totalSales || 0), 0).toLocaleString()}</p>
+                                    <p className="text-[10px] text-[rgb(var(--color-text-muted-rgb))] font-black uppercase tracking-widest">Total Sales Units</p>
+                                    <p className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))]">{stats?.reduce((acc, s) => acc + (s.totalSales || 0), 0).toLocaleString()}</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Estimated Gross</p>
+                                    <p className="text-[10px] text-[rgb(var(--color-text-muted-rgb))] font-black uppercase tracking-widest">Estimated Gross</p>
                                     <p className="text-4xl font-black text-emerald-400">${stats?.reduce((acc, s) => acc + (s.totalRevenue || 0), 0).toLocaleString()}</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">User Engagement</p>
+                                    <p className="text-[10px] text-[rgb(var(--color-text-muted-rgb))] font-black uppercase tracking-widest">User Engagement</p>
                                     <p className="text-4xl font-black text-cyan-400">{stats?.reduce((acc, s) => acc + (s.attempts || 0), 0).toLocaleString()}</p>
                                 </div>
                             </div>
@@ -241,24 +241,24 @@ const Admin: FC = () => {
                 {activeTab === 'appearance' && (
                     <div className="space-y-10">
                         <div className="space-y-6">
-                            <h2 className="text-3xl font-black flex items-center gap-3 text-white">
+                            <h2 className="text-3xl font-black flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))]">
                                 <Settings2 className="text-cyan-500" size={32} /> Component Toggles
                             </h2>
-                            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-800 shadow-xl">
+                            <div className="bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-2xl overflow-hidden divide-y divide-[rgb(var(--color-border-rgb))] shadow-xl">
                                 {[
                                     { id: 'purchaseNotifierEnabled', label: 'Site Purchase Notifier', desc: 'Real-time social proof popups for visitors' },
                                     { id: 'subscriptionsEnabled', label: 'Subscription Framework', desc: 'Global recurring billing and membership logic' },
                                     { id: 'bundlesEnabled', label: 'Smart Product Bundling', desc: 'Automated package deal rendering (Exam + Sub)' }
                                 ].map(f => (
-                                    <div key={f.id} className="flex items-center justify-between p-6 bg-slate-900 hover:bg-slate-800/40 transition-colors">
+                                    <div key={f.id} className="flex items-center justify-between p-6 bg-[rgb(var(--color-card-rgb))] hover:bg-[rgba(var(--color-muted-rgb),0.4)] transition-colors">
                                         <div className="max-w-md">
-                                            <p className="font-black text-slate-100 text-lg">{f.label}</p>
-                                            <p className="text-sm text-slate-500 font-medium mt-1">{f.desc}</p>
+                                            <p className="font-black text-[rgb(var(--color-text-strong-rgb))] text-lg">{f.label}</p>
+                                            <p className="text-sm text-[rgb(var(--color-text-muted-rgb))] font-medium mt-1">{f.desc}</p>
                                         </div>
                                         <button 
                                             onClick={() => handleSyncSettings({ [f.id]: !(localSettings as any)[f.id] })}
                                             disabled={isSavingSettings}
-                                            className={`transition-all transform active:scale-95 ${ (localSettings as any)[f.id] ? 'text-cyan-500' : 'text-slate-700'}`}
+                                            className={`transition-all transform active:scale-95 ${ (localSettings as any)[f.id] ? 'text-cyan-500' : 'text-slate-400'}`}
                                         >
                                             { (localSettings as any)[f.id] ? <ToggleRight size={52} strokeWidth={1.5}/> : <ToggleLeft size={52} strokeWidth={1.5}/>}
                                         </button>
@@ -268,11 +268,11 @@ const Admin: FC = () => {
                         </div>
 
                         <div className="space-y-6">
-                            <h2 className="text-3xl font-black flex items-center gap-3 text-white">
+                            <h2 className="text-3xl font-black flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))]">
                                 <Palette className="text-cyan-500" size={32} /> Organizational Theme
                             </h2>
-                            <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
-                                <p className="text-slate-500 text-sm font-medium mb-8 leading-relaxed max-w-2xl">
+                            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-2xl shadow-xl border border-[rgb(var(--color-border-rgb))]">
+                                <p className="text-[rgb(var(--color-text-muted-rgb))] text-sm font-medium mb-8 leading-relaxed max-w-2xl">
                                     Set the <strong>global default theme</strong> for all users. This selection will be the baseline visual profile for the dashboard, certificates, and marketing elements.
                                 </p>
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -283,12 +283,12 @@ const Admin: FC = () => {
                                             onClick={() => handleSyncSettings({ activeThemeId: theme.id })}
                                             className={`relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${
                                                 localSettings.activeThemeId === theme.id 
-                                                    ? 'border-cyan-500 bg-cyan-50 ring-2 ring-cyan-500/20 shadow-md' 
-                                                    : 'border-slate-200 hover:border-cyan-400 bg-slate-50'
+                                                    ? 'border-cyan-500 bg-cyan-500/10 ring-2 ring-cyan-500/20 shadow-md' 
+                                                    : 'border-[rgb(var(--color-border-rgb))] hover:border-cyan-400 bg-[rgba(var(--color-muted-rgb),0.2)]'
                                             }`}
                                         >
                                             {localSettings.activeThemeId === theme.id && (
-                                                <div className="absolute -top-2 -right-2 bg-cyan-500 text-white rounded-full p-1 shadow-md border-2 border-white">
+                                                <div className="absolute -top-2 -right-2 bg-cyan-500 text-white rounded-full p-1 shadow-md border-2 border-[rgb(var(--color-card-rgb))]">
                                                     <Check size={12} strokeWidth={4}/>
                                                 </div>
                                             )}
@@ -301,7 +301,7 @@ const Admin: FC = () => {
                                             </div>
 
                                             <span className={`font-bold text-xs uppercase tracking-tight ${
-                                                localSettings.activeThemeId === theme.id ? 'text-cyan-700' : 'text-slate-600'
+                                                localSettings.activeThemeId === theme.id ? 'text-cyan-400' : 'text-[rgb(var(--color-text-muted-rgb))]'
                                             }`}>
                                                 {theme.name}
                                             </span>
@@ -315,35 +315,35 @@ const Admin: FC = () => {
 
                 {activeTab === 'bulk' && (
                     <div className="space-y-8">
-                        <h2 className="text-3xl font-black flex items-center gap-3 text-white">
+                        <h2 className="text-3xl font-black flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))]">
                             <DatabaseZap className="text-cyan-500" size={32} /> Infrastructure Tools
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="bg-slate-900 p-8 rounded-2xl border border-slate-800 shadow-xl">
-                                <h3 className="text-xl font-black mb-6 flex items-center gap-3 text-white border-b border-slate-800 pb-4">
+                            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-2xl border border-[rgb(var(--color-border-rgb))] shadow-xl">
+                                <h3 className="text-xl font-black mb-6 flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))] border-b border-[rgb(var(--color-border-rgb))] pb-4">
                                     <RefreshCw size={22} className="text-cyan-400"/> Memory Management
                                 </h3>
                                 <div className="space-y-4">
-                                    <button onClick={flushCache} className="w-full py-4 bg-slate-950 hover:bg-slate-800 text-slate-200 font-bold rounded-xl border border-slate-800 flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-lg">
+                                    <button onClick={flushCache} className="w-full py-4 bg-[rgb(var(--color-background-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-default-rgb))] font-bold rounded-xl border border-[rgb(var(--color-border-rgb))] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-lg">
                                         <RefreshCw size={18} className="text-cyan-500"/> Purge Configuration Cache
                                     </button>
-                                    <button onClick={() => googleSheetsService.adminClearQuestionCaches(token!)} className="w-full py-4 bg-slate-950 hover:bg-slate-800 text-slate-200 font-bold rounded-xl border border-slate-800 flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-lg">
+                                    <button onClick={() => googleSheetsService.adminClearQuestionCaches(token!)} className="w-full py-4 bg-[rgb(var(--color-background-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-default-rgb))] font-bold rounded-xl border border-[rgb(var(--color-border-rgb))] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-lg">
                                         <FileSpreadsheet size={18} className="text-emerald-500"/> Force Sync All Data Sheets
                                     </button>
                                 </div>
                             </div>
                             
-                            <div className="bg-slate-900 p-8 rounded-2xl border border-slate-800 shadow-xl flex flex-col">
-                                <h3 className="text-xl font-black mb-6 flex items-center gap-3 text-white border-b border-slate-800 pb-4">
+                            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-2xl border border-[rgb(var(--color-border-rgb))] shadow-xl flex flex-col">
+                                <h3 className="text-xl font-black mb-6 flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))] border-b border-[rgb(var(--color-border-rgb))] pb-4">
                                     <DownloadCloud size={22} className="text-cyan-400"/> Bulk Templates
                                 </h3>
                                 <div className="space-y-4 flex-1">
-                                    <p className="text-slate-500 text-sm font-medium mb-4 leading-relaxed italic">Download canonical CSV structures for rapid migration or backup.</p>
-                                    <a href="/template-exam-programs.csv" download className="flex items-center justify-between p-5 bg-slate-950 border border-slate-800 rounded-xl hover:bg-slate-800 transition-all text-slate-300 font-bold hover:text-cyan-400">
+                                    <p className="text-[rgb(var(--color-text-muted-rgb))] text-sm font-medium mb-4 leading-relaxed italic">Download canonical CSV structures for rapid migration or backup.</p>
+                                    <a href="/template-exam-programs.csv" download className="flex items-center justify-between p-5 bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl hover:bg-[rgb(var(--color-muted-rgb))] transition-all text-[rgb(var(--color-text-default-rgb))] font-bold hover:text-cyan-400">
                                         <span>Exam Programs Structure</span>
                                         <ExternalLink size={16} className="opacity-50"/>
                                     </a>
-                                    <a href="/template-questions.csv" download className="flex items-center justify-between p-5 bg-slate-950 border border-slate-800 rounded-xl hover:bg-slate-800 transition-all text-slate-300 font-bold hover:text-cyan-400">
+                                    <a href="/template-questions.csv" download className="flex items-center justify-between p-5 bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl hover:bg-[rgb(var(--color-muted-rgb))] transition-all text-[rgb(var(--color-text-default-rgb))] font-bold hover:text-cyan-400">
                                         <span>Master Question Dataset</span>
                                         <ExternalLink size={16} className="opacity-50"/>
                                     </a>

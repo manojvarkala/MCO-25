@@ -1,3 +1,4 @@
+
 import React, { FC, useState, useMemo, ReactNode } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -23,7 +24,7 @@ const TabButton: FC<{ active: boolean; onClick: () => void; children: ReactNode 
     <button
         onClick={onClick}
         className={`px-6 py-2 font-black text-xs uppercase tracking-widest rounded-lg transition-all ${
-            active ? 'bg-cyan-600 text-white shadow-lg' : 'bg-slate-950 text-slate-500 hover:bg-slate-800'
+            active ? 'bg-cyan-600 text-white shadow-lg' : 'bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-muted-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]'
         }`}
     >
         {children}
@@ -59,69 +60,69 @@ const ProductEditorModal: FC<{
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-                <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
-                    <h2 className="text-xl font-black text-white flex items-center gap-2">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                <div className="p-6 border-b border-[rgb(var(--color-border-rgb))] flex justify-between items-center bg-[rgba(var(--color-background-rgb),0.5)]">
+                    <h2 className="text-xl font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2">
                         {isNew ? <PlusCircle size={20} className="text-emerald-500"/> : <Edit size={20} className="text-cyan-500"/>} 
                         {isNew ? `Create New ${formData.type.toUpperCase()}` : 'Edit Product'}
                     </h2>
-                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors"><X size={24}/></button>
+                    <button onClick={onClose} className="text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))] transition-colors"><X size={24}/></button>
                 </div>
                 
                 <div className="p-8 space-y-6 overflow-y-auto flex-grow">
                     <div>
-                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1 block">Display Name</label>
+                        <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">Display Name</label>
                         <div className="relative">
-                            <Tag className="absolute left-3 top-3.5 text-slate-600" size={18}/>
+                            <Tag className="absolute left-3 top-3.5 text-slate-400" size={18}/>
                             <input 
                                 type="text" 
                                 value={formData.name} 
                                 onChange={e => setFormData({...formData, name: e.target.value})}
                                 placeholder="e.g. CPC Certification Exam"
-                                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+                                className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1 block">Unique SKU</label>
+                        <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">Unique SKU</label>
                         <div className="relative">
-                            <Info className="absolute left-3 top-3.5 text-slate-600" size={18}/>
+                            <Info className="absolute left-3 top-3.5 text-slate-400" size={18}/>
                             <input 
                                 type="text" 
                                 value={formData.sku} 
                                 onChange={e => setFormData({...formData, sku: e.target.value})}
                                 disabled={!isNew}
                                 placeholder="e.g. exam-cpc-cert"
-                                className={`w-full bg-slate-950 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 ${!isNew ? 'opacity-50 cursor-not-allowed font-mono text-cyan-400' : ''}`}
+                                className={`w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 ${!isNew ? 'opacity-50 cursor-not-allowed font-mono text-cyan-500' : ''}`}
                             />
                         </div>
-                        {isNew && <p className="text-[9px] text-slate-500 mt-1 uppercase font-bold">Must match the Exam Program SKU precisely.</p>}
+                        {isNew && <p className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] mt-1 uppercase font-bold">Must match the Exam Program SKU precisely.</p>}
                     </div>
 
                     <div className="grid grid-cols-2 gap-6">
                         <div>
-                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1 block">Regular Price</label>
+                            <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">Regular Price</label>
                             <div className="relative">
-                                <DollarSign className="absolute left-3 top-3.5 text-slate-600" size={18}/>
+                                <DollarSign className="absolute left-3 top-3.5 text-slate-400" size={18}/>
                                 <input 
                                     type="number" 
                                     value={formData.regularPrice} 
                                     onChange={e => setFormData({...formData, regularPrice: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
                                 />
                             </div>
                         </div>
                         <div>
-                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1 block">Sale Price</label>
+                            <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">Sale Price</label>
                             <div className="relative">
-                                <DollarSign className="absolute left-3 top-3.5 text-slate-600" size={18}/>
+                                <DollarSign className="absolute left-3 top-3.5 text-slate-400" size={18}/>
                                 <input 
                                     type="number" 
                                     value={formData.price} 
                                     onChange={e => setFormData({...formData, price: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
                                 />
                             </div>
                         </div>
@@ -129,11 +130,11 @@ const ProductEditorModal: FC<{
 
                     {formData.type === 'subscription' && (
                         <div>
-                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1 block">Billing Period</label>
+                            <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">Billing Period</label>
                             <select 
                                 value={formData.subscriptionPeriod}
                                 onChange={e => setFormData({...formData, subscriptionPeriod: e.target.value})}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-white"
+                                className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 px-4 text-[rgb(var(--color-text-strong-rgb))]"
                             >
                                 <option value="day">Daily</option>
                                 <option value="week">Weekly</option>
@@ -145,17 +146,17 @@ const ProductEditorModal: FC<{
 
                     {formData.type === 'bundle' && (
                         <div>
-                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Packaged Contents</label>
-                            <div className="bg-slate-950 border border-slate-700 rounded-xl p-4 space-y-2 max-h-48 overflow-y-auto">
+                            <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-2 block">Packaged Contents</label>
+                            <div className="bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl p-4 space-y-2 max-h-48 overflow-y-auto">
                                 {availableExams.map(exam => (
-                                    <label key={exam.sku} className="flex items-center gap-3 p-2 hover:bg-slate-900 rounded-lg cursor-pointer transition-colors border border-transparent has-[:checked]:border-cyan-500/30">
+                                    <label key={exam.sku} className="flex items-center gap-3 p-2 hover:bg-[rgba(var(--color-muted-rgb),0.3)] rounded-lg cursor-pointer transition-colors border border-transparent has-[:checked]:border-cyan-500/30">
                                         <input 
                                             type="checkbox" 
                                             checked={formData.bundledSkus.includes(exam.sku)}
                                             onChange={() => handleToggleBundleItem(exam.sku)}
-                                            className="rounded bg-slate-800 border-slate-600 text-cyan-500"
+                                            className="rounded border-[rgb(var(--color-border-rgb))] bg-[rgb(var(--color-card-rgb))] text-cyan-500"
                                         />
-                                        <span className="text-xs text-slate-300 font-bold">{exam.name}</span>
+                                        <span className="text-xs text-[rgb(var(--color-text-default-rgb))] font-bold">{exam.name}</span>
                                     </label>
                                 ))}
                             </div>
@@ -163,8 +164,8 @@ const ProductEditorModal: FC<{
                     )}
                 </div>
 
-                <div className="p-6 bg-slate-950/50 border-t border-slate-800 flex justify-end gap-3">
-                    <button onClick={onClose} disabled={isSaving} className="px-6 py-2.5 font-bold text-slate-400 hover:text-white transition-colors">Discard</button>
+                <div className="p-6 bg-[rgba(var(--color-background-rgb),0.5)] border-t border-[rgb(var(--color-border-rgb))] flex justify-end gap-3">
+                    <button onClick={onClose} disabled={isSaving} className="px-6 py-2.5 font-bold text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))] transition-colors">Discard</button>
                     <button 
                         onClick={() => onSave(formData)} 
                         disabled={isSaving || !formData.name || !formData.sku}
@@ -239,6 +240,7 @@ const ProductCustomizer: FC = () => {
     };
 
     const handleBulkPriceUpdate = async () => {
+        // FIX: Replaced undefined variable 'selectedIds' with 'selectedSkus' state.
         if (selectedSkus.length === 0 || !token || (!bulkPrice && !bulkRegularPrice)) return;
         setIsSaving(true);
         const tid = toast.loading(`Updating ${selectedSkus.length} products...`);
@@ -268,31 +270,31 @@ const ProductCustomizer: FC = () => {
     return (
         <div className="space-y-8 pb-20">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-                <h1 className="text-4xl font-black text-slate-100 font-display flex items-center gap-3">
+                <h1 className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3">
                     <ShoppingCart className="text-cyan-500" /> Store Inventory
                 </h1>
                 
                 {selectedSkus.length > 0 && (
-                    <div className="flex items-center gap-4 bg-slate-900 border border-slate-700 p-4 rounded-2xl shadow-xl animate-in slide-in-from-right-4 duration-300">
+                    <div className="flex items-center gap-4 bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] p-4 rounded-2xl shadow-xl animate-in slide-in-from-right-4 duration-300">
                         <div className="flex gap-2">
                             <div className="relative">
-                                <span className="absolute left-2 top-2.5 text-[8px] font-black text-slate-500 uppercase tracking-tighter">Sale</span>
+                                <span className="absolute left-2 top-2.5 text-[8px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-tighter">Sale</span>
                                 <input 
                                     type="number" 
                                     placeholder="0.00" 
                                     value={bulkPrice} 
                                     onChange={e => setBulkPrice(e.target.value)}
-                                    className="w-24 bg-slate-950 border border-slate-600 rounded-lg py-2 pl-8 pr-2 text-xs text-white focus:border-emerald-500"
+                                    className="w-24 bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg py-2 pl-8 pr-2 text-xs text-[rgb(var(--color-text-strong-rgb))] focus:border-emerald-500"
                                 />
                             </div>
                             <div className="relative">
-                                <span className="absolute left-2 top-2.5 text-[8px] font-black text-slate-500 uppercase tracking-tighter">Reg</span>
+                                <span className="absolute left-2 top-2.5 text-[8px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-tighter">Reg</span>
                                 <input 
                                     type="number" 
                                     placeholder="0.00" 
                                     value={bulkRegularPrice} 
                                     onChange={e => setBulkRegularPrice(e.target.value)}
-                                    className="w-24 bg-slate-950 border border-slate-600 rounded-lg py-2 pl-8 pr-2 text-xs text-white focus:border-cyan-500"
+                                    className="w-24 bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg py-2 pl-8 pr-2 text-xs text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500"
                                 />
                             </div>
                         </div>
@@ -312,25 +314,25 @@ const ProductCustomizer: FC = () => {
                 </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 p-1.5 bg-slate-950 rounded-xl border border-slate-800 self-start">
+            <div className="flex flex-wrap gap-3 p-1.5 bg-[rgb(var(--color-background-rgb))] rounded-xl border border-[rgb(var(--color-border-rgb))] self-start">
                 <TabButton active={activeTab === 'all'} onClick={() => { setActiveTab('all'); setSelectedSkus([]); }}>Full List</TabButton>
                 <TabButton active={activeTab === 'simple'} onClick={() => { setActiveTab('simple'); setSelectedSkus([]); }}>Standard</TabButton>
                 <TabButton active={activeTab === 'subscription'} onClick={() => { setActiveTab('subscription'); setSelectedSkus([]); }}>Recurring</TabButton>
                 <TabButton active={activeTab === 'bundle'} onClick={() => { setActiveTab('bundle'); setSelectedSkus([]); }}>Package Deals</TabButton>
             </div>
 
-            <div className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
-                <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center justify-between">
-                     <button onClick={handleSelectAll} className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition">
+            <div className="bg-[rgb(var(--color-card-rgb))] rounded-2xl shadow-2xl border border-[rgb(var(--color-border-rgb))] overflow-hidden">
+                <div className="bg-[rgb(var(--color-background-rgb))] p-4 border-b border-[rgb(var(--color-border-rgb))] flex items-center justify-between">
+                     <button onClick={handleSelectAll} className="flex items-center gap-2 text-[10px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-widest hover:text-[rgb(var(--color-text-strong-rgb))] transition">
                         {selectedSkus.length === filtered.length && filtered.length > 0 ? <CheckSquare size={16} className="text-cyan-500"/> : <Square size={16}/>}
                         {selectedSkus.length === filtered.length && filtered.length > 0 ? 'Deselect All' : 'Select All Filtered'}
                     </button>
-                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{filtered.length} INVENTORY ITEMS</span>
+                    <span className="text-[10px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-widest">{filtered.length} INVENTORY ITEMS</span>
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left border-collapse">
-                        <thead className="bg-slate-950 text-slate-500 uppercase text-[10px] font-black tracking-widest border-b border-slate-800">
+                        <thead className="bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-muted-rgb))] uppercase text-[10px] font-black tracking-widest border-b border-[rgb(var(--color-border-rgb))]">
                             <tr>
                                 <th className="p-5 w-12"></th>
                                 <th className="p-5">Product Entity</th>
@@ -339,23 +341,23 @@ const ProductCustomizer: FC = () => {
                                 <th className="p-5 text-right">Settings</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800">
+                        <tbody className="divide-y divide-[rgb(var(--color-border-rgb))]">
                             {filtered.map(p => (
-                                <tr key={p.sku} className={`hover:bg-slate-800/40 transition-colors group ${selectedSkus.includes(p.sku) ? 'bg-cyan-900/10' : ''}`}>
+                                <tr key={p.sku} className={`hover:bg-[rgba(var(--color-muted-rgb),0.4)] transition-colors group ${selectedSkus.includes(p.sku) ? 'bg-cyan-500/10' : ''}`}>
                                     <td className="p-5">
-                                        <button onClick={() => handleToggleSelect(p.sku)} className="text-slate-700 hover:text-cyan-500 transition-colors">
+                                        <button onClick={() => handleToggleSelect(p.sku)} className="text-[rgb(var(--color-border-rgb))] hover:text-cyan-500 transition-colors">
                                             {selectedSkus.includes(p.sku) ? <CheckSquare size={20} className="text-cyan-500"/> : <Square size={20}/>}
                                         </button>
                                     </td>
                                     <td className="p-5">
-                                        <p className="font-black text-slate-100 text-base group-hover:text-cyan-400 transition-colors">{p.name}</p>
-                                        <p className="text-[10px] font-mono text-slate-500 mt-1 uppercase">SKU: {p.sku}</p>
+                                        <p className="font-black text-[rgb(var(--color-text-strong-rgb))] text-base group-hover:text-cyan-500 transition-colors">{p.name}</p>
+                                        <p className="text-[10px] font-mono text-[rgb(var(--color-text-muted-rgb))] mt-1 uppercase">SKU: {p.sku}</p>
                                     </td>
                                     <td className="p-5">
                                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-inner border ${
-                                            p.type === 'bundle' ? 'bg-purple-900/30 text-purple-400 border-purple-800' : 
-                                            p.type === 'subscription' ? 'bg-blue-900/30 text-blue-400 border-blue-800' : 
-                                            'bg-slate-950 text-slate-400 border-slate-800'
+                                            p.type === 'bundle' ? 'bg-purple-500/10 text-purple-500 border-purple-500/30' : 
+                                            p.type === 'subscription' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' : 
+                                            'bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-muted-rgb))] border-[rgb(var(--color-border-rgb))]'
                                         }`}>
                                             {p.type === 'bundle' ? <Package size={10}/> : (p.type === 'subscription' ? <Repeat size={10}/> : <Box size={10}/>)}
                                             {p.type}
@@ -363,16 +365,16 @@ const ProductCustomizer: FC = () => {
                                     </td>
                                     <td className="p-5">
                                         <div className="flex items-baseline gap-2">
-                                            <span className="font-black text-white text-lg">${parseFloat(p.price).toFixed(2)}</span>
+                                            <span className="font-black text-[rgb(var(--color-text-strong-rgb))] text-lg">${parseFloat(p.price).toFixed(2)}</span>
                                             {parseFloat(p.regularPrice) > parseFloat(p.price) && (
-                                                <span className="text-xs line-through text-slate-600 font-bold">${parseFloat(p.regularPrice).toFixed(2)}</span>
+                                                <span className="text-xs line-through text-[rgb(var(--color-text-muted-rgb))] font-bold">${parseFloat(p.regularPrice).toFixed(2)}</span>
                                             )}
                                         </div>
                                     </td>
                                     <td className="p-5 text-right">
                                         <button 
                                             onClick={() => setEditingProduct(p)}
-                                            className="p-2.5 text-slate-500 hover:text-white hover:bg-slate-700 rounded-xl transition-all border border-transparent hover:border-slate-600 shadow-sm"
+                                            className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-cyan-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl transition-all border border-transparent hover:border-[rgb(var(--color-border-rgb))] shadow-sm"
                                         >
                                             <Edit size={16}/>
                                         </button>
@@ -383,7 +385,7 @@ const ProductCustomizer: FC = () => {
                     </table>
                 </div>
                 {filtered.length === 0 && (
-                    <div className="p-20 text-center text-slate-600 font-mono italic">
+                    <div className="p-20 text-center text-[rgb(var(--color-text-muted-rgb))] font-mono italic">
                         No product entries matching current filter.
                     </div>
                 )}

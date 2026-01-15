@@ -79,35 +79,35 @@ const ExamEditor: FC<{
         }));
     };
 
-    const Label = ({ children }: { children: ReactNode }) => <label className="text-[10px] font-black uppercase tracking-widest text-white mb-1 block opacity-80">{children}</label>;
+    const Label = ({ children }: { children: ReactNode }) => <label className="text-[10px] font-black uppercase tracking-widest text-[rgb(var(--color-text-muted-rgb))] mb-1 block opacity-80">{children}</label>;
 
     return (
-        <div className="bg-slate-900 p-6 rounded-b-xl space-y-6 shadow-inner border-t border-slate-700 pb-40 relative z-10">
+        <div className="bg-[rgba(var(--color-muted-rgb),0.2)] p-6 rounded-b-xl space-y-6 shadow-inner border-t border-[rgb(var(--color-border-rgb))] pb-40 relative z-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <Label>Brand Identity / Name</Label>
-                    <input type="text" value={data.category?.name || ''} onChange={e => handleCategoryChange('name', e.target.value)} className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20" />
+                    <input type="text" value={data.category?.name || ''} onChange={e => handleCategoryChange('name', e.target.value)} className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20" />
                 </div>
                 <div>
                     <Label>Google Sheet Data URL</Label>
-                    <input type="text" value={data.category?.questionSourceUrl || ''} onChange={e => handleCategoryChange('questionSourceUrl', e.target.value)} className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-cyan-300 font-mono text-xs" />
+                    <input type="text" value={data.category?.questionSourceUrl || ''} onChange={e => handleCategoryChange('questionSourceUrl', e.target.value)} className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-cyan-500 font-mono text-xs" />
                 </div>
             </div>
             
             <div>
                 <Label>Program Description (Public)</Label>
-                <textarea value={data.category?.description || ''} onChange={e => handleCategoryChange('description', e.target.value)} className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-white leading-relaxed" rows={3} />
+                <textarea value={data.category?.description || ''} onChange={e => handleCategoryChange('description', e.target.value)} className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))] leading-relaxed" rows={3} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg relative z-20">
-                    <div className="flex justify-between items-center border-b border-slate-700 pb-3">
-                        <h4 className="font-black text-white flex items-center gap-2 uppercase"><Award size={18} className="text-blue-400" /> Certification Config</h4>
+                <div className="p-5 border rounded-xl bg-[rgba(var(--color-muted-rgb),0.3)] border-[rgb(var(--color-border-rgb))] space-y-5 shadow-lg relative z-20">
+                    <div className="flex justify-between items-center border-b border-[rgb(var(--color-border-rgb))] pb-3">
+                        <h4 className="font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2 uppercase"><Award size={18} className="text-blue-500" /> Certification Config</h4>
                         {data.certExam?.certificateEnabled && (
                             <Link 
                                 to={`/certificate/sample?template_id=${data.certExam?.certificateTemplateId || 'cert-completion'}&theme_id=${activeOrg?.certificateThemeId}`} 
                                 target="_blank"
-                                className="text-[10px] font-black text-cyan-400 hover:text-cyan-300 uppercase flex items-center gap-1 underline"
+                                className="text-[10px] font-black text-cyan-500 hover:text-cyan-400 uppercase flex items-center gap-1 underline"
                             >
                                 Preview <ExternalLink size={10}/>
                             </Link>
@@ -120,20 +120,20 @@ const ExamEditor: FC<{
                             <select 
                                 value={data.certExam?.productSku || ''} 
                                 onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} 
-                                className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-white text-sm cursor-pointer hover:border-cyan-500 transition-colors font-mono"
+                                className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))] text-sm cursor-pointer hover:border-cyan-500 transition-colors font-mono"
                             >
                                 <option value="">-- No Linked Product --</option>
                                 {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
                             </select>
                         </div>
-                        <div className="p-4 bg-slate-950/50 rounded-xl border border-slate-700/50">
+                        <div className="p-4 bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl border border-[rgb(var(--color-border-rgb))]">
                             <label className="flex items-center justify-between cursor-pointer group">
                                 <div className="space-y-0.5">
                                     <div className="flex items-center gap-2">
-                                        <Zap size={14} className={hasAddon ? "text-amber-400 fill-amber-400" : "text-slate-500"} />
-                                        <span className="text-xs font-black text-white uppercase tracking-tighter">Premium Addon Offer</span>
+                                        <Zap size={14} className={hasAddon ? "text-amber-500 fill-amber-500" : "text-slate-500"} />
+                                        <span className="text-xs font-black text-[rgb(var(--color-text-strong-rgb))] uppercase tracking-tighter">Premium Addon Offer</span>
                                     </div>
-                                    <p className="text-[9px] text-slate-500 font-bold uppercase">
+                                    <p className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] font-bold uppercase">
                                         {data.certExam?.addonSku ? `Linked: ${data.certExam.addonSku}` : `Default: ${data.certExam?.productSku || 'SKU'}-1mo-addon`}
                                     </p>
                                 </div>
@@ -141,61 +141,61 @@ const ExamEditor: FC<{
                                     type="checkbox" 
                                     checked={hasAddon} 
                                     onChange={e => toggleAddon(e.target.checked)}
-                                    className="w-5 h-5 rounded border-slate-600 bg-slate-800 text-amber-500 focus:ring-amber-500/20"
+                                    className="w-5 h-5 rounded border-[rgb(var(--color-border-rgb))] bg-[rgb(var(--color-background-rgb))] text-amber-500 focus:ring-amber-500/20"
                                 />
                             </label>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
-                        <div><Label>Questions</Label><input type="number" value={data.certExam?.numberOfQuestions || ''} onChange={e => handleExamChange('certExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
-                        <div><Label>Mins</Label><input type="number" value={data.certExam?.durationMinutes || ''} onChange={e => handleExamChange('certExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
-                        <div><Label>Pass %</Label><input type="number" value={data.certExam?.passScore || ''} onChange={e => handleExamChange('certExam', 'passScore', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
+                        <div><Label>Questions</Label><input type="number" value={data.certExam?.numberOfQuestions || ''} onChange={e => handleExamChange('certExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))]" /></div>
+                        <div><Label>Mins</Label><input type="number" value={data.certExam?.durationMinutes || ''} onChange={e => handleExamChange('certExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))]" /></div>
+                        <div><Label>Pass %</Label><input type="number" value={data.certExam?.passScore || ''} onChange={e => handleExamChange('certExam', 'passScore', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))]" /></div>
                     </div>
                     
                     <div className="space-y-3 pt-2">
-                        <label className="flex items-center gap-2 text-xs font-bold text-white cursor-pointer">
-                            <input type="checkbox" checked={!!data.certExam?.certificateEnabled} onChange={e => handleExamChange('certExam', 'certificateEnabled', e.target.checked)} className="rounded bg-slate-950 border-slate-600 text-cyan-500" />
+                        <label className="flex items-center gap-2 text-xs font-bold text-[rgb(var(--color-text-strong-rgb))] cursor-pointer">
+                            <input type="checkbox" checked={!!data.certExam?.certificateEnabled} onChange={e => handleExamChange('certExam', 'certificateEnabled', e.target.checked)} className="rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-cyan-500" />
                             Enable Certification Certificate
                         </label>
-                        <label className="flex items-center gap-2 text-xs font-bold text-white cursor-pointer">
-                            <input type="checkbox" checked={!!data.certExam?.isProctored} onChange={e => handleExamChange('certExam', 'isProctored', e.target.checked)} className="rounded bg-slate-950 border-slate-600 text-cyan-500" />
-                            <ShieldCheck size={14} className="text-cyan-400"/> Enable Proctoring Integrity
+                        <label className="flex items-center gap-2 text-xs font-bold text-[rgb(var(--color-text-strong-rgb))] cursor-pointer">
+                            <input type="checkbox" checked={!!data.certExam?.isProctored} onChange={e => handleExamChange('certExam', 'isProctored', e.target.checked)} className="rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-cyan-500" />
+                            <ShieldCheck size={14} className="text-cyan-500"/> Enable Proctoring Integrity
                         </label>
                     </div>
                 </div>
 
-                <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg">
-                    <div className="flex justify-between items-center border-b border-slate-700 pb-3">
-                        <h4 className="font-black text-white flex items-center gap-2 uppercase"><FileText size={18} className="text-emerald-400" /> Practice Rules</h4>
+                <div className="p-5 border rounded-xl bg-[rgba(var(--color-muted-rgb),0.3)] border-[rgb(var(--color-border-rgb))] space-y-5 shadow-lg">
+                    <div className="flex justify-between items-center border-b border-[rgb(var(--color-border-rgb))] pb-3">
+                        <h4 className="font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2 uppercase"><FileText size={18} className="text-emerald-500" /> Practice Rules</h4>
                          {data.practiceExam?.certificateEnabled && (
                             <Link 
                                 to={`/certificate/sample?template_id=cert-practice&theme_id=${activeOrg?.certificateThemeId}`} 
                                 target="_blank"
-                                className="text-[10px] font-black text-emerald-400 hover:text-emerald-300 uppercase flex items-center gap-1 underline"
+                                className="text-[10px] font-black text-emerald-500 hover:text-emerald-400 uppercase flex items-center gap-1 underline"
                             >
                                 Preview <ExternalLink size={10}/>
                             </Link>
                         )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                        <div><Label>Question Count</Label><input type="number" value={data.practiceExam?.numberOfQuestions || ''} onChange={e => handleExamChange('practiceExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
-                        <div><Label>Duration (Mins)</Label><input type="number" value={data.practiceExam?.durationMinutes || ''} onChange={e => handleExamChange('practiceExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
+                        <div><Label>Question Count</Label><input type="number" value={data.practiceExam?.numberOfQuestions || ''} onChange={e => handleExamChange('practiceExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))]" /></div>
+                        <div><Label>Duration (Mins)</Label><input type="number" value={data.practiceExam?.durationMinutes || ''} onChange={e => handleExamChange('practiceExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))]" /></div>
                     </div>
-                    <label className="flex items-center gap-2 text-xs font-bold text-white pt-2 cursor-pointer">
-                        <input type="checkbox" checked={!!data.practiceExam?.certificateEnabled} onChange={e => handleExamChange('practiceExam', 'certificateEnabled', e.target.checked)} className="rounded bg-slate-950 border-slate-600 text-cyan-500" />
+                    <label className="flex items-center gap-2 text-xs font-bold text-[rgb(var(--color-text-strong-rgb))] pt-2 cursor-pointer">
+                        <input type="checkbox" checked={!!data.practiceExam?.certificateEnabled} onChange={e => handleExamChange('practiceExam', 'certificateEnabled', e.target.checked)} className="rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-cyan-500" />
                         Enable Completion Certificate
                     </label>
                 </div>
             </div>
             
-            <div className="flex justify-between items-center pt-6 border-t border-slate-700">
+            <div className="flex justify-between items-center pt-6 border-t border-[rgb(var(--color-border-rgb))]">
                 <div className="flex gap-2">
                     {!isConfirmingDelete ? (
                         <button 
                             onClick={() => setIsConfirmingDelete(true)} 
                             disabled={isSaving}
-                            className="flex items-center gap-2 px-4 py-2 text-rose-400 hover:text-rose-300 border border-rose-900/50 hover:border-rose-800 rounded-lg text-xs font-bold transition uppercase tracking-tighter"
+                            className="flex items-center gap-2 px-4 py-2 text-rose-500 hover:text-rose-400 border border-rose-500/30 hover:border-rose-500 rounded-lg text-xs font-bold transition uppercase tracking-tighter"
                         >
                             <Trash2 size={14} /> Delete Program
                         </button>
@@ -211,7 +211,7 @@ const ExamEditor: FC<{
                     {isConfirmingDelete && (
                         <button 
                             onClick={() => setIsConfirmingDelete(false)} 
-                            className="px-4 py-2 text-slate-400 hover:text-white text-xs font-bold transition"
+                            className="px-4 py-2 text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))] text-xs font-bold transition"
                         >
                             CANCEL
                         </button>
@@ -219,7 +219,7 @@ const ExamEditor: FC<{
                 </div>
 
                 <div className="flex gap-3">
-                    <button onClick={onCancel} disabled={isSaving} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition">Discard</button>
+                    <button onClick={onCancel} disabled={isSaving} className="px-6 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg font-bold transition">Discard</button>
                     <button onClick={() => onSave(program.category.id, data)} disabled={isSaving} className="flex items-center gap-2 px-8 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-black transition shadow-lg disabled:opacity-50">
                         {isSaving ? <Spinner size="sm" /> : <Save size={18} />} SAVE CHANGES
                     </button>
@@ -369,18 +369,18 @@ const ExamProgramCustomizer: FC = () => {
     return (
         <div className="space-y-8 pb-40">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <h1 className="text-4xl font-black text-white font-display flex items-center gap-3"><Settings className="text-cyan-500" /> Program Master</h1>
+                <h1 className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3"><Settings className="text-cyan-500" /> Program Master</h1>
                 {selectedIds.length > 0 && (
-                    <div className="flex flex-col gap-4 bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl animate-in slide-in-from-top-4 duration-300 w-full lg:w-auto">
+                    <div className="flex flex-col gap-4 bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] p-6 rounded-2xl shadow-2xl animate-in slide-in-from-top-4 duration-300 w-full lg:w-auto">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black uppercase text-slate-500">Pass Score %</label>
+                                <label className="text-[9px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))]">Pass Score %</label>
                                 <input 
                                     type="number" 
                                     placeholder="80" 
                                     value={bulkData.passScore} 
                                     onChange={e => setBulkData({...bulkData, passScore: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
+                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg p-2 text-xs text-[rgb(var(--color-text-strong-rgb))]"
                                 />
                             </div>
                             <div className="space-y-1">
@@ -390,7 +390,7 @@ const ExamProgramCustomizer: FC = () => {
                                     placeholder="20" 
                                     value={bulkData.practiceQuestions} 
                                     onChange={e => setBulkData({...bulkData, practiceQuestions: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
+                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg p-2 text-xs text-[rgb(var(--color-text-strong-rgb))]"
                                 />
                             </div>
                             <div className="space-y-1">
@@ -400,7 +400,7 @@ const ExamProgramCustomizer: FC = () => {
                                     placeholder="30" 
                                     value={bulkData.practiceDuration} 
                                     onChange={e => setBulkData({...bulkData, practiceDuration: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
+                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg p-2 text-xs text-[rgb(var(--color-text-strong-rgb))]"
                                 />
                             </div>
                             <div className="space-y-1">
@@ -410,7 +410,7 @@ const ExamProgramCustomizer: FC = () => {
                                     placeholder="100" 
                                     value={bulkData.certQuestions} 
                                     onChange={e => setBulkData({...bulkData, certQuestions: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
+                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg p-2 text-xs text-[rgb(var(--color-text-strong-rgb))]"
                                 />
                             </div>
                             <div className="space-y-1">
@@ -420,17 +420,17 @@ const ExamProgramCustomizer: FC = () => {
                                     placeholder="120" 
                                     value={bulkData.certDuration} 
                                     onChange={e => setBulkData({...bulkData, certDuration: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
+                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg p-2 text-xs text-[rgb(var(--color-text-strong-rgb))]"
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black uppercase text-slate-500">Sheet URL</label>
+                                <label className="text-[9px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))]">Sheet URL</label>
                                 <input 
                                     type="text" 
                                     placeholder="CSV Link..." 
                                     value={bulkData.questionSourceUrl} 
                                     onChange={e => setBulkData({...bulkData, questionSourceUrl: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
+                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg p-2 text-xs text-[rgb(var(--color-text-strong-rgb))]"
                                 />
                             </div>
                             <div className="space-y-1 flex flex-col justify-end">
@@ -439,14 +439,14 @@ const ExamProgramCustomizer: FC = () => {
                                         type="checkbox" 
                                         checked={bulkData.useAddonBulk} 
                                         onChange={e => setBulkData({...bulkData, useAddonBulk: e.target.checked})}
-                                        className="rounded border-slate-600 bg-slate-950 text-cyan-500"
+                                        className="rounded border-[rgb(var(--color-border-rgb))] bg-[rgb(var(--color-background-rgb))] text-cyan-500"
                                     />
-                                    <span className="text-[9px] font-black uppercase text-slate-500">Apply Addon?</span>
+                                    <span className="text-[9px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))]">Apply Addon?</span>
                                 </label>
                                 {bulkData.useAddonBulk && (
                                     <button 
                                         onClick={() => setBulkData({...bulkData, enableAddon: !bulkData.enableAddon})}
-                                        className={`mt-1 flex items-center gap-1 text-[8px] font-black px-2 py-1 rounded border ${bulkData.enableAddon ? 'bg-amber-600 border-amber-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}
+                                        className={`mt-1 flex items-center gap-1 text-[8px] font-black px-2 py-1 rounded border ${bulkData.enableAddon ? 'bg-amber-600 border-amber-500 text-white' : 'bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-slate-400'}`}
                                     >
                                         {bulkData.enableAddon ? <ToggleRight size={14}/> : <ToggleLeft size={14}/>}
                                         {bulkData.enableAddon ? 'ENABLE ADDON' : 'DISABLE ADDON'}
@@ -465,32 +465,32 @@ const ExamProgramCustomizer: FC = () => {
                 )}
             </div>
 
-            <div className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-700">
-                <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center justify-between rounded-t-2xl">
-                    <button onClick={handleSelectAll} className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition">
+            <div className="bg-[rgb(var(--color-card-rgb))] rounded-2xl shadow-2xl border border-[rgb(var(--color-border-rgb))]">
+                <div className="bg-[rgb(var(--color-background-rgb))] p-4 border-b border-[rgb(var(--color-border-rgb))] flex items-center justify-between rounded-t-2xl">
+                    <button onClick={handleSelectAll} className="flex items-center gap-2 text-[10px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-widest hover:text-[rgb(var(--color-text-strong-rgb))] transition">
                         {selectedIds.length === programs.length ? <CheckSquare size={16} className="text-cyan-500"/> : <Square size={16}/>}
                         {selectedIds.length === programs.length ? 'Deselect All' : 'Select All Programs'}
                     </button>
-                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{programs.length} ACTIVE PROGRAMS</span>
+                    <span className="text-[10px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-widest">{programs.length} ACTIVE PROGRAMS</span>
                 </div>
 
-                <div className="divide-y divide-slate-800">
+                <div className="divide-y divide-[rgb(var(--color-border-rgb))]">
                     {programs.map(p => (
-                        <div key={p.category.id} id={`program-card-${p.category.id}`} className="bg-slate-900 group first:rounded-none last:rounded-b-2xl">
-                            <div className={`flex items-center p-6 transition-colors ${expandedId === p.category.id ? 'bg-slate-800' : 'hover:bg-slate-800/40'}`}>
-                                <button onClick={() => handleToggleSelect(p.category.id)} className="mr-6 text-slate-700 hover:text-cyan-500 transition-colors">
+                        <div key={p.category.id} id={`program-card-${p.category.id}`} className="bg-[rgb(var(--color-card-rgb))] group first:rounded-none last:rounded-b-2xl">
+                            <div className={`flex items-center p-6 transition-colors ${expandedId === p.category.id ? 'bg-[rgba(var(--color-muted-rgb),0.3)]' : 'hover:bg-[rgba(var(--color-muted-rgb),0.2)]'}`}>
+                                <button onClick={() => handleToggleSelect(p.category.id)} className="mr-6 text-[rgb(var(--color-border-rgb))] hover:text-cyan-500 transition-colors">
                                     {selectedIds.includes(p.category.id) ? <CheckSquare size={22} className="text-cyan-500"/> : <Square size={22}/>}
                                 </button>
                                 <div className="flex-grow">
-                                    <p className="font-black text-white text-lg">{p.category.name}</p>
+                                    <p className="font-black text-[rgb(var(--color-text-strong-rgb))] text-lg">{p.category.name}</p>
                                     <div className="flex flex-wrap gap-3 mt-1">
-                                        {p.certExam?.productSku ? <span className="text-[9px] text-cyan-400 font-mono bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800 uppercase">SKU: {p.certExam.productSku}</span> : <span className="text-[9px] text-rose-500 font-black uppercase">UNLINKED</span>}
-                                        {p.certExam?.addonSku && <span className="text-[9px] text-amber-400 font-mono bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800 uppercase flex items-center gap-1"><Zap size={8}/> Addon: {p.certExam.addonSku}</span>}
-                                        <span className="text-[9px] text-slate-400 flex items-center gap-1 bg-slate-950/40 px-2 py-0.5 rounded border border-slate-800 uppercase"><HelpCircle size={8}/> {p.certExam?.numberOfQuestions || 0} Cert Qs</span>
-                                        <span className="text-[9px] text-slate-400 flex items-center gap-1 bg-slate-950/40 px-2 py-0.5 rounded border border-slate-800 uppercase"><Clock size={8}/> {p.certExam?.durationMinutes || 0} Mins</span>
+                                        {p.certExam?.productSku ? <span className="text-[9px] text-cyan-500 font-mono bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 uppercase">SKU: {p.certExam.productSku}</span> : <span className="text-[9px] text-rose-500 font-black uppercase">UNLINKED</span>}
+                                        {p.certExam?.addonSku && <span className="text-[9px] text-amber-500 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30 uppercase flex items-center gap-1"><Zap size={8}/> Addon: {p.certExam.addonSku}</span>}
+                                        <span className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] flex items-center gap-1 bg-[rgba(var(--color-background-rgb),0.5)] px-2 py-0.5 rounded border border-[rgb(var(--color-border-rgb))] uppercase"><HelpCircle size={8}/> {p.certExam?.numberOfQuestions || 0} Cert Qs</span>
+                                        <span className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] flex items-center gap-1 bg-[rgba(var(--color-background-rgb),0.5)] px-2 py-0.5 rounded border border-[rgb(var(--color-border-rgb))] uppercase"><Clock size={8}/> {p.certExam?.durationMinutes || 0} Mins</span>
                                     </div>
                                 </div>
-                                <button onClick={() => setExpandedId(expandedId === p.category.id ? null : p.category.id)} className="flex items-center gap-2 px-6 py-2 bg-slate-950 text-white rounded-xl text-xs font-black border border-slate-700 hover:border-cyan-500 transition-all">
+                                <button onClick={() => setExpandedId(expandedId === p.category.id ? null : p.category.id)} className="flex items-center gap-2 px-6 py-2 bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-strong-rgb))] rounded-xl text-xs font-black border border-[rgb(var(--color-border-rgb))] hover:border-cyan-500 transition-all">
                                     <Edit size={14} className="text-cyan-500"/> {expandedId === p.category.id ? 'CLOSE' : 'CONFIGURE'}
                                 </button>
                             </div>
@@ -515,14 +515,14 @@ const ExamProgramCustomizer: FC = () => {
                     width: 8px;
                 }
                 .mco-custom-scrollbar::-webkit-scrollbar-track {
-                    background: #020617;
+                    background: transparent;
                 }
                 .mco-custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: #1e293b;
+                    background: rgba(var(--color-border-rgb), 0.5);
                     border-radius: 10px;
                 }
                 .mco-custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: #334155;
+                    background: rgba(var(--color-border-rgb), 0.8);
                 }
             `}</style>
         </div>
