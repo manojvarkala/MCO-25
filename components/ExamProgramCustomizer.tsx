@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, ExamProductCategory } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, AlertTriangle, ExternalLink, CheckSquare, Square, Zap, Layers, Clock, HelpCircle, ToggleRight, ToggleLeft } from 'lucide-react';
+import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, AlertTriangle, ExternalLink, CheckSquare, Square, Zap, Layers, Clock, HelpCircle, ToggleRight, ToggleLeft, ShieldCheck } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 // FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -28,8 +28,8 @@ const ExamEditor: FC<{
     const { activeOrg } = useAppContext();
     const [data, setData] = useState<EditableProgramData>({
         category: { ...program.category },
-        practiceExam: program.practiceExam ? { ...program.practiceExam } : { id: program.category.practiceExamId, isPractice: true } as any,
-        certExam: program.certExam ? { ...program.certExam } : { id: program.category.certificationExamId, isPractice: false } as any,
+        practiceExam: program.practiceExam ? { ...program.practiceExam } : { id: program.category.practiceExamId, isPractice: true, certificateEnabled: false } as any,
+        certExam: program.certExam ? { ...program.certExam } : { id: program.category.certificationExamId, isPractice: false, certificateEnabled: true, isProctored: true } as any,
     });
     
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -146,10 +146,17 @@ const ExamEditor: FC<{
                         <div><Label>Mins</Label><input type="number" value={data.certExam?.durationMinutes || ''} onChange={e => handleExamChange('certExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
                         <div><Label>Pass %</Label><input type="number" value={data.certExam?.passScore || ''} onChange={e => handleExamChange('certExam', 'passScore', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
                     </div>
-                    <label className="flex items-center gap-2 text-xs font-bold text-white pt-2 cursor-pointer">
-                        <input type="checkbox" checked={data.certExam?.certificateEnabled || false} onChange={e => handleExamChange('certExam', 'certificateEnabled', e.target.checked)} className="rounded bg-slate-950 border-slate-600 text-cyan-500" />
-                        Enable Certification Certificate
-                    </label>
+                    
+                    <div className="space-y-3 pt-2">
+                        <label className="flex items-center gap-2 text-xs font-bold text-white cursor-pointer">
+                            <input type="checkbox" checked={data.certExam?.certificateEnabled || false} onChange={e => handleExamChange('certExam', 'certificateEnabled', e.target.checked)} className="rounded bg-slate-950 border-slate-600 text-cyan-500" />
+                            Enable Certification Certificate
+                        </label>
+                        <label className="flex items-center gap-2 text-xs font-bold text-white cursor-pointer">
+                            <input type="checkbox" checked={data.certExam?.isProctored || false} onChange={e => handleExamChange('certExam', 'isProctored', e.target.checked)} className="rounded bg-slate-950 border-slate-600 text-cyan-500" />
+                            <ShieldCheck size={14} className="text-cyan-400"/> Enable Proctoring Integrity
+                        </label>
+                    </div>
                 </div>
 
                 <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg">

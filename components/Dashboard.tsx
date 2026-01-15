@@ -113,7 +113,7 @@ const Dashboard: FC = () => {
                     <p className="text-[rgb(var(--color-text-muted-rgb))]">Ready to ace your next exam?</p>
                 </div>
                 {user && token && (
-                    <button onClick={handleSync} disabled={isSyncing} className="flex items-center gap-2 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-100 font-black text-xs uppercase tracking-widest py-3 px-6 rounded-xl transition disabled:opacity-50 shadow-lg">
+                    <button onClick={handleSync} disabled={isSyncing} className="flex items-center gap-2 bg-slate-900 border border-slate-900 hover:bg-slate-800 text-slate-100 font-black text-xs uppercase tracking-widest py-3 px-6 rounded-xl transition disabled:opacity-50 shadow-lg">
                         <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} /> {isSyncing ? 'Synchronizing...' : 'Sync My Exams'}
                     </button>
                 )}
@@ -171,18 +171,27 @@ const Dashboard: FC = () => {
                     let dashboardBundle = null;
                     if (bundlesEnabled && category.certExam?.productSku && examPrices) {
                         const certSku = category.certExam.productSku;
-                        // DYNAMIC BUNDLE DETECTION: Look for any bundle containing this SKU
-                        const bundleEntry = Object.entries(examPrices).find(([sku, p]: [string, any]) => 
-                            p.isBundle && Array.isArray(p.bundledSkus) && p.bundledSkus.includes(certSku)
-                        );
-
-                        if (bundleEntry) {
-                            const [sku, p] = bundleEntry;
-                            const isSubAddon = sku.includes('addon') || p.type === 'subscription';
+                        // PRECISE ADDON TARGETING: Look for exactly {certSku}-1mo-addon
+                        const addonSku = `${certSku}-1mo-addon`;
+                        const p = examPrices[addonSku];
+                        
+                        if (p) {
                             dashboardBundle = { 
-                                product: { ...p, sku }, 
-                                type: isSubAddon ? 'subscription' as const : 'practice' as const 
+                                product: { ...p, sku: addonSku }, 
+                                type: 'subscription' as const 
                             };
+                        } else {
+                            // Fallback to searching any bundle that includes this SKU if explicit addon doesn't exist
+                            const bundleEntry = Object.entries(examPrices).find(([sku, prod]: [string, any]) => 
+                                prod.isBundle && Array.isArray(prod.bundledSkus) && prod.bundledSkus.includes(certSku)
+                            );
+                            if (bundleEntry) {
+                                const [sku, prod] = bundleEntry;
+                                dashboardBundle = { 
+                                    product: { ...prod, sku }, 
+                                    type: (sku.includes('addon') || prod.type === 'subscription') ? 'subscription' as const : 'practice' as const 
+                                };
+                            }
                         }
                     }
 
@@ -211,17 +220,7 @@ const Dashboard: FC = () => {
                 })}
             </div>
 
-            {bundlesEnabled && featuredBundles.length > 0 && (
-                <div className="pt-10 border-t border-slate-800">
-                    <h2 className="text-3xl font-black text-[rgb(var(--color-text-strong-rgb))] mb-6 font-display flex items-center gap-2">
-                        <Zap className="text-amber-500 fill-amber-500" />
-                        Specialized Exam Bundles
-                    </h2>
-                    <div className="mco-grid-container">
-                        {featuredBundles.map(bundle => <FeaturedBundleCard key={bundle.sku} bundle={bundle} activeOrg={activeOrg} />)}
-                    </div>
-                </div>
-            )}
+            {/* Featured Bundles logic... */}
         </div>
     );
 };

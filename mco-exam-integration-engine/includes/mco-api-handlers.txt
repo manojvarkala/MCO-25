@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 28.9.5 (Safe Patching Engine)
+ * VERSION: 28.9.6 (Extended Patching Engine)
  * =============================================================================
  */
 
@@ -355,6 +355,9 @@ function mco_handle_admin_update_exam_program($request) {
         if (isset($u['practiceExam']['durationMinutes'])) {
             update_post_meta($post_id, '_mco_practice_duration', (int)$u['practiceExam']['durationMinutes']);
         }
+        if (isset($u['practiceExam']['certificateEnabled'])) {
+            update_post_meta($post_id, '_mco_practice_certificate_enabled', $u['practiceExam']['certificateEnabled'] ? '1' : '0');
+        }
     } 
 
     if (isset($u['certExam'])) { 
@@ -372,6 +375,12 @@ function mco_handle_admin_update_exam_program($request) {
         }
         if (isset($u['certExam']['addonSku'])) {
             update_post_meta($post_id, '_mco_addon_sku', sanitize_text_field($u['certExam']['addonSku']));
+        }
+        if (isset($u['certExam']['certificateEnabled'])) {
+            update_post_meta($post_id, '_mco_certificate_enabled', $u['certExam']['certificateEnabled'] ? '1' : '0');
+        }
+        if (isset($u['certExam']['isProctored'])) {
+            update_post_meta($post_id, '_mco_is_proctored', $u['certExam']['isProctored'] ? '1' : '0');
         }
     } 
 
