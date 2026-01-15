@@ -189,7 +189,10 @@ const ProductCustomizer: FC = () => {
     const [editingProduct, setEditingProduct] = useState<ProductEntry | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
+    
+    // Bulk pricing state
     const [bulkPrice, setBulkPrice] = useState('');
+    const [bulkRegularPrice, setBulkRegularPrice] = useState('');
 
     const products = useMemo(() => {
         if (!examPrices) return [];
@@ -236,7 +239,7 @@ const ProductCustomizer: FC = () => {
     };
 
     const handleBulkPriceUpdate = async () => {
-        if (selectedSkus.length === 0 || !token || !bulkPrice) return;
+        if (selectedSkus.length === 0 || !token || (!bulkPrice && !bulkRegularPrice)) return;
         setIsSaving(true);
         const tid = toast.loading(`Updating ${selectedSkus.length} products...`);
         try {
@@ -245,7 +248,8 @@ const ProductCustomizer: FC = () => {
                 if (prod) {
                     await googleSheetsService.adminUpsertProduct(token, {
                         ...prod,
-                        price: bulkPrice
+                        price: bulkPrice || prod.price,
+                        regularPrice: bulkRegularPrice || prod.regularPrice
                     });
                 }
             }
@@ -253,6 +257,7 @@ const ProductCustomizer: FC = () => {
             toast.success("Bulk Pricing Updated", { id: tid });
             setSelectedSkus([]);
             setBulkPrice('');
+            setBulkRegularPrice('');
         } catch (e: any) {
             toast.error(e.message, { id: tid });
         } finally {
@@ -268,20 +273,32 @@ const ProductCustomizer: FC = () => {
                 </h1>
                 
                 {selectedSkus.length > 0 && (
-                    <div className="flex items-center gap-4 bg-slate-900 border border-slate-700 p-3 rounded-2xl shadow-xl animate-in slide-in-from-right-4 duration-300">
-                        <div className="relative">
-                            <DollarSign className="absolute left-2.5 top-2.5 text-slate-600" size={14}/>
-                            <input 
-                                type="number" 
-                                placeholder="Bulk Sale Price" 
-                                value={bulkPrice} 
-                                onChange={e => setBulkPrice(e.target.value)}
-                                className="w-40 bg-slate-950 border border-slate-600 rounded-lg py-1.5 pl-7 pr-3 text-xs text-white focus:border-emerald-500"
-                            />
+                    <div className="flex items-center gap-4 bg-slate-900 border border-slate-700 p-4 rounded-2xl shadow-xl animate-in slide-in-from-right-4 duration-300">
+                        <div className="flex gap-2">
+                            <div className="relative">
+                                <span className="absolute left-2 top-2.5 text-[8px] font-black text-slate-500 uppercase tracking-tighter">Sale</span>
+                                <input 
+                                    type="number" 
+                                    placeholder="0.00" 
+                                    value={bulkPrice} 
+                                    onChange={e => setBulkPrice(e.target.value)}
+                                    className="w-24 bg-slate-950 border border-slate-600 rounded-lg py-2 pl-8 pr-2 text-xs text-white focus:border-emerald-500"
+                                />
+                            </div>
+                            <div className="relative">
+                                <span className="absolute left-2 top-2.5 text-[8px] font-black text-slate-500 uppercase tracking-tighter">Reg</span>
+                                <input 
+                                    type="number" 
+                                    placeholder="0.00" 
+                                    value={bulkRegularPrice} 
+                                    onChange={e => setBulkRegularPrice(e.target.value)}
+                                    className="w-24 bg-slate-950 border border-slate-600 rounded-lg py-2 pl-8 pr-2 text-xs text-white focus:border-cyan-500"
+                                />
+                            </div>
                         </div>
                         <button 
                             onClick={handleBulkPriceUpdate}
-                            className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 transition"
+                            className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/20"
                         >
                             Update {selectedSkus.length} Items
                         </button>

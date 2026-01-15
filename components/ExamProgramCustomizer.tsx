@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, ExamProductCategory } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, AlertTriangle, ExternalLink, CheckSquare, Square, Zap, Layers } from 'lucide-react';
+import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, AlertTriangle, ExternalLink, CheckSquare, Square, Zap, Layers, Clock, HelpCircle } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 // FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -63,7 +63,7 @@ const ExamEditor: FC<{
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg">
+                <div className="p-5 border rounded-xl bg-slate-800 border-slate-700 space-y-5 shadow-lg relative z-20">
                     <div className="flex justify-between items-center border-b border-slate-700 pb-3">
                         <h4 className="font-black text-white flex items-center gap-2 uppercase"><Award size={18} className="text-blue-400" /> Certification Config</h4>
                         {data.certExam?.certificateEnabled && (
@@ -190,7 +190,10 @@ const ExamProgramCustomizer: FC = () => {
     const [bulkData, setBulkData] = useState<any>({
         passScore: '',
         questionSourceUrl: '',
-        certQuestions: ''
+        practiceQuestions: '',
+        practiceDuration: '',
+        certQuestions: '',
+        certDuration: ''
     });
 
     const programs = useMemo(() => {
@@ -255,9 +258,18 @@ const ExamProgramCustomizer: FC = () => {
         const tid = toast.loading(`Updating ${selectedIds.length} programs...`);
         try {
             for (const id of selectedIds) {
-                const update: any = { certExam: {} };
+                const update: any = { 
+                    certExam: {},
+                    practiceExam: {}
+                };
+                
                 if (bulkData.passScore) update.certExam.passScore = bulkData.passScore;
                 if (bulkData.certQuestions) update.certExam.numberOfQuestions = bulkData.certQuestions;
+                if (bulkData.certDuration) update.certExam.durationMinutes = bulkData.certDuration;
+                
+                if (bulkData.practiceQuestions) update.practiceExam.numberOfQuestions = bulkData.practiceQuestions;
+                if (bulkData.practiceDuration) update.practiceExam.durationMinutes = bulkData.practiceDuration;
+                
                 if (bulkData.questionSourceUrl) update.category = { questionSourceUrl: bulkData.questionSourceUrl };
                 
                 await googleSheetsService.adminUpdateExamProgram(token, id, update);
@@ -265,7 +277,7 @@ const ExamProgramCustomizer: FC = () => {
             await refreshConfig();
             toast.success("Bulk Update Complete", { id: tid });
             setSelectedIds([]);
-            setBulkData({ passScore: '', questionSourceUrl: '', certQuestions: '' });
+            setBulkData({ passScore: '', questionSourceUrl: '', practiceQuestions: '', practiceDuration: '', certQuestions: '', certDuration: '' });
         } catch (e: any) {
             toast.error(e.message, { id: tid });
         } finally {
@@ -294,29 +306,75 @@ const ExamProgramCustomizer: FC = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <h1 className="text-4xl font-black text-white font-display flex items-center gap-3"><Settings className="text-cyan-500" /> Program Master</h1>
                 {selectedIds.length > 0 && (
-                    <div className="flex items-center gap-4 bg-slate-900 border border-slate-700 p-4 rounded-2xl shadow-2xl animate-in slide-in-from-top-4 duration-300">
-                        <div className="flex gap-4">
-                            <input 
-                                type="number" 
-                                placeholder="Bulk Pass %" 
-                                value={bulkData.passScore} 
-                                onChange={e => setBulkData({...bulkData, passScore: e.target.value})}
-                                className="w-32 bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
-                            />
-                            <input 
-                                type="text" 
-                                placeholder="Bulk Sheet URL" 
-                                value={bulkData.questionSourceUrl} 
-                                onChange={e => setBulkData({...bulkData, questionSourceUrl: e.target.value})}
-                                className="w-64 bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
-                            />
+                    <div className="flex flex-col gap-4 bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl animate-in slide-in-from-top-4 duration-300 w-full lg:w-auto">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-slate-500">Pass Score %</label>
+                                <input 
+                                    type="number" 
+                                    placeholder="80" 
+                                    value={bulkData.passScore} 
+                                    onChange={e => setBulkData({...bulkData, passScore: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-emerald-500">Prac Qs</label>
+                                <input 
+                                    type="number" 
+                                    placeholder="20" 
+                                    value={bulkData.practiceQuestions} 
+                                    onChange={e => setBulkData({...bulkData, practiceQuestions: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-emerald-500">Prac Mins</label>
+                                <input 
+                                    type="number" 
+                                    placeholder="30" 
+                                    value={bulkData.practiceDuration} 
+                                    onChange={e => setBulkData({...bulkData, practiceDuration: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-cyan-500">Cert Qs</label>
+                                <input 
+                                    type="number" 
+                                    placeholder="100" 
+                                    value={bulkData.certQuestions} 
+                                    onChange={e => setBulkData({...bulkData, certQuestions: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-cyan-500">Cert Mins</label>
+                                <input 
+                                    type="number" 
+                                    placeholder="120" 
+                                    value={bulkData.certDuration} 
+                                    onChange={e => setBulkData({...bulkData, certDuration: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-slate-500">Sheet URL</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="CSV Link..." 
+                                    value={bulkData.questionSourceUrl} 
+                                    onChange={e => setBulkData({...bulkData, questionSourceUrl: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
+                                />
+                            </div>
                         </div>
                         <button 
                             onClick={handleBulkUpdate}
                             disabled={isSaving}
-                            className="bg-cyan-600 text-white px-6 py-2 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-cyan-500 transition"
+                            className="w-full bg-cyan-600 text-white py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-cyan-500 transition shadow-lg shadow-cyan-900/20"
                         >
-                            APPLY TO {selectedIds.length}
+                            APPLY TO {selectedIds.length} SELECTED PROGRAMS
                         </button>
                     </div>
                 )}
@@ -340,9 +398,11 @@ const ExamProgramCustomizer: FC = () => {
                                 </button>
                                 <div className="flex-grow">
                                     <p className="font-black text-white text-lg">{p.category.name}</p>
-                                    <div className="flex gap-3 mt-1">
+                                    <div className="flex flex-wrap gap-3 mt-1">
                                         {p.certExam?.productSku ? <span className="text-[9px] text-cyan-400 font-mono bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800 uppercase">SKU: {p.certExam.productSku}</span> : <span className="text-[9px] text-rose-500 font-black uppercase">UNLINKED</span>}
                                         {p.certExam?.addonSku && <span className="text-[9px] text-amber-400 font-mono bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800 uppercase flex items-center gap-1"><Zap size={8}/> Addon: {p.certExam.addonSku}</span>}
+                                        <span className="text-[9px] text-slate-400 flex items-center gap-1 bg-slate-950/40 px-2 py-0.5 rounded border border-slate-800 uppercase"><HelpCircle size={8}/> {p.certExam?.numberOfQuestions || 0} Cert Qs</span>
+                                        <span className="text-[9px] text-slate-400 flex items-center gap-1 bg-slate-950/40 px-2 py-0.5 rounded border border-slate-800 uppercase"><Clock size={8}/> {p.certExam?.durationMinutes || 0} Mins</span>
                                     </div>
                                 </div>
                                 <button onClick={() => setExpandedId(expandedId === p.category.id ? null : p.category.id)} className="flex items-center gap-2 px-6 py-2 bg-slate-950 text-white rounded-xl text-xs font-black border border-slate-700 hover:border-cyan-500 transition-all">
