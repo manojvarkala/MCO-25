@@ -1,5 +1,5 @@
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
-// FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
+// FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
 import * as ReactRouterDOM from 'react-router-dom';
 const { useNavigate, Link } = ReactRouterDOM as any;
 import toast from 'react-hot-toast';
@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { TestResult, Exam, ProductVariation } from '../types.ts';
-import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit, CreditCard, Gift, X, LogOut, ExternalLink, Zap, ShoppingBag } from 'lucide-react';
+import { Activity, BarChart2, Clock, HelpCircle, FileText, CheckCircle, XCircle, ChevronRight, Award, RefreshCw, PlayCircle, Star, Edit, CreditCard, Gift, X, LogOut, ExternalLink, Zap, ShoppingBag, Rocket } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import ExamCard from './ExamCard.tsx';
 import ExamBundleCard from './ExamBundleCard.tsx';
@@ -73,6 +73,12 @@ const Dashboard: FC = () => {
             });
     }, [activeOrg]);
 
+    // Highlight purchased exams for the top section
+    const purchasedExams = useMemo(() => {
+        if (!activeOrg || !paidExamIds || paidExamIds.length === 0) return [];
+        return activeOrg.exams.filter(e => !e.isPractice && paidExamIds.includes(e.productSku));
+    }, [activeOrg, paidExamIds]);
+
     const featuredBundles = useMemo(() => {
         if (!bundlesEnabled || !examPrices) return [];
         return Object.entries(examPrices)
@@ -128,8 +134,8 @@ const Dashboard: FC = () => {
                 )}
             </div>
 
-            {/* Subscription Status or Upgrade Grid */}
-            {user && (isSubscribed || isBetaTester) ? (
+            {/* Subscription Status */}
+            {user && (isSubscribed || isBetaTester) && (
                 <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-cyan-500/30 p-6 rounded-2xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="flex items-center gap-5">
                         <div className="p-4 bg-cyan-500/10 rounded-2xl border border-cyan-500/20">
@@ -150,7 +156,35 @@ const Dashboard: FC = () => {
                         Manage Billing <ExternalLink size={14}/>
                     </a>
                 </div>
-            ) : subscriptionsEnabled && (
+            )}
+
+            {/* NEW: PROMINENT PURCHASED EXAMS (Pinned to Top) */}
+            {purchasedExams.length > 0 && (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 px-2">
+                        <Rocket className="text-emerald-500" size={20} />
+                        <h2 className="text-xl font-black text-slate-100 uppercase tracking-tight">Your Unlocked Certifications</h2>
+                    </div>
+                    <div className="mco-grid-container">
+                        {purchasedExams.map(exam => (
+                            <ExamCard 
+                                key={exam.id} 
+                                exam={exam} 
+                                programId="" 
+                                isPractice={false} 
+                                isPurchased={true} 
+                                activeOrg={activeOrg} 
+                                examPrices={examPrices} 
+                                hideDetailsLink={true}
+                                attemptsMade={user ? results.filter(r => r.examId === exam.id).length : 0} 
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Upgrade Grid for Non-Subscribers */}
+            {user && !isSubscribed && !isBetaTester && subscriptionsEnabled && (
                 <div className="mco-subscription-grid">
                     <SubscriptionOfferCard 
                         planName="Monthly Access"
