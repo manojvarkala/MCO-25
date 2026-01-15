@@ -41,9 +41,21 @@ const decodeHtmlEntities = (text: string | undefined): string => {
 
 const normalizePaidIds = (raw: any): string[] => {
     if (!raw) return [];
-    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    const items = Array.isArray(parsed) ? parsed : Object.values(parsed);
-    return items.filter(i => typeof i === 'string' || typeof i === 'number').map(i => i.toString());
+    try {
+        let items: any[] = [];
+        if (typeof raw === 'string') {
+            const parsed = JSON.parse(raw);
+            items = Array.isArray(parsed) ? parsed : Object.values(parsed);
+        } else if (Array.isArray(raw)) {
+            items = raw;
+        } else if (typeof raw === 'object') {
+            items = Object.values(raw);
+        }
+        return items.filter(i => typeof i === 'string' || typeof i === 'number').map(i => i.toString());
+    } catch (error) {
+        console.warn("Failed to normalize paid IDs:", error);
+        return [];
+    }
 };
 
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
@@ -85,7 +97,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [isBetaTester, setIsBetaTester] = useState<boolean>(() => {
     try {
         const stored = localStorage.getItem('isBetaTester');
-        return stored ? JSON.parse(stored) : false;
+        return (stored === 'true' || stored === '1');
     } catch (error) {
         return false;
     }
@@ -135,9 +147,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setIsBetaTester(!!data.isBetaTester);
         
         localStorage.setItem('paidExamIds', JSON.stringify(normalizedIds));
-        localStorage.setItem('isSubscribed', JSON.stringify(!!data.isSubscribed));
+        localStorage.setItem('isSubscribed', data.isSubscribed ? 'true' : 'false');
         localStorage.setItem('subscriptionInfo', JSON.stringify(data.subscriptionInfo));
-        localStorage.setItem('isBetaTester', JSON.stringify(!!data.isBetaTester));
+        localStorage.setItem('isBetaTester', data.isBetaTester ? 'true' : 'false');
     } catch (e) {
         console.error("Failed to refresh entitlements", e);
         throw e;
