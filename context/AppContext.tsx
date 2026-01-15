@@ -82,6 +82,9 @@ const processConfigData = (configData: any) => {
                 regularPrice: parseFloat(getField(exam, ['regularPrice', 'regular_price'])) || 0,
                 isPractice: exam.isPractice ?? (category ? category.practiceExamId === id : false),
                 productSku: getField(exam, ['productSku', 'product_sku', 'sku']),
+                addonSku: exam.addonSku || '', // Explicitly preserve addonSku
+                certificateEnabled: !!exam.certificateEnabled, // Cast to bool
+                isProctored: !!exam.isProctored, // Cast to bool
                 questionSourceUrl: getField(exam, ['questionSourceUrl', 'question_source_url'], categoryUrl)
             };
         }).filter(Boolean) as Exam[];
@@ -169,14 +172,9 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
           setPurchaseNotifierMinGap(newActiveOrg.purchaseNotifierMinGap ?? 8);
           setPurchaseNotifierMaxGap(newActiveOrg.purchaseNotifierMaxGap ?? 23);
           
-          // Theme Determination Logic:
-          // 1. If we just did an "Explicit Sync" (Admin saved settings), Force use Org Default.
-          // 2. Otherwise, use user preference (LocalStorage), then fallback to Org Default.
           const storedTheme = localStorage.getItem('mco_active_theme');
           const orgTheme = newActiveOrg.activeThemeId;
-          
           const finalTheme = (isExplicitSync || !storedTheme) ? (orgTheme || 'default') : storedTheme;
-          
           setActiveTheme(finalTheme);
       }
       return true;
@@ -237,7 +235,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 const liveConfig = await response.json();
                 const processed = processConfigData(liveConfig);
                 if (processed) {
-                    // isExplicitSync=true when forceRefresh=true
                     applyConfigToState(liveConfig, processed, forceRefresh);
                     localStorage.setItem(cacheKey, JSON.stringify(liveConfig));
                     configFound = true;
@@ -286,7 +283,6 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     if (org) {
         setActiveOrg(org);
         localStorage.setItem('activeOrgId', org.id);
-        // Sync theme with the new org's default
         if (org.activeThemeId) {
             setActiveTheme(org.activeThemeId);
         }

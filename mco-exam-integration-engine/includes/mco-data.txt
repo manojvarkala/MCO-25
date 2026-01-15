@@ -141,8 +141,11 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
             ];
         }
 
-        // FETCH ALL PRODUCTS (Exhaustive loop for addon detection)
-        $product_query = new WC_Product_Query(['status' => 'publish', 'limit' => -1]);
+        // FETCH ALL PRODUCTS (Exhaustive loop including non-published for link verification)
+        $product_query = new WC_Product_Query([
+            'status' => ['publish', 'draft', 'private'], 
+            'limit' => -1
+        ]);
         $all_products = $product_query->get_products();
         foreach ($all_products as $product) {
             $psku = $product->get_sku();
@@ -158,6 +161,7 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
                 'name' => (string)$product->get_name(),
                 'type' => (string)$product->get_type(),
                 'isBundle' => $is_bundle,
+                'status' => $product->get_status(),
                 'bundledSkus' => (array)get_post_meta($product->get_id(), '_mco_bundled_skus', true) ?: []
             ];
             
@@ -188,7 +192,7 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
 if (!function_exists('mco_get_app_config_data')) {
     function mco_get_app_config_data() {
         $version = (string)get_option('mco_config_version', '0');
-        $cache_key = 'mco_app_config_full_' . md5($version); // Version-specific cache key
+        $cache_key = 'mco_app_config_full_' . md5($version);
         
         $cached = get_transient($cache_key);
         if ($cached !== false) return $cached;

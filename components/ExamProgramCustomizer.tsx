@@ -26,21 +26,24 @@ const ExamEditor: FC<{
     bundleProducts: any[];
 }> = ({ program, onSave, onDelete, onCancel, isSaving, unlinkedProducts, bundleProducts }) => {
     const { activeOrg } = useAppContext();
+    
+    // STRICT INITIALIZATION: Map directly from props to internal state
     const [data, setData] = useState<EditableProgramData>({
-        category: { ...program.category },
+        category: { 
+            name: program.category.name || '',
+            description: program.category.description || '',
+            questionSourceUrl: program.category.questionSourceUrl || ''
+        },
         practiceExam: program.practiceExam ? { ...program.practiceExam } : { id: program.category.practiceExamId, isPractice: true, certificateEnabled: false } as any,
         certExam: program.certExam ? { ...program.certExam } : { id: program.category.certificationExamId, isPractice: false, certificateEnabled: true, isProctored: true } as any,
     });
     
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
-    // Derived state for the addon checkbox
+    // Addon checkbox logic: reflects IF an addon SKU exists in the database
     const hasAddon = useMemo(() => {
-        const sku = data.certExam?.productSku || '';
-        const currentAddon = data.certExam?.addonSku || '';
-        // It's considered checked if it matches the standard pattern
-        return currentAddon === `${sku}-1mo-addon` && currentAddon !== '';
-    }, [data.certExam?.productSku, data.certExam?.addonSku]);
+        return !!data.certExam?.addonSku;
+    }, [data.certExam?.addonSku]);
 
     const handleCategoryChange = (field: keyof ExamProductCategory, value: string) => {
         setData(prev => ({ ...prev, category: { ...prev.category, [field]: value } }));
@@ -50,7 +53,7 @@ const ExamEditor: FC<{
         setData(prev => {
             const next = { ...prev, [examType]: { ...prev[examType], [field]: value } };
             
-            // If primary SKU changes and addon was enabled, update addon SKU suffix
+            // Auto-update addon pattern only if it was already following the standard suffix
             if (examType === 'certExam' && field === 'productSku' && hasAddon) {
                 next.certExam = { 
                     ...next.certExam, 
@@ -117,7 +120,7 @@ const ExamEditor: FC<{
                             <select 
                                 value={data.certExam?.productSku || ''} 
                                 onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} 
-                                className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-white text-sm cursor-pointer hover:border-cyan-500 transition-colors"
+                                className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-white text-sm cursor-pointer hover:border-cyan-500 transition-colors font-mono"
                             >
                                 <option value="">-- No Linked Product --</option>
                                 {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
@@ -130,7 +133,9 @@ const ExamEditor: FC<{
                                         <Zap size={14} className={hasAddon ? "text-amber-400 fill-amber-400" : "text-slate-500"} />
                                         <span className="text-xs font-black text-white uppercase tracking-tighter">Premium Addon Offer</span>
                                     </div>
-                                    <p className="text-[9px] text-slate-500 font-bold uppercase">Auto-constructs: {data.certExam?.productSku || 'SKU'}-1mo-addon</p>
+                                    <p className="text-[9px] text-slate-500 font-bold uppercase">
+                                        {data.certExam?.addonSku ? `Linked: ${data.certExam.addonSku}` : `Default: ${data.certExam?.productSku || 'SKU'}-1mo-addon`}
+                                    </p>
                                 </div>
                                 <input 
                                     type="checkbox" 
@@ -150,11 +155,11 @@ const ExamEditor: FC<{
                     
                     <div className="space-y-3 pt-2">
                         <label className="flex items-center gap-2 text-xs font-bold text-white cursor-pointer">
-                            <input type="checkbox" checked={data.certExam?.certificateEnabled || false} onChange={e => handleExamChange('certExam', 'certificateEnabled', e.target.checked)} className="rounded bg-slate-950 border-slate-600 text-cyan-500" />
+                            <input type="checkbox" checked={!!data.certExam?.certificateEnabled} onChange={e => handleExamChange('certExam', 'certificateEnabled', e.target.checked)} className="rounded bg-slate-950 border-slate-600 text-cyan-500" />
                             Enable Certification Certificate
                         </label>
                         <label className="flex items-center gap-2 text-xs font-bold text-white cursor-pointer">
-                            <input type="checkbox" checked={data.certExam?.isProctored || false} onChange={e => handleExamChange('certExam', 'isProctored', e.target.checked)} className="rounded bg-slate-950 border-slate-600 text-cyan-500" />
+                            <input type="checkbox" checked={!!data.certExam?.isProctored} onChange={e => handleExamChange('certExam', 'isProctored', e.target.checked)} className="rounded bg-slate-950 border-slate-600 text-cyan-500" />
                             <ShieldCheck size={14} className="text-cyan-400"/> Enable Proctoring Integrity
                         </label>
                     </div>
@@ -178,7 +183,7 @@ const ExamEditor: FC<{
                         <div><Label>Duration (Mins)</Label><input type="number" value={data.practiceExam?.durationMinutes || ''} onChange={e => handleExamChange('practiceExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
                     </div>
                     <label className="flex items-center gap-2 text-xs font-bold text-white pt-2 cursor-pointer">
-                        <input type="checkbox" checked={data.practiceExam?.certificateEnabled || false} onChange={e => handleExamChange('practiceExam', 'certificateEnabled', e.target.checked)} className="rounded bg-slate-950 border-slate-600 text-cyan-500" />
+                        <input type="checkbox" checked={!!data.practiceExam?.certificateEnabled} onChange={e => handleExamChange('practiceExam', 'certificateEnabled', e.target.checked)} className="rounded bg-slate-950 border-slate-600 text-cyan-500" />
                         Enable Completion Certificate
                     </label>
                 </div>
@@ -273,6 +278,7 @@ const ExamProgramCustomizer: FC = () => {
 
     const productLists = useMemo(() => {
         if (!examPrices) return { unlinked: [], bundles: [] };
+        // Map all existing products to the list
         const all = Object.entries(examPrices).map(([sku, d]: [string, any]) => ({ sku, name: d.name, isBundle: d.isBundle }));
         return {
             unlinked: all,
