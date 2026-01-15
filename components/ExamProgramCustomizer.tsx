@@ -1,4 +1,4 @@
-import React, { FC, useState, useMemo, ReactNode, useEffect } from 'react';
+import React, { FC, useState, useMemo, ReactNode, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -8,7 +8,7 @@ import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, AlertTriangl
 import Spinner from './Spinner.tsx';
 // FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
 import * as ReactRouterDOM from 'react-router-dom';
-const { Link } = ReactRouterDOM as any;
+const { Link, useLocation } = ReactRouterDOM as any;
 
 interface EditableProgramData {
     category?: Partial<ExamProductCategory>;
@@ -45,7 +45,7 @@ const ExamEditor: FC<{
     const Label = ({ children }: { children: ReactNode }) => <label className="text-[10px] font-black uppercase tracking-widest text-white mb-1 block opacity-80">{children}</label>;
 
     return (
-        <div className="bg-slate-900 p-6 rounded-b-xl space-y-6 shadow-inner border-t border-slate-700 max-h-[80vh] overflow-y-auto mco-custom-scrollbar">
+        <div className="bg-slate-900 p-6 rounded-b-xl space-y-6 shadow-inner border-t border-slate-700 max-h-[85vh] overflow-y-auto mco-custom-scrollbar pb-20">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <Label>Brand Identity / Name</Label>
@@ -181,6 +181,7 @@ const ExamEditor: FC<{
 const ExamProgramCustomizer: FC = () => {
     const { activeOrg, examPrices, refreshConfig } = useAppContext();
     const { token } = useAuth();
+    const location = useLocation();
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -200,6 +201,24 @@ const ExamProgramCustomizer: FC = () => {
             certExam: activeOrg.exams.find(e => e.id === cat.certificationExamId)
         })).sort((a,b) => (a.category.name || '').localeCompare(b.category.name || ''));
     }, [activeOrg]);
+
+    // Handle deep linking via Hash (e.g., #prod-123)
+    useEffect(() => {
+        const hash = location.hash.replace('#', '');
+        if (hash && programs.length > 0) {
+            const match = programs.find(p => p.category.id === hash);
+            if (match) {
+                setExpandedId(hash);
+                // Wait for render, then scroll
+                setTimeout(() => {
+                    const el = document.getElementById(`program-card-${hash}`);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 300);
+            }
+        }
+    }, [location.hash, programs]);
 
     const productLists = useMemo(() => {
         if (!examPrices) return { unlinked: [], bundles: [] };
@@ -271,7 +290,7 @@ const ExamProgramCustomizer: FC = () => {
     };
 
     return (
-        <div className="space-y-8 pb-20">
+        <div className="space-y-8 pb-40">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <h1 className="text-4xl font-black text-white font-display flex items-center gap-3"><Settings className="text-cyan-500" /> Program Master</h1>
                 {selectedIds.length > 0 && (
@@ -314,7 +333,7 @@ const ExamProgramCustomizer: FC = () => {
 
                 <div className="divide-y divide-slate-800">
                     {programs.map(p => (
-                        <div key={p.category.id} className="bg-slate-900 group first:rounded-none last:rounded-b-2xl">
+                        <div key={p.category.id} id={`program-card-${p.category.id}`} className="bg-slate-900 group first:rounded-none last:rounded-b-2xl">
                             <div className={`flex items-center p-6 transition-colors ${expandedId === p.category.id ? 'bg-slate-800' : 'hover:bg-slate-800/40'}`}>
                                 <button onClick={() => handleToggleSelect(p.category.id)} className="mr-6 text-slate-700 hover:text-cyan-500 transition-colors">
                                     {selectedIds.includes(p.category.id) ? <CheckSquare size={22} className="text-cyan-500"/> : <Square size={22}/>}
