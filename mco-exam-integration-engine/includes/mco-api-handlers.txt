@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 28.8.0 (Verification Engine & Scroll Logic)
+ * VERSION: 28.9.0 (Cache Purge Parity)
  * =============================================================================
  */
 
@@ -345,6 +345,7 @@ function mco_handle_admin_update_exam_program($request) {
         update_post_meta($post_id, '_mco_pass_score', (int)$u['certExam']['passScore']); 
         if (isset($u['certExam']['addonSku'])) update_post_meta($post_id, '_mco_addon_sku', sanitize_text_field($u['certExam']['addonSku']));
     } 
+    delete_transient('mco_app_config_data');
     delete_transient('mco_app_config_data_full'); 
     return new WP_REST_Response(['success' => true], 200); 
 }
