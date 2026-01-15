@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 28.4.0 (Real Certificate Data Injection)
+ * VERSION: 28.5.0 (Checkout Engine & Addon Logic)
  * =============================================================================
  */
 
@@ -252,5 +252,45 @@ function mco_handle_update_name() { return new WP_REST_Response(['success'=>true
 function mco_handle_submit_feedback() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_submit_review() { return new WP_REST_Response(['success'=>true], 200); }
 function mco_handle_log_engagement() { return new WP_REST_Response(['success'=>true], 200); }
-function mco_handle_admin_update_exam_program($request) { $p = $request->get_json_params(); $post_id = (int)str_replace('prod-', '', $p['programId'] ?? ''); if (!$post_id) return new WP_Error('404', 'Invalid ID'); $u = $p['updateData'] ?? []; if (isset($u['category'])) { wp_update_post(['ID' => $post_id, 'post_title' => sanitize_text_field($u['category']['name']), 'post_content' => wp_kses_post($u['category']['description'])]); if (isset($u['category']['questionSourceUrl'])) update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($u['category']['questionSourceUrl'])); } if (isset($u['practiceExam'])) { update_post_meta($post_id, '_mco_practice_questions', (int)$u['practiceExam']['numberOfQuestions']); update_post_meta($post_id, '_mco_practice_duration', (int)$u['practiceExam']['durationMinutes']); } if (isset($u['certExam'])) { update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($u['certExam']['productSku'])); update_post_meta($post_id, '_mco_cert_questions', (int)$u['certExam']['numberOfQuestions']); update_post_meta($post_id, '_mco_cert_duration', (int)$u['certExam']['durationMinutes']); update_post_meta($post_id, '_mco_pass_score', (int)$u['certExam']['passScore']); } delete_transient('mco_app_config_data_full'); return new WP_REST_Response(['success' => true], 200); }
-function mco_handle_create_checkout_session() { return new WP_REST_Response(['checkoutUrl'=>''], 200); }
+
+function mco_handle_admin_update_exam_program($request) { 
+    $p = $request->get_json_params(); 
+    $post_id = (int)str_replace('prod-', '', $p['programId'] ?? ''); 
+    if (!$post_id) return new WP_Error('404', 'Invalid ID'); 
+    $u = $p['updateData'] ?? []; 
+    if (isset($u['category'])) { 
+        wp_update_post(['ID' => $post_id, 'post_title' => sanitize_text_field($u['category']['name']), 'post_content' => wp_kses_post($u['category']['description'])]); 
+        if (isset($u['category']['questionSourceUrl'])) update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($u['category']['questionSourceUrl'])); 
+    } 
+    if (isset($u['practiceExam'])) { 
+        update_post_meta($post_id, '_mco_practice_questions', (int)$u['practiceExam']['numberOfQuestions']); 
+        update_post_meta($post_id, '_mco_practice_duration', (int)$u['practiceExam']['durationMinutes']); 
+    } 
+    if (isset($u['certExam'])) { 
+        update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($u['certExam']['productSku'])); 
+        update_post_meta($post_id, '_mco_cert_questions', (int)$u['certExam']['numberOfQuestions']); 
+        update_post_meta($post_id, '_mco_cert_duration', (int)$u['certExam']['durationMinutes']); 
+        update_post_meta($post_id, '_mco_pass_score', (int)$u['certExam']['passScore']); 
+        if (isset($u['certExam']['addonSku'])) update_post_meta($post_id, '_mco_addon_sku', sanitize_text_field($u['certExam']['addonSku']));
+    } 
+    delete_transient('mco_app_config_data_full'); 
+    return new WP_REST_Response(['success' => true], 200); 
+}
+
+/**
+ * IMPLEMENT REAL CHECKOUT REDIRECT
+ */
+function mco_handle_create_checkout_session($request) {
+    if (!class_exists('WooCommerce')) return new WP_Error('500', 'WooCommerce is not active.');
+    $p = $request->get_json_params();
+    $sku = sanitize_text_field($p['sku'] ?? '');
+    if (empty($sku)) return new WP_Error('400', 'Product SKU is required.');
+
+    $product_id = wc_get_product_id_by_sku($sku);
+    if (!$product_id) return new WP_Error('404', "Product with SKU '$sku' not found in store.");
+
+    // Direct redirect URL to cart with auto-add
+    $checkout_url = add_query_arg('add-to-cart', $product_id, wc_get_checkout_url());
+
+    return new WP_REST_Response(['checkoutUrl' => $checkout_url], 200);
+}

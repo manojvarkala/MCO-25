@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import toast from 'react-hot-toast';
-import { Edit, Save, X, ShoppingCart, PlusCircle, Box, Repeat, Package, DollarSign, Tag, Info } from 'lucide-react';
+import { Edit, Save, X, ShoppingCart, PlusCircle, Box, Repeat, Package, DollarSign, Tag, Info, CheckSquare, Square } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 type TabType = 'all' | 'simple' | 'subscription' | 'bundle';
@@ -188,6 +188,8 @@ const ProductCustomizer: FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [editingProduct, setEditingProduct] = useState<ProductEntry | null>(null);
     const [isCreating, setIsCreating] = useState(false);
+    const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
+    const [bulkPrice, setBulkPrice] = useState('');
 
     const products = useMemo(() => {
         if (!examPrices) return [];
@@ -208,6 +210,14 @@ const ProductCustomizer: FC = () => {
         return products.filter(p => p.type === activeTab);
     }, [activeTab, products]);
 
+    const handleToggleSelect = (sku: string) => {
+        setSelectedSkus(prev => prev.includes(sku) ? prev.filter(s => s !== sku) : [...prev, sku]);
+    };
+
+    const handleSelectAll = () => {
+        setSelectedSkus(selectedSkus.length === filtered.length ? [] : filtered.map(p => p.sku));
+    };
+
     const handleSaveProduct = async (formData: any) => {
         if (!token) return;
         setIsSaving(true);
@@ -225,12 +235,59 @@ const ProductCustomizer: FC = () => {
         }
     };
 
+    const handleBulkPriceUpdate = async () => {
+        if (selectedSkus.length === 0 || !token || !bulkPrice) return;
+        setIsSaving(true);
+        const tid = toast.loading(`Updating ${selectedSkus.length} products...`);
+        try {
+            for (const sku of selectedSkus) {
+                const prod = products.find(p => p.sku === sku);
+                if (prod) {
+                    await googleSheetsService.adminUpsertProduct(token, {
+                        ...prod,
+                        price: bulkPrice
+                    });
+                }
+            }
+            await refreshConfig();
+            toast.success("Bulk Pricing Updated", { id: tid });
+            setSelectedSkus([]);
+            setBulkPrice('');
+        } catch (e: any) {
+            toast.error(e.message, { id: tid });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 pb-20">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                 <h1 className="text-4xl font-black text-slate-100 font-display flex items-center gap-3">
                     <ShoppingCart className="text-cyan-500" /> Store Inventory
                 </h1>
+                
+                {selectedSkus.length > 0 && (
+                    <div className="flex items-center gap-4 bg-slate-900 border border-slate-700 p-3 rounded-2xl shadow-xl animate-in slide-in-from-right-4 duration-300">
+                        <div className="relative">
+                            <DollarSign className="absolute left-2.5 top-2.5 text-slate-600" size={14}/>
+                            <input 
+                                type="number" 
+                                placeholder="Bulk Sale Price" 
+                                value={bulkPrice} 
+                                onChange={e => setBulkPrice(e.target.value)}
+                                className="w-40 bg-slate-950 border border-slate-600 rounded-lg py-1.5 pl-7 pr-3 text-xs text-white focus:border-emerald-500"
+                            />
+                        </div>
+                        <button 
+                            onClick={handleBulkPriceUpdate}
+                            className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 transition"
+                        >
+                            Update {selectedSkus.length} Items
+                        </button>
+                    </div>
+                )}
+
                 <div className="flex flex-wrap gap-2">
                     <button onClick={() => { setActiveTab('simple'); setIsCreating(true); }} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-black text-xs hover:bg-emerald-500 transition shadow-lg uppercase tracking-wider"><PlusCircle size={16}/> NEW SIMPLE</button>
                     <button onClick={() => { setActiveTab('subscription'); setIsCreating(true); }} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-xs hover:bg-blue-500 transition shadow-lg uppercase tracking-wider"><PlusCircle size={16}/> NEW SUB</button>
@@ -239,17 +296,26 @@ const ProductCustomizer: FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-3 p-1.5 bg-slate-950 rounded-xl border border-slate-800 self-start">
-                <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>Full List</TabButton>
-                <TabButton active={activeTab === 'simple'} onClick={() => setActiveTab('simple')}>Standard</TabButton>
-                <TabButton active={activeTab === 'subscription'} onClick={() => setActiveTab('subscription')}>Recurring</TabButton>
-                <TabButton active={activeTab === 'bundle'} onClick={() => setActiveTab('bundle')}>Package Deals</TabButton>
+                <TabButton active={activeTab === 'all'} onClick={() => { setActiveTab('all'); setSelectedSkus([]); }}>Full List</TabButton>
+                <TabButton active={activeTab === 'simple'} onClick={() => { setActiveTab('simple'); setSelectedSkus([]); }}>Standard</TabButton>
+                <TabButton active={activeTab === 'subscription'} onClick={() => { setActiveTab('subscription'); setSelectedSkus([]); }}>Recurring</TabButton>
+                <TabButton active={activeTab === 'bundle'} onClick={() => { setActiveTab('bundle'); setSelectedSkus([]); }}>Package Deals</TabButton>
             </div>
 
-            <div className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
+                <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center justify-between">
+                     <button onClick={handleSelectAll} className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition">
+                        {selectedSkus.length === filtered.length && filtered.length > 0 ? <CheckSquare size={16} className="text-cyan-500"/> : <Square size={16}/>}
+                        {selectedSkus.length === filtered.length && filtered.length > 0 ? 'Deselect All' : 'Select All Filtered'}
+                    </button>
+                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{filtered.length} INVENTORY ITEMS</span>
+                </div>
+
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left border-collapse">
                         <thead className="bg-slate-950 text-slate-500 uppercase text-[10px] font-black tracking-widest border-b border-slate-800">
                             <tr>
+                                <th className="p-5 w-12"></th>
                                 <th className="p-5">Product Entity</th>
                                 <th className="p-5">Classification</th>
                                 <th className="p-5">Value (USD)</th>
@@ -258,7 +324,12 @@ const ProductCustomizer: FC = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-800">
                             {filtered.map(p => (
-                                <tr key={p.sku} className="hover:bg-slate-800/40 transition-colors group">
+                                <tr key={p.sku} className={`hover:bg-slate-800/40 transition-colors group ${selectedSkus.includes(p.sku) ? 'bg-cyan-900/10' : ''}`}>
+                                    <td className="p-5">
+                                        <button onClick={() => handleToggleSelect(p.sku)} className="text-slate-700 hover:text-cyan-500 transition-colors">
+                                            {selectedSkus.includes(p.sku) ? <CheckSquare size={20} className="text-cyan-500"/> : <Square size={20}/>}
+                                        </button>
+                                    </td>
                                     <td className="p-5">
                                         <p className="font-black text-slate-100 text-base group-hover:text-cyan-400 transition-colors">{p.name}</p>
                                         <p className="text-[10px] font-mono text-slate-500 mt-1 uppercase">SKU: {p.sku}</p>
@@ -294,6 +365,11 @@ const ProductCustomizer: FC = () => {
                         </tbody>
                     </table>
                 </div>
+                {filtered.length === 0 && (
+                    <div className="p-20 text-center text-slate-600 font-mono italic">
+                        No product entries matching current filter.
+                    </div>
+                )}
             </div>
 
             {(editingProduct || isCreating) && (

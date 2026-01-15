@@ -69,6 +69,8 @@ export interface Exam {
   isProctored: boolean;
   recommendedBookIds: string[];
   productSlug: string;
+  // FIX: Added optional addonSku property to track linked bundles in management views.
+  addonSku?: string;
 }
 
 export interface ExamProductCategory {

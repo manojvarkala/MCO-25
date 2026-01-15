@@ -1,10 +1,10 @@
-import React, { FC, useState, useMemo, ReactNode } from 'react';
+import React, { FC, useState, useMemo, ReactNode, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, ExamProductCategory } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, AlertTriangle, ExternalLink, CheckSquare, Square, Zap, Layers } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 // FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -13,7 +13,7 @@ const { Link } = ReactRouterDOM as any;
 interface EditableProgramData {
     category?: Partial<ExamProductCategory>;
     practiceExam?: Partial<Exam>;
-    certExam?: Partial<Exam>;
+    certExam?: Partial<Exam> & { addonSku?: string };
 }
 
 const ExamEditor: FC<{
@@ -23,7 +23,8 @@ const ExamEditor: FC<{
     onCancel: () => void;
     isSaving: boolean;
     unlinkedProducts: any[];
-}> = ({ program, onSave, onDelete, onCancel, isSaving, unlinkedProducts }) => {
+    bundleProducts: any[];
+}> = ({ program, onSave, onDelete, onCancel, isSaving, unlinkedProducts, bundleProducts }) => {
     const { activeOrg } = useAppContext();
     const [data, setData] = useState<EditableProgramData>({
         category: { ...program.category },
@@ -37,7 +38,7 @@ const ExamEditor: FC<{
         setData(prev => ({ ...prev, category: { ...prev.category, [field]: value } }));
     };
 
-    const handleExamChange = (examType: 'practiceExam' | 'certExam', field: keyof Exam, value: any) => {
+    const handleExamChange = (examType: 'practiceExam' | 'certExam', field: string, value: any) => {
         setData(prev => ({ ...prev, [examType]: { ...prev[examType], [field]: value } }));
     };
 
@@ -75,17 +76,33 @@ const ExamEditor: FC<{
                             </Link>
                         )}
                     </div>
-                    <div>
-                        <Label>WooCommerce SKU Binding</Label>
-                        <select 
-                            value={data.certExam?.productSku || ''} 
-                            onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} 
-                            className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-white text-sm"
-                        >
-                            <option value="">-- No Linked Product --</option>
-                            {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
-                        </select>
+                    
+                    <div className="grid grid-cols-1 gap-4">
+                        <div>
+                            <Label>WooCommerce Certification SKU</Label>
+                            <select 
+                                value={data.certExam?.productSku || ''} 
+                                onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} 
+                                className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-white text-sm"
+                            >
+                                <option value="">-- No Linked Product --</option>
+                                {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <Label>Associated Premium Addon (Bundle SKU)</Label>
+                            <select 
+                                value={data.certExam?.addonSku || ''} 
+                                onChange={e => handleExamChange('certExam', 'addonSku', e.target.value)} 
+                                className="w-full p-3 border rounded-lg bg-slate-950 border-slate-600 text-amber-400 font-bold text-sm"
+                            >
+                                <option value="">-- Autodetect or No Addon --</option>
+                                {bundleProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
+                            </select>
+                            <p className="text-[9px] text-slate-500 mt-1 uppercase font-bold">The bundle offer that appears with this program.</p>
+                        </div>
                     </div>
+
                     <div className="grid grid-cols-3 gap-3">
                         <div><Label>Questions</Label><input type="number" value={data.certExam?.numberOfQuestions || ''} onChange={e => handleExamChange('certExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
                         <div><Label>Mins</Label><input type="number" value={data.certExam?.durationMinutes || ''} onChange={e => handleExamChange('certExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-slate-950 border-slate-600 text-white" /></div>
@@ -166,6 +183,14 @@ const ExamProgramCustomizer: FC = () => {
     const { token } = useAuth();
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    
+    // Bulk state
+    const [bulkData, setBulkData] = useState<any>({
+        passScore: '',
+        questionSourceUrl: '',
+        certQuestions: ''
+    });
 
     const programs = useMemo(() => {
         if (!activeOrg) return [];
@@ -176,16 +201,57 @@ const ExamProgramCustomizer: FC = () => {
         })).sort((a,b) => (a.category.name || '').localeCompare(b.category.name || ''));
     }, [activeOrg]);
 
+    const productLists = useMemo(() => {
+        if (!examPrices) return { unlinked: [], bundles: [] };
+        const all = Object.entries(examPrices).map(([sku, d]: [string, any]) => ({ sku, name: d.name, isBundle: d.isBundle }));
+        return {
+            unlinked: all,
+            bundles: all.filter(p => p.isBundle)
+        };
+    }, [examPrices]);
+
+    const handleToggleSelect = (id: string) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const handleSelectAll = () => {
+        setSelectedIds(selectedIds.length === programs.length ? [] : programs.map(p => p.category.id));
+    };
+
     const handleSave = async (id: string, data: EditableProgramData) => {
         if (!token) return;
         setIsSaving(true);
         try {
             await googleSheetsService.adminUpdateExamProgram(token, id, data);
             await refreshConfig();
-            toast.success("Program Updated Live");
+            toast.success("Program Synchronized");
             setExpandedId(null);
         } catch (e: any) { toast.error(e.message); }
         finally { setIsSaving(false); }
+    };
+
+    const handleBulkUpdate = async () => {
+        if (selectedIds.length === 0 || !token) return;
+        setIsSaving(true);
+        const tid = toast.loading(`Updating ${selectedIds.length} programs...`);
+        try {
+            for (const id of selectedIds) {
+                const update: any = { certExam: {} };
+                if (bulkData.passScore) update.certExam.passScore = bulkData.passScore;
+                if (bulkData.certQuestions) update.certExam.numberOfQuestions = bulkData.certQuestions;
+                if (bulkData.questionSourceUrl) update.category = { questionSourceUrl: bulkData.questionSourceUrl };
+                
+                await googleSheetsService.adminUpdateExamProgram(token, id, update);
+            }
+            await refreshConfig();
+            toast.success("Bulk Update Complete", { id: tid });
+            setSelectedIds([]);
+            setBulkData({ passScore: '', questionSourceUrl: '', certQuestions: '' });
+        } catch (e: any) {
+            toast.error(e.message, { id: tid });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleDelete = async (id: string) => {
@@ -195,31 +261,73 @@ const ExamProgramCustomizer: FC = () => {
         try {
             await googleSheetsService.adminDeletePost(token, id, 'mco_exam_program');
             await refreshConfig();
-            toast.success("Program moved to trash.", { id: tid });
+            toast.success("Program Deleted", { id: tid });
             setExpandedId(null);
         } catch (e: any) { 
-            toast.error(e.message || "Failed to delete program.", { id: tid }); 
+            toast.error(e.message, { id: tid }); 
         } finally { 
             setIsSaving(false); 
         }
     };
 
     return (
-        <div className="space-y-8">
-            <h1 className="text-4xl font-black text-white font-display flex items-center gap-3"><Settings className="text-cyan-500" /> Program Master</h1>
+        <div className="space-y-8 pb-20">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <h1 className="text-4xl font-black text-white font-display flex items-center gap-3"><Settings className="text-cyan-500" /> Program Master</h1>
+                {selectedIds.length > 0 && (
+                    <div className="flex items-center gap-4 bg-slate-900 border border-slate-700 p-4 rounded-2xl shadow-2xl animate-in slide-in-from-top-4 duration-300">
+                        <div className="flex gap-4">
+                            <input 
+                                type="number" 
+                                placeholder="Bulk Pass %" 
+                                value={bulkData.passScore} 
+                                onChange={e => setBulkData({...bulkData, passScore: e.target.value})}
+                                className="w-32 bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
+                            />
+                            <input 
+                                type="text" 
+                                placeholder="Bulk Sheet URL" 
+                                value={bulkData.questionSourceUrl} 
+                                onChange={e => setBulkData({...bulkData, questionSourceUrl: e.target.value})}
+                                className="w-64 bg-slate-950 border border-slate-600 rounded-lg p-2 text-xs text-white"
+                            />
+                        </div>
+                        <button 
+                            onClick={handleBulkUpdate}
+                            disabled={isSaving}
+                            className="bg-cyan-600 text-white px-6 py-2 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-cyan-500 transition"
+                        >
+                            APPLY TO {selectedIds.length}
+                        </button>
+                    </div>
+                )}
+            </div>
+
             <div className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
+                <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center justify-between">
+                    <button onClick={handleSelectAll} className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition">
+                        {selectedIds.length === programs.length ? <CheckSquare size={16} className="text-cyan-500"/> : <Square size={16}/>}
+                        {selectedIds.length === programs.length ? 'Deselect All' : 'Select All Programs'}
+                    </button>
+                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{programs.length} ACTIVE PROGRAMS</span>
+                </div>
+
                 <div className="divide-y divide-slate-800">
                     {programs.map(p => (
                         <div key={p.category.id} className="bg-slate-900 group">
-                            <div className={`flex items-center p-6 transition-colors ${expandedId === p.category.id ? 'bg-slate-800' : 'hover:bg-slate-800/50'}`}>
+                            <div className={`flex items-center p-6 transition-colors ${expandedId === p.category.id ? 'bg-slate-800' : 'hover:bg-slate-800/40'}`}>
+                                <button onClick={() => handleToggleSelect(p.category.id)} className="mr-6 text-slate-700 hover:text-cyan-500 transition-colors">
+                                    {selectedIds.includes(p.category.id) ? <CheckSquare size={22} className="text-cyan-500"/> : <Square size={22}/>}
+                                </button>
                                 <div className="flex-grow">
                                     <p className="font-black text-white text-lg">{p.category.name}</p>
-                                    <div className="flex gap-4 mt-1">
-                                        {p.certExam?.productSku ? <span className="text-[10px] text-cyan-400 font-mono bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800 uppercase">Linked SKU: {p.certExam.productSku}</span> : <span className="text-[10px] text-rose-400 italic font-bold">Unlinked Program</span>}
+                                    <div className="flex gap-3 mt-1">
+                                        {p.certExam?.productSku ? <span className="text-[9px] text-cyan-400 font-mono bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800 uppercase">SKU: {p.certExam.productSku}</span> : <span className="text-[9px] text-rose-500 font-black uppercase">UNLINKED</span>}
+                                        {p.certExam?.addonSku && <span className="text-[9px] text-amber-400 font-mono bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800 uppercase flex items-center gap-1"><Zap size={8}/> Addon: {p.certExam.addonSku}</span>}
                                     </div>
                                 </div>
                                 <button onClick={() => setExpandedId(expandedId === p.category.id ? null : p.category.id)} className="flex items-center gap-2 px-6 py-2 bg-slate-950 text-white rounded-xl text-xs font-black border border-slate-700 hover:border-cyan-500 transition-all">
-                                    <Edit size={14} className="text-cyan-500"/> {expandedId === p.category.id ? 'CLOSE' : 'EDIT'}
+                                    <Edit size={14} className="text-cyan-500"/> {expandedId === p.category.id ? 'CLOSE' : 'CONFIGURE'}
                                 </button>
                             </div>
                             {expandedId === p.category.id && (
@@ -229,7 +337,8 @@ const ExamProgramCustomizer: FC = () => {
                                     onDelete={handleDelete}
                                     onCancel={() => setExpandedId(null)} 
                                     isSaving={isSaving}
-                                    unlinkedProducts={Object.entries(examPrices || {}).map(([sku, d]: [string, any]) => ({ sku, name: d.name }))}
+                                    unlinkedProducts={productLists.unlinked}
+                                    bundleProducts={productLists.bundles}
                                 />
                             )}
                         </div>
