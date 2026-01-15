@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 28.9.7 (Custom Access Logic Added)
+ * VERSION: 28.9.8 (Entitlement Sync Fixed)
  * =============================================================================
  */
 
@@ -85,6 +85,62 @@ function mco_handle_record_hit() {
     $c = (int)get_option('mco_site_hits', 14350) + 1;
     update_option('mco_site_hits', $c);
     return new WP_REST_Response(['count' => $c], 200);
+}
+
+/**
+ * AUTHENTICATION & ENTITLEMENT SYNC
+ * Fixes the "handler invalid" error during sync
+ */
+function mco_handle_sync_auth($request) {
+    $payload = $request->get_param('jwt_payload');
+    $user_id = (int)$payload['user']['id'];
+
+    if (!$user_id) {
+        return new WP_Error('401', 'User ID missing from context.');
+    }
+
+    $paid_exams = get_user_meta($user_id, 'mco_paid_exams', true) ?: [];
+    
+    // Check 1: Official WC Subscriptions
+    $is_subscribed = false;
+    $subscription_info = null;
+    if (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription')) {
+        $is_subscribed = wcs_user_has_subscription($user_id, '', 'active');
+        if ($is_subscribed) {
+            $subs = wcs_get_users_subscriptions($user_id);
+            foreach ($subs as $sub) {
+                if ($sub->has_status('active')) {
+                    $next_payment = $sub->get_date('next_payment');
+                    if ($next_payment) {
+                        $subscription_info = [
+                            'status' => 'active',
+                            'nextPaymentDate' => date('M d, Y', strtotime($next_payment))
+                        ];
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // Check 2: Custom Addon Expiry
+    $custom_expiry = (int)get_user_meta($user_id, '_mco_premium_expiry', true);
+    if ($custom_expiry && $custom_expiry > time()) {
+        $is_subscribed = true;
+        if (!$subscription_info) {
+            $subscription_info = [
+                'status' => 'active',
+                'nextPaymentDate' => date('M d, Y', $custom_expiry)
+            ];
+        }
+    }
+
+    return new WP_REST_Response([
+        'paidExamIds' => (array)$paid_exams,
+        'isSubscribed' => (bool)$is_subscribed,
+        'subscriptionInfo' => $subscription_info,
+        'isBetaTester' => get_user_meta($user_id, '_mco_is_beta_tester', true) === '1'
+    ], 200);
 }
 
 function mco_handle_questions_from_sheet($request) {

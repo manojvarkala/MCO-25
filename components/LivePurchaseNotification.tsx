@@ -211,7 +211,8 @@ const LivePurchaseNotification: FC = () => {
 
         const showNotification = () => {
             // 1. Pick a random cultural region
-            const region = regionProfiles[Math.floor(Math.random() * regionProfiles.length)];
+            // FIX: Corrected variable name from 'regionProfiles' to 'REGION_PROFILES'.
+            const region = REGION_PROFILES[Math.floor(Math.random() * REGION_PROFILES.length)];
             
             // 2. Pick paired data from that region
             const randomName = region.names[Math.floor(Math.random() * region.names.length)];
