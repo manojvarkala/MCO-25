@@ -1,6 +1,6 @@
 import React, { FC, useState } from 'react';
 import toast from 'react-hot-toast';
-import { DownloadCloud, Code, Share2, ShieldCheck, Zap } from 'lucide-react';
+import { DownloadCloud, Code, Share2, ShieldCheck, Zap, AlertTriangle } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 import { downloadCorePluginZip, downloadSocialPluginZip } from '../services/zipService.ts';
 
@@ -8,23 +8,37 @@ const Integration: FC = () => {
     const [isCoreDownloading, setIsCoreDownloading] = useState(false);
     const [isSocialDownloading, setIsSocialDownloading] = useState(false);
 
-    // Dynamic asset loader to bypass module specifier issues
+    /**
+     * Enhanced source loader that ensures we aren't fetching 
+     * HTML error pages (common in SPAs) or empty files.
+     */
     const loadSource = async (path: string) => {
         try {
-            const response = await fetch(path);
-            if (!response.ok) throw new Error(`HTTP ${response.status} on ${path}`);
-            return await response.text();
-        } catch (e) {
-            console.error(`Assembly Error: Could not load ${path}`, e);
-            return ''; // Fallback to empty string to avoid breaking zip creation
+            // Add timestamp to bypass potential server-side caching of old/empty files
+            const response = await fetch(`${path}?t=${Date.now()}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const text = await response.text();
+            
+            // Validation: If it looks like HTML (starts with <) it's likely a 404 fallback page
+            if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+                throw new Error("Server returned HTML instead of source code. Check file paths.");
+            }
+            
+            if (text.trim() === '') {
+                throw new Error("File is empty.");
+            }
+
+            return text;
+        } catch (e: any) {
+            throw new Error(`Failed to load ${path.split('/').pop()}: ${e.message}`);
         }
     };
 
     const handleCoreDownload = async () => {
         setIsCoreDownloading(true);
-        const tid = toast.loading('Assembling Optimized API Engine...');
+        const tid = toast.loading('Assembling API Engine...');
         try {
-            // Fetch all source files dynamically from the public folder
             const [
                 main, styles, security, cpts, admin, data, routes, handlers, shortcodes, woocommerce,
                 tExams, tBooks, tQuestions
@@ -44,6 +58,11 @@ const Integration: FC = () => {
                 loadSource('/template-questions.csv')
             ]);
 
+            // Secondary check: Ensure the main file has the plugin header
+            if (!main.includes('Plugin Name:')) {
+                throw new Error("Source file header validation failed. ZIP creation aborted.");
+            }
+
             await downloadCorePluginZip({
                 main, styles, security, cpts, admin, data, routes, handlers, shortcodes, woocommerce,
                 templates: {
@@ -54,6 +73,7 @@ const Integration: FC = () => {
             });
             toast.success('Plugin Assembled & Ready!', { id: tid });
         } catch (e: any) {
+            console.error("ZIP Assembly Error:", e);
             toast.error(e.message || 'Assembly failed', { id: tid });
         } finally {
             setIsCoreDownloading(false);
@@ -81,10 +101,9 @@ const Integration: FC = () => {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
-            <h1 className="text-4xl font-extrabold text-[rgb(var(--color-text-strong-rgb))] font-display">Developer Integrations</h1>
+            <h1 className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))] font-display">Developer Integrations</h1>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Main Engine Card */}
                 <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-2xl shadow-xl border border-[rgb(var(--color-border-rgb))] flex flex-col">
                     <div className="flex items-center gap-4 mb-6">
                         <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl"><Code size={32} /></div>
@@ -94,7 +113,7 @@ const Integration: FC = () => {
                         </div>
                     </div>
                     <div className="flex-grow space-y-4 mb-8">
-                        <p className="text-sm text-slate-600">The core backend component. Handles SSO, JWT validation, and high-priority CORS handshaking to eliminate connection blocking. Now uses a flat ZIP structure for improved WordPress installer compatibility.</p>
+                        <p className="text-sm text-slate-600 leading-relaxed">The core backend component. Handles SSO, JWT validation, and high-priority CORS handshaking to eliminate connection blocking. Now uses a <strong>Level 1 Flat Structure</strong> for maximum WordPress compatibility.</p>
                         <ul className="space-y-2 text-xs text-slate-500">
                             <li className="flex items-center gap-2"><Zap size={14} className="text-blue-500" /> Installer-Friendly Root Headers</li>
                             <li className="flex items-center gap-2"><Zap size={14} className="text-blue-500" /> Virtual Order Auto-Complete</li>
@@ -107,11 +126,10 @@ const Integration: FC = () => {
                         className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition active:scale-95 disabled:opacity-50"
                     >
                         {isCoreDownloading ? <Spinner size="sm"/> : <DownloadCloud size={20}/>}
-                        {isCoreDownloading ? 'Gathering Sources...' : 'Download Integration Plugin'}
+                        {isCoreDownloading ? 'Validating Sources...' : 'Download Integration Plugin'}
                     </button>
                 </div>
 
-                {/* Social Poster Card */}
                 <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-2xl shadow-xl border border-[rgb(var(--color-border-rgb))] flex flex-col">
                     <div className="flex items-center gap-4 mb-6">
                         <div className="p-3 bg-purple-100 text-purple-600 rounded-2xl"><Share2 size={32} /></div>
@@ -121,7 +139,7 @@ const Integration: FC = () => {
                         </div>
                     </div>
                     <div className="flex-grow space-y-4 mb-8">
-                        <p className="text-sm text-slate-600">Companion plugin that automatically shares your AI-generated blog posts to Facebook and LinkedIn feeds. Now also updated with the optimized ZIP structure.</p>
+                        <p className="text-sm text-slate-600 leading-relaxed">Companion plugin that automatically shares your AI-generated blog posts to Facebook and LinkedIn feeds. Optimized with the same flat archive structure.</p>
                         <ul className="space-y-2 text-xs text-slate-500">
                             <li className="flex items-center gap-2"><Zap size={14} className="text-purple-500" /> Automated Social Dispatch</li>
                             <li className="flex items-center gap-2"><Zap size={14} className="text-purple-500" /> Facebook Graph API Integration</li>
@@ -133,20 +151,20 @@ const Integration: FC = () => {
                         className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition active:scale-95 disabled:opacity-50"
                     >
                         {isSocialDownloading ? <Spinner size="sm"/> : <DownloadCloud size={20}/>}
-                        {isSocialDownloading ? 'Gathering Sources...' : 'Download Social Poster'}
+                        {isSocialDownloading ? 'Validating Sources...' : 'Download Social Poster'}
                     </button>
                 </div>
             </div>
 
             <div className="bg-slate-900 text-white p-6 rounded-2xl border border-slate-700 shadow-2xl flex items-start gap-6">
-                <div className="p-4 bg-green-500/20 text-green-400 rounded-full flex-shrink-0"><ShieldCheck size={40} /></div>
+                <div className="p-4 bg-amber-500/20 text-amber-400 rounded-full flex-shrink-0"><AlertTriangle size={40} /></div>
                 <div>
-                    <h3 className="text-xl font-bold">Post-Deployment Critical Step</h3>
+                    <h3 className="text-xl font-bold">Troubleshooting Installation</h3>
                     <p className="text-sm text-slate-400 mt-2 leading-relaxed">
-                        After uploading and activating the plugin, you <strong>MUST</strong> ensure your <code>MCO_JWT_SECRET</code> in your WordPress <code>wp-config.php</code> matches your organization's security standards.
+                        If WordPress still reports "No valid plugins found", verify that your web server is correctly serving the <code>.txt</code> source files and not redirecting them to <code>index.html</code>. You can check this by trying to open <code>[Your Domain]/mco-exam-integration-engine/mco-exam-integration-engine.txt</code> directly in your browser.
                     </p>
                     <div className="mt-4 p-3 bg-slate-800 rounded border border-slate-700 font-mono text-xs text-cyan-400">
-                        define('MCO_JWT_SECRET', 'your-long-random-string-here');
+                        Content Check: Does the file start with &lt;?php ?
                     </div>
                 </div>
             </div>

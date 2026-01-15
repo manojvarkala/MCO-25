@@ -21,58 +21,75 @@ interface SocialPluginSources {
 }
 
 /**
- * Logic to assemble and trigger download of the Core MCO Engine.
- * FILES ARE NOW ADDED DIRECTLY TO THE ROOT OF THE ZIP (Flat Structure)
- * to ensure WordPress identifies the plugin header correctly.
+ * Logic to assemble the Core MCO Engine ZIP.
+ * 
+ * CRITICAL FIX: The structure is now completely flat at the root of the ZIP.
+ * Archive.zip
+ *  ├── mco-exam-integration-engine.php
+ *  ├── assets/
+ *  ├── includes/
+ *  └── public/
  */
 export const downloadCorePluginZip = async (sources: CorePluginSources) => {
+    if (!sources.main || !sources.main.includes('Plugin Name:')) {
+        throw new Error("Invalid plugin source: Missing headers in mco-exam-integration-engine.php");
+    }
+
     const zip = new JSZip();
 
-    // 1. Main Plugin Entry (MUST be at root)
-    zip.file('mco-exam-integration-engine.php', sources.main);
+    // 1. Main Entry (At ROOT for immediate WP detection)
+    zip.file('mco-exam-integration-engine.php', sources.main.trim());
 
-    // 2. Assets Subdirectory
+    // 2. Assets (Directly at root)
     const assets = zip.folder('assets');
-    assets?.file('mco-styles.css', sources.styles);
+    if (assets) assets.file('mco-styles.css', sources.styles);
     
-    // 3. Includes Subdirectory (Modular Logic)
+    // 3. Includes (Directly at root)
     const includes = zip.folder('includes');
-    includes?.file('mco-security.php', sources.security);
-    includes?.file('mco-cpts.php', sources.cpts);
-    includes?.file('mco-admin.php', sources.admin);
-    includes?.file('mco-data.php', sources.data);
-    includes?.file('mco-api-routes.php', sources.routes);
-    includes?.file('mco-api-handlers.php', sources.handlers);
-    includes?.file('mco-shortcodes.php', sources.shortcodes);
-    includes?.file('mco-woocommerce.php', sources.woocommerce);
+    if (includes) {
+        includes.file('mco-security.php', sources.security);
+        includes.file('mco-cpts.php', sources.cpts);
+        includes.file('mco-admin.php', sources.admin);
+        includes.file('mco-data.php', sources.data);
+        includes.file('mco-api-routes.php', sources.routes);
+        includes.file('mco-api-handlers.php', sources.handlers);
+        includes.file('mco-shortcodes.php', sources.shortcodes);
+        includes.file('mco-woocommerce.php', sources.woocommerce);
+    }
 
-    // 4. Public Templates Subdirectory
+    // 4. Public Templates (Directly at root)
     const publicDir = zip.folder('public');
-    Object.entries(sources.templates).forEach(([name, content]) => {
-        publicDir?.file(name, content);
-    });
+    if (publicDir) {
+        Object.entries(sources.templates).forEach(([name, content]) => {
+            publicDir.file(name, content);
+        });
+    }
 
-    const blob = await zip.generateAsync({ type: 'blob' });
-    triggerDownload(blob, 'mco-exam-integration-engine-v5.2.4.zip');
+    const blob = await zip.generateAsync({ 
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+    });
+    
+    triggerDownload(blob, 'mco-exam-integration-engine.zip');
 };
 
 /**
- * Logic to assemble and trigger download of the Social Poster Companion.
- * Uses the same flat structure for maximum compatibility.
+ * Logic to assemble the Social Poster ZIP (Flat structure).
  */
 export const downloadSocialPluginZip = async (sources: SocialPluginSources) => {
     const zip = new JSZip();
 
-    // Main Entry
-    zip.file('mco-social-poster.php', sources.main);
+    zip.file('mco-social-poster.php', sources.main.trim());
 
-    // Subdirectory logic
     const includes = zip.folder('includes');
-    includes?.file('admin-page.php', sources.admin);
-    includes?.file('post-handler.php', sources.handler);
+    if (includes) {
+        includes.file('admin-page.php', sources.admin);
+        includes.file('post-handler.php', sources.handler);
+    }
 
     const blob = await zip.generateAsync({ type: 'blob' });
-    triggerDownload(blob, 'mco-social-poster-v1.2.0.zip');
+    triggerDownload(blob, 'mco-social-poster.zip');
 };
 
 const triggerDownload = (blob: Blob, filename: string) => {
