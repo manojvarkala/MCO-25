@@ -132,7 +132,7 @@ const Profile: FC = () => {
 
     /**
      * Enhanced Exam Lookup
-     * Handles cases where exams were deleted/reinstated by checking SKUs if IDs fail.
+     * Handles cases where exams were deleted/reinstated by checking SKUs and Names if IDs fail.
      */
     const getExamDetails = (examId: string): Exam | undefined => {
         if (!activeOrg?.exams) return undefined;
@@ -143,6 +143,15 @@ const Profile: FC = () => {
 
         // 2. Loose match by SKU (Handles reinstated Certifications)
         found = activeOrg.exams.find(e => e.productSku === examId);
+        if (found) return found;
+        
+        // 3. Loose match by name pattern (Handles reinstated items with name-based legacy IDs)
+        // Technical IDs often look like: exam-prod-12345-practice
+        const cleanName = examId.replace('exam-', '').replace('-practice', '').replace('prod-', '').toLowerCase();
+        found = activeOrg.exams.find(e => 
+            e.name.toLowerCase().includes(cleanName) || 
+            (e.productSku && e.productSku.toLowerCase() === cleanName)
+        );
         if (found) return found;
 
         return undefined;
@@ -284,7 +293,14 @@ const Profile: FC = () => {
                             
                             // If the exam is not in current active catalog, we show it as a Legacy record
                             const isLegacy = !exam;
-                            const examName = exam ? exam.name : (result.examId.includes('prac-') ? 'Practice Session' : result.examId);
+                            
+                            // CLEAN NAME FALLBACK: Strip technical prefixes for a better display if exam is missing
+                            const examName = exam ? exam.name : result.examId
+                                .replace('prac-', 'Practice: ')
+                                .replace('exam-prod-', 'Legacy: ')
+                                .replace('-practice', '')
+                                .replace(/[_\-]/g, ' ');
+
                             const passScore = exam ? exam.passScore : 70;
                             const isPass = result.score >= passScore;
                             const scoreColor = isPass ? 'text-green-600' : 'text-red-500';
@@ -295,10 +311,10 @@ const Profile: FC = () => {
                                     <div className="flex flex-wrap justify-between items-center gap-2">
                                         <div className="flex-grow">
                                             <div className="flex items-center gap-2">
-                                                <h3 className="font-bold text-lg text-slate-800">{examName}</h3>
+                                                <h3 className="font-bold text-lg text-slate-800 capitalize">{examName}</h3>
                                                 {isLegacy && (
                                                     <span className="flex items-center gap-1 bg-slate-200 text-slate-600 text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-tighter" title="This exam was modified or removed from the catalog. Your result remains recorded.">
-                                                        <AlertCircle size={10}/> Reinstated/Legacy
+                                                        <AlertCircle size={10}/> Archived Record
                                                     </span>
                                                 )}
                                             </div>

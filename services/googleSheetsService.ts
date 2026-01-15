@@ -25,7 +25,9 @@ const apiFetch = async (endpoint: string, method: 'GET' | 'POST', token: string 
         method,
         headers,
         mode: 'cors',
-        credentials: 'same-origin' 
+        // FIX: Changed from 'same-origin' to 'include' to allow cross-origin credentialed requests.
+        // This resolves "Connection Blocked" issues when frontend and backend are on different domains.
+        credentials: 'include' 
     };
     
     if (method === 'POST') {

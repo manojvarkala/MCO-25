@@ -75,9 +75,22 @@ const Dashboard: FC = () => {
 
     // Highlight purchased exams for the top section
     const purchasedExams = useMemo(() => {
-        if (!activeOrg || !paidExamIds || paidExamIds.length === 0) return [];
-        return activeOrg.exams.filter(e => !e.isPractice && paidExamIds.includes(e.productSku));
-    }, [activeOrg, paidExamIds]);
+        if (!activeOrg || !activeOrg.exams) return [];
+        
+        // Normalize IDs to lower case and trim for robust matching
+        const normalizedPaidIds = (paidExamIds || []).map(id => id.toString().trim().toLowerCase());
+        
+        return activeOrg.exams.filter(e => {
+            if (e.isPractice) return false;
+            
+            // If user is subscribed/beta, all certifications are effectively "purchased" (unlocked)
+            if (isSubscribed || isBetaTester) return true;
+            
+            // Otherwise, check for direct ownership via SKU
+            const sku = (e.productSku || '').trim().toLowerCase();
+            return normalizedPaidIds.includes(sku);
+        });
+    }, [activeOrg, paidExamIds, isSubscribed, isBetaTester]);
 
     const featuredBundles = useMemo(() => {
         if (!bundlesEnabled || !examPrices) return [];
