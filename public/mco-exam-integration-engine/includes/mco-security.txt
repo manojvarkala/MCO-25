@@ -93,18 +93,8 @@ function mco_generate_exam_jwt($user_id) {
         }
     }
 
-    // Check 2: Custom Addon Expiry (The replacement for WC Subscriptions)
-    $custom_expiry = (int)get_user_meta($user_id, '_mco_premium_expiry', true);
-    if ($custom_expiry && $custom_expiry > time()) {
-        $is_subscribed = true; // App treats them as a subscriber
-        // If not already set by WC Subscriptions, set info from custom expiry
-        if (!$subscription_info) {
-            $subscription_info = [
-                'status' => 'active',
-                'nextPaymentDate' => date('M d, Y', $custom_expiry) . " (Premium Access)"
-            ];
-        }
-    }
+    // NEW: Scoped Program Expiries
+    $program_expiries = get_user_meta($user_id, '_mco_program_expiries', true) ?: [];
 
     $payload = [
         'iss' => get_site_url(),
@@ -119,7 +109,8 @@ function mco_generate_exam_jwt($user_id) {
         'paidExamIds' => (array)$paid_exams,
         'isSubscribed' => (bool)$is_subscribed,
         'subscriptionInfo' => $subscription_info,
-        'isBetaTester' => get_user_meta($user_id, '_mco_is_beta_tester', true) === '1'
+        'isBetaTester' => get_user_meta($user_id, '_mco_is_beta_tester', true) === '1',
+        'programExpiries' => $program_expiries
     ];
 
     $header = mco_base64url_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));

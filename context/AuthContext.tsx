@@ -12,6 +12,7 @@ interface AuthState {
     isSubscribed: boolean;
     subscriptionInfo: SubscriptionInfo | null;
     isBetaTester: boolean;
+    programExpiries: Record<string, number>;
 }
 
 interface AuthContextType extends AuthState {
@@ -102,6 +103,14 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         return false;
     }
   });
+  const [programExpiries, setProgramExpiries] = useState<Record<string, number>>(() => {
+    try {
+        const stored = localStorage.getItem('programExpiries');
+        return stored ? JSON.parse(stored) : {};
+    } catch (error) {
+        return {};
+    }
+  });
 
   const [masqueradeAs, setMasqueradeAs] = useState<MasqueradeMode>('none');
   const [originalAuthState, setOriginalAuthState] = useState<AuthState | null>(null);
@@ -119,6 +128,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setIsSubscribed(false);
     setSubscriptionInfo(null);
     setIsBetaTester(false);
+    setProgramExpiries({});
     setMasqueradeAs('none');
     setOriginalAuthState(null);
     localStorage.removeItem('examUser');
@@ -127,6 +137,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     localStorage.removeItem('isSubscribed');
     localStorage.removeItem('subscriptionInfo');
     localStorage.removeItem('isBetaTester');
+    localStorage.removeItem('programExpiries');
     
     Object.keys(localStorage).forEach(key => {
         if (key.startsWith('exam_timer_') || key.startsWith('exam_results_') || key.startsWith('appConfigCache')) {
@@ -146,10 +157,15 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setSubscriptionInfo(data.subscriptionInfo);
         setIsBetaTester(!!data.isBetaTester);
         
+        // Handle program expiries if returned by API
+        const expiries = (data as any).programExpiries || {};
+        setProgramExpiries(expiries);
+        
         localStorage.setItem('paidExamIds', JSON.stringify(normalizedIds));
         localStorage.setItem('isSubscribed', data.isSubscribed ? 'true' : 'false');
         localStorage.setItem('subscriptionInfo', JSON.stringify(data.subscriptionInfo));
         localStorage.setItem('isBetaTester', data.isBetaTester ? 'true' : 'false');
+        localStorage.setItem('programExpiries', JSON.stringify(expiries));
     } catch (e) {
         console.error("Failed to refresh entitlements", e);
         throw e;
@@ -180,14 +196,16 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setUser(payload.user);
             setPaidExamIds(normalizedIds);
             setToken(jwtToken);
+            setIsBetaTester(!!payload.isBetaTester);
+            setProgramExpiries(payload.programExpiries || {});
             setMasqueradeAs('none');
             setOriginalAuthState(null);
             
             localStorage.setItem('examUser', JSON.stringify(payload.user));
             localStorage.setItem('paidExamIds', JSON.stringify(normalizedIds));
             localStorage.setItem('authToken', jwtToken);
-            setIsBetaTester(!!payload.isBetaTester);
             localStorage.setItem('isBetaTester', payload.isBetaTester ? 'true' : 'false');
+            localStorage.setItem('programExpiries', JSON.stringify(payload.programExpiries || {}));
 
             setIsSubscribed(!!payload.isSubscribed);
             localStorage.setItem('isSubscribed', payload.isSubscribed ? 'true' : 'false');
@@ -208,7 +226,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   
     const startMasquerade = (as: 'user' | 'visitor') => {
         if (masqueradeAs !== 'none' || !user?.isAdmin) return;
-        setOriginalAuthState({ user, token, paidExamIds, isSubscribed, subscriptionInfo, isBetaTester });
+        setOriginalAuthState({ user, token, paidExamIds, isSubscribed, subscriptionInfo, isBetaTester, programExpiries });
         setMasqueradeAs(as);
     };
 
@@ -217,6 +235,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setUser(originalAuthState.user); setToken(originalAuthState.token);
         setPaidExamIds(originalAuthState.paidExamIds); setIsSubscribed(originalAuthState.isSubscribed);
         setSubscriptionInfo(originalAuthState.subscriptionInfo); setIsBetaTester(originalAuthState.isBetaTester);
+        setProgramExpiries(originalAuthState.programExpiries);
         setOriginalAuthState(null); setMasqueradeAs('none');
     };
 
@@ -230,9 +249,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const value = useMemo(() => ({
     user, token, paidExamIds, isSubscribed, subscriptionInfo, isEffectivelyAdmin,
-    isMasquerading: masqueradeAs !== 'none', masqueradeAs, isBetaTester,
+    isMasquerading: masqueradeAs !== 'none', masqueradeAs, isBetaTester, programExpiries,
     loginWithToken, logout, refreshEntitlements, updateUserName, startMasquerade, stopMasquerade,
-  }), [user, token, paidExamIds, isSubscribed, subscriptionInfo, isEffectivelyAdmin, masqueradeAs, isBetaTester, loginWithToken, logout, refreshEntitlements, updateUserName, startMasquerade, stopMasquerade]);
+  }), [user, token, paidExamIds, isSubscribed, subscriptionInfo, isEffectivelyAdmin, masqueradeAs, isBetaTester, programExpiries, loginWithToken, logout, refreshEntitlements, updateUserName, startMasquerade, stopMasquerade]);
 
   return (
     <AuthContext.Provider value={value}>

@@ -88,8 +88,8 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                 };
 
                 return (
-                    <div key={book.id} className="mco-book-card group flex flex-col h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
-                        <div className="mco-book-cover relative h-64 overflow-hidden bg-slate-100">
+                    <div key={book.id} className="mco-book-card group flex flex-col">
+                        <div className="mco-book-cover relative">
                             <BookCover book={book} className="w-full h-full" />
                             <a 
                                 href={primary?.url || '#'} 
@@ -102,18 +102,20 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                 </div>
                             </a>
                         </div>
-                        <div className="p-6 flex flex-col flex-grow">
+                        <div className="p-6 flex flex-col flex-grow bg-white">
                             <a 
                                 href={primary?.url || '#'} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="font-extrabold text-lg text-slate-900 dark:text-white line-clamp-2 hover:text-cyan-600 transition-colors"
+                                className="font-extrabold text-lg text-slate-900 line-clamp-2 hover:text-cyan-600 transition-colors h-[3.25rem]"
                             >
                                 {book.title}
                             </a>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3 mt-3 leading-relaxed flex-grow">{book.description}</p>
+                            <p className="text-sm text-slate-500 line-clamp-3 mt-3 leading-relaxed flex-grow">
+                                {book.description}
+                            </p>
                             
-                            <div className="mt-6 flex flex-col gap-2">
+                            <div className="mt-6 space-y-2">
                                 {sortedStores.map(key => {
                                     const url = book.affiliateLinks?.[key];
                                     if (!url) return null;
@@ -138,4 +140,5 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
         </div>
     );
 };
+
 export default BookshelfRenderer;

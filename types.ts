@@ -19,6 +19,8 @@ export interface TokenPayload {
   isSubscribed: boolean;
   subscriptionInfo?: SubscriptionInfo | null;
   isBetaTester?: boolean;
+  // NEW: Scoped expiries for individual exam programs (SKU -> timestamp)
+  programExpiries?: Record<string, number>;
 }
 
 export interface Question {

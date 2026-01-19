@@ -1,4 +1,4 @@
-import React, { FC, useState } from 'react';
+import React, { FC, useState, useMemo } from 'react';
 // FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
 import * as ReactRouterDOM from 'react-router-dom';
 const { useNavigate, Link } = ReactRouterDOM as any;
@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, Organization } from '../types.ts';
-import { Award, BookOpen, CheckCircle, Clock, HelpCircle, History, PlayCircle, ShoppingCart } from 'lucide-react';
+import { Award, BookOpen, CheckCircle, Clock, HelpCircle, History, PlayCircle, ShoppingCart, Zap } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 export interface ExamCardProps {
@@ -41,10 +41,30 @@ const stripHtml = (html: string): string => {
 
 const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased, activeOrg, examPrices, hideDetailsLink = false, attemptsMade, isDisabled = false }) => {
     const navigate = useNavigate();
-    const { user, token, isSubscribed, isBetaTester } = useAuth();
+    const { user, token, isSubscribed, isBetaTester, programExpiries } = useAuth();
     const [isRedirecting, setIsRedirecting] = useState(false);
 
-    const canTake = isPractice || isPurchased || isSubscribed || isBetaTester;
+    /**
+     * SCOPED ACCESS LOGIC
+     * 1. Global Subscriber or Beta: Unlocks EVERYTHING.
+     * 2. Certificate: Unlocked if direct SKU match in paidExamIds.
+     * 3. Practice/Premium Addon: Unlocked ONLY if program SKU has active expiry in programExpiries.
+     */
+    const hasScopedPremium = useMemo(() => {
+        if (!exam.productSku) return false;
+        const expiry = programExpiries[exam.productSku];
+        return !!(expiry && expiry > (Date.now() / 1000));
+    }, [exam.productSku, programExpiries]);
+
+    const canTake = useMemo(() => {
+        if (isSubscribed || isBetaTester) return true;
+        if (isPractice) {
+            // Free practice is always takeable, but premium practice requires scoped access
+            return true; 
+        }
+        return isPurchased || hasScopedPremium;
+    }, [isSubscribed, isBetaTester, isPractice, isPurchased, hasScopedPremium]);
+
     const priceInfo = examPrices && exam.productSku ? examPrices[exam.productSku] : null;
     const price = priceInfo?.price ?? (exam.price || 0);
     const regularPrice = priceInfo?.regularPrice ?? (exam.regularPrice || 0);
@@ -86,7 +106,7 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
 
     const maxAttempts = isPractice ? 10 : 3;
     const attemptsRemaining = maxAttempts - (attemptsMade || 0);
-    const isAttemptsExceeded = !isPractice && attemptsMade !== undefined && attemptsRemaining <= 0 && !isSubscribed && !isBetaTester;
+    const isAttemptsExceeded = !isPractice && attemptsMade !== undefined && attemptsRemaining <= 0 && !isSubscribed && !isBetaTester && !hasScopedPremium;
 
     return (
         <div className={`mco-card ${cardGradient} rounded-xl shadow-lg p-6 flex flex-col relative overflow-hidden ${isDisabled ? 'opacity-60 grayscale-[0.5]' : ''}`}>
@@ -97,7 +117,14 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
                         {isPractice ? <BookOpen size={20} /> : <Award size={20} />}
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold text-white leading-tight">{decodeHtml(exam.name)}</h3>
+                        <div className="flex items-center gap-2">
+                             <h3 className="text-xl font-bold text-white leading-tight">{decodeHtml(exam.name)}</h3>
+                             {hasScopedPremium && !isSubscribed && (
+                                 <span className="bg-amber-400 text-amber-900 text-[8px] font-black px-1.5 py-0.5 rounded uppercase flex items-center gap-1 shadow-lg">
+                                     <Zap size={8} className="fill-current"/> Addon Active
+                                 </span>
+                             )}
+                        </div>
                         <p className="text-[10px] uppercase tracking-widest font-black text-white/70 mt-1">
                             {isPractice ? 'Practice Test' : 'Certification Exam'}
                         </p>
