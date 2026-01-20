@@ -61,49 +61,114 @@ if (!function_exists('mco_load_shortcode_css')) {
                 flex-shrink: 0;
                 position: sticky;
                 top: 20px;
+				 
             }
+			
         }
+		/* ===============================
+   SECTION HEADING – PREMIUM FORMAT
+================================ */
+
+.mco-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin: 48px 0 32px;
+    text-align: center;
+}
+
+/* Icon styling */
+.mco-section-heading svg {
+    width: 36px;
+    height: 36px;
+    fill: #facc15; /* premium gold */
+    flex-shrink: 0;
+}
+
+/* Heading text */
+.mco-section-heading h2 {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #111827; /* strong dark heading */
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin: 0;
+}
+
+/* Optional: dark/gradient background compatibility */
+.mco-section-heading.dark h2 {
+    color: #ffffff;
+}
+
+.mco-section-heading.dark svg {
+    fill: #fde68a;
+}
+
 
                 /* THE GRID */
         .mco-book-grid, 
-        .mco-subscription-grid,
+		.mco-subscription-grid,
         .mco-bundle-grid,
         .mco-program-group__cards {
             display: grid !important;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
-            gap: 25px !important;
+            align-items: stretch !important; /* Forces cards to fill the row height */
+			gap: 25px !important;
             width: 100% !important;
             margin: 20px 0 !important;
             padding: 0 !important;
             list-style: none !important;
         }
+		.mco-card__description {
+   		 flex-grow: 1 !important;
+		}
 		   /* CARD BASE */
         .mco-card, .mco-book-card {
             background: #fff;
             border: 1px solid var(--mco-border);
             border-radius: 14px;
+			padding: 30px;
+    		text-align: center;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             height: 100% !important;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+			position: relative !important; /* Critical for the ribbon */
+    		overflow: hidden !important; /* Clips the ribbon overflow */
         }
         .mco-card:hover { transform: translateY(-6px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
-
-        .mco-card__header { padding: 12px 16px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; background: rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.9); }
+		.mco-card__header svg {
+    fill: #f345ff;
+}
+        .mco-card__header { 
+		padding: 12px 16px; 
+		font-size: 0.75rem; 
+		font-weight: 800; 
+		text-transform: uppercase; 
+		letter-spacing: 1px;
+		color: #ffffff;
+		background: rgba(0,0,0,0.15); 
+		display: flex; 
+		align-items: center; 
+		gap: 8px; 
+		margin-bottom: 6px;
+		color: rgba(255,255,255,0.9); 
+		}
         .mco-card__body { padding: 24px; flex-grow: 1; display: flex; flex-direction: column; }
         .mco-card__subtitle { font-size: 1.25rem; font-weight: 800; margin: 0 0 12px; line-height: 1.2; color: #fff; }
         .mco-card__stats { display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 700; background: rgba(0,0,0,0.1); padding: 10px; border-radius: 8px; margin-top: auto; color: #fff; }
-        .mco-card__footer { padding: 16px 24px; background: rgba(0,0,0,0.05); }
+        
 
-        /* VIBRANT GRADIENTS (The fix for "plain white" cards) */
+                /* VIBRANT GRADIENTS (The fix for "plain white" cards) */
         .mco-gradient--practice-1 { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important; border: none !important; }
         .mco-gradient--cert-1 { background: linear-gradient(135deg, #059669 0%, #064e3b 100%) !important; border: none !important; }
         .mco-gradient--bundle-sub { background: linear-gradient(135deg, #0d9488 0%, #134e4a 100%) !important; border: none !important; }
         .mco-gradient--bundle-practice { background: linear-gradient(135deg, #f97316 0%, #9a3412 100%) !important; border: none !important; }
-        .mco-gradient--sub-monthly { background: linear-gradient(135deg, #0891b2 0%, #155e75 100%) !important; border: none !important; }
-        .mco-gradient--sub-yearly { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%) !important; border: none !important; }
+        .mco-gradient--sub-monthly { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)) !important; border: none !important; }
+        .mco-gradient--sub-yearly { background: linear-gradient(35deg, #8b5cf6 0%, #6d28d9 100%) !important; border: none !important; }
 
         /* BUTTONS ON GRADIENT CARDS */
         .mco-card__button { 
@@ -125,7 +190,20 @@ if (!function_exists('mco_load_shortcode_css')) {
         .mco-book-btn--secondary { background: #e2e8f0 !important; color: #475569 !important; border: 1px solid #cbd5e1 !important; }
 
         /* BEST VALUE TAG */
-        .mco-best-value-tag { position: absolute; top: 12px; right: -30px; background: #fbbf24; color: #78350f; padding: 4px 40px; font-size: 0.7rem; font-weight: 900; transform: rotate(45deg); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+       .mco-best-value-tag { 
+        position: absolute; 
+        top: 15px; 
+        right: -35px;
+        width: 140px !important;
+        text-align: center !important;
+        background: #fbbf24; 
+        color: #78350f; 
+        padding: 1px 1px; 
+        font-size: 6px 0 !important; 
+        font-weight: 900; 
+        transform: rotate(45deg); 
+        z-index: 10 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
         /* ───────────────── Program Group ───────────────── */
         .mco-program-group {
@@ -153,6 +231,25 @@ if (!function_exists('mco_load_shortcode_css')) {
             list-style: none !important;
             padding: 0 !important;
         }
+		/* Practice Exams (Blue) */
+.mco-gradient--practice-1 { 
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important; 
+}
+
+/* Certification Exams (Emerald) */
+.mco-gradient--cert-1 { 
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%) !important; 
+}
+
+/* Monthly Plan (Cyan) */
+.mco-gradient--sub-monthly { 
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important; 
+}
+
+/* Yearly Plan (Violet) */
+.mco-gradient--sub-yearly { 
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%) !important; 
+}
 
         /* ───────────────── Unified Card Styles ───────────────── */
         .mco-card,
@@ -217,11 +314,16 @@ if (!function_exists('mco_load_shortcode_css')) {
 
         /* ───────────────── Footer ───────────────── */
         .mco-book-card__footer,
-        .mco-card__footer {
+      {
             padding: 1.25rem;
             background: #f8fafc;
             border-top: 1px solid var(--mco-border);
         }
+		.mco-card__footer { 
+		padding: 16px 14px; 
+		background: rgba(255, 255, 255, 0); 
+		margin-top: auto !important; /* Keeps buttons aligned at the bottom */
+		}
 
         .mco-store-buttons {
             display: flex;
@@ -326,6 +428,48 @@ if (!function_exists('mco_load_shortcode_css')) {
             text-decoration: none;
             align-self: flex-start;
         }
+	/* PRICE – matches your reference exactly */
+.mco-card__price {
+    font-size: 2.5rem;
+    font-weight: 900;
+    margin: 10px 0;
+    color: #ffffff;
+    text-align: center;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}	
+/* Highlight yearly price */
+.mco-card--best-value .mco-card__price {
+    color: #fde68a;
+}
+
+/* Savings text */
+.mco-card__saving-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #fcd34d;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+/* Feature list */
+.mco-sub-card__features li {
+    color: #f9fafb;
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.mco-sub-card__features li svg {
+    fill: #22c55e;
+}
+
+
+
 /* ───────────────── Program Showcase Colour Adaptation ───────────────── */
 
 /* Base program group – neutral fallback */
@@ -481,6 +625,7 @@ if (!function_exists('mco_load_shortcode_css')) {
         </style>';
     }
 }
+
 
 add_action('wp_head', 'mco_load_shortcode_css');
 
@@ -795,48 +940,102 @@ if (!function_exists('mco_exam_showcase_shortcode')) {
         <div class="mco-showcase-layout">
             <div class="mco-showcase-main">
                 <?php
-                // A. SUBSCRIPTION GRID
-                $subscriptions_enabled = $active_org_config['subscriptionsEnabled'] ?? true;
-                if ($subscriptions_enabled && !$is_subscribed) {
-                    $monthly_sub_data = $all_prices['sub-monthly'] ?? null; 
-                    $yearly_sub_data = $all_prices['sub-yearly'] ?? null;
-<div class="mco-section-heading">
-    <?php echo mco_get_svg_icon('cert'); ?>
-    <h2>Membership Plans</h2>
-</div>
-<div class="mco-subscription-grid"> <!-- This ensures grid form -->
-                    if (($monthly_sub_data && isset($monthly_sub_data['productId'])) || ($yearly_sub_data && isset($yearly_sub_data['productId']))) { ?>
-                        <div class="mco-subscription-grid">
-                            <?php if ($monthly_sub_data && isset($monthly_sub_data['productId'])) {
-                                $monthly_url = get_site_url() . '/cart/?add-to-cart=' . $monthly_sub_data['productId']; ?>
-                                <div class="mco-card mco-gradient--sub-monthly" style="padding:30px; text-align:center; border:none;">
-                                    <h3 class="mco-sub-card__title">Monthly Plan</h3>
-                                    <p style="font-size:2.5rem; font-weight:800; margin:10px 0;">$<?php echo number_format_i18n($monthly_sub_data['price'], 2); ?></p>
-                                    <ul class="mco-sub-card__features">
-                                        <li><?php echo mco_get_svg_icon('check'); ?><span>Unlimited Access to ALL Practice Exams</span></li>
-                                        <li><?php echo mco_get_svg_icon('check'); ?><span>Unlimited AI-Powered Feedback & Study Guides</span></li>
-                                        <li><?php echo mco_get_svg_icon('check'); ?><span>Cancel Anytime</span></li>
-                                    </ul>
-                                    <div class="mco-card__footer"><a href="<?php echo esc_url($monthly_url); ?>" class="mco-card__button mco-card__button--primary">Subscribe Now</a></div>
-                                </div>
-                            <?php } ?>
-                            <?php if ($yearly_sub_data && isset($yearly_sub_data['productId'])) {
-                                $yearly_url = get_site_url() . '/cart/?add-to-cart=' . $yearly_sub_data['productId']; ?>
-                                <div class="mco-card mco-gradient--sub-yearly mco-card--best-value"><div class="mco-best-value-tag"><?php echo mco_get_svg_icon('star'); ?> Best Value</div><h3 class="mco-sub-card__title">Yearly Plan</h3><p style="font-size:2.5rem; font-weight:800; margin:10px 0;">$<?php echo number_format_i18n($yearly_sub_data['price'], 2); ?></p>
-                                    <p style="text-align:center; font-size: 0.875rem; color: #fcd34d; font-weight: 600;">Saves over 35%!</p>
-                                    <ul class="mco-sub-card__features">
-                                        <li><?php echo mco_get_svg_icon('check'); ?><span>All Monthly features</span></li>
-                                        <li><?php echo mco_get_svg_icon('check'); ?><span>Access All Exam Programs</span></li>
-                                        <li><?php echo mco_get_svg_icon('check'); ?><span>Billed Annually</span></li>
-                                    </ul>
-                                    <div class="mco-card__footer"><a href="<?php echo esc_url($yearly_url); ?>" class="mco-card__button mco-card__button--primary">Subscribe & Save</a></div>
-                                </div>
-                            <?php } ?>
-                        </div>
-                    <?php }
+// A. SUBSCRIPTION GRID
+$subscriptions_enabled = $active_org_config['subscriptionsEnabled'] ?? true;
+
+if ($subscriptions_enabled && !$is_subscribed) {
+
+    $monthly_sub_data = $all_prices['sub-monthly'] ?? null;
+    $yearly_sub_data  = $all_prices['sub-yearly'] ?? null;
+
+    if (
+        ($monthly_sub_data && isset($monthly_sub_data['productId'])) ||
+        ($yearly_sub_data && isset($yearly_sub_data['productId']))
+    ) {
+        ?>
+       <div class="mco-subscription-grid">
+
+            <?php if ($monthly_sub_data && isset($monthly_sub_data['productId'])) :
+                $monthly_url = get_site_url() . '/cart/?add-to-cart=' . $monthly_sub_data['productId'];
+                $bundle = $monthly_sub_data;
+            ?>
+                <div class="mco-card mco-gradient--sub-monthly">
+
+                    <!-- Structural placeholder for symmetry -->
+                    <div class="mco-best-value-tag" style="visibility:hidden;"></div>
+
+                    <h3 class="mco-card__header">
+                        <span><?php echo mco_get_svg_icon('bundle'); ?></span>
+                        Monthly Plan
+                    </h3>
+
+                    <!-- PRICE -->
+                    <p class="mco-card__price">
+                        $<?php echo number_format_i18n($bundle['price'], 2); ?>
+                    </p>
+
+                    <!-- Placeholder for savings text -->
+                    <p class="mco-card__saving-text">&nbsp;</p>
+
+                    <ul class="mco-sub-card__features">
+                        <li><?php echo mco_get_svg_icon('check'); ?><span>Unlimited Access to ALL Practice Exams</span></li>
+                        <li><?php echo mco_get_svg_icon('check'); ?><span>Unlimited AI-Powered Feedback & Study Guides</span></li>
+                        <li><?php echo mco_get_svg_icon('check'); ?><span>Cancel Anytime</span></li>
+                    </ul>
+
+                    <div class="mco-card__footer">
+                        <a href="<?php echo esc_url($monthly_url); ?>" class="mco-card__button mco-card__button--white">
+                            Subscribe Now
+                        </a>
                     </div>
-                }
-// --- BUNDLES SECTION ---
+                </div>
+            <?php endif; ?>
+
+            <?php if ($yearly_sub_data && isset($yearly_sub_data['productId'])) :
+                $yearly_url = get_site_url() . '/cart/?add-to-cart=' . $yearly_sub_data['productId'];
+                $bundle = $yearly_sub_data;
+            ?>
+                <div class="mco-card mco-gradient--sub-yearly mco-card--best-value">
+
+                    <div class="mco-best-value-tag">
+                        <?php echo mco_get_svg_icon('star'); ?> BEST VALUE
+                    </div>
+
+                    <h3 class="mco-card__header">
+                        <span><?php echo mco_get_svg_icon('bundle'); ?></span>
+                        Yearly Plan
+                    </h3>
+
+                    <!-- PRICE -->
+                    <p class="mco-card__price">
+                        $<?php echo number_format_i18n($bundle['price'], 2); ?>
+                    </p>
+
+                    <p class="mco-card__saving-text">
+                        Saves over 35%!
+                    </p>
+
+                    <ul class="mco-sub-card__features">
+                        <li><?php echo mco_get_svg_icon('check'); ?><span>All Monthly features</span></li>
+                        <li><?php echo mco_get_svg_icon('check'); ?><span>Access All Exam Programs</span></li>
+                        <li><?php echo mco_get_svg_icon('check'); ?><span>Billed Annually</span></li>
+                    </ul>
+
+                    <div class="mco-card__footer">
+                        <a href="<?php echo esc_url($yearly_url); ?>" class="mco-card__button mco-card__button--white">
+                            Subscribe & Save
+                        </a>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+        </div>
+        <?php
+    }
+}
+
+		
+		// --- BUNDLES SECTION ---
 $bundles_enabled = $active_org_config['bundlesEnabled'] ?? true;
 if ($bundles_enabled) {
     // Filter for products explicitly marked as bundles or with multiple items
@@ -869,7 +1068,8 @@ if ($bundles_enabled) {
             <?php } ?>
         </div>
     <?php }
-}                
+}
+                
                 // B. PROGRAM GROUPS ?>
                 <div class="mco-program-list">
                     <?php 
@@ -902,7 +1102,7 @@ if ($bundles_enabled) {
                                             </div>
                                         </div>
                                         <div class="mco-card__footer">
-                                            <a href="<?php echo esc_url($app_url . '/test/' . $practice_exam['id']); ?>" class="mco-card__button mco-card__button--primary">Start Practice</a>
+                                            <a href="<?php echo esc_url($app_url . '/test/' . $practice_exam['id']); ?>" class="mco-card__button mco-card__button--white">Start Practice</a>
                                         </div>
                                     </div>
                                 <?php } ?>
@@ -926,8 +1126,8 @@ if ($bundles_enabled) {
                                    <h4 class="mco-card__subtitle"><?php echo esc_html(html_entity_decode($cert_exam['name'], ENT_QUOTES, 'UTF-8')); ?></h4>
                                             <?php if (!$is_purchased && $cert_exam['price'] > 0) { ?>
                                                 <div style="text-align: center; margin-bottom: 1rem;">
-                                                    <?php if (isset($cert_exam['regularPrice']) && $cert_exam['regularPrice'] > $cert_exam['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($cert_exam['regularPrice'], 2) . '</span> '; ?>
-                                                    <span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$<?php echo number_format_i18n($cert_exam['price'], 2); ?></span>
+                                                    <?php if (isset($cert_exam['regularPrice']) && $cert_exam['regularPrice'] > $cert_exam['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through;color:#EE4B2B;">$' . number_format_i18n($cert_exam['regularPrice'], 2) . '</span> '; ?>
+                                                    <span style="font-size: 2.5rem; font-weight: 900; margin:10px 0; color:#fff; ">$<?php echo number_format_i18n($cert_exam['price'], 2); ?></span>
                                                 </div>
                                             <?php } ?>
                                             <div class="mco-card__stats">
@@ -971,13 +1171,13 @@ if ($bundles_enabled) {
                                                     <h3 class="mco-card__subtitle"><?php echo esc_html($desc_text); ?></h3>
                                                     <?php if (isset($bundle_data['price'])) { ?>
                                                         <div style="text-align: center; margin-bottom: 1rem;">
-                                                            <?php if (isset($bundle_data['regularPrice']) && $bundle_data['regularPrice'] > $bundle_data['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through; opacity: 0.7;">$' . number_format_i18n($bundle_data['regularPrice'], 2) . '</span> '; ?>
-                                                            <span style="font-size: 2.5rem; font-weight: 800; margin-left: 0.5rem;">$<?php echo number_format_i18n($bundle_data['price'], 2); ?></span>
+                                                            <?php if (isset($bundle_data['regularPrice']) && $bundle_data['regularPrice'] > $bundle_data['price']) echo '<span style="font-size: 1.25rem; text-decoration: line-through;color:#EE4B2B; ;">$' . number_format_i18n($bundle_data['regularPrice'], 2) . '</span> '; ?>
+                                                            <span style="font-size: 2.5rem; font-weight: 900; margin:10px 0; color:#fff; ">$<?php echo number_format_i18n($bundle_data['price'], 2); ?></span> 
                                                         </div>
                                                     <?php } ?>
                                                 </div>
                                                 <div class="mco-card__footer">
-                                                    <a href="<?php echo esc_url($bundle_url); ?>" class="mco-card__button mco-card__button--purchase"><?php echo mco_get_svg_icon('cart'); ?> Purchase Bundle</a>
+                                                    <a href="<?php echo esc_url($bundle_url); ?>" class="mco-card__button mco-card__button--white"><?php echo mco_get_svg_icon('cart'); ?> Purchase Bundle</a>
                                                 </div>
                                             </div>
                                         <?php } // Closes if ($bundle_data)
@@ -995,44 +1195,7 @@ if ($bundles_enabled) {
         <?php return ob_get_clean(); // End main output buffer
     }
 }
-/ --- B. BUNDLES SECTION (Insert this block) ---
-$bundles_enabled = $active_org_config['bundlesEnabled'] ?? true;
-if ($bundles_enabled) {
-    // Filters for products explicitly marked as bundles with 2 or more items
-    $standalone_bundles = array_filter($all_prices, function($p) {
-        return (isset($p['isBundle']) && ($p['isBundle'] === true || $p['isBundle'] === 'yes')) 
-               && (!empty($p['bundledSkus']) && count($p['bundledSkus']) > 1);
-    });
 
-    if (!empty($standalone_bundles)) { ?>
-        <div class="mco-section-heading">
-            <?php echo mco_get_svg_icon('bundle'); ?>
-            <h2>Exclusive Value Bundles</h2>
-        </div>
-        <div class="mco-bundle-grid">
-            <?php foreach ($standalone_bundles as $sku => $bundle) {
-                $bundle_url = isset($bundle['productId']) ? get_site_url() . '/cart/?add-to-cart=' . $bundle['productId'] : '#';
-                $is_sub_addon = strpos($sku, 'addon') !== false || ($bundle['type'] ?? '') === 'subscription';
-                ?>
-                <div class="mco-card <?php echo $is_sub_addon ? 'mco-gradient--bundle-sub' : 'mco-gradient--bundle-practice'; ?>">
-                    <div class="mco-card__header"><span><?php echo mco_get_svg_icon('bundle'); ?></span> Package Deal</div>
-                    <div class="mco-card__body">
-                        <h3 class="mco-card__subtitle" style="color:#fff;"><?php echo esc_html($bundle['name']); ?></h3>
-                        <p style="color:rgba(255,255,255,0.8); font-size:0.85rem; margin-bottom:15px;">
-                            Comprehensive certification pathway including all required study tools.
-                        </p>
-                        <p style="font-size:2.5rem; font-weight:900; margin:10px 0; color:#fff; text-align:center;">
-                            $<?php echo number_format_i18n($bundle['price'], 2); ?>
-                        </p>
-                    </div>
-                    <div class="mco-card__footer">
-                        <a href="<?php echo esc_url($bundle_url); ?>" class="mco-card__button mco-card__button--white">Get Package Deal</a>
-                    </div>
-                </div>
-            <?php } ?>
-        </div>
-    <?php }
-}
 // --- 8. PROGRAM GRID SHORTCODE (Category Page Style) ---
 if (!function_exists('mco_program_grid_shortcode')) {
     function mco_program_grid_shortcode() {
