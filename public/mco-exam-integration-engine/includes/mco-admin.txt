@@ -15,10 +15,11 @@ if (!function_exists('mco_sanitize_data_uri_or_url')) {
 if (!function_exists('mco_add_admin_menu')) {
     add_action('admin_menu', 'mco_add_admin_menu');
     function mco_add_admin_menu() {
-        add_menu_page('Exam App Engine', 'Exam App Engine', 'manage_options', 'mco-exam-engine', 'mco_exam_engine_admin_page', 'dashicons-welcome-learn-more', 25);
+        // Renamed to Annapoorna Advantage
+        add_menu_page('Annapoorna Advantage', 'Annapoorna Advantage', 'manage_options', 'mco-exam-engine', 'mco_exam_engine_admin_page', 'dashicons-welcome-learn-more', 25);
         add_submenu_page('mco-exam-engine', 'Exam Programs', 'Exam Programs', 'manage_options', 'edit.php?post_type=mco_exam_program');
         add_submenu_page('mco-exam-engine', 'Recommended Books', 'Recommended Books', 'manage_options', 'edit.php?post_type=mco_recommended_book');
-        add_submenu_page('mco-exam-engine', 'Settings & Tools', 'Settings & Tools', 'manage_options', 'mco-exam-engine', 'mco_exam_engine_admin_page');
+        add_submenu_page('mco-exam-engine', 'Advantage Settings', 'Advantage Settings', 'manage_options', 'mco-exam-engine', 'mco_exam_engine_admin_page');
     }
 }
 
@@ -26,7 +27,7 @@ if (!function_exists('mco_admin_enqueue_scripts')) {
     add_action('admin_enqueue_scripts', 'mco_admin_enqueue_scripts');
     function mco_admin_enqueue_scripts($hook) {
         $screen = get_current_screen();
-        if (!$screen || ((string)$screen->post_type !== 'mco_exam_program' && (string)$screen->base !== 'toplevel_page_mco-exam-engine' && (string)$screen->base !== 'exam-app-engine_page_mco-exam-engine')) {
+        if (!$screen || ((string)$screen->post_type !== 'mco_exam_program' && (string)$screen->base !== 'toplevel_page_mco-exam-engine' && (string)$screen->base !== 'annapoorna-advantage_page_mco-exam-engine')) {
             return;
         }
         if (defined('MCO_PLUGIN_URL') && defined('MCO_VERSION')) {
@@ -47,12 +48,9 @@ if (!function_exists('mco_handle_generate_products_csv')) { add_action('admin_po
 if (!function_exists('mco_admin_upload_notices')) {
     add_action('admin_notices', 'mco_admin_upload_notices');
     function mco_admin_upload_notices() {
-        // Only show on our admin page
         if (!isset($_GET['page']) || (string)$_GET['page'] !== 'mco-exam-engine') {
             return;
         }
-
-        // Display general success messages if present
         if (isset($_GET['message'])) {
             echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(urldecode((string)$_GET['message'])) . '</p></div>';
         }
@@ -84,7 +82,7 @@ if (!function_exists('mco_exam_engine_admin_page')) {
                 update_option('mco_purchase_notifier_max_gap', sanitize_text_field((string)($_POST['mco_purchase_notifier_max_gap'] ?? '23')));
                 delete_transient('mco_app_config_data');
                 update_option('mco_config_version', current_time('YmdHis'));
-                echo '<div class="notice notice-success is-dismissible"><p>Settings saved and config cache cleared.</p></div>';
+                echo '<div class="notice notice-success is-dismissible"><p>Advantage settings saved and config cache cleared.</p></div>';
 
             } elseif ($form_action === 'save_theme_settings') {
                 update_option('mco_active_theme_id', sanitize_text_field((string)($_POST['mco_active_theme_id'] ?? '')));
@@ -125,7 +123,7 @@ if (!function_exists('mco_exam_engine_admin_page')) {
                 if (isset($_POST['clear_config_cache'])) {
                     delete_transient('mco_app_config_data');
                     update_option('mco_config_version', current_time('YmdHis'));
-                    echo '<div class="notice notice-success is-dismissible"><p>Application config cache cleared.</p></div>';
+                    echo '<div class="notice notice-success is-dismissible"><p>Advantage config cache cleared.</p></div>';
                 }
                 if (isset($_POST['clear_question_caches'])) {
                     global $wpdb;
@@ -138,7 +136,7 @@ if (!function_exists('mco_exam_engine_admin_page')) {
         $active_tab = isset($_GET['tab']) ? sanitize_text_field((string)$_GET['tab']) : 'main_settings';
         ?>
         <div class="wrap mco-admin-wrap">
-            <h1>Settings & Tools</h1>
+            <h1>Annapoorna Advantage Settings</h1>
             <h2 class="nav-tab-wrapper">
                 <a href="?page=mco-exam-engine&tab=main_settings" class="nav-tab <?php echo $active_tab == 'main_settings' ? 'nav-tab-active' : ''; ?>">Main Settings</a>
                 <a href="?page=mco-exam-engine&tab=certificate_templates" class="nav-tab <?php echo $active_tab == 'certificate_templates' ? 'nav-tab-active' : ''; ?>">Certificate Templates</a>
@@ -171,7 +169,7 @@ if (!function_exists('mco_render_main_settings_tab')) {
                 <tr><th>Organization Address</th><td><input type="text" name="mco_organization_address" value="<?php echo esc_attr($current_address); ?>" class="widefat" placeholder="e.g. 123 Main St, Anytown, State, Country"><p class="description">Optional. Displayed in app footer.</p></td></tr>
                 <tr><th>Disclaimer Text</th><td><textarea name="mco_disclaimer_text" rows="3" class="widefat"><?php echo esc_textarea((string)get_option('mco_disclaimer_text')); ?></textarea><p class="description">Optional. A short disclaimer to be displayed in the application footer.</p></td></tr>
                 <tr><th>JWT Secret</th><td><code><?php echo defined('MCO_JWT_SECRET') ? 'Defined' : '<strong>Not Defined!</strong>'; ?></code></td></tr>
-                <tr><th colspan="2"><h4>Feature Toggles</h4></th></tr>
+                <tr><th colspan="2"><h4>Advantage Toggles</h4></th></tr>
                 <tr><th>Enable Registration</th><td><input type="checkbox" name="mco_users_can_register" value="1" <?php checked(get_option('mco_force_enable_registration'), 1); ?>></td></tr>
                 <tr><th>Enable Subscriptions</th><td><input type="checkbox" name="mco_subscriptions_enabled" value="1" <?php checked(get_option('mco_subscriptions_enabled', '1'), '1'); ?>></td></tr>
                 <tr><th>Enable Bundles</th><td><input type="checkbox" name="mco_bundles_enabled" value="1" <?php checked(get_option('mco_bundles_enabled', '1'), '1'); ?>></td></tr>
@@ -347,7 +345,7 @@ if (!function_exists('mco_render_tools_tab')) {
     function mco_render_tools_tab() {
         echo '<h2>Maintenance Tools</h2><form method="post" action="?page=mco-exam-engine&tab=tools">';
         wp_nonce_field('mco_save_settings', 'mco_save_settings_nonce');
-        echo '<input type="hidden" name="mco_form_action" value="clear_caches"><table class="form-table"><tr><th>Clear App Config Cache</th><td><button type="submit" name="clear_config_cache" class="button">Clear Cache</button></td></tr><tr><th>Clear Question Caches</th><td><button type="submit" name="clear_question_caches" class="button">Clear Caches</button></td></tr></table></form><hr><h2>Onboarding & Backup</h2><table class="form-table"><tr><th>Generate Tenant Blueprint</th><td><form method="post" action="'.esc_url(admin_url('admin-post.php')).'"><input type="hidden" name="action" value="mco_generate_tenant_blueprint">';
+        echo '<input type="hidden" name="mco_form_action" value="clear_caches"><table class="form-table"><tr><th>Clear Advantage Config Cache</th><td><button type="submit" name="clear_config_cache" class="button">Clear Cache</button></td></tr><tr><th>Clear Question Caches</th><td><button type="submit" name="clear_question_caches" class="button">Clear Caches</button></td></tr></table></form><hr><h2>Onboarding & Backup</h2><table class="form-table"><tr><th>Generate Tenant Blueprint</th><td><form method="post" action="'.esc_url(admin_url('admin-post.php')).'"><input type="hidden" name="action" value="mco_generate_tenant_blueprint">';
         wp_nonce_field('mco_generate_tenant_blueprint_nonce');
         echo '<button type="submit" class="button">Generate Blueprint</button></form></td></tr><tr><th>Generate Full Snapshot</th><td><form method="post" action="'.esc_url(admin_url('admin-post.php')).'"><input type="hidden" name="action" value="mco_generate_full_snapshot">';
         wp_nonce_field('mco_generate_full_snapshot_nonce');
