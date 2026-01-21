@@ -63,9 +63,9 @@ const BookshelfRenderer: FC<BookshelfRendererProps> = ({ books, type }) => {
                                     href={primary?.url || '#'} 
                                     target="_blank" 
                                     rel="noopener noreferrer" 
-                                    className="mt-1 inline-flex items-center gap-1 text-[10px] bg-yellow-400 text-amber-900 font-black px-2 py-1 rounded uppercase tracking-tighter self-start hover:bg-yellow-500 transition-colors"
+                                    className="mt-2 mco-book-card-sidebar__button self-start"
                                 >
-                                    <ShoppingCart size={10} /> {primary?.domainName || 'Amazon'}
+                                    <ShoppingCart size={12} /> {primary?.domainName || 'Amazon'}
                                 </a>
                             </div>
                         </div>

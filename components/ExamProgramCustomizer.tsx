@@ -27,20 +27,35 @@ const ExamEditor: FC<{
 }> = ({ program, onSave, onDelete, onCancel, isSaving, unlinkedProducts, bundleProducts }) => {
     const { activeOrg } = useAppContext();
     
-    // STRICT INITIALIZATION: Map directly from props to internal state
-    const [data, setData] = useState<EditableProgramData>({
+    // NUCLEAR DEFENSIVE INITIALIZATION:
+    // This prevents the 'Visual Tabs Error' by ensuring no null pointers are accessed during render.
+    // If a program exists but is broken in the DB, we generate virtual default objects.
+    const [data, setData] = useState<EditableProgramData>(() => ({
         category: { 
-            name: program.category.name || '',
-            description: program.category.description || '',
-            questionSourceUrl: program.category.questionSourceUrl || ''
+            name: program.category?.name || '',
+            description: program.category?.description || '',
+            questionSourceUrl: program.category?.questionSourceUrl || ''
         },
-        practiceExam: program.practiceExam ? { ...program.practiceExam } : { id: program.category.practiceExamId, isPractice: true, certificateEnabled: false } as any,
-        certExam: program.certExam ? { ...program.certExam } : { id: program.category.certificationExamId, isPractice: false, certificateEnabled: true, isProctored: true } as any,
-    });
+        practiceExam: program.practiceExam ? { ...program.practiceExam } : { 
+            id: program.category?.practiceExamId || `prac-virtual-${Date.now()}`, 
+            isPractice: true, 
+            certificateEnabled: false,
+            numberOfQuestions: 20,
+            durationMinutes: 30
+        } as any,
+        certExam: program.certExam ? { ...program.certExam } : { 
+            id: program.category?.certificationExamId || '', 
+            isPractice: false, 
+            certificateEnabled: true, 
+            isProctored: true,
+            numberOfQuestions: 50,
+            durationMinutes: 90,
+            passScore: 70
+        } as any,
+    }));
     
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
-    // Addon checkbox logic: reflects IF an addon SKU exists in the database
     const hasAddon = useMemo(() => {
         return !!data.certExam?.addonSku;
     }, [data.certExam?.addonSku]);
@@ -51,14 +66,11 @@ const ExamEditor: FC<{
 
     const handleExamChange = (examType: 'practiceExam' | 'certExam', field: string, value: any) => {
         setData(prev => {
-            const next = { ...prev, [examType]: { ...prev[examType], [field]: value } };
+            const current = (prev as any)[examType] || {};
+            const next = { ...prev, [examType]: { ...current, [field]: value } };
             
-            // Auto-update addon pattern only if it was already following the standard suffix
             if (examType === 'certExam' && field === 'productSku' && hasAddon) {
-                next.certExam = { 
-                    ...next.certExam, 
-                    addonSku: value ? `${value}-1mo-addon` : '' 
-                };
+                next.certExam = { ...next.certExam, addonSku: value ? `${value}-1mo-addon` : '' };
             }
             return next;
         });
@@ -72,21 +84,18 @@ const ExamEditor: FC<{
         }
         setData(prev => ({
             ...prev,
-            certExam: {
-                ...prev.certExam,
-                addonSku: enabled ? `${baseSku}-1mo-addon` : ''
-            }
+            certExam: { ...prev.certExam, addonSku: enabled ? `${baseSku}-1mo-addon` : '' }
         }));
     };
 
     const Label = ({ children }: { children: ReactNode }) => <label className="text-[10px] font-black uppercase tracking-widest text-[rgb(var(--color-text-muted-rgb))] mb-1 block opacity-80">{children}</label>;
 
     return (
-        <div className="bg-[rgba(var(--color-muted-rgb),0.2)] p-6 rounded-b-xl space-y-6 shadow-inner border-t border-[rgb(var(--color-border-rgb))] pb-40 relative z-10">
+        <div className="bg-[rgba(var(--color-muted-rgb),0.2)] p-6 rounded-b-xl space-y-6 shadow-inner border-t border-[rgb(var(--color-border-rgb))] pb-20">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <Label>Brand Identity / Name</Label>
-                    <input type="text" value={data.category?.name || ''} onChange={e => handleCategoryChange('name', e.target.value)} className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20" />
+                    <input type="text" value={data.category?.name || ''} onChange={e => handleCategoryChange('name', e.target.value)} className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500" />
                 </div>
                 <div>
                     <Label>Google Sheet Data URL</Label>
@@ -96,22 +105,13 @@ const ExamEditor: FC<{
             
             <div>
                 <Label>Program Description (Public)</Label>
-                <textarea value={data.category?.description || ''} onChange={e => handleCategoryChange('description', e.target.value)} className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))] leading-relaxed" rows={3} />
+                <textarea value={data.category?.description || ''} onChange={e => handleCategoryChange('description', e.target.value)} className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))]" rows={3} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-5 border rounded-xl bg-[rgba(var(--color-muted-rgb),0.3)] border-[rgb(var(--color-border-rgb))] space-y-5 shadow-lg relative z-20">
+                <div className="p-5 border rounded-xl bg-[rgba(var(--color-muted-rgb),0.3)] border-[rgb(var(--color-border-rgb))] space-y-5 shadow-lg">
                     <div className="flex justify-between items-center border-b border-[rgb(var(--color-border-rgb))] pb-3">
                         <h4 className="font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2 uppercase"><Award size={18} className="text-blue-500" /> Certification Config</h4>
-                        {data.certExam?.certificateEnabled && (
-                            <Link 
-                                to={`/certificate/sample?template_id=${data.certExam?.certificateTemplateId || 'cert-completion'}&theme_id=${activeOrg?.certificateThemeId}`} 
-                                target="_blank"
-                                className="text-[10px] font-black text-cyan-500 hover:text-cyan-400 uppercase flex items-center gap-1 underline"
-                            >
-                                Preview <ExternalLink size={10}/>
-                            </Link>
-                        )}
                     </div>
                     
                     <div className="grid grid-cols-1 gap-4">
@@ -120,7 +120,7 @@ const ExamEditor: FC<{
                             <select 
                                 value={data.certExam?.productSku || ''} 
                                 onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} 
-                                className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))] text-sm cursor-pointer hover:border-cyan-500 transition-colors font-mono"
+                                className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))] text-sm font-mono"
                             >
                                 <option value="">-- No Linked Product --</option>
                                 {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
@@ -133,94 +133,40 @@ const ExamEditor: FC<{
                                         <Zap size={14} className={hasAddon ? "text-amber-500 fill-amber-500" : "text-slate-500"} />
                                         <span className="text-xs font-black text-[rgb(var(--color-text-strong-rgb))] uppercase tracking-tighter">Premium Addon Offer</span>
                                     </div>
-                                    <p className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] font-bold uppercase">
-                                        {data.certExam?.addonSku ? `Linked: ${data.certExam.addonSku}` : `Default: ${data.certExam?.productSku || 'SKU'}-1mo-addon`}
-                                    </p>
+                                    <p className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] font-bold uppercase">{data.certExam?.addonSku || 'Not Configured'}</p>
                                 </div>
-                                <input 
-                                    type="checkbox" 
-                                    checked={hasAddon} 
-                                    onChange={e => toggleAddon(e.target.checked)}
-                                    className="w-5 h-5 rounded border-[rgb(var(--color-border-rgb))] bg-[rgb(var(--color-background-rgb))] text-amber-500 focus:ring-amber-500/20"
-                                />
+                                <input type="checkbox" checked={hasAddon} onChange={e => toggleAddon(e.target.checked)} className="w-5 h-5 rounded border-[rgb(var(--color-border-rgb))] text-amber-500" />
                             </label>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
-                        <div><Label>Questions</Label><input type="number" value={data.certExam?.numberOfQuestions || ''} onChange={e => handleExamChange('certExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))]" /></div>
-                        <div><Label>Mins</Label><input type="number" value={data.certExam?.durationMinutes || ''} onChange={e => handleExamChange('certExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))]" /></div>
-                        <div><Label>Pass %</Label><input type="number" value={data.certExam?.passScore || ''} onChange={e => handleExamChange('certExam', 'passScore', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))]" /></div>
-                    </div>
-                    
-                    <div className="space-y-3 pt-2">
-                        <label className="flex items-center gap-2 text-xs font-bold text-[rgb(var(--color-text-strong-rgb))] cursor-pointer">
-                            <input type="checkbox" checked={!!data.certExam?.certificateEnabled} onChange={e => handleExamChange('certExam', 'certificateEnabled', e.target.checked)} className="rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-cyan-500" />
-                            Enable Certification Certificate
-                        </label>
-                        <label className="flex items-center gap-2 text-xs font-bold text-[rgb(var(--color-text-strong-rgb))] cursor-pointer">
-                            <input type="checkbox" checked={!!data.certExam?.isProctored} onChange={e => handleExamChange('certExam', 'isProctored', e.target.checked)} className="rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-cyan-500" />
-                            <ShieldCheck size={14} className="text-cyan-500"/> Enable Proctoring Integrity
-                        </label>
+                        <div><Label>Questions</Label><input type="number" value={data.certExam?.numberOfQuestions || ''} onChange={e => handleExamChange('certExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))]" /></div>
+                        <div><Label>Mins</Label><input type="number" value={data.certExam?.durationMinutes || ''} onChange={e => handleExamChange('certExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))]" /></div>
+                        <div><Label>Pass %</Label><input type="number" value={data.certExam?.passScore || ''} onChange={e => handleExamChange('certExam', 'passScore', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))]" /></div>
                     </div>
                 </div>
 
                 <div className="p-5 border rounded-xl bg-[rgba(var(--color-muted-rgb),0.3)] border-[rgb(var(--color-border-rgb))] space-y-5 shadow-lg">
-                    <div className="flex justify-between items-center border-b border-[rgb(var(--color-border-rgb))] pb-3">
-                        <h4 className="font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2 uppercase"><FileText size={18} className="text-emerald-500" /> Practice Rules</h4>
-                         {data.practiceExam?.certificateEnabled && (
-                            <Link 
-                                to={`/certificate/sample?template_id=cert-practice&theme_id=${activeOrg?.certificateThemeId}`} 
-                                target="_blank"
-                                className="text-[10px] font-black text-emerald-500 hover:text-emerald-400 uppercase flex items-center gap-1 underline"
-                            >
-                                Preview <ExternalLink size={10}/>
-                            </Link>
-                        )}
-                    </div>
+                    <h4 className="font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2 uppercase border-b border-[rgb(var(--color-border-rgb))] pb-3"><FileText size={18} className="text-emerald-500" /> Practice Rules</h4>
                     <div className="grid grid-cols-2 gap-4">
-                        <div><Label>Question Count</Label><input type="number" value={data.practiceExam?.numberOfQuestions || ''} onChange={e => handleExamChange('practiceExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))]" /></div>
-                        <div><Label>Duration (Mins)</Label><input type="number" value={data.practiceExam?.durationMinutes || ''} onChange={e => handleExamChange('practiceExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))]" /></div>
+                        <div><Label>Question Count</Label><input type="number" value={data.practiceExam?.numberOfQuestions || ''} onChange={e => handleExamChange('practiceExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))]" /></div>
+                        <div><Label>Duration (Mins)</Label><input type="number" value={data.practiceExam?.durationMinutes || ''} onChange={e => handleExamChange('practiceExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))]" /></div>
                     </div>
-                    <label className="flex items-center gap-2 text-xs font-bold text-[rgb(var(--color-text-strong-rgb))] pt-2 cursor-pointer">
-                        <input type="checkbox" checked={!!data.practiceExam?.certificateEnabled} onChange={e => handleExamChange('practiceExam', 'certificateEnabled', e.target.checked)} className="rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-cyan-500" />
-                        Enable Completion Certificate
-                    </label>
                 </div>
             </div>
             
             <div className="flex justify-between items-center pt-6 border-t border-[rgb(var(--color-border-rgb))]">
                 <div className="flex gap-2">
                     {!isConfirmingDelete ? (
-                        <button 
-                            onClick={() => setIsConfirmingDelete(true)} 
-                            disabled={isSaving}
-                            className="flex items-center gap-2 px-4 py-2 text-rose-500 hover:text-rose-400 border border-rose-500/30 hover:border-rose-500 rounded-lg text-xs font-bold transition uppercase tracking-tighter"
-                        >
-                            <Trash2 size={14} /> Delete Program
-                        </button>
+                        <button onClick={() => setIsConfirmingDelete(true)} className="px-4 py-2 text-rose-500 hover:text-rose-400 border border-rose-500/30 rounded-lg text-xs font-bold uppercase">Delete Program</button>
                     ) : (
-                        <button 
-                            onClick={() => onDelete(program.category.id)} 
-                            disabled={isSaving}
-                            className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-black transition animate-pulse shadow-lg shadow-rose-900/20"
-                        >
-                            <AlertTriangle size={14} /> CONFIRM TRASH
-                        </button>
-                    )}
-                    {isConfirmingDelete && (
-                        <button 
-                            onClick={() => setIsConfirmingDelete(false)} 
-                            className="px-4 py-2 text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))] text-xs font-bold transition"
-                        >
-                            CANCEL
-                        </button>
+                        <button onClick={() => onDelete(program.category.id)} className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-black shadow-lg shadow-rose-900/20 animate-pulse">CONFIRM TRASH</button>
                     )}
                 </div>
-
                 <div className="flex gap-3">
-                    <button onClick={onCancel} disabled={isSaving} className="px-6 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg font-bold transition">Discard</button>
-                    <button onClick={() => onSave(program.category.id, data)} disabled={isSaving} className="flex items-center gap-2 px-8 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-black transition shadow-lg disabled:opacity-50">
+                    <button onClick={onCancel} className="px-6 py-2 text-[rgb(var(--color-text-muted-rgb))] font-bold">Discard</button>
+                    <button onClick={() => onSave(program.category.id, data)} disabled={isSaving} className="flex items-center gap-2 px-8 py-2 bg-cyan-600 text-white rounded-lg font-black transition shadow-lg">
                         {isSaving ? <Spinner size="sm" /> : <Save size={18} />} SAVE CHANGES
                     </button>
                 </div>
@@ -235,20 +181,7 @@ const ExamProgramCustomizer: FC = () => {
     const location = useLocation();
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
     
-    // Bulk state
-    const [bulkData, setBulkData] = useState<any>({
-        passScore: '',
-        questionSourceUrl: '',
-        practiceQuestions: '',
-        practiceDuration: '',
-        certQuestions: '',
-        certDuration: '',
-        enableAddon: false,
-        useAddonBulk: false // Flag to determine if we should apply addon change
-    });
-
     const programs = useMemo(() => {
         if (!activeOrg) return [];
         return activeOrg.examProductCategories.map(cat => ({
@@ -258,41 +191,11 @@ const ExamProgramCustomizer: FC = () => {
         })).sort((a,b) => (a.category.name || '').localeCompare(b.category.name || ''));
     }, [activeOrg]);
 
-    // Handle deep linking via Hash (e.g., #prod-123)
-    useEffect(() => {
-        const hash = location.hash.replace('#', '');
-        if (hash && programs.length > 0) {
-            const match = programs.find(p => p.category.id === hash);
-            if (match) {
-                setExpandedId(hash);
-                // Wait for render, then scroll
-                setTimeout(() => {
-                    const el = document.getElementById(`program-card-${hash}`);
-                    if (el) {
-                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                }, 300);
-            }
-        }
-    }, [location.hash, programs]);
-
     const productLists = useMemo(() => {
         if (!examPrices) return { unlinked: [], bundles: [] };
-        // Map all existing products to the list
         const all = Object.entries(examPrices).map(([sku, d]: [string, any]) => ({ sku, name: d.name, isBundle: d.isBundle }));
-        return {
-            unlinked: all,
-            bundles: all.filter(p => p.isBundle)
-        };
+        return { unlinked: all, bundles: all.filter(p => p.isBundle) };
     }, [examPrices]);
-
-    const handleToggleSelect = (id: string) => {
-        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-    };
-
-    const handleSelectAll = () => {
-        setSelectedIds(selectedIds.length === programs.length ? [] : programs.map(p => p.category.id));
-    };
 
     const handleSave = async (id: string, data: EditableProgramData) => {
         if (!token) return;
@@ -306,50 +209,6 @@ const ExamProgramCustomizer: FC = () => {
         finally { setIsSaving(false); }
     };
 
-    const handleBulkUpdate = async () => {
-        if (selectedIds.length === 0 || !token) return;
-        setIsSaving(true);
-        const tid = toast.loading(`Updating ${selectedIds.length} programs...`);
-        try {
-            for (const id of selectedIds) {
-                const program = programs.find(p => p.category.id === id);
-                if (!program) continue;
-
-                const update: any = { 
-                    certExam: {},
-                    practiceExam: {}
-                };
-                
-                if (bulkData.passScore) update.certExam.passScore = bulkData.passScore;
-                if (bulkData.certQuestions) update.certExam.numberOfQuestions = bulkData.certQuestions;
-                if (bulkData.certDuration) update.certExam.durationMinutes = bulkData.certDuration;
-                
-                if (bulkData.practiceQuestions) update.practiceExam.numberOfQuestions = bulkData.practiceQuestions;
-                if (bulkData.practiceDuration) update.practiceExam.durationMinutes = bulkData.practiceDuration;
-                
-                if (bulkData.questionSourceUrl) update.category = { questionSourceUrl: bulkData.questionSourceUrl };
-                
-                // Addon bulk construction
-                if (bulkData.useAddonBulk) {
-                    const sku = program.certExam?.productSku || '';
-                    if (sku) {
-                        update.certExam.addonSku = bulkData.enableAddon ? `${sku}-1mo-addon` : '';
-                    }
-                }
-                
-                await googleSheetsService.adminUpdateExamProgram(token, id, update);
-            }
-            await refreshConfig();
-            toast.success("Bulk Update Complete", { id: tid });
-            setSelectedIds([]);
-            setBulkData({ passScore: '', questionSourceUrl: '', practiceQuestions: '', practiceDuration: '', certQuestions: '', certDuration: '', enableAddon: false, useAddonBulk: false });
-        } catch (e: any) {
-            toast.error(e.message, { id: tid });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
     const handleDelete = async (id: string) => {
         if (!token) return;
         setIsSaving(true);
@@ -359,135 +218,28 @@ const ExamProgramCustomizer: FC = () => {
             await refreshConfig();
             toast.success("Program Deleted", { id: tid });
             setExpandedId(null);
-        } catch (e: any) { 
-            toast.error(e.message, { id: tid }); 
-        } finally { 
-            setIsSaving(false); 
-        }
+        } catch (e: any) { toast.error(e.message, { id: tid }); }
+        finally { setIsSaving(false); }
     };
 
     return (
         <div className="space-y-8 pb-40">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <h1 className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3"><Settings className="text-cyan-500" /> Program Master</h1>
-                {selectedIds.length > 0 && (
-                    <div className="flex flex-col gap-4 bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] p-6 rounded-2xl shadow-2xl animate-in slide-in-from-top-4 duration-300 w-full lg:w-auto">
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))]">Pass Score %</label>
-                                <input 
-                                    type="number" 
-                                    placeholder="80" 
-                                    value={bulkData.passScore} 
-                                    onChange={e => setBulkData({...bulkData, passScore: e.target.value})}
-                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg p-2 text-xs text-[rgb(var(--color-text-strong-rgb))]"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black uppercase text-emerald-500">Prac Qs</label>
-                                <input 
-                                    type="number" 
-                                    placeholder="20" 
-                                    value={bulkData.practiceQuestions} 
-                                    onChange={e => setBulkData({...bulkData, practiceQuestions: e.target.value})}
-                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg p-2 text-xs text-[rgb(var(--color-text-strong-rgb))]"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black uppercase text-emerald-500">Prac Mins</label>
-                                <input 
-                                    type="number" 
-                                    placeholder="30" 
-                                    value={bulkData.practiceDuration} 
-                                    onChange={e => setBulkData({...bulkData, practiceDuration: e.target.value})}
-                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg p-2 text-xs text-[rgb(var(--color-text-strong-rgb))]"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black uppercase text-cyan-500">Cert Qs</label>
-                                <input 
-                                    type="number" 
-                                    placeholder="100" 
-                                    value={bulkData.certQuestions} 
-                                    onChange={e => setBulkData({...bulkData, certQuestions: e.target.value})}
-                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg p-2 text-xs text-[rgb(var(--color-text-strong-rgb))]"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black uppercase text-cyan-500">Cert Mins</label>
-                                <input 
-                                    type="number" 
-                                    placeholder="120" 
-                                    value={bulkData.certDuration} 
-                                    onChange={e => setBulkData({...bulkData, certDuration: e.target.value})}
-                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg p-2 text-xs text-[rgb(var(--color-text-strong-rgb))]"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))]">Sheet URL</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="CSV Link..." 
-                                    value={bulkData.questionSourceUrl} 
-                                    onChange={e => setBulkData({...bulkData, questionSourceUrl: e.target.value})}
-                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg p-2 text-xs text-[rgb(var(--color-text-strong-rgb))]"
-                                />
-                            </div>
-                            <div className="space-y-1 flex flex-col justify-end">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={bulkData.useAddonBulk} 
-                                        onChange={e => setBulkData({...bulkData, useAddonBulk: e.target.checked})}
-                                        className="rounded border-[rgb(var(--color-border-rgb))] bg-[rgb(var(--color-background-rgb))] text-cyan-500"
-                                    />
-                                    <span className="text-[9px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))]">Apply Addon?</span>
-                                </label>
-                                {bulkData.useAddonBulk && (
-                                    <button 
-                                        onClick={() => setBulkData({...bulkData, enableAddon: !bulkData.enableAddon})}
-                                        className={`mt-1 flex items-center gap-1 text-[8px] font-black px-2 py-1 rounded border ${bulkData.enableAddon ? 'bg-amber-600 border-amber-500 text-white' : 'bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-slate-400'}`}
-                                    >
-                                        {bulkData.enableAddon ? <ToggleRight size={14}/> : <ToggleLeft size={14}/>}
-                                        {bulkData.enableAddon ? 'ENABLE ADDON' : 'DISABLE ADDON'}
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                        <button 
-                            onClick={handleBulkUpdate}
-                            disabled={isSaving}
-                            className="w-full bg-cyan-600 text-white py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-cyan-500 transition shadow-lg shadow-cyan-900/20"
-                        >
-                            APPLY TO {selectedIds.length} SELECTED PROGRAMS
-                        </button>
-                    </div>
-                )}
-            </div>
+            <h1 className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3"><Settings className="text-cyan-500" /> Program Master</h1>
 
-            <div className="bg-[rgb(var(--color-card-rgb))] rounded-2xl shadow-2xl border border-[rgb(var(--color-border-rgb))]">
-                <div className="bg-[rgb(var(--color-background-rgb))] p-4 border-b border-[rgb(var(--color-border-rgb))] flex items-center justify-between rounded-t-2xl">
-                    <button onClick={handleSelectAll} className="flex items-center gap-2 text-[10px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-widest hover:text-[rgb(var(--color-text-strong-rgb))] transition">
-                        {selectedIds.length === programs.length ? <CheckSquare size={16} className="text-cyan-500"/> : <Square size={16}/>}
-                        {selectedIds.length === programs.length ? 'Deselect All' : 'Select All Programs'}
-                    </button>
+            <div className="bg-[rgb(var(--color-card-rgb))] rounded-2xl shadow-2xl border border-[rgb(var(--color-border-rgb))] overflow-hidden">
+                <div className="bg-[rgb(var(--color-background-rgb))] p-4 border-b border-[rgb(var(--color-border-rgb))] flex items-center justify-between">
                     <span className="text-[10px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-widest">{programs.length} ACTIVE PROGRAMS</span>
                 </div>
 
                 <div className="divide-y divide-[rgb(var(--color-border-rgb))]">
                     {programs.map(p => (
-                        <div key={p.category.id} id={`program-card-${p.category.id}`} className="bg-[rgb(var(--color-card-rgb))] group first:rounded-none last:rounded-b-2xl">
+                        <div key={p.category.id} className="bg-[rgb(var(--color-card-rgb))]">
                             <div className={`flex items-center p-6 transition-colors ${expandedId === p.category.id ? 'bg-[rgba(var(--color-muted-rgb),0.3)]' : 'hover:bg-[rgba(var(--color-muted-rgb),0.2)]'}`}>
-                                <button onClick={() => handleToggleSelect(p.category.id)} className="mr-6 text-[rgb(var(--color-border-rgb))] hover:text-cyan-500 transition-colors">
-                                    {selectedIds.includes(p.category.id) ? <CheckSquare size={22} className="text-cyan-500"/> : <Square size={22}/>}
-                                </button>
                                 <div className="flex-grow">
                                     <p className="font-black text-[rgb(var(--color-text-strong-rgb))] text-lg">{p.category.name}</p>
                                     <div className="flex flex-wrap gap-3 mt-1">
-                                        {p.certExam?.productSku ? <span className="text-[9px] text-cyan-500 font-mono bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 uppercase">SKU: {p.certExam.productSku}</span> : <span className="text-[9px] text-rose-500 font-black uppercase">UNLINKED</span>}
-                                        {p.certExam?.addonSku && <span className="text-[9px] text-amber-500 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30 uppercase flex items-center gap-1"><Zap size={8}/> Addon: {p.certExam.addonSku}</span>}
+                                        {p.certExam?.productSku ? <span className="text-[9px] text-cyan-500 font-mono bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 uppercase">SKU: {p.certExam.productSku}</span> : <span className="text-[9px] text-rose-500 font-black uppercase">UNLINKED PRODUCT</span>}
                                         <span className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] flex items-center gap-1 bg-[rgba(var(--color-background-rgb),0.5)] px-2 py-0.5 rounded border border-[rgb(var(--color-border-rgb))] uppercase"><HelpCircle size={8}/> {p.certExam?.numberOfQuestions || 0} Cert Qs</span>
-                                        <span className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] flex items-center gap-1 bg-[rgba(var(--color-background-rgb),0.5)] px-2 py-0.5 rounded border border-[rgb(var(--color-border-rgb))] uppercase"><Clock size={8}/> {p.certExam?.durationMinutes || 0} Mins</span>
                                     </div>
                                 </div>
                                 <button onClick={() => setExpandedId(expandedId === p.category.id ? null : p.category.id)} className="flex items-center gap-2 px-6 py-2 bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-strong-rgb))] rounded-xl text-xs font-black border border-[rgb(var(--color-border-rgb))] hover:border-cyan-500 transition-all">
@@ -509,22 +261,6 @@ const ExamProgramCustomizer: FC = () => {
                     ))}
                 </div>
             </div>
-            
-            <style>{`
-                .mco-custom-scrollbar::-webkit-scrollbar {
-                    width: 8px;
-                }
-                .mco-custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .mco-custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: rgba(var(--color-border-rgb), 0.5);
-                    border-radius: 10px;
-                }
-                .mco-custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: rgba(var(--color-border-rgb), 0.8);
-                }
-            `}</style>
         </div>
     );
 };
