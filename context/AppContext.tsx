@@ -67,6 +67,8 @@ const processConfigData = (configData: any) => {
             const rawId = getField(exam, ['id', 'ID', 'post_id']);
             if (!rawId) return null;
             const id = rawId.toString();
+            
+            // Loose lookup to match category questions if specific one is missing
             const category = categories.find(c => c.certificationExamId === id || c.practiceExamId === id);
             const categoryUrl = category ? category.questionSourceUrl : undefined;
 
@@ -162,10 +164,10 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       
       const tenantConfig = getTenantConfig();
       const apiDomain = new URL(tenantConfig.apiBaseUrl || 'https://www.annapoornainfo.com').hostname.toLowerCase().replace('www.', '');
-      const currentHost = window.location.hostname.toLowerCase();
+      const currentHost = window.location.hostname.toLowerCase().replace('www.', '');
       
-      // STRICT TENANT MATCHING:
-      // We look for the organization whose website field matches the current API domain or current hostname.
+      // DEEP TENANT MATCHING:
+      // We look for the organization whose website field matches the current host OR the API domain.
       let newActiveOrg = processedData.processedOrgs.find(o => {
         const orgWeb = (o.website || '').toLowerCase().replace('www.', '');
         return apiDomain.includes(orgWeb) || orgWeb.includes(apiDomain) || currentHost.includes(orgWeb);

@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 29.4.0 (Full Restoration & Multi-Prefix ID Resolution)
+ * VERSION: 29.5.0 (Nuclear ID Resolution & Full Logic Restoration)
  * =============================================================================
  */
 
@@ -14,15 +14,18 @@ if (!defined('ABSPATH')) exit;
  */
 if (!function_exists('mco_get_api_params')) {
     function mco_get_api_params($request) {
+        // 1. Standard WP Parser
         $params = $request->get_json_params();
         if (is_array($params) && !empty($params)) return $params;
 
+        // 2. Direct Body Decoding
         $body = $request->get_body();
         if (!empty($body)) {
             $decoded = json_decode($body, true);
             if (is_array($decoded)) return $decoded;
         }
 
+        // 3. Raw Stream Fallback
         $raw = file_get_contents('php://input');
         if (!empty($raw)) {
             $decoded = json_decode($raw, true);
@@ -34,8 +37,8 @@ if (!function_exists('mco_get_api_params')) {
 }
 
 /**
- * HELPER: Multi-Prefix ID Extraction
- * Resolves WP Post ID from any format sent by the React app (prod-, prac-, etc).
+ * HELPER: Deep Recursive ID Extraction
+ * Strips all possible technical prefixes to find the raw WP Post ID.
  */
 if (!function_exists('mco_extract_numeric_id')) {
     function mco_extract_numeric_id($raw_id) {
@@ -43,10 +46,26 @@ if (!function_exists('mco_extract_numeric_id')) {
         if (is_numeric($raw_id)) return (int)$raw_id;
         
         $clean = (string)$raw_id;
-        $prefixes = ['exam-prod-', 'prod-', 'prac-', 'exam-'];
+        // List of all prefixes used across different versions of the React app
+        $prefixes = [
+            'exam-prod-', 
+            'exam-prac-', 
+            'prod-', 
+            'prac-', 
+            'exam-', 
+            'test_', 
+            'program-'
+        ];
+        
         foreach ($prefixes as $prefix) {
-            $clean = str_replace($prefix, '', $clean);
+            $clean = str_ireplace($prefix, '', $clean);
         }
+
+        // Final check: extract only numeric digits if still messy
+        if (!is_numeric($clean)) {
+            $clean = preg_replace('/[^0-9]/', '', $clean);
+        }
+
         return (int)$clean;
     }
 }
@@ -222,8 +241,8 @@ function mco_handle_admin_upsert_product($request) {
     $type = sanitize_text_field($p['type'] ?? 'simple');
     if ($pid) { $product = wc_get_product($pid); } 
     else { 
-        if ($type === 'subscription' && class_exists('WC_Product_Subscription')) $product = new WC_Product_Subscription();
-        else $product = new WC_Product_Simple(); 
+        if ($type === 'subscription' && class_exists('WC_Product_Subscription')) $product = new WP_Product_Subscription();
+        else $product = new WP_Product_Simple(); 
         $product->set_sku($sku);
     }
     if (isset($p['name'])) $product->set_name(sanitize_text_field($p['name']));
