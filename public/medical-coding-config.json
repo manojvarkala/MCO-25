@@ -1,5 +1,4 @@
 
-
 {
     "version": "20251030131255",
     "organizations": [
@@ -8,6 +7,7 @@
             "name": "Medical Coding Online",
             "website": "www.coding-online.net",
             "logoUrl": "/assets/logos/mco-logo.png",
+            "introVideoUrl": "https://videos.pexels.com/video-files/3191572/3191572-uhd_2560_1440_25fps.mp4",
             "availableThemes": [
                 { "id": "default", "name": "Cyberpunk" },
                 { "id": "professional", "name": "Professional" },
