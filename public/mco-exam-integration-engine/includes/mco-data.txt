@@ -88,7 +88,7 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
         $exams = []; $cats = []; $prices = []; $books = [];
         if (!class_exists('WooCommerce')) return ['exams'=>[], 'examProductCategories'=>[], 'examPrices'=>[], 'suggestedBooks'=>[]];
 
-        // Fetch ANY status so admins can see hidden content during setup
+        // INCLUSIVE QUERY: Fetch everything so admins see all content
         $program_posts = get_posts([
             'post_type' => 'mco_exam_program', 
             'posts_per_page' => -1, 
@@ -101,7 +101,7 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
             $question_source_url = (string)get_post_meta($p->ID, '_mco_question_source_url', true);
             $practice_exam_id = 'prac-'.$p->ID;
 
-            // 1. Every Program ALWAYS gets a practice exam entry
+            // 1. PRACTICE EXAM (ALWAYS EXISTS PER PROGRAM)
             $exams[] = [
                 'id' => $practice_exam_id, 
                 'name' => (string)(get_post_meta($p->ID, '_mco_practice_exam_title_override', true) ?: $p->post_title . ' Practice'),
@@ -116,7 +116,7 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
                 'recommendedBookIds' => []
             ];
 
-            // 2. If a SKU exists, add the certification exam entry
+            // 2. CERTIFICATION EXAM (ONLY IF SKU IS PRESENT)
             if ($sku) {
                 $product_id = wc_get_product_id_by_sku($sku);
                 $product = $product_id ? wc_get_product($product_id) : null;
@@ -140,7 +140,7 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
                 ];
             }
 
-            // 3. Map the Category
+            // 3. PROGRAM CATEGORY MAPPING
             $cats[] = [
                 'id' => 'prod-'.$p->ID, 
                 'name' => (string)$p->post_title, 
@@ -151,7 +151,7 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
             ];
         }
 
-        // Fetch Prices for all products
+        // PRICE INDEXING
         $product_query = new WC_Product_Query(['status' => ['publish', 'draft', 'private'], 'limit' => -1]);
         $all_products = $product_query->get_products();
         foreach ($all_products as $product) {
@@ -170,7 +170,7 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
             ];
         }
 
-        // Fetch Books
+        // BOOKS
         $book_posts = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'any']);
         foreach ($book_posts as $bp) {
             $books[] = [
