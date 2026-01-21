@@ -1,12 +1,14 @@
 import React, { FC, useState, useRef, useEffect, useMemo } from 'react';
 import { chapters } from './chapters.ts';
-import { BookOpen, Download, ChevronLeft, ChevronRight, Search, Menu, X, FileText, Settings, Database, Sparkles, ShieldCheck } from 'lucide-react';
+import { BookOpen, Download, ChevronLeft, ChevronRight, Search, Menu, X, FileText, Settings, Database, Sparkles, ShieldCheck, Layers } from 'lucide-react';
 import Spinner from '../Spinner.tsx';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useAppContext } from '../../context/AppContext.tsx';
 
 const Handbook: FC = () => {
+    const { activeOrg } = useAppContext();
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [activeChapterIndex, setActiveChapterIndex] = useState(3); // Default to Ch 1 Intro
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -14,6 +16,15 @@ const Handbook: FC = () => {
     
     const contentRef = useRef<HTMLDivElement>(null);
     const snapshotRef = useRef<HTMLDivElement>(null);
+
+    // Domain Check: Only show medical coding spec on the MCO domain
+    const isMedicalCodingDomain = activeOrg?.id === 'org-medical-coding-online';
+
+    const availableChapters = useMemo(() => {
+        if (isMedicalCodingDomain) return chapters;
+        // Filter out Chapter 18 if not on the medical coding domain
+        return chapters.filter(ch => !ch.title.toLowerCase().includes('medical coding specialization'));
+    }, [isMedicalCodingDomain]);
 
     useEffect(() => {
         if (contentRef.current) {
@@ -32,11 +43,10 @@ const Handbook: FC = () => {
             const pdfWidth = 210; 
             const pdfHeight = 297; 
             
-            for (let i = 0; i < chapters.length; i++) {
-                const ch = chapters[i];
+            for (let i = 0; i < availableChapters.length; i++) {
+                const ch = availableChapters[i];
                 toast.loading(`Capturing: ${ch.title}`, { id: toastId });
 
-                // Dynamic Header Logic: Skip for cover, show title for others
                 const showHeader = i > 0;
                 const sectionTitle = i < 3 ? 'Preliminary' : `Section ${i - 2}`;
 
@@ -44,7 +54,7 @@ const Handbook: FC = () => {
                     <div style="padding: 50px; background: white; color: #0f172a; font-family: 'Inter', sans-serif; width: 800px; min-height: 1130px; display: flex; flex-direction: column;">
                         ${showHeader ? `
                         <div style="font-size: 11px; color: #0891b2; font-weight: 900; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 35px; display: flex; justify-content: space-between; text-transform: uppercase; letter-spacing: 1px;">
-                            <span>Annapoorna Engine Handbook</span>
+                            <span>Portal Administration Handbook</span>
                             <span>${sectionTitle} • ${ch.title.split(':').pop()?.trim()}</span>
                         </div>
                         ` : ''}
@@ -72,7 +82,7 @@ const Handbook: FC = () => {
                 pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
             }
 
-            pdf.save('Annapoorna_Administrator_Handbook_v2.pdf');
+            pdf.save(`${activeOrg?.name || 'Portal'}_Handbook.pdf`);
             toast.success('Handbook Exported Successfully!', { id: toastId });
         } catch (error) {
             console.error("PDF generation failed:", error);
@@ -83,12 +93,12 @@ const Handbook: FC = () => {
         }
     };
 
-    const navItems = [
+    const navGroups = [
         { icon: <FileText size={16}/>, label: 'Core Concepts', range: [3, 5] },
         { icon: <ShieldCheck size={16}/>, label: 'User Guide', range: [6, 7] },
         { icon: <Settings size={16}/>, label: 'WP Admin', range: [8, 10] },
         { icon: <Database size={16}/>, label: 'In-App Admin', range: [11, 15] },
-        { icon: <Sparkles size={16}/>, label: 'Special Topics', range: [16, 19] }
+        { icon: <Layers size={16}/>, label: isMedicalCodingDomain ? 'Coding Spec' : 'Implementation', range: [16, 20] }
     ];
 
     return (
@@ -99,7 +109,7 @@ const Handbook: FC = () => {
                 style={{ width: '800px' }}
             ></div>
 
-            {/* SIDEBAR - Dark Professional Theme */}
+            {/* SIDEBAR */}
             <aside className={`bg-slate-900 border-r border-slate-800 transition-all duration-300 flex-shrink-0 ${isSidebarOpen ? 'w-full lg:w-80' : 'w-0 lg:w-0 overflow-hidden'}`}>
                 <div className="p-6 h-full flex flex-col">
                     <div className="flex items-center justify-between mb-8">
@@ -107,7 +117,7 @@ const Handbook: FC = () => {
                             <div className="p-2.5 bg-cyan-600 rounded-xl text-white shadow-lg shadow-cyan-500/20">
                                 <BookOpen size={20}/>
                             </div>
-                            <span className="font-black text-white uppercase tracking-tighter text-lg">Docs Center</span>
+                            <span className="font-black text-white uppercase tracking-tighter text-lg">Docs Engine</span>
                         </div>
                         <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-slate-400"><X /></button>
                     </div>
@@ -116,7 +126,7 @@ const Handbook: FC = () => {
                         <Search className="absolute left-3 top-3 text-slate-500" size={16} />
                         <input 
                             type="text" 
-                            placeholder="Search..."
+                            placeholder="Search Handbook..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-slate-200 focus:border-cyan-500 focus:ring-0 transition-all"
@@ -124,13 +134,13 @@ const Handbook: FC = () => {
                     </div>
 
                     <nav className="flex-grow overflow-y-auto space-y-8 pr-2 custom-scrollbar">
-                        {navItems.map((group, gIdx) => (
+                        {navGroups.map((group, gIdx) => (
                             <div key={gIdx}>
                                 <h5 className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 px-2">
                                     {group.icon} {group.label}
                                 </h5>
                                 <ul className="space-y-1">
-                                    {chapters.map((ch, idx) => {
+                                    {availableChapters.map((ch, idx) => {
                                         if (idx < group.range[0] || idx > group.range[1]) return null;
                                         const isActive = activeChapterIndex === idx;
                                         return (
@@ -166,8 +176,8 @@ const Handbook: FC = () => {
                             <Menu size={20}/>
                         </button>
                         <div className="hidden md:block">
-                            <p className="text-[10px] font-black text-cyan-600 uppercase tracking-widest">Handbook Section {activeChapterIndex - 2}</p>
-                            <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight truncate max-w-xs">{chapters[activeChapterIndex].title}</h2>
+                            <p className="text-[10px] font-black text-cyan-600 uppercase tracking-widest">Administrator Handbook</p>
+                            <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight truncate max-w-xs">{availableChapters[activeChapterIndex]?.title || 'Loading...'}</h2>
                         </div>
                     </div>
 
@@ -177,13 +187,13 @@ const Handbook: FC = () => {
                         className="flex items-center gap-2 px-6 py-3 bg-slate-950 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition shadow-xl disabled:opacity-50"
                     >
                         {isGeneratingPdf ? <Spinner size="sm" /> : <Download size={14} />}
-                        {isGeneratingPdf ? 'Processing...' : 'Export Master PDF'}
+                        {isGeneratingPdf ? 'Processing...' : 'Export Handbook'}
                     </button>
                 </header>
 
                 <div ref={contentRef} className="flex-1 overflow-y-auto p-10 lg:p-20 custom-scrollbar scroll-smooth">
                     <article className="max-w-4xl mx-auto mco-handbook-prose p-12 bg-white rounded-3xl shadow-xl border border-slate-200 animate-in fade-in slide-in-from-bottom-2 duration-700">
-                        <div dangerouslySetInnerHTML={{ __html: chapters[activeChapterIndex].content }} />
+                        <div dangerouslySetInnerHTML={{ __html: availableChapters[activeChapterIndex]?.content || '' }} />
                         
                         <div className="mt-24 pt-12 border-t border-slate-100 flex justify-between items-center">
                             <button 
@@ -195,7 +205,7 @@ const Handbook: FC = () => {
                             </button>
                             <button 
                                 onClick={() => setActiveChapterIndex(prev => prev + 1)}
-                                disabled={activeChapterIndex >= chapters.length - 1}
+                                disabled={activeChapterIndex >= availableChapters.length - 1}
                                 className="flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-black text-[10px] uppercase tracking-widest disabled:opacity-0 transition group"
                             >
                                 Next <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform"/>

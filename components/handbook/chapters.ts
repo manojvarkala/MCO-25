@@ -18,6 +18,7 @@ import { ch14_onboarding_workflow } from './content/ch14_onboarding_workflow.ts'
 import { ch15_plugin_integration } from './content/ch15_plugin_integration.ts';
 import { ch16_monetization } from './content/ch16_monetization.ts';
 import { ch17_visual_design } from './content/ch17_visual_design.ts';
+import { ch18_medical_coding_specialization } from './content/ch18_medical_coding_specialization.ts';
 
 export interface Chapter {
     title: string;
@@ -46,4 +47,5 @@ export const chapters: Chapter[] = [
     { title: "Chapter 15: Plugin Integration & Shortcodes", content: ch15_plugin_integration },
     { title: "Chapter 16: Monetization & Premium Access", content: ch16_monetization },
     { title: "Chapter 17: Visual Design & Grid Systems", content: ch17_visual_design },
+    { title: "Chapter 18: Medical Coding Specialization", content: ch18_medical_coding_specialization },
 ];
