@@ -3,7 +3,7 @@ export const tocContent = `
     
     <div class="space-y-4 mt-6 text-base handbook-toc">
         <div>
-            <h3 class="text-lg font-semibold">Part I: Core Concepts</h3>
+            <h3 class="text-lg font-semibold text-cyan-700">Part I: Core Concepts</h3>
             <ol class="list-decimal list-inside space-y-1 pl-4 mt-1">
                 <li><a href="#ch1" data-chapter-index="3">Introduction & The Headless Advantage</a></li>
                 <li><a href="#ch2" data-chapter-index="4">Architecture & Multi-Tenancy</a></li>
@@ -11,14 +11,14 @@ export const tocContent = `
             </ol>
         </div>
         <div>
-            <h3 class="text-lg font-semibold">Part II: User Guide</h3>
+            <h3 class="text-lg font-semibold text-cyan-700">Part II: User Guide</h3>
             <ol class="list-decimal list-inside space-y-1 pl-4 mt-1" start="4">
                 <li><a href="#ch4" data-chapter-index="6">The Dashboard & Subscription Management</a></li>
                 <li><a href="#ch5" data-chapter-index="7">Taking Exams & Understanding Results</a></li>
             </ol>
         </div>
         <div>
-            <h3 class="text-lg font-semibold">Part III: Administrator's Guide (WordPress)</h3>
+            <h3 class="text-lg font-semibold text-cyan-700">Part III: Administrator's Guide (WordPress)</h3>
             <ol class="list-decimal list-inside space-y-1 pl-4 mt-1" start="6">
                 <li><a href="#ch6" data-chapter-index="8">Plugin Setup & Admin Menu Overview</a></li>
                 <li><a href="#ch7" data-chapter-index="9">Managing Content: CPTs & Bulk Import</a></li>
@@ -26,7 +26,7 @@ export const tocContent = `
             </ol>
         </div>
         <div>
-            <h3 class="text-lg font-semibold">Part IV: Administrator's Guide (In-App)</h3>
+            <h3 class="text-lg font-semibold text-cyan-700">Part IV: Administrator's Guide (In-App)</h3>
             <ol class="list-decimal list-inside space-y-1 pl-4 mt-1" start="9">
                 <li><a href="#ch9" data-chapter-index="11">In-App Admin Panel & Debug Sidebar</a></li>
                 <li><a href="#ch10" data-chapter-index="12">Sales Analytics</a></li>
@@ -36,13 +36,19 @@ export const tocContent = `
             </ol>
         </div>
         <div>
-            <h3 class="text-lg font-semibold">Part V: Special Architecture & Design</h3>
+            <h3 class="text-lg font-semibold text-cyan-700">Part V: Special Architecture & Design</h3>
             <ol class="list-decimal list-inside space-y-1 pl-4 mt-1" start="14">
                 <li><a href="#ch14" data-chapter-index="16">The Complete Onboarding Workflow</a></li>
                 <li><a href="#ch15" data-chapter-index="17">Plugin Integration & Shortcodes</a></li>
                 <li><a href="#ch16" data-chapter-index="18">Monetization & Custom Access Logic</a></li>
                 <li><a href="#ch17" data-chapter-index="19">Visual Identity & Unified Grid Systems</a></li>
             </ol>
+        </div>
+        <div class="mco-toc-special-section mt-4 pt-4 border-t border-slate-100">
+             <h3 class="text-lg font-black text-amber-600">Specialization</h3>
+             <ol class="list-decimal list-inside space-y-1 pl-4 mt-1" start="18">
+                <li><a href="#ch18" data-chapter-index="20">Medical Coding Specialization (Exclusive)</a></li>
+             </ol>
         </div>
     </div>
 `;

@@ -1,10 +1,10 @@
-# Multi-Tenant Examination Platform Engine
+# Annapoorna Advantage: Multi-Tenant Examination Platform
 
 This project is a powerful, multi-tenant React frontend for a WordPress-powered examination system. It is designed to be a flexible and scalable "engine" that can serve customized exam experiences for various brands or subjects (e.g., medical coding, law, finance) using a single, unified codebase.
 
 ## Core Architecture
 
-The platform's strength lies in its headless architecture, which separates the application **engine** (this React app) from its **content** (managed in WordPress and Google Sheets).
+The platform's strength lies in its headless architecture, which separates the application **Annapoorna Advantage** (this React app) from its **content** (managed in WordPress and Google Sheets).
 
 -   **Headless WordPress Backend**: A WordPress site, powered by the custom `mco-exam-integration-engine` plugin, acts as the central hub for:
     -   **User Management & SSO**: Handles all user registration and authentication via JWT.

@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name:       MCO Exam Integration Engine
+ * Plugin Name:       Annapoorna Advantage Integration
  * Plugin URI:        https://annapoornainfo.com
- * Description:       A modular, high-performance backend for the React Examination App.
+ * Description:       A modular, high-performance backend for the Annapoorna Advantage React App.
  * Version:           5.2.4
  * Author:            Annapoorna Infotech
  * License:           GPL v2 or later
