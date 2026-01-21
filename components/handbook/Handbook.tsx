@@ -7,7 +7,6 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppContext } from '../../context/AppContext.tsx';
 
-// FIX: Corrected component syntax and fixed malformed template literals in classNames and string interpolations.
 const Handbook: FC = () => {
     const { activeOrg } = useAppContext();
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -49,7 +48,7 @@ const Handbook: FC = () => {
         if (!snapshotRef.current) return;
 
         setIsGeneratingPdf(true);
-        const toastId = toast.loading('Assembling Advantage Handbook...');
+        const toastId = toast.loading('Assembling Handbook Assets...');
 
         try {
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -67,7 +66,7 @@ const Handbook: FC = () => {
                     <div style="padding: 50px; background: white; color: #0f172a; font-family: 'Inter', sans-serif; width: 800px; min-height: 1130px; display: flex; flex-direction: column;">
                         ${showHeader ? `
                         <div style="font-size: 11px; color: #0891b2; font-weight: 900; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 35px; display: flex; justify-content: space-between; text-transform: uppercase; letter-spacing: 1px;">
-                            <span>Annapoorna Advantage Documentation</span>
+                            <span>Portal Administration Handbook</span>
                             <span>${sectionTitle} • ${ch.title.split(':').pop()?.trim()}</span>
                         </div>
                         ` : ''}
@@ -75,7 +74,7 @@ const Handbook: FC = () => {
                             ${ch.content}
                         </div>
                         <div style="margin-top: 50px; border-top: 1px solid #f1f5f9; padding-top: 15px; font-size: 10px; color: #94a3b8; text-align: center;">
-                            © ${new Date().getFullYear()} Annapoorna Infotech • Advantage Framework Page ${i + 1}
+                            © ${new Date().getFullYear()} Annapoorna Infotech • Page ${i + 1}
                         </div>
                     </div>
                 `;
@@ -95,9 +94,8 @@ const Handbook: FC = () => {
                 pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
             }
 
-            // FIX: Corrected template literal escaping
-            pdf.save(`Annapoorna_Advantage_Handbook.pdf`);
-            toast.success('Advantage Handbook Exported!', { id: toastId });
+            pdf.save(`${activeOrg?.name || 'Portal'}_Handbook.pdf`);
+            toast.success('Handbook Exported Successfully!', { id: toastId });
         } catch (error) {
             console.error("PDF generation failed:", error);
             toast.error('Export failed. Please try again.', { id: toastId });
@@ -110,11 +108,17 @@ const Handbook: FC = () => {
     const navGroups = [
         { icon: <FileText size={16}/>, label: 'Core Concepts', range: [3, 5] },
         { icon: <ShieldCheck size={16}/>, label: 'User Guide', range: [6, 7] },
-        { icon: <Settings size={16}/>, label: 'Advantage Admin', range: [8, 10] },
-        { icon: <Database size={16}/>, label: 'Backend Orchestration', range: [11, 15] },
+        { icon: <Settings size={16}/>, label: 'WP Admin', range: [8, 10] },
+        { icon: <Database size={16}/>, label: 'In-App Admin', range: [11, 15] },
         { icon: <Layers size={16}/>, label: 'Implementation', range: [16, 19] },
+        // Conditional group for Medical Coding Specialists
         ...(isMedicalCodingDomain ? [{ icon: <Award size={16}/>, label: 'Coding Specialization', range: [20, 20] }] : [])
     ];
+
+    const handleChapterSelect = (title: string) => {
+        const index = availableChapters.findIndex(c => c.title === title);
+        if (index !== -1) setActiveChapterIndex(index);
+    };
 
     return (
         <div className="flex flex-col lg:flex-row min-h-[85vh] bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200">
@@ -125,7 +129,6 @@ const Handbook: FC = () => {
             ></div>
 
             {/* SIDEBAR */}
-            {/* FIX: Fixed malformed className template literal */}
             <aside className={`bg-slate-900 border-r border-slate-800 transition-all duration-300 flex-shrink-0 ${isSidebarOpen ? 'w-full lg:w-80' : 'w-0 lg:w-0 overflow-hidden'}`}>
                 <div className="p-6 h-full flex flex-col">
                     <div className="flex items-center justify-between mb-8">
@@ -133,7 +136,7 @@ const Handbook: FC = () => {
                             <div className="p-2.5 bg-cyan-600 rounded-xl text-white shadow-lg shadow-cyan-500/20">
                                 <BookOpen size={20}/>
                             </div>
-                            <span className="font-black text-white uppercase tracking-tighter text-lg">Advantage Docs</span>
+                            <span className="font-black text-white uppercase tracking-tighter text-lg">Docs Engine</span>
                         </div>
                         <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-slate-400"><X /></button>
                     </div>
@@ -152,12 +155,13 @@ const Handbook: FC = () => {
                     <nav className="flex-grow overflow-y-auto space-y-8 pr-2 custom-scrollbar">
                         {navGroups.map((group, gIdx) => (
                             <div key={gIdx}>
-                                {/* FIX: Fixed malformed className template literal */}
                                 <h5 className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-3 px-2 ${group.label === 'Coding Specialization' ? 'text-amber-500' : 'text-slate-500'}`}>
                                     {group.icon} {group.label}
                                 </h5>
                                 <ul className="space-y-1">
                                     {chapters.map((ch, originalIdx) => {
+                                        // We map over 'chapters' (original) to respect the hardcoded ranges, 
+                                        // but only render if they exist in 'availableChapters'
                                         if (originalIdx < group.range[0] || originalIdx > group.range[1]) return null;
                                         
                                         const isAvailable = availableChapters.some(ac => ac.title === ch.title);
@@ -170,7 +174,6 @@ const Handbook: FC = () => {
                                             <li key={originalIdx}>
                                                 <button
                                                     onClick={() => setActiveChapterIndex(currentIdxInAvailable)}
-                                                    // FIX: Fixed malformed className template literal
                                                     className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-black transition-all border-l-4 ${
                                                         isActive 
                                                             ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500 shadow-sm' 
@@ -200,7 +203,7 @@ const Handbook: FC = () => {
                             <Menu size={20}/>
                         </button>
                         <div className="hidden md:block">
-                            <p className="text-[10px] font-black text-cyan-600 uppercase tracking-widest">Annapoorna Advantage Knowledge Base</p>
+                            <p className="text-[10px] font-black text-cyan-600 uppercase tracking-widest">Portal Administrator Handbook</p>
                             <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight truncate max-w-xs">{availableChapters[activeChapterIndex]?.title || 'Loading...'}</h2>
                         </div>
                     </div>

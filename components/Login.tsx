@@ -53,13 +53,12 @@ const Login: FC = () => {
         // Always enforce the API URL from the redirect if present.
         // If the URL changes, force a full page reload to ensure apiConfig.ts re-evaluates.
         if (apiUrlOverride) {
-            const sanitizedUrl = apiUrlOverride.replace(/\/$/, "");
             const currentStoredUrl = localStorage.getItem('mco_dynamic_api_url');
-            if (currentStoredUrl !== sanitizedUrl) {
-                console.log(`Binding app to new backend: ${sanitizedUrl}`);
-                localStorage.setItem('mco_dynamic_api_url', sanitizedUrl);
+            if (currentStoredUrl !== apiUrlOverride) {
+                console.log(`Binding app to new backend: ${apiUrlOverride}`);
+                localStorage.setItem('mco_dynamic_api_url', apiUrlOverride);
                 // Force a full reload to ensure apiConfig.ts is re-evaluated and the base URL is picked up.
-                window.location.href = window.location.pathname + window.location.search; 
+                window.location.reload(); 
                 return; // Stop further execution in this effect
             }
         }

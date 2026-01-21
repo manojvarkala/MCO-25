@@ -67,8 +67,6 @@ const processConfigData = (configData: any) => {
             const rawId = getField(exam, ['id', 'ID', 'post_id']);
             if (!rawId) return null;
             const id = rawId.toString();
-            
-            // Loose lookup to match category questions if specific one is missing
             const category = categories.find(c => c.certificationExamId === id || c.practiceExamId === id);
             const categoryUrl = category ? category.questionSourceUrl : undefined;
 
@@ -84,9 +82,9 @@ const processConfigData = (configData: any) => {
                 regularPrice: parseFloat(getField(exam, ['regularPrice', 'regular_price'])) || 0,
                 isPractice: exam.isPractice ?? (category ? category.practiceExamId === id : false),
                 productSku: getField(exam, ['productSku', 'product_sku', 'sku']),
-                addonSku: exam.addonSku || '', 
-                certificateEnabled: !!exam.certificateEnabled,
-                isProctored: !!exam.isProctored,
+                addonSku: exam.addonSku || '', // Explicitly preserve addonSku
+                certificateEnabled: !!exam.certificateEnabled, // Cast to bool
+                isProctored: !!exam.isProctored, // Cast to bool
                 questionSourceUrl: getField(exam, ['questionSourceUrl', 'question_source_url'], categoryUrl)
             };
         }).filter(Boolean) as Exam[];
@@ -161,27 +159,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setOrganizations(processedData.processedOrgs);
       setExamPrices(config.examPrices || null);
       setSuggestedBooks(processedData.allSuggestedBooks);
-      
-      const tenantConfig = getTenantConfig();
-      const apiDomain = new URL(tenantConfig.apiBaseUrl || 'https://www.annapoornainfo.com').hostname.toLowerCase().replace('www.', '');
-      const currentHost = window.location.hostname.toLowerCase().replace('www.', '');
-      
-      // DEEP TENANT MATCHING:
-      // We look for the organization whose website field matches the current host OR the API domain.
-      let newActiveOrg = processedData.processedOrgs.find(o => {
-        const orgWeb = (o.website || '').toLowerCase().replace('www.', '');
-        return apiDomain.includes(orgWeb) || orgWeb.includes(apiDomain) || currentHost.includes(orgWeb);
-      });
-      
-      if (!newActiveOrg) {
-          const storedOrgId = localStorage.getItem('activeOrgId');
-          newActiveOrg = processedData.processedOrgs.find(o => o.id === storedOrgId);
-      }
-      
-      if (!newActiveOrg) {
-          newActiveOrg = processedData.processedOrgs[0];
-      }
-
+      const newActiveOrg = processedData.processedOrgs.find(o => o.id === localStorage.getItem('activeOrgId')) || processedData.processedOrgs[0];
       setActiveOrg(newActiveOrg);
       
       if (newActiveOrg) {
@@ -233,8 +211,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setIsInitializing(true);
     let configFound = false;
     const tenantConfig = getTenantConfig();
-    const apiBase = tenantConfig.apiBaseUrl || '';
-    const cacheKey = `appConfigCache_${apiBase}`;
+    const cacheKey = `appConfigCache_${tenantConfig.apiBaseUrl}`;
 
     try {
         if (!forceRefresh) {
@@ -251,9 +228,9 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             } catch (e) { localStorage.removeItem(cacheKey); }
         }
 
-        const apiUrl = apiBase ? `${apiBase}/wp-json/mco-app/v1/config` : '/wp-json/mco-app/v1/config';
+        const apiUrl = tenantConfig.apiBaseUrl ? `${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config` : '/wp-json/mco-app/v1/config';
         try {
-            const response = await fetch(`${apiUrl}?nocache=${forceRefresh ? Date.now() : ''}`, { mode: 'cors', credentials: 'include' });
+            const response = await fetch(`${apiUrl}?nocache=${forceRefresh ? Date.now() : ''}`, { mode: 'cors', credentials: 'same-origin' });
             if (response.ok) {
                 const liveConfig = await response.json();
                 const processed = processConfigData(liveConfig);
@@ -264,7 +241,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 }
             }
         } catch (fetchErr) {
-            console.warn("AppContext: API fetch failed.", fetchErr);
+            console.warn("AppContext: Live API fetch failed. Falling back to static JSON.", fetchErr);
         }
 
         if (!configFound) {
@@ -279,11 +256,11 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                     }
                 }
             } catch (staticErr) {
-                console.error("AppContext: Static load failed.", staticErr);
+                console.error("AppContext: Static configuration load failed.", staticErr);
             }
         }
     } catch (error: any) {
-        console.error("AppContext: Fatal load error:", error);
+        console.error("AppContext: Fatal error loading app configuration:", error);
     } finally {
         setIsInitializing(false);
     }

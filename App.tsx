@@ -74,14 +74,14 @@ const AppContent: FC = () => {
 
     useEffect(() => {
         if (activeOrg) {
-            document.title = `${activeOrg.name} | Annapoorna Advantage`;
+            document.title = `${activeOrg.name} | Examination Portal`;
             let metaDescription = document.querySelector('meta[name="description"]');
             if (!metaDescription) {
                 metaDescription = document.createElement('meta');
                 metaDescription.setAttribute('name', 'description');
                 document.head.appendChild(metaDescription);
             }
-            const description = `The official Annapoorna Advantage portal for ${activeOrg.name}. Access practice tests, certification exams, and AI-powered study guides.`;
+            const description = `The official examination portal for ${activeOrg.name}. Access practice tests, certification exams, and AI-powered study guides.`;
             metaDescription.setAttribute('content', description);
         }
     }, [activeOrg]);
@@ -96,7 +96,7 @@ const AppContent: FC = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white p-6 text-center">
                 <LogoSpinner />
-                <p className="mt-4 font-mono text-cyan-400 animate-pulse uppercase tracking-widest text-xs">Initializing Advantage Environment...</p>
+                <p className="mt-4 font-mono text-cyan-400 animate-pulse uppercase tracking-widest text-xs">Initializing Secure Environment...</p>
             </div>
         );
     }
@@ -110,7 +110,7 @@ const AppContent: FC = () => {
                 <div className="max-w-md w-full bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700">
                     <WifiOff size={48} className="mx-auto text-red-400 mb-4" />
                     <h2 className="text-2xl font-bold mb-2">Connection Issue</h2>
-                    <p className="text-slate-400 mb-4 text-sm">We're having trouble connecting to the Advantage server.</p>
+                    <p className="text-slate-400 mb-4 text-sm">We're having trouble connecting to the examination server.</p>
                     <div className="bg-slate-900/50 p-3 rounded-lg mb-6 text-left border border-slate-700">
                         <p className="text-[10px] uppercase font-bold text-slate-500 mb-1 flex items-center gap-1"><Server size={10} /> Attempting to connect to:</p>
                         <code className="text-xs text-cyan-400 break-all">{targetUrl}</code>
@@ -133,7 +133,7 @@ const AppContent: FC = () => {
                 <div className="bg-[rgba(var(--color-accent-rgb),0.2)] border-b border-[rgba(var(--color-accent-rgb),0.4)]">
                     <div className="container mx-auto px-4 py-2 text-center text-sm font-medium text-[rgb(var(--color-text-strong-rgb))] flex items-center justify-center gap-2">
                         <AlertTriangle size={16} className="flex-shrink-0" />
-                        <span>All exams are independent practice tools designed to build proficiency via Annapoorna Advantage. Not affiliated with certifying bodies.</span>
+                        <span>All exams are independent practice tools designed to build proficiency. Not affiliated with AAPC, AHIMA, or any certifying body.</span>
                     </div>
                 </div>
             )}

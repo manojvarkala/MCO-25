@@ -37,6 +37,7 @@ export const getTenantConfig = (): TenantConfig => {
     }
 
     // 2. Development Mode (Localhost)
+    // FIX: Using empty string ensures the Vite Proxy is triggered, bypassing CORS errors during dev.
     if (isDev && (hostname === 'localhost' || hostname === '127.0.0.1')) {
         return {
             apiBaseUrl: '', 
@@ -44,20 +45,12 @@ export const getTenantConfig = (): TenantConfig => {
         };
     }
 
-    // 3. Persistent Binding (Resolved Fix: Correctly map static file to stored URL)
+    // 3. Persistent Binding
     const storedUrl = localStorage.getItem('mco_dynamic_api_url');
     if (storedUrl && storedUrl.startsWith('http')) {
-        const sanitizedUrl = storedUrl.replace(/\/$/, "");
-        let staticPath = DEFAULT_TENANT_CONFIG.staticConfigPath;
-        for (const key in KNOWN_TENANT_CONFIGS) {
-            if (sanitizedUrl.includes(key)) {
-                staticPath = KNOWN_TENANT_CONFIGS[key].staticConfigPath;
-                break;
-            }
-        }
         return {
-            apiBaseUrl: sanitizedUrl,
-            staticConfigPath: staticPath
+            apiBaseUrl: storedUrl.replace(/\/$/, ""),
+            staticConfigPath: DEFAULT_TENANT_CONFIG.staticConfigPath
         };
     }
 

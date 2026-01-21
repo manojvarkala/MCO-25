@@ -1,10 +1,10 @@
 export const ch1Content = `
     <h3 class="text-xl font-bold">1.1 The Vision: Your Centralized Examination Ecosystem</h3>
-    <p>Welcome to the Annapoorna Advantage, a revolutionary platform engineered not just to administer tests, but to build and scale entire educational enterprises. Our vision was to create a single, powerful, multi-tenant solution that empowers organizations to launch bespoke, branded examination portals with unparalleled speed and efficiency. Whether you operate in medical coding, legal studies, finance, or any other professional field, this engine is your launchpad for creating a world-class certification experience.</p>
+    <p>Welcome to the Annapoorna Examination Engine, a revolutionary platform engineered not just to administer tests, but to build and scale entire educational enterprises. Our vision was to create a single, powerful, multi-tenant solution that empowers organizations to launch bespoke, branded examination portals with unparalleled speed and efficiency. Whether you operate in medical coding, legal studies, finance, or any other professional field, this engine is your launchpad for creating a world-class certification experience.</p>
     <p>Imagine deploying a new, fully-branded exam portal for a client or a new subject in a matter of hours, not months. This platform is designed to eliminate technical barriers, allowing you to focus on what truly matters: creating high-quality content and growing your audience.</p>
 
     <h3 class="text-xl font-bold mt-6">1.2 The Power of the Headless Engine</h3>
-    <p>At its core, the Annapoorna Advantage operates on a "headless" architecture. This means we have separated the beautiful, lightning-fast user interface (the "head") from the robust content and e-commerce backend (the "body," powered by WordPress and WooCommerce). This separation is not just a technical detail—it is your competitive advantage.</p>
+    <p>At its core, the Annapoorna Engine operates on a "headless" architecture. This means we have separated the beautiful, lightning-fast user interface (the "head") from the robust content and e-commerce backend (the "body," powered by WordPress and WooCommerce). This separation is not just a technical detail—it is your competitive advantage.</p>
     <ul>
         <li><strong>Unmatched User Experience:</strong> Deliver a modern, app-like experience that is faster and more responsive than any traditional website, keeping your users engaged and focused.</li>
         <li><strong>Infinite Flexibility:</strong> Change the look, feel, and functionality of your user-facing portals without ever risking your backend data. Adapt to market trends instantly.</li>
@@ -23,7 +23,7 @@ export const ch1Content = `
     </ul>
 
     <h3 class="text-xl font-bold mt-6">1.4 Purpose of This Handbook</h3>
-    <p>This handbook is your definitive guide to unlocking the full potential of the Annapoorna Advantage. It provides a comprehensive overview of the platform's architecture, a practical guide for administrators, and a technical reference for developers, ensuring you have all the knowledge needed to manage and grow your examination business.</p>
+    <p>This handbook is your definitive guide to unlocking the full potential of the Annapoorna Examination Engine. It provides a comprehensive overview of the platform's architecture, a practical guide for administrators, and a technical reference for developers, ensuring you have all the knowledge needed to manage and grow your examination business.</p>
     
     <h3 class="text-xl font-bold mt-6">1.5 Intended Audience</h3>
     <p>This guide is written for three primary groups: <strong>Administrators</strong> who manage content and users, <strong>Business Owners</strong> who strategize and scale the platform, and <strong>Developers</strong> who maintain and extend its capabilities.</p>
