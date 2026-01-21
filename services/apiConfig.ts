@@ -44,7 +44,7 @@ export const getTenantConfig = (): TenantConfig => {
         };
     }
 
-    // 3. Persistent Binding (FIXED: Now correctly resolves staticConfigPath for the stored URL)
+    // 3. Persistent Binding (Resolved Fix: Correctly map static file to stored URL)
     const storedUrl = localStorage.getItem('mco_dynamic_api_url');
     if (storedUrl && storedUrl.startsWith('http')) {
         const sanitizedUrl = storedUrl.replace(/\/$/, "");

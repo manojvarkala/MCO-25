@@ -2,7 +2,7 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 29.3.0 (Full Restoration & Strict ID Logic)
+ * VERSION: 29.4.0 (Full Restoration & Multi-Prefix ID Resolution)
  * =============================================================================
  */
 
@@ -14,31 +14,28 @@ if (!defined('ABSPATH')) exit;
  */
 if (!function_exists('mco_get_api_params')) {
     function mco_get_api_params($request) {
-        // 1. Standard WP Parser
         $params = $request->get_json_params();
         if (is_array($params) && !empty($params)) return $params;
 
-        // 2. Direct Body Decoding
         $body = $request->get_body();
         if (!empty($body)) {
             $decoded = json_decode($body, true);
             if (is_array($decoded)) return $decoded;
         }
 
-        // 3. Raw Stream Fallback
         $raw = file_get_contents('php://input');
         if (!empty($raw)) {
             $decoded = json_decode($raw, true);
             if (is_array($decoded)) return $decoded;
         }
 
-        // 4. Default to standard params (GET/POST mix)
         return $request->get_params();
     }
 }
 
 /**
- * HELPER: Deep ID Extraction
+ * HELPER: Multi-Prefix ID Extraction
+ * Resolves WP Post ID from any format sent by the React app (prod-, prac-, etc).
  */
 if (!function_exists('mco_extract_numeric_id')) {
     function mco_extract_numeric_id($raw_id) {
@@ -176,7 +173,6 @@ function mco_handle_admin_update_exam_program($request) {
     $p = mco_get_api_params($request); 
     if (empty($p)) return new WP_Error('400', 'Empty payload.');
 
-    // Exhaustive ID check
     $raw_id = $p['programId'] ?? $p['postId'] ?? $p['id'] ?? '';
     $post_id = mco_extract_numeric_id($raw_id);
     if (!$post_id) return new WP_Error('404', 'Valid Program ID not present in request.'); 

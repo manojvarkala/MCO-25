@@ -165,21 +165,15 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       const currentHost = window.location.hostname.toLowerCase();
       
       // STRICT TENANT MATCHING:
-      // 1. Try to find the org whose website field matches the current API domain
-      // 2. Try to match by localStorage ID
-      // 3. Match by hostname
+      // We look for the organization whose website field matches the current API domain or current hostname.
       let newActiveOrg = processedData.processedOrgs.find(o => {
         const orgWeb = (o.website || '').toLowerCase().replace('www.', '');
-        return apiDomain.includes(orgWeb) || orgWeb.includes(apiDomain);
+        return apiDomain.includes(orgWeb) || orgWeb.includes(apiDomain) || currentHost.includes(orgWeb);
       });
       
       if (!newActiveOrg) {
           const storedOrgId = localStorage.getItem('activeOrgId');
           newActiveOrg = processedData.processedOrgs.find(o => o.id === storedOrgId);
-      }
-      
-      if (!newActiveOrg) {
-          newActiveOrg = processedData.processedOrgs.find(o => currentHost.includes(o.website.toLowerCase().replace('www.', '')));
       }
       
       if (!newActiveOrg) {
