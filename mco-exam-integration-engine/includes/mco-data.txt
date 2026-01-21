@@ -43,12 +43,15 @@ if (!function_exists('mco_get_full_snapshot_data')) {
             $logo_url = (string)($image[0] ?? '');
         }
 
+        $host = (string)parse_url(get_bloginfo('url'), PHP_URL_HOST);
+        $org_id = 'org-' . sanitize_title($host);
+
         $snapshot = [
             "version" => (string)get_option('mco_config_version', current_time('YmdHis')),
             "organizations" => [[
-                "id" => "org-mco",
+                "id" => $org_id,
                 "name" => (string)get_bloginfo('name'),
-                "website" => (string)parse_url(get_bloginfo('url'), PHP_URL_HOST),
+                "website" => $host,
                 "address" => (string)get_option('mco_organization_address', ''),
                 "logoUrl" => $logo_url,
                 "introVideoUrl" => (string)get_option('mco_intro_video_url', ''),
@@ -83,7 +86,6 @@ if (!function_exists('mco_get_full_snapshot_data')) {
 if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
     function mco_fetch_and_process_dynamic_app_data() {
         $exams = []; $cats = []; $prices = []; $books = [];
-
         if (!class_exists('WooCommerce')) return ['exams'=>[], 'examProductCategories'=>[], 'examPrices'=>[], 'suggestedBooks'=>[]];
 
         $program_posts = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1, 'post_status' => ['publish', 'draft', 'private']]);
@@ -141,50 +143,18 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
             ];
         }
 
-        // FETCH ALL PRODUCTS (Exhaustive loop including non-published for link verification)
-        $product_query = new WC_Product_Query([
-            'status' => ['publish', 'draft', 'private'], 
-            'limit' => -1
-        ]);
+        $product_query = new WC_Product_Query(['status' => ['publish', 'draft', 'private'], 'limit' => -1]);
         $all_products = $product_query->get_products();
         foreach ($all_products as $product) {
             $psku = $product->get_sku();
             if (!$psku) continue;
-
-            $is_bundle = get_post_meta($product->get_id(), '_mco_is_bundle', true) === 'yes' || $product->is_type('bundle');
-            
-            $prices[$psku] = [
-                'productId' => (string)$product->get_id(),
-                'sku' => $psku,
-                'price' => (float)$product->get_price(), 
-                'regularPrice' => (float)$product->get_regular_price(), 
-                'name' => (string)$product->get_name(),
-                'type' => (string)$product->get_type(),
-                'isBundle' => $is_bundle,
-                'status' => $product->get_status(),
-                'bundledSkus' => (array)get_post_meta($product->get_id(), '_mco_bundled_skus', true) ?: []
-            ];
-            
-            if ($product->is_type('subscription')) {
-                $prices[$psku]['subscription_period'] = (string)$product->get_meta('_subscription_period');
-            }
+            $prices[$psku] = ['productId' => (string)$product->get_id(), 'sku' => $psku, 'price' => (float)$product->get_price(), 'regularPrice' => (float)$product->get_regular_price(), 'name' => (string)$product->get_name(), 'type' => (string)$product->get_type(), 'isBundle' => (get_post_meta($product->get_id(), '_mco_is_bundle', true) === 'yes' || $product->is_type('bundle')), 'status' => $product->get_status(), 'bundledSkus' => (array)get_post_meta($product->get_id(), '_mco_bundled_skus', true) ?: []];
         }
 
         $book_posts = get_posts(['post_type' => 'mco_recommended_book', 'posts_per_page' => -1, 'post_status' => 'publish']);
         foreach ($book_posts as $bp) {
-            $books[] = [
-                'id' => (string)get_post_meta($bp->ID, '_mco_book_id', true),
-                'title' => (string)$bp->post_title,
-                'description' => wp_kses_post((string)$bp->post_content),
-                'thumbnailUrl' => (string)get_post_meta($bp->ID, '_mco_thumbnail_url', true),
-                'affiliateLinks' => [
-                    'com' => (string)get_post_meta($bp->ID, '_mco_link_com', true) ?: '',
-                    'in' => (string)get_post_meta($bp->ID, '_mco_link_in', true) ?: '',
-                    'ae' => (string)get_post_meta($bp->ID, '_mco_link_ae', true) ?: '',
-                ]
-            ];
+            $books[] = ['id' => (string)get_post_meta($bp->ID, '_mco_book_id', true), 'title' => (string)$bp->post_title, 'description' => wp_kses_post((string)$bp->post_content), 'thumbnailUrl' => (string)get_post_meta($bp->ID, '_mco_thumbnail_url', true), 'affiliateLinks' => ['com' => (string)get_post_meta($bp->ID, '_mco_link_com', true) ?: '', 'in' => (string)get_post_meta($bp->ID, '_mco_link_in', true) ?: '', 'ae' => (string)get_post_meta($bp->ID, '_mco_link_ae', true) ?: '']];
         }
-
         return ['exams' => $exams, 'examProductCategories' => $cats, 'examPrices' => $prices, 'suggestedBooks' => $books];
     }
 }
@@ -192,11 +162,10 @@ if (!function_exists('mco_fetch_and_process_dynamic_app_data')) {
 if (!function_exists('mco_get_app_config_data')) {
     function mco_get_app_config_data() {
         $version = (string)get_option('mco_config_version', '0');
-        $cache_key = 'mco_app_config_full_' . md5($version);
-        
+        $site_id = (string)parse_url(get_bloginfo('url'), PHP_URL_HOST);
+        $cache_key = 'mco_app_config_' . md5($site_id . $version);
         $cached = get_transient($cache_key);
         if ($cached !== false) return $cached;
-        
         $data = mco_get_full_snapshot_data(false);
         set_transient($cache_key, $data, DAY_IN_SECONDS);
         return $data;
@@ -205,13 +174,7 @@ if (!function_exists('mco_get_app_config_data')) {
 
 if (!function_exists('mco_get_available_themes')) {
     function mco_get_available_themes() {
-        return [
-            ['id'=>'default','name'=>'Cyberpunk'],
-            ['id'=>'professional','name'=>'Professional'],
-            ['id'=>'serene','name'=>'Serene'],
-            ['id'=>'academic','name'=>'Academic'],
-            ['id'=>'noir','name'=>'Noir']
-        ];
+        return [['id'=>'default','name'=>'Cyberpunk'], ['id'=>'professional','name'=>'Professional'], ['id'=>'serene','name'=>'Serene'], ['id'=>'academic','name'=>'Academic'], ['id'=>'noir','name'=>'Noir']];
     }
 }
 ?>

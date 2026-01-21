@@ -82,9 +82,9 @@ const processConfigData = (configData: any) => {
                 regularPrice: parseFloat(getField(exam, ['regularPrice', 'regular_price'])) || 0,
                 isPractice: exam.isPractice ?? (category ? category.practiceExamId === id : false),
                 productSku: getField(exam, ['productSku', 'product_sku', 'sku']),
-                addonSku: exam.addonSku || '', // Explicitly preserve addonSku
-                certificateEnabled: !!exam.certificateEnabled, // Cast to bool
-                isProctored: !!exam.isProctored, // Cast to bool
+                addonSku: exam.addonSku || '', 
+                certificateEnabled: !!exam.certificateEnabled,
+                isProctored: !!exam.isProctored,
                 questionSourceUrl: getField(exam, ['questionSourceUrl', 'question_source_url'], categoryUrl)
             };
         }).filter(Boolean) as Exam[];
@@ -160,17 +160,26 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setExamPrices(config.examPrices || null);
       setSuggestedBooks(processedData.allSuggestedBooks);
       
-      const hostname = window.location.hostname.toLowerCase();
-      const storedOrgId = localStorage.getItem('activeOrgId');
+      const tenantConfig = getTenantConfig();
+      const apiDomain = new URL(tenantConfig.apiBaseUrl || 'https://www.annapoornainfo.com').hostname.toLowerCase().replace('www.', '');
+      const currentHost = window.location.hostname.toLowerCase();
       
-      // IMPROVED MATCHING:
-      // 1. Try to match by stored ID from localStorage
-      // 2. If no match, try to match by hostname from the configuration's website field
-      // 3. Finally, fallback to the first organization in the data set
-      let newActiveOrg = processedData.processedOrgs.find(o => o.id === storedOrgId);
+      // STRICT TENANT MATCHING:
+      // 1. Try to find the org whose website field matches the current API domain
+      // 2. Try to match by localStorage ID
+      // 3. Match by hostname
+      let newActiveOrg = processedData.processedOrgs.find(o => {
+        const orgWeb = (o.website || '').toLowerCase().replace('www.', '');
+        return apiDomain.includes(orgWeb) || orgWeb.includes(apiDomain);
+      });
       
       if (!newActiveOrg) {
-          newActiveOrg = processedData.processedOrgs.find(o => hostname.includes(o.website.toLowerCase()));
+          const storedOrgId = localStorage.getItem('activeOrgId');
+          newActiveOrg = processedData.processedOrgs.find(o => o.id === storedOrgId);
+      }
+      
+      if (!newActiveOrg) {
+          newActiveOrg = processedData.processedOrgs.find(o => currentHost.includes(o.website.toLowerCase().replace('www.', '')));
       }
       
       if (!newActiveOrg) {
@@ -228,7 +237,8 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setIsInitializing(true);
     let configFound = false;
     const tenantConfig = getTenantConfig();
-    const cacheKey = `appConfigCache_${tenantConfig.apiBaseUrl}`;
+    const apiBase = tenantConfig.apiBaseUrl || '';
+    const cacheKey = `appConfigCache_${apiBase}`;
 
     try {
         if (!forceRefresh) {
@@ -245,7 +255,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
             } catch (e) { localStorage.removeItem(cacheKey); }
         }
 
-        const apiUrl = tenantConfig.apiBaseUrl ? `${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config` : '/wp-json/mco-app/v1/config';
+        const apiUrl = apiBase ? `${apiBase}/wp-json/mco-app/v1/config` : '/wp-json/mco-app/v1/config';
         try {
             const response = await fetch(`${apiUrl}?nocache=${forceRefresh ? Date.now() : ''}`, { mode: 'cors', credentials: 'include' });
             if (response.ok) {
@@ -258,7 +268,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 }
             }
         } catch (fetchErr) {
-            console.warn("AppContext: Live API fetch failed. Falling back to static JSON.", fetchErr);
+            console.warn("AppContext: API fetch failed.", fetchErr);
         }
 
         if (!configFound) {
@@ -273,11 +283,11 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
                     }
                 }
             } catch (staticErr) {
-                console.error("AppContext: Static configuration load failed.", staticErr);
+                console.error("AppContext: Static load failed.", staticErr);
             }
         }
     } catch (error: any) {
-        console.error("AppContext: Fatal error loading app configuration:", error);
+        console.error("AppContext: Fatal load error:", error);
     } finally {
         setIsInitializing(false);
     }
