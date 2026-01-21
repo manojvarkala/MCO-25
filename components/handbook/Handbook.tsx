@@ -49,7 +49,7 @@ const Handbook: FC = () => {
         if (!snapshotRef.current) return;
 
         setIsGeneratingPdf(true);
-        const toastId = toast.loading('Assembling Handbook Assets...');
+        const toastId = toast.loading('Assembling Advantage Handbook...');
 
         try {
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -67,7 +67,7 @@ const Handbook: FC = () => {
                     <div style="padding: 50px; background: white; color: #0f172a; font-family: 'Inter', sans-serif; width: 800px; min-height: 1130px; display: flex; flex-direction: column;">
                         ${showHeader ? `
                         <div style="font-size: 11px; color: #0891b2; font-weight: 900; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 35px; display: flex; justify-content: space-between; text-transform: uppercase; letter-spacing: 1px;">
-                            <span>Annapoorna Advantage Handbook</span>
+                            <span>Annapoorna Advantage Documentation</span>
                             <span>${sectionTitle} • ${ch.title.split(':').pop()?.trim()}</span>
                         </div>
                         ` : ''}
@@ -75,7 +75,7 @@ const Handbook: FC = () => {
                             ${ch.content}
                         </div>
                         <div style="margin-top: 50px; border-top: 1px solid #f1f5f9; padding-top: 15px; font-size: 10px; color: #94a3b8; text-align: center;">
-                            © ${new Date().getFullYear()} Annapoorna Infotech • Page ${i + 1}
+                            © ${new Date().getFullYear()} Annapoorna Infotech • Advantage Framework Page ${i + 1}
                         </div>
                     </div>
                 `;
@@ -97,7 +97,7 @@ const Handbook: FC = () => {
 
             // FIX: Corrected template literal escaping
             pdf.save(`Annapoorna_Advantage_Handbook.pdf`);
-            toast.success('Handbook Exported Successfully!', { id: toastId });
+            toast.success('Advantage Handbook Exported!', { id: toastId });
         } catch (error) {
             console.error("PDF generation failed:", error);
             toast.error('Export failed. Please try again.', { id: toastId });
@@ -110,8 +110,8 @@ const Handbook: FC = () => {
     const navGroups = [
         { icon: <FileText size={16}/>, label: 'Core Concepts', range: [3, 5] },
         { icon: <ShieldCheck size={16}/>, label: 'User Guide', range: [6, 7] },
-        { icon: <Settings size={16}/>, label: 'WP Admin', range: [8, 10] },
-        { icon: <Database size={16}/>, label: 'In-App Admin', range: [11, 15] },
+        { icon: <Settings size={16}/>, label: 'Advantage Admin', range: [8, 10] },
+        { icon: <Database size={16}/>, label: 'Backend Orchestration', range: [11, 15] },
         { icon: <Layers size={16}/>, label: 'Implementation', range: [16, 19] },
         ...(isMedicalCodingDomain ? [{ icon: <Award size={16}/>, label: 'Coding Specialization', range: [20, 20] }] : [])
     ];
@@ -200,7 +200,7 @@ const Handbook: FC = () => {
                             <Menu size={20}/>
                         </button>
                         <div className="hidden md:block">
-                            <p className="text-[10px] font-black text-cyan-600 uppercase tracking-widest">Annapoorna Advantage Handbook</p>
+                            <p className="text-[10px] font-black text-cyan-600 uppercase tracking-widest">Annapoorna Advantage Knowledge Base</p>
                             <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight truncate max-w-xs">{availableChapters[activeChapterIndex]?.title || 'Loading...'}</h2>
                         </div>
                     </div>
