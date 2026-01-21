@@ -159,7 +159,24 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setOrganizations(processedData.processedOrgs);
       setExamPrices(config.examPrices || null);
       setSuggestedBooks(processedData.allSuggestedBooks);
-      const newActiveOrg = processedData.processedOrgs.find(o => o.id === localStorage.getItem('activeOrgId')) || processedData.processedOrgs[0];
+      
+      const hostname = window.location.hostname.toLowerCase();
+      const storedOrgId = localStorage.getItem('activeOrgId');
+      
+      // IMPROVED MATCHING:
+      // 1. Try to match by stored ID from localStorage
+      // 2. If no match, try to match by hostname from the configuration's website field
+      // 3. Finally, fallback to the first organization in the data set
+      let newActiveOrg = processedData.processedOrgs.find(o => o.id === storedOrgId);
+      
+      if (!newActiveOrg) {
+          newActiveOrg = processedData.processedOrgs.find(o => hostname.includes(o.website.toLowerCase()));
+      }
+      
+      if (!newActiveOrg) {
+          newActiveOrg = processedData.processedOrgs[0];
+      }
+
       setActiveOrg(newActiveOrg);
       
       if (newActiveOrg) {
@@ -230,7 +247,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         const apiUrl = tenantConfig.apiBaseUrl ? `${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config` : '/wp-json/mco-app/v1/config';
         try {
-            const response = await fetch(`${apiUrl}?nocache=${forceRefresh ? Date.now() : ''}`, { mode: 'cors', credentials: 'same-origin' });
+            const response = await fetch(`${apiUrl}?nocache=${forceRefresh ? Date.now() : ''}`, { mode: 'cors', credentials: 'include' });
             if (response.ok) {
                 const liveConfig = await response.json();
                 const processed = processConfigData(liveConfig);
