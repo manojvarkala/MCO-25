@@ -32,19 +32,19 @@ const themePreviewColors: { [key: string]: string[] } = {
 };
 
 const HealthCard: FC<{ title: string; status?: { success: boolean; message: string } }> = ({ title, status }) => (
-    <div className="bg-slate-900 p-5 rounded-2xl border-2 border-slate-800 flex items-center justify-between shadow-xl group hover:border-cyan-500/50 transition-all">
+    <div className="bg-[rgb(var(--color-card-rgb))] p-5 rounded-2xl border-2 border-[rgb(var(--color-border-rgb))] flex items-center justify-between shadow-xl group hover:border-[rgb(var(--color-primary-rgb))] transition-all">
         <div className="flex items-center gap-3 overflow-hidden">
             {!status ? (
-                <RefreshCw size={22} className="text-cyan-500 animate-spin flex-shrink-0" />
+                <RefreshCw size={22} className="text-[rgb(var(--color-primary-rgb))] animate-spin flex-shrink-0" />
             ) : status.success ? (
                 <CheckCircle className="text-emerald-400 flex-shrink-0" size={22} />
             ) : (
                 <XCircle className="text-rose-500 flex-shrink-0" size={22} />
             )}
-            <span className="font-black text-white text-sm tracking-tight truncate">{title}</span>
+            <span className="font-black text-[rgb(var(--color-text-strong-rgb))] text-sm tracking-tight truncate">{title}</span>
         </div>
         <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
-            !status ? 'bg-slate-800 text-slate-400' : status.success ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+            !status ? 'bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-muted-rgb))]' : status.success ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
         }`}>
             {!status ? 'POLLING' : status.message}
         </span>
@@ -104,7 +104,6 @@ const Admin: FC = () => {
         const nextSettings = { ...localSettings, ...updates };
         setLocalSettings(nextSettings);
         
-        // If we changed the theme, apply it locally for preview immediately
         if (updates.activeThemeId) {
             setActiveTheme(updates.activeThemeId);
         }
@@ -121,7 +120,7 @@ const Admin: FC = () => {
     if (isLoading && !health) return (
         <div className="flex flex-col items-center justify-center py-20">
             <Spinner size="lg" />
-            <p className="mt-4 font-black text-cyan-500 animate-pulse text-xs tracking-widest uppercase">Initializing Audit...</p>
+            <p className="mt-4 font-black text-[rgb(var(--color-primary-rgb))] animate-pulse text-xs tracking-widest uppercase">Initializing Audit...</p>
         </div>
     );
 
@@ -146,8 +145,8 @@ const Admin: FC = () => {
             <main className="flex-1 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 {activeTab === 'diagnostics' && (
                     <div className="space-y-8">
-                        <h2 className="text-3xl font-black text-white flex items-center gap-3">
-                            <Layout className="text-cyan-500" size={32} /> System Health
+                        <h2 className="text-3xl font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-3">
+                            <Layout className="text-[rgb(var(--color-primary-rgb))]" size={32} /> System Health
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <HealthCard title="API Gateway" status={health?.api_connection} />
@@ -158,22 +157,22 @@ const Admin: FC = () => {
                             <HealthCard title="Data Stream" status={health?.sheet_accessibility} />
                         </div>
 
-                        <div className="bg-slate-900 border-2 border-slate-800 rounded-3xl p-10 shadow-2xl">
-                            <h3 className="text-xl font-black text-white mb-10 flex items-center gap-3 border-b border-slate-800 pb-5">
-                                <BarChart3 size={24} className="text-cyan-500" /> Key Performance Indicators
+                        <div className="bg-[rgb(var(--color-card-rgb))] border-2 border-[rgb(var(--color-border-rgb))] rounded-3xl p-10 shadow-2xl">
+                            <h3 className="text-xl font-black text-[rgb(var(--color-text-strong-rgb))] mb-10 flex items-center gap-3 border-b border-[rgb(var(--color-border-rgb))] pb-5">
+                                <BarChart3 size={24} className="text-[rgb(var(--color-primary-rgb))]" /> Key Performance Indicators
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-12">
                                 <div>
-                                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">Total Unit Sales</p>
-                                    <p className="text-5xl font-black text-white tabular-nums">{stats?.reduce((acc, s) => acc + (s.totalSales || 0), 0).toLocaleString()}</p>
+                                    <p className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-2">Total Unit Sales</p>
+                                    <p className="text-5xl font-black text-[rgb(var(--color-text-strong-rgb))] tabular-nums">{stats?.reduce((acc, s) => acc + (s.totalSales || 0), 0).toLocaleString()}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">Gross Revenue</p>
-                                    <p className="text-5xl font-black text-emerald-400 tabular-nums">${stats?.reduce((acc, s) => acc + (s.totalRevenue || 0), 0).toLocaleString()}</p>
+                                    <p className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-2">Gross Revenue</p>
+                                    <p className="text-5xl font-black text-emerald-500 tabular-nums">${stats?.reduce((acc, s) => acc + (s.totalRevenue || 0), 0).toLocaleString()}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">User Engagements</p>
-                                    <p className="text-5xl font-black text-cyan-400 tabular-nums">{stats?.reduce((acc, s) => acc + (s.attempts || 0), 0).toLocaleString()}</p>
+                                    <p className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-2">User Engagements</p>
+                                    <p className="text-5xl font-black text-[rgb(var(--color-primary-rgb))] tabular-nums">{stats?.reduce((acc, s) => acc + (s.attempts || 0), 0).toLocaleString()}</p>
                                 </div>
                             </div>
                         </div>
@@ -183,10 +182,10 @@ const Admin: FC = () => {
                 {activeTab === 'appearance' && (
                     <div className="space-y-10">
                         <div className="space-y-6">
-                            <h2 className="text-3xl font-black text-white flex items-center gap-3">
-                                <Palette className="text-cyan-500" size={32} /> Global Theme Identity
+                            <h2 className="text-3xl font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-3">
+                                <Palette className="text-[rgb(var(--color-primary-rgb))]" size={32} /> Global Theme Identity
                             </h2>
-                            <p className="text-slate-400 max-w-2xl font-medium">Select the default visual theme for all users on this tenant. Users can still personalize their own view from their profile.</p>
+                            <p className="text-[rgb(var(--color-text-muted-rgb))] max-w-2xl font-medium">Select the default visual theme for all users on this tenant.</p>
                             
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                                 {availableThemes.map(theme => {
@@ -199,21 +198,21 @@ const Admin: FC = () => {
                                             onClick={() => handleSyncSettings({ activeThemeId: theme.id })}
                                             className={`relative p-5 rounded-2xl border-2 transition-all text-left flex flex-col items-center gap-3 group ${
                                                 isSelected 
-                                                ? 'bg-slate-800 border-cyan-500 shadow-lg shadow-cyan-500/20' 
-                                                : 'bg-slate-900 border-slate-800 hover:border-slate-600'
+                                                ? 'bg-[rgb(var(--color-muted-rgb))] border-[rgb(var(--color-primary-rgb))] shadow-lg' 
+                                                : 'bg-[rgb(var(--color-card-rgb))] border-[rgb(var(--color-border-rgb))] hover:border-[rgb(var(--color-primary-rgb))]'
                                             }`}
                                         >
                                             {isSelected && (
-                                                <div className="absolute -top-2 -right-2 bg-cyan-500 text-slate-950 rounded-full p-1 shadow-lg z-10">
+                                                <div className="absolute -top-2 -right-2 bg-[rgb(var(--color-primary-rgb))] text-[rgb(var(--color-background-rgb))] rounded-full p-1 shadow-lg z-10">
                                                     <Check size={14} strokeWidth={4} />
                                                 </div>
                                             )}
-                                            <div className="flex w-full h-10 rounded-lg overflow-hidden border border-slate-700">
+                                            <div className="flex w-full h-10 rounded-lg overflow-hidden border border-[rgb(var(--color-border-rgb))]">
                                                 {colors.map((c, i) => (
                                                     <div key={i} className="flex-1" style={{ backgroundColor: c }}></div>
                                                 ))}
                                             </div>
-                                            <span className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-cyan-400' : 'text-slate-500 group-hover:text-slate-300'}`}>
+                                            <span className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-[rgb(var(--color-primary-rgb))]' : 'text-[rgb(var(--color-text-muted-rgb))]'}`}>
                                                 {theme.name}
                                             </span>
                                         </button>
@@ -223,24 +222,24 @@ const Admin: FC = () => {
                         </div>
 
                         <div className="space-y-6">
-                            <h2 className="text-3xl font-black text-white flex items-center gap-3">
-                                <Settings2 className="text-cyan-500" size={32} /> Feature Overrides
+                            <h2 className="text-3xl font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-3">
+                                <Settings2 className="text-[rgb(var(--color-primary-rgb))]" size={32} /> Feature Overrides
                             </h2>
-                            <div className="bg-slate-900 border-2 border-slate-800 rounded-3xl overflow-hidden divide-y divide-slate-800 shadow-2xl">
+                            <div className="bg-[rgb(var(--color-card-rgb))] border-2 border-[rgb(var(--color-border-rgb))] rounded-3xl overflow-hidden divide-y divide-[rgb(var(--color-border-rgb))] shadow-2xl">
                                 {[
                                     { id: 'purchaseNotifierEnabled', label: 'Purchase Notifier', desc: 'Display randomized social proof notifications for site activity.' },
-                                    { id: 'subscriptionsEnabled', label: 'Subscription Engine', desc: 'Enable global recurring billing logic and membership levels.' },
-                                    { id: 'bundlesEnabled', label: 'Dynamic Bundling', desc: 'Display high-value "Exam + Subscription" packages on dashboard.' }
+                                    { id: 'subscriptionsEnabled', label: 'Subscription Engine', desc: 'Enable global recurring billing logic.' },
+                                    { id: 'bundlesEnabled', label: 'Dynamic Bundling', desc: 'Display high-value packages on dashboard.' }
                                 ].map(f => (
-                                    <div key={f.id} className="flex items-center justify-between p-8 hover:bg-white/[0.01] transition-colors">
+                                    <div key={f.id} className="flex items-center justify-between p-8 hover:bg-[rgba(var(--color-muted-rgb),0.2)] transition-colors">
                                         <div className="max-w-md">
-                                            <p className="font-black text-white text-xl">{f.label}</p>
-                                            <p className="text-sm text-slate-500 font-bold mt-1">{f.desc}</p>
+                                            <p className="font-black text-[rgb(var(--color-text-strong-rgb))] text-xl">{f.label}</p>
+                                            <p className="text-sm text-[rgb(var(--color-text-muted-rgb))] font-bold mt-1">{f.desc}</p>
                                         </div>
                                         <button 
                                             onClick={() => handleSyncSettings({ [f.id]: !(localSettings as any)[f.id] })}
                                             disabled={isSavingSettings}
-                                            className={`transition-all transform active:scale-90 ${ (localSettings as any)[f.id] ? 'text-cyan-400' : 'text-slate-700'}`}
+                                            className={`transition-all transform active:scale-90 ${ (localSettings as any)[f.id] ? 'text-[rgb(var(--color-primary-rgb))]' : 'text-[rgb(var(--color-border-rgb))]'}`}
                                         >
                                             { (localSettings as any)[f.id] ? <ToggleRight size={64} /> : <ToggleLeft size={64} />}
                                         </button>
@@ -253,37 +252,18 @@ const Admin: FC = () => {
 
                 {activeTab === 'bulk' && (
                     <div className="space-y-8">
-                        <h2 className="text-3xl font-black text-white flex items-center gap-3">
-                            <DatabaseZap className="text-cyan-500" size={32} /> Core Infrastructure
+                        <h2 className="text-3xl font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-3">
+                            <DatabaseZap className="text-[rgb(var(--color-primary-rgb))]" size={32} /> Infrastructure
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-slate-900 border-2 border-slate-800 p-8 rounded-3xl shadow-2xl">
-                                <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 border-b border-slate-800 pb-4">
-                                    <RefreshCw size={22} className="text-cyan-400"/> Memory Management
+                            <div className="bg-[rgb(var(--color-card-rgb))] border-2 border-[rgb(var(--color-border-rgb))] p-8 rounded-3xl shadow-2xl">
+                                <h3 className="text-xl font-black text-[rgb(var(--color-text-strong-rgb))] mb-6 flex items-center gap-3 border-b border-[rgb(var(--color-border-rgb))] pb-4">
+                                    <RefreshCw size={22} className="text-[rgb(var(--color-primary-rgb))]"/> Caching
                                 </h3>
                                 <div className="space-y-4">
-                                    <button onClick={async () => { await googleSheetsService.adminClearConfigCache(token!); await refreshConfig(); toast.success("Cleared"); }} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-xl border border-slate-700 flex items-center justify-center gap-3 transition-all">
-                                        <RefreshCw size={18} className="text-cyan-400"/> Clear Config Cache
+                                    <button onClick={async () => { await googleSheetsService.adminClearConfigCache(token!); await refreshConfig(); toast.success("Cleared"); }} className="w-full py-4 bg-[rgb(var(--color-muted-rgb))] hover:opacity-80 text-[rgb(var(--color-text-strong-rgb))] font-black rounded-xl flex items-center justify-center gap-3 transition-all">
+                                        <RefreshCw size={18} /> Clear Config Cache
                                     </button>
-                                    <button onClick={async () => { await googleSheetsService.adminClearQuestionCaches(token!); toast.success("Synced"); }} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-xl border border-slate-700 flex items-center justify-center gap-3 transition-all">
-                                        <FileSpreadsheet size={18} className="text-emerald-400"/> Force Sync Sheet Cache
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-slate-900 border-2 border-slate-800 p-8 rounded-3xl shadow-2xl">
-                                <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 border-b border-slate-800 pb-4">
-                                    <DownloadCloud size={22} className="text-cyan-400"/> Data Templates
-                                </h3>
-                                <div className="space-y-3">
-                                    <a href="/template-exam-programs.csv" download className="flex items-center justify-between p-5 bg-slate-800/50 border border-slate-800 rounded-xl hover:border-cyan-500 transition-all text-slate-300 font-bold">
-                                        <span>Download Programs CSV</span>
-                                        <ExternalLink size={16}/>
-                                    </a>
-                                    <a href="/template-questions.csv" download className="flex items-center justify-between p-5 bg-slate-800/50 border border-slate-800 rounded-xl hover:border-cyan-500 transition-all text-slate-300 font-bold">
-                                        <span>Download Questions CSV</span>
-                                        <ExternalLink size={16}/>
-                                    </a>
                                 </div>
                             </div>
                         </div>

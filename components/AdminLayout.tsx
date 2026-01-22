@@ -22,10 +22,10 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
     return (
         <div className="mco-admin-wrapper grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-8 min-h-screen">
             <aside className="md:col-span-1 lg:col-span-1 self-start sticky top-28">
-                <nav className="space-y-2 bg-slate-900/50 p-3 rounded-2xl border border-slate-800 shadow-2xl">
+                <nav className="space-y-2 bg-[rgb(var(--color-card-rgb))] p-3 rounded-2xl border border-[rgb(var(--color-border-rgb))] shadow-2xl">
                     {isSuperAdmin && (
                         <div className="mb-6">
-                            <p className="px-4 text-[9px] font-black text-cyan-500 uppercase tracking-widest mb-3">Network Control</p>
+                            <p className="px-4 text-[9px] font-black text-[rgb(var(--color-primary-rgb))] uppercase tracking-widest mb-3">Network Control</p>
                             <NavLink to="/admin/network" className={({ isActive }: any) => `${baseClass} ${isActive ? activeClass : inactiveClass}`}>
                                 <Globe size={18} />
                                 <span>Network Hub</span>
@@ -33,7 +33,7 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
                         </div>
                     )}
 
-                    <p className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">System Admin</p>
+                    <p className="px-4 text-[9px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-widest mb-3">System Admin</p>
                     <div className="space-y-1">
                         {[
                             { to: "/admin", icon: <LayoutDashboard size={18} />, label: "Health Center", end: true },
@@ -60,7 +60,7 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
                         ))}
                     </div>
 
-                    <div className="pt-4 mt-4 border-t border-slate-800">
+                    <div className="pt-4 mt-4 border-t border-[rgb(var(--color-border-rgb))]">
                         <NavLink to="/dashboard" className={`${baseClass} ${inactiveClass}`}>
                             <ArrowLeft size={18} />
                             <span>Return to Portal</span>
