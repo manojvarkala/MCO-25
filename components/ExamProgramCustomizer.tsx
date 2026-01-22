@@ -4,11 +4,10 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, ExamProductCategory } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, AlertTriangle, ExternalLink, CheckSquare, Square, Zap, Layers, Clock, HelpCircle, ToggleRight, ToggleLeft, ShieldCheck } from 'lucide-react';
+import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, AlertTriangle, ExternalLink, CheckSquare, Square, Zap, Layers, Clock, HelpCircle, ToggleRight, ToggleLeft, ShieldCheck, X } from 'lucide-react';
 import Spinner from './Spinner.tsx';
-// FIX: Using wildcard import for react-router-dom to resolve missing named export errors.
 import * as ReactRouterDOM from 'react-router-dom';
-const { Link, useLocation } = ReactRouterDOM as any;
+const { Link } = ReactRouterDOM as any;
 
 interface EditableProgramData {
     category?: Partial<ExamProductCategory>;
@@ -23,10 +22,7 @@ const ExamEditor: FC<{
     onCancel: () => void;
     isSaving: boolean;
     unlinkedProducts: any[];
-    bundleProducts: any[];
-}> = ({ program, onSave, onDelete, onCancel, isSaving, unlinkedProducts, bundleProducts }) => {
-    const { activeOrg } = useAppContext();
-    
+}> = ({ program, onSave, onDelete, onCancel, isSaving, unlinkedProducts }) => {
     const [data, setData] = useState<EditableProgramData>(() => ({
         category: { 
             name: program.category?.name || '',
@@ -52,119 +48,63 @@ const ExamEditor: FC<{
     }));
     
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-
-    const hasAddon = useMemo(() => {
-        return !!data.certExam?.addonSku;
-    }, [data.certExam?.addonSku]);
+    const hasAddon = !!data.certExam?.addonSku;
 
     const handleCategoryChange = (field: keyof ExamProductCategory, value: string) => {
         setData(prev => ({ ...prev, category: { ...prev.category, [field]: value } }));
     };
 
     const handleExamChange = (examType: 'practiceExam' | 'certExam', field: string, value: any) => {
-        setData(prev => {
-            const current = (prev as any)[examType] || {};
-            const next = { ...prev, [examType]: { ...current, [field]: value } };
-            
-            if (examType === 'certExam' && field === 'productSku' && hasAddon) {
-                next.certExam = { ...next.certExam, addonSku: value ? `${value}-1mo-addon` : '' };
-            }
-            return next;
-        });
-    };
-
-    const toggleAddon = (enabled: boolean) => {
-        const baseSku = data.certExam?.productSku || '';
-        if (!baseSku && enabled) {
-            toast.error("Set a Certification SKU first to enable the addon.");
-            return;
-        }
-        setData(prev => ({
-            ...prev,
-            certExam: { ...prev.certExam, addonSku: enabled ? `${baseSku}-1mo-addon` : '' }
-        }));
+        setData(prev => ({ ...prev, [examType]: { ...(prev as any)[examType], [field]: value } }));
     };
 
     const Label = ({ children }: { children: ReactNode }) => <label className="text-[10px] font-black uppercase tracking-widest text-[rgb(var(--color-text-muted-rgb))] mb-1 block opacity-80">{children}</label>;
 
     return (
-        <div className="bg-[rgba(var(--color-muted-rgb),0.2)] p-6 rounded-b-xl space-y-6 shadow-inner border-t border-[rgb(var(--color-border-rgb))] pb-20">
+        <div className="bg-[rgba(var(--color-muted-rgb),0.2)] p-6 rounded-b-xl space-y-6 border-t border-[rgb(var(--color-border-rgb))]">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <Label>Brand Identity / Name</Label>
+                    <Label>Identity Name</Label>
                     <input type="text" value={data.category?.name || ''} onChange={e => handleCategoryChange('name', e.target.value)} className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500" />
                 </div>
                 <div>
-                    <Label>Google Sheet Data URL</Label>
+                    <Label>Google Sheet URL</Label>
                     <input type="text" value={data.category?.questionSourceUrl || ''} onChange={e => handleCategoryChange('questionSourceUrl', e.target.value)} className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-cyan-500 font-mono text-xs" />
                 </div>
             </div>
             
-            <div>
-                <Label>Program Description (Public)</Label>
-                <textarea value={data.category?.description || ''} onChange={e => handleCategoryChange('description', e.target.value)} className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))]" rows={3} />
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-5 border rounded-xl bg-[rgba(var(--color-muted-rgb),0.3)] border-[rgb(var(--color-border-rgb))] space-y-5 shadow-lg">
-                    <div className="flex justify-between items-center border-b border-[rgb(var(--color-border-rgb))] pb-3">
-                        <h4 className="font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2 uppercase"><Award size={18} className="text-blue-500" /> Certification Config</h4>
+                <div className="p-5 border rounded-xl bg-[rgba(var(--color-muted-rgb),0.3)] border-[rgb(var(--color-border-rgb))] space-y-5">
+                    <h4 className="font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2 uppercase text-xs"><Award size={18} className="text-blue-500" /> Certification</h4>
+                    <div>
+                        <Label>WooCommerce SKU</Label>
+                        <select value={data.certExam?.productSku || ''} onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))] font-mono">
+                            <option value="">-- No Link --</option>
+                            {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
+                        </select>
                     </div>
-                    
-                    <div className="grid grid-cols-1 gap-4">
-                        <div>
-                            <Label>WooCommerce Certification SKU</Label>
-                            <select 
-                                value={data.certExam?.productSku || ''} 
-                                onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} 
-                                className="w-full p-3 border rounded-lg bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-strong-rgb))] text-sm font-mono"
-                            >
-                                <option value="">-- No Linked Product --</option>
-                                {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
-                            </select>
-                        </div>
-                        <div className="p-4 bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl border border-[rgb(var(--color-border-rgb))]">
-                            <label className="flex items-center justify-between cursor-pointer group">
-                                <div className="space-y-0.5">
-                                    <div className="flex items-center gap-2">
-                                        <Zap size={14} className={hasAddon ? "text-amber-500 fill-amber-500" : "text-slate-500"} />
-                                        <span className="text-xs font-black text-[rgb(var(--color-text-strong-rgb))] uppercase tracking-tighter">Premium Addon Offer</span>
-                                    </div>
-                                    <p className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] font-bold uppercase">{data.certExam?.addonSku || 'Not Configured'}</p>
-                                </div>
-                                <input type="checkbox" checked={hasAddon} onChange={e => toggleAddon(e.target.checked)} className="w-5 h-5 rounded border-[rgb(var(--color-border-rgb))] text-amber-500" />
-                            </label>
-                        </div>
-                    </div>
-
                     <div className="grid grid-cols-3 gap-3">
-                        <div><Label>Questions</Label><input type="number" value={data.certExam?.numberOfQuestions || ''} onChange={e => handleExamChange('certExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))]" /></div>
+                        <div><Label>Qty</Label><input type="number" value={data.certExam?.numberOfQuestions || ''} onChange={e => handleExamChange('certExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))]" /></div>
                         <div><Label>Mins</Label><input type="number" value={data.certExam?.durationMinutes || ''} onChange={e => handleExamChange('certExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))]" /></div>
-                        <div><Label>Pass %</Label><input type="number" value={data.certExam?.passScore || ''} onChange={e => handleExamChange('certExam', 'passScore', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))]" /></div>
+                        <div><Label>Pass%</Label><input type="number" value={data.certExam?.passScore || ''} onChange={e => handleExamChange('certExam', 'passScore', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))]" /></div>
                     </div>
                 </div>
 
-                <div className="p-5 border rounded-xl bg-[rgba(var(--color-muted-rgb),0.3)] border-[rgb(var(--color-border-rgb))] space-y-5 shadow-lg">
-                    <h4 className="font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2 uppercase border-b border-[rgb(var(--color-border-rgb))] pb-3"><FileText size={18} className="text-emerald-500" /> Practice Rules</h4>
+                <div className="p-5 border rounded-xl bg-[rgba(var(--color-muted-rgb),0.3)] border-[rgb(var(--color-border-rgb))] space-y-5">
+                    <h4 className="font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2 uppercase text-xs"><FileText size={18} className="text-emerald-500" /> Practice</h4>
                     <div className="grid grid-cols-2 gap-4">
-                        <div><Label>Question Count</Label><input type="number" value={data.practiceExam?.numberOfQuestions || ''} onChange={e => handleExamChange('practiceExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))]" /></div>
-                        <div><Label>Duration (Mins)</Label><input type="number" value={data.practiceExam?.durationMinutes || ''} onChange={e => handleExamChange('practiceExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))]" /></div>
+                        <div><Label>Qty</Label><input type="number" value={data.practiceExam?.numberOfQuestions || ''} onChange={e => handleExamChange('practiceExam', 'numberOfQuestions', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))]" /></div>
+                        <div><Label>Mins</Label><input type="number" value={data.practiceExam?.durationMinutes || ''} onChange={e => handleExamChange('practiceExam', 'durationMinutes', e.target.value)} className="w-full p-2 border rounded bg-[rgb(var(--color-background-rgb))] border-[rgb(var(--color-border-rgb))]" /></div>
                     </div>
                 </div>
             </div>
             
             <div className="flex justify-between items-center pt-6 border-t border-[rgb(var(--color-border-rgb))]">
-                <div className="flex gap-2">
-                    {!isConfirmingDelete ? (
-                        <button onClick={() => setIsConfirmingDelete(true)} className="px-4 py-2 text-rose-500 hover:text-rose-400 border border-rose-500/30 rounded-lg text-xs font-bold uppercase">Delete Program</button>
-                    ) : (
-                        <button onClick={() => onDelete(program.category.id)} className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-black shadow-lg shadow-rose-900/20 animate-pulse">CONFIRM TRASH</button>
-                    )}
-                </div>
+                <button onClick={() => { if(window.confirm('Trash this program?')) onDelete(program.category.id) }} className="px-4 py-2 text-rose-500 hover:text-rose-400 text-xs font-bold uppercase">Delete</button>
                 <div className="flex gap-3">
                     <button onClick={onCancel} className="px-6 py-2 text-[rgb(var(--color-text-muted-rgb))] font-bold">Discard</button>
-                    <button onClick={() => onSave(program.category.id, data)} disabled={isSaving} className="flex items-center gap-2 px-8 py-2 bg-cyan-600 text-white rounded-lg font-black transition shadow-lg">
-                        {isSaving ? <Spinner size="sm" /> : <Save size={18} />} SAVE CHANGES
+                    <button onClick={() => onSave(program.category.id, data)} disabled={isSaving} className="px-8 py-2 bg-cyan-600 text-white rounded-lg font-black transition shadow-lg">
+                        {isSaving ? <Spinner size="sm" /> : <Save size={18} />} SAVE
                     </button>
                 </div>
             </div>
@@ -176,13 +116,9 @@ const ExamProgramCustomizer: FC = () => {
     const { activeOrg, examPrices, refreshConfig } = useAppContext();
     const { token } = useAuth();
     const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isSaving, setIsSaving] = useState(false);
-    
-    // Bulk Update State
-    const [bulkPassScore, setBulkPassScore] = useState('');
-    const [bulkDuration, setBulkDuration] = useState('');
-    const [bulkQuestions, setBulkQuestions] = useState('');
+    const [isCreating, setIsCreating] = useState(false);
+    const [newProgramName, setNewProgramName] = useState('');
 
     const programs = useMemo(() => {
         if (!activeOrg) return [];
@@ -193,206 +129,92 @@ const ExamProgramCustomizer: FC = () => {
         })).sort((a,b) => (a.category.name || '').localeCompare(b.category.name || ''));
     }, [activeOrg]);
 
-    const productLists = useMemo(() => {
-        if (!examPrices) return { unlinked: [], bundles: [] };
-        const all = Object.entries(examPrices).map(([sku, d]: [string, any]) => ({ sku, name: d.name, isBundle: d.isBundle }));
-        return { unlinked: all, bundles: all.filter(p => p.isBundle) };
-    }, [examPrices]);
-
-    const handleToggleSelect = (id: string) => {
-        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-    };
-
-    const handleSelectAll = () => {
-        setSelectedIds(selectedIds.length === programs.length ? [] : programs.map(p => p.category.id));
-    };
-
-    const handleSave = async (id: string, data: EditableProgramData) => {
-        if (!token) return;
+    const handleCreateProgram = async () => {
+        if (!token || !newProgramName) return;
         setIsSaving(true);
         try {
-            // 1. Update the Exam Program Meta in WP
-            await googleSheetsService.adminUpdateExamProgram(token, id, data);
-
-            // 2. AUTO-PROVISION CHECK:
-            // If an addon SKU is specified but doesn't exist in WooCommerce, create it.
-            const addonSku = data.certExam?.addonSku;
-            if (addonSku && examPrices && !examPrices[addonSku]) {
-                const baseProduct = Object.values(examPrices).find((p: any) => p.sku === data.certExam?.productSku);
-                
-                await googleSheetsService.adminUpsertProduct(token, {
-                    sku: addonSku,
-                    name: `${data.category?.name || 'Exam'} - 1-Month Premium Access`,
-                    type: 'simple',
-                    price: 19.99, // Default bundle price
-                    regularPrice: 59.99,
-                    isBundle: true,
-                    bundledSkus: [data.certExam?.productSku]
-                });
-                toast.success(`Addon Product Created: ${addonSku}`);
-            }
-
+            await googleSheetsService.adminCreateExamProgram(token, newProgramName, {});
             await refreshConfig();
-            toast.success("Program Synchronized");
-            setExpandedId(null);
+            toast.success("New Program Created");
+            setIsCreating(false);
+            setNewProgramName('');
         } catch (e: any) { toast.error(e.message); }
         finally { setIsSaving(false); }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!token) return;
-        setIsSaving(true);
-        const tid = toast.loading("Trashing program...");
-        try {
-            await googleSheetsService.adminDeletePost(token, id, 'mco_exam_program');
-            await refreshConfig();
-            toast.success("Program Deleted", { id: tid });
-            setExpandedId(null);
-            setSelectedIds(prev => prev.filter(i => i !== id));
-        } catch (e: any) { toast.error(e.message, { id: tid }); }
-        finally { setIsSaving(false); }
-    };
-
-    const handleBulkDelete = async () => {
-        if (selectedIds.length === 0 || !token) return;
-        if (!window.confirm(`Permanently delete ${selectedIds.length} programs?`)) return;
-
-        setIsSaving(true);
-        const tid = toast.loading(`Deleting ${selectedIds.length} programs...`);
-        try {
-            for (const id of selectedIds) {
-                await googleSheetsService.adminDeletePost(token, id, 'mco_exam_program');
-            }
-            await refreshConfig();
-            toast.success("Bulk Deletion Complete", { id: tid });
-            setSelectedIds([]);
-        } catch (e: any) {
-            toast.error(e.message, { id: tid });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleBulkUpdate = async () => {
-        if (selectedIds.length === 0 || !token) return;
-        setIsSaving(true);
-        const tid = toast.loading(`Patching ${selectedIds.length} programs...`);
-        try {
-            for (const id of selectedIds) {
-                const program = programs.find(p => p.category.id === id);
-                if (!program) continue;
-
-                const payload: EditableProgramData = {
-                    certExam: {
-                        passScore: bulkPassScore ? parseInt(bulkPassScore, 10) : undefined,
-                        durationMinutes: bulkDuration ? parseInt(bulkDuration, 10) : undefined,
-                        numberOfQuestions: bulkQuestions ? parseInt(bulkQuestions, 10) : undefined
-                    }
-                };
-                // Clean payload of undefineds
-                if (!payload.certExam?.passScore) delete payload.certExam?.passScore;
-                if (!payload.certExam?.durationMinutes) delete payload.certExam?.durationMinutes;
-                if (!payload.certExam?.numberOfQuestions) delete payload.certExam?.numberOfQuestions;
-
-                await googleSheetsService.adminUpdateExamProgram(token, id, payload);
-            }
-            await refreshConfig();
-            toast.success("Bulk Settings Applied", { id: tid });
-            setSelectedIds([]);
-            setBulkPassScore('');
-            setBulkDuration('');
-            setBulkQuestions('');
-        } catch (e: any) {
-            toast.error(e.message, { id: tid });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
     return (
         <div className="space-y-8 pb-40">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex justify-between items-center">
                 <h1 className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3">
                     <Settings className="text-cyan-500" /> Program Master
                 </h1>
-
-                {selectedIds.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-4 bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] p-4 rounded-2xl shadow-xl animate-in slide-in-from-right-4 duration-300">
-                        <div className="flex gap-2">
-                             <div className="relative">
-                                <span className="absolute left-2 top-2.5 text-[8px] font-black text-slate-500 uppercase">Pass%</span>
-                                <input type="number" placeholder="70" value={bulkPassScore} onChange={e => setBulkPassScore(e.target.value)} className="w-16 bg-slate-900 border border-slate-700 rounded-lg py-2 pl-8 pr-2 text-xs text-white" />
-                            </div>
-                            <div className="relative">
-                                <span className="absolute left-2 top-2.5 text-[8px] font-black text-slate-500 uppercase">Min</span>
-                                <input type="number" placeholder="90" value={bulkDuration} onChange={e => setBulkDuration(e.target.value)} className="w-16 bg-slate-900 border border-slate-700 rounded-lg py-2 pl-8 pr-2 text-xs text-white" />
-                            </div>
-                            <div className="relative">
-                                <span className="absolute left-2 top-2.5 text-[8px] font-black text-slate-500 uppercase">Qty</span>
-                                <input type="number" placeholder="50" value={bulkQuestions} onChange={e => setBulkQuestions(e.target.value)} className="w-16 bg-slate-900 border border-slate-700 rounded-lg py-2 pl-8 pr-2 text-xs text-white" />
-                            </div>
-                        </div>
-                        <div className="flex gap-2">
-                            <button onClick={handleBulkUpdate} className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase hover:bg-emerald-500 transition">Update {selectedIds.length}</button>
-                            <button onClick={handleBulkDelete} className="bg-rose-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase hover:bg-rose-500 transition flex items-center gap-2">
-                                <Trash2 size={12}/> Delete
-                            </button>
-                        </div>
-                    </div>
-                )}
+                <button onClick={() => setIsCreating(true)} className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-black shadow-lg hover:bg-emerald-500 transition uppercase tracking-wider text-xs">
+                    <PlusCircle size={18}/> New Program
+                </button>
             </div>
 
             <div className="bg-[rgb(var(--color-card-rgb))] rounded-2xl shadow-2xl border border-[rgb(var(--color-border-rgb))] overflow-hidden">
-                <div className="bg-[rgb(var(--color-background-rgb))] p-4 border-b border-[rgb(var(--color-border-rgb))] flex items-center justify-between">
-                    <button onClick={handleSelectAll} className="flex items-center gap-2 text-[10px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-widest hover:text-white transition">
-                        {selectedIds.length === programs.length && programs.length > 0 ? <CheckSquare size={16} className="text-cyan-500"/> : <Square size={16}/>}
-                        {selectedIds.length === programs.length && programs.length > 0 ? 'Deselect All' : 'Select All Filtered'}
-                    </button>
-                    <span className="text-[10px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-widest">{programs.length} ACTIVE PROGRAMS</span>
-                </div>
-
                 <div className="divide-y divide-[rgb(var(--color-border-rgb))]">
                     {programs.map(p => (
-                        <div key={p.category.id} className={`bg-[rgb(var(--color-card-rgb))] transition-colors ${selectedIds.includes(p.category.id) ? 'bg-cyan-500/5' : ''}`}>
-                            <div className={`flex items-center p-6 gap-4 ${expandedId === p.category.id ? 'bg-[rgba(var(--color-muted-rgb),0.3)]' : 'hover:bg-[rgba(var(--color-muted-rgb),0.2)]'}`}>
-                                <button onClick={() => handleToggleSelect(p.category.id)} className="text-[rgb(var(--color-border-rgb))] hover:text-cyan-500 transition-colors">
-                                    {selectedIds.includes(p.category.id) ? <CheckSquare size={20} className="text-cyan-500"/> : <Square size={20}/>}
-                                </button>
-                                
+                        <div key={p.category.id}>
+                            <div className="flex items-center p-6 gap-4 hover:bg-[rgba(var(--color-muted-rgb),0.1)] transition-colors">
                                 <div className="flex-grow">
                                     <p className="font-black text-[rgb(var(--color-text-strong-rgb))] text-lg">{p.category.name}</p>
-                                    <div className="flex flex-wrap gap-3 mt-1">
-                                        {p.certExam?.productSku ? <span className="text-[9px] text-cyan-500 font-mono bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 uppercase">SKU: {p.certExam.productSku}</span> : <span className="text-[9px] text-rose-500 font-black uppercase">UNLINKED PRODUCT</span>}
-                                        <span className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] flex items-center gap-1 bg-[rgba(var(--color-background-rgb),0.5)] px-2 py-0.5 rounded border border-[rgb(var(--color-border-rgb))] uppercase"><HelpCircle size={8}/> {p.certExam?.numberOfQuestions || 0} Cert Qs</span>
-                                    </div>
+                                    <p className="text-[10px] text-cyan-500 font-mono uppercase mt-1">ID: {p.category.id}</p>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => setExpandedId(expandedId === p.category.id ? null : p.category.id)} className="flex items-center gap-2 px-6 py-2 bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-strong-rgb))] rounded-xl text-xs font-black border border-[rgb(var(--color-border-rgb))] hover:border-cyan-500 transition-all">
-                                        <Edit size={14} className="text-cyan-500"/> {expandedId === p.category.id ? 'CLOSE' : 'CONFIGURE'}
-                                    </button>
-                                    <button 
-                                        onClick={() => { if(window.confirm('Delete this program permanently?')) handleDelete(p.category.id) }}
-                                        className="p-2 text-[rgb(var(--color-text-muted-rgb))] hover:text-rose-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl border border-transparent hover:border-rose-500/30 transition-all"
-                                    >
-                                        <Trash2 size={18}/>
-                                    </button>
-                                </div>
+                                <button onClick={() => setExpandedId(expandedId === p.category.id ? null : p.category.id)} className="px-6 py-2 bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-strong-rgb))] rounded-xl text-xs font-black border border-[rgb(var(--color-border-rgb))] hover:border-cyan-500 transition-all">
+                                    {expandedId === p.category.id ? 'CLOSE' : 'CONFIGURE'}
+                                </button>
                             </div>
                             {expandedId === p.category.id && (
                                 <ExamEditor 
                                     program={p} 
-                                    onSave={handleSave} 
-                                    onDelete={handleDelete}
+                                    onSave={async (id, data) => {
+                                        setIsSaving(true);
+                                        try {
+                                            await googleSheetsService.adminUpdateExamProgram(token!, id, data);
+                                            await refreshConfig();
+                                            toast.success("Updated");
+                                            setExpandedId(null);
+                                        } catch (e: any) { toast.error(e.message); }
+                                        finally { setIsSaving(false); }
+                                    }} 
+                                    onDelete={async (id) => {
+                                        setIsSaving(true);
+                                        try {
+                                            await googleSheetsService.adminDeletePost(token!, id, 'mco_exam_program');
+                                            await refreshConfig();
+                                            setExpandedId(null);
+                                        } catch (e: any) { toast.error(e.message); }
+                                        finally { setIsSaving(false); }
+                                    }}
                                     onCancel={() => setExpandedId(null)} 
                                     isSaving={isSaving}
-                                    unlinkedProducts={productLists.unlinked}
-                                    bundleProducts={productLists.bundles}
+                                    unlinkedProducts={Object.entries(examPrices || {}).map(([sku, d]: [string, any]) => ({ sku, name: d.name }))}
                                 />
                             )}
                         </div>
                     ))}
                 </div>
             </div>
+
+            {isCreating && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-2xl w-full max-w-md p-8 shadow-2xl">
+                        <h2 className="text-2xl font-black text-white mb-6 flex items-center gap-2">
+                            <PlusCircle className="text-emerald-500" /> Create Program
+                        </h2>
+                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Program Brand Name</label>
+                        <input type="text" value={newProgramName} onChange={e => setNewProgramName(e.target.value)} placeholder="e.g. COC Specialist" className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 px-4 text-white focus:border-emerald-500 mb-8" />
+                        <div className="flex justify-end gap-3">
+                            <button onClick={() => setIsCreating(false)} className="px-6 py-2 font-bold text-slate-400">Cancel</button>
+                            <button onClick={handleCreateProgram} disabled={isSaving || !newProgramName} className="px-8 py-2 bg-emerald-600 text-white rounded-xl font-black shadow-lg">
+                                {isSaving ? <Spinner size="sm"/> : 'CREATE PROGRAM'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
