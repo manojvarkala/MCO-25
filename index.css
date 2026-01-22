@@ -87,30 +87,30 @@
 }
 .mco-card__button--cyan:hover { background: #0891b2 !important; }
 
-/* ANIMATED SAVE BADGE */
+/* ANIMATED CORNER RIBBON SAVE BADGE */
 .mco-badge--save {
     position: absolute;
-    top: 1rem;
-    right: 1rem;
+    top: 15px;
+    right: -35px;
+    width: 140px;
     background: #ef4444; /* red-500 */
     color: white;
+    text-align: center;
     font-size: 10px;
     font-weight: 900;
-    padding: 6px 10px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    padding: 4px 0;
+    transform: rotate(45deg);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
     z-index: 30;
     text-transform: uppercase;
-    animation: mco-pulse-bounce 2s infinite;
+    letter-spacing: 0.05em;
+    animation: mco-ribbon-pulse 2s infinite ease-in-out;
     pointer-events: none;
 }
 
-@keyframes mco-pulse-bounce {
-    0%, 100% { transform: scale(1) translateY(0); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-    50% { transform: scale(1.1) translateY(-3px); box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.5); }
+@keyframes mco-ribbon-pulse {
+    0%, 100% { background-color: #ef4444; transform: rotate(45deg) scale(1); }
+    50% { background-color: #f87171; transform: rotate(45deg) scale(1.05); }
 }
 
 /* PREMIUM VIBRANT GRADIENTS */

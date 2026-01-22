@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, Organization } from '../types.ts';
-import { Award, BookOpen, Clock, HelpCircle, History, PlayCircle, ShoppingCart, Zap, Tag } from 'lucide-react';
+import { Award, BookOpen, Clock, HelpCircle, History, PlayCircle, ShoppingCart, Zap } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 export interface ExamCardProps {
@@ -104,10 +104,10 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
 
     return (
         <div className={`mco-card ${cardGradient} rounded-2xl shadow-xl p-6 flex flex-col relative overflow-hidden ${isDisabled ? 'opacity-60 grayscale-[0.5]' : ''}`}>
-            {/* Sale Badge */}
+            {/* Corner Ribbon Sale Badge */}
             {isOnSale && !canTake && (
                 <div className="mco-badge--save">
-                    <Tag size={10} /> SAVE ${ (regularPrice - price).toFixed(0) }
+                    SAVE ${ (regularPrice - price).toFixed(0) }
                 </div>
             )}
 

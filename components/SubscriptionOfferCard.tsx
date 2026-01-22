@@ -1,5 +1,5 @@
 import React, { FC, useState, useMemo } from 'react';
-import { Check, Star, ShoppingCart, Zap, Tag } from 'lucide-react';
+import { Check, Star, ShoppingCart, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -78,10 +78,10 @@ const SubscriptionOfferCard: FC<SubscriptionOfferCardProps> = ({
                 </div>
             )}
 
-            {/* Animated Save Badge for Yearly */}
+            {/* Corner Ribbon Sale Badge */}
             {yearlySavings > 0 && (
                 <div className="mco-badge--save">
-                    <Tag size={10} /> SAVE ${yearlySavings.toFixed(0)}/YR
+                    SAVE ${yearlySavings.toFixed(0)}/YR
                 </div>
             )}
             

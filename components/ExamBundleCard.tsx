@@ -1,5 +1,5 @@
 import React, { FC, useMemo, useState } from 'react';
-import { ShoppingBag, Check, ShoppingCart, Tag } from 'lucide-react';
+import { ShoppingBag, Check, ShoppingCart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -78,10 +78,10 @@ const ExamBundleCard: FC<ExamBundleCardProps> = ({ type, bundleDataRaw, activeOr
 
     return (
         <div className={`${bundleInfo.gradientClass} text-white rounded-xl shadow-lg p-6 flex flex-col relative overflow-hidden`}>
-            {/* Animated Sale Badge */}
+            {/* Animated Corner Ribbon */}
             {hasSale && (
                 <div className="mco-badge--save">
-                    <Tag size={10} /> SAVE ${(bundleInfo.regularPrice - bundleInfo.price).toFixed(0)}
+                    SAVE ${(bundleInfo.regularPrice - bundleInfo.price).toFixed(0)}
                 </div>
             )}
 
