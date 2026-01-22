@@ -44,7 +44,7 @@ const HealthCard: FC<{ title: string; status?: { success: boolean; message: stri
             <span className="font-black text-[rgb(var(--color-text-strong-rgb))] text-sm tracking-tight truncate">{title}</span>
         </div>
         <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
-            !status ? 'bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-muted-rgb))]' : status.success ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+            !status ? 'bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-muted-rgb))]' : status.success ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
         }`}>
             {!status ? 'POLLING' : status.message}
         </span>
@@ -253,14 +253,13 @@ const Admin: FC = () => {
                 {activeTab === 'bulk' && (
                     <div className="space-y-10">
                         <h2 className="text-3xl font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-3">
-                            <DatabaseZap className="text-[rgb(var(--color-primary-rgb))]" size={32} /> Core Infrastructure
+                            <DatabaseZap className="text-[rgb(var(--color-primary-rgb))]" size={32} /> Infrastructure
                         </h2>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {/* Memory & Cache Management */}
                             <div className="bg-[rgb(var(--color-card-rgb))] border-2 border-[rgb(var(--color-border-rgb))] p-8 rounded-3xl shadow-xl space-y-6">
                                 <h3 className="text-xl font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2 border-b border-[rgb(var(--color-border-rgb))] pb-4">
-                                    <RefreshCw size={24} className="text-cyan-500" /> Cache Management
+                                    <RefreshCw size={24} className="text-[rgb(var(--color-primary-rgb))]"/> Caching Control
                                 </h3>
                                 <div className="space-y-3">
                                     <button onClick={async () => { await googleSheetsService.adminClearConfigCache(token!); await refreshConfig(); toast.success("Cleared"); }} className="w-full py-4 bg-[rgb(var(--color-muted-rgb))] hover:opacity-80 text-[rgb(var(--color-text-strong-rgb))] font-black rounded-xl flex items-center justify-center gap-3 transition-all">
@@ -272,7 +271,6 @@ const Admin: FC = () => {
                                 </div>
                             </div>
 
-                            {/* Data Purge Tools */}
                             <div className="bg-[rgb(var(--color-card-rgb))] border-2 border-[rgb(var(--color-border-rgb))] p-8 rounded-3xl shadow-xl space-y-6">
                                 <h3 className="text-xl font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2 border-b border-[rgb(var(--color-border-rgb))] pb-4">
                                     <ShieldAlert size={24} className="text-rose-500" /> Data Maintenance
@@ -284,25 +282,24 @@ const Admin: FC = () => {
                                 </div>
                             </div>
 
-                            {/* Archival & Export */}
                             <div className="md:col-span-2 bg-[rgb(var(--color-card-rgb))] border-2 border-[rgb(var(--color-border-rgb))] p-8 rounded-3xl shadow-xl space-y-6">
                                 <h3 className="text-xl font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2 border-b border-[rgb(var(--color-border-rgb))] pb-4">
-                                    <DownloadCloud size={24} className="text-[rgb(var(--color-primary-rgb))]" /> Archival & Snapshots
+                                    <DownloadCloud size={24} className="text-[rgb(var(--color-primary-rgb))]" /> Export & Blueprinting
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <a href="/wp-admin/admin-post.php?action=mco_generate_full_snapshot" className="flex items-center justify-between p-6 bg-[rgb(var(--color-muted-rgb))] rounded-2xl hover:border-[rgb(var(--color-primary-rgb))] border-2 border-transparent transition-all group">
                                         <div>
-                                            <p className="font-black text-white">Full Content Snapshot</p>
-                                            <p className="text-[10px] text-slate-400 font-bold mt-1">Export JSON for static fallback</p>
+                                            <p className="font-black text-[rgb(var(--color-text-strong-rgb))]">Full Content Snapshot</p>
+                                            <p className="text-[10px] text-[rgb(var(--color-text-muted-rgb))] font-bold mt-1">Export JSON for static fallback</p>
                                         </div>
-                                        <DownloadCloud className="text-slate-500 group-hover:text-cyan-500" />
+                                        <DownloadCloud className="text-[rgb(var(--color-text-muted-rgb))] group-hover:text-[rgb(var(--color-primary-rgb))]" />
                                     </a>
                                     <a href="/wp-admin/admin-post.php?action=mco_generate_tenant_blueprint" className="flex items-center justify-between p-6 bg-[rgb(var(--color-muted-rgb))] rounded-2xl hover:border-[rgb(var(--color-primary-rgb))] border-2 border-transparent transition-all group">
                                         <div>
-                                            <p className="font-black text-white">Tenant Blueprint</p>
-                                            <p className="text-[10px] text-slate-400 font-bold mt-1">Empty scaffold for onboarding</p>
+                                            <p className="font-black text-[rgb(var(--color-text-strong-rgb))]">Tenant Blueprint</p>
+                                            <p className="text-[10px] text-[rgb(var(--color-text-muted-rgb))] font-bold mt-1">Empty scaffold for onboarding</p>
                                         </div>
-                                        <DatabaseZap className="text-slate-500 group-hover:text-cyan-500" />
+                                        <DatabaseZap className="text-[rgb(var(--color-text-muted-rgb))] group-hover:text-[rgb(var(--color-primary-rgb))]" />
                                     </a>
                                 </div>
                             </div>

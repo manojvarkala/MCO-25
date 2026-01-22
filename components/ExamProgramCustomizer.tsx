@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, ExamProductCategory } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, Zap, Layers, Clock, ToggleRight, ToggleLeft, ShieldCheck, X, Globe, BarChart3 } from 'lucide-react';
+import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, Zap, Layers, Clock, ToggleRight, ToggleLeft, ShieldCheck, X, Globe, BarChart3, RefreshCw } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 interface EditableProgramData {
@@ -136,6 +136,7 @@ const ExamProgramCustomizer: FC = () => {
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     
     // Detailed creation state
     const [newProgram, setNewProgram] = useState({
@@ -144,15 +145,17 @@ const ExamProgramCustomizer: FC = () => {
         questionSourceUrl: '',
         certQuestions: 100,
         certDuration: 120,
-        passScore: 70
+        passScore: 70,
+        practiceQuestions: 20,
+        practiceDuration: 30
     });
 
     const programs = useMemo(() => {
         if (!activeOrg) return [];
         return activeOrg.examProductCategories.map(cat => ({
             category: cat,
-            practiceExam: activeOrg.exams.find(e => e.id === cat.practiceExamId),
-            certExam: activeOrg.exams.find(e => e.id === cat.certificationExamId)
+            practiceExam: activeOrg.exams.find(e => e && e.id === cat.practiceExamId),
+            certExam: activeOrg.exams.find(e => e && e.id === cat.certificationExamId)
         })).sort((a,b) => (a.category.name || '').localeCompare(b.category.name || ''));
     }, [activeOrg]);
 
@@ -165,20 +168,52 @@ const ExamProgramCustomizer: FC = () => {
             await refreshConfig();
             toast.success("New Program Integrated", { id: tid });
             setIsCreating(false);
-            setNewProgram({ name: '', sku: '', questionSourceUrl: '', certQuestions: 100, certDuration: 120, passScore: 70 });
+            setNewProgram({ 
+                name: '', 
+                sku: '', 
+                questionSourceUrl: '', 
+                certQuestions: 100, 
+                certDuration: 120, 
+                passScore: 70,
+                practiceQuestions: 20,
+                practiceDuration: 30
+            });
         } catch (e: any) { toast.error(e.message, { id: tid }); }
         finally { setIsSaving(false); }
     };
 
+    const handleManualRefresh = async () => {
+        setIsRefreshing(true);
+        const tid = toast.loading("Syncing with Cloud...");
+        try {
+            await refreshConfig();
+            toast.success("App Data Updated", { id: tid });
+        } catch (e) {
+            toast.error("Sync Failed", { id: tid });
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
     return (
         <div className="space-y-10 pb-40">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <h1 className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-4">
                     <Settings className="text-[rgb(var(--color-primary-rgb))]" size={40} /> Program Master
                 </h1>
-                <button onClick={() => setIsCreating(true)} className="mco-btn-admin-success">
-                    <PlusCircle size={20}/> NEW PROGRAM
-                </button>
+                <div className="flex gap-3">
+                    <button 
+                        onClick={handleManualRefresh} 
+                        disabled={isRefreshing}
+                        className="flex items-center gap-2 px-5 py-3 bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-strong-rgb))] rounded-xl font-black text-[10px] uppercase tracking-widest hover:opacity-80 transition-all border border-[rgb(var(--color-border-rgb))]"
+                    >
+                        <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+                        Sync Cache
+                    </button>
+                    <button onClick={() => setIsCreating(true)} className="mco-btn-admin-success !px-8">
+                        <PlusCircle size={20}/> NEW PROGRAM
+                    </button>
+                </div>
             </div>
 
             <div className="bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-3xl overflow-hidden shadow-2xl">
@@ -240,7 +275,7 @@ const ExamProgramCustomizer: FC = () => {
                             <button onClick={() => setIsCreating(false)} className="text-[rgb(var(--color-text-muted-rgb))] hover:text-white"><X size={24}/></button>
                         </div>
 
-                        <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
                             <div className="space-y-4">
                                 <h4 className="text-[10px] font-black text-cyan-500 uppercase tracking-widest flex items-center gap-2 mb-4"><Layers size={14}/> Primary Identity</h4>
                                 <div>
@@ -260,16 +295,18 @@ const ExamProgramCustomizer: FC = () => {
                             <div className="space-y-4">
                                 <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-2 mb-4"><BarChart3 size={14}/> Exam Criteria</h4>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div><label className="mco-admin-label">Questions</label><input type="number" value={newProgram.certQuestions} onChange={e => setNewProgram({...newProgram, certQuestions: parseInt(e.target.value)})} className="mco-admin-input" /></div>
+                                    <div><label className="mco-admin-label">Cert Qs</label><input type="number" value={newProgram.certQuestions} onChange={e => setNewProgram({...newProgram, certQuestions: parseInt(e.target.value)})} className="mco-admin-input" /></div>
                                     <div><label className="mco-admin-label">Duration (m)</label><input type="number" value={newProgram.certDuration} onChange={e => setNewProgram({...newProgram, certDuration: parseInt(e.target.value)})} className="mco-admin-input" /></div>
                                 </div>
                                 <div>
                                     <label className="mco-admin-label">Passing Threshold (%)</label>
                                     <input type="number" value={newProgram.passScore} onChange={e => setNewProgram({...newProgram, passScore: parseInt(e.target.value)})} className="mco-admin-input text-blue-500" />
                                 </div>
-                                <div className="p-4 bg-[rgba(var(--color-primary-rgb),0.05)] border-2 border-dashed border-[rgba(var(--color-primary-rgb),0.2)] rounded-2xl">
-                                    <p className="text-[9px] font-bold text-[rgb(var(--color-primary-rgb))] uppercase">Note: Auto-Sync</p>
-                                    <p className="text-[10px] text-[rgb(var(--color-text-muted-rgb))] mt-1">Creating this program will automatically scaffold a linked WooCommerce product.</p>
+
+                                <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2 mt-6 mb-4"><FileText size={14}/> Practice Parameters</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div><label className="mco-admin-label">Practice Qs</label><input type="number" value={newProgram.practiceQuestions} onChange={e => setNewProgram({...newProgram, practiceQuestions: parseInt(e.target.value)})} className="mco-admin-input" /></div>
+                                    <div><label className="mco-admin-label">Duration (m)</label><input type="number" value={newProgram.practiceDuration} onChange={e => setNewProgram({...newProgram, practiceDuration: parseInt(e.target.value)})} className="mco-admin-input" /></div>
                                 </div>
                             </div>
                         </div>

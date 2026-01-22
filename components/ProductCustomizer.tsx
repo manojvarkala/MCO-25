@@ -58,7 +58,7 @@ const ProductEditorModal: FC<{
             <div className="bg-slate-900 border-2 border-slate-700 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-950">
                     <h2 className="text-2xl font-black text-white flex items-center gap-3">
-                        {isDuplicating ? <Copy size={24} className="text-amber-500"/> : (isNew ? <PlusCircle size={24} className="text-emerald-500"/> : <Edit size={24} className="text-cyan-500"/>)} 
+                        {isDuplicating ? <Copy size={24} className="text-amber-500"/> : (isNew ? <PlusCircle size={24} className="text-emerald-500"/> : <Edit size={24} className="text-indigo-500"/>)} 
                         {isDuplicating ? 'Clone Product' : (isNew ? `New ${formData.type}` : 'Edit Product')}
                     </h2>
                     <button onClick={onClose} className="p-2 text-slate-500 hover:text-white transition-colors"><X size={28}/></button>
@@ -74,7 +74,7 @@ const ProductEditorModal: FC<{
                         <div>
                             <label className="mco-admin-label">Unique Merchant SKU</label>
                             <input type="text" value={formData.sku} onChange={e => setFormData({...formData, sku: e.target.value})} disabled={!isNew} className={`mco-admin-input font-mono ${!isNew ? 'opacity-40 cursor-not-allowed bg-slate-950' : ''}`} />
-                            {isNew && <p className="text-[10px] text-cyan-500 font-bold mt-2 tracking-widest uppercase">This must match the program SKU exactly.</p>}
+                            {isNew && <p className="text-[10px] text-indigo-500 font-bold mt-2 tracking-widest uppercase">This must match the program SKU exactly.</p>}
                         </div>
 
                         <div className="grid grid-cols-2 gap-6">
@@ -93,8 +93,8 @@ const ProductEditorModal: FC<{
                                 <label className="mco-admin-label">Included Product Items</label>
                                 <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-2 max-h-56 overflow-y-auto custom-scrollbar">
                                     {availableExams.map(exam => (
-                                        <label key={exam.id} className="flex items-center gap-3 p-3 hover:bg-white/[0.03] rounded-xl cursor-pointer transition-colors border border-transparent has-[:checked]:border-cyan-500/20">
-                                            <input type="checkbox" checked={formData.bundledSkus.includes(exam.sku)} onChange={() => handleToggleBundleItem(exam.sku)} className="w-5 h-5 rounded border-slate-700 bg-slate-800 text-cyan-500" />
+                                        <label key={exam.id} className="flex items-center gap-3 p-3 hover:bg-white/[0.03] rounded-xl cursor-pointer transition-colors border border-transparent has-[:checked]:border-indigo-500/20">
+                                            <input type="checkbox" checked={formData.bundledSkus.includes(exam.sku)} onChange={() => handleToggleBundleItem(exam.sku)} className="w-5 h-5 rounded border-slate-700 bg-slate-800 text-indigo-500" />
                                             <span className="text-xs text-slate-300 font-bold">{exam.name}</span>
                                         </label>
                                     ))}
@@ -116,7 +116,7 @@ const ProductEditorModal: FC<{
                     </div>
                     <div className="flex gap-4">
                         <button onClick={onClose} disabled={isSaving} className="px-8 py-3 font-bold text-slate-400 hover:text-white transition-colors">Discard</button>
-                        <button onClick={() => onSave(formData, isDuplicating)} disabled={isSaving || !formData.name || !formData.sku} className="mco-btn-admin-primary">
+                        <button onClick={() => onSave(formData, isDuplicating)} disabled={isSaving || !formData.name || !formData.sku} className="mco-btn-admin-primary !bg-indigo-600">
                             {isSaving ? <Spinner size="sm"/> : <Save size={20}/>} 
                             {isDuplicating ? 'SAVE CLONE' : (isNew ? 'CREATE' : 'UPDATE')}
                         </button>
@@ -158,13 +158,13 @@ const ProductCustomizer: FC = () => {
     const handleSaveProduct = async (formData: any, isClone: boolean) => {
         if (!token) return;
         setIsSaving(true);
-        const tid = toast.loading("Syncing...");
+        const tid = toast.loading("Syncing Store State...");
         const payload = { ...formData };
         if (isClone) { delete payload.id; payload.type = 'simple'; }
         try {
             await googleSheetsService.adminUpsertProduct(token, payload);
             await refreshConfig();
-            toast.success("Synchronized", { id: tid });
+            toast.success("Inventory Synchronized", { id: tid });
             setEditingProduct(null); setIsCreating(false); setIsDuplicating(false);
         } catch (e: any) { toast.error(e.message, { id: tid }); }
         finally { setIsSaving(false); }
@@ -176,9 +176,9 @@ const ProductCustomizer: FC = () => {
         try {
             await googleSheetsService.adminDeletePost(token, productId, 'product');
             await refreshConfig();
-            toast.success("Trashed");
+            toast.success("Trashed from Inventory");
             setEditingProduct(null);
-        } catch (e: any) { toast.error("Failed"); }
+        } catch (e: any) { toast.error("Failed to delete product."); }
         finally { setIsSaving(false); }
     };
 
@@ -186,7 +186,7 @@ const ProductCustomizer: FC = () => {
         <div className="space-y-10 pb-40">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                 <h1 className="text-4xl font-black text-white font-display flex items-center gap-4">
-                    <ShoppingCart className="text-cyan-500" size={40} /> Store Inventory
+                    <ShoppingCart className="text-indigo-500" size={40} /> Store Inventory
                 </h1>
                 
                 <div className="flex flex-wrap gap-2">
@@ -202,7 +202,7 @@ const ProductCustomizer: FC = () => {
                         key={t}
                         onClick={() => setActiveTab(t as TabType)}
                         className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                            activeTab === t ? 'bg-cyan-500 text-slate-950 shadow-lg' : 'text-slate-500 hover:text-white'
+                            activeTab === t ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'
                         }`}
                     >
                         {t}
@@ -225,7 +225,7 @@ const ProductCustomizer: FC = () => {
                             <tr key={p.sku} className="hover:bg-white/[0.02] transition-colors">
                                 <td className="p-6">
                                     <p className="font-black text-white text-lg">{p.name}</p>
-                                    <p className="text-[10px] font-mono text-cyan-400 mt-1 uppercase">SKU: {p.sku}</p>
+                                    <p className="text-[10px] font-mono text-indigo-400 mt-1 uppercase">SKU: {p.sku}</p>
                                 </td>
                                 <td className="p-6">
                                     <span className="px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter bg-slate-950 text-slate-300 border border-slate-800">
@@ -235,7 +235,7 @@ const ProductCustomizer: FC = () => {
                                 <td className="p-6 font-black text-white text-xl">${parseFloat(p.price).toFixed(2)}</td>
                                 <td className="p-6 text-right space-x-2">
                                     <button onClick={() => { setEditingProduct(p); setIsDuplicating(true); }} className="p-3 text-slate-500 hover:text-amber-500 transition-colors" title="Clone"><Copy size={18}/></button>
-                                    <button onClick={() => { setEditingProduct(p); setIsDuplicating(false); }} className="p-3 text-slate-500 hover:text-cyan-500 transition-colors" title="Edit"><Edit size={18}/></button>
+                                    <button onClick={() => { setEditingProduct(p); setIsDuplicating(false); }} className="p-3 text-slate-500 hover:text-indigo-500 transition-colors" title="Edit"><Edit size={18}/></button>
                                     <button onClick={() => { if(window.confirm('Delete?')) handleDeleteProduct(p.id) }} className="p-3 text-slate-500 hover:text-rose-500 transition-colors" title="Trash"><Trash2 size={18}/></button>
                                 </td>
                             </tr>
