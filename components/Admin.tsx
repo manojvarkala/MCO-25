@@ -1,4 +1,4 @@
-import React, { FC, useState, useEffect, ReactNode } from 'react';
+import React, { FC, useState, useEffect, ReactNode, useRef } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import type { ExamStat, Theme } from '../types.ts';
 import toast from 'react-hot-toast';
@@ -104,8 +104,11 @@ const Admin: FC = () => {
     const [stats, setStats] = useState<ExamStat[] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSavingSettings, setIsSavingSettings] = useState(false);
+    
+    // Lock ref to prevent race conditions during save/refresh cycles
+    const pendingUpdateRef = useRef(false);
 
-    // Local settings state for UI reactivity
+    // Initial local state with defensive defaults
     const [localSettings, setLocalSettings] = useState({
         purchaseNotifierEnabled: true,
         bundlesEnabled: true,
@@ -113,9 +116,9 @@ const Admin: FC = () => {
         activeThemeId: 'default'
     });
 
-    // Only update local settings from global state if we are not currently saving
+    // Synchronize local settings with global AppContext when activeOrg changes
     useEffect(() => {
-        if (activeOrg && !isSavingSettings) {
+        if (activeOrg && !pendingUpdateRef.current) {
             setLocalSettings({
                 purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
                 bundlesEnabled: activeOrg.bundlesEnabled ?? true,
@@ -123,7 +126,7 @@ const Admin: FC = () => {
                 activeThemeId: activeOrg.activeThemeId || 'default'
             });
         }
-    }, [activeOrg, isSavingSettings]);
+    }, [activeOrg]);
 
     const loadData = async () => {
         if (!token) return;
@@ -147,21 +150,26 @@ const Admin: FC = () => {
     const handleSyncSettings = async (updates: Partial<typeof localSettings>) => {
         if (!token || isSavingSettings) return;
         
-        // 1. Optimistic UI Update
+        pendingUpdateRef.current = true;
         setIsSavingSettings(true);
+        
+        // 1. Optimistic UI Update
         const nextSettings = { ...localSettings, ...updates };
         setLocalSettings(nextSettings);
 
-        // Preview choice immediately for the admin's current view
+        // Immediate Visual Feedback for Admin
         if (updates.activeThemeId) {
             setActiveTheme(updates.activeThemeId);
         }
 
         const tid = toast.loading("Syncing branding to server...");
         try {
+            // 2. Transmit to Backend
             await googleSheetsService.adminUpdateGlobalSettings(token, nextSettings);
-            // 2. Clear server cache and refresh local data
+            
+            // 3. Purge Server Transients and reload global app state
             await refreshConfig();
+            
             toast.success("Settings saved and verified", { id: tid });
         } catch (e: any) {
             toast.error(e.message || "Save failed", { id: tid });
@@ -176,6 +184,7 @@ const Admin: FC = () => {
                 setActiveTheme(activeOrg.activeThemeId || 'default');
             }
         } finally {
+            pendingUpdateRef.current = false;
             setIsSavingSettings(false);
         }
     };
@@ -191,7 +200,12 @@ const Admin: FC = () => {
         } catch (e: any) { toast.error(e.message, { id: tid }); }
     };
 
-    if (isLoading && !health) return <div className="flex flex-col items-center justify-center py-20 text-slate-200"><Spinner size="lg"/><p className="mt-4 font-mono text-xs uppercase tracking-widest animate-pulse">Establishing Secure Uplink...</p></div>;
+    if (isLoading && !health) return (
+        <div className="flex flex-col items-center justify-center py-20 text-slate-200">
+            <Spinner size="lg"/>
+            <p className="mt-4 font-mono text-xs uppercase tracking-widest animate-pulse">Establishing Secure Uplink...</p>
+        </div>
+    );
 
     return (
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 pb-20">
@@ -269,49 +283,51 @@ const Admin: FC = () => {
                             </div>
                         </div>
 
-                        <div className="space-y-6">
-                            <h2 className="text-3xl font-black flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))]">
-                                <Palette className="text-cyan-500" size={32} /> Organizational Theme
-                            </h2>
-                            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-2xl shadow-xl border border-[rgb(var(--color-border-rgb))]">
-                                <p className="text-[rgb(var(--color-text-muted-rgb))] text-sm font-medium mb-8 leading-relaxed max-w-2xl">
-                                    Set the <strong>global default theme</strong> for all users. This selection will be the baseline visual profile for the dashboard, certificates, and marketing elements.
-                                </p>
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                                    {(availableThemes || []).map(theme => (
-                                        <button
-                                            key={theme.id}
-                                            type="button"
-                                            onClick={() => handleSyncSettings({ activeThemeId: theme.id })}
-                                            className={`relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${
-                                                localSettings.activeThemeId === theme.id 
-                                                    ? 'border-cyan-500 bg-cyan-500/10 ring-2 ring-cyan-500/20 shadow-md' 
-                                                    : 'border-[rgb(var(--color-border-rgb))] hover:border-cyan-400 bg-[rgba(var(--color-muted-rgb),0.2)]'
-                                            }`}
-                                        >
-                                            {localSettings.activeThemeId === theme.id && (
-                                                <div className="absolute -top-2 -right-2 bg-cyan-500 text-white rounded-full p-1 shadow-md border-2 border-[rgb(var(--color-card-rgb))]">
-                                                    <Check size={12} strokeWidth={4}/>
+                        {activeOrg && (
+                            <div className="space-y-6">
+                                <h2 className="text-3xl font-black flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))]">
+                                    <Palette className="text-cyan-500" size={32} /> Organizational Theme
+                                </h2>
+                                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-2xl shadow-xl border border-[rgb(var(--color-border-rgb))]">
+                                    <p className="text-[rgb(var(--color-text-muted-rgb))] text-sm font-medium mb-8 leading-relaxed max-w-2xl">
+                                        Set the <strong>global default theme</strong> for all users. This selection will be the baseline visual profile for the dashboard, certificates, and marketing elements.
+                                    </p>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                        {(availableThemes || []).map(theme => (
+                                            <button
+                                                key={theme.id}
+                                                type="button"
+                                                onClick={() => handleSyncSettings({ activeThemeId: theme.id })}
+                                                className={`relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${
+                                                    localSettings.activeThemeId === theme.id 
+                                                        ? 'border-cyan-500 bg-cyan-500/10 ring-2 ring-cyan-500/20 shadow-md' 
+                                                        : 'border-[rgb(var(--color-border-rgb))] hover:border-cyan-400 bg-[rgba(var(--color-muted-rgb),0.2)]'
+                                                }`}
+                                            >
+                                                {localSettings.activeThemeId === theme.id && (
+                                                    <div className="absolute -top-2 -right-2 bg-cyan-500 text-white rounded-full p-1 shadow-md border-2 border-[rgb(var(--color-card-rgb))]">
+                                                        <Check size={12} strokeWidth={4}/>
+                                                    </div>
+                                                )}
+                                                
+                                                <div className="flex justify-center space-x-1 w-full h-8 pointer-events-none">
+                                                    <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.primary || '#ccc' }}></div>
+                                                    <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.secondary || '#ccc' }}></div>
+                                                    <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.accent || '#ccc' }}></div>
+                                                    <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.background || '#ccc' }}></div>
                                                 </div>
-                                            )}
-                                            
-                                            <div className="flex justify-center space-x-1 w-full h-8 pointer-events-none">
-                                                <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.primary || '#ccc' }}></div>
-                                                <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.secondary || '#ccc' }}></div>
-                                                <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.accent || '#ccc' }}></div>
-                                                <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.background || '#ccc' }}></div>
-                                            </div>
 
-                                            <span className={`font-bold text-xs uppercase tracking-tight ${
-                                                localSettings.activeThemeId === theme.id ? 'text-cyan-400' : 'text-[rgb(var(--color-text-muted-rgb))]'
-                                            }`}>
-                                                {theme.name}
-                                            </span>
-                                        </button>
-                                    ))}
+                                                <span className={`font-bold text-xs uppercase tracking-tight ${
+                                                    localSettings.activeThemeId === theme.id ? 'text-cyan-400' : 'text-[rgb(var(--color-text-muted-rgb))]'
+                                                }`}>
+                                                    {theme.name}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
 
@@ -326,10 +342,10 @@ const Admin: FC = () => {
                                     <RefreshCw size={22} className="text-cyan-400"/> Memory Management
                                 </h3>
                                 <div className="space-y-4">
-                                    <button onClick={flushCache} className="w-full py-4 bg-[rgb(var(--color-background-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-default-rgb))] font-bold rounded-xl border border-[rgb(var(--color-border-rgb))] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-lg">
+                                    <button onClick={flushCache} className="w-full py-4 bg-[rgb(var(--color-background-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-default-rgb))] font-bold rounded-xl border border-[rgb(var(--color-border-rgb))] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] shadow-lg">
                                         <RefreshCw size={18} className="text-cyan-500"/> Purge Configuration Cache
                                     </button>
-                                    <button onClick={() => googleSheetsService.adminClearQuestionCaches(token!)} className="w-full py-4 bg-[rgb(var(--color-background-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-default-rgb))] font-bold rounded-xl border border-[rgb(var(--color-border-rgb))] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-lg">
+                                    <button onClick={() => googleSheetsService.adminClearQuestionCaches(token!)} className="w-full py-4 bg-[rgb(var(--color-background-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-default-rgb))] font-bold rounded-xl border border-[rgb(var(--color-border-rgb))] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] shadow-lg">
                                         <FileSpreadsheet size={18} className="text-emerald-500"/> Force Sync All Data Sheets
                                     </button>
                                 </div>
