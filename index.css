@@ -75,9 +75,112 @@
     --color-text-muted-rgb: 161, 161, 170;
 }
 
+/* --- GRID LAYOUTS --- */
+.mco-grid-container {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1.5rem;
+}
+@media (min-width: 768px) { .mco-grid-container { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .mco-grid-container { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.mco-subscription-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1.5rem;
+    max-width: 64rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+@media (min-width: 768px) { .mco-subscription-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* --- CARD COMPONENTS --- */
+.mco-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mco-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* Gradients */
+.mco-gradient--practice-1 { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); }
+.mco-gradient--cert-1 { background: linear-gradient(135deg, #059669 0%, #064e3b 100%); }
+.mco-gradient--sub-monthly { background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); }
+.mco-gradient--sub-yearly { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); }
+
+/* Badges */
+.mco-badge--save {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: #facc15;
+    color: #854d0e;
+    padding: 0.25rem 2rem;
+    font-size: 0.65rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    transform: rotate(45deg) translate(1.5rem, -1.5rem);
+    width: 8rem;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 20;
+}
+
+/* Buttons */
+.mco-card__button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border-radius: 1rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.025em;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.mco-card__button--white {
+    background-color: white !important;
+    color: #0f172a !important;
+}
+
+.mco-card__button--white:hover {
+    background-color: #f1f5f9 !important;
+    transform: scale(1.02);
+}
+
+.mco-card__button--amber {
+    background-color: #facc15 !important;
+    color: #854d0e !important;
+}
+
+.mco-card__button--amber:hover {
+    background-color: #fde047 !important;
+    transform: scale(1.02);
+}
+
+.mco-card__button--cyan {
+    background-color: #22d3ee !important;
+    color: #083344 !important;
+}
+
 /* --- ADMIN VIEW SCOPED STYLES --- */
 .mco-admin-wrapper {
-    /* No longer overrides background/card colors, lets theme flow through */
     color: rgb(var(--color-text-default-rgb));
 }
 
@@ -93,73 +196,61 @@
 
 .mco-admin-input {
     width: 100%;
-    background-color: rgba(var(--color-background-rgb), 0.5);
-    border: 1px solid rgb(var(--color-border-rgb));
+    background-color: rgba(var(--color-background-rgb), 0.1);
+    border: 2px solid rgb(var(--color-border-rgb));
     color: rgb(var(--color-text-strong-rgb));
-    padding: 0.75rem 1rem;
-    border-radius: 0.75rem;
-    font-weight: 600;
+    padding: 0.85rem 1.25rem;
+    border-radius: 1rem;
+    font-weight: 700;
     transition: all 0.2s;
 }
 
 .mco-admin-input:focus {
+    background-color: rgba(var(--color-primary-rgb), 0.05);
     border-color: rgb(var(--color-primary-rgb));
     outline: none;
-    box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.2);
+    box-shadow: 0 0 0 4px rgba(var(--color-primary-rgb), 0.1);
 }
 
 .mco-btn-admin-primary {
     background-color: rgb(var(--color-primary-rgb)) !important;
-    /* Use a high-contrast inverse color logic or let the primary handle it */
     color: rgb(var(--color-background-rgb)) !important;
     font-weight: 900 !important;
     text-transform: uppercase;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.75rem;
+    padding: 0.85rem 1.75rem;
+    border-radius: 1rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    transition: all 0.2s;
+    gap: 0.75rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
     cursor: pointer;
-}
-
-.mco-btn-admin-primary:hover {
-    filter: brightness(1.1);
-    transform: translateY(-1px);
 }
 
 .mco-admin-nav-item {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 1rem 1.25rem;
-    border-radius: 0.75rem;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 1.25rem;
     font-weight: 900;
     font-size: 0.875rem;
     transition: all 0.2s ease;
     border: 1px solid transparent;
     text-align: left;
     width: 100%;
-    letter-spacing: 0.02em;
 }
 
 .mco-admin-nav-item--active {
     background-color: rgb(var(--color-primary-rgb)) !important; 
     color: rgb(var(--color-background-rgb)) !important;
-    box-shadow: 0 10px 15px -3px rgba(var(--color-primary-rgb), 0.3);
 }
 
 .mco-admin-nav-item--inactive {
-    background-color: rgba(var(--color-card-rgb), 0.4);
-    border: 1px solid rgb(var(--color-border-rgb));
+    background-color: rgba(var(--color-card-rgb), 0.5);
+    border: 2px solid rgb(var(--color-border-rgb));
     color: rgb(var(--color-text-muted-rgb));
-}
-
-.mco-admin-nav-item--inactive:hover {
-    background-color: rgba(var(--color-muted-rgb), 0.6);
-    color: rgb(var(--color-text-strong-rgb));
 }
 
 body { 

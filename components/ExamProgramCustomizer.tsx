@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, ExamProductCategory } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, Zap, Layers, Clock, ToggleRight, ToggleLeft, ShieldCheck, X } from 'lucide-react';
+import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, Zap, Layers, Clock, ToggleRight, ToggleLeft, ShieldCheck, X, Globe, BarChart3 } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 interface EditableProgramData {
@@ -51,10 +51,10 @@ const ExamEditor: FC<{
     };
 
     return (
-        <div className="bg-slate-900/50 p-8 border-t border-slate-800 space-y-10">
+        <div className="bg-[rgba(var(--color-muted-rgb),0.1)] p-8 border-t border-[rgb(var(--color-border-rgb))] space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div className="space-y-6">
-                    <h4 className="text-xs font-black text-cyan-500 uppercase tracking-widest flex items-center gap-2">
+                    <h4 className="text-xs font-black text-[rgb(var(--color-primary-rgb))] uppercase tracking-widest flex items-center gap-2">
                         <Layers size={14}/> Identity & Source
                     </h4>
                     <div>
@@ -82,21 +82,21 @@ const ExamEditor: FC<{
                             {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
                         </select>
                     </div>
-                    <div className="p-4 bg-slate-950/50 border border-slate-800 rounded-2xl flex items-center justify-between">
+                    <div className="p-4 bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-2xl flex items-center justify-between">
                         <div>
-                            <p className="text-xs font-black text-white">Enable Proctored Mode</p>
-                            <p className="text-[10px] text-slate-500 font-bold mt-1">Force fullscreen and tab monitoring</p>
+                            <p className="text-xs font-black text-[rgb(var(--color-text-strong-rgb))]">Enable Proctored Mode</p>
+                            <p className="text-[10px] text-[rgb(var(--color-text-muted-rgb))] font-bold mt-1">Force fullscreen and tab monitoring</p>
                         </div>
-                        <button onClick={() => handleExamChange('certExam', 'isProctored', !data.certExam?.isProctored)} className="text-cyan-500">
-                            {data.certExam?.isProctored ? <ToggleRight size={32} /> : <ToggleLeft size={32} className="text-slate-700" />}
+                        <button onClick={() => handleExamChange('certExam', 'isProctored', !data.certExam?.isProctored)} className="text-[rgb(var(--color-primary-rgb))]">
+                            {data.certExam?.isProctored ? <ToggleRight size={32} /> : <ToggleLeft size={32} className="opacity-30" />}
                         </button>
                     </div>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <div className="p-6 bg-slate-950/50 rounded-2xl border border-slate-800 space-y-6">
-                    <h4 className="font-black text-white uppercase text-[10px] flex items-center gap-2">
+                <div className="p-6 bg-[rgb(var(--color-card-rgb))] rounded-2xl border border-[rgb(var(--color-border-rgb))] space-y-6">
+                    <h4 className="font-black text-[rgb(var(--color-text-strong-rgb))] uppercase text-[10px] flex items-center gap-2">
                         <ShieldCheck size={14} className="text-blue-500" /> Certification Parameters
                     </h4>
                     <div className="grid grid-cols-3 gap-4">
@@ -106,8 +106,8 @@ const ExamEditor: FC<{
                     </div>
                 </div>
 
-                <div className="p-6 bg-slate-950/50 rounded-2xl border border-slate-800 space-y-6">
-                    <h4 className="font-black text-white uppercase text-[10px] flex items-center gap-2">
+                <div className="p-6 bg-[rgb(var(--color-card-rgb))] rounded-2xl border border-[rgb(var(--color-border-rgb))] space-y-6">
+                    <h4 className="font-black text-[rgb(var(--color-text-strong-rgb))] uppercase text-[10px] flex items-center gap-2">
                         <FileText size={14} className="text-emerald-500" /> Practice Parameters
                     </h4>
                     <div className="grid grid-cols-2 gap-4">
@@ -117,10 +117,10 @@ const ExamEditor: FC<{
                 </div>
             </div>
 
-            <div className="flex justify-between items-center pt-8 border-t border-slate-800">
-                <button onClick={() => onDelete(program.category.id)} className="px-6 py-2 text-rose-500 hover:bg-rose-500/10 rounded-xl text-xs font-black">TRASH PROGRAM</button>
+            <div className="flex justify-between items-center pt-8 border-t border-[rgb(var(--color-border-rgb))]">
+                <button onClick={() => onDelete(program.category.id)} className="px-6 py-2 text-rose-500 hover:bg-rose-500/10 rounded-xl text-xs font-black transition-all">TRASH PROGRAM</button>
                 <div className="flex gap-4">
-                    <button onClick={onCancel} className="px-6 py-2 font-bold text-slate-400">Discard</button>
+                    <button onClick={onCancel} className="px-6 py-2 font-bold text-[rgb(var(--color-text-muted-rgb))]">Discard</button>
                     <button onClick={() => onSave(program.category.id, data)} disabled={isSaving} className="mco-btn-admin-primary min-w-[140px]">
                         {isSaving ? <Spinner size="sm"/> : 'SAVE SETTINGS'}
                     </button>
@@ -136,7 +136,16 @@ const ExamProgramCustomizer: FC = () => {
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
-    const [newProgramName, setNewProgramName] = useState('');
+    
+    // Detailed creation state
+    const [newProgram, setNewProgram] = useState({
+        name: '',
+        sku: '',
+        questionSourceUrl: '',
+        certQuestions: 100,
+        certDuration: 120,
+        passScore: 70
+    });
 
     const programs = useMemo(() => {
         if (!activeOrg) return [];
@@ -148,40 +157,41 @@ const ExamProgramCustomizer: FC = () => {
     }, [activeOrg]);
 
     const handleCreateProgram = async () => {
-        if (!token || !newProgramName) return;
+        if (!token || !newProgram.name || !newProgram.sku) return;
         setIsSaving(true);
+        const tid = toast.loading("Assembling Program Structure...");
         try {
-            await googleSheetsService.adminCreateExamProgram(token, newProgramName, {});
+            await googleSheetsService.adminCreateExamProgram(token, newProgram.name, newProgram);
             await refreshConfig();
-            toast.success("Created");
+            toast.success("New Program Integrated", { id: tid });
             setIsCreating(false);
-            setNewProgramName('');
-        } catch (e: any) { toast.error("Error"); }
+            setNewProgram({ name: '', sku: '', questionSourceUrl: '', certQuestions: 100, certDuration: 120, passScore: 70 });
+        } catch (e: any) { toast.error(e.message, { id: tid }); }
         finally { setIsSaving(false); }
     };
 
     return (
         <div className="space-y-10 pb-40">
             <div className="flex justify-between items-center">
-                <h1 className="text-4xl font-black text-white font-display flex items-center gap-4">
-                    <Settings className="text-cyan-500" size={40} /> Program Master
+                <h1 className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-4">
+                    <Settings className="text-[rgb(var(--color-primary-rgb))]" size={40} /> Program Master
                 </h1>
                 <button onClick={() => setIsCreating(true)} className="mco-btn-admin-success">
                     <PlusCircle size={20}/> NEW PROGRAM
                 </button>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-                <div className="divide-y divide-slate-800">
+            <div className="bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-3xl overflow-hidden shadow-2xl">
+                <div className="divide-y divide-[rgb(var(--color-border-rgb))]">
                     {programs.map(p => (
                         <div key={p.category.id} className="transition-all">
-                            <div className={`flex items-center p-8 gap-6 transition-colors ${expandedId === p.category.id ? 'bg-slate-800/50' : 'hover:bg-white/[0.02]'}`}>
+                            <div className={`flex items-center p-8 gap-6 transition-colors ${expandedId === p.category.id ? 'bg-[rgba(var(--color-primary-rgb),0.05)]' : 'hover:bg-white/[0.02]'}`}>
                                 <div className="flex-grow">
-                                    <p className="font-black text-white text-xl">{p.category.name}</p>
-                                    <p className="text-[10px] text-slate-500 font-mono uppercase mt-1">ID: {p.category.id}</p>
+                                    <p className="font-black text-[rgb(var(--color-text-strong-rgb))] text-xl">{p.category.name}</p>
+                                    <p className="text-[10px] text-[rgb(var(--color-text-muted-rgb))] font-mono uppercase mt-1">ID: {p.category.id}</p>
                                 </div>
                                 <button onClick={() => setExpandedId(expandedId === p.category.id ? null : p.category.id)} className={`px-8 py-3 rounded-xl text-xs font-black transition-all border-2 ${
-                                    expandedId === p.category.id ? 'bg-slate-950 text-white border-slate-700' : 'bg-slate-900 text-cyan-500 border-cyan-500/20 hover:border-cyan-500'
+                                    expandedId === p.category.id ? 'bg-[rgb(var(--color-primary-rgb))] text-[rgb(var(--color-background-rgb))] border-transparent shadow-lg' : 'bg-transparent text-[rgb(var(--color-primary-rgb))] border-[rgba(var(--color-primary-rgb),0.3)] hover:border-[rgb(var(--color-primary-rgb))]'
                                 }`}>
                                     {expandedId === p.category.id ? 'CLOSE' : 'CONFIGURE'}
                                 </button>
@@ -191,16 +201,16 @@ const ExamProgramCustomizer: FC = () => {
                                     program={p} 
                                     onSave={async (id, data) => {
                                         setIsSaving(true);
+                                        const t = toast.loading("Syncing...");
                                         try {
                                             await googleSheetsService.adminUpdateExamProgram(token!, id, data);
                                             await refreshConfig();
-                                            toast.success("Sync Complete");
+                                            toast.success("Synchronized", { id: t });
                                             setExpandedId(null);
-                                        } catch (e: any) { toast.error("Sync Failed"); }
+                                        } catch (e: any) { toast.error("Sync Failed", { id: t }); }
                                         finally { setIsSaving(false); }
                                     }} 
                                     onDelete={async (id) => {
-                                        if(!window.confirm('Delete?')) return;
                                         setIsSaving(true);
                                         try {
                                             await googleSheetsService.adminDeletePost(token!, id, 'mco_exam_program');
@@ -219,20 +229,55 @@ const ExamProgramCustomizer: FC = () => {
                 </div>
             </div>
 
+            {/* NEW PROGRAM ARCHITECT MODAL */}
             {isCreating && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                    <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-md p-10 shadow-2xl">
-                        <h2 className="text-3xl font-black text-white mb-8">New Program</h2>
-                        <div className="space-y-6">
-                            <div>
-                                <label className="mco-admin-label">Program Name</label>
-                                <input type="text" value={newProgramName} onChange={e => setNewProgramName(e.target.value)} className="mco-admin-input" />
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                    <div className="bg-[rgb(var(--color-card-rgb))] border-2 border-[rgb(var(--color-border-rgb))] rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="p-8 border-b border-[rgb(var(--color-border-rgb))] bg-[rgba(var(--color-muted-rgb),0.1)] flex justify-between items-center">
+                            <h2 className="text-3xl font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-3">
+                                <PlusCircle className="text-[rgb(var(--color-primary-rgb))]" /> Create New Program
+                            </h2>
+                            <button onClick={() => setIsCreating(false)} className="text-[rgb(var(--color-text-muted-rgb))] hover:text-white"><X size={24}/></button>
+                        </div>
+
+                        <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <h4 className="text-[10px] font-black text-cyan-500 uppercase tracking-widest flex items-center gap-2 mb-4"><Layers size={14}/> Primary Identity</h4>
+                                <div>
+                                    <label className="mco-admin-label">Public Program Name</label>
+                                    <input type="text" value={newProgram.name} onChange={e => setNewProgram({...newProgram, name: e.target.value})} className="mco-admin-input" placeholder="e.g. Master CPC Certification" />
+                                </div>
+                                <div>
+                                    <label className="mco-admin-label">Merchant SKU (Permanent)</label>
+                                    <input type="text" value={newProgram.sku} onChange={e => setNewProgram({...newProgram, sku: e.target.value})} className="mco-admin-input font-mono" placeholder="exam-cpc-2024" />
+                                </div>
+                                <div>
+                                    <label className="mco-admin-label">Google Sheet Dataset URL</label>
+                                    <input type="text" value={newProgram.questionSourceUrl} onChange={e => setNewProgram({...newProgram, questionSourceUrl: e.target.value})} className="mco-admin-input text-xs" placeholder="https://docs.google.com/..." />
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-2 mb-4"><BarChart3 size={14}/> Exam Criteria</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div><label className="mco-admin-label">Questions</label><input type="number" value={newProgram.certQuestions} onChange={e => setNewProgram({...newProgram, certQuestions: parseInt(e.target.value)})} className="mco-admin-input" /></div>
+                                    <div><label className="mco-admin-label">Duration (m)</label><input type="number" value={newProgram.certDuration} onChange={e => setNewProgram({...newProgram, certDuration: parseInt(e.target.value)})} className="mco-admin-input" /></div>
+                                </div>
+                                <div>
+                                    <label className="mco-admin-label">Passing Threshold (%)</label>
+                                    <input type="number" value={newProgram.passScore} onChange={e => setNewProgram({...newProgram, passScore: parseInt(e.target.value)})} className="mco-admin-input text-blue-500" />
+                                </div>
+                                <div className="p-4 bg-[rgba(var(--color-primary-rgb),0.05)] border-2 border-dashed border-[rgba(var(--color-primary-rgb),0.2)] rounded-2xl">
+                                    <p className="text-[9px] font-bold text-[rgb(var(--color-primary-rgb))] uppercase">Note: Auto-Sync</p>
+                                    <p className="text-[10px] text-[rgb(var(--color-text-muted-rgb))] mt-1">Creating this program will automatically scaffold a linked WooCommerce product.</p>
+                                </div>
                             </div>
                         </div>
-                        <div className="flex justify-end gap-4 mt-10">
-                            <button onClick={() => setIsCreating(false)} className="px-6 py-2 font-bold text-slate-500">Cancel</button>
-                            <button onClick={handleCreateProgram} disabled={isSaving || !newProgramName} className="mco-btn-admin-primary !bg-emerald-600">
-                                {isSaving ? <Spinner size="sm"/> : 'CREATE'}
+
+                        <div className="p-8 bg-[rgba(var(--color-muted-rgb),0.1)] border-t border-[rgb(var(--color-border-rgb))] flex justify-end gap-4">
+                            <button onClick={() => setIsCreating(false)} className="px-8 py-3 font-bold text-[rgb(var(--color-text-muted-rgb))] hover:text-white">Cancel</button>
+                            <button onClick={handleCreateProgram} disabled={isSaving || !newProgram.name || !newProgram.sku} className="mco-btn-admin-primary !bg-emerald-600">
+                                {isSaving ? <Spinner size="sm"/> : 'INITIALIZE PROGRAM'}
                             </button>
                         </div>
                     </div>
