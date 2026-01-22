@@ -137,7 +137,7 @@
     50% { background-color: #f87171; transform: rotate(45deg) scale(1.05); }
 }
 
-/* ADMIN NAVIGATION TABS */
+/* ADMIN NAVIGATION TABS - HIGH CONTRAST */
 .mco-admin-nav-item {
     display: flex;
     align-items: center;
@@ -155,7 +155,7 @@
 .mco-admin-nav-item--active {
     background-color: rgb(var(--color-primary-rgb));
     border-color: rgb(var(--color-primary-hover-rgb));
-    color: #ffffff;
+    color: #ffffff !important;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
 }
 
