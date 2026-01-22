@@ -1,0 +1,9 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+function mco_social_dispatch_post($post_id) {
+    $options = get_option('mco_social_settings');
+    if (!$options) return;
+    // ... Logic to post to FB/LinkedIn via API ...
+}
+add_action('mco_ai_post_created', 'mco_social_dispatch_post');

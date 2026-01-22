@@ -11,22 +11,10 @@ if (!defined('ABSPATH')) exit;
 define('MCO_SOCIAL_VERSION', '1.2.0');
 define('MCO_SOCIAL_PATH', plugin_dir_path(__FILE__));
 
-// Include logic
 require_once MCO_SOCIAL_PATH . 'includes/admin-page.php';
 require_once MCO_SOCIAL_PATH . 'includes/post-handler.php';
 
-/**
- * Register the social settings menu
- */
 function mco_social_add_menu() {
-    add_submenu_page(
-        'mco-exam-engine',
-        'Social Poster',
-        'Social Poster',
-        'manage_options',
-        'mco-social-settings',
-        'mco_social_render_admin_page'
-    );
+    add_submenu_page('mco-exam-engine', 'Social Poster', 'Social Poster', 'manage_options', 'mco-social-settings', 'mco_social_render_admin_page');
 }
 add_action('admin_menu', 'mco_social_add_menu', 20);
-?>

@@ -9,8 +9,8 @@
 if (!defined('ABSPATH')) exit;
 
 /**
- * 1. CUSTOM ACCESS ENGINE (Replacement for WC Subscriptions)
- * This hooks into WooCommerce to grant 30 days of access based on SKU patterns.
+ * 1. SCOPED ACCESS ENGINE (Replacement for monolithic expiry)
+ * Stores expiries in a map: [ SKU => Timestamp ]
  */
 add_action('woocommerce_order_status_completed', 'mco_handle_custom_addon_access', 10, 1);
 function mco_handle_custom_addon_access($order_id) {
@@ -20,31 +20,33 @@ function mco_handle_custom_addon_access($order_id) {
     $user_id = $order->get_user_id();
     if (!$user_id) return;
 
-    $has_addon = false;
+    $expiries = get_user_meta($user_id, '_mco_program_expiries', true) ?: [];
+    if (!is_array($expiries)) $expiries = [];
+
+    $changes_made = false;
     foreach ($order->get_items() as $item) {
         $product = $item->get_product();
         if (!$product) continue;
         
         $sku = $product->get_sku();
-        // Check for our specific addon pattern
-        if (strpos($sku, '-1mo-addon') !== false || strpos($sku, 'addon-premium') !== false) {
-            $has_addon = true;
-            break;
+        
+        // Check for addon pattern
+        if (strpos($sku, '-1mo-addon') !== false) {
+            // Strip suffix to get the target program SKU
+            $base_sku = str_replace('-1mo-addon', '', $sku);
+            $now = time();
+            $current_expiry = isset($expiries[$base_sku]) ? (int)$expiries[$base_sku] : 0;
+            
+            $base_time = ($current_expiry > $now) ? $current_expiry : $now;
+            $expiries[$base_sku] = $base_time + (30 * DAY_IN_SECONDS);
+            
+            $order->add_order_note("MCO Engine: Scoped Premium granted for $base_sku until " . date('Y-m-d H:i', $expiries[$base_sku]));
+            $changes_made = true;
         }
     }
 
-    if ($has_addon) {
-        $current_expiry = (int)get_user_meta($user_id, '_mco_premium_expiry', true);
-        $now = time();
-        
-        // If they already have active time, add to it. Otherwise, start from now.
-        $base_time = ($current_expiry > $now) ? $current_expiry : $now;
-        $new_expiry = $base_time + (30 * DAY_IN_SECONDS);
-        
-        update_user_meta($user_id, '_mco_premium_expiry', $new_expiry);
-        
-        // Log for audit
-        $order->add_order_note("MCO Engine: Granted 30 days of Premium Access. New Expiry: " . date('Y-m-d H:i', $new_expiry));
+    if ($changes_made) {
+        update_user_meta($user_id, '_mco_program_expiries', $expiries);
     }
 }
 
@@ -89,7 +91,6 @@ function mco_handle_record_hit() {
 
 /**
  * AUTHENTICATION & ENTITLEMENT SYNC
- * Fixes the "handler invalid" error during sync
  */
 function mco_handle_sync_auth($request) {
     $payload = $request->get_param('jwt_payload');
@@ -123,23 +124,15 @@ function mco_handle_sync_auth($request) {
         }
     }
 
-    // Check 2: Custom Addon Expiry
-    $custom_expiry = (int)get_user_meta($user_id, '_mco_premium_expiry', true);
-    if ($custom_expiry && $custom_expiry > time()) {
-        $is_subscribed = true;
-        if (!$subscription_info) {
-            $subscription_info = [
-                'status' => 'active',
-                'nextPaymentDate' => date('M d, Y', $custom_expiry)
-            ];
-        }
-    }
+    // Check 2: Scoped Program Expiries
+    $program_expiries = get_user_meta($user_id, '_mco_program_expiries', true) ?: [];
 
     return new WP_REST_Response([
         'paidExamIds' => (array)$paid_exams,
         'isSubscribed' => (bool)$is_subscribed,
         'subscriptionInfo' => $subscription_info,
-        'isBetaTester' => get_user_meta($user_id, '_mco_is_beta_tester', true) === '1'
+        'isBetaTester' => get_user_meta($user_id, '_mco_is_beta_tester', true) === '1',
+        'programExpiries' => $program_expiries
     ], 200);
 }
 

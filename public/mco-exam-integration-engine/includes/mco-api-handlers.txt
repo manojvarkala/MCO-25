@@ -91,7 +91,6 @@ function mco_handle_record_hit() {
 
 /**
  * AUTHENTICATION & ENTITLEMENT SYNC
- * Upgraded to return program-specific expiries.
  */
 function mco_handle_sync_auth($request) {
     $payload = $request->get_param('jwt_payload');
@@ -169,6 +168,7 @@ function mco_handle_questions_from_sheet($request) {
     }
     return new WP_REST_Response($questions, 200);
 }
+
 
 // --- ADMIN PERSISTENCE LOGIC ---
 
