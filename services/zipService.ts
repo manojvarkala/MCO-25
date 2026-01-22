@@ -22,7 +22,7 @@ interface SocialPluginSources {
 
 /**
  * Logic to assemble the Core MCO Engine ZIP.
- * All files are added to the ROOT of the ZIP to ensure WordPress detection.
+ * Maps .txt source content to .php and .css files for WordPress.
  */
 export const downloadCorePluginZip = async (sources: CorePluginSources) => {
     const zip = new JSZip();
@@ -30,15 +30,17 @@ export const downloadCorePluginZip = async (sources: CorePluginSources) => {
     // 1. Main Plugin Entry (Root)
     zip.file('mco-exam-integration-engine.php', sources.main);
 
-    // 2. Assets Subdirectory (Root-level)
+    // 2. Assets Subdirectory
     const assets = zip.folder('assets');
     if (assets) {
+        // Map .txt to .css
         assets.file('mco-styles.css', sources.styles);
     }
     
-    // 3. Includes Subdirectory (Root-level)
+    // 3. Includes Subdirectory
     const includes = zip.folder('includes');
     if (includes) {
+        // Map all .txt source keys to .php files
         includes.file('mco-security.php', sources.security);
         includes.file('mco-cpts.php', sources.cpts);
         includes.file('mco-admin.php', sources.admin);
@@ -49,7 +51,7 @@ export const downloadCorePluginZip = async (sources: CorePluginSources) => {
         includes.file('mco-woocommerce.php', sources.woocommerce);
     }
 
-    // 4. Public Templates Subdirectory (Root-level)
+    // 4. Public Templates Subdirectory
     const publicDir = zip.folder('public');
     if (publicDir) {
         Object.entries(sources.templates).forEach(([name, content]) => {
@@ -75,7 +77,7 @@ export const downloadSocialPluginZip = async (sources: SocialPluginSources) => {
     // Main Entry (Root)
     zip.file('mco-social-poster.php', sources.main);
 
-    // Includes (Root-level)
+    // Includes
     const includes = zip.folder('includes');
     if (includes) {
         includes.file('admin-page.php', sources.admin);
