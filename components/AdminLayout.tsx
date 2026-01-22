@@ -2,13 +2,19 @@ import React, { FC, ReactNode } from 'react';
 // FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
 import * as ReactRouterDOM from 'react-router-dom';
 const { NavLink } = ReactRouterDOM as any;
-import { LayoutDashboard, Settings, ShoppingCart, Code, ArrowLeft, History, BarChart3, Sparkles, BookOpen, TrendingUp, Users, FileCheck } from 'lucide-react';
+import { useAuth } from '../context/AuthContext.tsx';
+import { 
+    LayoutDashboard, Settings, ShoppingCart, Code, 
+    ArrowLeft, History, BarChart3, Sparkles, BookOpen, 
+    TrendingUp, Users, FileCheck, Globe 
+} from 'lucide-react';
 
 interface AdminLayoutProps {
   children: ReactNode;
 }
 
 const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
+    const { isSuperAdmin } = useAuth();
     const navLinkClass = "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-[rgb(var(--color-text-muted-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))]";
     const activeNavLinkClass = "bg-[rgba(var(--color-primary-rgb),0.1)] text-[rgb(var(--color-primary-rgb))]";
 
@@ -18,6 +24,18 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-8">
             <aside className="md:col-span-1 lg:col-span-1 bg-[rgb(var(--color-card-rgb))] p-4 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))] self-start sticky top-28">
                 <nav className="space-y-2">
+                    {/* Super Admin Section */}
+                    {isSuperAdmin && (
+                        <div className="mb-4">
+                            <p className="px-3 text-[9px] font-black text-cyan-500 uppercase tracking-widest mb-2">Network Control</p>
+                            <NavLink to="/admin/network" className={getLinkClass}>
+                                <Globe size={18} />
+                                <span className="font-bold text-white">Network Hub</span>
+                            </NavLink>
+                        </div>
+                    )}
+
+                    <p className="px-3 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Platform Management</p>
                     <NavLink to="/admin" end className={getLinkClass}>
                         <LayoutDashboard size={18} />
                         <span>Admin Dashboard</span>

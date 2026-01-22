@@ -53,6 +53,7 @@ import VolunteerOnboarding from './components/VolunteerOnboarding.tsx';
 import BetaRegistration from './components/BetaRegistration.tsx';
 import WooCommerceStyling from './components/WooCommerceStyling.tsx';
 import PurchaseNotifier from './components/PurchaseNotifier.tsx'; 
+import SuperAdminMonitor from './components/SuperAdminMonitor.tsx';
 import { getApiBaseUrl } from './services/apiConfig.ts';
 
 const ProtectedRoute: FC<{ children: ReactNode; adminOnly?: boolean }> = ({ children, adminOnly = false }) => {
@@ -64,7 +65,7 @@ const ProtectedRoute: FC<{ children: ReactNode; adminOnly?: boolean }> = ({ chil
 };
 
 const AppContent: FC = () => {
-    const { user, isMasquerading, isEffectivelyAdmin } = useAuth();
+    const { user, isMasquerading, isEffectivelyAdmin, isSuperAdmin } = useAuth();
     const { activeOrg, activeTheme, isInitializing } = useAppContext();
     const location = useLocation();
     const [isDebugSidebarOpen, setIsDebugSidebarOpen] = useState(false);
@@ -164,6 +165,7 @@ const AppContent: FC = () => {
                                 <Route path="/handbook" element={<Handbook />} />
                                 <Route path="/woo-styling" element={<WooCommerceStyling />} />
                                 <Route path="/purchase-notifier" element={<PurchaseNotifier />} />
+                                <Route path="/network" element={isSuperAdmin ? <SuperAdminMonitor /> : <Navigate to="/admin" />} />
                             </Routes></AdminLayout></ProtectedRoute>} />
                         <Route path="/instructions" element={<Instructions />} />
                         <Route path="/user-guide" element={<UserGuide />} />

@@ -17,6 +17,7 @@ interface AuthState {
 
 interface AuthContextType extends AuthState {
   isEffectivelyAdmin: boolean;
+  isSuperAdmin: boolean;
   isMasquerading: boolean;
   masqueradeAs: MasqueradeMode;
   loginWithToken: (token: string, isSyncOnly?: boolean) => Promise<void>;
@@ -114,12 +115,33 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const [masqueradeAs, setMasqueradeAs] = useState<MasqueradeMode>('none');
   const [originalAuthState, setOriginalAuthState] = useState<AuthState | null>(null);
+  
+  // Dynamic Super Admin emails fetched from master-tenants.json
+  const [superAdminEmails, setSuperAdminEmails] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Fetch the dynamic list of authorized Super Admins on mount
+    fetch('/master-tenants.json')
+      .then(res => res.json())
+      .then(data => {
+        if (data.superAdminEmails) {
+            setSuperAdminEmails(data.superAdminEmails.map((e: string) => e.toLowerCase()));
+        }
+      })
+      .catch(() => console.warn("Failed to load super admin registry. Fallback to default."));
+  }, []);
 
   const isEffectivelyAdmin = useMemo(() => {
     if (!user) return false;
     return user.isAdmin && masqueradeAs === 'none';
   }, [user, masqueradeAs]);
 
+  // DEFINE SUPER ADMIN IDENTITY DYNAMICALLY
+  const isSuperAdmin = useMemo(() => {
+    if (!user) return false;
+    // Check against the editable list from master-tenants.json
+    return user.isAdmin && superAdminEmails.includes(user.email.toLowerCase());
+  }, [user, superAdminEmails]);
 
   const logout = useCallback(() => {
     setUser(null);
@@ -157,7 +179,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setSubscriptionInfo(data.subscriptionInfo);
         setIsBetaTester(!!data.isBetaTester);
         
-        // Handle program expiries if returned by API
         const expiries = (data as any).programExpiries || {};
         setProgramExpiries(expiries);
         
@@ -248,10 +269,10 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, [user]);
 
   const value = useMemo(() => ({
-    user, token, paidExamIds, isSubscribed, subscriptionInfo, isEffectivelyAdmin,
+    user, token, paidExamIds, isSubscribed, subscriptionInfo, isEffectivelyAdmin, isSuperAdmin,
     isMasquerading: masqueradeAs !== 'none', masqueradeAs, isBetaTester, programExpiries,
     loginWithToken, logout, refreshEntitlements, updateUserName, startMasquerade, stopMasquerade,
-  }), [user, token, paidExamIds, isSubscribed, subscriptionInfo, isEffectivelyAdmin, masqueradeAs, isBetaTester, programExpiries, loginWithToken, logout, refreshEntitlements, updateUserName, startMasquerade, stopMasquerade]);
+  }), [user, token, paidExamIds, isSubscribed, subscriptionInfo, isEffectivelyAdmin, isSuperAdmin, masqueradeAs, isBetaTester, programExpiries, loginWithToken, logout, refreshEntitlements, updateUserName, startMasquerade, stopMasquerade]);
 
   return (
     <AuthContext.Provider value={value}>

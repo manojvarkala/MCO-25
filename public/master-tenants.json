@@ -1,6 +1,10 @@
 
 {
   "feePercentage": 10,
+  "superAdminEmails": [
+    "admin@annapoornainfo.com",
+    "manoj@annapoornainfo.com"
+  ],
   "tenants": [
     {
       "id": "mco",
