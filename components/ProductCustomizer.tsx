@@ -148,7 +148,7 @@ const ProductEditorModal: FC<{
                             <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-2 block">Packaged Contents</label>
                             <div className="bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl p-4 space-y-2 max-h-48 overflow-y-auto">
                                 {availableExams.map(exam => (
-                                    <label key={exam.sku} className="flex items-center gap-3 p-2 hover:bg-[rgba(var(--color-muted-rgb),0.3)] rounded-lg cursor-pointer transition-colors border border-transparent has-[:checked]:border-cyan-500/30">
+                                    <label key={exam.id} className="flex items-center gap-3 p-2 hover:bg-[rgba(var(--color-muted-rgb),0.3)] rounded-lg cursor-pointer transition-colors border border-transparent has-[:checked]:border-cyan-500/30">
                                         <input 
                                             type="checkbox" 
                                             checked={formData.bundledSkus.includes(exam.sku)}
@@ -197,13 +197,12 @@ const ProductCustomizer: FC = () => {
     const products = useMemo(() => {
         if (!examPrices) return [];
         return Object.entries(examPrices).map(([sku, data]: [string, any]) => {
-            // FORCE TYPE OVERRIDE for -1mo-addon items
-            // They should be treated as subscriptions (recurring) in the admin UI,
-            // even if they are technically 'simple' products in WooCommerce metadata.
-            const isAddon = sku.includes('-1mo-addon');
-            const resolvedType = isAddon 
-                ? 'subscription' 
-                : (data.isBundle ? 'bundle' : (data.subscription_period ? 'subscription' : 'simple'));
+            // Updated Type Resolution
+            // -1mo-addon items are technically 'simple' one-time products.
+            // They belong in the 'Standard' tab, not 'Recurring'.
+            const resolvedType = data.isBundle 
+                ? 'bundle' 
+                : (data.subscription_period ? 'subscription' : 'simple');
 
             return {
                 id: data.productId?.toString() || sku,
@@ -213,7 +212,7 @@ const ProductCustomizer: FC = () => {
                 price: data.price?.toString() || '0',
                 regularPrice: data.regularPrice?.toString() || '0',
                 bundledSkus: data.bundledSkus || [],
-                subscriptionPeriod: data.subscription_period || (isAddon ? 'month' : undefined)
+                subscriptionPeriod: data.subscription_period
             };
         });
     }, [examPrices]);

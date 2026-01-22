@@ -106,6 +106,8 @@ const Dashboard: FC = () => {
                 id: p.productId?.toString() || p.sku,
                 sku: p.sku,
                 name: stripHtml(p.name),
+                // Visual mapping for styling: Addons and recurring subs use 'subscription' for Teal colors.
+                // Actual bundles use 'bundle' for Purple colors.
                 type: (p.sku.includes('addon') || p.type === 'subscription') ? 'subscription' : 'bundle',
                 salePrice: p.price?.toString() || '0',
                 regularPrice: p.regularPrice?.toString() || '0',
