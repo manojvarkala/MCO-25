@@ -1,0 +1,21 @@
+
+{
+  "feePercentage": 10,
+  "tenants": [
+    {
+      "id": "mco",
+      "name": "Medical Coding Online",
+      "apiUrl": "https://www.coding-online.net"
+    },
+    {
+      "id": "annapoorna",
+      "name": "Annapoorna Infotech",
+      "apiUrl": "https://www.annapoornainfo.com"
+    },
+    {
+      "id": "bharatcerts",
+      "name": "Bharat Certs",
+      "apiUrl": "https://www.bharatcerts.in"
+    }
+  ]
+}

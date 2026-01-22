@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, FC, ReactNode } from 'react';
 import type { Organization, Exam, ExamProductCategory, InProgressExamInfo, RecommendedBook, Theme, FeedbackContext, AppContextType } from '../types.ts';
-import toast from 'react-hot-toast';
-import { useAuth } from './AuthContext.tsx';
-import { getTenantConfig, TenantConfig } from '../services/apiConfig.ts';
+import { getTenantConfig } from '../services/apiConfig.ts';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -82,9 +80,9 @@ const processConfigData = (configData: any) => {
                 regularPrice: parseFloat(getField(exam, ['regularPrice', 'regular_price'])) || 0,
                 isPractice: exam.isPractice ?? (category ? category.practiceExamId === id : false),
                 productSku: getField(exam, ['productSku', 'product_sku', 'sku']),
-                addonSku: exam.addonSku || '', // Explicitly preserve addonSku
-                certificateEnabled: !!exam.certificateEnabled, // Cast to bool
-                isProctored: !!exam.isProctored, // Cast to bool
+                addonSku: exam.addonSku || '',
+                certificateEnabled: !!exam.certificateEnabled,
+                isProctored: !!exam.isProctored,
                 questionSourceUrl: getField(exam, ['questionSourceUrl', 'question_source_url'], categoryUrl)
             };
         }).filter(Boolean) as Exam[];
@@ -174,6 +172,8 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
           
           const storedTheme = localStorage.getItem('mco_active_theme');
           const orgTheme = newActiveOrg.activeThemeId;
+          
+          // If we just saved (explicit sync), we MUST use the org's theme to reflect admin's choice
           const finalTheme = (isExplicitSync || !storedTheme) ? (orgTheme || 'default') : storedTheme;
           setActiveTheme(finalTheme);
       }
@@ -230,7 +230,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         const apiUrl = tenantConfig.apiBaseUrl ? `${tenantConfig.apiBaseUrl}/wp-json/mco-app/v1/config` : '/wp-json/mco-app/v1/config';
         try {
-            const response = await fetch(`${apiUrl}?nocache=${forceRefresh ? Date.now() : ''}`, { mode: 'cors', credentials: 'same-origin' });
+            const response = await fetch(`${apiUrl}?nocache=${forceRefresh ? Date.now() : ''}`, { mode: 'cors', credentials: 'include' });
             if (response.ok) {
                 const liveConfig = await response.json();
                 const processed = processConfigData(liveConfig);

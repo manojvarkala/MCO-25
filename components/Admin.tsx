@@ -28,7 +28,7 @@ const themeColors: { [key: string]: { [key: string]: string } } = {
         primary: 'rgb(6, 182, 212)',
         secondary: 'rgb(219, 39, 119)',
         accent: 'rgb(253, 224, 71)',
-        background: 'rgb(30, 41, 59)',
+        background: 'rgb(15, 23, 42)',
     },
     professional: {
         primary: 'rgb(4, 120, 87)',
@@ -105,7 +105,7 @@ const Admin: FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSavingSettings, setIsSavingSettings] = useState(false);
 
-    // Track local settings for the toggles/theme
+    // Local settings state for UI reactivity
     const [localSettings, setLocalSettings] = useState({
         purchaseNotifierEnabled: true,
         bundlesEnabled: true,
@@ -113,8 +113,9 @@ const Admin: FC = () => {
         activeThemeId: 'default'
     });
 
+    // Only update local settings from global state if we are not currently saving
     useEffect(() => {
-        if (activeOrg) {
+        if (activeOrg && !isSavingSettings) {
             setLocalSettings({
                 purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
                 bundlesEnabled: activeOrg.bundlesEnabled ?? true,
@@ -122,7 +123,7 @@ const Admin: FC = () => {
                 activeThemeId: activeOrg.activeThemeId || 'default'
             });
         }
-    }, [activeOrg]);
+    }, [activeOrg, isSavingSettings]);
 
     const loadData = async () => {
         if (!token) return;
@@ -145,8 +146,9 @@ const Admin: FC = () => {
 
     const handleSyncSettings = async (updates: Partial<typeof localSettings>) => {
         if (!token || isSavingSettings) return;
-        setIsSavingSettings(true);
         
+        // 1. Optimistic UI Update
+        setIsSavingSettings(true);
         const nextSettings = { ...localSettings, ...updates };
         setLocalSettings(nextSettings);
 
@@ -158,12 +160,12 @@ const Admin: FC = () => {
         const tid = toast.loading("Syncing branding to server...");
         try {
             await googleSheetsService.adminUpdateGlobalSettings(token, nextSettings);
-            // CRITICAL: Refresh config to persist the change across the app state
+            // 2. Clear server cache and refresh local data
             await refreshConfig();
-            toast.success("Settings saved successfully", { id: tid });
+            toast.success("Settings saved and verified", { id: tid });
         } catch (e: any) {
             toast.error(e.message || "Save failed", { id: tid });
-            // Revert local UI state on failure
+            // Revert on failure
             if (activeOrg) {
                 setLocalSettings({
                     purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
