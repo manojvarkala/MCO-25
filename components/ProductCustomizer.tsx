@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import toast from 'react-hot-toast';
-import { Edit, Save, X, ShoppingCart, PlusCircle, Box, Repeat, Package, DollarSign, Tag, Info, CheckSquare, Square, Trash2 } from 'lucide-react';
+import { Edit, Save, X, ShoppingCart, PlusCircle, Box, Repeat, Package, DollarSign, Tag, Info, CheckSquare, Square, Trash2, Copy, Link2 } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 type TabType = 'all' | 'simple' | 'subscription' | 'bundle';
@@ -17,6 +17,7 @@ interface ProductEntry {
     regularPrice: string;
     bundledSkus?: string[];
     subscriptionPeriod?: string;
+    questionSourceUrl?: string;
 }
 
 const TabButton: FC<{ active: boolean; onClick: () => void; children: ReactNode }> = ({ active, onClick, children }) => (
@@ -38,17 +39,21 @@ const ProductEditorModal: FC<{
     onDelete: (productId: string) => Promise<void>;
     isSaving: boolean;
     availableExams: ProductEntry[];
-}> = ({ product, type, onClose, onSave, onDelete, isSaving, availableExams }) => {
-    const isNew = !product;
+    isDuplicating?: boolean;
+}> = ({ product, type, onClose, onSave, onDelete, isSaving, availableExams, isDuplicating = false }) => {
+    const isNew = !product || isDuplicating;
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+    
     const [formData, setFormData] = useState({
-        name: product?.name || '',
+        name: isDuplicating ? `${product?.name} - Premium Addon` : (product?.name || ''),
         price: product?.price || '0',
         regularPrice: product?.regularPrice || '0',
-        sku: product?.sku || '',
+        sku: isDuplicating ? `${product?.sku}-1mo-addon` : (product?.sku || ''),
         type: product?.type || (type === 'all' ? 'simple' : type),
         bundledSkus: product?.bundledSkus || [] as string[],
-        subscriptionPeriod: product?.subscriptionPeriod || 'month'
+        subscriptionPeriod: product?.subscriptionPeriod || 'month',
+        questionSourceUrl: product?.questionSourceUrl || '',
+        isBundle: isDuplicating ? true : (product?.type === 'bundle')
     });
 
     const handleToggleBundleItem = (sku: string) => {
@@ -65,15 +70,15 @@ const ProductEditorModal: FC<{
             <div className="bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
                 <div className="p-6 border-b border-[rgb(var(--color-border-rgb))] flex justify-between items-center bg-[rgba(var(--color-background-rgb),0.5)]">
                     <h2 className="text-xl font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2">
-                        {isNew ? <PlusCircle size={20} className="text-emerald-500"/> : <Edit size={20} className="text-cyan-500"/>} 
-                        {isNew ? `Create New ${formData.type.toUpperCase()}` : 'Edit Product'}
+                        {isDuplicating ? <Copy size={20} className="text-amber-500"/> : (isNew ? <PlusCircle size={20} className="text-emerald-500"/> : <Edit size={20} className="text-cyan-500"/>)} 
+                        {isDuplicating ? 'Duplicate as Addon' : (isNew ? `Create New ${formData.type.toUpperCase()}` : 'Edit Product')}
                     </h2>
                     <button onClick={onClose} className="text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))] transition-colors"><X size={24}/></button>
                 </div>
                 
                 <div className="p-8 space-y-6 overflow-y-auto flex-grow">
                     <div>
-                        <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">Display Name</label>
+                        <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">Product Title</label>
                         <div className="relative">
                             <Tag className="absolute left-3 top-3.5 text-slate-400" size={18}/>
                             <input 
@@ -81,7 +86,7 @@ const ProductEditorModal: FC<{
                                 value={formData.name} 
                                 onChange={e => setFormData({...formData, name: e.target.value})}
                                 placeholder="e.g. CPC Certification Exam"
-                                className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+                                className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 font-bold"
                             />
                         </div>
                     </div>
@@ -96,58 +101,56 @@ const ProductEditorModal: FC<{
                                 onChange={e => setFormData({...formData, sku: e.target.value})}
                                 disabled={!isNew}
                                 placeholder="e.g. exam-cpc-cert"
-                                className={`w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 ${!isNew ? 'opacity-50 cursor-not-allowed font-mono text-cyan-500' : ''}`}
+                                className={`w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 ${!isNew ? 'opacity-50 cursor-not-allowed font-mono text-cyan-500' : 'font-mono'}`}
                             />
                         </div>
-                        {isNew && <p className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] mt-1 uppercase font-bold">Must match the Exam Program SKU precisely.</p>}
+                        {isNew && <p className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] mt-1 uppercase font-bold">Recommended for addons: <span className="text-amber-500">-1mo-addon</span></p>}
+                    </div>
+
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">Question Source (Google Sheet URL)</label>
+                        <div className="relative">
+                            <Link2 className="absolute left-3 top-3.5 text-slate-400" size={18}/>
+                            <input 
+                                type="text" 
+                                value={formData.questionSourceUrl} 
+                                onChange={e => setFormData({...formData, questionSourceUrl: e.target.value})}
+                                placeholder="https://docs.google.com/spreadsheets/d/..."
+                                className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-cyan-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 font-mono text-xs"
+                            />
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-6">
                         <div>
-                            <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">Regular Price</label>
+                            <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">Retail Price</label>
                             <div className="relative">
                                 <DollarSign className="absolute left-3 top-3.5 text-slate-400" size={18}/>
                                 <input 
                                     type="number" 
                                     value={formData.regularPrice} 
                                     onChange={e => setFormData({...formData, regularPrice: e.target.value})}
-                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500"
                                 />
                             </div>
                         </div>
                         <div>
-                            <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">Sale Price</label>
+                            <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">Offer Price</label>
                             <div className="relative">
                                 <DollarSign className="absolute left-3 top-3.5 text-slate-400" size={18}/>
                                 <input 
                                     type="number" 
                                     value={formData.price} 
                                     onChange={e => setFormData({...formData, price: e.target.value})}
-                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+                                    className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-emerald-500 font-black focus:border-emerald-500"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    {formData.type === 'subscription' && (
+                    {formData.type === 'bundle' || isDuplicating && (
                         <div>
-                            <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">Billing Period</label>
-                            <select 
-                                value={formData.subscriptionPeriod}
-                                onChange={e => setFormData({...formData, subscriptionPeriod: e.target.value})}
-                                className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 px-4 text-[rgb(var(--color-text-strong-rgb))]"
-                            >
-                                <option value="day">Daily</option>
-                                <option value="week">Weekly</option>
-                                <option value="month">Monthly</option>
-                                <option value="year">Yearly</option>
-                            </select>
-                        </div>
-                    )}
-
-                    {formData.type === 'bundle' && (
-                        <div>
-                            <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-2 block">Packaged Contents</label>
+                            <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-2 block">Packaged Contents (Bundle Items)</label>
                             <div className="bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl p-4 space-y-2 max-h-48 overflow-y-auto">
                                 {availableExams.map(exam => (
                                     <label key={exam.id} className="flex items-center gap-3 p-2 hover:bg-[rgba(var(--color-muted-rgb),0.3)] rounded-lg cursor-pointer transition-colors border border-transparent has-[:checked]:border-cyan-500/30">
@@ -173,14 +176,14 @@ const ProductEditorModal: FC<{
                                     onClick={() => setIsConfirmingDelete(true)}
                                     className="px-4 py-2 text-rose-500 hover:text-rose-400 border border-rose-500/30 rounded-lg text-xs font-bold uppercase transition-colors"
                                 >
-                                    Delete Product
+                                    Delete
                                 </button>
                             ) : (
                                 <button 
-                                    onClick={() => onDelete(product.id)}
+                                    onClick={() => onDelete(product!.id)}
                                     className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-black shadow-lg animate-pulse"
                                 >
-                                    Confirm Delete
+                                    Confirm
                                 </button>
                             )
                         )}
@@ -195,7 +198,7 @@ const ProductEditorModal: FC<{
                             }`}
                         >
                             {isSaving ? <Spinner size="sm"/> : <Save size={18}/>} 
-                            {isNew ? 'CREATE PRODUCT' : 'UPDATE PRODUCT'}
+                            {isDuplicating ? 'SAVE AS CLONE' : (isNew ? 'CREATE PRODUCT' : 'UPDATE PRODUCT')}
                         </button>
                     </div>
                 </div>
@@ -211,6 +214,7 @@ const ProductCustomizer: FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [editingProduct, setEditingProduct] = useState<ProductEntry | null>(null);
     const [isCreating, setIsCreating] = useState(false);
+    const [isDuplicating, setIsDuplicating] = useState(false);
     const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
     
     // Bulk pricing state
@@ -232,7 +236,8 @@ const ProductCustomizer: FC = () => {
                 price: data.price?.toString() || '0',
                 regularPrice: data.regularPrice?.toString() || '0',
                 bundledSkus: data.bundledSkus || [],
-                subscriptionPeriod: data.subscription_period
+                subscriptionPeriod: data.subscription_period,
+                questionSourceUrl: data.questionSourceUrl || ''
             };
         });
     }, [examPrices]);
@@ -253,13 +258,14 @@ const ProductCustomizer: FC = () => {
     const handleSaveProduct = async (formData: any) => {
         if (!token) return;
         setIsSaving(true);
-        const tid = toast.loading("Saving to WooCommerce...");
+        const tid = toast.loading("Syncing WooCommerce...");
         try {
             await googleSheetsService.adminUpsertProduct(token, formData);
             await refreshConfig();
             toast.success("Inventory Synchronized", { id: tid });
             setEditingProduct(null);
             setIsCreating(false);
+            setIsDuplicating(false);
         } catch (e: any) {
             toast.error(e.message || "Failed to save", { id: tid });
         } finally {
@@ -383,26 +389,26 @@ const ProductCustomizer: FC = () => {
                 )}
 
                 <div className="flex flex-wrap gap-2">
-                    <button onClick={() => { setActiveTab('simple'); setIsCreating(true); }} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-black text-xs hover:bg-emerald-500 transition shadow-lg uppercase tracking-wider"><PlusCircle size={16}/> NEW SIMPLE</button>
+                    <button onClick={() => { setActiveTab('simple'); setIsCreating(true); }} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-black text-xs hover:bg-emerald-500 transition shadow-lg uppercase tracking-wider"><PlusCircle size={16}/> NEW PRODUCT</button>
                     <button onClick={() => { setActiveTab('subscription'); setIsCreating(true); }} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-xs hover:bg-blue-500 transition shadow-lg uppercase tracking-wider"><PlusCircle size={16}/> NEW SUB</button>
                     <button onClick={() => { setActiveTab('bundle'); setIsCreating(true); }} className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-xl font-black text-xs hover:bg-purple-500 transition shadow-lg uppercase tracking-wider"><PlusCircle size={16}/> NEW BUNDLE</button>
                 </div>
             </div>
 
             <div className="flex flex-wrap gap-3 p-1.5 bg-[rgb(var(--color-background-rgb))] rounded-xl border border-[rgb(var(--color-border-rgb))] self-start">
-                <TabButton active={activeTab === 'all'} onClick={() => { setActiveTab('all'); setSelectedSkus([]); }}>Full List</TabButton>
-                <TabButton active={activeTab === 'simple'} onClick={() => { setActiveTab('simple'); setSelectedSkus([]); }}>Standard</TabButton>
-                <TabButton active={activeTab === 'subscription'} onClick={() => { setActiveTab('subscription'); setSelectedSkus([]); }}>Recurring</TabButton>
-                <TabButton active={activeTab === 'bundle'} onClick={() => { setActiveTab('bundle'); setSelectedSkus([]); }}>Package Deals</TabButton>
+                <TabButton active={activeTab === 'all'} onClick={() => { setActiveTab('all'); setSelectedSkus([]); }}>Full Inventory</TabButton>
+                <TabButton active={activeTab === 'simple'} onClick={() => { setActiveTab('simple'); setSelectedSkus([]); }}>Standard Exams</TabButton>
+                <TabButton active={activeTab === 'subscription'} onClick={() => { setActiveTab('subscription'); setSelectedSkus([]); }}>Memberships</TabButton>
+                <TabButton active={activeTab === 'bundle'} onClick={() => { setActiveTab('bundle'); setSelectedSkus([]); }}>Bundles & Addons</TabButton>
             </div>
 
             <div className="bg-[rgb(var(--color-card-rgb))] rounded-2xl shadow-2xl border border-[rgb(var(--color-border-rgb))] overflow-hidden">
                 <div className="bg-[rgb(var(--color-background-rgb))] p-4 border-b border-[rgb(var(--color-border-rgb))] flex items-center justify-between">
                      <button onClick={handleSelectAll} className="flex items-center gap-2 text-[10px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-widest hover:text-[rgb(var(--color-text-strong-rgb))] transition">
                         {selectedSkus.length === filtered.length && filtered.length > 0 ? <CheckSquare size={16} className="text-cyan-500"/> : <Square size={16}/>}
-                        {selectedSkus.length === filtered.length && filtered.length > 0 ? 'Deselect All' : 'Select All Filtered'}
+                        {selectedSkus.length === filtered.length && filtered.length > 0 ? 'Deselect All' : 'Select Filtered Group'}
                     </button>
-                    <span className="text-[10px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-widest">{filtered.length} INVENTORY ITEMS</span>
+                    <span className="text-[10px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-widest">{filtered.length} STORE ENTITIES</span>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -410,10 +416,10 @@ const ProductCustomizer: FC = () => {
                         <thead className="bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-muted-rgb))] uppercase text-[10px] font-black tracking-widest border-b border-[rgb(var(--color-border-rgb))]">
                             <tr>
                                 <th className="p-5 w-12"></th>
-                                <th className="p-5">Product Entity</th>
-                                <th className="p-5">Classification</th>
-                                <th className="p-5">Value (USD)</th>
-                                <th className="p-5 text-right">Settings</th>
+                                <th className="p-5">Entity Branding</th>
+                                <th className="p-5">Type</th>
+                                <th className="p-5">Price Matrix</th>
+                                <th className="p-5 text-right">Quick Tools</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[rgb(var(--color-border-rgb))]">
@@ -426,7 +432,7 @@ const ProductCustomizer: FC = () => {
                                     </td>
                                     <td className="p-5">
                                         <p className="font-black text-[rgb(var(--color-text-strong-rgb))] text-base group-hover:text-cyan-500 transition-colors">{p.name}</p>
-                                        <p className="text-[10px] font-mono text-[rgb(var(--color-text-muted-rgb))] mt-1 uppercase">SKU: {p.sku}</p>
+                                        <p className="text-[10px] font-mono text-[rgb(var(--color-text-muted-rgb))] mt-1 uppercase">SKU: <span className="text-cyan-400">{p.sku}</span></p>
                                     </td>
                                     <td className="p-5">
                                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-inner border ${
@@ -448,14 +454,23 @@ const ProductCustomizer: FC = () => {
                                     </td>
                                     <td className="p-5 text-right space-x-2">
                                         <button 
-                                            onClick={() => setEditingProduct(p)}
+                                            onClick={() => { setEditingProduct(p); setIsDuplicating(true); }}
+                                            className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-amber-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl transition-all border border-transparent hover:border-amber-500/30 shadow-sm"
+                                            title="Duplicate for Premium Addon"
+                                        >
+                                            <Copy size={16}/>
+                                        </button>
+                                        <button 
+                                            onClick={() => { setEditingProduct(p); setIsDuplicating(false); }}
                                             className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-cyan-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl transition-all border border-transparent hover:border-[rgb(var(--color-border-rgb))] shadow-sm"
+                                            title="Edit Properties"
                                         >
                                             <Edit size={16}/>
                                         </button>
                                         <button 
-                                            onClick={() => { if(window.confirm('Delete this product permanently?')) handleDeleteProduct(p.id) }}
+                                            onClick={() => { if(window.confirm('Delete this entity permanently?')) handleDeleteProduct(p.id) }}
                                             className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-rose-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl transition-all border border-transparent hover:border-rose-500/30 shadow-sm"
+                                            title="Trash"
                                         >
                                             <Trash2 size={16}/>
                                         </button>
@@ -467,7 +482,7 @@ const ProductCustomizer: FC = () => {
                 </div>
                 {filtered.length === 0 && (
                     <div className="p-20 text-center text-[rgb(var(--color-text-muted-rgb))] font-mono italic">
-                        No product entries matching current filter.
+                        The current search/filter criteria returned zero inventory records.
                     </div>
                 )}
             </div>
@@ -476,10 +491,11 @@ const ProductCustomizer: FC = () => {
                 <ProductEditorModal 
                     product={editingProduct} 
                     type={activeTab}
-                    onClose={() => { setEditingProduct(null); setIsCreating(false); }} 
+                    onClose={() => { setEditingProduct(null); setIsCreating(false); setIsDuplicating(false); }} 
                     onSave={handleSaveProduct} 
                     onDelete={handleDeleteProduct}
                     isSaving={isSaving}
+                    isDuplicating={isDuplicating}
                     availableExams={products.filter(p => p.type === 'simple')}
                 />
             )}
