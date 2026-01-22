@@ -59,11 +59,7 @@ const themeColors: { [key: string]: { [key: string]: string } } = {
 const NavItem: FC<{ id: AdminTab; label: string; icon: ReactNode; active: boolean; onClick: (id: AdminTab) => void }> = ({ id, label, icon, active, onClick }) => (
     <button
         onClick={() => onClick(id)}
-        className={`flex items-center gap-3 px-5 py-4 rounded-xl transition-all font-bold text-sm w-full text-left border ${
-            active 
-                ? 'bg-cyan-600 border-cyan-500 text-white shadow-lg shadow-cyan-900/20' 
-                : 'bg-[rgb(var(--color-card-rgb))] border-[rgb(var(--color-border-rgb))] text-[rgb(var(--color-text-muted-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))]'
-        }`}
+        className={`mco-admin-nav-item ${active ? 'mco-admin-nav-item--active' : 'mco-admin-nav-item--inactive'}`}
     >
         {icon} {label}
     </button>

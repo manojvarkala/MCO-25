@@ -176,9 +176,14 @@ const ExamProgramCustomizer: FC = () => {
     const { activeOrg, examPrices, refreshConfig } = useAppContext();
     const { token } = useAuth();
     const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isSaving, setIsSaving] = useState(false);
     
+    // Bulk Update State
+    const [bulkPassScore, setBulkPassScore] = useState('');
+    const [bulkDuration, setBulkDuration] = useState('');
+    const [bulkQuestions, setBulkQuestions] = useState('');
+
     const programs = useMemo(() => {
         if (!activeOrg) return [];
         return activeOrg.examProductCategories.map(cat => ({
@@ -193,6 +198,14 @@ const ExamProgramCustomizer: FC = () => {
         const all = Object.entries(examPrices).map(([sku, d]: [string, any]) => ({ sku, name: d.name, isBundle: d.isBundle }));
         return { unlinked: all, bundles: all.filter(p => p.isBundle) };
     }, [examPrices]);
+
+    const handleToggleSelect = (id: string) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
+
+    const handleSelectAll = () => {
+        setSelectedIds(selectedIds.length === programs.length ? [] : programs.map(p => p.category.id));
+    };
 
     const handleSave = async (id: string, data: EditableProgramData) => {
         if (!token) return;
@@ -215,24 +228,117 @@ const ExamProgramCustomizer: FC = () => {
             await refreshConfig();
             toast.success("Program Deleted", { id: tid });
             setExpandedId(null);
-            setDeletingId(null);
+            setSelectedIds(prev => prev.filter(i => i !== id));
         } catch (e: any) { toast.error(e.message, { id: tid }); }
         finally { setIsSaving(false); }
     };
 
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0 || !token) return;
+        if (!window.confirm(`Permanently delete ${selectedIds.length} programs?`)) return;
+
+        setIsSaving(true);
+        const tid = toast.loading(`Deleting ${selectedIds.length} programs...`);
+        try {
+            for (const id of selectedIds) {
+                await googleSheetsService.adminDeletePost(token, id, 'mco_exam_program');
+            }
+            await refreshConfig();
+            toast.success("Bulk Deletion Complete", { id: tid });
+            setSelectedIds([]);
+        } catch (e: any) {
+            toast.error(e.message, { id: tid });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleBulkUpdate = async () => {
+        if (selectedIds.length === 0 || !token) return;
+        setIsSaving(true);
+        const tid = toast.loading(`Patching ${selectedIds.length} programs...`);
+        try {
+            for (const id of selectedIds) {
+                const program = programs.find(p => p.category.id === id);
+                if (!program) continue;
+
+                const payload: EditableProgramData = {
+                    certExam: {
+                        passScore: bulkPassScore ? parseInt(bulkPassScore, 10) : undefined,
+                        durationMinutes: bulkDuration ? parseInt(bulkDuration, 10) : undefined,
+                        numberOfQuestions: bulkQuestions ? parseInt(bulkQuestions, 10) : undefined
+                    }
+                };
+                // Clean payload of undefineds
+                if (!payload.certExam?.passScore) delete payload.certExam?.passScore;
+                if (!payload.certExam?.durationMinutes) delete payload.certExam?.durationMinutes;
+                if (!payload.certExam?.numberOfQuestions) delete payload.certExam?.numberOfQuestions;
+
+                await googleSheetsService.adminUpdateExamProgram(token, id, payload);
+            }
+            await refreshConfig();
+            toast.success("Bulk Settings Applied", { id: tid });
+            setSelectedIds([]);
+            setBulkPassScore('');
+            setBulkDuration('');
+            setBulkQuestions('');
+        } catch (e: any) {
+            toast.error(e.message, { id: tid });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
         <div className="space-y-8 pb-40">
-            <h1 className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3"><Settings className="text-cyan-500" /> Program Master</h1>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <h1 className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3">
+                    <Settings className="text-cyan-500" /> Program Master
+                </h1>
+
+                {selectedIds.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-4 bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] p-4 rounded-2xl shadow-xl animate-in slide-in-from-right-4 duration-300">
+                        <div className="flex gap-2">
+                             <div className="relative">
+                                <span className="absolute left-2 top-2.5 text-[8px] font-black text-slate-500 uppercase">Pass%</span>
+                                <input type="number" placeholder="70" value={bulkPassScore} onChange={e => setBulkPassScore(e.target.value)} className="w-16 bg-slate-900 border border-slate-700 rounded-lg py-2 pl-8 pr-2 text-xs text-white" />
+                            </div>
+                            <div className="relative">
+                                <span className="absolute left-2 top-2.5 text-[8px] font-black text-slate-500 uppercase">Min</span>
+                                <input type="number" placeholder="90" value={bulkDuration} onChange={e => setBulkDuration(e.target.value)} className="w-16 bg-slate-900 border border-slate-700 rounded-lg py-2 pl-8 pr-2 text-xs text-white" />
+                            </div>
+                            <div className="relative">
+                                <span className="absolute left-2 top-2.5 text-[8px] font-black text-slate-500 uppercase">Qty</span>
+                                <input type="number" placeholder="50" value={bulkQuestions} onChange={e => setBulkQuestions(e.target.value)} className="w-16 bg-slate-900 border border-slate-700 rounded-lg py-2 pl-8 pr-2 text-xs text-white" />
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={handleBulkUpdate} className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase hover:bg-emerald-500 transition">Update {selectedIds.length}</button>
+                            <button onClick={handleBulkDelete} className="bg-rose-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase hover:bg-rose-500 transition flex items-center gap-2">
+                                <Trash2 size={12}/> Delete
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             <div className="bg-[rgb(var(--color-card-rgb))] rounded-2xl shadow-2xl border border-[rgb(var(--color-border-rgb))] overflow-hidden">
                 <div className="bg-[rgb(var(--color-background-rgb))] p-4 border-b border-[rgb(var(--color-border-rgb))] flex items-center justify-between">
+                    <button onClick={handleSelectAll} className="flex items-center gap-2 text-[10px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-widest hover:text-white transition">
+                        {selectedIds.length === programs.length && programs.length > 0 ? <CheckSquare size={16} className="text-cyan-500"/> : <Square size={16}/>}
+                        {selectedIds.length === programs.length && programs.length > 0 ? 'Deselect All' : 'Select All Filtered'}
+                    </button>
                     <span className="text-[10px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-widest">{programs.length} ACTIVE PROGRAMS</span>
                 </div>
 
                 <div className="divide-y divide-[rgb(var(--color-border-rgb))]">
                     {programs.map(p => (
-                        <div key={p.category.id} className="bg-[rgb(var(--color-card-rgb))]">
-                            <div className={`flex items-center p-6 transition-colors ${expandedId === p.category.id ? 'bg-[rgba(var(--color-muted-rgb),0.3)]' : 'hover:bg-[rgba(var(--color-muted-rgb),0.2)]'}`}>
+                        <div key={p.category.id} className={`bg-[rgb(var(--color-card-rgb))] transition-colors ${selectedIds.includes(p.category.id) ? 'bg-cyan-500/5' : ''}`}>
+                            <div className={`flex items-center p-6 gap-4 ${expandedId === p.category.id ? 'bg-[rgba(var(--color-muted-rgb),0.3)]' : 'hover:bg-[rgba(var(--color-muted-rgb),0.2)]'}`}>
+                                <button onClick={() => handleToggleSelect(p.category.id)} className="text-[rgb(var(--color-border-rgb))] hover:text-cyan-500 transition-colors">
+                                    {selectedIds.includes(p.category.id) ? <CheckSquare size={20} className="text-cyan-500"/> : <Square size={20}/>}
+                                </button>
+                                
                                 <div className="flex-grow">
                                     <p className="font-black text-[rgb(var(--color-text-strong-rgb))] text-lg">{p.category.name}</p>
                                     <div className="flex flex-wrap gap-3 mt-1">
@@ -244,22 +350,12 @@ const ExamProgramCustomizer: FC = () => {
                                     <button onClick={() => setExpandedId(expandedId === p.category.id ? null : p.category.id)} className="flex items-center gap-2 px-6 py-2 bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-strong-rgb))] rounded-xl text-xs font-black border border-[rgb(var(--color-border-rgb))] hover:border-cyan-500 transition-all">
                                         <Edit size={14} className="text-cyan-500"/> {expandedId === p.category.id ? 'CLOSE' : 'CONFIGURE'}
                                     </button>
-                                    {deletingId !== p.category.id ? (
-                                        <button 
-                                            onClick={() => setDeletingId(p.category.id)}
-                                            className="p-2 text-[rgb(var(--color-text-muted-rgb))] hover:text-rose-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl border border-transparent hover:border-rose-500/30 transition-all"
-                                        >
-                                            <Trash2 size={18}/>
-                                        </button>
-                                    ) : (
-                                        <button 
-                                            onClick={() => handleDelete(p.category.id)}
-                                            onMouseLeave={() => setDeletingId(null)}
-                                            className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-black animate-in fade-in zoom-in-95 duration-200"
-                                        >
-                                            CONFIRM?
-                                        </button>
-                                    )}
+                                    <button 
+                                        onClick={() => { if(window.confirm('Delete this program permanently?')) handleDelete(p.category.id) }}
+                                        className="p-2 text-[rgb(var(--color-text-muted-rgb))] hover:text-rose-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl border border-transparent hover:border-rose-500/30 transition-all"
+                                    >
+                                        <Trash2 size={18}/>
+                                    </button>
                                 </div>
                             </div>
                             {expandedId === p.category.id && (

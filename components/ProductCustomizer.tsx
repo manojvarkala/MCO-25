@@ -220,9 +220,6 @@ const ProductCustomizer: FC = () => {
     const products = useMemo(() => {
         if (!examPrices) return [];
         return Object.entries(examPrices).map(([sku, data]: [string, any]) => {
-            // Updated Type Resolution
-            // -1mo-addon items are technically 'simple' one-time products.
-            // They belong in the 'Standard' tab, not 'Recurring'.
             const resolvedType = data.isBundle 
                 ? 'bundle' 
                 : (data.subscription_period ? 'subscription' : 'simple');
@@ -287,6 +284,29 @@ const ProductCustomizer: FC = () => {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (selectedSkus.length === 0 || !token) return;
+        if (!window.confirm(`Permanently delete ${selectedSkus.length} products?`)) return;
+
+        setIsSaving(true);
+        const tid = toast.loading(`Deleting ${selectedSkus.length} products...`);
+        try {
+            for (const sku of selectedSkus) {
+                const prod = products.find(p => p.sku === sku);
+                if (prod) {
+                    await googleSheetsService.adminDeletePost(token, prod.id, 'product');
+                }
+            }
+            await refreshConfig();
+            toast.success("Bulk Deletion Complete", { id: tid });
+            setSelectedSkus([]);
+        } catch (e: any) {
+            toast.error(e.message, { id: tid });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleBulkPriceUpdate = async () => {
         if (selectedSkus.length === 0 || !token || (!bulkPrice && !bulkRegularPrice)) return;
         setIsSaving(true);
@@ -345,12 +365,20 @@ const ProductCustomizer: FC = () => {
                                 />
                             </div>
                         </div>
-                        <button 
-                            onClick={handleBulkPriceUpdate}
-                            className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/20"
-                        >
-                            Update {selectedSkus.length} Items
-                        </button>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={handleBulkPriceUpdate}
+                                className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/20"
+                            >
+                                Update {selectedSkus.length}
+                            </button>
+                            <button 
+                                onClick={handleBulkDelete}
+                                className="bg-rose-600 text-white px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-500 transition shadow-lg shadow-rose-900/20 flex items-center gap-2"
+                            >
+                                <Trash2 size={14}/> Bulk Trash
+                            </button>
+                        </div>
                     </div>
                 )}
 

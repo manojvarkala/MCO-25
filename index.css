@@ -87,6 +87,30 @@
 }
 .mco-card__button--cyan:hover { background: #0891b2 !important; }
 
+/* SIDEBAR BOOK BUTTON */
+.mco-book-card-sidebar__button {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+    background: var(--mco-amber) !important;
+    color: var(--mco-amber-text) !important;
+    font-size: 0.75rem !important;
+    font-weight: 900 !important;
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
+    text-decoration: none !important;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.mco-book-card-sidebar__button:hover {
+    background: #f59e0b !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+}
+
 /* ANIMATED CORNER RIBBON SAVE BADGE */
 .mco-badge--save {
     position: absolute;
@@ -111,6 +135,40 @@
 @keyframes mco-ribbon-pulse {
     0%, 100% { background-color: #ef4444; transform: rotate(45deg) scale(1); }
     50% { background-color: #f87171; transform: rotate(45deg) scale(1.05); }
+}
+
+/* ADMIN NAVIGATION TABS */
+.mco-admin-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-radius: 0.75rem;
+    font-weight: 800;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    text-align: left;
+    width: 100%;
+}
+
+.mco-admin-nav-item--active {
+    background-color: rgb(var(--color-primary-rgb));
+    border-color: rgb(var(--color-primary-hover-rgb));
+    color: #ffffff;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+}
+
+.mco-admin-nav-item--inactive {
+    background-color: rgb(var(--color-card-rgb));
+    border-color: rgb(var(--color-border-rgb));
+    color: rgb(var(--color-text-muted-rgb));
+}
+
+.mco-admin-nav-item--inactive:hover {
+    background-color: rgb(var(--color-muted-rgb));
+    color: rgb(var(--color-text-strong-rgb));
+    border-color: rgb(var(--color-text-muted-rgb));
 }
 
 /* PREMIUM VIBRANT GRADIENTS */
