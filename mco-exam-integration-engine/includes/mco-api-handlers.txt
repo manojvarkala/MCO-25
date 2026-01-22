@@ -449,13 +449,12 @@ function mco_handle_get_debug_details($request) {
     ], 200); 
 }
 /**
- * UPDATED: INDUSTRIAL PROGRAM CREATOR
- * Replace your existing function with this to fix the "Empty Practice Exam" issue.
+ * UPDATED: INDUSTRIAL PROGRAM CREATOR (With Auto-Addon Provisioning)
  */
 function mco_handle_admin_create_exam_program($request) { 
     $p = $request->get_json_params(); 
     $name = sanitize_text_field($p['programName'] ?? 'New Program');
-    $data = $p['productLinkData'] ?? []; // This contains the metadata from the modal
+    $data = $p['productLinkData'] ?? [];
     
     $pid = wp_insert_post([
         'post_title' => $name, 
@@ -466,23 +465,44 @@ function mco_handle_admin_create_exam_program($request) {
     if (is_wp_error($pid)) return $pid;
 
     if (!empty($data)) {
-        // Core Identity
-        if (!empty($data['sku'])) update_post_meta($pid, '_mco_certification_exam_sku', sanitize_text_field($data['sku']));
+        $base_sku = sanitize_text_field($data['sku'] ?? '');
+        $addon_sku = sanitize_text_field($data['addonSku'] ?? '');
+
+        // 1. Save Core Metadata
+        if ($base_sku) update_post_meta($pid, '_mco_certification_exam_sku', $base_sku);
         if (!empty($data['questionSourceUrl'])) update_post_meta($pid, '_mco_question_source_url', esc_url_raw($data['questionSourceUrl']));
         
-        // Certification parameters
+        // 2. Certification parameters
         if (!empty($data['certQuestions'])) update_post_meta($pid, '_mco_cert_questions', (int)$data['certQuestions']);
         if (!empty($data['certDuration'])) update_post_meta($pid, '_mco_cert_duration', (int)$data['certDuration']);
         if (!empty($data['passScore'])) update_post_meta($pid, '_mco_pass_score', (int)$data['passScore']);
         
-        // Practice parameters (THE FIX)
+        // 3. Practice parameters
         if (!empty($data['practiceQuestions'])) update_post_meta($pid, '_mco_practice_questions', (int)$data['practiceQuestions']);
         if (!empty($data['practiceDuration'])) update_post_meta($pid, '_mco_practice_duration', (int)$data['practiceDuration']);
         
+        // 4. AUTO-CREATE ADDON LOGIC
+        if (!empty($data['autoCreateAddon']) && $base_sku) {
+            $generated_addon_sku = $base_sku . '-1mo-addon';
+            $addon_exists = wc_get_product_id_by_sku($generated_addon_sku);
+            
+            if (!$addon_exists && class_exists('WooCommerce')) {
+                $addon_prod = new WC_Product_Simple();
+                $addon_prod->set_name($name . ' - 1mo Premium Access');
+                $addon_prod->set_sku($generated_addon_sku);
+                $addon_prod->set_regular_price(59.99);
+                $addon_prod->set_sale_price(19.99);
+                $addon_prod->set_status('publish');
+                $addon_prod->set_virtual(true);
+                $addon_prod->save();
+            }
+            $addon_sku = $generated_addon_sku;
+        }
+
+        if ($addon_sku) update_post_meta($pid, '_mco_addon_sku', $addon_sku);
         update_post_meta($pid, '_mco_certificate_enabled', '1');
     }
 
-    // Force Frontend Refresh
     delete_transient('mco_app_config_data'); 
     delete_transient('mco_app_config_data_full'); 
     update_option('mco_config_version', (string)current_time('timestamp'));

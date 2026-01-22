@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import type { Exam, ExamProductCategory } from '../types.ts';
 import toast from 'react-hot-toast';
-import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, Zap, Layers, Clock, ToggleRight, ToggleLeft, ShieldCheck, X, Globe, BarChart3, RefreshCw } from 'lucide-react';
+import { Settings, Edit, Save, Award, FileText, PlusCircle, Trash2, Zap, Layers, Clock, ToggleRight, ToggleLeft, ShieldCheck, X, Globe, BarChart3, RefreshCw, ShoppingCart } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 interface EditableProgramData {
@@ -19,8 +19,8 @@ const ExamEditor: FC<{
     onDelete: (programId: string) => Promise<void>;
     onCancel: () => void;
     isSaving: boolean;
-    unlinkedProducts: any[];
-}> = ({ program, onSave, onDelete, onCancel, isSaving, unlinkedProducts }) => {
+    availableProducts: any[];
+}> = ({ program, onSave, onDelete, onCancel, isSaving, availableProducts }) => {
     const [data, setData] = useState<EditableProgramData>(() => ({
         category: { 
             name: program.category?.name || '',
@@ -38,7 +38,8 @@ const ExamEditor: FC<{
             isPractice: false, 
             numberOfQuestions: 50,
             durationMinutes: 90,
-            passScore: 70
+            passScore: 70,
+            addonSku: ''
         } as any,
     }));
 
@@ -71,16 +72,29 @@ const ExamEditor: FC<{
                     <h4 className="text-xs font-black text-blue-500 uppercase tracking-widest flex items-center gap-2">
                         <Award size={14}/> Commerce Link
                     </h4>
-                    <div>
-                        <label className="mco-admin-label">Linked WooCommerce Product</label>
-                        <select 
-                            value={data.certExam?.productSku || ''} 
-                            onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} 
-                            className="mco-admin-input"
-                        >
-                            <option value="">-- No Product Linked --</option>
-                            {unlinkedProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
-                        </select>
+                    <div className="grid grid-cols-1 gap-4">
+                        <div>
+                            <label className="mco-admin-label">Primary Certification Product</label>
+                            <select 
+                                value={data.certExam?.productSku || ''} 
+                                onChange={e => handleExamChange('certExam', 'productSku', e.target.value)} 
+                                className="mco-admin-input"
+                            >
+                                <option value="">-- No Product Linked --</option>
+                                {availableProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="mco-admin-label">Linked Premium Addon (Optional)</label>
+                            <select 
+                                value={data.certExam?.addonSku || ''} 
+                                onChange={e => handleExamChange('certExam', 'addonSku', e.target.value)} 
+                                className="mco-admin-input !border-amber-500/30"
+                            >
+                                <option value="">-- No Addon Linked --</option>
+                                {availableProducts.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
+                            </select>
+                        </div>
                     </div>
                     <div className="p-4 bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-2xl flex items-center justify-between">
                         <div>
@@ -120,7 +134,6 @@ const ExamEditor: FC<{
             <div className="flex justify-between items-center pt-8 border-t border-[rgb(var(--color-border-rgb))]">
                 <button onClick={() => onDelete(program.category.id)} className="px-6 py-2 text-rose-500 hover:bg-rose-500/10 rounded-xl text-xs font-black transition-all">TRASH PROGRAM</button>
                 <div className="flex gap-4">
-                    {/* FIX: Replaced invalid 'onCancel' property with 'onClick' on button element */}
                     <button onClick={onCancel} className="px-6 py-2 font-bold text-[rgb(var(--color-text-muted-rgb))]">Discard</button>
                     <button onClick={() => onSave(program.category.id, data)} disabled={isSaving} className="mco-btn-admin-primary min-w-[140px]">
                         {isSaving ? <Spinner size="sm"/> : 'SAVE SETTINGS'}
@@ -148,8 +161,14 @@ const ExamProgramCustomizer: FC = () => {
         certDuration: 120,
         passScore: 70,
         practiceQuestions: 20,
-        practiceDuration: 30
+        practiceDuration: 30,
+        addonSku: '',
+        autoCreateAddon: true
     });
+
+    const products = useMemo(() => {
+        return Object.entries(examPrices || {}).map(([sku, d]: [string, any]) => ({ sku, name: d.name }));
+    }, [examPrices]);
 
     const programs = useMemo(() => {
         if (!activeOrg) return [];
@@ -177,7 +196,9 @@ const ExamProgramCustomizer: FC = () => {
                 certDuration: 120, 
                 passScore: 70,
                 practiceQuestions: 20,
-                practiceDuration: 30
+                practiceDuration: 30,
+                addonSku: '',
+                autoCreateAddon: true
             });
         } catch (e: any) { toast.error(e.message, { id: tid }); }
         finally { setIsSaving(false); }
@@ -257,7 +278,7 @@ const ExamProgramCustomizer: FC = () => {
                                     }}
                                     onCancel={() => setExpandedId(null)} 
                                     isSaving={isSaving}
-                                    unlinkedProducts={Object.entries(examPrices || {}).map(([sku, d]: [string, any]) => ({ sku, name: d.name }))}
+                                    availableProducts={products}
                                 />
                             )}
                         </div>
@@ -267,47 +288,87 @@ const ExamProgramCustomizer: FC = () => {
 
             {/* NEW PROGRAM ARCHITECT MODAL */}
             {isCreating && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                    <div className="bg-[rgb(var(--color-card-rgb))] border-2 border-[rgb(var(--color-border-rgb))] rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+                    <div className="bg-[rgb(var(--color-card-rgb))] border-2 border-[rgb(var(--color-border-rgb))] rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 my-8">
                         <div className="p-8 border-b border-[rgb(var(--color-border-rgb))] bg-[rgba(var(--color-muted-rgb),0.1)] flex justify-between items-center">
                             <h2 className="text-3xl font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-3">
-                                <PlusCircle className="text-[rgb(var(--color-primary-rgb))]" /> Create New Program
+                                <PlusCircle className="text-[rgb(var(--color-primary-rgb))]" /> New Program Architect
                             </h2>
                             <button onClick={() => setIsCreating(false)} className="text-[rgb(var(--color-text-muted-rgb))] hover:text-white"><X size={24}/></button>
                         </div>
 
-                        <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                            <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-cyan-500 uppercase tracking-widest flex items-center gap-2 mb-4"><Layers size={14}/> Primary Identity</h4>
-                                <div>
-                                    <label className="mco-admin-label">Public Program Name</label>
-                                    <input type="text" value={newProgram.name} onChange={e => setNewProgram({...newProgram, name: e.target.value})} className="mco-admin-input" placeholder="e.g. Master CPC Certification" />
+                        <div className="p-10 space-y-10 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                            {/* SECTION 1: IDENTITY */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <h4 className="text-[10px] font-black text-cyan-500 uppercase tracking-widest flex items-center gap-2 mb-4"><Layers size={14}/> Primary Identity</h4>
+                                    <div>
+                                        <label className="mco-admin-label">Public Program Name</label>
+                                        <input type="text" value={newProgram.name} onChange={e => setNewProgram({...newProgram, name: e.target.value})} className="mco-admin-input" placeholder="e.g. Master CPC Certification" />
+                                    </div>
+                                    <div>
+                                        <label className="mco-admin-label">Merchant SKU (Permanent)</label>
+                                        <input type="text" value={newProgram.sku} onChange={e => setNewProgram({...newProgram, sku: e.target.value})} className="mco-admin-input font-mono" placeholder="exam-cpc-2024" />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="mco-admin-label">Merchant SKU (Permanent)</label>
-                                    <input type="text" value={newProgram.sku} onChange={e => setNewProgram({...newProgram, sku: e.target.value})} className="mco-admin-input font-mono" placeholder="exam-cpc-2024" />
-                                </div>
-                                <div>
-                                    <label className="mco-admin-label">Google Sheet Dataset URL</label>
-                                    <input type="text" value={newProgram.questionSourceUrl} onChange={e => setNewProgram({...newProgram, questionSourceUrl: e.target.value})} className="mco-admin-input text-xs" placeholder="https://docs.google.com/..." />
+
+                                <div className="space-y-4">
+                                    <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-2 mb-4"><BarChart3 size={14}/> Exam Criteria</h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div><label className="mco-admin-label">Cert Qs</label><input type="number" value={newProgram.certQuestions} onChange={e => setNewProgram({...newProgram, certQuestions: parseInt(e.target.value)})} className="mco-admin-input" /></div>
+                                        <div><label className="mco-admin-label">Duration (m)</label><input type="number" value={newProgram.certDuration} onChange={e => setNewProgram({...newProgram, certDuration: parseInt(e.target.value)})} className="mco-admin-input" /></div>
+                                    </div>
+                                    <div>
+                                        <label className="mco-admin-label">Passing Threshold (%)</label>
+                                        <input type="number" value={newProgram.passScore} onChange={e => setNewProgram({...newProgram, passScore: parseInt(e.target.value)})} className="mco-admin-input text-blue-500" />
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-2 mb-4"><BarChart3 size={14}/> Exam Criteria</h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div><label className="mco-admin-label">Cert Qs</label><input type="number" value={newProgram.certQuestions} onChange={e => setNewProgram({...newProgram, certQuestions: parseInt(e.target.value)})} className="mco-admin-input" /></div>
-                                    <div><label className="mco-admin-label">Duration (m)</label><input type="number" value={newProgram.certDuration} onChange={e => setNewProgram({...newProgram, certDuration: parseInt(e.target.value)})} className="mco-admin-input" /></div>
+                            {/* SECTION 2: PRACTICE & SOURCE */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-[rgb(var(--color-border-rgb))]">
+                                <div className="space-y-4">
+                                    <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2 mb-4"><FileText size={14}/> Practice Parameters</h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div><label className="mco-admin-label">Practice Qs</label><input type="number" value={newProgram.practiceQuestions} onChange={e => setNewProgram({...newProgram, practiceQuestions: parseInt(e.target.value)})} className="mco-admin-input" /></div>
+                                        <div><label className="mco-admin-label">Duration (m)</label><input type="number" value={newProgram.practiceDuration} onChange={e => setNewProgram({...newProgram, practiceDuration: parseInt(e.target.value)})} className="mco-admin-input" /></div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="mco-admin-label">Passing Threshold (%)</label>
-                                    <input type="number" value={newProgram.passScore} onChange={e => setNewProgram({...newProgram, passScore: parseInt(e.target.value)})} className="mco-admin-input text-blue-500" />
+                                <div className="space-y-4">
+                                    <h4 className="text-[10px] font-black text-purple-500 uppercase tracking-widest flex items-center gap-2 mb-4"><Globe size={14}/> Data Source</h4>
+                                    <div>
+                                        <label className="mco-admin-label">Google Sheet Dataset URL</label>
+                                        <input type="text" value={newProgram.questionSourceUrl} onChange={e => setNewProgram({...newProgram, questionSourceUrl: e.target.value})} className="mco-admin-input text-xs" placeholder="https://docs.google.com/..." />
+                                    </div>
                                 </div>
+                            </div>
 
-                                <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2 mt-6 mb-4"><FileText size={14}/> Practice Parameters</h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div><label className="mco-admin-label">Practice Qs</label><input type="number" value={newProgram.practiceQuestions} onChange={e => setNewProgram({...newProgram, practiceQuestions: parseInt(e.target.value)})} className="mco-admin-input" /></div>
-                                    <div><label className="mco-admin-label">Duration (m)</label><input type="number" value={newProgram.practiceDuration} onChange={e => setNewProgram({...newProgram, practiceDuration: parseInt(e.target.value)})} className="mco-admin-input" /></div>
+                            {/* SECTION 3: MONETIZATION & ADDONS */}
+                            <div className="pt-8 border-t border-[rgb(var(--color-border-rgb))]">
+                                <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2 mb-6"><Zap size={14}/> Monetization & Premium Access</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                                    <div>
+                                        <label className="mco-admin-label">Link Existing Addon</label>
+                                        <select 
+                                            value={newProgram.addonSku} 
+                                            onChange={e => setNewProgram({...newProgram, addonSku: e.target.value})} 
+                                            className="mco-admin-input"
+                                        >
+                                            <option value="">-- No Addon --</option>
+                                            {products.map(p => <option key={p.sku} value={p.sku}>{p.name} ({p.sku})</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="p-5 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-xs font-black text-amber-500">Auto-Provisioning</p>
+                                                <p className="text-[10px] text-amber-600/70 font-bold mt-1">Create 30-Day Premium Addon product</p>
+                                            </div>
+                                            <button onClick={() => setNewProgram({...newProgram, autoCreateAddon: !newProgram.autoCreateAddon})} className="text-amber-500">
+                                                {newProgram.autoCreateAddon ? <ToggleRight size={32} /> : <ToggleLeft size={32} className="opacity-30" />}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -315,7 +376,8 @@ const ExamProgramCustomizer: FC = () => {
                         <div className="p-8 bg-[rgba(var(--color-muted-rgb),0.1)] border-t border-[rgb(var(--color-border-rgb))] flex justify-end gap-4">
                             <button onClick={() => setIsCreating(false)} className="px-8 py-3 font-bold text-[rgb(var(--color-text-muted-rgb))] hover:text-white">Cancel</button>
                             <button onClick={handleCreateProgram} disabled={isSaving || !newProgram.name || !newProgram.sku} className="mco-btn-admin-primary !bg-emerald-600">
-                                {isSaving ? <Spinner size="sm"/> : 'INITIALIZE PROGRAM'}
+                                {isSaving ? <Spinner size="sm"/> : <ShoppingCart size={18}/>}
+                                {isSaving ? 'Assembling...' : 'INITIALIZE PROGRAM'}
                             </button>
                         </div>
                     </div>
