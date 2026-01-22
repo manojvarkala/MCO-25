@@ -23,6 +23,14 @@ interface HealthStatus {
 
 type AdminTab = 'diagnostics' | 'appearance' | 'bulk';
 
+const themePreviewColors: { [key: string]: string[] } = {
+    default: ['#06b6d4', '#db2777', '#fde047', '#0f172a'],
+    professional: ['#047857', '#3b82f6', '#eab308', '#f1f5f9'],
+    serene: ['#60a5fa', '#34d399', '#fb923c', '#f0fdfa'],
+    academic: ['#7f1d1d', '#a16207', '#d97706', '#fafaf9'],
+    noir: ['#e5e7eb', '#8b5cf6', '#eab308', '#1f2937']
+};
+
 const HealthCard: FC<{ title: string; status?: { success: boolean; message: string } }> = ({ title, status }) => (
     <div className="bg-slate-900 p-5 rounded-2xl border-2 border-slate-800 flex items-center justify-between shadow-xl group hover:border-cyan-500/50 transition-all">
         <div className="flex items-center gap-3 overflow-hidden">
@@ -45,7 +53,7 @@ const HealthCard: FC<{ title: string; status?: { success: boolean; message: stri
 
 const Admin: FC = () => {
     const { token } = useAuth();
-    const { activeOrg, availableThemes, refreshConfig, setActiveTheme } = useAppContext();
+    const { activeOrg, availableThemes, refreshConfig, setActiveTheme, activeTheme } = useAppContext();
     const [activeTab, setActiveTabState] = useState<AdminTab>('diagnostics');
     const [health, setHealth] = useState<HealthStatus | null>(null);
     const [stats, setStats] = useState<ExamStat[] | null>(null);
@@ -95,12 +103,17 @@ const Admin: FC = () => {
         setIsSavingSettings(true);
         const nextSettings = { ...localSettings, ...updates };
         setLocalSettings(nextSettings);
-        if (updates.activeThemeId) setActiveTheme(updates.activeThemeId);
-        const tid = toast.loading("Syncing...");
+        
+        // If we changed the theme, apply it locally for preview immediately
+        if (updates.activeThemeId) {
+            setActiveTheme(updates.activeThemeId);
+        }
+
+        const tid = toast.loading("Syncing Platform Settings...");
         try {
             await googleSheetsService.adminUpdateGlobalSettings(token, nextSettings);
             await refreshConfig();
-            toast.success("Saved", { id: tid });
+            toast.success("Settings Synchronized", { id: tid });
         } catch (e: any) { toast.error(e.message, { id: tid }); }
         finally { setIsSavingSettings(false); }
     };
@@ -169,29 +182,71 @@ const Admin: FC = () => {
 
                 {activeTab === 'appearance' && (
                     <div className="space-y-10">
-                        <h2 className="text-3xl font-black text-white flex items-center gap-3">
-                            <Settings2 className="text-cyan-500" size={32} /> Platform Toggles
-                        </h2>
-                        <div className="bg-slate-900 border-2 border-slate-800 rounded-3xl overflow-hidden divide-y divide-slate-800">
-                            {[
-                                { id: 'purchaseNotifierEnabled', label: 'Purchase Notifier', desc: 'Real-time social proof popups for visitors' },
-                                { id: 'subscriptionsEnabled', label: 'Subscription Engine', desc: 'Global recurring billing and membership logic' },
-                                { id: 'bundlesEnabled', label: 'Dynamic Bundling', desc: 'Automated package rendering (Exam + Time)' }
-                            ].map(f => (
-                                <div key={f.id} className="flex items-center justify-between p-8 hover:bg-white/[0.02] transition-colors">
-                                    <div className="max-w-md">
-                                        <p className="font-black text-white text-xl">{f.label}</p>
-                                        <p className="text-sm text-slate-400 font-medium mt-1">{f.desc}</p>
+                        <div className="space-y-6">
+                            <h2 className="text-3xl font-black text-white flex items-center gap-3">
+                                <Palette className="text-cyan-500" size={32} /> Global Theme Identity
+                            </h2>
+                            <p className="text-slate-400 max-w-2xl font-medium">Select the default visual theme for all users on this tenant. Users can still personalize their own view from their profile.</p>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                {availableThemes.map(theme => {
+                                    const colors = themePreviewColors[theme.id] || ['#ccc', '#ccc', '#ccc', '#ccc'];
+                                    const isSelected = localSettings.activeThemeId === theme.id;
+                                    
+                                    return (
+                                        <button
+                                            key={theme.id}
+                                            onClick={() => handleSyncSettings({ activeThemeId: theme.id })}
+                                            className={`relative p-5 rounded-2xl border-2 transition-all text-left flex flex-col items-center gap-3 group ${
+                                                isSelected 
+                                                ? 'bg-slate-800 border-cyan-500 shadow-lg shadow-cyan-500/20' 
+                                                : 'bg-slate-900 border-slate-800 hover:border-slate-600'
+                                            }`}
+                                        >
+                                            {isSelected && (
+                                                <div className="absolute -top-2 -right-2 bg-cyan-500 text-slate-950 rounded-full p-1 shadow-lg z-10">
+                                                    <Check size={14} strokeWidth={4} />
+                                                </div>
+                                            )}
+                                            <div className="flex w-full h-10 rounded-lg overflow-hidden border border-slate-700">
+                                                {colors.map((c, i) => (
+                                                    <div key={i} className="flex-1" style={{ backgroundColor: c }}></div>
+                                                ))}
+                                            </div>
+                                            <span className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-cyan-400' : 'text-slate-500 group-hover:text-slate-300'}`}>
+                                                {theme.name}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <h2 className="text-3xl font-black text-white flex items-center gap-3">
+                                <Settings2 className="text-cyan-500" size={32} /> Feature Overrides
+                            </h2>
+                            <div className="bg-slate-900 border-2 border-slate-800 rounded-3xl overflow-hidden divide-y divide-slate-800 shadow-2xl">
+                                {[
+                                    { id: 'purchaseNotifierEnabled', label: 'Purchase Notifier', desc: 'Display randomized social proof notifications for site activity.' },
+                                    { id: 'subscriptionsEnabled', label: 'Subscription Engine', desc: 'Enable global recurring billing logic and membership levels.' },
+                                    { id: 'bundlesEnabled', label: 'Dynamic Bundling', desc: 'Display high-value "Exam + Subscription" packages on dashboard.' }
+                                ].map(f => (
+                                    <div key={f.id} className="flex items-center justify-between p-8 hover:bg-white/[0.01] transition-colors">
+                                        <div className="max-w-md">
+                                            <p className="font-black text-white text-xl">{f.label}</p>
+                                            <p className="text-sm text-slate-500 font-bold mt-1">{f.desc}</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => handleSyncSettings({ [f.id]: !(localSettings as any)[f.id] })}
+                                            disabled={isSavingSettings}
+                                            className={`transition-all transform active:scale-90 ${ (localSettings as any)[f.id] ? 'text-cyan-400' : 'text-slate-700'}`}
+                                        >
+                                            { (localSettings as any)[f.id] ? <ToggleRight size={64} /> : <ToggleLeft size={64} />}
+                                        </button>
                                     </div>
-                                    <button 
-                                        onClick={() => handleSyncSettings({ [f.id]: !(localSettings as any)[f.id] })}
-                                        disabled={isSavingSettings}
-                                        className={`transition-all ${ (localSettings as any)[f.id] ? 'text-cyan-400' : 'text-slate-600'}`}
-                                    >
-                                        { (localSettings as any)[f.id] ? <ToggleRight size={64} /> : <ToggleLeft size={64} />}
-                                    </button>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </div>
                 )}

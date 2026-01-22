@@ -15,12 +15,12 @@ interface AdminLayoutProps {
 const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
     const { isSuperAdmin } = useAuth();
     
-    const baseClass = "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-black transition-all border border-transparent";
-    const activeClass = "bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 border-cyan-400";
-    const inactiveClass = "text-slate-400 hover:text-white hover:bg-slate-800/50 hover:border-slate-700";
+    const baseClass = "mco-admin-nav-item";
+    const activeClass = "mco-admin-nav-item--active";
+    const inactiveClass = "mco-admin-nav-item--inactive";
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-8">
+        <div className="mco-admin-wrapper grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-8 min-h-screen">
             <aside className="md:col-span-1 lg:col-span-1 self-start sticky top-28">
                 <nav className="space-y-2 bg-slate-900/50 p-3 rounded-2xl border border-slate-800 shadow-2xl">
                     {isSuperAdmin && (
