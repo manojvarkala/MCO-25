@@ -1,4 +1,3 @@
-
 import React, { FC, useState, useMemo, ReactNode } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -197,16 +196,26 @@ const ProductCustomizer: FC = () => {
 
     const products = useMemo(() => {
         if (!examPrices) return [];
-        return Object.entries(examPrices).map(([sku, data]: [string, any]) => ({
-            id: data.productId?.toString() || sku,
-            sku,
-            name: data.name || 'Untitled Product',
-            type: data.isBundle ? 'bundle' : (data.subscription_period ? 'subscription' : 'simple'),
-            price: data.price?.toString() || '0',
-            regularPrice: data.regularPrice?.toString() || '0',
-            bundledSkus: data.bundledSkus || [],
-            subscriptionPeriod: data.subscription_period
-        }));
+        return Object.entries(examPrices).map(([sku, data]: [string, any]) => {
+            // FORCE TYPE OVERRIDE for -1mo-addon items
+            // They should be treated as subscriptions (recurring) in the admin UI,
+            // even if they are technically 'simple' products in WooCommerce metadata.
+            const isAddon = sku.includes('-1mo-addon');
+            const resolvedType = isAddon 
+                ? 'subscription' 
+                : (data.isBundle ? 'bundle' : (data.subscription_period ? 'subscription' : 'simple'));
+
+            return {
+                id: data.productId?.toString() || sku,
+                sku,
+                name: data.name || 'Untitled Product',
+                type: resolvedType,
+                price: data.price?.toString() || '0',
+                regularPrice: data.regularPrice?.toString() || '0',
+                bundledSkus: data.bundledSkus || [],
+                subscriptionPeriod: data.subscription_period || (isAddon ? 'month' : undefined)
+            };
+        });
     }, [examPrices]);
 
     const filtered = useMemo(() => {
@@ -240,7 +249,6 @@ const ProductCustomizer: FC = () => {
     };
 
     const handleBulkPriceUpdate = async () => {
-        // FIX: Replaced undefined variable 'selectedIds' with 'selectedSkus' state.
         if (selectedSkus.length === 0 || !token || (!bulkPrice && !bulkRegularPrice)) return;
         setIsSaving(true);
         const tid = toast.loading(`Updating ${selectedSkus.length} products...`);

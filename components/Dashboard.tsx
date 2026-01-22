@@ -269,10 +269,10 @@ const Dashboard: FC = () => {
                             </div>
                             <div className="mco-grid-container">
                                 {category.practiceExam && (
-                                    <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} examPrices={examPrices} hideDetailsLink={true} />
+                                    <ExamCard exam={category.practiceExam} programId={category.id} isPractice={true} isPurchased={false} activeOrg={activeOrg} hideDetailsLink={true} examPrices={examPrices} />
                                 )}
                                 {category.certExam && (
-                                    <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} examPrices={examPrices} hideDetailsLink={true} attemptsMade={user ? results.filter(r => r.examId === category.certExam!.id).length : 0} />
+                                    <ExamCard exam={category.certExam} programId={category.id} isPractice={false} isPurchased={paidExamIds.includes(category.certExam.productSku)} activeOrg={activeOrg} hideDetailsLink={true} attemptsMade={user ? results.filter(r => r.examId === category.certExam!.id).length : 0} examPrices={examPrices} />
                                 )}
                                 {bundlesEnabled && dashboardBundle && (
                                     <ExamBundleCard type={dashboardBundle.type} bundleDataRaw={dashboardBundle.product} activeOrg={activeOrg} examPrices={examPrices} />
