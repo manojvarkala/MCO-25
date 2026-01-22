@@ -27,9 +27,6 @@ const ExamEditor: FC<{
 }> = ({ program, onSave, onDelete, onCancel, isSaving, unlinkedProducts, bundleProducts }) => {
     const { activeOrg } = useAppContext();
     
-    // NUCLEAR DEFENSIVE INITIALIZATION:
-    // This prevents the 'Visual Tabs Error' by ensuring no null pointers are accessed during render.
-    // If a program exists but is broken in the DB, we generate virtual default objects.
     const [data, setData] = useState<EditableProgramData>(() => ({
         category: { 
             name: program.category?.name || '',
@@ -178,8 +175,8 @@ const ExamEditor: FC<{
 const ExamProgramCustomizer: FC = () => {
     const { activeOrg, examPrices, refreshConfig } = useAppContext();
     const { token } = useAuth();
-    const location = useLocation();
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     
     const programs = useMemo(() => {
@@ -218,6 +215,7 @@ const ExamProgramCustomizer: FC = () => {
             await refreshConfig();
             toast.success("Program Deleted", { id: tid });
             setExpandedId(null);
+            setDeletingId(null);
         } catch (e: any) { toast.error(e.message, { id: tid }); }
         finally { setIsSaving(false); }
     };
@@ -242,9 +240,27 @@ const ExamProgramCustomizer: FC = () => {
                                         <span className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] flex items-center gap-1 bg-[rgba(var(--color-background-rgb),0.5)] px-2 py-0.5 rounded border border-[rgb(var(--color-border-rgb))] uppercase"><HelpCircle size={8}/> {p.certExam?.numberOfQuestions || 0} Cert Qs</span>
                                     </div>
                                 </div>
-                                <button onClick={() => setExpandedId(expandedId === p.category.id ? null : p.category.id)} className="flex items-center gap-2 px-6 py-2 bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-strong-rgb))] rounded-xl text-xs font-black border border-[rgb(var(--color-border-rgb))] hover:border-cyan-500 transition-all">
-                                    <Edit size={14} className="text-cyan-500"/> {expandedId === p.category.id ? 'CLOSE' : 'CONFIGURE'}
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => setExpandedId(expandedId === p.category.id ? null : p.category.id)} className="flex items-center gap-2 px-6 py-2 bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-strong-rgb))] rounded-xl text-xs font-black border border-[rgb(var(--color-border-rgb))] hover:border-cyan-500 transition-all">
+                                        <Edit size={14} className="text-cyan-500"/> {expandedId === p.category.id ? 'CLOSE' : 'CONFIGURE'}
+                                    </button>
+                                    {deletingId !== p.category.id ? (
+                                        <button 
+                                            onClick={() => setDeletingId(p.category.id)}
+                                            className="p-2 text-[rgb(var(--color-text-muted-rgb))] hover:text-rose-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl border border-transparent hover:border-rose-500/30 transition-all"
+                                        >
+                                            <Trash2 size={18}/>
+                                        </button>
+                                    ) : (
+                                        <button 
+                                            onClick={() => handleDelete(p.category.id)}
+                                            onMouseLeave={() => setDeletingId(null)}
+                                            className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-black animate-in fade-in zoom-in-95 duration-200"
+                                        >
+                                            CONFIRM?
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             {expandedId === p.category.id && (
                                 <ExamEditor 

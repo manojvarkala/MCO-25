@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import toast from 'react-hot-toast';
-import { Edit, Save, X, ShoppingCart, PlusCircle, Box, Repeat, Package, DollarSign, Tag, Info, CheckSquare, Square } from 'lucide-react';
+import { Edit, Save, X, ShoppingCart, PlusCircle, Box, Repeat, Package, DollarSign, Tag, Info, CheckSquare, Square, Trash2 } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 type TabType = 'all' | 'simple' | 'subscription' | 'bundle';
@@ -35,10 +35,12 @@ const ProductEditorModal: FC<{
     type: TabType;
     onClose: () => void; 
     onSave: (data: any) => Promise<void>; 
+    onDelete: (productId: string) => Promise<void>;
     isSaving: boolean;
     availableExams: ProductEntry[];
-}> = ({ product, type, onClose, onSave, isSaving, availableExams }) => {
+}> = ({ product, type, onClose, onSave, onDelete, isSaving, availableExams }) => {
     const isNew = !product;
+    const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
     const [formData, setFormData] = useState({
         name: product?.name || '',
         price: product?.price || '0',
@@ -163,18 +165,39 @@ const ProductEditorModal: FC<{
                     )}
                 </div>
 
-                <div className="p-6 bg-[rgba(var(--color-background-rgb),0.5)] border-t border-[rgb(var(--color-border-rgb))] flex justify-end gap-3">
-                    <button onClick={onClose} disabled={isSaving} className="px-6 py-2.5 font-bold text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))] transition-colors">Discard</button>
-                    <button 
-                        onClick={() => onSave(formData)} 
-                        disabled={isSaving || !formData.name || !formData.sku}
-                        className={`px-8 py-2.5 rounded-xl font-black text-sm transition-all shadow-lg flex items-center gap-2 ${
-                            isNew ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20' : 'bg-cyan-600 hover:bg-cyan-500 shadow-cyan-900/20'
-                        }`}
-                    >
-                        {isSaving ? <Spinner size="sm"/> : <Save size={18}/>} 
-                        {isNew ? 'CREATE PRODUCT' : 'UPDATE PRODUCT'}
-                    </button>
+                <div className="p-6 bg-[rgba(var(--color-background-rgb),0.5)] border-t border-[rgb(var(--color-border-rgb))] flex justify-between gap-3">
+                    <div className="flex gap-2">
+                        {!isNew && (
+                            !isConfirmingDelete ? (
+                                <button 
+                                    onClick={() => setIsConfirmingDelete(true)}
+                                    className="px-4 py-2 text-rose-500 hover:text-rose-400 border border-rose-500/30 rounded-lg text-xs font-bold uppercase transition-colors"
+                                >
+                                    Delete Product
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={() => onDelete(product.id)}
+                                    className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-black shadow-lg animate-pulse"
+                                >
+                                    Confirm Delete
+                                </button>
+                            )
+                        )}
+                    </div>
+                    <div className="flex gap-3">
+                        <button onClick={onClose} disabled={isSaving} className="px-6 py-2.5 font-bold text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))] transition-colors">Discard</button>
+                        <button 
+                            onClick={() => onSave(formData)} 
+                            disabled={isSaving || !formData.name || !formData.sku}
+                            className={`px-8 py-2.5 rounded-xl font-black text-sm transition-all shadow-lg flex items-center gap-2 ${
+                                isNew ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20' : 'bg-cyan-600 hover:bg-cyan-500 shadow-cyan-900/20'
+                            }`}
+                        >
+                            {isSaving ? <Spinner size="sm"/> : <Save size={18}/>} 
+                            {isNew ? 'CREATE PRODUCT' : 'UPDATE PRODUCT'}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -242,6 +265,23 @@ const ProductCustomizer: FC = () => {
             setIsCreating(false);
         } catch (e: any) {
             toast.error(e.message || "Failed to save", { id: tid });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDeleteProduct = async (productId: string) => {
+        if (!token) return;
+        setIsSaving(true);
+        const tid = toast.loading("Trashing product...");
+        try {
+            await googleSheetsService.adminDeletePost(token, productId, 'product');
+            await refreshConfig();
+            toast.success("Product Deleted", { id: tid });
+            setEditingProduct(null);
+            setIsCreating(false);
+        } catch (e: any) {
+            toast.error(e.message || "Deletion failed", { id: tid });
         } finally {
             setIsSaving(false);
         }
@@ -378,12 +418,18 @@ const ProductCustomizer: FC = () => {
                                             )}
                                         </div>
                                     </td>
-                                    <td className="p-5 text-right">
+                                    <td className="p-5 text-right space-x-2">
                                         <button 
                                             onClick={() => setEditingProduct(p)}
                                             className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-cyan-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl transition-all border border-transparent hover:border-[rgb(var(--color-border-rgb))] shadow-sm"
                                         >
                                             <Edit size={16}/>
+                                        </button>
+                                        <button 
+                                            onClick={() => { if(window.confirm('Delete this product permanently?')) handleDeleteProduct(p.id) }}
+                                            className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-rose-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl transition-all border border-transparent hover:border-rose-500/30 shadow-sm"
+                                        >
+                                            <Trash2 size={16}/>
                                         </button>
                                     </td>
                                 </tr>
@@ -404,6 +450,7 @@ const ProductCustomizer: FC = () => {
                     type={activeTab}
                     onClose={() => { setEditingProduct(null); setIsCreating(false); }} 
                     onSave={handleSaveProduct} 
+                    onDelete={handleDeleteProduct}
                     isSaving={isSaving}
                     availableExams={products.filter(p => p.type === 'simple')}
                 />
