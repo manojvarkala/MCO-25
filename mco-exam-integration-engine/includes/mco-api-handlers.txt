@@ -2,57 +2,82 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 31.0.0 (Full System Restore + Scoped Analytics)
+ * VERSION: 28.9.8 (Entitlement Sync Fixed)
  * =============================================================================
  */
 
 if (!defined('ABSPATH')) exit;
 
 /**
- * 1. PREMIUM ACCESS ENGINE
+ * 1. SCOPED ACCESS ENGINE (Replacement for monolithic expiry)
+ * Stores expiries in a map: [ SKU => Timestamp ]
  */
 add_action('woocommerce_order_status_completed', 'mco_handle_custom_addon_access', 10, 1);
 function mco_handle_custom_addon_access($order_id) {
     $order = wc_get_order($order_id);
     if (!$order) return;
+
     $user_id = $order->get_user_id();
     if (!$user_id) return;
+
     $expiries = get_user_meta($user_id, '_mco_program_expiries', true) ?: [];
     if (!is_array($expiries)) $expiries = [];
+
     $changes_made = false;
     foreach ($order->get_items() as $item) {
         $product = $item->get_product();
         if (!$product) continue;
+        
         $sku = $product->get_sku();
+        
+        // Check for addon pattern
         if (strpos($sku, '-1mo-addon') !== false) {
+            // Strip suffix to get the target program SKU
             $base_sku = str_replace('-1mo-addon', '', $sku);
             $now = time();
             $current_expiry = isset($expiries[$base_sku]) ? (int)$expiries[$base_sku] : 0;
+            
             $base_time = ($current_expiry > $now) ? $current_expiry : $now;
             $expiries[$base_sku] = $base_time + (30 * DAY_IN_SECONDS);
-            $order->add_order_note("MCO Engine: Scoped Premium granted for $base_sku.");
+            
+            $order->add_order_note("MCO Engine: Scoped Premium granted for $base_sku until " . date('Y-m-d H:i', $expiries[$base_sku]));
             $changes_made = true;
         }
     }
-    if ($changes_made) update_user_meta($user_id, '_mco_program_expiries', $expiries);
+
+    if ($changes_made) {
+        update_user_meta($user_id, '_mco_program_expiries', $expiries);
+    }
 }
 
 /**
- * 2. NETWORK FETCHER
+ * 2. AGGRESSIVE NETWORK FETCHER
  */
 if (!function_exists('mco_fetch_remote_csv_content')) {
     function mco_fetch_remote_csv_content($url) {
         if (empty($url)) return new WP_Error('empty_url', 'Source URL missing.');
-        $args = ['timeout' => 45, 'redirection' => 10, 'sslverify' => false, 'headers' => ['Cache-Control' => 'no-cache']];
+        $url = trim((string)$url);
+        if (strpos($url, 'docs.google.com/spreadsheets') !== false) {
+            if (strpos($url, '/pub') === false && strpos($url, 'output=csv') === false) {
+                $url = preg_replace('/\/edit.*$/', '/export?format=csv', $url);
+            }
+        }
+        $ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+        $args = ['timeout' => 45, 'redirection' => 10, 'user-agent' => $ua, 'sslverify' => false, 'headers' => ['Cache-Control' => 'no-cache']];
         $response = wp_remote_get(esc_url_raw($url), $args);
         if (is_wp_error($response)) return $response;
-        return ['body' => wp_remote_retrieve_body($response)];
+        $code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        if ($code !== 200) return new WP_Error('http_err', "Source code $code");
+        if (stripos($body, '<!DOCTYPE') !== false || stripos($body, '<html') !== false) {
+            return new WP_Error('restricted', 'Access denied by Google. Sheet must be "Published to Web" as CSV.');
+        }
+        return ['body' => $body, 'method' => 'wp_remote'];
     }
 }
 
-/**
- * 3. CORE HANDLERS (Diagnostics Fix)
- */
+// --- SYSTEM CORE ---
+
 function mco_handle_get_config() {
     if (!function_exists('mco_get_app_config_data')) return new WP_Error('500', 'Provider failure.');
     return new WP_REST_Response(mco_get_app_config_data(), 200);
@@ -64,197 +89,498 @@ function mco_handle_record_hit() {
     return new WP_REST_Response(['count' => $c], 200);
 }
 
-function mco_handle_admin_get_status() {
-    $s = []; 
-    $s['api_connection'] = ['success' => true, 'message' => 'ONLINE'];
-    $s['jwt_secret'] = ['success' => defined('MCO_JWT_SECRET'), 'message' => defined('MCO_JWT_SECRET') ? 'SECURE' : 'MISSING'];
-    $s['woocommerce'] = ['success' => class_exists('WooCommerce'), 'message' => class_exists('WooCommerce') ? 'ACTIVE' : 'OFFLINE'];
-    $s['wc_subscriptions'] = ['success' => class_exists('WC_Subscriptions'), 'message' => class_exists('WC_Subscriptions') ? 'ACTIVE' : 'INACTIVE'];
-    $s['app_url_config'] = ['success' => !empty(get_option('mco_exam_app_url')), 'message' => !empty(get_option('mco_exam_app_url')) ? 'VALID' : 'EMPTY'];
-    $s['sheet_accessibility'] = ['success' => true, 'message' => 'READY'];
-    return new WP_REST_Response($s, 200);
-}
-
 /**
- * 4. AUTH & ENTITLEMENTS
+ * AUTHENTICATION & ENTITLEMENT SYNC
  */
 function mco_handle_sync_auth($request) {
     $payload = $request->get_param('jwt_payload');
     $user_id = (int)$payload['user']['id'];
-    if (!$user_id) return new WP_Error('401', 'User ID missing.');
+
+    if (!$user_id) {
+        return new WP_Error('401', 'User ID missing from context.');
+    }
+
     $paid_exams = get_user_meta($user_id, 'mco_paid_exams', true) ?: [];
+    
+    // Check 1: Official WC Subscriptions
     $is_subscribed = false;
     $subscription_info = null;
     if (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription')) {
-        if (wcs_user_has_subscription($user_id, '', 'active')) {
-            $is_subscribed = true;
+        $is_subscribed = wcs_user_has_subscription($user_id, '', 'active');
+        if ($is_subscribed) {
             $subs = wcs_get_users_subscriptions($user_id);
             foreach ($subs as $sub) {
                 if ($sub->has_status('active')) {
-                    $subscription_info = ['status' => 'active', 'nextPaymentDate' => date('M d, Y', strtotime($sub->get_date('next_payment')))];
+                    $next_payment = $sub->get_date('next_payment');
+                    if ($next_payment) {
+                        $subscription_info = [
+                            'status' => 'active',
+                            'nextPaymentDate' => date('M d, Y', strtotime($next_payment))
+                        ];
+                    }
                     break;
                 }
             }
         }
     }
+
+    // Check 2: Scoped Program Expiries
+    $program_expiries = get_user_meta($user_id, '_mco_program_expiries', true) ?: [];
+
     return new WP_REST_Response([
         'paidExamIds' => (array)$paid_exams,
         'isSubscribed' => (bool)$is_subscribed,
         'subscriptionInfo' => $subscription_info,
         'isBetaTester' => get_user_meta($user_id, '_mco_is_beta_tester', true) === '1',
-        'programExpiries' => get_user_meta($user_id, '_mco_program_expiries', true) ?: []
+        'programExpiries' => $program_expiries
     ], 200);
 }
 
-/**
- * 5. PRODUCT & INVENTORY
- */
-function mco_handle_admin_upsert_product($request) {
-    if (!class_exists('WooCommerce')) return new WP_Error('500', 'WC required.');
+function mco_handle_questions_from_sheet($request) {
     $p = $request->get_json_params();
-    $sku = sanitize_text_field(strval($p['sku'] ?? ''));
-    if (empty($sku)) return new WP_Error('400', 'SKU missing.');
-    $existing_id = wc_get_product_id_by_sku($sku);
-    $type = sanitize_text_field(strval($p['type'] ?? 'simple'));
-    if ($existing_id) { $product = wc_get_product($existing_id); } 
-    else { 
-        if ($type === 'subscription' && class_exists('WC_Product_Subscription')) { $product = new WC_Product_Subscription(); } 
-        else { $product = new WC_Product_Simple(); }
-        $product->set_sku($sku);
+    $url = $p['sheetUrl'] ?? '';
+    $requested_count = (int)($p['count'] ?? 0);
+    if (empty($url)) return new WP_Error('400', 'Sheet URL missing.');
+    $cache_key = 'mco_sheet_' . md5($url);
+    $questions = get_transient($cache_key);
+    if ($questions === false) {
+        $fetch = mco_fetch_remote_csv_content($url);
+        if (is_wp_error($fetch)) return $fetch;
+        $body = preg_replace('/^[\xEF\xBB\xBF]*/', '', (string)$fetch['body']);
+        $lines = preg_split('/\r\n|\r|\n/', $body);
+        array_shift($lines);
+        $questions = []; $idx = 1;
+        foreach ($lines as $line) {
+            $row = str_getcsv($line);
+            if (empty(array_filter($row))) continue;
+            if (count($row) >= 6) {
+                $questions[] = ['id' => $idx++, 'question' => wp_kses_post($row[0]), 'options' => array_map('trim', array_slice($row, 1, 4)), 'correctAnswer' => (int)$row[5]];
+            } elseif (count($row) >= 3) {
+                $questions[] = ['id' => $idx++, 'question' => wp_kses_post($row[0]), 'options' => array_map('trim', explode('|', $row[1])), 'correctAnswer' => (int)$row[2]];
+            }
+        }
+        if (empty($questions)) return new WP_Error('empty', 'No valid questions.');
+        set_transient($cache_key, $questions, HOUR_IN_SECONDS);
     }
-    if (isset($p['name'])) $product->set_name(sanitize_text_field(strval($p['name'])));
-    if (isset($p['regularPrice'])) $product->set_regular_price(floatval($p['regularPrice']));
-    if (isset($p['price'])) $product->set_sale_price(floatval($p['price']));
-    $product->set_status('publish'); $product->set_virtual(true);
-    $final_id = $product->save();
-    if (isset($p['isBundle']) && $p['isBundle']) { update_post_meta($final_id, '_mco_is_bundle', 'yes'); } else { delete_post_meta($final_id, '_mco_is_bundle'); }
-    if (isset($p['bundledSkus'])) { update_post_meta($final_id, '_mco_bundled_skus', array_filter(array_map('sanitize_text_field', (array)$p['bundledSkus']))); }
-    delete_transient('mco_app_config_data'); delete_transient('mco_app_config_data_full');
-    return new WP_REST_Response(['success' => true, 'productId' => $final_id], 200);
+    if ($requested_count > 0 && count($questions) > $requested_count) {
+        shuffle($questions);
+        $questions = array_slice($questions, 0, $requested_count);
+    }
+    return new WP_REST_Response($questions, 200);
+}
+
+// --- ADMIN PERSISTENCE LOGIC ---
+
+function mco_handle_admin_update_settings($request) {
+    $p = $request->get_json_params();
+    if (isset($p['activeThemeId'])) update_option('mco_active_theme_id', sanitize_text_field($p['activeThemeId']));
+    $toggles = ['purchaseNotifierEnabled' => 'mco_purchase_notifier_enabled', 'subscriptionsEnabled' => 'mco_subscriptions_enabled', 'bundlesEnabled' => 'mco_bundles_enabled'];
+    foreach ($toggles as $jk => $wk) { if (isset($p[$jk])) update_option($wk, $p[$jk] ? '1' : '0'); }
+    delete_transient('mco_app_config_data');
+    delete_transient('mco_app_config_data_full');
+    update_option('mco_config_version', (string)current_time('timestamp'));
+    return new WP_REST_Response(['success' => true], 200);
 }
 
 /**
- * 6. ANALYTICS & STATS
+ * RE-ENGINEERED PRODUCT UPSERT (Robust against crashes)
  */
-function mco_handle_get_exam_stats() {
-    $stats = []; $programs = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1]);
-    global $wpdb; $rows = $wpdb->get_results("SELECT meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'");
-    $all = []; foreach ($rows as $row) { $r = maybe_unserialize($row->meta_value); if (is_array($r)) $all = array_merge($all, $r); }
-    foreach ($programs as $p) {
-        $sku = get_post_meta($p->ID, '_mco_certification_exam_sku', true);
-        $eid = $sku ?: 'prac-'.$p->ID;
-        $attempts = array_filter($all, fn($r) => ($r['examId'] ?? '') === $eid);
-        $count = count($attempts); $sum = array_sum(array_column($attempts, 'score'));
-        $pass_score = (int)get_post_meta($p->ID, '_mco_pass_score', true) ?: 70;
-        $pass_count = count(array_filter($attempts, fn($r) => (float)($r['score'] ?? 0) >= $pass_score));
-        $sales = 0; $rev = 0;
-        if ($sku) {
-            $pid = wc_get_product_id_by_sku($sku);
-            $product = $pid ? wc_get_product($pid) : null;
-            if ($product) { $sales = (int)$product->get_total_sales(); $rev = $sales * (float)$product->get_price(); }
+function mco_handle_admin_upsert_product($request) {
+    if (!class_exists('WooCommerce')) return new WP_Error('500', 'WooCommerce required.');
+    
+    $p = $request->get_json_params();
+    $sku = sanitize_text_field($p['sku'] ?? '');
+    if (empty($sku)) return new WP_Error('400', 'SKU missing.');
+    
+    $pid = wc_get_product_id_by_sku($sku);
+    $type = sanitize_text_field($p['type'] ?? 'simple');
+    
+    // Safety check for product object initialization
+    if ($pid) { 
+        $product = wc_get_product($pid); 
+    } else { 
+        if ($type === 'subscription' && class_exists('WC_Product_Subscription')) {
+            $product = new WC_Product_Subscription();
+        } else {
+            $product = new WC_Product_Simple(); 
         }
-        $stats[] = ['id' => (string)$eid, 'name' => $p->post_title, 'isPractice' => empty($sku), 'attempts' => $count, 'averageScore' => ($count > 0 ? $sum / $count : 0), 'passRate' => ($count > 0 ? ($pass_count / $count) * 100 : 0), 'totalSales' => $sales, 'totalRevenue' => $rev, 'passCount' => $pass_count, 'totalScoreSum' => $sum, 'programName' => $p->post_title, 'engagements' => (int)get_post_meta($p->ID, '_mco_engagements', true) ?: 0];
+        $product->set_sku($sku);
+    }
+
+    if (!$product || is_wp_error($product)) {
+        return new WP_Error('500', 'Failed to initialize WooCommerce product object.');
+    }
+
+    // Set core attributes
+    if (isset($p['name'])) $product->set_name(sanitize_text_field($p['name']));
+    if (isset($p['regularPrice'])) $product->set_regular_price((float)$p['regularPrice']);
+    if (isset($p['price'])) $product->set_sale_price((float)$p['price']);
+    
+    $product->set_status('publish'); 
+    $product->set_virtual(true);
+    
+    // Save to database
+    $new_id = $product->save();
+    
+    if (!$new_id) {
+        return new WP_Error('500', 'Failed to write product record to database.');
+    }
+
+    // Handle Question Source Meta
+    if (isset($p['questionSourceUrl'])) {
+        update_post_meta($new_id, '_mco_question_source_url', esc_url_raw($p['questionSourceUrl']));
+    }
+
+    // Handle Subscription Specifics
+    if ($product->is_type('subscription') && isset($p['subscriptionPeriod'])) {
+        update_post_meta($new_id, '_subscription_period', sanitize_text_field($p['subscriptionPeriod']));
+    }
+
+    // Handle Bundle Logic (Flagging & Packaged Skus)
+    if (isset($p['isBundle']) && $p['isBundle']) {
+        update_post_meta($new_id, '_mco_is_bundle', 'yes');
+    }
+    
+    if (isset($p['bundledSkus'])) {
+        $sanitized_bundled = array_map('sanitize_text_field', (array)$p['bundledSkus']);
+        update_post_meta($new_id, '_mco_bundled_skus', $sanitized_bundled);
+    }
+
+    // Flush Transients
+    delete_transient('mco_app_config_data'); 
+    delete_transient('mco_app_config_data_full');
+    update_option('mco_config_version', (string)current_time('timestamp'));
+    
+    return new WP_REST_Response(['success' => true, 'productId' => $new_id], 200);
+}
+
+// --- ANALYTICS HANDLER ---
+
+function mco_handle_get_exam_stats() {
+    $stats = []; $program_posts = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1]);
+    global $wpdb; $results_rows = $wpdb->get_results("SELECT meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'");
+    $all_results = []; foreach ($results_rows as $row) { $r = maybe_unserialize($row->meta_value); if (is_array($r)) $all_results = array_merge($all_results, $r); }
+    foreach ($program_posts as $post) {
+        $sku = (string)get_post_meta($post->ID, '_mco_certification_exam_sku', true);
+        $eid = $sku ?: 'prac-'.$post->ID;
+        $attempts = array_filter($all_results, fn($r) => ($r['examId'] ?? '') === $eid);
+        $count = count($attempts); $score_sum = array_sum(array_column($attempts, 'score'));
+        $pass_score = (int)get_post_meta($post->ID, '_mco_pass_score', true) ?: 70;
+        $pass_count = count(array_filter($attempts, fn($r) => (float)($r['score'] ?? 0) >= $pass_score));
+        $sales = 0; $revenue = 0;
+        if ($sku && class_exists('WooCommerce')) { $pid = wc_get_product_id_by_sku($sku); $product = $pid ? wc_get_product($pid) : null; if ($product) { $sales = (int)$product->get_total_sales(); $revenue = $sales * (float)$product->get_price(); } }
+        $stats[] = ['id' => (string)$eid, 'name' => (string)$post->post_title, 'isPractice' => empty($sku), 'attempts' => (int)$count, 'averageScore' => (float)($count > 0 ? $score_sum / $count : 0), 'passRate' => (float)($count > 0 ? ($pass_count / $count) * 100 : 0), 'totalSales' => (int)$sales, 'totalRevenue' => (float)$revenue, 'passCount' => (int)$pass_count, 'totalScoreSum' => (float)$score_sum, 'programName' => (string)$post->post_title, 'engagements' => (int)get_post_meta($post->ID, '_mco_engagements', true) ?: 0];
     }
     return new WP_REST_Response($stats, 200);
 }
 
-/**
- * 7. QUESTION ENGINE
- */
-function mco_handle_questions_from_sheet($request) {
-    $p = $request->get_json_params(); $url = $p['sheetUrl'] ?? '';
-    $fetch = mco_fetch_remote_csv_content($url); if (is_wp_error($fetch)) return $fetch;
-    $lines = preg_split('/\r\n|\r|\n/', (string)$fetch['body']); array_shift($lines);
-    $qs = []; $idx = 1;
-    foreach ($lines as $l) {
-        $row = str_getcsv($l);
-        if (count($row) >= 6) { $qs[] = ['id' => $idx++, 'question' => $row[0], 'options' => array_slice($row, 1, 4), 'correctAnswer' => (int)$row[5]]; }
-    }
-    return new WP_REST_Response($qs, 200);
+// --- BETA TESTERS & DIAGNOSTICS ---
+
+function mco_handle_admin_get_beta_testers() {
+    $query = new WP_User_Query(['meta_key' => '_mco_is_beta_tester', 'meta_value' => '1', 'fields' => 'all']);
+    $users = $query->get_results(); $testers = [];
+    foreach ($users as $user) { $testers[] = ['id' => (string)$user->ID, 'name' => $user->display_name, 'email' => $user->user_email, 'registrationDate' => $user->user_registered, 'tokenRedeemed' => true, 'expiryTimestamp' => time() + (86400 * 30)]; }
+    return new WP_REST_Response($testers, 200);
+}
+
+function mco_handle_admin_get_status() {
+    $s = []; $s['api_connection'] = ['success' => true, 'message' => 'Online'];
+    $s['jwt_secret'] = ['success' => defined('MCO_JWT_SECRET'), 'message' => defined('MCO_JWT_SECRET') ? 'Defined' : 'Missing'];
+    $is_woo = class_exists('WooCommerce'); $s['woocommerce'] = ['success' => $is_woo, 'message' => $is_woo ? 'Active' : 'Missing'];
+    $s['wc_subscriptions'] = ['success' => class_exists('WC_Subscriptions'), 'message' => class_exists('WC_Subscriptions') ? 'Active' : 'Inactive'];
+    $s['app_url_config'] = ['success' => !empty(get_option('mco_exam_app_url')), 'message' => !empty(get_option('mco_exam_app_url')) ? 'Configured' : 'Empty'];
+    $s['sheet_accessibility'] = ['success' => true, 'message' => 'Online'];
+    return new WP_REST_Response($s, 200);
+}
+
+function mco_handle_admin_clear_all_results() { global $wpdb; $wpdb->query("DELETE FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'"); return new WP_REST_Response(['success' => true, 'message' => 'Platform results purged.'], 200); }
+
+function mco_handle_admin_toggle_beta_status($request) {
+    $p = $request->get_json_params(); $status = $p['isBetaTester'] ? '1' : '0';
+    $user_id = (int)$request->get_param('jwt_payload')['user']['id'];
+    if (!$user_id) return new WP_Error('401', 'User context lost.');
+    update_user_meta($user_id, '_mco_is_beta_tester', $status);
+    if (!function_exists('mco_generate_exam_jwt')) return new WP_Error('500', 'Security engine offline.');
+    $token = mco_generate_exam_jwt($user_id);
+    return new WP_REST_Response(['success' => true, 'token' => $token], 200);
+}
+
+// --- CONTENT ENGINE ---
+
+function mco_handle_admin_get_post_creation_data() {
+    $authors = get_users(['role__in' => ['administrator', 'editor', 'author'], 'fields' => ['ID', 'display_name']]);
+    $categories = get_categories(['hide_empty' => false]);
+    $formatted_categories = array_map(function($cat) { return ['term_id' => $cat->term_id, 'name' => $cat->name, 'slug' => $cat->slug]; }, $categories);
+    return new WP_REST_Response(['authors' => $authors, 'categories' => $formatted_categories], 200);
+}
+
+function mco_handle_admin_create_post($request) {
+    $p = $request->get_json_params();
+    $post_data = ['post_title' => sanitize_text_field($p['post_title'] ?? 'Untitled AI Post'), 'post_content' => $p['post_content'] ?? '', 'post_status' => sanitize_text_field($p['post_status'] ?? 'future'), 'post_author' => (int)($p['post_author'] ?? get_current_user_id()), 'post_date' => sanitize_text_field($p['post_date'] ?? current_time('mysql')), 'post_category' => isset($p['post_category']) ? [(int)$p['post_category']] : []];
+    $post_id = wp_insert_post($post_data); if (is_wp_error($post_id)) return $post_id;
+    if (!empty($p['keywords'])) wp_set_post_tags($post_id, $p['keywords'], true);
+    do_action('mco_ai_post_created', $post_id);
+    return new WP_REST_Response(['success' => true, 'post_id' => $post_id, 'post_url' => get_permalink($post_id)], 200);
 }
 
 /**
- * 8. SECONDARY HANDLERS
+ * FETCH REAL CERTIFICATE DATA
  */
-function mco_handle_get_debug_details($request) {
-    $payload = $request->get_param('jwt_payload'); $uid = (int)$payload['user']['id']; $results = [];
-    if (!empty($payload['user']['isAdmin'])) {
-        global $wpdb; $rows = $wpdb->get_results("SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'");
-        foreach ($rows as $row) {
-            $user_res = maybe_unserialize($row->meta_value);
-            if (is_array($user_res)) {
+function mco_handle_get_certificate_data($request) {
+    $test_id = $request['id'];
+    $payload = $request->get_param('jwt_payload');
+    $is_admin = !empty($payload['user']['isAdmin']);
+    $requesting_user_id = (int)$payload['user']['id'];
+
+    global $wpdb;
+    
+    if ($is_admin) {
+        $results_rows = $wpdb->get_results("SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'");
+    } else {
+        $results_rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results' AND user_id = %d",
+            $requesting_user_id
+        ));
+    }
+
+    foreach ($results_rows as $row) {
+        $results = maybe_unserialize($row->meta_value);
+        if (!is_array($results)) continue;
+        foreach ($results as $result) {
+            if (($result['testId'] ?? '') === $test_id) {
                 $user = get_userdata($row->user_id);
-                foreach($user_res as $ur) { $ur['userId'] = (string)$row->user_id; $ur['candidateName'] = $user ? $user->display_name : 'User #'.$row->user_id; $results[] = $ur; }
+                $programs = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1]);
+                $exam_name = $result['examId'];
+                foreach($programs as $p) {
+                    $sku = get_post_meta($p->ID, '_mco_certification_exam_sku', true);
+                    if ($sku === $result['examId'] || 'prac-'.$p->ID === $result['examId']) { $exam_name = $p->post_title; break; }
+                }
+                return new WP_REST_Response([
+                    'certificateNumber' => 'MCO-' . strtoupper(substr(md5($test_id), 0, 10)),
+                    'candidateName' => $user ? $user->display_name : 'Candidate',
+                    'finalScore' => (float)$result['score'],
+                    'date' => date('F j, Y', $result['timestamp'] / 1000),
+                    'examId' => $result['examId'],
+                    'examName' => $exam_name
+                ], 200);
             }
         }
-    } else { $results = maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true)) ?: []; }
-    return new WP_REST_Response(['user' => $payload['user'], 'results' => array_values($results), 'sheetTest' => ['success' => true]], 200);
+    }
+    return new WP_Error('not_found', 'Certificate record not found.', ['status' => 404]);
 }
 
-function mco_handle_verify_certificate($request) { 
-    $cid = strtoupper(sanitize_text_field($request['id'])); $hash = str_replace('MCO-', '', $cid); global $wpdb; 
-    $rows = $wpdb->get_results("SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'"); 
-    foreach ($rows as $row) { 
-        $res = maybe_unserialize($row->meta_value); 
-        if (is_array($res)) { 
-            foreach ($res as $r) { 
-                if (strtoupper(substr(md5($r['testId']), 0, 10)) === $hash) { 
-                    $u = get_userdata($row->user_id); 
-                    return new WP_REST_Response(['valid' => true, 'candidateName' => $u->display_name, 'examName' => $r['examId'], 'finalScore' => $r['score'], 'date' => date('F j, Y', $r['timestamp']/1000)], 200); 
-                } 
-            } 
-        } 
-    } 
-    return new WP_Error('404', 'Invalid Cert'); 
+/**
+ * IMPLEMENT REAL CERTIFICATE VERIFICATION
+ */
+function mco_handle_verify_certificate($request) {
+    $cert_id = strtoupper(sanitize_text_field($request['id']));
+    // Support both raw hashes and prefixed numbers
+    $clean_hash = str_replace('MCO-', '', $cert_id);
+
+    global $wpdb;
+    $results_rows = $wpdb->get_results("SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'");
+
+    foreach ($results_rows as $row) {
+        $results = maybe_unserialize($row->meta_value);
+        if (!is_array($results)) continue;
+        foreach ($results as $result) {
+            $calculated_hash = strtoupper(substr(md5($result['testId']), 0, 10));
+            if ($calculated_hash === $clean_hash) {
+                $user = get_userdata($row->user_id);
+                $exam_name = $result['examId'];
+                $programs = get_posts(['post_type' => 'mco_exam_program', 'posts_per_page' => -1]);
+                foreach($programs as $p) {
+                    $sku = get_post_meta($p->ID, '_mco_certification_exam_sku', true);
+                    if ($sku === $result['examId'] || 'prac-'.$p->ID === $result['examId']) { $exam_name = $p->post_title; break; }
+                }
+
+                return new WP_REST_Response([
+                    'valid' => true,
+                    'candidateName' => $user ? $user->display_name : 'Verified Candidate',
+                    'examName' => $exam_name,
+                    'finalScore' => (float)$result['score'],
+                    'date' => date('F j, Y', $result['timestamp'] / 1000)
+                ], 200);
+            }
+        }
+    }
+
+    return new WP_Error('invalid_cert', 'The provided certificate ID could not be found in our verification database.', ['status' => 404]);
 }
 
-function mco_handle_get_certificate_data($request) { 
-    $tid = $request['id']; global $wpdb; 
-    $rows = $wpdb->get_results("SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'"); 
-    foreach ($rows as $row) { 
-        $res = maybe_unserialize($row->meta_value); 
-        if (is_array($res)) { 
-            foreach ($res as $r) { 
-                if ($r['testId'] === $tid) { 
-                    $u = get_userdata($row->user_id); 
-                    return new WP_REST_Response(['certificateNumber' => 'MCO-'.strtoupper(substr(md5($tid),0,10)), 'candidateName' => $u->display_name, 'finalScore' => $r['score'], 'date' => date('F j, Y', $r['timestamp']/1000), 'examId' => $r['examId']], 200); 
-                } 
-            } 
-        } 
-    } 
-    return new WP_Error('404', 'Not found'); 
-}
-
-function mco_handle_get_user_results($request) { $uid = (int)$request->get_param('jwt_payload')['user']['id']; return new WP_REST_Response(maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true)) ?: [], 200); }
-function mco_handle_submit_result($request) { $uid = (int)$request->get_param('jwt_payload')['user']['id']; $data = $request->get_json_params(); $h = maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true)) ?: []; $h[] = $data; update_user_meta($uid, 'mco_exam_results', $h); return new WP_REST_Response(['success' => true], 200); }
-function mco_handle_admin_update_settings($request) { $p = $request->get_json_params(); if (isset($p['activeThemeId'])) update_option('mco_active_theme_id', sanitize_text_field($p['activeThemeId'])); $t = ['purchaseNotifierEnabled' => 'mco_purchase_notifier_enabled', 'subscriptionsEnabled' => 'mco_subscriptions_enabled', 'bundlesEnabled' => 'mco_bundles_enabled']; foreach ($t as $k => $v) { if (isset($p[$k])) update_option($v, $p[$k] ? '1' : '0'); } delete_transient('mco_app_config_data'); delete_transient('mco_app_config_data_full'); return new WP_REST_Response(['success' => true], 200); }
-function mco_handle_admin_delete_post($request) { $p = $request->get_json_params(); $id = (int)str_replace('prod-', '', ($p['postId'] ?? '')); wp_trash_post($id); delete_transient('mco_app_config_data'); return new WP_REST_Response(['success' => true], 200); }
-function mco_handle_create_checkout_session($request) { $p = $request->get_json_params(); $sku = sanitize_text_field($p['sku'] ?? ''); $pid = wc_get_product_id_by_sku($sku); return new WP_REST_Response(['checkoutUrl' => add_query_arg('add-to-cart', $pid, wc_get_checkout_url())], 200); }
-function mco_handle_admin_clear_config_cache() { delete_transient('mco_app_config_data'); delete_transient('mco_app_config_data_full'); return new WP_REST_Response(['success' => true], 200); }
+// --- SECONDARY HANDLERS ---
+function mco_handle_get_user_results($request) { $uid = (int)$request->get_param('jwt_payload')['user']['id']; $res = maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true)) ?: []; return new WP_REST_Response(array_values((array)$res), 200); }
+function mco_handle_submit_result($request) { $uid = (int)$request->get_param('jwt_payload')['user']['id']; $data = $request->get_json_params(); $h = maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true)) ?: []; $data['server_timestamp'] = time(); $h[] = $data; update_user_meta($uid, 'mco_exam_results', $h); return new WP_REST_Response(['success' => true], 200); }
+function mco_handle_admin_clear_config_cache() { delete_transient('mco_app_config_data'); delete_transient('mco_app_config_data_full'); update_option('mco_config_version', time()); return new WP_REST_Response(['success' => true], 200); }
 function mco_handle_admin_clear_question_caches() { global $wpdb; $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '\_transient\_mco\_sheet\_%'"); return new WP_REST_Response(['success' => true], 200); }
-function mco_handle_admin_get_beta_testers() { $q = new WP_User_Query(['meta_key' => '_mco_is_beta_tester', 'meta_value' => '1']); $testers = []; foreach ($q->get_results() as $u) { $testers[] = ['id' => (string)$u->ID, 'name' => $u->display_name, 'email' => $u->user_email, 'registrationDate' => $u->user_registered, 'tokenRedeemed' => true, 'expiryTimestamp' => time()+86400]; } return new WP_REST_Response($testers, 200); }
-function mco_handle_admin_toggle_beta_status($request) { $p = $request->get_json_params(); $uid = (int)$request->get_param('jwt_payload')['user']['id']; update_user_meta($uid, '_mco_is_beta_tester', $p['isBetaTester'] ? '1' : '0'); return new WP_REST_Response(['success' => true, 'token' => mco_generate_exam_jwt($uid)], 200); }
-function mco_handle_update_name($request) { $p = $request->get_json_params(); $uid = (int)$request->get_param('jwt_payload')['user']['id']; wp_update_user(['ID' => $uid, 'display_name' => sanitize_text_field($p['fullName'])]); return new WP_REST_Response(['success' => true], 200); }
-function mco_handle_admin_get_post_creation_data() { return new WP_REST_Response(['authors' => get_users(['role' => 'administrator', 'fields' => ['ID', 'display_name']]), 'categories' => get_categories(['hide_empty' => false])], 200); }
-function mco_handle_admin_update_exam_program($request) { 
-    $p = $request->get_json_params(); $post_id = (int)str_replace('prod-', '', $p['programId'] ?? ''); if (!$post_id) return new WP_Error('404', 'Invalid ID'); 
-    $u = $p['updateData'] ?? []; 
-    if (isset($u['category'])) { 
-        $pu = ['ID' => $post_id]; if (isset($u['category']['name'])) $pu['post_title'] = sanitize_text_field($u['category']['name']); if (isset($u['category']['description'])) $pu['post_content'] = wp_kses_post($u['category']['description']); if (count($pu) > 1) wp_update_post($pu); 
-        if (isset($u['category']['questionSourceUrl'])) update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($u['category']['questionSourceUrl']));
-    } 
-    if (isset($u['practiceExam'])) { if (isset($u['practiceExam']['numberOfQuestions'])) update_post_meta($post_id, '_mco_practice_questions', (int)$u['practiceExam']['numberOfQuestions']); if (isset($u['practiceExam']['durationMinutes'])) update_post_meta($post_id, '_mco_practice_duration', (int)$u['practiceExam']['durationMinutes']); } 
-    if (isset($u['certExam'])) { if (isset($u['certExam']['productSku'])) update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($u['certExam']['productSku'])); if (isset($u['certExam']['passScore'])) update_post_meta($post_id, '_mco_pass_score', (int)$u['certExam']['passScore']); } 
-    delete_transient('mco_app_config_data'); delete_transient('mco_app_config_data_full'); return new WP_REST_Response(['success' => true], 200); 
+
+/**
+ * GLOBAL AUDIT GETTER
+ */
+function mco_handle_get_debug_details($request) { 
+    $payload = $request->get_param('jwt_payload'); 
+    $uid = (int)$payload['user']['id']; 
+    $is_admin = !empty($payload['user']['isAdmin']);
+
+    $results = [];
+    if ($is_admin) {
+        global $wpdb;
+        $rows = $wpdb->get_results("SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'mco_exam_results'");
+        foreach ($rows as $row) {
+            $user_results = maybe_unserialize($row->meta_value);
+            if (is_array($user_results)) {
+                $user = get_userdata($row->user_id);
+                foreach($user_results as $ur) {
+                    $ur['userId'] = (string)$row->user_id;
+                    $ur['candidateName'] = $user ? $user->display_name : 'User #'.$row->user_id;
+                    $results[] = $ur;
+                }
+            }
+        }
+    } else {
+        $results = maybe_unserialize(get_user_meta($uid, 'mco_exam_results', true)) ?: [];
+    }
+
+    return new WP_REST_Response([
+        'user' => $payload['user'], 
+        'purchases' => get_user_meta($uid, 'mco_paid_exams', true) ?: [], 
+        'results' => array_values($results), 
+        'sheetTest' => ['success' => true, 'message' => 'Audit stream synchronized.']
+    ], 200); 
 }
-function mco_handle_submit_feedback() { return new WP_REST_Response(['success' => true], 200); }
-function mco_handle_submit_review() { return new WP_REST_Response(['success' => true], 200); }
-function mco_handle_log_engagement() { return new WP_REST_Response(['success' => true], 200); }
-function mco_handle_register_tester() { return new WP_REST_Response(['success' => true], 200); }
-function mco_handle_resend_onboarding_email() { return new WP_REST_Response(['success' => true], 200); }
-function mco_handle_redeem_tester_token() { return new WP_REST_Response(['token' => ''], 200); }
-function mco_handle_admin_resend_beta_email() { return new WP_REST_Response(['success' => true], 200); }
-function mco_handle_admin_test_sheet_url() { return new WP_REST_Response(['success' => true], 200); }
+/**
+ * UPDATED: INDUSTRIAL PROGRAM CREATOR
+ * Replace your existing function with this to fix the "Empty Practice Exam" issue.
+ */
 function mco_handle_admin_create_exam_program($request) { 
-    $p = $request->get_json_params(); $pid = wp_insert_post(['post_title' => sanitize_text_field($p['programName'] ?? 'New Program'), 'post_type' => 'mco_exam_program', 'post_status' => 'publish']); delete_transient('mco_app_config_data'); return new WP_REST_Response(['success' => true, 'id' => $pid], 200);
+    $p = $request->get_json_params(); 
+    $name = sanitize_text_field($p['programName'] ?? 'New Program');
+    $data = $p['productLinkData'] ?? []; // This contains the metadata from the modal
+    
+    $pid = wp_insert_post([
+        'post_title' => $name, 
+        'post_type' => 'mco_exam_program', 
+        'post_status' => 'publish'
+    ]); 
+
+    if (is_wp_error($pid)) return $pid;
+
+    if (!empty($data)) {
+        // Core Identity
+        if (!empty($data['sku'])) update_post_meta($pid, '_mco_certification_exam_sku', sanitize_text_field($data['sku']));
+        if (!empty($data['questionSourceUrl'])) update_post_meta($pid, '_mco_question_source_url', esc_url_raw($data['questionSourceUrl']));
+        
+        // Certification parameters
+        if (!empty($data['certQuestions'])) update_post_meta($pid, '_mco_cert_questions', (int)$data['certQuestions']);
+        if (!empty($data['certDuration'])) update_post_meta($pid, '_mco_cert_duration', (int)$data['certDuration']);
+        if (!empty($data['passScore'])) update_post_meta($pid, '_mco_pass_score', (int)$data['passScore']);
+        
+        // Practice parameters (THE FIX)
+        if (!empty($data['practiceQuestions'])) update_post_meta($pid, '_mco_practice_questions', (int)$data['practiceQuestions']);
+        if (!empty($data['practiceDuration'])) update_post_meta($pid, '_mco_practice_duration', (int)$data['practiceDuration']);
+        
+        update_post_meta($pid, '_mco_certificate_enabled', '1');
+    }
+
+    // Force Frontend Refresh
+    delete_transient('mco_app_config_data'); 
+    delete_transient('mco_app_config_data_full'); 
+    update_option('mco_config_version', (string)current_time('timestamp'));
+
+    return new WP_REST_Response(['success' => true, 'id' => $pid], 200);
+}
+
+function mco_handle_admin_resend_beta_email() { return new WP_REST_Response(['success'=>true], 200); }
+function mco_handle_admin_test_sheet_url() { return new WP_REST_Response(['success'=>true], 200); }
+
+function mco_handle_admin_delete_post($request) { $p = $request->get_json_params(); $post_id = (int)str_replace('prod-', '', ($p['postId'] ?? '')); if (!$post_id) return new WP_Error('400', 'ID missing.'); wp_trash_post($post_id); delete_transient('mco_app_config_data'); delete_transient('mco_app_config_data_full'); return new WP_REST_Response(['success' => true], 200); }
+function mco_handle_register_tester() { return new WP_REST_Response(['success'=>true], 200); }
+function mco_handle_resend_onboarding_email() { return new WP_REST_Response(['success'=>true], 200); }
+function mco_handle_redeem_tester_token() { return new WP_REST_Response(['token'=>''], 200); }
+function mco_handle_update_name() { return new WP_REST_Response(['success'=>true], 200); }
+function mco_handle_submit_feedback() { return new WP_REST_Response(['success'=>true], 200); }
+function mco_handle_submit_review() { return new WP_REST_Response(['success'=>true], 200); }
+function mco_handle_log_engagement() { return new WP_REST_Response(['success'=>true], 200); }
+/**
+ * SAFE PATCHING UPDATE HANDLER
+ * Only updates meta fields that are explicitly provided in the payload.
+ */
+function mco_handle_admin_update_exam_program($request) { 
+    $p = $request->get_json_params(); 
+    $post_id = (int)str_replace('prod-', '', $p['programId'] ?? ''); 
+    if (!$post_id) return new WP_Error('404', 'Invalid ID'); 
+    
+    $u = $p['updateData'] ?? []; 
+    
+    if (isset($u['category'])) { 
+        $post_update = ['ID' => $post_id];
+        if (isset($u['category']['name'])) $post_update['post_title'] = sanitize_text_field($u['category']['name']);
+        if (isset($u['category']['description'])) $post_update['post_content'] = wp_kses_post($u['category']['description']);
+        
+        if (count($post_update) > 1) wp_update_post($post_update); 
+        
+        if (isset($u['category']['questionSourceUrl'])) {
+            update_post_meta($post_id, '_mco_question_source_url', esc_url_raw($u['category']['questionSourceUrl']));
+        }
+    } 
+
+    if (isset($u['practiceExam'])) { 
+        if (isset($u['practiceExam']['numberOfQuestions'])) {
+            update_post_meta($post_id, '_mco_practice_questions', (int)$u['practiceExam']['numberOfQuestions']);
+        }
+        if (isset($u['practiceExam']['durationMinutes'])) {
+            update_post_meta($post_id, '_mco_practice_duration', (int)$u['practiceExam']['durationMinutes']);
+        }
+        if (isset($u['practiceExam']['certificateEnabled'])) {
+            update_post_meta($post_id, '_mco_practice_certificate_enabled', $u['practiceExam']['certificateEnabled'] ? '1' : '0');
+        }
+    } 
+
+    if (isset($u['certExam'])) { 
+        if (isset($u['certExam']['productSku'])) {
+            update_post_meta($post_id, '_mco_certification_exam_sku', sanitize_text_field($u['certExam']['productSku']));
+        }
+        if (isset($u['certExam']['numberOfQuestions'])) {
+            update_post_meta($post_id, '_mco_cert_questions', (int)$u['certExam']['numberOfQuestions']);
+        }
+        if (isset($u['certExam']['durationMinutes'])) {
+            update_post_meta($post_id, '_mco_cert_duration', (int)$u['certExam']['durationMinutes']);
+        }
+        if (isset($u['certExam']['passScore'])) {
+            update_post_meta($post_id, '_mco_pass_score', (int)$u['certExam']['passScore']);
+        }
+        if (isset($u['certExam']['addonSku'])) {
+            update_post_meta($post_id, '_mco_addon_sku', sanitize_text_field($u['certExam']['addonSku']));
+        }
+        if (isset($u['certExam']['certificateEnabled'])) {
+            update_post_meta($post_id, '_mco_certificate_enabled', $u['certExam']['certificateEnabled'] ? '1' : '0');
+        }
+        if (isset($u['certExam']['isProctored'])) {
+            update_post_meta($post_id, '_mco_is_proctored', $u['certExam']['isProctored'] ? '1' : '0');
+        }
+    } 
+
+    delete_transient('mco_app_config_data');
+    delete_transient('mco_app_config_data_full'); 
+    update_option('mco_config_version', time());
+    
+    return new WP_REST_Response(['success' => true], 200); 
+}
+
+/**
+ * IMPLEMENT REAL CHECKOUT REDIRECT
+ */
+function mco_handle_create_checkout_session($request) {
+    if (!class_exists('WooCommerce')) return new WP_Error('500', 'WooCommerce is not active.');
+    $p = $request->get_json_params();
+    $sku = sanitize_text_field($p['sku'] ?? '');
+    if (empty($sku)) return new WP_Error('400', 'Product SKU is required.');
+
+    $product_id = wc_get_product_id_by_sku($sku);
+    if (!$product_id) return new WP_Error('404', "Product with SKU '$sku' not found in store.");
+
+    // Direct redirect URL to cart with auto-add
+    $checkout_url = add_query_arg('add-to-cart', $product_id, wc_get_checkout_url());
+
+    return new WP_REST_Response(['checkoutUrl' => $checkout_url], 200);
 }

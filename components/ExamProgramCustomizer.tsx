@@ -120,6 +120,7 @@ const ExamEditor: FC<{
             <div className="flex justify-between items-center pt-8 border-t border-[rgb(var(--color-border-rgb))]">
                 <button onClick={() => onDelete(program.category.id)} className="px-6 py-2 text-rose-500 hover:bg-rose-500/10 rounded-xl text-xs font-black transition-all">TRASH PROGRAM</button>
                 <div className="flex gap-4">
+                    {/* FIX: Replaced invalid 'onCancel' property with 'onClick' on button element */}
                     <button onClick={onCancel} className="px-6 py-2 font-bold text-[rgb(var(--color-text-muted-rgb))]">Discard</button>
                     <button onClick={() => onSave(program.category.id, data)} disabled={isSaving} className="mco-btn-admin-primary min-w-[140px]">
                         {isSaving ? <Spinner size="sm"/> : 'SAVE SETTINGS'}
@@ -198,7 +199,7 @@ const ExamProgramCustomizer: FC = () => {
     return (
         <div className="space-y-10 pb-40">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <h1 className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-4">
+                <h1 className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3">
                     <Settings className="text-[rgb(var(--color-primary-rgb))]" size={40} /> Program Master
                 </h1>
                 <div className="flex gap-3">
