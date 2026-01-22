@@ -106,7 +106,7 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
         <div className={`mco-card ${cardGradient} rounded-2xl shadow-xl p-6 flex flex-col relative overflow-hidden ${isDisabled ? 'opacity-60 grayscale-[0.5]' : ''}`}>
             {/* Sale Badge */}
             {isOnSale && !canTake && (
-                <div className="absolute top-4 right-4 bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg z-20 animate-pulse">
+                <div className="mco-badge--save">
                     <Tag size={10} /> SAVE ${ (regularPrice - price).toFixed(0) }
                 </div>
             )}
@@ -163,7 +163,7 @@ const ExamCard: FC<ExamCardProps> = ({ exam, programId, isPractice, isPurchased,
             {/* Footer Action */}
             <div className="mt-auto relative z-10">
                 {isAttemptsExceeded ? (
-                    <div className="bg-red-500/20 text-white p-4 rounded-xl text-[10px] font-black text-center border border-red-500/30 backdrop-blur-md">
+                    <div className="bg-red-50/20 text-white p-4 rounded-xl text-[10px] font-black text-center border border-red-500/30 backdrop-blur-md">
                         MAX ATTEMPTS REACHED. REPURCHASE REQUIRED.
                     </div>
                 ) : (

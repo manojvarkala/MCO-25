@@ -1,5 +1,5 @@
 import React, { FC, useState, useMemo } from 'react';
-import { Check, Star, ShoppingCart, Zap } from 'lucide-react';
+import { Check, Star, ShoppingCart, Zap, Tag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -28,7 +28,7 @@ const SubscriptionOfferCard: FC<SubscriptionOfferCardProps> = ({
     gradientClass,
 }) => {
     const { user, token } = useAuth();
-    const { activeOrg } = useAppContext();
+    const { activeOrg, examPrices } = useAppContext();
     const [isRedirecting, setIsRedirecting] = useState(false);
 
     const sku = useMemo(() => {
@@ -36,6 +36,15 @@ const SubscriptionOfferCard: FC<SubscriptionOfferCardProps> = ({
         if (planName.toLowerCase().includes('yearly')) return 'sub-yearly';
         return null;
     }, [planName]);
+
+    // Calculate specific savings for Yearly vs Monthly
+    const yearlySavings = useMemo(() => {
+        if (sku !== 'sub-yearly' || !examPrices) return 0;
+        const monthlyPrice = examPrices['sub-monthly']?.price || 19.99;
+        const totalMonthlyCost = monthlyPrice * 12;
+        const currentYearlyPrice = price;
+        return totalMonthlyCost > currentYearlyPrice ? (totalMonthlyCost - currentYearlyPrice) : 0;
+    }, [sku, examPrices, price]);
 
     const handleSubscribe = async () => {
         if (!sku) {
@@ -62,10 +71,17 @@ const SubscriptionOfferCard: FC<SubscriptionOfferCardProps> = ({
     const buttonText = isRedirecting ? 'Preparing...' : 'Subscribe Now';
 
     return (
-        <div className={`relative flex flex-col p-8 rounded-3xl shadow-2xl text-white transition-transform hover:scale-[1.02] border border-white/10 ${gradientClass}`}>
+        <div className={`relative flex flex-col p-8 rounded-3xl shadow-2xl text-white transition-transform hover:scale-[1.02] border border-white/10 overflow-hidden ${gradientClass}`}>
             {isBestValue && (
-                <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-[10px] font-black uppercase px-4 py-1.5 rounded-full shadow-lg border-2 border-white/20 flex items-center gap-1.5 whitespace-nowrap">
+                <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-[10px] font-black uppercase px-4 py-1.5 rounded-full shadow-lg border-2 border-white/20 flex items-center gap-1.5 whitespace-nowrap z-20">
                     <Star size={12} className="fill-current" /> Best Value Path
+                </div>
+            )}
+
+            {/* Animated Save Badge for Yearly */}
+            {yearlySavings > 0 && (
+                <div className="mco-badge--save">
+                    <Tag size={10} /> SAVE ${yearlySavings.toFixed(0)}/YR
                 </div>
             )}
             
@@ -93,7 +109,7 @@ const SubscriptionOfferCard: FC<SubscriptionOfferCardProps> = ({
                 {features.map((feature, index) => (
                     <li key={index} className="flex items-start gap-3">
                         <div className="mt-0.5 bg-white/20 p-1 rounded-full">
-                            <Check size={12} className="text-white" strokeWidth={4} />
+                            <Check size={12} className="text-white" strokeWidth={4} stroke="currentColor" />
                         </div>
                         <span className="text-sm font-semibold text-white/90">{feature}</span>
                     </li>

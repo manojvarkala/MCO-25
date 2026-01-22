@@ -1,6 +1,5 @@
-
 import React, { FC, useMemo, useState } from 'react';
-import { ShoppingBag, Check, ShoppingCart } from 'lucide-react';
+import { ShoppingBag, Check, ShoppingCart, Tag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -75,16 +74,24 @@ const ExamBundleCard: FC<ExamBundleCardProps> = ({ type, bundleDataRaw, activeOr
     }
 
     const buttonText = isRedirecting ? 'Preparing...' : 'Purchase Bundle';
+    const hasSale = bundleInfo.regularPrice > bundleInfo.price;
 
     return (
-        <div className={`${bundleInfo.gradientClass} text-white rounded-xl shadow-lg p-6 flex flex-col`}>
+        <div className={`${bundleInfo.gradientClass} text-white rounded-xl shadow-lg p-6 flex flex-col relative overflow-hidden`}>
+            {/* Animated Sale Badge */}
+            {hasSale && (
+                <div className="mco-badge--save">
+                    <Tag size={10} /> SAVE ${(bundleInfo.regularPrice - bundleInfo.price).toFixed(0)}
+                </div>
+            )}
+
             <h3 className="text-xl font-bold flex items-center gap-2"><ShoppingBag size={20} /> {bundleInfo.title}</h3>
             <p className="text-sm text-white/80 mt-2 mb-4 flex-grow">
                 {bundleInfo.description}
             </p>
 
             <div className="my-4 text-center">
-                {bundleInfo.regularPrice && bundleInfo.regularPrice > bundleInfo.price ? (
+                {hasSale ? (
                     <div className="flex items-baseline justify-center gap-2">
                         <span className="text-2xl line-through text-white/70">${bundleInfo.regularPrice.toFixed(2)}</span>
                         <span className="text-4xl font-extrabold text-white">${bundleInfo.price.toFixed(2)}</span>

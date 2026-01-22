@@ -1,5 +1,5 @@
 import React, { FC, useMemo, useState } from 'react';
-import { ShoppingBag, Check, ShoppingCart, Gift, ArrowRight, Zap } from 'lucide-react';
+import { ShoppingBag, Check, ShoppingCart, Gift, ArrowRight, Zap, Tag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
@@ -78,15 +78,16 @@ const FeaturedBundleCard: FC<FeaturedBundleCardProps> = ({ bundle, activeOrg }) 
 
     const salePrice = parseFloat(bundle.salePrice || '0');
     const regPrice = parseFloat(bundle.regularPrice || '0');
-    const savings = (regPrice > salePrice && regPrice > 0) ? Math.round(((regPrice - salePrice) / regPrice) * 100) : 0;
+    const savingsAmount = (regPrice > salePrice && regPrice > 0) ? (regPrice - salePrice) : 0;
 
     return (
         <div className="relative overflow-hidden rounded-2xl shadow-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white group hover:shadow-2xl transition-shadow duration-300">
             <div className="absolute top-0 right-0 -mt-10 -mr-10 w-32 h-32 bg-amber-300/20 rounded-full blur-2xl"></div>
             
-            {savings > 0 && (
-                <div className="absolute top-4 right-4 bg-red-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-sm z-20">
-                    SAVE {savings}%
+            {/* Animated Save Badge */}
+            {savingsAmount > 0 && (
+                <div className="mco-badge--save">
+                    <Tag size={10} /> SAVE ${savingsAmount.toFixed(0)}
                 </div>
             )}
 
