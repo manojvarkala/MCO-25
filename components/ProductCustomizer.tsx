@@ -19,17 +19,6 @@ interface ProductEntry {
     subscriptionPeriod?: string;
 }
 
-const TabButton: FC<{ active: boolean; onClick: () => void; children: ReactNode }> = ({ active, onClick, children }) => (
-    <button
-        onClick={onClick}
-        className={`px-6 py-2 font-black text-xs uppercase tracking-widest rounded-lg transition-all ${
-            active ? 'bg-cyan-600 text-white shadow-lg' : 'bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-muted-rgb))] hover:bg-[rgb(var(--color-muted-rgb))]'
-        }`}
-    >
-        {children}
-    </button>
-);
-
 const ProductEditorModal: FC<{ 
     product: ProductEntry | null; 
     type: TabType;
@@ -45,7 +34,7 @@ const ProductEditorModal: FC<{
     
     const [formData, setFormData] = useState({
         id: isDuplicating ? '' : (product?.id || ''),
-        name: isDuplicating ? `${product?.name} - Premium Addon` : (product?.name || ''),
+        name: isDuplicating ? `${product?.name} - 1mo Premium` : (product?.name || ''),
         price: product?.price || '0',
         regularPrice: product?.regularPrice || '0',
         sku: isDuplicating ? `${product?.sku}-1mo-addon` : (product?.sku || ''),
@@ -65,74 +54,71 @@ const ProductEditorModal: FC<{
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-                <div className="p-6 border-b border-[rgb(var(--color-border-rgb))] flex justify-between items-center bg-[rgba(var(--color-background-rgb),0.5)]">
-                    <h2 className="text-xl font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2">
-                        {isDuplicating ? <Copy size={20} className="text-amber-500"/> : (isNew ? <PlusCircle size={20} className="text-emerald-500"/> : <Edit size={20} className="text-cyan-500"/>)} 
-                        {isDuplicating ? 'Clone as Simple Addon' : (isNew ? `New ${formData.type.toUpperCase()}` : 'Edit Product')}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-slate-900 border-2 border-slate-700 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+                    <h2 className="text-2xl font-black text-white flex items-center gap-3">
+                        {isDuplicating ? <Copy size={24} className="text-amber-500"/> : (isNew ? <PlusCircle size={24} className="text-emerald-500"/> : <Edit size={24} className="text-cyan-500"/>)} 
+                        {isDuplicating ? 'Clone Product' : (isNew ? `New ${formData.type}` : 'Edit Product')}
                     </h2>
-                    <button onClick={onClose} className="text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))] transition-colors"><X size={24}/></button>
+                    <button onClick={onClose} className="p-2 text-slate-500 hover:text-white transition-colors"><X size={28}/></button>
                 </div>
                 
-                <div className="p-8 space-y-6 overflow-y-auto flex-grow">
-                    <div>
-                        <Label>Product Title</Label>
-                        <div className="relative">
-                            <Tag className="absolute left-3 top-3.5 text-slate-400" size={18}/>
-                            <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 font-bold" />
-                        </div>
-                    </div>
-
-                    <div>
-                        <Label>Unique SKU</Label>
-                        <div className="relative">
-                            <Info className="absolute left-3 top-3.5 text-slate-400" size={18}/>
-                            <input type="text" value={formData.sku} onChange={e => setFormData({...formData, sku: e.target.value})} disabled={!isNew} className={`w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 ${!isNew ? 'opacity-50 cursor-not-allowed font-mono text-cyan-500' : 'font-mono'}`} />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-6">
+                <div className="p-10 space-y-8 overflow-y-auto flex-grow custom-scrollbar">
+                    <div className="space-y-6">
                         <div>
-                            <Label>Retail Price</Label>
-                            <input type="number" value={formData.regularPrice} onChange={e => setFormData({...formData, regularPrice: e.target.value})} className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 px-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500" />
+                            <label className="mco-admin-label">Product Internal Name</label>
+                            <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="mco-admin-input" placeholder="e.g. Master CIC Exam Pack" />
                         </div>
-                        <div>
-                            <Label>Sale Price</Label>
-                            <input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 px-4 text-emerald-500 font-black focus:border-emerald-500" />
-                        </div>
-                    </div>
 
-                    {(formData.type === 'bundle' || isDuplicating) && (
                         <div>
-                            <Label>Bundle Contents</Label>
-                            <div className="bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl p-4 space-y-2 max-h-48 overflow-y-auto">
-                                {availableExams.map(exam => (
-                                    <label key={exam.id} className="flex items-center gap-3 p-2 hover:bg-[rgba(var(--color-muted-rgb),0.3)] rounded-lg cursor-pointer transition-colors border border-transparent has-[:checked]:border-cyan-500/30">
-                                        <input type="checkbox" checked={formData.bundledSkus.includes(exam.sku)} onChange={() => handleToggleBundleItem(exam.sku)} className="rounded border-[rgb(var(--color-border-rgb))] bg-[rgb(var(--card-rgb))] text-cyan-500" />
-                                        <span className="text-xs text-[rgb(var(--color-text-default-rgb))] font-bold">{exam.name}</span>
-                                    </label>
-                                ))}
+                            <label className="mco-admin-label">Unique Merchant SKU</label>
+                            <input type="text" value={formData.sku} onChange={e => setFormData({...formData, sku: e.target.value})} disabled={!isNew} className={`mco-admin-input font-mono ${!isNew ? 'opacity-40 cursor-not-allowed bg-slate-950' : ''}`} />
+                            {isNew && <p className="text-[10px] text-cyan-500 font-bold mt-2 tracking-widest uppercase">This must match the program SKU exactly.</p>}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <label className="mco-admin-label">Retail Price ($)</label>
+                                <input type="number" value={formData.regularPrice} onChange={e => setFormData({...formData, regularPrice: e.target.value})} className="mco-admin-input" />
+                            </div>
+                            <div>
+                                <label className="mco-admin-label">Sale Price ($)</label>
+                                <input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="mco-admin-input !text-emerald-400 !border-emerald-500/30" />
                             </div>
                         </div>
-                    )}
+
+                        {(formData.isBundle || formData.type === 'bundle') && (
+                            <div className="space-y-4">
+                                <label className="mco-admin-label">Included Product Items</label>
+                                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-2 max-h-56 overflow-y-auto custom-scrollbar">
+                                    {availableExams.map(exam => (
+                                        <label key={exam.id} className="flex items-center gap-3 p-3 hover:bg-white/[0.03] rounded-xl cursor-pointer transition-colors border border-transparent has-[:checked]:border-cyan-500/20">
+                                            <input type="checkbox" checked={formData.bundledSkus.includes(exam.sku)} onChange={() => handleToggleBundleItem(exam.sku)} className="w-5 h-5 rounded border-slate-700 bg-slate-800 text-cyan-500" />
+                                            <span className="text-xs text-slate-300 font-bold">{exam.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                <div className="p-6 bg-[rgba(var(--color-background-rgb),0.5)] border-t border-[rgb(var(--color-border-rgb))] flex justify-between gap-3">
+                <div className="p-8 bg-slate-950 border-t border-slate-800 flex justify-between items-center">
                     <div className="flex gap-2">
                         {!isNew && (
                             !isConfirmingDelete ? (
-                                <button onClick={() => setIsConfirmingDelete(true)} className="px-4 py-2 text-rose-500 hover:text-rose-400 border border-rose-500/30 rounded-lg text-xs font-bold uppercase transition-colors">Delete</button>
+                                <button onClick={() => setIsConfirmingDelete(true)} className="px-6 py-2.5 text-rose-500 hover:text-white hover:bg-rose-600 rounded-xl text-xs font-black transition-all">DELETE</button>
                             ) : (
-                                <button onClick={() => onDelete(product!.id)} className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-black shadow-lg animate-pulse">Confirm</button>
+                                <button onClick={() => onDelete(product!.id)} className="px-6 py-2.5 bg-rose-600 text-white rounded-xl text-xs font-black animate-pulse">CONFIRM TRASH</button>
                             )
                         )}
                     </div>
-                    <div className="flex gap-3">
-                        <button onClick={onClose} disabled={isSaving} className="px-6 py-2.5 font-bold text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))] transition-colors">Discard</button>
-                        <button onClick={() => onSave(formData, isDuplicating)} disabled={isSaving || !formData.name || !formData.sku} className={`px-8 py-2.5 rounded-xl font-black text-sm transition-all shadow-lg flex items-center gap-2 ${isNew ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-cyan-600 hover:bg-cyan-500'}`}>
-                            {isSaving ? <Spinner size="sm"/> : <Save size={18}/>} 
-                            {isDuplicating ? 'CREATE CLONE' : (isNew ? 'CREATE' : 'UPDATE')}
+                    <div className="flex gap-4">
+                        <button onClick={onClose} disabled={isSaving} className="px-8 py-3 font-bold text-slate-400 hover:text-white transition-colors">Discard</button>
+                        <button onClick={() => onSave(formData, isDuplicating)} disabled={isSaving || !formData.name || !formData.sku} className="mco-btn-admin-primary">
+                            {isSaving ? <Spinner size="sm"/> : <Save size={20}/>} 
+                            {isDuplicating ? 'SAVE CLONE' : (isNew ? 'CREATE' : 'UPDATE')}
                         </button>
                     </div>
                 </div>
@@ -140,8 +126,6 @@ const ProductEditorModal: FC<{
         </div>
     );
 };
-
-const Label: FC<{ children: ReactNode }> = ({ children }) => <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">{children}</label>;
 
 const ProductCustomizer: FC = () => {
     const { examPrices, refreshConfig } = useAppContext();
@@ -151,11 +135,7 @@ const ProductCustomizer: FC = () => {
     const [editingProduct, setEditingProduct] = useState<ProductEntry | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [isDuplicating, setIsDuplicating] = useState(false);
-    const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
     
-    const [bulkPrice, setBulkPrice] = useState('');
-    const [bulkRegularPrice, setBulkRegularPrice] = useState('');
-
     const products = useMemo(() => {
         if (!examPrices) return [];
         return Object.entries(examPrices).map(([sku, data]: [string, any]) => ({
@@ -178,92 +158,85 @@ const ProductCustomizer: FC = () => {
     const handleSaveProduct = async (formData: any, isClone: boolean) => {
         if (!token) return;
         setIsSaving(true);
-        const tid = toast.loading("Syncing WooCommerce...");
-        
-        // CRITICAL FIX: Strip ID if cloning to prevent WC database conflicts
+        const tid = toast.loading("Syncing...");
         const payload = { ...formData };
-        if (isClone) {
-            delete payload.id;
-        }
-
+        if (isClone) { delete payload.id; payload.type = 'simple'; }
         try {
             await googleSheetsService.adminUpsertProduct(token, payload);
             await refreshConfig();
-            toast.success("Inventory Synchronized", { id: tid });
-            setEditingProduct(null);
-            setIsCreating(false);
-            setIsDuplicating(false);
-        } catch (e: any) {
-            toast.error(e.message || "Failed to save", { id: tid });
-        } finally {
-            setIsSaving(false);
-        }
+            toast.success("Synchronized", { id: tid });
+            setEditingProduct(null); setIsCreating(false); setIsDuplicating(false);
+        } catch (e: any) { toast.error(e.message, { id: tid }); }
+        finally { setIsSaving(false); }
     };
 
     const handleDeleteProduct = async (productId: string) => {
         if (!token) return;
         setIsSaving(true);
-        const tid = toast.loading("Trashing product...");
         try {
             await googleSheetsService.adminDeletePost(token, productId, 'product');
             await refreshConfig();
-            toast.success("Product Deleted", { id: tid });
+            toast.success("Trashed");
             setEditingProduct(null);
-        } catch (e: any) {
-            toast.error(e.message || "Deletion failed", { id: tid });
-        } finally {
-            setIsSaving(false);
-        }
+        } catch (e: any) { toast.error("Failed"); }
+        finally { setIsSaving(false); }
     };
 
     return (
-        <div className="space-y-8 pb-20">
+        <div className="space-y-10 pb-40">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-                <h1 className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3">
-                    <ShoppingCart className="text-cyan-500" /> Store Inventory
+                <h1 className="text-4xl font-black text-white font-display flex items-center gap-4">
+                    <ShoppingCart className="text-cyan-500" size={40} /> Store Inventory
                 </h1>
                 
                 <div className="flex flex-wrap gap-2">
-                    <button onClick={() => { setActiveTab('simple'); setIsCreating(true); }} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-black text-xs hover:bg-emerald-500 transition shadow-lg uppercase tracking-wider"><PlusCircle size={16}/> NEW PRODUCT</button>
-                    <button onClick={() => { setActiveTab('subscription'); setIsCreating(true); }} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-xs hover:bg-blue-500 transition shadow-lg uppercase tracking-wider"><PlusCircle size={16}/> NEW SUB</button>
-                    <button onClick={() => { setActiveTab('bundle'); setIsCreating(true); }} className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-xl font-black text-xs hover:bg-purple-500 transition shadow-lg uppercase tracking-wider"><PlusCircle size={16}/> NEW BUNDLE</button>
+                    <button onClick={() => { setActiveTab('simple'); setIsCreating(true); }} className="mco-btn-admin-success !bg-emerald-600">NEW PRODUCT</button>
+                    <button onClick={() => { setActiveTab('subscription'); setIsCreating(true); }} className="mco-btn-admin-success !bg-blue-600">NEW SUB</button>
+                    <button onClick={() => { setActiveTab('bundle'); setIsCreating(true); }} className="mco-btn-admin-success !bg-purple-600">NEW BUNDLE</button>
                 </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 p-1.5 bg-[rgb(var(--color-background-rgb))] rounded-xl border border-[rgb(var(--color-border-rgb))] self-start">
-                <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>Full Inventory</TabButton>
-                <TabButton active={activeTab === 'simple'} onClick={() => setActiveTab('simple')}>Standard Exams</TabButton>
-                <TabButton active={activeTab === 'subscription'} onClick={() => setActiveTab('subscription')}>Memberships</TabButton>
-                <TabButton active={activeTab === 'bundle'} onClick={() => setActiveTab('bundle')}>Bundles & Addons</TabButton>
+            <div className="flex flex-wrap gap-3 p-2 bg-slate-900 rounded-2xl border-2 border-slate-800 self-start">
+                {['all', 'simple', 'subscription', 'bundle'].map(t => (
+                    <button
+                        key={t}
+                        onClick={() => setActiveTab(t as TabType)}
+                        className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                            activeTab === t ? 'bg-cyan-500 text-slate-950 shadow-lg' : 'text-slate-500 hover:text-white'
+                        }`}
+                    >
+                        {t}
+                    </button>
+                ))}
             </div>
 
-            <div className="bg-[rgb(var(--color-card-rgb))] rounded-2xl shadow-2xl border border-[rgb(var(--color-border-rgb))] overflow-hidden">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-[rgb(var(--color-background-rgb))] text-[rgb(var(--color-text-muted-rgb))] uppercase text-[10px] font-black tracking-widest border-b border-[rgb(var(--color-border-rgb))]">
+            <div className="bg-slate-900 rounded-3xl shadow-2xl border-2 border-slate-800 overflow-hidden">
+                <table className="w-full text-sm text-left border-collapse">
+                    <thead className="bg-slate-950 text-slate-500 uppercase text-[10px] font-black tracking-widest border-b border-slate-800">
                         <tr>
-                            <th className="p-5">Branding</th>
-                            <th className="p-5">Type</th>
-                            <th className="p-5">Price</th>
-                            <th className="p-5 text-right">Actions</th>
+                            <th className="p-6">Merchant Identity</th>
+                            <th className="p-6">Type</th>
+                            <th className="p-6">Current Price</th>
+                            <th className="p-6 text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-[rgb(var(--color-border-rgb))]">
+                    <tbody className="divide-y divide-slate-800">
                         {filtered.map(p => (
-                            <tr key={p.sku} className="hover:bg-[rgba(var(--color-muted-rgb),0.2)] transition-colors">
-                                <td className="p-5">
-                                    <p className="font-black text-[rgb(var(--color-text-strong-rgb))] text-base">{p.name}</p>
-                                    <p className="text-[10px] font-mono text-[rgb(var(--color-text-muted-rgb))] mt-1 uppercase">SKU: <span className="text-cyan-400">{p.sku}</span></p>
+                            <tr key={p.sku} className="hover:bg-white/[0.02] transition-colors">
+                                <td className="p-6">
+                                    <p className="font-black text-white text-lg">{p.name}</p>
+                                    <p className="text-[10px] font-mono text-cyan-400 mt-1 uppercase">SKU: {p.sku}</p>
                                 </td>
-                                <td className="p-5">
-                                    <span className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-inner border border-[rgb(var(--color-border-rgb))] bg-[rgb(var(--color-background-rgb))]">
+                                <td className="p-6">
+                                    <span className="px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter bg-slate-950 text-slate-300 border border-slate-800">
                                         {p.type}
                                     </span>
                                 </td>
-                                <td className="p-5 font-black text-[rgb(var(--color-text-strong-rgb))] text-lg">${parseFloat(p.price).toFixed(2)}</td>
-                                <td className="p-5 text-right space-x-2">
-                                    <button onClick={() => { setEditingProduct(p); setIsDuplicating(true); }} className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-amber-500 rounded-xl transition-all" title="Clone as Addon"><Copy size={16}/></button>
-                                    <button onClick={() => { setEditingProduct(p); setIsDuplicating(false); }} className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-cyan-500 rounded-xl transition-all" title="Edit"><Edit size={16}/></button>
-                                    <button onClick={() => { if(window.confirm('Delete this product permanently?')) handleDeleteProduct(p.id) }} className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-rose-500 rounded-xl transition-all" title="Trash"><Trash2 size={16}/></button>
+                                <td className="p-6 font-black text-white text-xl">${parseFloat(p.price).toFixed(2)}</td>
+                                <td className="p-6 text-right space-x-2">
+                                    <button onClick={() => { setEditingProduct(p); setIsDuplicating(true); }} className="p-3 text-slate-500 hover:text-amber-500 transition-colors" title="Clone"><Copy size={18}/></button>
+                                    <button onClick={() => { setEditingProduct(p); setIsDuplicating(false); }} className="p-3 text-slate-500 hover:text-cyan-500 transition-colors" title="Edit"><Edit size={18}/></button>
+                                    <button onClick={() => { if(window.confirm('Delete?')) handleDeleteProduct(p.id) }} className="p-3 text-slate-500 hover:text-rose-500 transition-colors" title="Trash"><Trash2 size={18}/></button>
                                 </td>
                             </tr>
                         ))}

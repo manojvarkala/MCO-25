@@ -1,5 +1,4 @@
 import React, { FC, ReactNode } from 'react';
-// FIX: Using wildcard import for react-router-dom to resolve missing named export errors in this environment.
 import * as ReactRouterDOM from 'react-router-dom';
 const { NavLink } = ReactRouterDOM as any;
 import { useAuth } from '../context/AuthContext.tsx';
@@ -15,75 +14,56 @@ interface AdminLayoutProps {
 
 const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
     const { isSuperAdmin } = useAuth();
-    const navLinkClass = "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-[rgb(var(--color-text-muted-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))]";
-    const activeNavLinkClass = "bg-[rgba(var(--color-primary-rgb),0.1)] text-[rgb(var(--color-primary-rgb))]";
-
-    const getLinkClass = ({ isActive }: { isActive: boolean }) => isActive ? `${navLinkClass} ${activeNavLinkClass}` : navLinkClass;
+    
+    const baseClass = "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-black transition-all border border-transparent";
+    const activeClass = "bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 border-cyan-400";
+    const inactiveClass = "text-slate-400 hover:text-white hover:bg-slate-800/50 hover:border-slate-700";
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-8">
-            <aside className="md:col-span-1 lg:col-span-1 bg-[rgb(var(--color-card-rgb))] p-4 rounded-xl shadow-lg border border-[rgb(var(--color-border-rgb))] self-start sticky top-28">
-                <nav className="space-y-2">
-                    {/* Super Admin Section */}
+            <aside className="md:col-span-1 lg:col-span-1 self-start sticky top-28">
+                <nav className="space-y-2 bg-slate-900/50 p-3 rounded-2xl border border-slate-800 shadow-2xl">
                     {isSuperAdmin && (
-                        <div className="mb-4">
-                            <p className="px-3 text-[9px] font-black text-cyan-500 uppercase tracking-widest mb-2">Network Control</p>
-                            <NavLink to="/admin/network" className={getLinkClass}>
+                        <div className="mb-6">
+                            <p className="px-4 text-[9px] font-black text-cyan-500 uppercase tracking-widest mb-3">Network Control</p>
+                            <NavLink to="/admin/network" className={({ isActive }: any) => `${baseClass} ${isActive ? activeClass : inactiveClass}`}>
                                 <Globe size={18} />
-                                <span className="font-bold text-white">Network Hub</span>
+                                <span>Network Hub</span>
                             </NavLink>
                         </div>
                     )}
 
-                    <p className="px-3 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Platform Management</p>
-                    <NavLink to="/admin" end className={getLinkClass}>
-                        <LayoutDashboard size={18} />
-                        <span>Admin Dashboard</span>
-                    </NavLink>
-                    <NavLink to="/admin/analytics" className={getLinkClass}>
-                        <BarChart3 size={18} />
-                        <span>Sales Analytics</span>
-                    </NavLink>
-                    <NavLink to="/admin/exam-analytics" className={getLinkClass}>
-                        <TrendingUp size={18} />
-                        <span>Usage Analytics</span>
-                    </NavLink>
-                    <NavLink to="/admin/user-results" className={getLinkClass}>
-                        <FileCheck size={18} />
-                        <span>User Results</span>
-                    </NavLink>
-                    <NavLink to="/admin/beta-analytics" className={getLinkClass}>
-                        <Users size={18} />
-                        <span>Beta Testers</span>
-                    </NavLink>
-                    <NavLink to="/admin/programs" className={getLinkClass}>
-                        <Settings size={18} />
-                        <span>Exam Programs</span>
-                    </NavLink>
-                    <NavLink to="/admin/products" className={getLinkClass}>
-                        <ShoppingCart size={18} />
-                        <span>Product Customizer</span>
-                    </NavLink>
-                    <NavLink to="/admin/content-engine" className={getLinkClass}>
-                        <Sparkles size={18} />
-                        <span>Content Engine</span>
-                    </NavLink>
-                    <NavLink to="/admin/integration" className={getLinkClass}>
-                        <Code size={18} />
-                        <span>Integration</span>
-                    </NavLink>
-                    <NavLink to="/admin/history" className={getLinkClass}>
-                        <History size={18} />
-                        <span>Dev History</span>
-                    </NavLink>
-                    <NavLink to="/admin/handbook" className={getLinkClass}>
-                        <BookOpen size={18} />
-                        <span>Handbook</span>
-                    </NavLink>
-                    <div className="pt-4 mt-4 border-t border-[rgb(var(--color-border-rgb))]">
-                        <NavLink to="/dashboard" className={navLinkClass}>
+                    <p className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">System Admin</p>
+                    <div className="space-y-1">
+                        {[
+                            { to: "/admin", icon: <LayoutDashboard size={18} />, label: "Health Center", end: true },
+                            { to: "/admin/analytics", icon: <BarChart3 size={18} />, label: "Sales & Revenue" },
+                            { to: "/admin/exam-analytics", icon: <TrendingUp size={18} />, label: "Usage Data" },
+                            { to: "/admin/user-results", icon: <FileCheck size={18} />, label: "Result Audits" },
+                            { to: "/admin/beta-analytics", icon: <Users size={18} />, label: "Beta Testers" },
+                            { to: "/admin/programs", icon: <Settings size={18} />, label: "Exam Master" },
+                            { to: "/admin/products", icon: <ShoppingCart size={18} />, label: "Inventory" },
+                            { to: "/admin/content-engine", icon: <Sparkles size={18} />, label: "AI Post Engine" },
+                            { to: "/admin/integration", icon: <Code size={18} />, label: "Integrations" },
+                            { to: "/admin/history", icon: <History size={18} />, label: "Logs" },
+                            { to: "/admin/handbook", icon: <BookOpen size={18} />, label: "Admin Manual" },
+                        ].map((link) => (
+                            <NavLink 
+                                key={link.to}
+                                to={link.to} 
+                                end={link.end}
+                                className={({ isActive }: any) => `${baseClass} ${isActive ? activeClass : inactiveClass}`}
+                            >
+                                {link.icon}
+                                <span>{link.label}</span>
+                            </NavLink>
+                        ))}
+                    </div>
+
+                    <div className="pt-4 mt-4 border-t border-slate-800">
+                        <NavLink to="/dashboard" className={`${baseClass} ${inactiveClass}`}>
                             <ArrowLeft size={18} />
-                            <span>Back to App</span>
+                            <span>Return to Portal</span>
                         </NavLink>
                     </div>
                 </nav>

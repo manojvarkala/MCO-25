@@ -1,6 +1,6 @@
 import React, { FC, useState, useEffect, ReactNode, useRef } from 'react';
 import { useAppContext } from '../context/AppContext.tsx';
-import type { ExamStat, Theme } from '../types.ts';
+import type { ExamStat } from '../types.ts';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
@@ -23,62 +23,22 @@ interface HealthStatus {
 
 type AdminTab = 'diagnostics' | 'appearance' | 'bulk';
 
-const themeColors: { [key: string]: { [key: string]: string } } = {
-    default: {
-        primary: 'rgb(6, 182, 212)',
-        secondary: 'rgb(219, 39, 119)',
-        accent: 'rgb(253, 224, 71)',
-        background: 'rgb(15, 23, 42)',
-    },
-    professional: {
-        primary: 'rgb(4, 120, 87)',
-        secondary: 'rgb(59, 130, 246)',
-        accent: 'rgb(234, 179, 8)',
-        background: 'rgb(241, 245, 249)',
-    },
-    serene: {
-        primary: 'rgb(96, 165, 250)',
-        secondary: 'rgb(52, 211, 153)',
-        accent: 'rgb(251, 146, 60)',
-        background: 'rgb(240, 253, 250)',
-    },
-    academic: {
-        primary: 'rgb(127, 29, 29)',
-        secondary: 'rgb(161, 98, 7)',
-        accent: 'rgb(217, 119, 6)',
-        background: 'rgb(254, 252, 251)',
-    },
-    noir: {
-        primary: 'rgb(229, 231, 235)',
-        secondary: 'rgb(139, 92, 246)',
-        accent: 'rgb(234, 179, 8)',
-        background: 'rgb(31, 41, 55)',
-    }
-};
-
-const NavItem: FC<{ id: AdminTab; label: string; icon: ReactNode; active: boolean; onClick: (id: AdminTab) => void }> = ({ id, label, icon, active, onClick }) => (
-    <button
-        onClick={() => onClick(id)}
-        className={`mco-admin-nav-item ${active ? 'mco-admin-nav-item--active' : 'mco-admin-nav-item--inactive'}`}
-    >
-        {icon} {label}
-    </button>
-);
-
 const HealthCard: FC<{ title: string; status?: { success: boolean; message: string } }> = ({ title, status }) => (
-    <div className="bg-[rgb(var(--color-card-rgb))] p-4 rounded-xl border border-[rgb(var(--color-border-rgb))] flex items-center justify-between shadow-sm hover:border-cyan-500 transition-colors">
+    <div className="bg-slate-900 p-5 rounded-2xl border-2 border-slate-800 flex items-center justify-between shadow-xl group hover:border-cyan-500/50 transition-all">
         <div className="flex items-center gap-3 overflow-hidden">
             {!status ? (
-                <RefreshCw size={18} className="text-cyan-500 animate-spin flex-shrink-0" />
+                <RefreshCw size={22} className="text-cyan-500 animate-spin flex-shrink-0" />
             ) : status.success ? (
-                <CheckCircle className="text-emerald-500 flex-shrink-0" size={18} />
+                <CheckCircle className="text-emerald-400 flex-shrink-0" size={22} />
             ) : (
-                <XCircle className="text-rose-500 flex-shrink-0" size={18} />
+                <XCircle className="text-rose-500 flex-shrink-0" size={22} />
             )}
-            <span className="font-bold text-[rgb(var(--color-text-strong-rgb))] text-sm truncate">{title}</span>
+            <span className="font-black text-white text-sm tracking-tight truncate">{title}</span>
         </div>
-        <span className={`mco-admin-badge ${!status ? 'mco-admin-badge--pending' : status.success ? 'mco-admin-badge--success' : 'mco-admin-badge--error'}`}>
-            {!status ? 'POLLING...' : status.message.toUpperCase()}
+        <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+            !status ? 'bg-slate-800 text-slate-400' : status.success ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+        }`}>
+            {!status ? 'POLLING' : status.message}
         </span>
     </div>
 );
@@ -86,25 +46,11 @@ const HealthCard: FC<{ title: string; status?: { success: boolean; message: stri
 const Admin: FC = () => {
     const { token } = useAuth();
     const { activeOrg, availableThemes, refreshConfig, setActiveTheme } = useAppContext();
-    
-    const [activeTab, setActiveTabState] = useState<AdminTab>(() => {
-        return (sessionStorage.getItem('mco_admin_active_tab') as AdminTab) || 'diagnostics';
-    });
-
-    const setActiveTab = (tab: AdminTab) => {
-        setActiveTabState(tab);
-        sessionStorage.setItem('mco_admin_active_tab', tab);
-    };
-    
+    const [activeTab, setActiveTabState] = useState<AdminTab>('diagnostics');
     const [health, setHealth] = useState<HealthStatus | null>(null);
     const [stats, setStats] = useState<ExamStat[] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSavingSettings, setIsSavingSettings] = useState(false);
-    
-    // Lock ref to prevent race conditions during save/refresh cycles
-    const pendingUpdateRef = useRef(false);
-
-    // Initial local state with defensive defaults
     const [localSettings, setLocalSettings] = useState({
         purchaseNotifierEnabled: true,
         bundlesEnabled: true,
@@ -112,9 +58,13 @@ const Admin: FC = () => {
         activeThemeId: 'default'
     });
 
-    // Synchronize local settings with global AppContext when activeOrg changes
+    const setActiveTab = (tab: AdminTab) => {
+        setActiveTabState(tab);
+        sessionStorage.setItem('mco_admin_active_tab', tab);
+    };
+
     useEffect(() => {
-        if (activeOrg && !pendingUpdateRef.current) {
+        if (activeOrg) {
             setLocalSettings({
                 purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
                 bundlesEnabled: activeOrg.bundlesEnabled ?? true,
@@ -134,116 +84,83 @@ const Admin: FC = () => {
             ]);
             setHealth(h);
             setStats(s);
-        } catch (e: any) {
-            console.error("Diagnostic failure:", e);
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (e: any) { console.error(e); }
+        finally { setIsLoading(false); }
     };
 
     useEffect(() => { loadData(); }, [token]);
 
     const handleSyncSettings = async (updates: Partial<typeof localSettings>) => {
         if (!token || isSavingSettings) return;
-        
-        pendingUpdateRef.current = true;
         setIsSavingSettings(true);
-        
-        // 1. Optimistic UI Update
         const nextSettings = { ...localSettings, ...updates };
         setLocalSettings(nextSettings);
-
-        // Immediate Visual Feedback for Admin
-        if (updates.activeThemeId) {
-            setActiveTheme(updates.activeThemeId);
-        }
-
-        const tid = toast.loading("Syncing branding to server...");
+        if (updates.activeThemeId) setActiveTheme(updates.activeThemeId);
+        const tid = toast.loading("Syncing...");
         try {
-            // 2. Transmit to Backend
             await googleSheetsService.adminUpdateGlobalSettings(token, nextSettings);
-            
-            // 3. Purge Server Transients and reload global app state
             await refreshConfig();
-            
-            toast.success("Settings saved and verified", { id: tid });
-        } catch (e: any) {
-            toast.error(e.message || "Save failed", { id: tid });
-            // Revert on failure
-            if (activeOrg) {
-                setLocalSettings({
-                    purchaseNotifierEnabled: activeOrg.purchaseNotifierEnabled ?? true,
-                    bundlesEnabled: activeOrg.bundlesEnabled ?? true,
-                    subscriptionsEnabled: activeOrg.subscriptionsEnabled ?? true,
-                    activeThemeId: activeOrg.activeThemeId || 'default'
-                });
-                setActiveTheme(activeOrg.activeThemeId || 'default');
-            }
-        } finally {
-            pendingUpdateRef.current = false;
-            setIsSavingSettings(false);
-        }
-    };
-
-    const flushCache = async () => {
-        if (!token) return;
-        const tid = toast.loading("Purging configurations...");
-        try {
-            await googleSheetsService.adminClearConfigCache(token);
-            await refreshConfig();
-            toast.success("Config Cache Cleared", { id: tid });
-            loadData();
+            toast.success("Saved", { id: tid });
         } catch (e: any) { toast.error(e.message, { id: tid }); }
+        finally { setIsSavingSettings(false); }
     };
 
     if (isLoading && !health) return (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-200">
-            <Spinner size="lg"/>
-            <p className="mt-4 font-mono text-xs uppercase tracking-widest animate-pulse">Establishing Secure Uplink...</p>
+        <div className="flex flex-col items-center justify-center py-20">
+            <Spinner size="lg" />
+            <p className="mt-4 font-black text-cyan-500 animate-pulse text-xs tracking-widest uppercase">Initializing Audit...</p>
         </div>
     );
 
     return (
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 pb-20">
             <aside className="lg:w-64 flex flex-col gap-3">
-                <NavItem id="diagnostics" label="Platform Audit" icon={<Activity size={20}/>} active={activeTab === 'diagnostics'} onClick={setActiveTab} />
-                <NavItem id="appearance" label="Visual Branding" icon={<Palette size={20}/>} active={activeTab === 'appearance'} onClick={setActiveTab} />
-                <NavItem id="bulk" label="Infrastructure" icon={<DatabaseZap size={20}/>} active={activeTab === 'bulk'} onClick={setActiveTab} />
+                {[
+                    { id: 'diagnostics', label: 'Diagnostics', icon: <Activity size={20}/> },
+                    { id: 'appearance', label: 'Appearance', icon: <Palette size={20}/> },
+                    { id: 'bulk', label: 'Infrastructure', icon: <DatabaseZap size={20}/> }
+                ].map(tab => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as AdminTab)}
+                        className={`mco-admin-nav-item ${activeTab === tab.id ? 'mco-admin-nav-item--active' : 'mco-admin-nav-item--inactive'}`}
+                    >
+                        {tab.icon} {tab.label}
+                    </button>
+                ))}
             </aside>
 
             <main className="flex-1 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 {activeTab === 'diagnostics' && (
                     <div className="space-y-8">
-                        <div>
-                            <h2 className="text-3xl font-black mb-6 flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))]">
-                                <Layout className="text-cyan-500" size={32} /> Platform Health
-                            </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <HealthCard title="API Gateway" status={health?.api_connection} />
-                                <HealthCard title="Security Layer" status={health?.jwt_secret} />
-                                <HealthCard title="Commerce Core" status={health?.woocommerce} />
-                                <HealthCard title="Billing Engine" status={health?.wc_subscriptions} />
-                                <HealthCard title="App Protocol" status={health?.app_url_config} />
-                                <HealthCard title="Data Sheets" status={health?.sheet_accessibility} />
-                            </div>
+                        <h2 className="text-3xl font-black text-white flex items-center gap-3">
+                            <Layout className="text-cyan-500" size={32} /> System Health
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <HealthCard title="API Gateway" status={health?.api_connection} />
+                            <HealthCard title="JWT Security" status={health?.jwt_secret} />
+                            <HealthCard title="WooCommerce" status={health?.woocommerce} />
+                            <HealthCard title="Billing Engine" status={health?.wc_subscriptions} />
+                            <HealthCard title="App Protocol" status={health?.app_url_config} />
+                            <HealthCard title="Data Stream" status={health?.sheet_accessibility} />
                         </div>
 
-                        <div className="bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-2xl p-8 shadow-xl">
-                            <h3 className="text-xl font-bold mb-8 flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))] border-b border-[rgb(var(--color-border-rgb))] pb-4">
-                                <BarChart3 size={24} className="text-cyan-500" /> Platform Metrics
+                        <div className="bg-slate-900 border-2 border-slate-800 rounded-3xl p-10 shadow-2xl">
+                            <h3 className="text-xl font-black text-white mb-10 flex items-center gap-3 border-b border-slate-800 pb-5">
+                                <BarChart3 size={24} className="text-cyan-500" /> Key Performance Indicators
                             </h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-                                <div className="space-y-1">
-                                    <p className="text-[10px] text-[rgb(var(--color-text-muted-rgb))] font-black uppercase tracking-widest">Total Sales Units</p>
-                                    <p className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))]">{stats?.reduce((acc, s) => acc + (s.totalSales || 0), 0).toLocaleString()}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-12">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">Total Unit Sales</p>
+                                    <p className="text-5xl font-black text-white tabular-nums">{stats?.reduce((acc, s) => acc + (s.totalSales || 0), 0).toLocaleString()}</p>
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] text-[rgb(var(--color-text-muted-rgb))] font-black uppercase tracking-widest">Estimated Gross</p>
-                                    <p className="text-4xl font-black text-emerald-400">${stats?.reduce((acc, s) => acc + (s.totalRevenue || 0), 0).toLocaleString()}</p>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">Gross Revenue</p>
+                                    <p className="text-5xl font-black text-emerald-400 tabular-nums">${stats?.reduce((acc, s) => acc + (s.totalRevenue || 0), 0).toLocaleString()}</p>
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] text-[rgb(var(--color-text-muted-rgb))] font-black uppercase tracking-widest">User Engagement</p>
-                                    <p className="text-4xl font-black text-cyan-400">{stats?.reduce((acc, s) => acc + (s.attempts || 0), 0).toLocaleString()}</p>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">User Engagements</p>
+                                    <p className="text-5xl font-black text-cyan-400 tabular-nums">{stats?.reduce((acc, s) => acc + (s.attempts || 0), 0).toLocaleString()}</p>
                                 </div>
                             </div>
                         </div>
@@ -252,114 +169,65 @@ const Admin: FC = () => {
 
                 {activeTab === 'appearance' && (
                     <div className="space-y-10">
-                        <div className="space-y-6">
-                            <h2 className="text-3xl font-black flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))]">
-                                <Settings2 className="text-cyan-500" size={32} /> Component Toggles
-                            </h2>
-                            <div className="bg-[rgb(var(--color-card-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-2xl overflow-hidden divide-y divide-[rgb(var(--color-border-rgb))] shadow-xl">
-                                {[
-                                    { id: 'purchaseNotifierEnabled', label: 'Site Purchase Notifier', desc: 'Real-time social proof popups for visitors' },
-                                    { id: 'subscriptionsEnabled', label: 'Subscription Framework', desc: 'Global recurring billing and membership logic' },
-                                    { id: 'bundlesEnabled', label: 'Smart Product Bundling', desc: 'Automated package deal rendering (Exam + Sub)' }
-                                ].map(f => (
-                                    <div key={f.id} className="flex items-center justify-between p-6 bg-[rgb(var(--color-card-rgb))] hover:bg-[rgba(var(--color-muted-rgb),0.4)] transition-colors">
-                                        <div className="max-w-md">
-                                            <p className="font-black text-[rgb(var(--color-text-strong-rgb))] text-lg">{f.label}</p>
-                                            <p className="text-sm text-[rgb(var(--color-text-muted-rgb))] font-medium mt-1">{f.desc}</p>
-                                        </div>
-                                        <button 
-                                            onClick={() => handleSyncSettings({ [f.id]: !(localSettings as any)[f.id] })}
-                                            disabled={isSavingSettings}
-                                            className={`transition-all transform active:scale-95 ${ (localSettings as any)[f.id] ? 'text-cyan-500' : 'text-slate-400'}`}
-                                        >
-                                            { (localSettings as any)[f.id] ? <ToggleRight size={52} strokeWidth={1.5}/> : <ToggleLeft size={52} strokeWidth={1.5}/>}
-                                        </button>
+                        <h2 className="text-3xl font-black text-white flex items-center gap-3">
+                            <Settings2 className="text-cyan-500" size={32} /> Platform Toggles
+                        </h2>
+                        <div className="bg-slate-900 border-2 border-slate-800 rounded-3xl overflow-hidden divide-y divide-slate-800">
+                            {[
+                                { id: 'purchaseNotifierEnabled', label: 'Purchase Notifier', desc: 'Real-time social proof popups for visitors' },
+                                { id: 'subscriptionsEnabled', label: 'Subscription Engine', desc: 'Global recurring billing and membership logic' },
+                                { id: 'bundlesEnabled', label: 'Dynamic Bundling', desc: 'Automated package rendering (Exam + Time)' }
+                            ].map(f => (
+                                <div key={f.id} className="flex items-center justify-between p-8 hover:bg-white/[0.02] transition-colors">
+                                    <div className="max-w-md">
+                                        <p className="font-black text-white text-xl">{f.label}</p>
+                                        <p className="text-sm text-slate-400 font-medium mt-1">{f.desc}</p>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {activeOrg && (
-                            <div className="space-y-6">
-                                <h2 className="text-3xl font-black flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))]">
-                                    <Palette className="text-cyan-500" size={32} /> Organizational Theme
-                                </h2>
-                                <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-2xl shadow-xl border border-[rgb(var(--color-border-rgb))]">
-                                    <p className="text-[rgb(var(--color-text-muted-rgb))] text-sm font-medium mb-8 leading-relaxed max-w-2xl">
-                                        Set the <strong>global default theme</strong> for all users. This selection will be the baseline visual profile for the dashboard, certificates, and marketing elements.
-                                    </p>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                                        {(availableThemes || []).map(theme => (
-                                            <button
-                                                key={theme.id}
-                                                type="button"
-                                                onClick={() => handleSyncSettings({ activeThemeId: theme.id })}
-                                                className={`relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${
-                                                    localSettings.activeThemeId === theme.id 
-                                                        ? 'border-cyan-500 bg-cyan-500/10 ring-2 ring-cyan-500/20 shadow-md' 
-                                                        : 'border-[rgb(var(--color-border-rgb))] hover:border-cyan-400 bg-[rgba(var(--color-muted-rgb),0.2)]'
-                                                }`}
-                                            >
-                                                {localSettings.activeThemeId === theme.id && (
-                                                    <div className="absolute -top-2 -right-2 bg-cyan-500 text-white rounded-full p-1 shadow-md border-2 border-[rgb(var(--color-card-rgb))]">
-                                                        <Check size={12} strokeWidth={4}/>
-                                                    </div>
-                                                )}
-                                                
-                                                <div className="flex justify-center space-x-1 w-full h-8 pointer-events-none">
-                                                    <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.primary || '#ccc' }}></div>
-                                                    <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.secondary || '#ccc' }}></div>
-                                                    <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.accent || '#ccc' }}></div>
-                                                    <div className="w-1/4 rounded shadow-sm border border-black/5" style={{ backgroundColor: themeColors[theme.id]?.background || '#ccc' }}></div>
-                                                </div>
-
-                                                <span className={`font-bold text-xs uppercase tracking-tight ${
-                                                    localSettings.activeThemeId === theme.id ? 'text-cyan-400' : 'text-[rgb(var(--color-text-muted-rgb))]'
-                                                }`}>
-                                                    {theme.name}
-                                                </span>
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <button 
+                                        onClick={() => handleSyncSettings({ [f.id]: !(localSettings as any)[f.id] })}
+                                        disabled={isSavingSettings}
+                                        className={`transition-all ${ (localSettings as any)[f.id] ? 'text-cyan-400' : 'text-slate-600'}`}
+                                    >
+                                        { (localSettings as any)[f.id] ? <ToggleRight size={64} /> : <ToggleLeft size={64} />}
+                                    </button>
                                 </div>
-                            </div>
-                        )}
+                            ))}
+                        </div>
                     </div>
                 )}
 
                 {activeTab === 'bulk' && (
                     <div className="space-y-8">
-                        <h2 className="text-3xl font-black flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))]">
-                            <DatabaseZap className="text-cyan-500" size={32} /> Infrastructure Tools
+                        <h2 className="text-3xl font-black text-white flex items-center gap-3">
+                            <DatabaseZap className="text-cyan-500" size={32} /> Core Infrastructure
                         </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-2xl border border-[rgb(var(--color-border-rgb))] shadow-xl">
-                                <h3 className="text-xl font-black mb-6 flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))] border-b border-[rgb(var(--color-border-rgb))] pb-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-slate-900 border-2 border-slate-800 p-8 rounded-3xl shadow-2xl">
+                                <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 border-b border-slate-800 pb-4">
                                     <RefreshCw size={22} className="text-cyan-400"/> Memory Management
                                 </h3>
                                 <div className="space-y-4">
-                                    <button onClick={flushCache} className="w-full py-4 bg-[rgb(var(--color-background-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-default-rgb))] font-bold rounded-xl border border-[rgb(var(--color-border-rgb))] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] shadow-lg">
-                                        <RefreshCw size={18} className="text-cyan-500"/> Purge Configuration Cache
+                                    <button onClick={async () => { await googleSheetsService.adminClearConfigCache(token!); await refreshConfig(); toast.success("Cleared"); }} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-xl border border-slate-700 flex items-center justify-center gap-3 transition-all">
+                                        <RefreshCw size={18} className="text-cyan-400"/> Clear Config Cache
                                     </button>
-                                    <button onClick={() => googleSheetsService.adminClearQuestionCaches(token!)} className="w-full py-4 bg-[rgb(var(--color-background-rgb))] hover:bg-[rgb(var(--color-muted-rgb))] text-[rgb(var(--color-text-default-rgb))] font-bold rounded-xl border border-[rgb(var(--color-border-rgb))] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] shadow-lg">
-                                        <FileSpreadsheet size={18} className="text-emerald-500"/> Force Sync All Data Sheets
+                                    <button onClick={async () => { await googleSheetsService.adminClearQuestionCaches(token!); toast.success("Synced"); }} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-xl border border-slate-700 flex items-center justify-center gap-3 transition-all">
+                                        <FileSpreadsheet size={18} className="text-emerald-400"/> Force Sync Sheet Cache
                                     </button>
                                 </div>
                             </div>
                             
-                            <div className="bg-[rgb(var(--color-card-rgb))] p-8 rounded-2xl border border-[rgb(var(--color-border-rgb))] shadow-xl flex flex-col">
-                                <h3 className="text-xl font-black mb-6 flex items-center gap-3 text-[rgb(var(--color-text-strong-rgb))] border-b border-[rgb(var(--color-border-rgb))] pb-4">
-                                    <DownloadCloud size={22} className="text-cyan-400"/> Bulk Templates
+                            <div className="bg-slate-900 border-2 border-slate-800 p-8 rounded-3xl shadow-2xl">
+                                <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 border-b border-slate-800 pb-4">
+                                    <DownloadCloud size={22} className="text-cyan-400"/> Data Templates
                                 </h3>
-                                <div className="space-y-4 flex-1">
-                                    <p className="text-[rgb(var(--color-text-muted-rgb))] text-sm font-medium mb-4 leading-relaxed italic">Download canonical CSV structures for rapid migration or backup.</p>
-                                    <a href="/template-exam-programs.csv" download className="flex items-center justify-between p-5 bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl hover:bg-[rgb(var(--color-muted-rgb))] transition-all text-[rgb(var(--color-text-default-rgb))] font-bold hover:text-cyan-400">
-                                        <span>Exam Programs Structure</span>
-                                        <ExternalLink size={16} className="opacity-50"/>
+                                <div className="space-y-3">
+                                    <a href="/template-exam-programs.csv" download className="flex items-center justify-between p-5 bg-slate-800/50 border border-slate-800 rounded-xl hover:border-cyan-500 transition-all text-slate-300 font-bold">
+                                        <span>Download Programs CSV</span>
+                                        <ExternalLink size={16}/>
                                     </a>
-                                    <a href="/template-questions.csv" download className="flex items-center justify-between p-5 bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl hover:bg-[rgb(var(--color-muted-rgb))] transition-all text-[rgb(var(--color-text-default-rgb))] font-bold hover:text-cyan-400">
-                                        <span>Master Question Dataset</span>
-                                        <ExternalLink size={16} className="opacity-50"/>
+                                    <a href="/template-questions.csv" download className="flex items-center justify-between p-5 bg-slate-800/50 border border-slate-800 rounded-xl hover:border-cyan-500 transition-all text-slate-300 font-bold">
+                                        <span>Download Questions CSV</span>
+                                        <ExternalLink size={16}/>
                                     </a>
                                 </div>
                             </div>
