@@ -211,7 +211,27 @@ const ExamProgramCustomizer: FC = () => {
         if (!token) return;
         setIsSaving(true);
         try {
+            // 1. Update the Exam Program Meta in WP
             await googleSheetsService.adminUpdateExamProgram(token, id, data);
+
+            // 2. AUTO-PROVISION CHECK:
+            // If an addon SKU is specified but doesn't exist in WooCommerce, create it.
+            const addonSku = data.certExam?.addonSku;
+            if (addonSku && examPrices && !examPrices[addonSku]) {
+                const baseProduct = Object.values(examPrices).find((p: any) => p.sku === data.certExam?.productSku);
+                
+                await googleSheetsService.adminUpsertProduct(token, {
+                    sku: addonSku,
+                    name: `${data.category?.name || 'Exam'} - 1-Month Premium Access`,
+                    type: 'simple',
+                    price: 19.99, // Default bundle price
+                    regularPrice: 59.99,
+                    isBundle: true,
+                    bundledSkus: [data.certExam?.productSku]
+                });
+                toast.success(`Addon Product Created: ${addonSku}`);
+            }
+
             await refreshConfig();
             toast.success("Program Synchronized");
             setExpandedId(null);
@@ -291,7 +311,7 @@ const ExamProgramCustomizer: FC = () => {
 
     return (
         <div className="space-y-8 pb-40">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h1 className="text-4xl font-black text-[rgb(var(--color-text-strong-rgb))] font-display flex items-center gap-3">
                     <Settings className="text-cyan-500" /> Program Master
                 </h1>
