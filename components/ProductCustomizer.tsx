@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
 import { googleSheetsService } from '../services/googleSheetsService.ts';
 import toast from 'react-hot-toast';
-import { Edit, Save, X, ShoppingCart, PlusCircle, Box, Repeat, Package, DollarSign, Tag, Info, CheckSquare, Square, Trash2, Copy, Link2 } from 'lucide-react';
+import { Edit, Save, X, ShoppingCart, PlusCircle, Box, Repeat, Package, DollarSign, Tag, Info, CheckSquare, Square, Trash2, Copy } from 'lucide-react';
 import Spinner from './Spinner.tsx';
 
 type TabType = 'all' | 'simple' | 'subscription' | 'bundle';
@@ -17,7 +17,6 @@ interface ProductEntry {
     regularPrice: string;
     bundledSkus?: string[];
     subscriptionPeriod?: string;
-    questionSourceUrl?: string;
 }
 
 const TabButton: FC<{ active: boolean; onClick: () => void; children: ReactNode }> = ({ active, onClick, children }) => (
@@ -49,10 +48,10 @@ const ProductEditorModal: FC<{
         price: product?.price || '0',
         regularPrice: product?.regularPrice || '0',
         sku: isDuplicating ? `${product?.sku}-1mo-addon` : (product?.sku || ''),
-        type: product?.type || (type === 'all' ? 'simple' : type),
+        // Clones are ALWAYS simple products in WC even if source was a bundle
+        type: isDuplicating ? 'simple' : (product?.type || (type === 'all' ? 'simple' : type)),
         bundledSkus: product?.bundledSkus || [] as string[],
         subscriptionPeriod: product?.subscriptionPeriod || 'month',
-        questionSourceUrl: product?.questionSourceUrl || '',
         isBundle: isDuplicating ? true : (product?.type === 'bundle')
     });
 
@@ -71,7 +70,7 @@ const ProductEditorModal: FC<{
                 <div className="p-6 border-b border-[rgb(var(--color-border-rgb))] flex justify-between items-center bg-[rgba(var(--color-background-rgb),0.5)]">
                     <h2 className="text-xl font-black text-[rgb(var(--color-text-strong-rgb))] flex items-center gap-2">
                         {isDuplicating ? <Copy size={20} className="text-amber-500"/> : (isNew ? <PlusCircle size={20} className="text-emerald-500"/> : <Edit size={20} className="text-cyan-500"/>)} 
-                        {isDuplicating ? 'Duplicate as Addon' : (isNew ? `Create New ${formData.type.toUpperCase()}` : 'Edit Product')}
+                        {isDuplicating ? 'Duplicate as Addon' : (isNew ? `Create New Product` : 'Edit Product')}
                     </h2>
                     <button onClick={onClose} className="text-[rgb(var(--color-text-muted-rgb))] hover:text-[rgb(var(--color-text-strong-rgb))] transition-colors"><X size={24}/></button>
                 </div>
@@ -86,7 +85,7 @@ const ProductEditorModal: FC<{
                                 value={formData.name} 
                                 onChange={e => setFormData({...formData, name: e.target.value})}
                                 placeholder="e.g. CPC Certification Exam"
-                                className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 font-bold"
+                                className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 transition-all font-bold"
                             />
                         </div>
                     </div>
@@ -101,24 +100,10 @@ const ProductEditorModal: FC<{
                                 onChange={e => setFormData({...formData, sku: e.target.value})}
                                 disabled={!isNew}
                                 placeholder="e.g. exam-cpc-cert"
-                                className={`w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 ${!isNew ? 'opacity-50 cursor-not-allowed font-mono text-cyan-500' : 'font-mono'}`}
+                                className={`w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500 transition-all ${!isNew ? 'opacity-50 cursor-not-allowed font-mono text-cyan-500' : 'font-mono'}`}
                             />
                         </div>
-                        {isNew && <p className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] mt-1 uppercase font-bold">Recommended for addons: <span className="text-amber-500">-1mo-addon</span></p>}
-                    </div>
-
-                    <div>
-                        <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-1 block">Question Source (Google Sheet URL)</label>
-                        <div className="relative">
-                            <Link2 className="absolute left-3 top-3.5 text-slate-400" size={18}/>
-                            <input 
-                                type="text" 
-                                value={formData.questionSourceUrl} 
-                                onChange={e => setFormData({...formData, questionSourceUrl: e.target.value})}
-                                placeholder="https://docs.google.com/spreadsheets/d/..."
-                                className="w-full bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl py-3 pl-10 pr-4 text-cyan-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 font-mono text-xs"
-                            />
-                        </div>
+                        {isNew && <p className="text-[9px] text-[rgb(var(--color-text-muted-rgb))] mt-1 uppercase font-bold">Clones default to <span className="text-amber-500">Simple Product</span> status.</p>}
                     </div>
 
                     <div className="grid grid-cols-2 gap-6">
@@ -148,9 +133,9 @@ const ProductEditorModal: FC<{
                         </div>
                     </div>
 
-                    {formData.type === 'bundle' || isDuplicating && (
+                    {(formData.type === 'bundle' || isDuplicating) && (
                         <div>
-                            <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-2 block">Packaged Contents (Bundle Items)</label>
+                            <label className="text-[10px] font-black uppercase text-[rgb(var(--color-text-muted-rgb))] tracking-widest mb-2 block">Included Contents</label>
                             <div className="bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-xl p-4 space-y-2 max-h-48 overflow-y-auto">
                                 {availableExams.map(exam => (
                                     <label key={exam.id} className="flex items-center gap-3 p-2 hover:bg-[rgba(var(--color-muted-rgb),0.3)] rounded-lg cursor-pointer transition-colors border border-transparent has-[:checked]:border-cyan-500/30">
@@ -172,19 +157,9 @@ const ProductEditorModal: FC<{
                     <div className="flex gap-2">
                         {!isNew && (
                             !isConfirmingDelete ? (
-                                <button 
-                                    onClick={() => setIsConfirmingDelete(true)}
-                                    className="px-4 py-2 text-rose-500 hover:text-rose-400 border border-rose-500/30 rounded-lg text-xs font-bold uppercase transition-colors"
-                                >
-                                    Delete
-                                </button>
+                                <button onClick={() => setIsConfirmingDelete(true)} className="px-4 py-2 text-rose-500 hover:text-rose-400 border border-rose-500/30 rounded-lg text-xs font-bold uppercase transition-colors">Delete</button>
                             ) : (
-                                <button 
-                                    onClick={() => onDelete(product!.id)}
-                                    className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-black shadow-lg animate-pulse"
-                                >
-                                    Confirm
-                                </button>
+                                <button onClick={() => onDelete(product!.id)} className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-black shadow-lg animate-pulse">Confirm</button>
                             )
                         )}
                     </div>
@@ -198,7 +173,7 @@ const ProductEditorModal: FC<{
                             }`}
                         >
                             {isSaving ? <Spinner size="sm"/> : <Save size={18}/>} 
-                            {isDuplicating ? 'SAVE AS CLONE' : (isNew ? 'CREATE PRODUCT' : 'UPDATE PRODUCT')}
+                            {isDuplicating ? 'SAVE AS ADDON' : (isNew ? 'CREATE PRODUCT' : 'UPDATE PRODUCT')}
                         </button>
                     </div>
                 </div>
@@ -217,7 +192,6 @@ const ProductCustomizer: FC = () => {
     const [isDuplicating, setIsDuplicating] = useState(false);
     const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
     
-    // Bulk pricing state
     const [bulkPrice, setBulkPrice] = useState('');
     const [bulkRegularPrice, setBulkRegularPrice] = useState('');
 
@@ -236,8 +210,7 @@ const ProductCustomizer: FC = () => {
                 price: data.price?.toString() || '0',
                 regularPrice: data.regularPrice?.toString() || '0',
                 bundledSkus: data.bundledSkus || [],
-                subscriptionPeriod: data.subscription_period,
-                questionSourceUrl: data.questionSourceUrl || ''
+                subscriptionPeriod: data.subscription_period
             };
         });
     }, [examPrices]);
@@ -293,15 +266,12 @@ const ProductCustomizer: FC = () => {
     const handleBulkDelete = async () => {
         if (selectedSkus.length === 0 || !token) return;
         if (!window.confirm(`Permanently delete ${selectedSkus.length} products?`)) return;
-
         setIsSaving(true);
         const tid = toast.loading(`Deleting ${selectedSkus.length} products...`);
         try {
             for (const sku of selectedSkus) {
                 const prod = products.find(p => p.sku === sku);
-                if (prod) {
-                    await googleSheetsService.adminDeletePost(token, prod.id, 'product');
-                }
+                if (prod) await googleSheetsService.adminDeletePost(token, prod.id, 'product');
             }
             await refreshConfig();
             toast.success("Bulk Deletion Complete", { id: tid });
@@ -352,38 +322,16 @@ const ProductCustomizer: FC = () => {
                         <div className="flex gap-2">
                             <div className="relative">
                                 <span className="absolute left-2 top-2.5 text-[8px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-tighter">Sale</span>
-                                <input 
-                                    type="number" 
-                                    placeholder="0.00" 
-                                    value={bulkPrice} 
-                                    onChange={e => setBulkPrice(e.target.value)}
-                                    className="w-24 bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg py-2 pl-8 pr-2 text-xs text-[rgb(var(--color-text-strong-rgb))] focus:border-emerald-500"
-                                />
+                                <input type="number" placeholder="0.00" value={bulkPrice} onChange={e => setBulkPrice(e.target.value)} className="w-24 bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg py-2 pl-8 pr-2 text-xs text-[rgb(var(--color-text-strong-rgb))] focus:border-emerald-500"/>
                             </div>
                             <div className="relative">
                                 <span className="absolute left-2 top-2.5 text-[8px] font-black text-[rgb(var(--color-text-muted-rgb))] uppercase tracking-tighter">Reg</span>
-                                <input 
-                                    type="number" 
-                                    placeholder="0.00" 
-                                    value={bulkRegularPrice} 
-                                    onChange={e => setBulkRegularPrice(e.target.value)}
-                                    className="w-24 bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg py-2 pl-8 pr-2 text-xs text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500"
-                                />
+                                <input type="number" placeholder="0.00" value={bulkRegularPrice} onChange={e => setBulkRegularPrice(e.target.value)} className="w-24 bg-[rgb(var(--color-background-rgb))] border border-[rgb(var(--color-border-rgb))] rounded-lg py-2 pl-8 pr-2 text-xs text-[rgb(var(--color-text-strong-rgb))] focus:border-cyan-500"/>
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <button 
-                                onClick={handleBulkPriceUpdate}
-                                className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/20"
-                            >
-                                Update {selectedSkus.length}
-                            </button>
-                            <button 
-                                onClick={handleBulkDelete}
-                                className="bg-rose-600 text-white px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-500 transition shadow-lg shadow-rose-900/20 flex items-center gap-2"
-                            >
-                                <Trash2 size={14}/> Bulk Trash
-                            </button>
+                            <button onClick={handleBulkPriceUpdate} className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/20">Update {selectedSkus.length}</button>
+                            <button onClick={handleBulkDelete} className="bg-rose-600 text-white px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-500 transition shadow-lg shadow-rose-900/20 flex items-center gap-2"><Trash2 size={14}/> Bulk Trash</button>
                         </div>
                     </div>
                 )}
@@ -453,38 +401,15 @@ const ProductCustomizer: FC = () => {
                                         </div>
                                     </td>
                                     <td className="p-5 text-right space-x-2">
-                                        <button 
-                                            onClick={() => { setEditingProduct(p); setIsDuplicating(true); }}
-                                            className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-amber-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl transition-all border border-transparent hover:border-amber-500/30 shadow-sm"
-                                            title="Duplicate for Premium Addon"
-                                        >
-                                            <Copy size={16}/>
-                                        </button>
-                                        <button 
-                                            onClick={() => { setEditingProduct(p); setIsDuplicating(false); }}
-                                            className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-cyan-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl transition-all border border-transparent hover:border-[rgb(var(--color-border-rgb))] shadow-sm"
-                                            title="Edit Properties"
-                                        >
-                                            <Edit size={16}/>
-                                        </button>
-                                        <button 
-                                            onClick={() => { if(window.confirm('Delete this entity permanently?')) handleDeleteProduct(p.id) }}
-                                            className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-rose-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl transition-all border border-transparent hover:border-rose-500/30 shadow-sm"
-                                            title="Trash"
-                                        >
-                                            <Trash2 size={16}/>
-                                        </button>
+                                        <button onClick={() => { setEditingProduct(p); setIsDuplicating(true); }} className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-amber-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl transition-all border border-transparent hover:border-amber-500/30 shadow-sm" title="Duplicate for Premium Addon"><Copy size={16}/></button>
+                                        <button onClick={() => { setEditingProduct(p); setIsDuplicating(false); }} className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-cyan-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl transition-all border border-transparent hover:border-[rgb(var(--color-border-rgb))] shadow-sm" title="Edit Properties"><Edit size={16}/></button>
+                                        <button onClick={() => { if(window.confirm('Delete this entity permanently?')) handleDeleteProduct(p.id) }} className="p-2.5 text-[rgb(var(--color-text-muted-rgb))] hover:text-rose-500 hover:bg-[rgba(var(--color-background-rgb),0.5)] rounded-xl transition-all border border-transparent hover:border-rose-500/30 shadow-sm" title="Trash"><Trash2 size={16}/></button>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
-                {filtered.length === 0 && (
-                    <div className="p-20 text-center text-[rgb(var(--color-text-muted-rgb))] font-mono italic">
-                        The current search/filter criteria returned zero inventory records.
-                    </div>
-                )}
             </div>
 
             {(editingProduct || isCreating) && (

@@ -2,52 +2,39 @@
 /**
  * =============================================================================
  * MODULE: Industrial API Logic Handlers
- * VERSION: 28.9.8 (Entitlement Sync Fixed)
+ * VERSION: 29.0.0 (Stability Overhaul)
  * =============================================================================
  */
 
 if (!defined('ABSPATH')) exit;
 
 /**
- * 1. SCOPED ACCESS ENGINE (Replacement for monolithic expiry)
- * Stores expiries in a map: [ SKU => Timestamp ]
+ * 1. SCOPED ACCESS ENGINE
  */
 add_action('woocommerce_order_status_completed', 'mco_handle_custom_addon_access', 10, 1);
 function mco_handle_custom_addon_access($order_id) {
     $order = wc_get_order($order_id);
     if (!$order) return;
-
     $user_id = $order->get_user_id();
     if (!$user_id) return;
-
     $expiries = get_user_meta($user_id, '_mco_program_expiries', true) ?: [];
     if (!is_array($expiries)) $expiries = [];
-
     $changes_made = false;
     foreach ($order->get_items() as $item) {
         $product = $item->get_product();
         if (!$product) continue;
-        
         $sku = $product->get_sku();
-        
-        // Check for addon pattern
         if (strpos($sku, '-1mo-addon') !== false) {
-            // Strip suffix to get the target program SKU
             $base_sku = str_replace('-1mo-addon', '', $sku);
             $now = time();
             $current_expiry = isset($expiries[$base_sku]) ? (int)$expiries[$base_sku] : 0;
-            
             $base_time = ($current_expiry > $now) ? $current_expiry : $now;
             $expiries[$base_sku] = $base_time + (30 * DAY_IN_SECONDS);
-            
-            $order->add_order_note("MCO Engine: Scoped Premium granted for $base_sku until " . date('Y-m-d H:i', $expiries[$base_sku]));
+            $order->add_order_note("MCO Engine: Scoped Premium granted for $base_sku.");
             $changes_made = true;
         }
     }
-
-    if ($changes_made) {
-        update_user_meta($user_id, '_mco_program_expiries', $expiries);
-    }
+    if ($changes_made) update_user_meta($user_id, '_mco_program_expiries', $expiries);
 }
 
 /**
@@ -69,9 +56,6 @@ if (!function_exists('mco_fetch_remote_csv_content')) {
         $code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
         if ($code !== 200) return new WP_Error('http_err', "Source code $code");
-        if (stripos($body, '<!DOCTYPE') !== false || stripos($body, '<html') !== false) {
-            return new WP_Error('restricted', 'Access denied by Google. Sheet must be "Published to Web" as CSV.');
-        }
         return ['body' => $body, 'method' => 'wp_remote'];
     }
 }
@@ -89,20 +73,11 @@ function mco_handle_record_hit() {
     return new WP_REST_Response(['count' => $c], 200);
 }
 
-/**
- * AUTHENTICATION & ENTITLEMENT SYNC
- */
 function mco_handle_sync_auth($request) {
     $payload = $request->get_param('jwt_payload');
     $user_id = (int)$payload['user']['id'];
-
-    if (!$user_id) {
-        return new WP_Error('401', 'User ID missing from context.');
-    }
-
+    if (!$user_id) return new WP_Error('401', 'User ID missing.');
     $paid_exams = get_user_meta($user_id, 'mco_paid_exams', true) ?: [];
-    
-    // Check 1: Official WC Subscriptions
     $is_subscribed = false;
     $subscription_info = null;
     if (class_exists('WC_Subscriptions') && function_exists('wcs_user_has_subscription')) {
@@ -112,21 +87,13 @@ function mco_handle_sync_auth($request) {
             foreach ($subs as $sub) {
                 if ($sub->has_status('active')) {
                     $next_payment = $sub->get_date('next_payment');
-                    if ($next_payment) {
-                        $subscription_info = [
-                            'status' => 'active',
-                            'nextPaymentDate' => date('M d, Y', strtotime($next_payment))
-                        ];
-                    }
+                    if ($next_payment) $subscription_info = ['status' => 'active', 'nextPaymentDate' => date('M d, Y', strtotime($next_payment))];
                     break;
                 }
             }
         }
     }
-
-    // Check 2: Scoped Program Expiries
     $program_expiries = get_user_meta($user_id, '_mco_program_expiries', true) ?: [];
-
     return new WP_REST_Response([
         'paidExamIds' => (array)$paid_exams,
         'isSubscribed' => (bool)$is_subscribed,
@@ -139,7 +106,6 @@ function mco_handle_sync_auth($request) {
 function mco_handle_questions_from_sheet($request) {
     $p = $request->get_json_params();
     $url = $p['sheetUrl'] ?? '';
-    $requested_count = (int)($p['count'] ?? 0);
     if (empty($url)) return new WP_Error('400', 'Sheet URL missing.');
     $cache_key = 'mco_sheet_' . md5($url);
     $questions = get_transient($cache_key);
@@ -153,58 +119,79 @@ function mco_handle_questions_from_sheet($request) {
         foreach ($lines as $line) {
             $row = str_getcsv($line);
             if (empty(array_filter($row))) continue;
-            if (count($row) >= 6) {
-                $questions[] = ['id' => $idx++, 'question' => wp_kses_post($row[0]), 'options' => array_map('trim', array_slice($row, 1, 4)), 'correctAnswer' => (int)$row[5]];
-            } elseif (count($row) >= 3) {
-                $questions[] = ['id' => $idx++, 'question' => wp_kses_post($row[0]), 'options' => array_map('trim', explode('|', $row[1])), 'correctAnswer' => (int)$row[2]];
-            }
+            if (count($row) >= 6) $questions[] = ['id' => $idx++, 'question' => wp_kses_post($row[0]), 'options' => array_map('trim', array_slice($row, 1, 4)), 'correctAnswer' => (int)$row[5]];
         }
         if (empty($questions)) return new WP_Error('empty', 'No valid questions.');
         set_transient($cache_key, $questions, HOUR_IN_SECONDS);
     }
-    if ($requested_count > 0 && count($questions) > $requested_count) {
-        shuffle($questions);
-        $questions = array_slice($questions, 0, $requested_count);
-    }
     return new WP_REST_Response($questions, 200);
 }
 
-// --- ADMIN PERSISTENCE LOGIC ---
+// --- ADMIN PERSISTENCE ---
 
 function mco_handle_admin_update_settings($request) {
     $p = $request->get_json_params();
     if (isset($p['activeThemeId'])) update_option('mco_active_theme_id', sanitize_text_field($p['activeThemeId']));
     $toggles = ['purchaseNotifierEnabled' => 'mco_purchase_notifier_enabled', 'subscriptionsEnabled' => 'mco_subscriptions_enabled', 'bundlesEnabled' => 'mco_bundles_enabled'];
     foreach ($toggles as $jk => $wk) { if (isset($p[$jk])) update_option($wk, $p[$jk] ? '1' : '0'); }
-    delete_transient('mco_app_config_data');
-    delete_transient('mco_app_config_data_full');
-    update_option('mco_config_version', (string)current_time('timestamp'));
+    delete_transient('mco_app_config_data'); delete_transient('mco_app_config_data_full');
     return new WP_REST_Response(['success' => true], 200);
 }
 
+/**
+ * RE-ENGINEERED PRODUCT UPSERT (Maximum Stability)
+ */
 function mco_handle_admin_upsert_product($request) {
     if (!class_exists('WooCommerce')) return new WP_Error('500', 'WC required.');
+    
     $p = $request->get_json_params();
-    $sku = sanitize_text_field($p['sku'] ?? '');
+    $sku = sanitize_text_field(strval($p['sku'] ?? ''));
     if (empty($sku)) return new WP_Error('400', 'SKU missing.');
+    
     $pid = wc_get_product_id_by_sku($sku);
-    $type = sanitize_text_field($p['type'] ?? 'simple');
-    if ($pid) { $product = wc_get_product($pid); } 
-    else { 
-        if ($type === 'subscription' && class_exists('WC_Product_Subscription')) $product = new WC_Product_Subscription();
-        else $product = new WC_Product_Simple(); 
+    $type = sanitize_text_field(strval($p['type'] ?? 'simple'));
+    
+    // Instantiate correct object
+    if ($pid) { 
+        $product = wc_get_product($pid); 
+    } else { 
+        if ($type === 'subscription' && class_exists('WC_Product_Subscription')) {
+            $product = new WC_Product_Subscription();
+        } else {
+            $product = new WC_Product_Simple(); 
+        }
         $product->set_sku($sku);
     }
-    if (isset($p['name'])) $product->set_name(sanitize_text_field($p['name']));
-    if (isset($p['regularPrice'])) $product->set_regular_price((float)$p['regularPrice']);
-    if (isset($p['price'])) $product->set_sale_price((float)$p['price']);
-    $product->set_status('publish'); $product->set_virtual(true);
-    if ($product->is_type('subscription')) { if (isset($p['subscriptionPeriod'])) update_post_meta($product->get_id(), '_subscription_period', sanitize_text_field($p['subscriptionPeriod'])); }
-    $product->save();
-    if ($type === 'bundle') { update_post_meta($product->get_id(), '_mco_is_bundle', 'yes'); if (isset($p['bundledSkus'])) update_post_meta($product->get_id(), '_mco_bundled_skus', array_map('sanitize_text_field', (array)$p['bundledSkus'])); }
+
+    if (!$product) return new WP_Error('500', 'WC Object Error.');
+
+    if (isset($p['name'])) $product->set_name(sanitize_text_field(strval($p['name'])));
+    if (isset($p['regularPrice'])) $product->set_regular_price(floatval($p['regularPrice']));
+    if (isset($p['price'])) $product->set_sale_price(floatval($p['price']));
+    
+    $product->set_status('publish'); 
+    $product->set_virtual(true);
+    
+    $final_id = $product->save();
+    if (!$final_id) return new WP_Error('500', 'Save failed.');
+
+    // Subscription Meta
+    if ($product->is_type('subscription') && isset($p['subscriptionPeriod'])) {
+        update_post_meta($final_id, '_subscription_period', sanitize_text_field(strval($p['subscriptionPeriod'])));
+    }
+
+    // Bundle Logic
+    if (isset($p['isBundle']) && $p['isBundle']) {
+        update_post_meta($final_id, '_mco_is_bundle', 'yes');
+    }
+    
+    if (isset($p['bundledSkus'])) {
+        $bundled = array_filter(array_map('sanitize_text_field', (array)$p['bundledSkus']));
+        update_post_meta($final_id, '_mco_bundled_skus', $bundled);
+    }
+
     delete_transient('mco_app_config_data'); delete_transient('mco_app_config_data_full');
-    update_option('mco_config_version', (string)current_time('timestamp'));
-    return new WP_REST_Response(['success' => true, 'productId' => $product->get_id()], 200);
+    return new WP_REST_Response(['success' => true, 'productId' => $final_id], 200);
 }
 
 // --- ANALYTICS HANDLER ---
